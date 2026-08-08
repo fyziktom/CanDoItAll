@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class InputAttachmentPreparer(

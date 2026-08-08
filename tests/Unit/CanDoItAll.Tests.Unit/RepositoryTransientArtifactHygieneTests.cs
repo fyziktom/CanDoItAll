@@ -112,11 +112,12 @@ public sealed class RepositoryTransientArtifactHygieneTests
             return true;
         }
 
-        if (path.StartsWith("codex/bundles/", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
+        // Contract decision (post-review follow-up): codex/bundles/** holds the
+        // operator's durable coordination bundles (requirements, work units,
+        // proof, session handoffs). They are deliberately committed as shared
+        // working state for bundle executors and are therefore allowed;
+        // transient outputs (exports, zips, run logs, execution reports)
+        // remain forbidden below.
         if (path.StartsWith("codex/bundle-exports/", StringComparison.OrdinalIgnoreCase))
         {
             return true;

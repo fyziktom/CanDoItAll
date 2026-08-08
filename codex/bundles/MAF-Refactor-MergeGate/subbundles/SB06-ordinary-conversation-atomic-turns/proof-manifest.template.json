@@ -1,0 +1,50 @@
+{
+  "subbundle": "SB06",
+  "title": "Ordinary conversation atomic turns",
+  "status": "NotStarted",
+  "decision": "Blocked",
+  "startingCommit": "",
+  "endingCommit": "",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [],
+  "commands": [],
+  "tests": [],
+  "architectureChecks": [],
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "acceptance": [
+    {
+      "criterion": "Failed or abandoned Adopt restores the original provider and acceleration.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Successful Adopt remains unchanged.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Rename during active turn fails typed without changing state.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Near-capacity turn fails before ILlmInvocationPort is called.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Corrupted ActiveTurn metadata fails typed on load.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No ordinary failure leaves an orphaned active turn.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "residualRisk": "",
+  "nextSubbundleUnlocked": false
+}

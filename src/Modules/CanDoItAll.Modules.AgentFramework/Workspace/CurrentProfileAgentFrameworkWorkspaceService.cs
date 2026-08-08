@@ -452,10 +452,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public Task<ExecutionRunResult> ContinueExecutionRunAsync(
         Guid executionRunId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
         return ExecuteNewActivityOperationAsync(
             activityOperationId,
             agentId: null,
@@ -464,7 +465,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             (service, operation) => service.ContinueExecutionRunWithinOperationAsync(
                 operation,
                 executionRunId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }
@@ -522,10 +523,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         Guid agentId,
         Guid chatSessionId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
         return ExecuteNewActivityOperationAsync(
             activityOperationId,
             agentId,
@@ -535,7 +537,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 operation,
                 agentId,
                 chatSessionId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }
@@ -543,11 +545,12 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation,
         Guid executionRunId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(decisions);
         return DispatchPinnedActivityOperation(
             operation,
             expectedAgentId: null,
@@ -556,7 +559,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
             service => service.ContinueExecutionRunWithinOperationAsync(
                 operation,
                 executionRunId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }
@@ -565,10 +568,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
         return DispatchPinnedActivityOperation(
             operation,
             agentId,
@@ -578,7 +582,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 operation,
                 agentId,
                 chatSessionId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }

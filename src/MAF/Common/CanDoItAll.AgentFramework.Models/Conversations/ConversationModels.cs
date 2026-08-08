@@ -660,6 +660,64 @@ public sealed record AgentRuntimeExecutionOptions(
 
     [JsonIgnore]
     public AgentRuntimeTransientContext? TransientContext { get; init; }
+
+    /// <summary>
+    /// Stable hash (SHA-256 hex, ordered) of the composed runtime tool names for this run.
+    /// Empty until the adapter fills it in after capability composition (the tool list is
+    /// not definitively known before that point); a runtime-state envelope writer must
+    /// never treat an empty value as "matches" against a differently-empty current value —
+    /// see <c>IRuntimeStateCompatibilityPolicy</c>.
+    /// </summary>
+    public string ToolsetFingerprint { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The current turn's bounded model-context digest, reusing
+    /// <c>AgentTurnContextReference.ModelContextDigest</c> — never a second digest.
+    /// Empty when the run has no turn-context reference (for example a governed process
+    /// step) rather than a fabricated value. Persisted in the runtime-state envelope's
+    /// v1 wire field <c>contextPolicyFingerprint</c>.
+    /// </summary>
+    public string ModelContextDigest { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Fingerprint of the admitted execution authority policy for this run
+    /// (source: the governance snapshot). Separate from the model-context
+    /// digest so a policy change invalidates persisted state even when the
+    /// visible UI context is unchanged. Empty without an admitted authority.
+    /// </summary>
+    public string AuthorityPolicyFingerprint { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Fingerprint of the effectively exposed capability set, stamped by the
+    /// adapter after capability composition. Empty until composition.
+    /// </summary>
+    public string CapabilityPolicyFingerprint { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The legacy names-only toolset fingerprint, stamped alongside the
+    /// contract fingerprint so schema-v1 envelopes captured before the
+    /// contract hash existed stay restorable through the adapter's explicit
+    /// v1 rules.
+    /// </summary>
+    public string LegacyToolsetNameFingerprint { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The agent's chat-history mode (source: <c>agent.ChatHistoryMode</c>), threaded here so
+    /// every session-persistence call site can stamp a runtime-state envelope without needing
+    /// its own <c>AgentDefinition</c> parameter.
+    /// </summary>
+    public AgentChatHistoryMode? HistoryMode { get; init; }
+
+    /// <summary>
+    /// The admitted execution governance snapshot for this run. Present for
+    /// every context-admitted turn (rebuilt from the run's persisted authority
+    /// projection for both ordinary sends and approval continuation); absent
+    /// for runs admitted without application context (detached conversations,
+    /// legacy runs). Capability composition and invocation policy consume this
+    /// snapshot as the permission ceiling and may only narrow it.
+    /// </summary>
+    [JsonIgnore]
+    public AgentExecutionGovernanceSnapshot? Governance { get; init; }
 }
 
 public sealed record AgentRuntimeTransientContext

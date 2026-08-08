@@ -35,7 +35,10 @@ public sealed class MafContextMessageTransformationTests
                 AgentRuntimeContextIntent.Empty with
                 {
                     WorkspaceScope = WorkspaceScopeDescriptor.Project("project-b")
-                }));
+                },
+                WorkspaceRuntimeServicesTestFactory.Create(
+                    Path.GetTempPath(),
+                    WorkspaceScopeDescriptor.Project("project-a"))));
 
         Assert.Contains("conflicting workspace scopes", exception.Message, StringComparison.Ordinal);
     }
@@ -91,7 +94,10 @@ public sealed class MafContextMessageTransformationTests
                 AgentRuntimeContextIntent.Empty with
                 {
                     Purpose = AgentRuntimeContextPurpose.InteractiveChat
-                });
+                },
+                WorkspaceRuntimeServicesTestFactory.Create(
+                    workspaceRoot,
+                    WorkspaceScopeDescriptor.Project(projectId.ToString("D"))));
             var (wrappedAgent, recordingClient) = CreateContextRecordingAgent(state);
 
             await wrappedAgent.RunAsync([

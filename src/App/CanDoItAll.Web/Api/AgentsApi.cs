@@ -500,10 +500,15 @@ internal static class AgentsApi
                 AgentActivityApiResults.SetOperationIdHeader(context.Response, operationId);
                 try
                 {
+                    var decisions = await AgentApprovalDecisionRequestMapper.ResolveDecisionsAsync(
+                        workspaceService,
+                        executionRunId,
+                        request,
+                        cancellationToken);
                     var result = await workspaceService.ContinueExecutionRunAsync(
                         executionRunId,
                         operationId,
-                        request.Approved,
+                        decisions,
                         request.AutoApprovePendingToolCalls,
                         cancellationToken);
                     return Results.Ok(AgentApiResponseMapper.ToExecutionRunResult(result));
@@ -513,6 +518,14 @@ internal static class AgentsApi
                     return AgentActivityApiResults.FromAdmissionException(
                         context,
                         exception,
+                        executionRunId: executionRunId);
+                }
+                catch (AgentApprovalDecisionMismatchException exception)
+                {
+                    return ApiEndpointResults.AgentValidationFailure(
+                        context,
+                        exception.Message,
+                        "agents.approval-decision-mismatch",
                         executionRunId: executionRunId);
                 }
                 catch (AgentChatRunFailedException exception)
@@ -952,7 +965,18 @@ internal sealed record AgentChatApiRequest(
 internal sealed record PendingApprovalApiRequest(
     bool Approved,
     bool AutoApprovePendingToolCalls,
-    AgentExecutionOperationId? ActivityOperationId = null);
+    AgentExecutionOperationId? ActivityOperationId = null)
+{
+    /// <summary>
+    /// SB15 additive per-proposal decisions. When present and non-empty, this takes precedence
+    /// over <see cref="Approved"/> and must contain exactly one decision per approval currently
+    /// pending on the target run. Absent for legacy clients, who keep sending only
+    /// <see cref="Approved"/> — the request handler expands that against the run's pending set.
+    /// </summary>
+    public IReadOnlyList<PendingApprovalDecisionApiRequest>? Decisions { get; init; }
+}
+
+internal sealed record PendingApprovalDecisionApiRequest(string ApprovalId, bool Approved);
 
 internal sealed record AgentExecutionRunApiRequest(
     Guid AgentId,

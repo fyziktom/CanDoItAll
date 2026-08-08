@@ -215,6 +215,25 @@
                     {
                         <StatusBadge Tone="neutral" Text="No module context" />
                     }
+                    @{
+                        var conversationBinding = ResolveConversationBinding(visibleChat);
+                        var isDetachedConversation = conversationBinding is { Mode: AgentConversationContextMode.Detached };
+                    }
+                    <StatusBadge Tone="@(isDetachedConversation ? "warning" : "neutral")"
+                                 Text="@ResolveAffinityStatus(conversationBinding)"
+                                 data-testid="floating-agent-chat-affinity-status" />
+                    @if (HasPendingContextChange(conversationBinding))
+                    {
+                        <StatusBadge Tone="info"
+                                     Text="@ResolvePendingContextText()"
+                                     data-testid="floating-agent-chat-pending-context" />
+                    }
+                    <Button Icon="@(isDetachedConversation ? "link" : "link_off")"
+                            Text="@(isDetachedConversation ? "Follow context" : "Detach")"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="@(() => ToggleConversationContextMode(visibleChat))"
+                            data-testid="floating-agent-chat-affinity-toggle" />
                 </Cluster>
                 @if (visibleChat.ChatSessionId is { } sessionId)
                 {

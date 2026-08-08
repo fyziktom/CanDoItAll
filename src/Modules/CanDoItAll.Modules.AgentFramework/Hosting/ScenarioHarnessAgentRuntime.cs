@@ -3,14 +3,22 @@ using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Modules.AgentFramework.Hosting;
 
+/// <summary>
+/// Deterministic scenario-harness interception core. SB10 introduced <see cref="ScenarioHarnessExecutionDecorator"/>
+/// and <see cref="ScenarioHarnessDiagnosticsDecorator"/> as the port-level classes that decide
+/// whether a request targets the scenario-harness provider; this type owns exactly the
+/// deterministic scenario bodies those decorators call into. It no longer implements the broad
+/// legacy runtime interface (deleted SB18) or holds an inner fallback runtime — decorators own the
+/// provider-matching branch and the inner-port fallback themselves.
+/// </summary>
 internal sealed partial class ScenarioHarnessAgentRuntime(
-    IAgentRuntime inner,
     string workspaceRoot,
     WorkspaceScopeDescriptor workspaceScope,
     IWorkspaceFileService fileService,
-    IWorkspaceCommandExecutionService commandExecutionService) : IAgentRuntime
+    IWorkspaceCommandExecutionService commandExecutionService)
 {
     private const string ProcessScenarioOutputRoot = "output/ps";
     private const string ProcessScenarioArtifactRoot = "artifacts/ps";
@@ -28,15 +36,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
     private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
 
-    public Task<ProviderHealthResult> TestProviderAsync(
-        ProviderProfile provider,
-        CancellationToken cancellationToken = default)
+    internal static Task<ProviderHealthResult> CreateScenarioProviderHealthResultAsync()
     {
-        if (!IsScenarioProvider(provider))
-        {
-            return inner.TestProviderAsync(provider, cancellationToken);
-        }
-
         return Task.FromResult(new ProviderHealthResult(
             Success: true,
             Summary: "Scenario harness provider is available for deterministic integrated proof runs.",
@@ -46,16 +47,8 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             ]));
     }
 
-    public Task<ProviderTestChatResult> RunProviderTestChatAsync(
-        ProviderProfile provider,
-        ProviderTestChatRequest request,
-        CancellationToken cancellationToken = default)
+    internal static Task<ProviderTestChatResult> CreateScenarioProviderTestChatResultAsync()
     {
-        if (!IsScenarioProvider(provider))
-        {
-            return inner.RunProviderTestChatAsync(provider, request, cancellationToken);
-        }
-
         return Task.FromResult(new ProviderTestChatResult(
             Model: "scenario-local",
             ResponseText: "Scenario harness provider is deterministic. Use SC03 and SC04 directly, then validate SC09-SC11 through the integrated `/processes` flow.",
@@ -63,50 +56,16 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
             OutputTokens: 28));
     }
 
-    public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
-        ProviderProfile provider,
-        ProviderModelMaintenanceEditorRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsScenarioProvider(provider))
-        {
-            return inner.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
-        }
+    internal static InvalidOperationException CreateScenarioModelMaintenanceUnsupportedError()
+        => new("The scenario harness provider does not support provider model maintenance.");
 
-        throw new InvalidOperationException("The scenario harness provider does not support provider model maintenance.");
-    }
-
-    public async Task<AgentRuntimeResponse> RunAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        ChatSessionRecord session,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        IReadOnlyList<AgentMemoryRecord> memory,
+    internal async Task<AgentRuntimeResponse> ExecuteScenarioRunAsync(
         string prompt,
-        string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null,
-        AgentRuntimeExecutionOptions? executionOptions = null)
+        bool suppressApprovalRequirements,
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
     {
-        if (!IsScenarioProvider(provider))
-        {
-            return await inner.RunAsync(
-                agent,
-                provider,
-                session,
-                capabilities,
-                memory,
-                prompt,
-                runtimeSessionKey,
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements,
-                structuredOutput,
-                executionOptions);
-        }
-
         var definition = ResolveDefinition(prompt);
         var state = CreateState(definition, prompt);
 
@@ -168,37 +127,13 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         return await ExecuteScenarioAsync(definition, state, progressCallback, structuredOutput, executionOptions);
     }
 
-    public async Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
+    internal async Task<AgentRuntimeResponse> ExecuteScenarioApprovalContinuationAsync(
         ChatSessionRecord session,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        IReadOnlyList<AgentMemoryRecord> memory,
         bool approved,
-        string? runtimeSessionKey,
         Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null,
-        AgentRuntimeExecutionOptions? executionOptions = null)
+        AgentStructuredOutputContract? structuredOutput,
+        AgentRuntimeExecutionOptions? executionOptions)
     {
-        if (!IsScenarioProvider(provider))
-        {
-            return await inner.RespondToPendingApprovalsAsync(
-                agent,
-                provider,
-                session,
-                capabilities,
-                memory,
-                approved,
-                runtimeSessionKey,
-                progressCallback,
-                cancellationToken,
-                suppressApprovalRequirements,
-                structuredOutput,
-                executionOptions);
-        }
-
         var state = ParseState(session.Compatibility?.SerializedSessionStateJson)
             ?? throw new InvalidOperationException("The scenario harness could not restore the pending approval state.");
         var definition = ResolveDefinition(state.ScenarioId);
@@ -661,7 +596,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         return JsonSerializer.Deserialize<ScenarioRuntimeState>(json, JsonOptions);
     }
 
-    private static bool IsScenarioProvider(ProviderProfile provider)
+    internal static bool IsScenarioProvider(ProviderProfile provider)
         => string.Equals(provider.BaseUrl, ScenarioHarnessCatalog.ProviderBaseUrl, StringComparison.OrdinalIgnoreCase);
 
     private string ToAbsoluteWorkspacePath(string relativePath)

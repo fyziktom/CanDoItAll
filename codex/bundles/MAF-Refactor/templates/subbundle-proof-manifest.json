@@ -1,0 +1,46 @@
+{
+  "subbundleId": "SBXX-name",
+  "baselineCommit": "",
+  "resultCommit": "",
+  "status": "Pending",
+  "codeAnalytics": {
+    "available": false,
+    "snapshotId": "",
+    "dashboardHealth": "",
+    "dependencyCycleResult": "",
+    "relevantFindings": []
+  },
+  "changedFiles": [],
+  "changedProjects": [],
+  "builds": [],
+  "tests": [],
+  "sourceAssertions": [],
+  "responsibilitiesMoved": [],
+  "oldOwnerProof": [],
+  "dependencyProof": [],
+  "authorityProof": [],
+  "knownGaps": [],
+  "downstreamDecision": "Blocked",
+  "executor": {
+    "tool": "Claude Code",
+    "model": "",
+    "sessionId": "",
+    "reasoningProfile": "maximum/deep available"
+  },
+  "cutover": {
+    "selectedProductionPath": "",
+    "compatibilityFlagOrSelector": "",
+    "singleSideEffectPathProved": false,
+    "rollbackAction": "",
+    "legacyRemovalOwner": ""
+  },
+  "debugging": {
+    "correlationIds": [],
+    "failureStagesExercised": [],
+    "bugs": []
+  },
+  "handoff": {
+    "path": "proof/SESSION-HANDOFF.md",
+    "updated": false
+  }
+}

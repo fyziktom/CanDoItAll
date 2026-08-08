@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -9,6 +10,8 @@ internal interface IMafRuntimeSessionPersistenceDriver
     Task<string?> TrySerializePersistableRuntimeSessionAsync(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
+        ProviderProfile provider,
+        string model,
         AgentRuntimeExecutionOptions runtimeOptions,
         IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
         Func<ExecutionState, string, string, Task> progressCallback,
@@ -25,6 +28,7 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan SessionSerializationTimeout = TimeSpan.FromSeconds(5);
+    private static readonly IAgentRuntimeStateAdapter StateAdapter = new MafRuntimeStateAdapter();
 
     public bool ShouldSkipRuntimeSessionSerialization(
         AgentRuntimeExecutionOptions runtimeOptions,
@@ -50,6 +54,8 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
     public async Task<string?> TrySerializePersistableRuntimeSessionAsync(
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
+        ProviderProfile provider,
+        string model,
         AgentRuntimeExecutionOptions runtimeOptions,
         IReadOnlyCollection<PendingToolApprovalRecord> pendingApprovals,
         Func<ExecutionState, string, string, Task> progressCallback,
@@ -57,6 +63,8 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
     {
         ArgumentNullException.ThrowIfNull(runtimeAgent);
         ArgumentNullException.ThrowIfNull(runtimeSession);
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
         ArgumentNullException.ThrowIfNull(runtimeOptions);
         ArgumentNullException.ThrowIfNull(pendingApprovals);
         ArgumentNullException.ThrowIfNull(progressCallback);
@@ -96,33 +104,47 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
             return null;
         }
 
-        if (!InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions))
+        var payloadJson = serializedSessionJson;
+        if (InputAttachmentSupport.HasRequestScopedInputAttachments(runtimeOptions))
         {
-            return serializedSessionJson;
+            var scrubbedSessionJson = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSessionJson);
+            if (scrubbedSessionJson is null)
+            {
+                await progressCallback(
+                    ExecutionState.Persisting,
+                    "Session",
+                    "Dropped serialized Microsoft Agent Framework session state because request-scoped attachment payload scrubbing failed.");
+                ThrowIfApprovalStateUnavailable(
+                    pendingApprovals,
+                    new InvalidOperationException("Request-scoped session content scrubbing failed."));
+                return null;
+            }
+
+            if (!string.Equals(serializedSessionJson, scrubbedSessionJson, StringComparison.Ordinal))
+            {
+                await progressCallback(
+                    ExecutionState.Persisting,
+                    "Session",
+                    "Removed request-scoped attachment payloads from serialized Microsoft Agent Framework session state.");
+            }
+
+            payloadJson = scrubbedSessionJson;
         }
 
-        var scrubbedSessionJson = RequestScopedSessionContentScrubber.RemoveRequestScopedDataContent(serializedSessionJson);
-        if (scrubbedSessionJson is null)
+        var envelope = StateAdapter.CreateEnvelope(new AgentRuntimeStateCaptureRequest(
+            ProviderProfileId: provider.Id,
+            ProviderTransport: provider.Transport,
+            Model: model,
+            ToolsetFingerprint: runtimeOptions.ToolsetFingerprint,
+            ContextPolicyFingerprint: runtimeOptions.ModelContextDigest,
+            PayloadJson: payloadJson,
+            CapturedAtUtc: DateTimeOffset.UtcNow,
+            HistoryMode: runtimeOptions.HistoryMode)
         {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Dropped serialized Microsoft Agent Framework session state because request-scoped attachment payload scrubbing failed.");
-            ThrowIfApprovalStateUnavailable(
-                pendingApprovals,
-                new InvalidOperationException("Request-scoped session content scrubbing failed."));
-            return null;
-        }
-
-        if (!string.Equals(serializedSessionJson, scrubbedSessionJson, StringComparison.Ordinal))
-        {
-            await progressCallback(
-                ExecutionState.Persisting,
-                "Session",
-                "Removed request-scoped attachment payloads from serialized Microsoft Agent Framework session state.");
-        }
-
-        return scrubbedSessionJson;
+            AuthorityPolicyFingerprint = runtimeOptions.AuthorityPolicyFingerprint,
+            CapabilityPolicyFingerprint = runtimeOptions.CapabilityPolicyFingerprint
+        });
+        return envelope.ToJson();
     }
 
     private static async Task<string> SerializeRuntimeSessionAsync(

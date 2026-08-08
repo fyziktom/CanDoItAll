@@ -1,0 +1,45 @@
+{
+  "subbundle": "SB03",
+  "title": "Effective tool-policy context propagation",
+  "status": "NotStarted",
+  "decision": "Blocked",
+  "startingCommit": "",
+  "endingCommit": "",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [],
+  "commands": [],
+  "tests": [],
+  "architectureChecks": [],
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "acceptance": [
+    {
+      "criterion": "Downstream policy handling observes process run/step and process restrictions.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Governed recoverable denials remain recoverable.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "An unrelated cloning contributor cannot satisfy the process contributor requirement.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "The MAF adapter remains process-semantic-free.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Existing interactive and process tool-policy tests remain green.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "residualRisk": "",
+  "nextSubbundleUnlocked": false
+}

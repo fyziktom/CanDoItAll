@@ -6,7 +6,7 @@ internal static class ExecutionRunStateTransitions
 {
     public static ExecutionRunRecord CreateContinuationStartRun(
         ExecutionRunRecord run,
-        bool approved,
+        bool allApproved,
         bool effectiveAutoApprove,
         DateTimeOffset decidedAtUtc)
     {
@@ -21,9 +21,9 @@ internal static class ExecutionRunStateTransitions
             AutoApprovePendingToolCalls = effectiveAutoApprove,
             State = ExecutionState.Running,
             Outcome = null,
-            ResultSummary = approved
+            ResultSummary = allApproved
                 ? "Resuming execution after approval."
-                : "Resuming execution after rejection."
+                : "Resuming execution after a rejected or mixed approval decision."
         };
     }
 
@@ -106,22 +106,39 @@ internal static class ExecutionRunStateTransitions
         return (approvals, pending);
     }
 
+    /// <summary>
+    /// Applies one decision per pending approval (per-proposal, SB15). Callers must have already
+    /// validated that <paramref name="decisions"/> exactly covers <c>run.PendingApprovals</c> —
+    /// see <see cref="AgentApprovalDecisionMismatchException.ValidateExactCoverage"/> — the
+    /// missing-decision check below is a defensive backstop, not the primary validation.
+    /// </summary>
     public static (IReadOnlyList<ExecutionApprovalRecord> RunApprovals, IReadOnlyList<ExecutionApprovalRecord> Decided) ApplyApprovalDecision(
         IReadOnlyList<ExecutionApprovalRecord> existingRunApprovals,
         ExecutionRunRecord run,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         DateTimeOffset decidedAtUtc,
         string decisionSourceKind,
         string decisionSourceId)
     {
         ArgumentNullException.ThrowIfNull(existingRunApprovals);
         ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(decisions);
 
+        var decisionByApprovalId = decisions.ToDictionary(
+            decision => decision.ApprovalId,
+            decision => decision.Approved,
+            StringComparer.Ordinal);
         var approvals = existingRunApprovals.ToList();
         var decided = new List<ExecutionApprovalRecord>();
 
         foreach (var pendingApproval in run.PendingApprovals)
         {
+            if (!decisionByApprovalId.TryGetValue(pendingApproval.ApprovalId, out var approved))
+            {
+                throw new InvalidOperationException(
+                    $"No approval decision was supplied for pending approval '{pendingApproval.ApprovalId}'.");
+            }
+
             var existingIndex = approvals.FindIndex(item =>
                 item.ExecutionRunId == run.Id &&
                 string.Equals(item.ApprovalId, pendingApproval.ApprovalId, StringComparison.OrdinalIgnoreCase));

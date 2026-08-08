@@ -325,6 +325,7 @@ public sealed class AgentContextContributionTests
             provider,
             Array.Empty<CapabilityCatalogItem>(),
             memory ?? Array.Empty<AgentMemoryRecord>(),
+            WorkspaceRuntimeServicesTestFactory.Create(Path.GetTempPath()),
             (_, _, message) =>
             {
                 progressMessages.Add(message);
@@ -355,7 +356,8 @@ public sealed class AgentContextContributionTests
             CancellationToken.None,
             suppressApprovalRequirements: false,
             contextWorkspaceScope,
-            AgentRuntimeContextIntent.Empty);
+            AgentRuntimeContextIntent.Empty,
+            WorkspaceRuntimeServicesTestFactory.Create(Path.GetTempPath(), contextWorkspaceScope));
     }
 
     private static AgentContextContributionTraceCollector ReadContextContributionTraceCollector(object state)

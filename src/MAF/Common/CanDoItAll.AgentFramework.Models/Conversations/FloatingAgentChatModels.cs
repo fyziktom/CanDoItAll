@@ -21,6 +21,7 @@ public static class AgentChatContextLimits
 
 public readonly record struct AgentChatHandleId
 {
+    [JsonConstructor]
     public AgentChatHandleId(Guid value)
     {
         if (value == Guid.Empty)
@@ -44,6 +45,7 @@ public readonly record struct AgentChatHandleId
 
 public readonly record struct AgentChatContextScopeId
 {
+    [JsonConstructor]
     public AgentChatContextScopeId(Guid value)
     {
         if (value == Guid.Empty)
@@ -67,6 +69,7 @@ public readonly record struct AgentChatContextScopeId
 
 public readonly record struct AgentChatContextSourceKind
 {
+    [JsonConstructor]
     public AgentChatContextSourceKind(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -90,6 +93,7 @@ public readonly record struct AgentChatContextSourceKind
 
 public readonly record struct AgentChatContextSourceId
 {
+    [JsonConstructor]
     public AgentChatContextSourceId(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -113,6 +117,7 @@ public readonly record struct AgentChatContextSourceId
 
 public readonly record struct AgentChatContextContributorId
 {
+    [JsonConstructor]
     public AgentChatContextContributorId(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -164,6 +169,7 @@ internal sealed record AgentChatExternalTargetAccessAttachment : IAgentChatConte
 
 public readonly record struct AgentChatContextAttachmentKind
 {
+    [JsonConstructor]
     public AgentChatContextAttachmentKind(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -188,6 +194,7 @@ public readonly record struct AgentChatContextAttachmentKind
 
 public readonly record struct ModulePublicationRevision
 {
+    [JsonConstructor]
     public ModulePublicationRevision(long value)
     {
         if (value <= 0)
@@ -209,6 +216,7 @@ public readonly record struct ModulePublicationRevision
 
 public readonly record struct SnapshotContentFingerprint
 {
+    [JsonConstructor]
     public SnapshotContentFingerprint(string value)
     {
         Value = NormalizeFingerprint(value, nameof(value), "content");
@@ -241,6 +249,7 @@ public readonly record struct SnapshotContentFingerprint
 
 public readonly record struct SnapshotCoverageFingerprint
 {
+    [JsonConstructor]
     public SnapshotCoverageFingerprint(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
@@ -265,6 +274,7 @@ public readonly record struct SnapshotCoverageFingerprint
 
 public readonly record struct SnapshotFreshnessFingerprint
 {
+    [JsonConstructor]
     public SnapshotFreshnessFingerprint(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);

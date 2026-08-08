@@ -1,5 +1,6 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Integration;
@@ -347,16 +348,26 @@ public sealed class AgentFrameworkExecutionCapabilityFilteringIntegrationTests
         Guid agentId,
         ExecutionRunRecord run)
     {
+        // SB13 moved run criticality behind IAgentExecutionRunCriticalityPolicy, making
+        // ResolveAgentMemoryForRun an instance member. The governed-suppression behavior under test
+        // requires the real Processes-owned policy, so an uninitialized service instance carries it.
         var executionServiceType = Type.GetType(
             "CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService, CanDoItAll.AgentFramework.Core",
             throwOnError: true)
             ?? throw new InvalidOperationException("Could not resolve AgentFrameworkWorkspaceExecutionService.");
         var method = executionServiceType
-            .GetMethod("ResolveAgentMemoryForRun", BindingFlags.NonPublic | BindingFlags.Static)
+            .GetMethod("ResolveAgentMemoryForRun", BindingFlags.NonPublic | BindingFlags.Instance)
             ?? throw new InvalidOperationException("Could not find ResolveAgentMemoryForRun.");
+        var instance = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(executionServiceType);
+        var criticalityPoliciesField = executionServiceType
+            .GetField("runCriticalityPolicies", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Could not find runCriticalityPolicies.");
+        criticalityPoliciesField.SetValue(
+            instance,
+            new IAgentExecutionRunCriticalityPolicy[] { new CanDoItAll.Modules.Processes.ProcessExecutionRunCriticalityPolicy() });
 
         return Assert.IsAssignableFrom<IReadOnlyList<AgentMemoryRecord>>(
-            method.Invoke(null, [catalog, agentId, run]));
+            method.Invoke(instance, [catalog, agentId, run]));
     }
 
     private static ExecutionRunRecord CreateExecutionRun(

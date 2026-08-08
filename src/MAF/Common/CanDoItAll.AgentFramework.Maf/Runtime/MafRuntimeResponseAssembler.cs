@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafRuntimeResponseAssembler

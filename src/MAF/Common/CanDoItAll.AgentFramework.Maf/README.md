@@ -31,12 +31,27 @@ MAF runtime regression proof is tracked by named slices so process automation an
 | Approvals | `Runtime/MafRuntimeAgentFactory.cs` and capability policy code | Approval-required function wrapping, unusable approval-tool filtering, and policy-block static tests. |
 | MCP | `Runtime/Capabilities/McpCapabilityBuilder.cs` | Browser MCP result bounding tests that remove image payloads and cap snapshot text. |
 | A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Disabled endpoint, missing bearer secret, and invalid endpoint tests. |
-| Workflow mapping | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs` and `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafHandoffWorkflowFactory.cs` | MAF 1.15 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
+| Workflow mapping | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs` and `Runtime/Handoffs/MafHandoffWorkflowFactory.cs` | MAF 1.15 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
 | Trace correlation | `src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs` and execution response models | Tool invocation traces, finalizer invocation traces, workflow audit scope, and OpenTelemetry package presence source assertions. |
 
 ## Architecture Notes
 
-Keep AgentFramework model contracts, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly. MAF currently allows direct references to `CanDoItAll.Modules.Security` and `CanDoItAll.Modules.Workspace`; first-party product tool ownership belongs in registered `IAgentRuntimeToolProvider` implementations.
+Keep AgentFramework model contracts, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly. MAF must not reference `CanDoItAll.Modules.*` projects or the `Workflows.MafAdapter` project; secret-runtime contracts arrive through the dependency-free `CanDoItAll.Security.Abstractions` foundation project and storage contracts through `CanDoItAll.Infrastructure`. First-party product tool ownership belongs in registered `IAgentRuntimeToolProvider` implementations.
+
+### Runtime ports and the MAF adapter
+
+Production callers consume MAF through four narrow runtime ports declared in `CanDoItAll.AgentFramework.Runtime.Abstractions` — `IAgentExecutionRuntime`, `IAgentContinuationRuntime`, `IProviderDiagnosticsRuntime`, `IProviderModelAdministrationRuntime` — never a single broad runtime interface (the pre-SB18 `IAgentRuntime` surface was deleted once every caller finished migrating to the ports). `Runtime/MafAgentRuntime.cs` is now a **pure composition root**: it builds exactly one set of native adapters (`MafAgentExecutionAdapter`, `MafAgentContinuationAdapter`, `MafProviderDiagnosticsAdapter`, `MafProviderModelAdministrationAdapter`) per runtime scope from `MafAgentRuntimeDependencies` and exposes them as the `ExecutionPort` / `ContinuationPort` / `DiagnosticsPort` / `ModelAdministrationPort` properties. It contains no streaming, session, finalizer, or response-assembly logic — that lives in `Runtime/Execution/MafStreamingTurnExecutor.cs` and its collaborators. Composition sites (Hosting's `AddAgentFrameworkCore`, the Modules.AgentFramework module registration, and `CanDoItAllAgentWorkspaceFactory`) construct/register the four ports directly against this composition root; process-mock and scenario-harness test/proof providers are port-level decorators (`ProcessMockExecutionDecorator`/`ProcessMockDiagnosticsDecorator`, `ScenarioHarnessExecutionDecorator`/`ScenarioHarnessDiagnosticsDecorator`) that own their own provider-matching branch and their own deterministic interception bodies — they no longer wrap a broad runtime interface.
+
+### Governance input boundary
+
+MAF consumes the effective invocation context produced by the Core tool-policy pipeline; it does not
+resolve product ownership or rebuild scope from prompt text. Source-authority providers are registered
+through `IAgentExecutionSourceAuthorityProvider` by their owning Projects, Workbench, and Processes
+modules. Malformed or mismatched persisted authority fails closed during restore or continuation;
+missing authority also fails when the run proves governed context admission. Detached or legacy runs
+without such evidence remain explicitly ungoverned. The exact effective context used for a policy
+decision is the context passed into tool execution, so contributors cannot authorize one scope and
+execute another.
 
 ## Process Automation Notes
 

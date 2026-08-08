@@ -1,0 +1,60 @@
+{
+  "subbundle": "SB04",
+  "title": "Effective-scope process lease cleanup",
+  "status": "Complete",
+  "decision": "Pass",
+  "startingCommit": "d27fb8307aac6a5f88be6504eb5a284ca41ac1f6",
+  "endingCommit": "d27fb8307aac6a5f88be6504eb5a284ca41ac1f6",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/WorkspaceExecutionRunProcessLeases.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Hosting/WorkspaceExecutionRunProcessLeaseCleanupScopeFactory.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/AgentFrameworkWorkspaceFactory.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/WorkspaceExecutionRunProcessLeaseCleanupScopeFactory.cs",
+    "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkWorkspaceProcessLeaseCleanupTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/WorkspaceCommandExecutionServiceTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory.cs"
+  ],
+  "commands": [
+    { "name": "failing-first cross-scope characterization", "exitCode": 1, "expected": true },
+    { "name": "focused governed cleanup matrix", "exitCode": 0 },
+    { "name": "neighboring cleanup, command, and recovery tests", "exitCode": 0 },
+    { "name": "Release solution build", "exitCode": 0 },
+    { "name": "CodeAnalytics post snapshot and symbol ownership queries", "exitCode": 0 },
+    { "name": "six-characterization progression gate", "exitCode": 1, "expected": true },
+    { "name": "filtered full Unit sweep with five downstream exclusions", "exitCode": 124, "expected": false }
+  ],
+  "tests": [
+    { "name": "SB04 governed scope and idempotency matrix", "passed": 13, "failed": 0, "skipped": 0 },
+    { "name": "WorkspaceCommandExecutionService, workspace cleanup, and startup recovery neighborhood", "passed": 82, "failed": 0, "skipped": 0 },
+    { "name": "SB04-SB07 progression characterizations", "passed": 1, "failed": 5, "skipped": 0 }
+  ],
+  "architectureChecks": [
+    { "name": "CodeAnalytics pre/post", "result": "Pass", "evidence": "snap-20260808143458-077a7671 -> snap-20260808145625-a4667094; no blocking errors or project cycle" },
+    { "name": "composition ownership", "result": "Pass", "evidence": "Core exposes typed factory/scope contracts; Hosting and Modules.AgentFramework contain the two production implementations" },
+    { "name": "minimum cleanup composition", "result": "Pass", "evidence": "Each effective-scope cleanup creates only a process host and command service and disposes the owned scope" },
+    { "name": "MAF isolation", "result": "Pass", "evidence": "No process-lease type or semantic reference exists under CanDoItAll.AgentFramework.Maf" },
+    { "name": "C# architecture review", "result": "Pass", "evidence": "proof/SB04/architecture-review.md" }
+  ],
+  "bugs": [
+    "The fixed organization command service enumerated a different durable lease partition than the project-scoped service that launched the kept-alive process."
+  ],
+  "deviations": [
+    "The filtered full Unit sweep exceeded both 120-second and 300-second command ceilings without emitting a test failure; SB04 progression relies on the completed 82-test neighborhood, clean solution build, and exact downstream-characterization gate."
+  ],
+  "knownGaps": [
+    "A completed aggregate Unit count must be captured again at SB09 under the final regression gate."
+  ],
+  "acceptance": [
+    { "criterion": "A project-scoped kept-alive process launched from floating chat is stopped at terminal completion.", "satisfied": true, "evidence": "Organization_execution_cleans_a_real_project_scoped_process_lease" },
+    { "criterion": "Its project-scoped durable lease is removed.", "satisfied": true, "evidence": "Completion, approval-continuation, and failure tests inspect the real project lease store" },
+    { "criterion": "Organization and sandbox runs still clean correctly.", "satisfied": true, "evidence": "Four-state/scope Authorized_cleanup theory passes" },
+    { "criterion": "Scope conflict fails closed and retains the lease for retry.", "satisfied": true, "evidence": "Conflicting_metadata_and_governance_scope_retains_the_lease_for_retry" },
+    { "criterion": "Concurrent cleanup remains idempotent.", "satisfied": true, "evidence": "CleanupAsync_coordinates_concurrent_service_instances_per_lease" }
+  ],
+  "residualRisk": "No known SB04 correctness gap. The final bundle gate must obtain a completed aggregate Unit result because the SB04 aggregate wrapper timed out.",
+  "nextSubbundleUnlocked": true
+}

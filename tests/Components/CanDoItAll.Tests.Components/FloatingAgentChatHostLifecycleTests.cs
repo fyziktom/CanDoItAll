@@ -52,6 +52,8 @@ public sealed class FloatingAgentChatHostLifecycleTests
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IFloatingAgentChatCoordinator>(coordinator);
         context.Services.AddSingleton<IAgentChatContextRegistry>(contextRegistry);
+        context.Services.AddSingleton<IAgentConversationContextService>(
+            new AgentConversationContextService(TimeProvider.System));
         context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
         context.Services.AddSingleton<IAgentReferenceDataProvider, UnexpectedReferenceDataProvider>();
         context.Services.AddSingleton(

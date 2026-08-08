@@ -1182,12 +1182,12 @@ public sealed class AgentChatContextDigestTests
         IAgentChatContextAttachment;
 }
 
-public sealed class AgentRunTransientContextRegistryTests
+public sealed class AgentTurnContextLeaseRegistryTests
 {
     [Fact]
     public void Approval_context_rejects_a_different_top_level_workspace_scope()
     {
-        var registry = new AgentRunTransientContextRegistry();
+        var registry = new AgentTurnContextLeaseRegistry();
         var capturedContext = new AgentRuntimeTransientContext(
             string.Empty,
             WorkspaceScopeDescriptor.Project("project-1"));
@@ -1205,7 +1205,7 @@ public sealed class AgentRunTransientContextRegistryTests
     [Fact]
     public void Approval_context_must_match_the_run_digest_and_is_unavailable_after_release()
     {
-        var registry = new AgentRunTransientContextRegistry();
+        var registry = new AgentTurnContextLeaseRegistry();
         var context = new AgentRuntimeTransientContext(
             "Selected account: 42",
             WorkspaceScopeDescriptor.Organization("org-1"));
@@ -1229,7 +1229,91 @@ public sealed class AgentRunTransientContextRegistryTests
             registry.Resolve(run));
     }
 
-    private static ExecutionRunRecord CreateRun(AgentRuntimeTransientContext context)
+    [Fact]
+    public void Capacity_and_digest_semantics_match_the_renamed_registrys_original_behavior_exactly()
+    {
+        // Characterization: same 64-entry cap, same "different lease for same run id" rejection,
+        // same fail-closed Resolve — proves the rename/hardening did not change these invariants
+        // inherited from the pre-rename registry.
+        var registry = new AgentTurnContextLeaseRegistry();
+        for (var index = 0; index < 64; index++)
+        {
+            var context = new AgentRuntimeTransientContext($"context-{index}");
+            var run = CreateRun(context);
+            registry.Register(run, context);
+            Assert.Equal(context, registry.Resolve(run));
+        }
+
+        var overflowContext = new AgentRuntimeTransientContext("overflow");
+        var overflowRun = CreateRun(overflowContext);
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            registry.Register(overflowRun, overflowContext));
+        Assert.Contains("No more than 64", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TTL_eviction_never_evicts_a_lease_whose_last_observed_state_is_WaitingOnTool()
+    {
+        var evictions = new List<AgentTurnContextLeaseEvictionDiagnostic>();
+        var registry = new AgentTurnContextLeaseRegistry(
+            timeToLive: TimeSpan.FromMilliseconds(1),
+            onEvicted: evictions.Add);
+        var context = new AgentRuntimeTransientContext("Waiting on tool approval");
+        var run = CreateRun(context, ExecutionState.WaitingOnTool);
+
+        registry.Register(run, context);
+        Thread.Sleep(25);
+
+        // A fresh Resolve re-observes WaitingOnTool and must still find the lease resident —
+        // TTL eviction must never have removed an actively waiting run's lease.
+        Assert.Equal(context, registry.Resolve(run));
+        Assert.Empty(evictions);
+    }
+
+    [Fact]
+    public void TTL_eviction_removes_expired_leases_whose_last_observed_state_is_terminal()
+    {
+        var evictions = new List<AgentTurnContextLeaseEvictionDiagnostic>();
+        var registry = new AgentTurnContextLeaseRegistry(
+            timeToLive: TimeSpan.FromMilliseconds(1),
+            onEvicted: evictions.Add);
+        var context = new AgentRuntimeTransientContext("Left behind after completion");
+        var run = CreateRun(context, ExecutionState.Completed);
+
+        registry.Register(run, context);
+        Thread.Sleep(25);
+
+        // The next registry interaction (Register for a different run) sweeps expired leases.
+        var otherContext = new AgentRuntimeTransientContext("Other run");
+        var otherRun = CreateRun(otherContext, ExecutionState.Running);
+        registry.Register(otherRun, otherContext);
+
+        var eviction = Assert.Single(evictions);
+        Assert.Equal(run.Id, eviction.ExecutionRunId);
+        Assert.True(eviction.Age >= TimeSpan.FromMilliseconds(1));
+        Assert.Throws<AgentRunTransientContextUnavailableException>(() => registry.Resolve(run));
+    }
+
+    [Fact]
+    public void Terminal_cleanup_Remove_always_wins_over_TTL_eviction()
+    {
+        // Negative-implementation-detection guard: if a caller removes a lease on terminal
+        // transition, the lease must be gone immediately regardless of TTL configuration — this
+        // fails if Remove were ever implemented as "mark for later TTL sweep" instead of an
+        // immediate removal.
+        var registry = new AgentTurnContextLeaseRegistry(timeToLive: TimeSpan.FromDays(365));
+        var context = new AgentRuntimeTransientContext("Completed run");
+        var run = CreateRun(context, ExecutionState.Completed);
+
+        registry.Register(run, context);
+        registry.Remove(run.Id);
+
+        Assert.Throws<AgentRunTransientContextUnavailableException>(() => registry.Resolve(run));
+    }
+
+    private static ExecutionRunRecord CreateRun(
+        AgentRuntimeTransientContext context,
+        ExecutionState state = ExecutionState.WaitingOnTool)
     {
         var now = DateTimeOffset.UtcNow;
         var metadata = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
@@ -1251,7 +1335,7 @@ public sealed class AgentRunTransientContextRegistryTests
             string.Empty,
             "test-provider",
             "test-model",
-            ExecutionState.WaitingOnTool,
+            state,
             null,
             now,
             now,
@@ -1379,7 +1463,7 @@ public sealed class AgentChatExecutionOrchestratorTests
         var approvalResult = await orchestrator.RespondToPendingApprovalsAsync(
             agentId,
             sessionId,
-            approved: true);
+            decisions: [new PendingToolApprovalDecision("approval-1", Approved: true)]);
 
         Assert.Same(workspaceProxy.SendResult, sendResult);
         Assert.Same(workspaceProxy.ApprovalResult, approvalResult);
@@ -1481,16 +1565,41 @@ public sealed class AgentChatExecutionOrchestratorTests
                 PartitionedSequencedStreamPolicy.Default,
                 TimeProvider.System),
             TimeProvider.System);
+        var generationSource = new FixedAgentExecutionProfileGenerationSource(
+            new DatabaseProfileGeneration(0));
         return new AgentChatExecutionOrchestrator(
             workspace,
-            registry,
+            new AgentTurnContextCaptureService(
+                registry,
+                new OrchestratorSandboxAuthorityResolver(),
+                generationSource,
+                TimeProvider.System),
             notificationHub,
             coordinator,
             new OrchestratorWorkspaceFactory(workspace, scope),
             new OrchestratorDatabaseProfileRuntimeAccessor(profileId),
-            new FixedAgentExecutionProfileGenerationSource(
-                new DatabaseProfileGeneration(0)),
-            TimeProvider.System);
+            generationSource);
+    }
+
+    private sealed class OrchestratorSandboxAuthorityResolver
+        : IAgentExecutionAuthorityResolver
+    {
+        public ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(
+            AgentExecutionAuthorityResolutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new AgentExecutionAuthorityRecord(
+                AgentExecutionAuthorityId.Create(),
+                request.AgentId,
+                Guid.NewGuid(),
+                request.ExpectedDatabaseProfileGeneration,
+                request.ObservedWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox,
+                readAllowed: true,
+                mutationAllowed: false,
+                "test",
+                "test-fingerprint",
+                DateTimeOffset.UtcNow));
+        }
     }
 
     private static (IOrchestratorWorkspaceService Service, WorkspaceServiceProxy Proxy)

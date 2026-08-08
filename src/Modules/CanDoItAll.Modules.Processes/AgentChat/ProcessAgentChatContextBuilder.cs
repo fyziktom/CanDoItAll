@@ -65,8 +65,8 @@ internal static class ProcessAgentChatContextBuilder
     private const string Module = "processes";
     private const string WorkspaceSurface = "workspace";
     private const string LiveSurface = "live";
-    private const string WorkspaceSourceKind = "processes";
-    private const string LiveSourceKind = "processes-live";
+    internal const string WorkspaceSourceKind = "processes";
+    internal const string LiveSourceKind = "processes-live";
     private const int MaximumBoundedLabelLength = 180;
     private const int MaximumBoundedIdentityLength = 500;
     private const int MaximumBoundedFactLength = 800;

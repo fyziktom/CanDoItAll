@@ -23,31 +23,22 @@ public sealed class ScenarioHarnessAgentRuntimeTests
             var commandService = DispatchProxy.Create<IWorkspaceCommandExecutionService, RecordingCommandExecutionProxy>();
             var commandRecorder = (RecordingCommandExecutionProxy)(object)commandService;
             commandRecorder.WorkspaceRoot = workspaceRoot;
+            // SB18: the interception core no longer holds an inner fallback runtime — it never
+            // falls through for a scenario prompt, so there is nothing to prove "must not be
+            // called" against here directly (that boundary now belongs to the decorator; see
+            // RuntimePortDecoratorFallthroughTests).
             var runtime = new ScenarioHarnessAgentRuntime(
-                DispatchProxy.Create<IAgentRuntime, ThrowingAgentRuntimeProxy>(),
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
                 new WorkspaceFileService(workspaceRoot, WorkspaceScopeDescriptor.Sandbox),
                 commandService);
-            var provider = CreateScenarioProvider();
-            var agent = CreateAgent(provider.Id);
-            var now = DateTimeOffset.UtcNow;
 
-            var response = await runtime.RunAsync(
-                agent,
-                provider,
-                new ChatSessionRecord(
-                    Guid.NewGuid(),
-                    agent.Id,
-                    "SC03",
-                    now,
-                    now,
-                    Messages: []),
-                capabilities: [],
-                memory: [],
+            var response = await runtime.ExecuteScenarioRunAsync(
                 prompt: "SC03 - generate and build the controlled Blazor sample.",
-                runtimeSessionKey: null,
-                progressCallback: static (_, _, _) => Task.CompletedTask);
+                progressCallback: static (_, _, _) => Task.CompletedTask,
+                suppressApprovalRequirements: false,
+                structuredOutput: null,
+                executionOptions: null);
 
             Assert.Equal(1, commandRecorder.DotnetBuildCallCount);
             Assert.NotNull(commandRecorder.BuildBoundaryPath);
@@ -74,62 +65,6 @@ public sealed class ScenarioHarnessAgentRuntimeTests
         {
             Directory.Delete(workspaceRoot, recursive: true);
         }
-    }
-
-    private static AgentDefinition CreateAgent(Guid providerId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return new AgentDefinition(
-            Guid.NewGuid(),
-            "Scenario Harness Operator",
-            "Scenario harness",
-            "Runs deterministic integrated scenarios.",
-            "Execute the requested scenario.",
-            AgentLifecycleStatus.Active,
-            providerId,
-            "scenario-local",
-            AgentWorkloadKind.Programming,
-            AgentChatHistoryMode.FrameworkManaged,
-            Temperature: 0,
-            RequirePerServiceCallChatHistoryPersistence: false,
-            EnableBackgroundResponses: false,
-            ConfigurationJson: "{}",
-            IsTemplate: false,
-            TemplateKey: string.Empty,
-            AgentPermissionsPolicy.Default,
-            Capabilities: [],
-            Tags: [ScenarioHarnessCatalog.AgentTag],
-            CreatedAtUtc: now,
-            UpdatedAtUtc: now);
-    }
-
-    private static ProviderProfile CreateScenarioProvider()
-    {
-        return new ProviderProfile(
-            Guid.NewGuid(),
-            ScenarioHarnessCatalog.ProviderName,
-            ProviderKind.OpenAi,
-            ScenarioHarnessCatalog.ProviderBaseUrl,
-            string.Empty,
-            "scenario-local",
-            ProviderTransportKind.Responses,
-            IsEnabled: true,
-            SupportsStreaming: true,
-            SupportsTools: true,
-            PreferFrameworkManagedChatHistory: true,
-            SupportsBackgroundResponses: false,
-            ConfigurationJson: "{}",
-            Notes: "Deterministic test provider.",
-            HealthStatus: "Healthy",
-            LastCheckedAtUtc: DateTimeOffset.UtcNow,
-            SuggestedModels: ["scenario-local"]);
-    }
-
-    public class ThrowingAgentRuntimeProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-            => throw new InvalidOperationException(
-                $"The inner agent runtime must not be called by SC03. Attempted member: {targetMethod?.Name}.");
     }
 
     public class RecordingCommandExecutionProxy : DispatchProxy

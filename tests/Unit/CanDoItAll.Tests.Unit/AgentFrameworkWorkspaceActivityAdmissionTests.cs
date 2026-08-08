@@ -3,8 +3,10 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
@@ -73,7 +75,7 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
         var store = CreateUnexpectedDependency<ISandboxWorkspaceStore>();
         var packageService =
             CreateUnexpectedDependency<IAgentPackageService>();
-        var runtime = CreateUnexpectedDependency<IAgentRuntime>();
+        var runtime = CreateUnexpectedDependency<IFakeAgentRuntime>();
         var capabilityProofService =
             CreateUnexpectedDependency<ICapabilityProofService>();
         var coordinator = CreateCoordinator();
@@ -88,10 +90,16 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
             new DatabaseProfileGeneration(0));
         using var preparationCache = new AgentExecutionPreparationCache(
             AgentExecutionPreparationCachePolicy.Default);
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the unexpected-call runtime proxy without invoking it.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime.Service);
         using var service = new AgentFrameworkWorkspaceService(
             store.Service,
             packageService.Service,
-            runtime.Service,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             capabilityProofService.Service,
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             coordinator,
@@ -129,15 +137,21 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
 
     private static AgentFrameworkWorkspaceService CreateService(
         ISandboxWorkspaceStore store,
-        IAgentRuntime runtime,
+        IFakeAgentRuntime runtime,
         IAgentExecutionActivityCoordinator coordinator,
         AgentExecutionActivityWorkspaceIdentity workspaceIdentity,
         IAgentExecutionPreparationCache preparationCache)
     {
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the fake runtime for all four ports.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime);
         return new(
             store,
             CreateUnexpectedDependency<IAgentPackageService>().Service,
-            runtime,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             CreateUnexpectedDependency<ICapabilityProofService>().Service,
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             coordinator,
@@ -251,7 +265,7 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
         }
     }
 
-    private sealed class SuccessfulAgentRuntime : IAgentRuntime
+    private sealed class SuccessfulAgentRuntime : IFakeAgentRuntime
     {
         public Task<AgentRuntimeResponse> RunAsync(
             AgentDefinition agent,

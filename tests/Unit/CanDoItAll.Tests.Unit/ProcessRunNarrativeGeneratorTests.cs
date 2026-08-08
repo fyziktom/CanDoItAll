@@ -6,8 +6,10 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessRunNarrativeGeneratorTests
@@ -600,13 +602,19 @@ public sealed class ProcessRunNarrativeGeneratorTests
 
     private static AgentFrameworkWorkspaceService CreateProductionWorkspaceService(
         ISandboxWorkspaceStore store,
-        IAgentRuntime runtime,
+        IFakeAgentRuntime runtime,
         IAgentExecutionPreparationCache preparationCache)
     {
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the fake runtime for all four ports.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime);
         return new AgentFrameworkWorkspaceService(
             store,
             new UnusedAgentPackageService(),
-            runtime,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             new UnusedCapabilityProofService(),
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             new AgentExecutionActivityCoordinator(
@@ -752,7 +760,7 @@ public sealed class ProcessRunNarrativeGeneratorTests
         }
     }
 
-    private sealed class AdversarialNarrativeRuntime : IAgentRuntime
+    private sealed class AdversarialNarrativeRuntime : IFakeAgentRuntime
     {
         private readonly TaskCompletionSource firstRunRelease =
             new(TaskCreationOptions.RunContinuationsAsynchronously);

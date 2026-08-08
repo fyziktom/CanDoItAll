@@ -340,7 +340,7 @@ public sealed class CurrentProfileAgentExecutionActivityAdmissionTests
                 await service.ContinueExecutionRunAsync(
                     Guid.NewGuid(),
                     operationId,
-                    approved: true);
+                    decisions: [new PendingToolApprovalDecision("approval-1", Approved: true)]);
                 return;
             case DirectExecutionEntry.SendMessage:
                 await service.SendMessageAsync(
@@ -354,7 +354,7 @@ public sealed class CurrentProfileAgentExecutionActivityAdmissionTests
                     agentId,
                     sessionId,
                     operationId,
-                    approved: true);
+                    decisions: [new PendingToolApprovalDecision("approval-1", Approved: true)]);
                 return;
             default:
                 throw new ArgumentOutOfRangeException(nameof(entry), entry, null);

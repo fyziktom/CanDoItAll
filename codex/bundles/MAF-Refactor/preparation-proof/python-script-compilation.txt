@@ -1,0 +1,13 @@
+Python script compilation and CLI validation
+Date: 2026-08-06
+
+Compilation passed for 5 Python scripts with Python bytecode redirected outside the bundle.
+CLI help passed:
+- check_architecture_guards.py
+- check_cutover_guards.py
+- report_project_references.py
+- scan_affected_runtime_callers.py
+- validate_bundle_structure.py
+
+PowerShell execution: not run because neither pwsh nor Windows PowerShell was available in the preparation container.
+The target executor must run scripts/run-validation.ps1 from a local CanDoItAll checkout during SB00 and every required checkpoint.

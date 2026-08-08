@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 public readonly record struct DatabaseProfileGeneration
 {
+    [JsonConstructor]
     public DatabaseProfileGeneration(long value)
     {
         if (value < 0)

@@ -53,11 +53,8 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
                 [providerA.Id] = credentialA,
                 [providerB.Id] = credentialB
             });
-        using var services = new ServiceCollection()
-            .AddSingleton<IAgentProviderCredentialResolver>(resolver)
-            .BuildServiceProvider();
         var factory = new MafProviderAgentFactory(
-            new MafProviderCredentialService(services),
+            new MafProviderCredentialService(resolver),
             NoOpMafProviderStreamingDispatchGate.Instance);
         var environmentNames = new[]
         {
@@ -72,8 +69,8 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
 
         try
         {
-            agentA = CreateFrameworkAgent(factory, services, providerA);
-            agentB = CreateFrameworkAgent(factory, services, providerB);
+            agentA = CreateFrameworkAgent(factory, providerA);
+            agentB = CreateFrameworkAgent(factory, providerB);
 
             var responses = await Task.WhenAll(
                     RunTextAsync(agentA, "Respond for profile A."),
@@ -283,7 +280,6 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
 
     private static AIAgent CreateFrameworkAgent(
         MafProviderAgentFactory factory,
-        IServiceProvider services,
         ProviderProfile provider)
     {
         return factory.CreateFrameworkAgent(
@@ -291,8 +287,7 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
             provider.DefaultModel,
             MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
             frameworkManagedHistory: true,
-            allowBackgroundResponses: false,
-            services);
+            allowBackgroundResponses: false);
     }
 
     private static async Task<string> RunTextAsync(

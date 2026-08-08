@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Models;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService

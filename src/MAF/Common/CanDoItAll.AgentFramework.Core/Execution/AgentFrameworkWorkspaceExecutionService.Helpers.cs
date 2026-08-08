@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed partial class AgentFrameworkWorkspaceExecutionService

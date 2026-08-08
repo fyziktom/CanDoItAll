@@ -1,0 +1,27 @@
+Claude/Fable 5 revision audit
+Date: 2026-08-06
+
+Bundle baseline:
+- repository: fyziktom/CanDoItAll
+- branch: development
+- analyzed commit: 51d9a2f071e9a5f295abac884c8c667328462cc4
+
+Inventory and semantic checks:
+- subbundles: 19
+- checkpoint subbundles: 6
+- JSON files parsed: 22
+- Markdown files checked: 121
+- Claude root execution/handoff/review artifacts: 8
+- per-subbundle Claude Code prompts: 19
+- Claude execution/review/bugfix prompts: 22
+- explicit local Markdown references: resolved
+- Markdown code-fence parity: passed
+- UTF-8 and control-character audit: passed
+- packaged Python caches: none
+- subbundle IDs/titles/dependencies/prompts/proof/handoff consistency: passed
+- required risk, cutover, debugging, exact-adaptation, lightweight-LLM, and ordinary-chat coverage: passed
+- stale GPT-5.6/CODEX-PROMPT terms in implementation-facing subbundles: none
+
+Important preparation limitation:
+- no local target-repository build, tests, CodeAnalytics snapshot, PowerShell execution, or live provider/process/UI run was performed in this artifact container;
+- SB00 is required to refresh all current-branch evidence before implementation.

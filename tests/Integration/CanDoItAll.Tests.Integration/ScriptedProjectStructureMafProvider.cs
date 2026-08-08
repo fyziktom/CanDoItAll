@@ -18,11 +18,10 @@ internal sealed class ScriptedProjectStructureMafProviderAgentFactory(
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
-        bool allowBackgroundResponses,
-        IServiceProvider services)
+        bool allowBackgroundResponses)
     {
         chatClient.RecordFactoryInvocation(provider, model);
-        return chatClient.AsAIAgent(options: options, services: services);
+        return chatClient.AsAIAgent(options: options);
     }
 }
 
@@ -34,11 +33,10 @@ internal sealed class ScriptedReadOnlyProjectStructureMafProviderAgentFactory(
         string model,
         ChatClientAgentOptions options,
         bool frameworkManagedHistory,
-        bool allowBackgroundResponses,
-        IServiceProvider services)
+        bool allowBackgroundResponses)
     {
         chatClient.RecordFactoryInvocation(provider, model);
-        return chatClient.AsAIAgent(options: options, services: services);
+        return chatClient.AsAIAgent(options: options);
     }
 }
 
@@ -178,21 +176,16 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
             CaptureTools(options, configuredScenario);
             InvocationCount++;
 
+            // Auto-approved non-interactive runs use the production implicit
+            // mutation-lease protocol: mutation tools acquire and release their
+            // own lease, and explicit lease tools are deliberately not exposed
+            // for this purpose (explicit lease choreography belongs to governed
+            // process automation).
             return Task.FromResult(responseIndex++ switch
             {
-                0 => CreateFunctionCallResponse(
-                    LeaseCallId,
-                    ProjectLeaseAcquireToolName,
-                    new Dictionary<string, object?>
-                    {
-                        ["projectId"] = configuredScenario.ProjectId,
-                        ["reason"] = "Deterministic real-MAF Project Structure prompt harness",
-                        ["durationMinutes"] = 5
-                    }),
-                1 => CreateMutationCallResponse(messageSnapshot, configuredScenario),
-                2 => CreateReadCallResponse(messageSnapshot, configuredScenario),
-                3 => CreateReleaseCallResponse(messageSnapshot, configuredScenario),
-                4 => CreateCompletionResponse(messageSnapshot),
+                0 => CreateMutationCallResponse(configuredScenario),
+                1 => CreateReadCallResponse(messageSnapshot, configuredScenario),
+                2 => CreateCompletionResponse(messageSnapshot),
                 _ => throw new InvalidOperationException("The scripted Project Structure scenario received an unexpected provider turn.")
             });
         }
@@ -222,11 +215,8 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
     {
     }
 
-    private ChatResponse CreateMutationCallResponse(
-        IReadOnlyList<ChatMessage> messages,
-        Scenario configuredScenario)
+    private ChatResponse CreateMutationCallResponse(Scenario configuredScenario)
     {
-        AcquiredLease = ReadFunctionResult<ProjectStructureLeaseSnapshot>(messages, LeaseCallId);
         return configuredScenario switch
         {
             NodeCreateScenario nodeCreate => CreateNodeCallResponse(nodeCreate),
@@ -249,8 +239,7 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
                     "Canonical persistence proof for the Project Structure prompt harness.",
                     configuredScenario.ParentNodeId,
                     ObjectSubtype: "architecture",
-                    LeaseToken: AcquiredLease?.LeaseToken
-                        ?? throw new InvalidOperationException("The acquired lease token was not captured."))
+                    LeaseToken: null)
             });
 
     private ChatResponse CreateNodesCopyCallResponse(NodesCopyScenario configuredScenario)
@@ -263,8 +252,7 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
                 ["request"] = new ProjectStructureNodesCopyInput(
                     configuredScenario.SourceNodeIds,
                     configuredScenario.DestinationParentNodeId,
-                    AcquiredLease?.LeaseToken
-                        ?? throw new InvalidOperationException("The acquired lease token was not captured."))
+                    LeaseToken: null)
             });
 
     private ChatResponse CreateReadCallResponse(
@@ -308,27 +296,9 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
             .ToArray();
     }
 
-    private ChatResponse CreateReleaseCallResponse(
-        IReadOnlyList<ChatMessage> messages,
-        Scenario configuredScenario)
-    {
-        CanonicalReadback = ReadFunctionResult<ProjectStructureReadToolData>(messages, StructureReadCallId);
-        return CreateFunctionCallResponse(
-            LeaseReleaseCallId,
-            LeaseReleaseToolName,
-            new Dictionary<string, object?>
-            {
-                ["scope"] = new ProjectStructureScopeInput(
-                    ProjectStructureLeaseScopeKind.Project,
-                    ProjectId: configuredScenario.ProjectId),
-                ["leaseToken"] = AcquiredLease?.LeaseToken
-                    ?? throw new InvalidOperationException("The acquired lease token was not captured.")
-            });
-    }
-
     private ChatResponse CreateCompletionResponse(IReadOnlyList<ChatMessage> messages)
     {
-        ReleasedLease = ReadFunctionResult<ProjectStructureLeaseSnapshot>(messages, LeaseReleaseCallId);
+        CanonicalReadback = ReadFunctionResult<ProjectStructureReadToolData>(messages, StructureReadCallId);
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, CompletionText));
     }
 
@@ -361,10 +331,8 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
         };
         string[] missingTools =
         [
-            ProjectLeaseAcquireToolName,
             mutationToolName,
-            StructureReadToolName,
-            LeaseReleaseToolName
+            StructureReadToolName
         ];
         missingTools = missingTools
             .Where(toolName => !toolNames.Contains(toolName))
@@ -373,6 +341,22 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
         {
             throw new InvalidOperationException(
                 $"Real MAF did not attach the required Project Structure tools: {string.Join(", ", missingTools)}.");
+        }
+
+        // The auto-approved non-interactive purpose must NOT expose explicit
+        // lease tools; the implicit mutation lease is the production contract.
+        string[] forbiddenLeaseTools =
+        [
+            ProjectLeaseAcquireToolName,
+            LeaseReleaseToolName
+        ];
+        var unexpectedLeaseTools = forbiddenLeaseTools
+            .Where(toolNames.Contains)
+            .ToArray();
+        if (unexpectedLeaseTools.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"Real MAF attached explicit lease tools to an auto-approved non-interactive run: {string.Join(", ", unexpectedLeaseTools)}.");
         }
     }
 

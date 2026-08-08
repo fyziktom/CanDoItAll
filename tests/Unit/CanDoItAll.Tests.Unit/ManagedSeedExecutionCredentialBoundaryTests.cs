@@ -4,11 +4,13 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class ManagedSeedExecutionCredentialBoundaryTests
@@ -78,11 +80,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
     {
         var provider = CreateProvider();
         var credentialResolver = new CountingCredentialResolver();
-        using var services = new ServiceCollection()
-            .AddSingleton<IAgentProviderCredentialResolver>(
-                credentialResolver)
-            .BuildServiceProvider();
-        var credentialService = new MafProviderCredentialService(services);
+        var credentialService = new MafProviderCredentialService(credentialResolver);
         var factory = new MafProviderAgentFactory(
             credentialService,
             NoOpMafProviderStreamingDispatchGate.Instance);
@@ -102,8 +100,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
             provider.DefaultModel,
             options,
             frameworkManagedHistory: false,
-            allowBackgroundResponses: false,
-            services);
+            allowBackgroundResponses: false);
 
         Assert.NotNull(frameworkAgent);
         Assert.Equal(1, credentialResolver.CallCount);
@@ -112,7 +109,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
 
     private static AgentFrameworkWorkspaceService CreateService(
         ISandboxWorkspaceStore store,
-        IAgentRuntime runtime,
+        IFakeAgentRuntime runtime,
         AgentExecutionActivityWorkspaceIdentity workspaceIdentity,
         IAgentExecutionPreparationCache preparationCache,
         IAgentProviderCredentialResolver credentialResolver)
@@ -124,10 +121,16 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
                 PartitionedSequencedStreamPolicy.Default,
                 TimeProvider.System),
             TimeProvider.System);
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the fake runtime for all four ports.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime);
         return new(
             store,
             CreateUnexpectedDependency<IAgentPackageService>(),
-            runtime,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             CreateUnexpectedDependency<ICapabilityProofService>(),
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             coordinator,
@@ -219,7 +222,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
     }
 
     private sealed class RuntimeBoundaryProbe(
-        CountingCredentialResolver credentialResolver) : IAgentRuntime
+        CountingCredentialResolver credentialResolver) : IFakeAgentRuntime
     {
         private int runCallCount;
 

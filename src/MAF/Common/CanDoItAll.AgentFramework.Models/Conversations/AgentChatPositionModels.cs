@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -16,6 +17,7 @@ public static class AgentChatPositionLimits
 
 public readonly record struct AgentChatNavigationIdentity
 {
+    [JsonConstructor]
     public AgentChatNavigationIdentity(Guid value)
     {
         if (value == Guid.Empty)

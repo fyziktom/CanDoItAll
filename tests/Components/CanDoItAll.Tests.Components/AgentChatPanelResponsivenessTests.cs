@@ -815,17 +815,42 @@ public sealed class AgentChatPanelResponsivenessTests
                 PartitionedSequencedStreamPolicy.Default,
                 TimeProvider.System),
             TimeProvider.System);
+        var generationSource = new FixedAgentExecutionProfileGenerationSource(
+            new DatabaseProfileGeneration(0));
         return new AgentChatExecutionOrchestrator(
             workspace,
-            registry,
+            new AgentTurnContextCaptureService(
+                registry,
+                new ResponsiveSandboxAuthorityResolver(),
+                generationSource,
+                TimeProvider.System),
             new AgentChatExecutionNotificationHub(
                 NullLogger<AgentChatExecutionNotificationHub>.Instance),
             coordinator,
             new ResponsiveWorkspaceFactory(workspace, scope),
             new ResponsiveDatabaseProfileRuntimeAccessor(profileId),
-            new FixedAgentExecutionProfileGenerationSource(
-                new DatabaseProfileGeneration(0)),
-            TimeProvider.System);
+            generationSource);
+    }
+
+    private sealed class ResponsiveSandboxAuthorityResolver
+        : IAgentExecutionAuthorityResolver
+    {
+        public ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(
+            AgentExecutionAuthorityResolutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new AgentExecutionAuthorityRecord(
+                AgentExecutionAuthorityId.Create(),
+                request.AgentId,
+                Guid.NewGuid(),
+                request.ExpectedDatabaseProfileGeneration,
+                request.ObservedWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox,
+                readAllowed: true,
+                mutationAllowed: false,
+                "test",
+                "test-fingerprint",
+                DateTimeOffset.UtcNow));
+        }
     }
 
     private static IRenderedComponent<AgentChatPanel> RenderFocusedChat(

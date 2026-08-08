@@ -26,6 +26,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            ProjectStructureExecutionAuthorityProvider>());
         services.AddFileInteractionComponents(builder => builder
             .AddBuiltIns()
             .AddZoomPanRenderers()
@@ -57,6 +60,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectWorkbenchLifecycleService>();
         services.AddScoped<ProjectWorkbenchRelationService>();
         services.AddScoped<ProjectStructureAssemblyService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IAgentContextContributor,
+            AgentContext.ProjectStructureRuntimeGuidanceContributor>());
         services.AddScoped<ProjectStructureGanttMutationService>();
         services.AddSingleton<ProjectStructureGanttProjectionAdapter>();
         services.AddScoped<ProjectStructureProjectionMaintenanceService>();

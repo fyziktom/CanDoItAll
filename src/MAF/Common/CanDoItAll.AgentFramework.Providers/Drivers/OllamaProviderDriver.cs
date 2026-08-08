@@ -116,10 +116,17 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             ["messages"] = ProviderDriverProtocol.BuildOllamaChatMessages(request),
             ["stream"] = false
         };
-        var options = ResolveChatOptions(request.Provider, request.ModelParameterConfigurationJson);
+        var options = ResolveChatOptions(request.Provider, request.ModelParameterConfigurationJson, request.Temperature);
         if (options.Count > 0)
         {
             payload["options"] = options;
+        }
+
+        if (request.ResponseFormat is { RequireJson: true })
+        {
+            // Ollama has no schema-enforced JSON mode; plain JSON mode is the closest supported behavior.
+            // Schema validation for Ollama responses stays the caller's responsibility.
+            payload["format"] = "json";
         }
 
         var thinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
@@ -331,13 +338,18 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
 
     private static Dictionary<string, object> ResolveChatOptions(
         ProviderProfile provider,
-        string requestModelParameterConfigurationJson)
+        string requestModelParameterConfigurationJson,
+        double? temperature)
     {
         var options = new Dictionary<string, object>(StringComparer.Ordinal);
         var numPredict = AgentProviderModelParameterPolicy.ResolveOllamaMaxOutputTokensOrDefault(
             provider.ConfigurationJson,
             requestModelParameterConfigurationJson);
         options[NumPredictSnakePropertyName] = numPredict;
+        if (temperature is { } value)
+        {
+            options["temperature"] = value;
+        }
 
         return options;
     }

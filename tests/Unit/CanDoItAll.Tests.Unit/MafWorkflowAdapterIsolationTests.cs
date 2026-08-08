@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -16,9 +17,11 @@ public sealed class MafWorkflowAdapterIsolationTests
         Assert.Equal(
             "CanDoItAll.AgentFramework.Workflows.MafAdapter",
             typeof(MafWorkflowEventNormalizer).Assembly.GetName().Name);
+        // The neutral workflow LLM invoker moved out of the MAF adapter into
+        // the provider-neutral Workflows runtime.
         Assert.Equal(
-            "CanDoItAll.AgentFramework.Workflows.MafAdapter",
-            typeof(MafWorkflowLlmComponentInvoker).Assembly.GetName().Name);
+            "CanDoItAll.AgentFramework.Workflows.Runtime",
+            typeof(WorkflowLlmComponentInvoker).Assembly.GetName().Name);
 
         Assert.Equal(
             "CanDoItAll.AgentFramework.Maf",
@@ -82,8 +85,6 @@ public sealed class MafWorkflowAdapterIsolationTests
             "MafInProcessWorkflowExecutionBackend.cs",
             "MafWorkflowCompiler.cs",
             "MafWorkflowEventNormalizer.cs",
-            "MafWorkflowLlmComponentInvoker.cs",
-            "MafHandoffWorkflowFactory.cs",
             "MafConfiguredFileArtifactResolver.cs",
             "WorkflowBackendExternalRequestCapture.cs",
             "WorkflowBackendProgressEventObserver.cs",
@@ -94,6 +95,24 @@ public sealed class MafWorkflowAdapterIsolationTests
         {
             Assert.True(File.Exists(Path.Combine(adapterRoot, fileName)), $"Missing adapter file: {fileName}");
         }
+
+        var handoffFactoryPath = Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Handoffs",
+            "MafHandoffWorkflowFactory.cs");
+        Assert.True(
+            File.Exists(handoffFactoryPath),
+            "MafHandoffWorkflowFactory.cs moved out of the workflow adapter into the MAF runtime and must live at Runtime/Handoffs.");
+
+        var mafProjectText = File.ReadAllText(Path.Combine(
+            root,
+            @"src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj"));
+        Assert.DoesNotContain("Workflows.MafAdapter", mafProjectText, StringComparison.Ordinal);
 
         var mafWorkflowDirectory = Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Maf", "Runtime", "Workflows");
         var remainingMafWorkflowFiles = Directory.Exists(mafWorkflowDirectory)

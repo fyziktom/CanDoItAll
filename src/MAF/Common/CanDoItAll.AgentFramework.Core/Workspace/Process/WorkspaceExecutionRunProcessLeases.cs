@@ -12,6 +12,18 @@ public interface IWorkspaceExecutionRunProcessLeaseCleaner
     Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(Guid executionRunId);
 }
 
+public interface IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory
+{
+    IWorkspaceExecutionRunProcessLeaseCleanupScope Create(WorkspaceExecutionScope scope);
+}
+
+public interface IWorkspaceExecutionRunProcessLeaseCleanupScope : IAsyncDisposable
+{
+    WorkspaceExecutionScope Scope { get; }
+
+    Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(Guid executionRunId);
+}
+
 internal interface IWorkspaceExecutionRunProcessLeaseCleanupExecutor
 {
     Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(Guid executionRunId);
@@ -34,20 +46,20 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
     : IWorkspaceExecutionRunProcessLeaseCleaner
 {
     private readonly ISandboxWorkspaceExecutionRunStore executionRunStore;
-    private readonly IWorkspaceExecutionRunProcessLeaseCleanupExecutor cleanupExecutor;
+    private readonly WorkspaceExecutionScope configuredScope;
+    private readonly IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory cleanupScopeFactory;
 
     public WorkspaceExecutionRunProcessLeaseCleaner(
         ISandboxWorkspaceExecutionRunStore executionRunStore,
-        IWorkspaceCommandExecutionService commandExecutionService)
+        WorkspaceExecutionScope configuredScope,
+        IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory cleanupScopeFactory)
     {
         this.executionRunStore = executionRunStore
             ?? throw new ArgumentNullException(nameof(executionRunStore));
-        ArgumentNullException.ThrowIfNull(commandExecutionService);
-        cleanupExecutor = commandExecutionService
-            as IWorkspaceExecutionRunProcessLeaseCleanupExecutor
-            ?? throw new ArgumentException(
-                "Command execution service must provide the internal ExecutionRun process lease cleanup executor.",
-                nameof(commandExecutionService));
+        this.configuredScope = configuredScope
+            ?? throw new ArgumentNullException(nameof(configuredScope));
+        this.cleanupScopeFactory = cleanupScopeFactory
+            ?? throw new ArgumentNullException(nameof(cleanupScopeFactory));
     }
 
     public async Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(
@@ -89,9 +101,26 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
                 $"Execution run '{executionRunId:N}' is '{persistedRun.State}', not a persisted terminal state; workspace process cleanup was not authorized.");
         }
 
+        var scopeResolution = ResolveEffectiveScope(persistedRun);
+        if (!scopeResolution.Succeeded)
+        {
+            return Failure(executionRunId, scopeResolution.FailureMessage);
+        }
+
         try
         {
-            return await cleanupExecutor
+            await using var cleanupScope = cleanupScopeFactory.Create(
+                scopeResolution.Scope
+                ?? throw new InvalidOperationException(
+                    "Successful workspace process cleanup scope resolution produced no scope."));
+            if (!cleanupScope.Scope.SharesIdentityWith(scopeResolution.Scope))
+            {
+                return Failure(
+                    executionRunId,
+                    "The workspace process cleanup factory returned services for a different workspace scope. Durable leases were retained for a later cleanup attempt.");
+            }
+
+            return await cleanupScope
                 .CleanupAsync(executionRunId)
                 .ConfigureAwait(false);
         }
@@ -103,6 +132,73 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
         }
     }
 
+    private CleanupScopeResolution ResolveEffectiveScope(ExecutionRunRecord run)
+    {
+        var recordedScope = ExecutionInvocationMetadata
+            .ResolveRecordedContextWorkspaceScopeForReporting(run);
+        if (recordedScope.IsPresent && !recordedScope.IsValid)
+        {
+            return CleanupScopeResolution.Failed(
+                $"Execution run '{run.Id:N}' carries malformed workspace scope metadata. Durable leases were retained for a later cleanup attempt.");
+        }
+
+        var governanceRead = AgentTurnContextMetadata
+            .ReadExecutionGovernanceSnapshot(run.MetadataJson);
+        if (governanceRead.State == AgentExecutionGovernanceReadState.Malformed)
+        {
+            return CleanupScopeResolution.Failed(
+                $"Execution run '{run.Id:N}' carries a malformed authority projection. Durable leases were retained for a later cleanup attempt.");
+        }
+
+        var governance = governanceRead.Snapshot;
+        if (governance is not null)
+        {
+            if (governance.AgentId != run.AgentId)
+            {
+                return CleanupScopeResolution.Failed(
+                    $"Execution run '{run.Id:N}' carries an authority projection for a different agent. Durable leases were retained for a later cleanup attempt.");
+            }
+
+            if (configuredScope.DatabaseProfileId is { } databaseProfileId &&
+                governance.DatabaseProfileId != databaseProfileId)
+            {
+                return CleanupScopeResolution.Failed(
+                    $"Execution run '{run.Id:N}' carries an authority projection for a different database profile. Durable leases were retained for a later cleanup attempt.");
+            }
+
+            if (configuredScope.DatabaseProfileGeneration is { } databaseProfileGeneration &&
+                governance.DatabaseProfileGeneration != databaseProfileGeneration)
+            {
+                return CleanupScopeResolution.Failed(
+                    $"Execution run '{run.Id:N}' carries an authority projection from a different database profile generation. Durable leases were retained for a later cleanup attempt.");
+            }
+
+            if (recordedScope.Scope is { } metadataScope &&
+                metadataScope != governance.WorkspaceScope)
+            {
+                return CleanupScopeResolution.Failed(
+                    $"Execution run '{run.Id:N}' carries conflicting workspace scope metadata and governance. Durable leases were retained for a later cleanup attempt.");
+            }
+
+            return CleanupScopeResolution.Resolved(
+                WorkspaceExecutionScope.ForRun(
+                    configuredScope.WorkspaceRoot,
+                    governance.WorkspaceScope,
+                    governance,
+                    run.Id));
+        }
+
+        var trustedMetadataScope = ExecutionInvocationMetadata
+            .ResolveContextWorkspaceScope(run);
+        return CleanupScopeResolution.Resolved(
+            new WorkspaceExecutionScope(
+                configuredScope.WorkspaceRoot,
+                trustedMetadataScope ?? configuredScope.Scope,
+                configuredScope.DatabaseProfileId,
+                configuredScope.DatabaseProfileGeneration,
+                executionRunId: run.Id));
+    }
+
     private static WorkspaceExecutionRunProcessCleanupResult Failure(
         Guid executionRunId,
         string message)
@@ -110,6 +206,82 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
             executionRunId,
             [],
             [new WorkspaceExecutionRunProcessCleanupFailure(string.Empty, message)]);
+
+    private sealed record CleanupScopeResolution(
+        bool Succeeded,
+        WorkspaceExecutionScope? Scope,
+        string FailureMessage)
+    {
+        public static CleanupScopeResolution Resolved(WorkspaceExecutionScope scope)
+            => new(true, scope, string.Empty);
+
+        public static CleanupScopeResolution Failed(string message)
+            => new(false, null, message);
+    }
+}
+
+public sealed class WorkspaceExecutionRunProcessLeaseCleanupScope(
+    WorkspaceExecutionScope scope,
+    IWorkspaceCommandExecutionService commandExecutionService,
+    IWorkspaceProcessHost processHost)
+    : IWorkspaceExecutionRunProcessLeaseCleanupScope
+{
+    private readonly IWorkspaceExecutionRunProcessLeaseCleanupExecutor cleanupExecutor =
+        commandExecutionService as IWorkspaceExecutionRunProcessLeaseCleanupExecutor
+        ?? throw new WorkspaceRuntimeCompositionException(
+            "The scope-bound command service does not provide process lease cleanup.");
+    private bool disposed;
+
+    public WorkspaceExecutionScope Scope { get; } =
+        scope ?? throw new ArgumentNullException(nameof(scope));
+
+    public Task<WorkspaceExecutionRunProcessCleanupResult> CleanupAsync(
+        Guid executionRunId)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        return cleanupExecutor.CleanupAsync(executionRunId);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        List<Exception>? failures = null;
+        foreach (var ownedService in new object[]
+                 {
+                     commandExecutionService,
+                     processHost
+                 }.Distinct(ReferenceEqualityComparer.Instance))
+        {
+            try
+            {
+                switch (ownedService)
+                {
+                    case IAsyncDisposable asyncDisposable:
+                        await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                        break;
+                    case IDisposable disposable:
+                        disposable.Dispose();
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                (failures ??= []).Add(exception);
+            }
+        }
+
+        if (failures is { Count: > 0 })
+        {
+            throw new AggregateException(
+                "One or more scope-bound process lease cleanup services failed to dispose.",
+                failures);
+        }
+    }
 }
 
 internal enum WorkspaceExecutionRunProcessLeasePhase

@@ -1,0 +1,45 @@
+{
+  "subbundle": "SB02",
+  "title": "Module-owned source authority registry",
+  "status": "NotStarted",
+  "decision": "Blocked",
+  "startingCommit": "",
+  "endingCommit": "",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [],
+  "commands": [],
+  "tests": [],
+  "architectureChecks": [],
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "acceptance": [
+    {
+      "criterion": "Each source authority implementation lives with its owning module.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Resolver consumes DI-provided providers and constructs none.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Duplicate keys fail deterministically.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Missing provider plus workspace claim fails closed.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No project/process behavior regression.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "residualRisk": "",
+  "nextSubbundleUnlocked": false
+}

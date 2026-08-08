@@ -51,9 +51,9 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | Base path | Responsibility | Source |
 | --- | --- | --- |
 | `/api/access` | API status and token issue. | [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs) |
-| `/api/projects` | Project records, access items, hierarchy, and subproject relationships. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
-| `/api/project-structure` | Structure reads and mutations, tasks, process/workflow node operations, assets, imports, leases, knowledge, and analytics. | [`ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs) |
-| `/api/agents` | Agent, provider, capability, memory, chat, execution, approval, artifact, receipt, checkpoint, log, metric, and runtime-snapshot operations. | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
+| `/api/projects` | Project records, access items, hierarchy, subproject relationships, and durable deletion-cleanup recovery. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
+| `/api/project-structure` | Structure reads and focused mutations, node copy, tasks, process/workflow node operations, assets, imports, leases, deletion-cleanup readback, knowledge, and analytics. | [`ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs) |
+| `/api/agents` | Agent, provider, capability, memory, chat, execution, per-proposal approval, artifact, receipt, checkpoint, log, aggregate usage, metric, and runtime-snapshot operations. | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
 | `/api/agent-recruiting` | Candidate interviews, attempts, human reviews, interview history, and readiness. | [`AgentRecruitingApi.cs`](../src/App/CanDoItAll.Web/Api/AgentRecruitingApi.cs) |
 | `/api/prompt-gallery` | Prompt Gallery search, artifacts, versions, review, and application. | [`PromptGalleryApi.cs`](../src/App/CanDoItAll.Web/Api/PromptGalleryApi.cs) |
 | `/api/workflows` | Workflow settings, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
@@ -83,8 +83,24 @@ Use OpenAPI for exact methods and schemas. Do not copy a complete generated endp
 | `GET` | `/api/processes/runs/{runId}/summary` | Read durable facts and the bounded narrative summary. |
 | `GET` | `/api/processes/runs/{runId}/graph` | Read a paged run graph. |
 | `GET` | `/api/processes/runs/{runId}/history` | Read timeline history. |
+| `GET` | `/api/processes/events/stream` | Subscribe to bounded all-run lifecycle signals. |
+| `GET` | `/api/processes/runs/{runId}/events/stream` | Subscribe to bounded exact-run lifecycle signals. |
 
 `launch/check` is non-mutating. `launch` persists the run when readiness permits; `execute: false` prevents immediate dispatch queueing but does not turn the launch into a dry run. See the [operator runbook](process-agent-operator-runbook.md) for triage and configuration.
+
+## Agent Approval And Usage Contract
+
+Approval continuation accepts an additive `decisions` array whose entries contain `approvalId` and
+`approved`. New clients should read the run's current approvals immediately before posting and send
+exactly one decision for each pending approval. The server rejects duplicate, unknown, missing, or stale
+decision sets with `agents.approval-decision-mismatch`. The required legacy `approved` field remains a
+backward-compatible uniform decision when `decisions` is absent or empty.
+
+Agent execution detail uses transport-owned response DTOs rather than exposing persisted runtime
+records. Its `usageTotals` object reports observation counts, known/unknown usage counts, token and tool
+call totals, known/unknown cost counts, and known cost. Raw internal provider-usage observation enums are
+not an HTTP contract. After continuation or execution, read back run detail and evidence; do not treat a
+successful transport response as proof that restored authority or tool policy remained valid.
 
 ## Experimental Memory Provider API
 

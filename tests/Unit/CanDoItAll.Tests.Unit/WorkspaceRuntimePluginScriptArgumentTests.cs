@@ -21,14 +21,14 @@ public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
         var processHost = new RecordingWorkspaceProcessHost();
         var plugin = CreatePlugin(workspaceRoot, allowedRoot, processHost);
 
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(() =>
         {
             _ = plugin.RunWorkspacePowerShellScript(
                 Path.GetRelativePath(workspaceRoot, scriptPath),
                 arguments: [$"--input={Path.Combine(deniedRoot, "secret.json")}"]);
         });
 
-        Assert.Contains("not in this agent's allowed external workspace roots", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("allowed external workspace roots", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Null(processHost.LastRequest);
     }
 

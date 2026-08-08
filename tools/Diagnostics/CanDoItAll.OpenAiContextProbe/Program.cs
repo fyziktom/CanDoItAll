@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.OpenAiContextProbe;
@@ -55,7 +56,7 @@ internal static partial class Program
         foreach (var variant in variants)
         {
             variantResults.Add(await RunVariantAsync(
-                runtime,
+                runtime.ExecutionPort,
                 agent,
                 provider,
                 variant,
@@ -118,7 +119,7 @@ internal static partial class Program
     }
 
     private static async Task<RuntimeVariantProbeResult> RunVariantAsync(
-        MafAgentRuntime runtime,
+        IAgentExecutionRuntime executionPort,
         AgentDefinition agent,
         ProviderProfile provider,
         ProbeVariant variant,
@@ -142,23 +143,24 @@ internal static partial class Program
 
         try
         {
-            var response = await runtime.RunAsync(
-                agent,
-                provider,
-                session,
-                capabilities: [],
-                memory: [],
-                prompt: "Return exactly CONTEXT_PROBE_OK. Do not call tools.",
-                runtimeSessionKey: null,
-                progressCallback: (_, title, message) =>
-                {
-                    progressMessages.Add($"{title}: {message}");
-                    return Task.CompletedTask;
-                },
-                cancellationToken: cancellationToken,
-                suppressApprovalRequirements: true,
-                structuredOutput: null,
-                executionOptions: executionOptions);
+            var response = await executionPort.ExecuteAsync(
+                new AgentRuntimeExecutionRequest(
+                    agent,
+                    provider,
+                    session,
+                    Capabilities: [],
+                    Memory: [],
+                    Prompt: "Return exactly CONTEXT_PROBE_OK. Do not call tools.",
+                    RuntimeSessionKey: null,
+                    ProgressCallback: (_, title, message) =>
+                    {
+                        progressMessages.Add($"{title}: {message}");
+                        return Task.CompletedTask;
+                    },
+                    SuppressApprovalRequirements: true,
+                    StructuredOutput: null,
+                    ExecutionOptions: executionOptions),
+                cancellationToken);
 
             return RuntimeVariantProbeResult.FromResponse(
                 variant,

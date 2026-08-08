@@ -499,10 +499,14 @@ public partial class AgentChatPanel : IAsyncDisposable
         try
         {
             var operation = ChatExecutionOrchestrator.StartSendMessage(
-                executionAgentId,
-                executionSessionId,
-                prompt,
-                attachmentPaths);
+                new AgentChatSendRequest(
+                    executionAgentId,
+                    executionSessionId,
+                    prompt)
+                {
+                    AttachmentPaths = attachmentPaths,
+                    ConversationHandleId = executionHandleId
+                });
             activeActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);
             var result = await operation.Completion;
@@ -621,13 +625,15 @@ public partial class AgentChatPanel : IAsyncDisposable
         }
     }
 
-    private Task HandleApprovalDecisionAsync(bool approved)
-        => StartApprovalOperation(approved, autoApprovePendingToolCalls: false);
+    private Task HandleApprovalDecisionsAsync(IReadOnlyList<PendingToolApprovalDecision> decisions)
+        => StartApprovalOperation(decisions, autoApprovePendingToolCalls: false);
 
     private Task ApproveConversationAsync()
-        => StartApprovalOperation(approved: true, autoApprovePendingToolCalls: true);
+        => StartApprovalOperation(decisions: null, autoApprovePendingToolCalls: true);
 
-    private Task StartApprovalOperation(bool approved, bool autoApprovePendingToolCalls)
+    private Task StartApprovalOperation(
+        IReadOnlyList<PendingToolApprovalDecision>? decisions,
+        bool autoApprovePendingToolCalls)
     {
         if (!selectedAgentId.HasValue || !selectedSessionId.HasValue)
         {
@@ -648,7 +654,7 @@ public partial class AgentChatPanel : IAsyncDisposable
             executionSessionId,
             executionWorkspaceGeneration,
             executionHandleId,
-            approved,
+            decisions,
             autoApprovePendingToolCalls);
         return Task.CompletedTask;
     }
@@ -658,18 +664,38 @@ public partial class AgentChatPanel : IAsyncDisposable
         Guid executionSessionId,
         long executionWorkspaceGeneration,
         AgentChatHandleId? executionHandleId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision>? decisions,
         bool autoApprovePendingToolCalls)
     {
         await Task.Yield();
         var executionCompleted = false;
         var continuationWorkspaceGeneration = executionWorkspaceGeneration;
+        var approved = true;
         try
         {
+            var pendingApprovals = workspace?.SelectedRun?.PendingApprovals ?? [];
+            if (pendingApprovals.Count == 0)
+            {
+                return;
+            }
+
+            // Per-proposal decisions come from the panel unchanged. The
+            // approve-remaining action is an explicit whole-conversation
+            // approval of every pending proposal.
+            var effectiveDecisions = decisions
+                ?? pendingApprovals
+                    .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                    .ToArray();
+            if (effectiveDecisions.Count == 0)
+            {
+                return;
+            }
+
+            approved = effectiveDecisions.All(item => item.Approved);
             var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
                 executionAgentId,
                 executionSessionId,
-                approved,
+                effectiveDecisions,
                 autoApprovePendingToolCalls);
             activeActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);
@@ -699,7 +725,7 @@ public partial class AgentChatPanel : IAsyncDisposable
                     ? autoApprovePendingToolCalls
                         ? "Approval resumed the run and enabled remaining approvals for the active execution."
                         : "Approval resumed the run."
-                    : "Approval was rejected and the thread was refreshed.");
+                    : "The decisions were submitted; rejected proposals will not execute and the thread was refreshed.");
         }
         catch (AgentChatRunFailedException exception) when (isDisposed)
         {

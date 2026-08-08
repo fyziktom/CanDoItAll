@@ -6,6 +6,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Components;
 
 public sealed class HrAgentProcessReviewServiceTests
@@ -37,10 +38,16 @@ public sealed class HrAgentProcessReviewServiceTests
             .ResolveCurrentProfile()
             .Profile
             .Id;
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the capturing fake runtime for all four ports.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime);
         var workspace = new AgentFrameworkWorkspaceService(
             workspaceStore,
             new UnusedAgentPackageService(),
-            runtime,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             scope.ServiceProvider.GetRequiredService<ICapabilityProofService>(),
             logger: NullLogger<AgentFrameworkWorkspaceService>.Instance,
             activityCoordinator: scope.ServiceProvider
@@ -288,7 +295,7 @@ public sealed class HrAgentProcessReviewServiceTests
             ProcessStepId: processStepId);
     }
 
-    private sealed class CapturingManagerReviewRuntime : IAgentRuntime
+    private sealed class CapturingManagerReviewRuntime : IFakeAgentRuntime
     {
         public AgentRuntimeExecutionOptions? LastExecutionOptions { get; private set; }
 

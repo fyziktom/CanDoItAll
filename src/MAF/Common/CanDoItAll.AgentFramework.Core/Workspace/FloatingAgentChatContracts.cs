@@ -84,7 +84,7 @@ public interface IAgentChatExecutionOrchestrator
     AgentChatOperationHandle StartApprovalContinuation(
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 
@@ -102,7 +102,7 @@ public interface IAgentChatExecutionOrchestrator
     Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 }
@@ -124,6 +124,13 @@ public sealed record AgentChatSendRequest(
 
     public AgentChatExecutionBehavior Behavior { get; init; } =
         AgentChatExecutionBehavior.Default;
+
+    /// <summary>
+    /// Floating chat handle sending this turn. Used to bind conversation
+    /// context affinity before the first chat session exists; it never grants
+    /// authority.
+    /// </summary>
+    public AgentChatHandleId? ConversationHandleId { get; init; }
 }
 
 public sealed record AgentChatOperationHandle(

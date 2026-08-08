@@ -311,121 +311,6 @@ public interface IAgentPackageService
     }
 }
 
-public sealed record AgentRuntimeResponse(
-    string ResponseText,
-    int InputTokens,
-    int OutputTokens,
-    int ToolCalls,
-    string RuntimeSessionKey,
-    string? SerializedSessionStateJson,
-    IReadOnlyList<PendingToolApprovalRecord> PendingApprovals)
-{
-    public int CachedInputTokens { get; init; }
-
-    public IReadOnlyList<AgentFinalizerInvocation> FinalizerInvocations { get; init; } = [];
-
-    public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
-
-    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
-
-    public AgentRuntimeContextAssemblyManifest? ContextAssemblyManifest { get; init; }
-
-    public IReadOnlyList<AgentContextContributionTrace> ContextContributionTraces { get; init; } = [];
-
-    public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; init; }
-}
-
-public enum AgentRuntimeFailureOrigin
-{
-    Runtime,
-    Provider,
-    Tool,
-    Finalizer,
-    ProviderConfiguration
-}
-
-public sealed record AgentRuntimeProviderFailureIdentity(
-    Guid ProviderProfileId,
-    string ProviderName,
-    ProviderKind ProviderKind,
-    ProviderTransportKind Transport,
-    string Model);
-
-public sealed class AgentRuntimeUsageException : Exception
-{
-    public AgentRuntimeUsageException(
-        string message,
-        Exception innerException,
-        IReadOnlyList<ProviderUsageObservation> usageObservations,
-        IReadOnlyList<AgentToolInvocationTrace>? toolInvocationTraces = null,
-        ProviderRequestCompatibilityEvidence? entryAgentRequestCompatibilityEvidence = null,
-        AgentRuntimeFailureOrigin failureOrigin = AgentRuntimeFailureOrigin.Runtime,
-        AgentRuntimeProviderFailureIdentity? providerFailureIdentity = null)
-        : base(message, innerException)
-    {
-        UsageObservations = usageObservations;
-        ToolInvocationTraces = toolInvocationTraces ?? [];
-        EntryAgentRequestCompatibilityEvidence = entryAgentRequestCompatibilityEvidence;
-        FailureOrigin = failureOrigin;
-        ProviderFailureIdentity = providerFailureIdentity;
-    }
-
-    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; }
-
-    public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; }
-
-    public ProviderRequestCompatibilityEvidence? EntryAgentRequestCompatibilityEvidence { get; }
-
-    public AgentRuntimeFailureOrigin FailureOrigin { get; }
-
-    public AgentRuntimeProviderFailureIdentity? ProviderFailureIdentity { get; }
-}
-
-public interface IAgentRuntime
-{
-    Task<ProviderHealthResult> TestProviderAsync(
-        ProviderProfile provider,
-        CancellationToken cancellationToken = default);
-
-    Task<ProviderTestChatResult> RunProviderTestChatAsync(
-        ProviderProfile provider,
-        ProviderTestChatRequest request,
-        CancellationToken cancellationToken = default);
-
-    Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
-        ProviderProfile provider,
-        ProviderModelMaintenanceEditorRequest request,
-        CancellationToken cancellationToken = default);
-
-    Task<AgentRuntimeResponse> RunAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        ChatSessionRecord session,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        IReadOnlyList<AgentMemoryRecord> memory,
-        string prompt,
-        string? runtimeSessionKey,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null,
-        AgentRuntimeExecutionOptions? executionOptions = null);
-
-    Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        ChatSessionRecord session,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        IReadOnlyList<AgentMemoryRecord> memory,
-        bool approved,
-        string? runtimeSessionKey,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken = default,
-        bool suppressApprovalRequirements = false,
-        AgentStructuredOutputContract? structuredOutput = null,
-        AgentRuntimeExecutionOptions? executionOptions = null);
-}
-
 public interface ICapabilityProofService
 {
     Task<CapabilityVerificationResult> VerifyAsync(
@@ -663,10 +548,16 @@ public interface IAgentFrameworkWorkspaceService :
         throw new NotSupportedException(
             "This workspace does not support atomic same-source execution reservation.");
     }
+    /// <summary>
+    /// Continues an execution run with one decision per currently pending approval. Every
+    /// pending approval must receive exactly one decision — a partial, duplicate, or unknown-id
+    /// set is rejected with <see cref="AgentApprovalDecisionMismatchException"/> rather than
+    /// silently applied.
+    /// </summary>
     Task<ExecutionRunResult> ContinueExecutionRunAsync(
         Guid executionRunId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
     Task<AgentChatRunResult> SendMessageAsync(
@@ -676,11 +567,12 @@ public interface IAgentFrameworkWorkspaceService :
         AgentChatRunOptions options,
         CancellationToken cancellationToken = default,
         IReadOnlyList<string>? attachmentPaths = null);
+    /// <summary>Per-proposal decision overload — see <see cref="ContinueExecutionRunAsync(Guid,AgentExecutionOperationId,IReadOnlyList{PendingToolApprovalDecision},bool,CancellationToken)"/>.</summary>
     Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ExecutionLogEntry>> ListExecutionLogAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default);

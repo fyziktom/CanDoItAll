@@ -275,7 +275,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Assert.Equal(scopeId, snapshot.Scope.Id);
             Assert.Equal(source, snapshot.Scope.Source);
             Assert.True(snapshot.Version > canvasSnapshot.Version);
-            AssertContributors(snapshot);
+            AssertContributors(snapshot, expectGanttObservation: true);
             var attachment = Assert.Single(snapshot.Attachments);
             Assert.True(
                 attachment.TryGetAttachment<ProjectStructureInvocationSnapshot>(
@@ -398,20 +398,26 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             var baseContent = FindFragment(
                 snapshot,
                 ProjectStructureAgentChatContextBuilder.BaseContributorId).Content;
-            Assert.Contains("request.nodeIds is exact-node-only", baseContent, StringComparison.Ordinal);
-            Assert.Contains("request.subtreeRootIds", baseContent, StringComparison.Ordinal);
-            Assert.Contains("request.includeLinks", baseContent, StringComparison.Ordinal);
-            Assert.Contains("request.includeNotes", baseContent, StringComparison.Ordinal);
-            Assert.Contains("request.includeMetadata", baseContent, StringComparison.Ordinal);
-            Assert.Contains("request.includeAssets", baseContent, StringComparison.Ordinal);
-            Assert.Contains("ContextDefault", baseContent, StringComparison.Ordinal);
-            Assert.Contains("InvocationSnapshot", baseContent, StringComparison.Ordinal);
-            Assert.Contains("CanonicalCurrent", baseContent, StringComparison.Ordinal);
-            Assert.Contains("request.sourceWorkspacePath", baseContent, StringComparison.Ordinal);
-            Assert.Contains("no external-target path is needed", baseContent, StringComparison.Ordinal);
-            Assert.Contains("project_structure_asset_get", baseContent, StringComparison.Ordinal);
             Assert.Contains("project_structure_asset_content_get", baseContent, StringComparison.Ordinal);
-            Assert.Contains("do not grant workspace access", baseContent, StringComparison.Ordinal);
+            Assert.DoesNotContain("Selected-node operation contract", baseContent, StringComparison.Ordinal);
+
+            // The operational tool contract moved to the registered runtime
+            // guidance contributor; it stays complete there.
+            var guidanceText = CanDoItAll.Modules.Workbench.AgentContext
+                .ProjectStructureRuntimeGuidanceContributor.GuidanceText;
+            Assert.Contains("request.nodeIds is exact-node-only", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("request.subtreeRootIds", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("request.includeLinks", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("request.includeNotes", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("request.includeMetadata", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("request.includeAssets", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("ContextDefault", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("InvocationSnapshot", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("CanonicalCurrent", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("request.sourceWorkspacePath", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("no external-target path is needed", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("project_structure_asset_get", guidanceText, StringComparison.Ordinal);
+            Assert.Contains("do not grant workspace access", guidanceText, StringComparison.Ordinal);
 
             var selectionContent = FindFragment(
                 snapshot,
@@ -832,8 +838,29 @@ public sealed class ProjectStructureAgentChatContextProviderTests
         Assert.Equal(projectId.ToString("D"), snapshot.Scope.Source.Id.Value);
     }
 
-    private static void AssertContributors(AgentChatContextSnapshot snapshot)
+    private static void AssertContributors(
+        AgentChatContextSnapshot snapshot,
+        bool expectGanttObservation = false)
     {
+        if (expectGanttObservation)
+        {
+            Assert.Collection(
+                snapshot.Fragments,
+                fragment => Assert.Equal(
+                    ProjectStructureAgentChatContextBuilder.BaseContributorId,
+                    fragment.ContributorId.Value),
+                fragment => Assert.Equal(
+                    ProjectStructureAgentChatContextBuilder.ViewContributorId,
+                    fragment.ContributorId.Value),
+                fragment => Assert.Equal(
+                    CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationContributor.ContributorId,
+                    fragment.ContributorId.Value),
+                fragment => Assert.Equal(
+                    ProjectStructureAgentChatContextBuilder.SelectionContributorId,
+                    fragment.ContributorId.Value));
+            return;
+        }
+
         Assert.Collection(
             snapshot.Fragments,
             fragment => Assert.Equal(
@@ -856,6 +883,134 @@ public sealed class ProjectStructureAgentChatContextProviderTests
                 fragment.ContributorId.Value,
                 contributorId,
                 StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Gantt_view_publishes_explicit_loading_facts_when_observation_is_missing()
+    {
+        using var context = new BunitContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var surface = CreateSurface(projectId, "Delivery project");
+        RegisterProviderServices(context, registry, agent);
+
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
+            .Add(component => component.ActiveView, ProjectStructureAgentChatView.Gantt)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var ganttFragment = Assert.Single(snapshot.Fragments, fragment =>
+                fragment.ContributorId == new AgentChatContextContributorId(
+                    CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationContributor.ContributorId));
+            Assert.Contains("loading/partial", ganttFragment.Content, StringComparison.Ordinal);
+            Assert.Contains("do not treat earlier Canvas or Gantt facts as current", ganttFragment.Content, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                snapshot.Attachments,
+                attachment => attachment.Kind == new AgentChatContextAttachmentKind(
+                    CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationContributor.AttachmentKind));
+        });
+    }
+
+    [Fact]
+    public void Gantt_view_publishes_bounded_projection_facts_and_typed_attachment()
+    {
+        using var context = new BunitContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var surface = CreateSurface(projectId, "Delivery project");
+        RegisterProviderServices(context, registry, agent);
+        var observation = new CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservation(
+            projectId,
+            CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationCompleteness.Ready,
+            taskCount: 7,
+            dependencyCount: 4,
+            unscheduledTaskCount: 2,
+            warningCount: 1,
+            errorCount: 0,
+            projectedStartUtc: new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero),
+            projectedEndUtc: new DateTimeOffset(2026, 9, 15, 0, 0, 0, TimeSpan.Zero),
+            topIssueSummaries: ["Warning/ScheduleSynthesized: A schedule was synthesized."],
+            rowOrderFingerprint: "row-order-1",
+            selectedTaskNodeId: null,
+            capturedAtUtc: DateTimeOffset.UtcNow);
+
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
+            .Add(component => component.ActiveView, ProjectStructureAgentChatView.Gantt)
+            .Add(component => component.GanttObservation, observation)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            var ganttFragment = Assert.Single(snapshot.Fragments, fragment =>
+                fragment.ContributorId == new AgentChatContextContributorId(
+                    CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationContributor.ContributorId));
+            Assert.Contains("7 tasks", ganttFragment.Content, StringComparison.Ordinal);
+            Assert.Contains("4 dependencies", ganttFragment.Content, StringComparison.Ordinal);
+            Assert.Contains("2 without canonical schedules", ganttFragment.Content, StringComparison.Ordinal);
+            Assert.Contains("2026-08-01 .. 2026-09-15", ganttFragment.Content, StringComparison.Ordinal);
+            Assert.Contains("ScheduleSynthesized", ganttFragment.Content, StringComparison.Ordinal);
+
+            var ganttAttachment = Assert.Single(snapshot.Attachments, attachment =>
+                attachment.Kind == new AgentChatContextAttachmentKind(
+                    CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationContributor.AttachmentKind));
+            Assert.True(ganttAttachment.TryGetAttachment<
+                CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationAttachment>(out var payload));
+            Assert.Equal(7, payload.Observation.TaskCount);
+            Assert.Equal(observation.ContentFingerprint, ganttAttachment.ContentFingerprint.Value);
+        });
+    }
+
+    [Fact]
+    public void Canvas_view_does_not_publish_gantt_observation_contributor()
+    {
+        using var context = new BunitContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        var agent = CreateAgent();
+        var projectId = Guid.NewGuid();
+        var surface = CreateSurface(projectId, "Delivery project");
+        RegisterProviderServices(context, registry, agent);
+
+        var cut = context.Render<ProjectStructureAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.ProjectId, projectId)
+            .Add(component => component.ProjectName, "Delivery project")
+            .Add(component => component.Surface, surface)
+            .Add(component => component.ActiveView, ProjectStructureAgentChatView.Canvas)
+            .Add(component => component.ContextAccessState, AgentChatContextAccessState.Ready));
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.DoesNotContain(
+                snapshot.Fragments,
+                fragment => fragment.ContributorId == new AgentChatContextContributorId(
+                    CanDoItAll.Modules.Workbench.AgentContext.ProjectStructureGanttObservationContributor.ContributorId));
+        });
+    }
+
+    private static void RegisterProviderServices(
+        BunitContext context,
+        AgentChatContextRegistry registry,
+        AgentDefinition agent)
+    {
+        context.Services.AddLogging();
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        context.Services.AddSingleton<IAgentReferenceDataProvider>(new StubAgentReferenceDataProvider(agent));
+        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(new RecordingReferenceDataCacheInvalidator());
+        context.Services.AddSingleton<IDatabaseRuntimeState>(
+            new DatabaseRuntimeState(new DatabaseSwitchNotificationService()));
+        context.Services.AddSingleton(TimeProvider.System);
     }
 
     private static AgentDefinition CreateAgent()

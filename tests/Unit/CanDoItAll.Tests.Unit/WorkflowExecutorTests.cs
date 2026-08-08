@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
@@ -12,7 +14,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard;
-using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -816,10 +818,10 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerPassesProjectScopeFromWorkflowPayload()
+    public async Task WorkflowLlmComponentInvokerNeverGrantsWorkspaceAuthorityFromWorkflowPayload()
     {
         var projectId = Guid.Parse("ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f");
-        var runtime = new CapturingAgentRuntime(
+        var port = new CapturingLlmInvocationPort(
             $$"""
             {
               "markdown": "# Tetris request summary\n\nKeyboard-controlled static-web Tetris within one week.",
@@ -828,8 +830,8 @@ public sealed class WorkflowExecutorTests
             }
             """);
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonObjectShape);
@@ -854,22 +856,22 @@ public sealed class WorkflowExecutorTests
             """));
 
         Assert.Contains("Tetris request summary", result.PayloadJson, StringComparison.Ordinal);
-        var executionOptions = runtime.LastExecutionOptions;
-        Assert.NotNull(executionOptions);
-        var scope = executionOptions!.ContextWorkspaceScope;
-        Assert.NotNull(scope);
-        Assert.Equal(WorkspaceScopeKind.Project, scope!.Kind);
-        Assert.Equal(projectId.ToString("D"), scope.Key);
-        Assert.Contains("Potřebujeme naprogramovat jednoduchou hru Tetris", runtime.LastPrompt, StringComparison.Ordinal);
+        Assert.NotNull(port.LastRequest);
+        var requestPropertyNames = typeof(LlmInvocationRequest).GetProperties().Select(property => property.Name);
+        Assert.DoesNotContain(requestPropertyNames, name =>
+            name.Contains("Scope", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Workspace", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Authority", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("Potřebujeme naprogramovat jednoduchou hru Tetris", port.LastRequest!.Messages[^1].Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerUsesNodeInstructionSnapshot()
+    public async Task WorkflowLlmComponentInvokerUsesNodeInstructionSnapshot()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
@@ -891,18 +893,19 @@ public sealed class WorkflowExecutorTests
             component,
             new WorkflowNodeInput("{}"));
 
-        Assert.NotNull(runtime.LastAgent);
-        Assert.Equal("Pinned workflow prompt snapshot.", runtime.LastAgent!.Instructions);
+        Assert.NotNull(port.LastRequest);
+        var systemMessage = Assert.Single(port.LastRequest!.Messages, message => message.Role == LlmMessageRole.System);
+        Assert.Equal("Pinned workflow prompt snapshot.", systemMessage.Text);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerUsesNodeProviderModelAndInstructionOverrides()
+    public async Task WorkflowLlmComponentInvokerUsesNodeProviderModelAndInstructionOverrides()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var componentProvider = CreateProviderProfile("component-model");
         var nodeProvider = CreateProviderProfile("node-model");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([componentProvider, nodeProvider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
@@ -928,21 +931,23 @@ public sealed class WorkflowExecutorTests
             component,
             new WorkflowNodeInput("{}"));
 
-        Assert.Equal(nodeProvider.Id, runtime.LastProvider!.Id);
-        Assert.Equal(nodeProvider.DefaultModel, runtime.LastAgent!.Model);
-        Assert.Equal("Pinned node instructions.", runtime.LastAgent.Instructions);
+        Assert.NotNull(port.LastRequest);
+        Assert.Equal(nodeProvider.Id, port.LastRequest!.Provider.Id);
+        Assert.Equal(nodeProvider.DefaultModel, port.LastRequest.Model);
+        var systemMessage = Assert.Single(port.LastRequest.Messages, message => message.Role == LlmMessageRole.System);
+        Assert.Equal("Pinned node instructions.", systemMessage.Text);
         Assert.Equal(componentProvider.Id, component.ProviderProfileId);
         Assert.Equal(componentProvider.DefaultModel, component.Model);
         Assert.Equal("Component instructions must remain unchanged.", component.Instructions);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsBlankNodeInstructionSnapshot()
+    public async Task WorkflowLlmComponentInvokerRejectsBlankNodeInstructionSnapshot()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape) with
@@ -966,16 +971,16 @@ public sealed class WorkflowExecutorTests
                 new WorkflowNodeInput("{}")));
 
         Assert.Contains("immutable instruction snapshot", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(runtime.LastAgent);
+        Assert.Null(port.LastRequest);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsLegacyTemplateInstructionPlaceholder()
+    public async Task WorkflowLlmComponentInvokerRejectsLegacyTemplateInstructionPlaceholder()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
@@ -997,31 +1002,24 @@ public sealed class WorkflowExecutorTests
 
         Assert.Contains("legacy template placeholder", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("backfilled", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(runtime.LastAgent);
+        Assert.Null(port.LastRequest);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
+    public async Task WorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}")
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}")
         {
-            InputTokens = 0,
-            OutputTokens = 0,
-            UsageObservations =
-            [
-                CreateWorkflowUsageObservation(
-                    ProviderUsageObservationStatus.Observed,
-                    inputTokens: 1_000_000,
-                    cachedInputTokens: 250_000,
-                    outputTokens: 500_000)
-            ]
+            InputTokens = 1_000_000,
+            CachedInputTokens = 250_000,
+            OutputTokens = 500_000
         };
         var provider = CreateProviderProfile("gpt-5-mini") with
         {
             ModelPrices = [new ProviderModelTokenPrice("gpt-5-mini", 1.00m, 0.10m, 4.00m)]
         };
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
@@ -1044,27 +1042,20 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerMarksUnavailableWorkflowUsageAsUnknown()
+    public async Task WorkflowLlmComponentInvokerMarksUnavailableWorkflowUsageAsUnknown()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}")
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}")
         {
             InputTokens = 0,
-            OutputTokens = 0,
-            UsageObservations =
-            [
-                CreateWorkflowUsageObservation(
-                    ProviderUsageObservationStatus.UsageUnavailable,
-                    inputTokens: 0,
-                    cachedInputTokens: 0,
-                    outputTokens: 0)
-            ]
+            CachedInputTokens = 0,
+            OutputTokens = 0
         };
         var provider = CreateProviderProfile("gpt-5-mini") with
         {
             ModelPrices = [new ProviderModelTokenPrice("gpt-5-mini", 1.00m, 0.10m, 4.00m)]
         };
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
@@ -1085,9 +1076,9 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRequestsJsonResponseFormatSchemaForJsonComponents()
+    public async Task WorkflowLlmComponentInvokerRequestsJsonResponseFormatSchemaForJsonComponents()
     {
-        var runtime = new CapturingAgentRuntime(
+        var port = new CapturingLlmInvocationPort(
             """
             {
               "markdown": "# Summary",
@@ -1096,8 +1087,8 @@ public sealed class WorkflowExecutorTests
             }
             """);
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1114,15 +1105,16 @@ public sealed class WorkflowExecutorTests
             new WorkflowNodeInput("{}"));
 
         Assert.Contains("# Summary", result.PayloadJson, StringComparison.Ordinal);
-        var executionOptions = runtime.LastExecutionOptions;
-        Assert.NotNull(executionOptions);
-        Assert.True(executionOptions!.RequireJsonResponseFormat);
-        Assert.Equal(WorkflowStructuredResponseSchemaJson.Trim(), executionOptions.ResponseFormatJsonSchema);
-        Assert.Equal("workflow_llm_component_result", executionOptions.ResponseFormatSchemaName);
+        Assert.NotNull(port.LastRequest);
+        var responseFormat = port.LastRequest!.ResponseFormat;
+        Assert.NotNull(responseFormat);
+        Assert.True(responseFormat!.RequireJson);
+        Assert.Equal(WorkflowStructuredResponseSchemaJson.Trim(), responseFormat.SchemaJson);
+        Assert.Equal("workflow_llm_component_result", responseFormat.SchemaName);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerAcceptsValidSchemaKeywordsOutsidePortableContractSubset()
+    public async Task WorkflowLlmComponentInvokerAcceptsValidSchemaKeywordsOutsidePortableContractSubset()
     {
         const string responseSchema =
             """
@@ -1146,11 +1138,11 @@ public sealed class WorkflowExecutorTests
               }
             }
             """;
-        var runtime = new CapturingAgentRuntime(
+        var port = new CapturingLlmInvocationPort(
             """{"projectId":"ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f","result":"complete"}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1170,7 +1162,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerDoesNotMisapplySupportedRestrictionsToUnsupportedSchemaKeywords()
+    public async Task WorkflowLlmComponentInvokerDoesNotMisapplySupportedRestrictionsToUnsupportedSchemaKeywords()
     {
         const string responseSchema =
             """
@@ -1182,10 +1174,10 @@ public sealed class WorkflowExecutorTests
               "additionalProperties": false
             }
             """;
-        var runtime = new CapturingAgentRuntime("""{"x-workflow":"complete"}""");
+        var port = new CapturingLlmInvocationPort("""{"x-workflow":"complete"}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1205,7 +1197,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerDoesNotMisclassifyIndirectBusinessRefusalProperty()
+    public async Task WorkflowLlmComponentInvokerDoesNotMisclassifyIndirectBusinessRefusalProperty()
     {
         const string responseSchema =
             """
@@ -1222,10 +1214,10 @@ public sealed class WorkflowExecutorTests
               "$ref": "#/$defs/businessResult"
             }
             """;
-        var runtime = new CapturingAgentRuntime("""{"refusal":"No objections"}""");
+        var port = new CapturingLlmInvocationPort("""{"refusal":"No objections"}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1245,12 +1237,12 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerAcceptsUnconstrainedObjectResponseSchema()
+    public async Task WorkflowLlmComponentInvokerAcceptsUnconstrainedObjectResponseSchema()
     {
-        var runtime = new CapturingAgentRuntime("""{"ok":true}""");
+        var port = new CapturingLlmInvocationPort("""{"ok":true}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1270,16 +1262,16 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsJsonMissingRequiredSchemaFieldsAndPreservesUsage()
+    public async Task WorkflowLlmComponentInvokerRejectsJsonMissingRequiredSchemaFieldsAndPreservesUsage()
     {
-        var runtime = new CapturingAgentRuntime("""{"markdown":"# Summary"}""")
+        var port = new CapturingLlmInvocationPort("""{"markdown":"# Summary"}""")
         {
             InputTokens = 31,
             OutputTokens = 7
         };
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1311,9 +1303,9 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsSchemaShapedJsonInsteadOfBusinessResult()
+    public async Task WorkflowLlmComponentInvokerRejectsSchemaShapedJsonInsteadOfBusinessResult()
     {
-        var runtime = new CapturingAgentRuntime(
+        var port = new CapturingLlmInvocationPort(
             """
             {
               "type": "object",
@@ -1325,8 +1317,8 @@ public sealed class WorkflowExecutorTests
             }
             """);
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(
@@ -1350,12 +1342,12 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRequestsGenericJsonResponseFormatWhenSchemaIsMissing()
+    public async Task WorkflowLlmComponentInvokerRequestsGenericJsonResponseFormatWhenSchemaIsMissing()
     {
-        var runtime = new CapturingAgentRuntime("{\"ok\":true}");
+        var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
@@ -1368,19 +1360,20 @@ public sealed class WorkflowExecutorTests
             component,
             new WorkflowNodeInput("{}"));
 
-        var executionOptions = runtime.LastExecutionOptions;
-        Assert.NotNull(executionOptions);
-        Assert.True(executionOptions!.RequireJsonResponseFormat);
-        Assert.Equal(string.Empty, executionOptions.ResponseFormatJsonSchema);
+        Assert.NotNull(port.LastRequest);
+        var responseFormat = port.LastRequest!.ResponseFormat;
+        Assert.NotNull(responseFormat);
+        Assert.True(responseFormat!.RequireJson);
+        Assert.Equal(string.Empty, responseFormat.SchemaJson);
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsInvalidJsonWithoutRepairingPayload()
+    public async Task WorkflowLlmComponentInvokerRejectsInvalidJsonWithoutRepairingPayload()
     {
-        var runtime = new CapturingAgentRuntime("{\"markdown\":\"ok\"} + invalid");
+        var port = new CapturingLlmInvocationPort("{\"markdown\":\"ok\"} + invalid");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
         var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
@@ -1396,9 +1389,10 @@ public sealed class WorkflowExecutorTests
         Assert.Contains("summarize-office365", exception.Message, StringComparison.Ordinal);
         Assert.Contains("invalid JSON", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.IsType<InvalidOperationException>(exception.InnerException);
-        var executionOptions = runtime.LastExecutionOptions;
-        Assert.NotNull(executionOptions);
-        Assert.True(executionOptions!.RequireJsonResponseFormat);
+        Assert.NotNull(port.LastRequest);
+        var responseFormat = port.LastRequest!.ResponseFormat;
+        Assert.NotNull(responseFormat);
+        Assert.True(responseFormat!.RequireJson);
     }
 
     [Fact]
@@ -2050,7 +2044,9 @@ public sealed class WorkflowExecutorTests
 
         await RecordAsync("spreadsheet fails predictably for missing workbook", async () =>
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(spreadsheetExecutor, new WorkflowSpreadsheetExecutorSettings
+            // The workspace path seam now raises its typed resolution failure
+            // (a WorkspacePathResolutionException subtype of InvalidOperationException).
+            await Assert.ThrowsAsync<WorkspacePathResolutionException>(() => ExecuteDirectAsync(spreadsheetExecutor, new WorkflowSpreadsheetExecutorSettings
             {
                 Operation = WorkflowSpreadsheetOperation.WorkbookSummary,
                 WorkbookPath = "missing.xlsx"
@@ -2374,29 +2370,6 @@ public sealed class WorkflowExecutorTests
             SuggestedModels: [],
             Purpose: ProviderProfilePurpose.Chat);
 
-    private static ProviderUsageObservation CreateWorkflowUsageObservation(
-        ProviderUsageObservationStatus status,
-        int inputTokens,
-        int cachedInputTokens,
-        int outputTokens)
-    {
-        return new ProviderUsageObservation(
-            Id: Guid.NewGuid(),
-            CreatedAtUtc: DateTimeOffset.UtcNow,
-            ProviderName: "Workflow unit provider",
-            ProviderKind: ProviderKind.OpenAi,
-            Model: "gpt-5-mini",
-            TransportKind: ProviderTransportKind.ChatCompletions,
-            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
-            UsageStatus: status,
-            InputTokens: inputTokens,
-            CachedInputTokens: cachedInputTokens,
-            OutputTokens: outputTokens,
-            ReasoningTokens: 0,
-            TotalTokens: inputTokens + outputTokens,
-            ToolCallCount: 0);
-    }
-
     private sealed class RecordingWorkflowExecutor : IWorkflowExecutor
     {
         public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
@@ -2497,92 +2470,27 @@ public sealed class WorkflowExecutorTests
         }
     }
 
-    private sealed class CapturingAgentRuntime(string responseText) : IAgentRuntime
+    private sealed class CapturingLlmInvocationPort(string responseText) : ILlmInvocationPort
     {
-        public AgentDefinition? LastAgent { get; private set; }
-
-        public ProviderProfile? LastProvider { get; private set; }
-
-        public AgentRuntimeExecutionOptions? LastExecutionOptions { get; private set; }
-
-        public string LastPrompt { get; private set; } = string.Empty;
+        public LlmInvocationRequest? LastRequest { get; private set; }
 
         public int InputTokens { get; init; } = 12;
 
         public int OutputTokens { get; init; } = 8;
 
-        public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+        public int CachedInputTokens { get; init; }
 
-        public Task<AgentRuntimeResponse> RunAsync(
-            AgentDefinition agent,
-            ProviderProfile provider,
-            ChatSessionRecord session,
-            IReadOnlyList<CapabilityCatalogItem> capabilities,
-            IReadOnlyList<AgentMemoryRecord> memory,
-            string prompt,
-            string? runtimeSessionKey,
-            Func<ExecutionState, string, string, Task> progressCallback,
-            CancellationToken cancellationToken = default,
-            bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null,
-            AgentRuntimeExecutionOptions? executionOptions = null)
+        public Task<LlmInvocationResult> InvokeAsync(
+            LlmInvocationRequest request,
+            CancellationToken cancellationToken = default)
         {
-            LastAgent = agent;
-            LastProvider = provider;
-            _ = session;
-            _ = capabilities;
-            _ = memory;
-            _ = runtimeSessionKey;
-            _ = progressCallback;
-            _ = suppressApprovalRequirements;
-            _ = structuredOutput;
             cancellationToken.ThrowIfCancellationRequested();
-            LastPrompt = prompt;
-            LastExecutionOptions = executionOptions;
-            return Task.FromResult(new AgentRuntimeResponse(
+            LastRequest = request;
+            return Task.FromResult(new LlmInvocationResult(
+                request.Model,
                 responseText,
-                InputTokens,
-                OutputTokens,
-                ToolCalls: 0,
-                RuntimeSessionKey: string.Empty,
-                SerializedSessionStateJson: null,
-                PendingApprovals: [])
-            {
-                UsageObservations = UsageObservations
-            });
+                new LlmUsage(InputTokens, OutputTokens, CachedInputTokens)));
         }
-
-        public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
-            AgentDefinition agent,
-            ProviderProfile provider,
-            ChatSessionRecord session,
-            IReadOnlyList<CapabilityCatalogItem> capabilities,
-            IReadOnlyList<AgentMemoryRecord> memory,
-            bool approved,
-            string? runtimeSessionKey,
-            Func<ExecutionState, string, string, Task> progressCallback,
-            CancellationToken cancellationToken = default,
-            bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null,
-            AgentRuntimeExecutionOptions? executionOptions = null)
-            => throw new NotSupportedException();
-
-        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
-            ProviderProfile provider,
-            ProviderModelMaintenanceEditorRequest request,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<ProviderHealthResult> TestProviderAsync(
-            ProviderProfile provider,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
-            ProviderProfile provider,
-            ProviderTestChatRequest request,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
     }
 
     private sealed class TestProviderProfileRegistry(

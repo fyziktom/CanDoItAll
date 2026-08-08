@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Product module that exposes AgentFramework catalog, provider, execution, and technical-agent bridge capabilities to the app runtime.
+Product module that exposes AgentFramework catalog, provider, governed execution, agent chat, and
+technical-agent bridge capabilities to the app runtime.
 
 ## Project Type
 
@@ -46,6 +47,24 @@ Resolved secret values are not stored in the provider snapshot or preparation ca
 They are prepared for one execution dispatch, checked against the provider
 configuration fingerprint, and cleared on scope disposal. Live MAF runtimes remain
 per execution.
+
+Execution source authority is composed from the registered
+`IAgentExecutionSourceAuthorityProvider` implementations. Product-specific providers belong to their
+owning Projects, Workbench, and Processes modules; this module supplies the registry and canonical
+resolver, not hard-coded knowledge of those products. Persisted authority restoration and approval
+continuation fail closed on malformed or mismatched authority, and on missing authority when the run
+proves governed context admission. Detached or legacy runs without that evidence remain explicitly
+ungoverned. Tool-policy evaluation returns the exact effective invocation context, and that same context
+is used by the runtime tool provider.
+
+Runtime-owned child-process leases are cleaned only through an effective workspace/profile scope. The
+cleanup boundary re-reads durable terminal execution state and does not release leases for running or
+waiting-on-tool executions.
+
+The separate `CanDoItAll.AgentFramework.Llm.Conversations` library is an opt-in ordinary LLM
+conversation foundation. It is deliberately not registered by this product module and has no current
+HTTP API or UI. Future activation requires profile-generation fencing, retention policy, product
+surfaces, and integration proof.
 
 ## Related Docs
 

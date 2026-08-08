@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class MafProviderUpdatePumpTests

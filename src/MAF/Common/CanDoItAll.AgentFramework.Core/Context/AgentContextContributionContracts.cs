@@ -11,19 +11,6 @@ public interface IAgentContextContributor
         CancellationToken cancellationToken = default);
 }
 
-public readonly record struct AgentContextContributorId
-{
-    public AgentContextContributorId(string value)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value);
-        Value = value.Trim();
-    }
-
-    public string Value { get; }
-
-    public override string ToString() => Value;
-}
-
 public sealed record AgentContextContributorDescriptor(
     AgentContextContributorId Id,
     string DisplayName,
@@ -43,13 +30,6 @@ public enum AgentContextMessageRole
     System,
     User,
     Assistant
-}
-
-public enum AgentContextContributionStatus
-{
-    Provided,
-    Skipped,
-    Failed
 }
 
 public sealed record AgentContextContributionPolicy(
@@ -142,14 +122,6 @@ public sealed record AgentContextContributionResult(
                     item => item.Value?.Trim() ?? string.Empty,
                     StringComparer.Ordinal);
 }
-
-public sealed record AgentContextContributionTrace(
-    AgentContextContributorId ContributorId,
-    AgentContextContributionStatus Status,
-    int GeneratedMessageCount,
-    IReadOnlyDictionary<string, string> TraceMetadata,
-    string FailureMessage,
-    TimeSpan? Elapsed);
 
 public interface IAgentContextContributionTraceSink
 {

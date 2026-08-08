@@ -1,6 +1,7 @@
 using System.Net;
 using CanDoItAll.AgentFramework.Models;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Core;
 
 public enum AgentProviderFailureCategory

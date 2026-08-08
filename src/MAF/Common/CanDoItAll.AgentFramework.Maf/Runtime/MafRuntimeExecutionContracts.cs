@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
@@ -321,6 +322,10 @@ internal sealed record FinalizerSubmissionResult(bool Succeeded, string Message)
 
 internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
 {
+    private static readonly MethodInfo SubmitMethodDefinition =
+        typeof(FinalizerCapture).GetMethod(nameof(Submit), BindingFlags.NonPublic | BindingFlags.Instance)
+        ?? throw new InvalidOperationException($"{nameof(FinalizerCapture)}.{nameof(Submit)}<T> was not found.");
+
     private readonly object gate = new();
     private readonly List<AgentFinalizerInvocation> invocations = [];
     private int nextSequence;
@@ -329,29 +334,23 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
 
     public List<AITool> Tools { get; } = [];
 
-    public FinalizerSubmissionResult SubmitProcessStepOutcome(JsonElement result)
-        => CaptureJsonElement<ProcessStepOutcomeResult>(result, "Process step outcome finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitCodeReviewResult(CodeReviewResult result)
-        => Capture(result, "Code review result finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitArchitectureReviewResult(ArchitectureReviewResult result)
-        => Capture(result, "Architecture review result finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitImplementationPlan(ImplementationPlanResult result)
-        => Capture(result, "Implementation plan finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitTestPlan(TestPlanResult result)
-        => Capture(result, "Test plan finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitToolExecutionDecision(ToolExecutionDecisionResult result)
-        => Capture(result, "Tool execution decision finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitProcessStatePatch(ProcessStatePatch result)
-        => Capture(result, "Process state patch finalizer captured.");
-
-    public FinalizerSubmissionResult SubmitHumanEscalationRequest(HumanEscalationRequest result)
-        => Capture(result, "Human escalation request finalizer captured.");
+    /// <summary>
+    /// Builds the delegate the generic finalizer tool factory binds for this policy's contract. Contracts that
+    /// declare a <see cref="AgentFinalizerPolicy.KnownOutputNormalizer"/> capture a raw <see cref="JsonElement"/>
+    /// (tolerant path, unconstrained schema); every other contract captures its own strictly typed output (schema
+    /// reflects the concrete CLR shape). Either way the closed generic method is reflected by
+    /// <c>AIFunctionFactory.Create</c>, so the produced JSON schema matches what a hand-written typed delegate
+    /// would have produced.
+    /// </summary>
+    internal Delegate CreateSubmitDelegate()
+    {
+        var parameterType = Policy.KnownOutputNormalizer is not null
+            ? typeof(JsonElement)
+            : Policy.OutputType;
+        var closedMethod = SubmitMethodDefinition.MakeGenericMethod(parameterType);
+        var delegateType = typeof(Func<,>).MakeGenericType(parameterType, typeof(FinalizerSubmissionResult));
+        return closedMethod.CreateDelegate(delegateType, this);
+    }
 
     public IReadOnlyList<AgentFinalizerInvocation> Snapshot()
     {
@@ -359,6 +358,20 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
         {
             return invocations.ToList();
         }
+    }
+
+    /// <summary>The single generic capture entry point every contract's finalizer tool binds to (internal so tests
+    /// can invoke it directly with the same generic-argument inference the reflected delegate uses).
+    /// <c>where T : notnull</c> is required for schema fidelity, not just correctness: an unconstrained
+    /// generic parameter reports "nullable-oblivious" through <c>NullabilityInfoContext</c> even once closed over
+    /// a concrete reference type, which would add a spurious "null" branch to the generated JSON schema for every
+    /// strictly typed (non-tolerant) contract and silently change the finalizer tool's advertised argument shape.
+    /// </summary>
+    internal FinalizerSubmissionResult Submit<T>(T result) where T : notnull
+    {
+        return typeof(T) == typeof(JsonElement)
+            ? CaptureJsonElement((JsonElement)(object)result!, Policy.CaptureConfirmationMessage)
+            : Capture(result, Policy.CaptureConfirmationMessage);
     }
 
     private FinalizerSubmissionResult Capture<TOutput>(TOutput result, string message)
@@ -369,7 +382,7 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
         return CaptureArgumentsJson(argumentsJson, message);
     }
 
-    private FinalizerSubmissionResult CaptureJsonElement<TOutput>(JsonElement result, string message)
+    private FinalizerSubmissionResult CaptureJsonElement(JsonElement result, string message)
     {
         var rawJson = result.ValueKind == JsonValueKind.String
             ? result.GetString()
