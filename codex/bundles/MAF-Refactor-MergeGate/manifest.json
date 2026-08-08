@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "candoitall-maf-refactor-final-merge-gate-v3",
+  "title": "CanDoItAll MAF Refactor Final Merge-Gate Follow-up v3",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "maf-refactor",
+  "reviewedHead": "79a6c0d7de353acfae3511e2671baf7daee2b498",
+  "comparisonBranch": "development",
+  "executor": {
+    "client": "Codex",
+    "model": "GPT-5.6 Sol",
+    "reasoning": "xHigh"
+  },
+  "mergeReadyAtPreparation": false,
+  "scope": "Concrete merge blockers and architecture closure; no product expansion",
+  "findings": [
+    {
+      "id": "MRG-001",
+      "severity": "P0",
+      "title": "Malformed or incomplete current authority projection degrades to no governance",
+      "owner": "Core execution admission",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentTurnContextMetadata.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs"
+      ],
+      "summary": "The authority parser returns null both for genuinely absent legacy metadata and for malformed current metadata. Runtime restoration can therefore classify a corrupted context-admitted turn as having no governance snapshot instead of rejecting it before runtime construction."
+    },
+    {
+      "id": "MRG-002",
+      "severity": "P1 architecture",
+      "title": "Source authority provider registry is hard-coded and owns other modules' semantics",
+      "owner": "Module composition",
+      "requiredForMerge": true,
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentExecutionAuthorityComposition.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentExecutionSourceAuthorityProviders.cs"
+      ],
+      "summary": "The Core provider SPI exists, but the resolver constructs a hard-coded default list. Project, Project Structure, and Processes authority semantics all live in Modules.AgentFramework rather than the modules that publish those source kinds. This is not a real modular registry and leaves process/product semantics in the integration module."
+    },
+    {
+      "id": "MRG-003",
+      "severity": "P0",
+      "title": "Effective process policy context is discarded after evaluation",
+      "owner": "Provider-neutral tool governance pipeline / MAF mapping",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicyPipeline.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeAgentFactory.cs",
+        "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessToolInvocationPolicyContextContributor.cs"
+      ],
+      "summary": "ComposeAndEvaluateAsync evaluates an enriched local context but returns only the decision. MafRuntimeAgentFactory then passes the original neutral context to the block guard, telemetry, logging, and effective-approval checks. Governed denials may become fatal instead of recoverable, and process identity/restrictions disappear from diagnostics. The process-contributor presence check also relies on ReferenceEquals and can be bypassed by an unrelated cloning contributor."
+    },
+    {
+      "id": "MRG-004",
+      "severity": "P0",
+      "title": "Project-scoped kept-alive process leases are cleaned through an organization-scoped cleaner",
+      "owner": "Workspace execution lifetime",
+      "requiredForMerge": true,
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/AgentFrameworkWorkspaceFactory.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProcessLeases.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/WorkspaceExecutionRunProcessLeases.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandExecutionService.cs"
+      ],
+      "summary": "Floating chat execution is persisted by an organization-scoped workspace service, while MAF creates a project-scoped per-run command service for a Project Structure turn. That service stores durable process leases under the project-scoped audit root. Terminal cleanup uses the organization workspace's fixed-scope command service and therefore enumerates a different lease directory."
+    },
+    {
+      "id": "MRG-005",
+      "severity": "P0",
+      "title": "File conversation CAS is serialized only inside one scoped store instance",
+      "owner": "Ordinary LLM conversation persistence",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/FileLlmConversationStore.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/LlmConversationServiceCollectionExtensions.cs"
+      ],
+      "summary": "The file store uses an instance-local semaphore dictionary and is registered scoped. Two scopes can read the same revision, both pass the compare-and-swap check, and overwrite each other. Existing tests race one store instance and do not reproduce the production lifetime topology."
+    },
+    {
+      "id": "MRG-006",
+      "severity": "P1",
+      "title": "Failed provider adoption cannot restore pre-turn provider or acceleration state",
+      "owner": "Ordinary LLM conversation state machine",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/LlmConversationContracts.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/LlmConversationService.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/FileLlmConversationStore.cs"
+      ],
+      "summary": "Adopt is persisted at admission, but rollback is rebuilt from the admitted document and preserves the adopted provider while acceleration remains cleared. A process crash has the same problem because ActiveTurn does not persist the pre-turn compensation state."
+    },
+    {
+      "id": "MRG-007",
+      "severity": "P1",
+      "title": "Concurrent rename can orphan an active ordinary-conversation turn",
+      "owner": "Ordinary LLM conversation state machine",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/LlmConversationService.cs"
+      ],
+      "summary": "Rename is permitted while a provider turn is in flight and advances the revision. Completion then fails CAS; ConcurrencyConflict is excluded from compensation, leaving the pending user entry and ActiveTurn marker until manual abandonment."
+    },
+    {
+      "id": "MRG-008",
+      "severity": "P1",
+      "title": "Ordinary-conversation turn capacity is not reserved before provider invocation",
+      "owner": "Ordinary LLM conversation state machine",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/LlmConversationService.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/LlmConversationContracts.cs"
+      ],
+      "summary": "A conversation with one remaining transcript slot can admit the user entry and call the provider, then fail while appending the assistant entry. Capacity for the complete turn must be checked before the billable provider call."
+    },
+    {
+      "id": "MRG-009",
+      "severity": "P1",
+      "title": "Lightweight LLM empty-response retry drops usage from earlier attempts",
+      "owner": "Lightweight LLM invocation and workflow usage",
+      "requiredForMerge": true,
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/LlmInvocationContracts.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.ProviderRuntime/ProviderBackedLlmInvocationAdapter.cs",
+        "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/WorkflowLlmComponentInvoker.cs"
+      ],
+      "summary": "The adapter retries one empty provider response but returns only final-attempt usage. Failure paths also expose no accumulated usage, so workflow failure analytics can record zero despite billable provider attempts."
+    },
+    {
+      "id": "MRG-010",
+      "severity": "P1 activation",
+      "title": "Optional ordinary conversation service is production-registered without profile-switch fencing",
+      "owner": "Application composition",
+      "requiredForMerge": true,
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/LlmConversationServiceCollectionExtensions.cs"
+      ],
+      "summary": "The scoped service resolves its file root once. A long-lived Blazor scope can survive a database profile switch and retain the previous profile root. As no product surface consumes this optional foundation yet, the merge-safe action is to keep it dormant until a profile-aware integration exists."
+    },
+    {
+      "id": "MRG-011",
+      "severity": "Release gate",
+      "title": "Current HEAD has no visible CI result or executed follow-up proof set",
+      "owner": "Validation",
+      "requiredForMerge": true,
+      "paths": [
+        "codex/bundles/MAF-Refactor/",
+        "codex/bundles/MAF-Refactor-Followup/"
+      ],
+      "summary": "The branch contains many tests and proof templates, but the reviewed HEAD exposes no GitHub check or workflow result and the follow-up bundle has no completed proof manifests. Fresh independent build, tests, guards, and application smoke evidence are mandatory."
+    }
+  ],
+  "executionOrder": [
+    "SB00",
+    "SB01",
+    "SB02",
+    "SB03",
+    "SB04",
+    "SB05",
+    "SB06",
+    "SB07",
+    "SB08",
+    "SB09"
+  ],
+  "subbundles": [
+    {
+      "id": "SB00",
+      "slug": "independent-baseline-and-reproduction",
+      "title": "Independent baseline and blocker reproduction",
+      "dependsOn": [],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB01",
+      "slug": "fail-closed-governance-restoration",
+      "title": "Fail-closed governance restoration",
+      "dependsOn": [
+        "SB00"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB02",
+      "slug": "module-owned-source-authority-registry",
+      "title": "Module-owned source authority registry",
+      "dependsOn": [
+        "SB01"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB03",
+      "slug": "effective-tool-policy-context-propagation",
+      "title": "Effective tool-policy context propagation",
+      "dependsOn": [
+        "SB02"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB04",
+      "slug": "effective-scope-process-lease-cleanup",
+      "title": "Effective-scope process lease cleanup",
+      "dependsOn": [
+        "SB03"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB05",
+      "slug": "file-conversation-cross-instance-cas",
+      "title": "File conversation cross-instance CAS",
+      "dependsOn": [
+        "SB04"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB06",
+      "slug": "ordinary-conversation-atomic-turns",
+      "title": "Ordinary conversation atomic turns",
+      "dependsOn": [
+        "SB05"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB07",
+      "slug": "lightweight-llm-attempt-usage",
+      "title": "Lightweight LLM attempt usage accounting",
+      "dependsOn": [
+        "SB06"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB08",
+      "slug": "dormant-ordinary-conversation-composition",
+      "title": "Dormant ordinary-conversation production composition",
+      "dependsOn": [
+        "SB07"
+      ],
+      "requiredForMerge": true
+    },
+    {
+      "id": "SB09",
+      "slug": "final-regression-and-merge-gate",
+      "title": "Final regression and merge gate",
+      "dependsOn": [
+        "SB08"
+      ],
+      "requiredForMerge": true
+    }
+  ],
+  "finalGate": "SB09"
+}
