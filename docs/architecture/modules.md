@@ -6,7 +6,7 @@ first-party agent tool provider for that bounded area.
 
 | Module | Responsibility |
 |---|---|
-| [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md) | Agent catalog, provider configuration, governed execution, conversations, and capability setup |
+| [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md) | Agent catalog, provider configuration, governed execution, agent chat sessions, and capability setup |
 | [Collaboration](../../src/Modules/CanDoItAll.Modules.Collaboration/README.md) | Collaboration records and collaboration-facing application surfaces |
 | [CRM/HR](../../src/Modules/CanDoItAll.Modules.CrmHr/README.md) | Parties, accounts, opportunities, workforce, recruiting, skills, staffing, and agent/person relationships |
 | [Memory](../../src/Modules/CanDoItAll.Modules.Memory/README.md) | Memory provider configuration, operations, diagnostics, and user-facing Memory surfaces |
@@ -35,3 +35,7 @@ Each module should:
 
 Module-to-module references are acceptable only for an intentional product dependency.
 Provider, transport, and persistence details remain behind their owning adapter boundary.
+
+The ordinary multi-turn LLM conversation foundation under `src/MAF/Common` is not an active product
+module. It remains opt-in until a product surface, retention contract, and profile-generation fencing
+are implemented together.

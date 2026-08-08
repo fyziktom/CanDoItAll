@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Application-level foundation for ordinary multi-turn LLM conversations (SB15). Owns the canonical
+Application-level foundation for ordinary multi-turn LLM conversations. Owns the canonical
 conversation transcript, atomic turn admission/completion, provider/model snapshot and explicit switch
 policy, bounded non-destructive context-window selection, and durable file-backed persistence. Every
 inference call delegates to the stateless `ILlmInvocationPort`; provider conversation state is at most
@@ -33,11 +33,37 @@ Allowed references are `CanDoItAll.AgentFramework.Llm.Abstractions` and
 
 Three separate products share the lightweight LLM family: stateless invocation (`ILlmInvocationPort`),
 ordinary conversation (`ILlmConversationService`, this project), and full agent execution (elsewhere).
-Concurrent turns cannot corrupt transcript order: a turn is admitted via an optimistic revision
-compare-and-swap that persists the pending user entry plus an in-flight marker, and a failed turn rolls
-back to the pre-turn transcript. Crash recovery is explicit (`AbandonActiveTurnAsync`), never heuristic.
+They must not be composed into one implicit runtime.
+
+Turn admission reserves capacity for both the user and assistant entries before calling a provider.
+The optimistic revision compare-and-swap persists the pending user entry and an active-turn marker with
+the exact turn id, entry id, admitted revision, timestamp, and compensation state. Completion replaces
+that marker with the assistant entry. Provider failure, cancellation, or explicit
+`AbandonActiveTurnAsync` removes only the admitted pending entry, restores the provider and acceleration
+snapshot, clears the marker, and advances the revision. Rename is rejected while a turn is active;
+delete remains terminal.
+
+The file store uses schema version 2. Idle version-1 documents remain readable, but an active legacy
+turn without compensation metadata fails with a typed storage-corruption result instead of guessing a
+rollback. A canonical-path, process-wide reference-counted coordinator serializes compare-and-swap
+operations across store instances, bounds coordinator state, and cleans temporary files after atomic
+replacement.
+
+`LlmUsage` is immutable, rejects negative counters, and aggregates attempts with checked arithmetic.
+Provider metrics from every completed attempt contribute to the result; typed invocation failures carry
+known prior-attempt usage. Invalid or overflowing provider counters are sanitized to a provider failure,
+and workflow projections preserve known failure usage.
+
+## Production Activation
+
+The ordinary conversation library is opt-in and is not registered by the current product composition
+root. Activating it requires an explicit product API/UI, retention policy, integration tests, storage
+root ownership, and provider resolution fenced by the current database profile id and generation.
+Profile switching must invalidate active work or resolve the provider per operation; a singleton or
+unfenced registration is not supported.
 
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`
+- Process and MAF authority boundary: `docs/architecture/process-maf-1.15-outcome-authority.md`
