@@ -37,6 +37,7 @@
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/CanDoItAll.AgentFramework.Llm.Abstractions.csproj" />
+    <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/CanDoItAll.AgentFramework.Llm.Conversations.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Llm.ProviderRuntime/CanDoItAll.AgentFramework.Llm.ProviderRuntime.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj" />

@@ -105,11 +105,46 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
 
         var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(
             content,
-            canAnalyzeImages: false);
+            canTransformArtifacts: false);
 
         Assert.Contains("lacks artifact-transformation access", bounded.ContentSummary, StringComparison.Ordinal);
         Assert.DoesNotContain(content.Asset.MediaRelativePath, bounded.ContentSummary, StringComparison.Ordinal);
         Assert.DoesNotContain("workspace_analyze_image", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BoundForAgentRuntime_reports_document_conversion_permission_boundary_instead_of_naming_an_unavailable_tool()
+    {
+        var content = new ProjectStructureAssetContentDescriptor(
+            CreateAsset(ProjectObjectType.File, "application/pdf", "managed-files/project-media/files/calculator/quote.pdf"),
+            ContentLength: 420_000,
+            Base64Data: Convert.ToBase64String(new byte[512]));
+
+        var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(
+            content,
+            canTransformArtifacts: false);
+
+        Assert.True(bounded.Base64DataOmitted);
+        Assert.Contains("lacks artifact-transformation access", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_convert_document", bounded.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BoundForAgentRuntime_routes_large_markdown_to_project_authorized_text_tool_without_transform_access()
+    {
+        var content = new ProjectStructureAssetContentDescriptor(
+            CreateAsset(ProjectObjectType.File, "text/markdown", "managed-files/project-media/files/calculator/summary.md"),
+            ContentLength: 120_000,
+            Base64Data: Convert.ToBase64String(new byte[512]));
+
+        var bounded = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(
+            content,
+            canTransformArtifacts: false);
+
+        Assert.True(bounded.Base64DataOmitted);
+        Assert.Contains("project_structure_asset_text_get", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("workspace_convert_document", bounded.ContentSummary, StringComparison.Ordinal);
+        Assert.DoesNotContain("lacks artifact-transformation access", bounded.ContentSummary, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -304,11 +304,10 @@ public sealed class LlmInvocationException : Exception
 /// exceptions never propagate to callers.
 /// </summary>
 /// <remarks>
-/// Future extension point (not implemented by this subbundle - contract note only): an ordinary multi-turn LLM
-/// conversation application service (for example a prospective <c>ILlmConversationService</c>) would own
-/// transcript persistence, conversation metadata, and summarization/compaction policy, delegating every
-/// inference call to this stateless port. It must not be implemented by constructing an agent with disabled
-/// tools, and it must not depend on agent execution, capability composition, or MAF agent session types.
+/// The ordinary multi-turn conversation layer above this port is <see cref="ILlmConversationService"/>: it
+/// owns transcript persistence, conversation metadata, and context-window/summarization policy, delegating
+/// every inference call to this stateless port. It is not implemented by constructing an agent with disabled
+/// tools, and it does not depend on agent execution, capability composition, or MAF agent session types.
 /// </remarks>
 public interface ILlmInvocationPort
 {

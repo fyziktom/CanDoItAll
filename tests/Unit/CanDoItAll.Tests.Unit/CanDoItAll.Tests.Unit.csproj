@@ -47,6 +47,7 @@
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.ProviderPipelines\CanDoItAll.AgentFramework.ProviderPipelines.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Abstractions\CanDoItAll.AgentFramework.Llm.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Conversations\CanDoItAll.AgentFramework.Llm.Conversations.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Llm.ProviderRuntime\CanDoItAll.AgentFramework.Llm.ProviderRuntime.csproj" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />

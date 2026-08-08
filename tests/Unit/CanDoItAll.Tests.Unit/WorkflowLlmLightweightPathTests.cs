@@ -66,7 +66,8 @@ public sealed class WorkflowLlmLightweightPathTests
         var scanRoots = new[]
         {
             Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Llm.Abstractions"),
-            Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Llm.ProviderRuntime")
+            Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Llm.ProviderRuntime"),
+            Path.Combine(root, "src", "MAF", "Common", "CanDoItAll.AgentFramework.Llm.Conversations")
         };
 
         foreach (var scanRoot in scanRoots)

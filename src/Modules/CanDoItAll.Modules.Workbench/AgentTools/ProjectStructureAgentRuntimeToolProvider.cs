@@ -2024,7 +2024,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         private Task<ProjectStructureAssetContentDescriptor> ProjectStructureAssetContentGetAsync(
             AgentDefinition agent,
             ProjectStructureAccessState accessState,
-            bool canAnalyzeImages,
+            bool canTransformArtifacts,
             Guid projectId,
             string nodeId,
             CancellationToken cancellationToken)
@@ -2043,7 +2043,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     var content = await agentService.GetAssetContentAsync(projectId, nodeId, cancellationToken);
                     return ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(
                         content,
-                        canAnalyzeImages);
+                        canTransformArtifacts);
                 },
                 cancellationToken);
         }
