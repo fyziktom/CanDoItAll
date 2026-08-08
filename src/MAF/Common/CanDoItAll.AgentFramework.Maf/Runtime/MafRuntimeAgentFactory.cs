@@ -494,7 +494,7 @@ internal sealed class MafRuntimeAgentFactory
             // (for example governed process rules) are contributed by the
             // owning module through the injected policy pipeline; this adapter
             // does not interpret process fields.
-            var policyContext = new ToolInvocationPolicyContext(
+            var neutralPolicyContext = new ToolInvocationPolicyContext(
                 AgentId: agentDefinition.Id,
                 AgentName: agentDefinition.Name,
                 ToolName: functionName,
@@ -523,7 +523,10 @@ internal sealed class MafRuntimeAgentFactory
                 ExecutionGovernance = executionGovernance,
                 PathArguments = pathArguments
             };
-            var policyDecision = await toolPolicy.ComposeAndEvaluateAsync(policyContext, auditScope, cancellationToken);
+            var policyEvaluation = await toolPolicy
+                .ComposeAndEvaluateAsync(neutralPolicyContext, auditScope, cancellationToken);
+            var policyContext = policyEvaluation.EffectiveContext;
+            var policyDecision = policyEvaluation.Decision;
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
             activity?.SetTag("agentframework.tool_name", functionName);

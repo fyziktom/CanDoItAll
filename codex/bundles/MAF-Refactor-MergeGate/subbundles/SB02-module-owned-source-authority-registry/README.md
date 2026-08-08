@@ -40,3 +40,38 @@
         Create `proof/proof-manifest.json` and `SESSION-HANDOFF.md`. Record starting/ending SHA, changed
         files, commands, exit codes, test counts, architecture checks, bugs found, deviations, residual
         risk, and whether the next subbundle is unlocked.
+
+## Execution contract
+
+- **Owned finding:** MRG-002.
+- **Proof tier:** Behavioral.
+- **Progression gate:** SB03 unlocks only after implementations and registrations are module-owned, resolver construction is provider-agnostic, and dependency guards pass.
+- **Reopen trigger:** Any source-kind implementation remains in or returns to Modules.AgentFramework, or a new reference/cycle is needed.
+
+## C# Architecture Impact
+
+Convert a hard-coded integration-module catalog into a real module-owned provider registry.
+
+## Boundary Ownership
+
+Core owns the SPI; Workbench/Projects/Processes own their source semantics; Modules.AgentFramework owns only canonical resolution and composition.
+
+## Dependency Direction
+
+Publishing modules depend on Core contracts; Core and MAF never depend on publishing modules. Stop on a project cycle.
+
+## Pattern Decision
+
+Use an injected provider strategy collection with duplicate-key validation; reject a hard-coded factory or service locator.
+
+## Testability Contract
+
+Instantiate the resolver with explicit providers, test registrations in owning modules, and prove unknown/duplicate behavior independently.
+
+## Partial Class Policy
+
+Use top-level providers in owning modules; no nested or partial provider containers.
+
+## Architecture Proof Required
+
+Pre/post CodeAnalytics inventory and dependency/cycle proof, direct provider tests, composition smoke, and forbidden-ownership source guard.

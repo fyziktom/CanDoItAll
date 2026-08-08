@@ -150,6 +150,37 @@ public sealed class WorkflowLlmLightweightPathTests
     }
 
     [Fact]
+    public async Task InvokerProjectsKnownUsageFromTypedPortFailure()
+    {
+        var knownUsage = new LlmUsage(31, 7, 5);
+        var port = new RecordingLlmInvocationPort((request, _) =>
+            throw new LlmInvocationException(
+                LlmInvocationFailureKind.ProviderFailure,
+                request.Provider.Name,
+                request.Model,
+                request.CorrelationId,
+                usage: knownUsage));
+        var provider = CreateProviderProfile();
+        var invoker = new WorkflowLlmComponentInvoker(
+            port, new SingleProviderSource(provider), new ProviderProfileService());
+        var component = CreateComponent();
+        var node = CreateNode(component.Id);
+        var definition = CreateDefinition(node);
+
+        var exception = await Assert.ThrowsAsync<WorkflowUsageObservationException>(() => invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}")).AsTask());
+
+        var observation = Assert.Single(exception.Observations);
+        Assert.Equal(31, observation.InputTokens);
+        Assert.Equal(5, observation.CachedInputTokens);
+        Assert.Equal(7, observation.OutputTokens);
+        Assert.Equal(38, observation.TotalTokens);
+    }
+
+    [Fact]
     public async Task InvokerLeavesCancellationUnwrapped()
     {
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>

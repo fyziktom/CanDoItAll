@@ -16,6 +16,10 @@ public interface IToolInvocationPolicyContextContributor
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope);
 }
 
+public sealed record ToolInvocationPolicyEvaluationResult(
+    ToolInvocationPolicyContext EffectiveContext,
+    ToolInvocationPolicyDecision Decision);
+
 /// <summary>
 /// The injected tool-governance pipeline: applies every registered context
 /// contributor in registration order, then evaluates the composed context
@@ -24,7 +28,7 @@ public interface IToolInvocationPolicyContextContributor
 /// enriched the context — process restrictions must come from the Processes
 /// contributor, never from adapter defaults.
 /// </summary>
-public sealed class AgentToolInvocationPolicyPipeline : IAgentToolInvocationPolicy
+public sealed class AgentToolInvocationPolicyPipeline
 {
     private readonly IAgentToolInvocationPolicy policy;
     private readonly IReadOnlyList<IToolInvocationPolicyContextContributor> contributors;
@@ -37,15 +41,10 @@ public sealed class AgentToolInvocationPolicyPipeline : IAgentToolInvocationPoli
         this.contributors = contributors ?? [];
     }
 
-    public ValueTask<ToolInvocationPolicyDecision> EvaluateAsync(
-        ToolInvocationPolicyContext context,
-        CancellationToken cancellationToken)
-        => policy.EvaluateAsync(context, cancellationToken);
-
     /// <summary>
     /// Applies contributors to the neutral context and evaluates the result.
     /// </summary>
-    public async ValueTask<ToolInvocationPolicyDecision> ComposeAndEvaluateAsync(
+    public async ValueTask<ToolInvocationPolicyEvaluationResult> ComposeAndEvaluateAsync(
         ToolInvocationPolicyContext context,
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope,
         CancellationToken cancellationToken)
@@ -60,13 +59,53 @@ public sealed class AgentToolInvocationPolicyPipeline : IAgentToolInvocationPoli
                     $"Policy context contributor '{contributor.GetType().Name}' returned no context.");
         }
 
-        if (!string.IsNullOrWhiteSpace(auditScope?.ProcessRunId) &&
-            ReferenceEquals(composedContext, context))
+        if (!string.IsNullOrWhiteSpace(auditScope?.ProcessRunId))
         {
-            throw new InvalidOperationException(
-                "This governed process run requires a registered process policy contributor; refusing to evaluate tool policy without its typed restrictions.");
+            EnsureGovernedProcessContext(composedContext, auditScope);
         }
 
-        return await policy.EvaluateAsync(composedContext, cancellationToken).ConfigureAwait(false);
+        var decision = await policy
+            .EvaluateAsync(composedContext, cancellationToken)
+            .ConfigureAwait(false);
+        return new ToolInvocationPolicyEvaluationResult(composedContext, decision);
     }
+
+    private static void EnsureGovernedProcessContext(
+        ToolInvocationPolicyContext context,
+        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState auditScope)
+    {
+        var hasExactIdentity =
+            !string.IsNullOrWhiteSpace(auditScope.ProcessStepId) &&
+            string.Equals(context.ProcessRunId, auditScope.ProcessRunId, StringComparison.Ordinal) &&
+            string.Equals(context.ProcessStepId, auditScope.ProcessStepId, StringComparison.Ordinal);
+        var hasExactRestrictions =
+            context.ProcessAllowsProductMutation == auditScope.ProcessAllowsProductMutation &&
+            context.ProcessRequiresProductMutationBeforeManagedOutput ==
+                auditScope.ProcessRequiresProductMutationBeforeManagedOutput &&
+            HasSameValues(
+                context.ProcessProductMutationToolNames,
+                auditScope.ProcessProductMutationToolNames) &&
+            HasSameValues(
+                context.ProcessProductMutationRequiredBranchOutcomeKeys,
+                auditScope.ProcessProductMutationRequiredBranchOutcomeKeys) &&
+            HasSameValues(
+                context.ProcessStepAllowedOperations,
+                auditScope.ProcessStepAllowedOperations) &&
+            string.Equals(
+                context.ProcessStepTargetScope,
+                auditScope.ProcessStepTargetScope,
+                StringComparison.Ordinal);
+        if (!hasExactIdentity || !hasExactRestrictions)
+        {
+            throw new InvalidOperationException(
+                "This governed process run requires its exact audit identity and typed restrictions in the effective tool-policy context.");
+        }
+    }
+
+    private static bool HasSameValues(
+        IReadOnlyList<string>? effectiveValues,
+        IReadOnlyList<string>? auditValues)
+        => effectiveValues is not null &&
+           auditValues is not null &&
+           effectiveValues.SequenceEqual(auditValues, StringComparer.Ordinal);
 }

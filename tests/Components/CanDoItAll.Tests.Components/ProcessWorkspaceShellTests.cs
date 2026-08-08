@@ -1636,9 +1636,15 @@ public sealed class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public async Task Manager_chat_routes_approval_continuation_through_orchestrator()
+    public async Task Manager_chat_routes_mixed_approval_decisions_through_orchestrator()
     {
-        var workspaceService = new RecordingManagerChatWorkspaceService();
+        PendingToolApprovalRecord[] pendingApprovals =
+        [
+            new("approval-accepted", "call-accepted", "tool_a", "Function", "Approve A", "{}"),
+            new("approval-rejected", "call-rejected", "tool_b", "Function", "Reject B", "{}")
+        ];
+        var workspaceService = new RecordingManagerChatWorkspaceService(
+            pendingApprovals: pendingApprovals);
         using var context = CreateContext(out _, workspaceService);
         var cut = context.Render<ProcessWorkspaceShell>();
 
@@ -1648,18 +1654,24 @@ public sealed class ProcessWorkspaceShellTests
             "ContinueManagerChatApprovalAsync",
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
+        PendingToolApprovalDecision[] decisions =
+        [
+            new("approval-accepted", Approved: true),
+            new("approval-rejected", Approved: false)
+        ];
 
         await cut.InvokeAsync(async () =>
         {
             var continuation = Assert.IsAssignableFrom<Task>(
-                method.Invoke(cut.Instance, [true, true]));
+                method.Invoke(cut.Instance, [decisions, false]));
             await continuation;
         });
 
         var orchestrator = Assert.IsType<RecordingManagerChatExecutionOrchestrator>(
             context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>());
-        Assert.True(orchestrator.LastApprovalDecision);
-        Assert.True(orchestrator.LastAutoApprovePendingToolCalls);
+        Assert.Equal(decisions, orchestrator.LastApprovalDecisions);
+        Assert.False(orchestrator.LastApprovalDecision);
+        Assert.False(orchestrator.LastAutoApprovePendingToolCalls);
     }
 
     [Fact]
@@ -2365,10 +2377,14 @@ public sealed class ProcessWorkspaceShellTests
     {
         private readonly AgentDefinition agent;
         private readonly List<ChatSessionRecord> sessions = [];
+        private readonly IReadOnlyList<PendingToolApprovalRecord> pendingApprovals;
 
-        public RecordingManagerChatWorkspaceService(bool canUseVoiceMode = false)
+        public RecordingManagerChatWorkspaceService(
+            bool canUseVoiceMode = false,
+            IReadOnlyList<PendingToolApprovalRecord>? pendingApprovals = null)
         {
             agent = CreateAgent(canUseVoiceMode);
+            this.pendingApprovals = pendingApprovals ?? [];
         }
 
         public string AssistantResponseText { get; init; } = "Manager response from the fake runtime.";
@@ -2465,7 +2481,41 @@ public sealed class ProcessWorkspaceShellTests
                     .ToArray(),
                 selectedSession,
                 selectedSession?.Id,
-                LatestRun: null));
+                LatestRun: null)
+            {
+                SelectedRun = selectedSession is null || pendingApprovals.Count == 0
+                    ? null
+                    : CreatePendingExecutionRun(selectedSession)
+            });
+        }
+
+        private ExecutionRunRecord CreatePendingExecutionRun(ChatSessionRecord session)
+        {
+            return new ExecutionRunRecord(
+                Guid.NewGuid(),
+                agent.Id,
+                session.Id,
+                "Manager chat approval run",
+                "chat-session",
+                session.Id.ToString("N"),
+                string.Empty,
+                string.Empty,
+                "test",
+                "interactive",
+                "{}",
+                "Continue pending tool approvals",
+                string.Empty,
+                "test-provider",
+                "test-model",
+                ExecutionState.WaitingOnTool,
+                null,
+                Now,
+                Now,
+                Now,
+                null,
+                "runtime-session",
+                "{}",
+                pendingApprovals);
         }
 
         public Task<ChatRuntimeSnapshot> GetChatRuntimeSnapshotAsync(

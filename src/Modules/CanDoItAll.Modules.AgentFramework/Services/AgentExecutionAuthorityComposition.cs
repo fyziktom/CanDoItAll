@@ -20,8 +20,8 @@ namespace CanDoItAll.Modules.AgentFramework;
 /// </summary>
 internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecutionAuthorityResolver
 {
-    public const string CanonicalPolicyVersion = "v2-canonical";
-    public const string FailClosedSandboxPolicyVersion = "v2-fail-closed-sandbox";
+    public const string CanonicalPolicyVersion = AgentExecutionAuthorityPolicyVersions.Canonical;
+    public const string FailClosedSandboxPolicyVersion = AgentExecutionAuthorityPolicyVersions.FailClosedSandbox;
 
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
     private readonly IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor;
@@ -34,30 +34,18 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
         IAgentExecutionProfileGenerationSource profileGenerationSource,
         TimeProvider timeProvider,
-        IReadOnlyList<IAgentExecutionSourceAuthorityProvider>? sourceAuthorityProviders = null)
+        IEnumerable<IAgentExecutionSourceAuthorityProvider> sourceAuthorityProviders)
     {
         this.workspaceFactory = workspaceFactory ?? throw new ArgumentNullException(nameof(workspaceFactory));
         this.databaseProfileRuntimeAccessor = databaseProfileRuntimeAccessor ?? throw new ArgumentNullException(nameof(databaseProfileRuntimeAccessor));
         this.profileGenerationSource = profileGenerationSource ?? throw new ArgumentNullException(nameof(profileGenerationSource));
         this.timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-        providersBySourceKind = BuildProviderRegistry(sourceAuthorityProviders ?? CreateDefaultProviders());
+        providersBySourceKind = BuildProviderRegistry(
+            sourceAuthorityProviders ?? throw new ArgumentNullException(nameof(sourceAuthorityProviders)));
     }
 
-    /// <summary>
-    /// The built-in canonical source rules. Deterministic order; construction
-    /// fails on duplicate source kinds so exactly one provider owns each key.
-    /// </summary>
-    internal static IReadOnlyList<IAgentExecutionSourceAuthorityProvider> CreateDefaultProviders()
-        =>
-        [
-            new ProjectStructureExecutionAuthorityProvider(),
-            new ProjectsExecutionAuthorityProvider(),
-            new ProcessesExecutionAuthorityProvider("processes"),
-            new ProcessesExecutionAuthorityProvider("processes-live")
-        ];
-
     private static Dictionary<string, IAgentExecutionSourceAuthorityProvider> BuildProviderRegistry(
-        IReadOnlyList<IAgentExecutionSourceAuthorityProvider> providers)
+        IEnumerable<IAgentExecutionSourceAuthorityProvider> providers)
     {
         var registry = new Dictionary<string, IAgentExecutionSourceAuthorityProvider>(StringComparer.Ordinal);
         foreach (var provider in providers)

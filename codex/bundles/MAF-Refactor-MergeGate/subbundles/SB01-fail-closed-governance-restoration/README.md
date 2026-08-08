@@ -35,3 +35,38 @@
         Create `proof/proof-manifest.json` and `SESSION-HANDOFF.md`. Record starting/ending SHA, changed
         files, commands, exit codes, test counts, architecture checks, bugs found, deviations, residual
         risk, and whether the next subbundle is unlocked.
+
+## Execution contract
+
+- **Owned finding:** MRG-001.
+- **Proof tier:** Governed.
+- **Progression gate:** SB02 unlocks only after all initial and continuation restoration paths share the fail-closed validation and positive-evidence legacy remains green.
+- **Reopen trigger:** Any parser/restoration path converts malformed or identity-conflicting authority to absent/legacy or constructs a runtime before rejection.
+
+## C# Architecture Impact
+
+Isolate persisted-governance trust classification without widening the broad execution owner.
+
+## Boundary Ownership
+
+Core owns the typed read result and restoration validation; Models changes only if a stable shared contract is required.
+
+## Dependency Direction
+
+Core continues to depend inward on Models; no module or MAF dependency is permitted.
+
+## Pattern Decision
+
+Use a strongly typed tri-state result; nullable projection and exception-as-state are rejected.
+
+## Testability Contract
+
+Parser and execution-admission tests must prove rejection before runtime/provider construction plus a real compatible legacy case.
+
+## Partial Class Policy
+
+Edit the existing execution partial minimally; do not add another partial file or duplicate validation.
+
+## Architecture Proof Required
+
+Before/after symbol evidence, governed negative/positive transcripts, source assertion for the single restoration gate, and architecture review.

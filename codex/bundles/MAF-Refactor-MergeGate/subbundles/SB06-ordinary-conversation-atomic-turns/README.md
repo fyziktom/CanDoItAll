@@ -27,15 +27,57 @@
 
         ## Acceptance
 
-        - [ ] Failed or abandoned Adopt restores the original provider and acceleration.
-- [ ] Successful Adopt remains unchanged.
-- [ ] Rename during active turn fails typed without changing state.
-- [ ] Near-capacity turn fails before ILlmInvocationPort is called.
-- [ ] Corrupted ActiveTurn metadata fails typed on load.
-- [ ] No ordinary failure leaves an orphaned active turn.
+        - [x] Failed or abandoned Adopt restores the original provider and acceleration.
+- [x] Successful Adopt remains unchanged.
+- [x] Rename during active turn fails typed without changing state.
+- [x] Near-capacity turn fails before ILlmInvocationPort is called.
+- [x] Corrupted ActiveTurn metadata fails typed on load.
+- [x] No ordinary failure leaves an orphaned active turn.
 
         ## Proof requirements
 
         Create `proof/proof-manifest.json` and `SESSION-HANDOFF.md`. Record starting/ending SHA, changed
         files, commands, exit codes, test counts, architecture checks, bugs found, deviations, residual
         risk, and whether the next subbundle is unlocked.
+
+## Execution contract
+
+- **Owned findings:** MRG-006, MRG-007, and MRG-008.
+- **Proof tier:** Governed.
+- **Progression gate:** SB07 unlocks only after failure/cancel/abandon/recovery compensation, active-turn mutation guards, identity validation, and pre-provider capacity admission pass.
+- **Reopen trigger:** Any ordinary failure leaves turn-owned state, rename mutates an active turn, or the provider is invoked without two available transcript slots.
+
+## C# Architecture Impact
+
+Make turn-owned state an explicit durable transaction/compensation boundary without adding product features.
+
+## Boundary Ownership
+
+Llm.Abstractions owns bounded durable state contracts; Llm.Conversations owns orchestration, validation, compensation, and persistence mapping.
+
+## Dependency Direction
+
+LLM projects remain agent/workspace/process/MAF free and depend inward on LLM contracts and Models.
+
+## Pattern Decision
+
+Use explicit durable compensation state and one compensation constructor/path; reject rollback reconstructed from admitted state.
+
+## Testability Contract
+
+Direct service/store tests cover semantic positive turns and adversarial failure, cancellation, abandonment, crash recovery, rename, capacity, and corruption.
+
+## Partial Class Policy
+
+Keep the service cohesive without partials, nested state managers, or duplicated compensation branches.
+
+## Architecture Proof Required
+
+Governed invariant matrix, failing-first/passing transcripts, persistence round-trip assertions, anti-stub audit, and downstream successful-turn smoke.
+
+## Gate result
+
+- **Status:** Complete
+- **Decision:** Pass
+- **Evidence:** `proof-manifest.json`, `SESSION-HANDOFF.md`, and `../../proof/SB06`
+- **Next subbundle:** SB07 unlocked

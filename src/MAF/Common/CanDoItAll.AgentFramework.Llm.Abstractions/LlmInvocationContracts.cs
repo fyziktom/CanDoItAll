@@ -227,7 +227,35 @@ public sealed record LlmInvocationRequest
 /// <summary>
 /// Token usage reported for a single lightweight LLM invocation.
 /// </summary>
-public sealed record LlmUsage(int InputTokens, int OutputTokens, int CachedInputTokens = 0);
+public sealed record LlmUsage
+{
+    public static LlmUsage Zero { get; } = new(0, 0, 0);
+
+    public LlmUsage(int InputTokens, int OutputTokens, int CachedInputTokens = 0)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(InputTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(OutputTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(CachedInputTokens);
+        this.InputTokens = InputTokens;
+        this.OutputTokens = OutputTokens;
+        this.CachedInputTokens = CachedInputTokens;
+    }
+
+    public int InputTokens { get; }
+
+    public int OutputTokens { get; }
+
+    public int CachedInputTokens { get; }
+
+    public LlmUsage Add(LlmUsage other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return new LlmUsage(
+            checked(InputTokens + other.InputTokens),
+            checked(OutputTokens + other.OutputTokens),
+            checked(CachedInputTokens + other.CachedInputTokens));
+    }
+}
 
 /// <summary>
 /// The result of a single lightweight LLM invocation.
@@ -259,13 +287,15 @@ public sealed class LlmInvocationException : Exception
         string providerName,
         string model,
         string correlationId,
-        Exception? innerException = null)
+        Exception? innerException = null,
+        LlmUsage? usage = null)
         : base(BuildMessage(kind, providerName, model, correlationId), innerException)
     {
         Kind = kind;
         ProviderName = providerName ?? string.Empty;
         Model = model ?? string.Empty;
         CorrelationId = correlationId ?? string.Empty;
+        Usage = usage;
     }
 
     public LlmInvocationFailureKind Kind { get; }
@@ -275,6 +305,8 @@ public sealed class LlmInvocationException : Exception
     public string Model { get; }
 
     public string CorrelationId { get; }
+
+    public LlmUsage? Usage { get; }
 
     private static string BuildMessage(
         LlmInvocationFailureKind kind,

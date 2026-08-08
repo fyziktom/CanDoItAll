@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,14 +9,16 @@ namespace CanDoItAll.AgentFramework.Llm.Conversations;
 /// <summary>
 /// File-backed conversation store: one JSON document per conversation under
 /// <c>{root}/conversations/{id}.json</c>, written atomically (temp file + move) with the optimistic
-/// revision compare-and-swap serialized per conversation. The persistence schema is an explicit
+/// revision compare-and-swap serialized per canonical document path across store instances in this
+/// process. The persistence schema is an explicit
 /// versioned DTO decoupled from the contract records, and loads re-validate through the contract
 /// constructors so a corrupted or tampered file fails typed instead of yielding partial state.
-/// Assumes a single writing process per storage root, matching the other file-backed stores.
+/// Coordination is process-wide, not cross-process; callers must ensure a storage root has only one
+/// writing process.
 /// </summary>
 public sealed class FileLlmConversationStore : ILlmConversationStore
 {
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -27,42 +28,46 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
     };
 
     private readonly string _conversationsRoot;
-    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _conversationGates = new();
+    private readonly Func<string, string, CancellationToken, Task> _writeTemporaryFileAsync;
 
     public FileLlmConversationStore(string rootPath)
+        : this(rootPath, File.WriteAllTextAsync)
+    {
+    }
+
+    internal FileLlmConversationStore(
+        string rootPath,
+        Func<string, string, CancellationToken, Task> writeTemporaryFileAsync)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        ArgumentNullException.ThrowIfNull(writeTemporaryFileAsync);
         _conversationsRoot = Path.Combine(Path.GetFullPath(rootPath), "conversations");
+        _writeTemporaryFileAsync = writeTemporaryFileAsync;
     }
 
     public async Task<LlmConversationDocument> CreateAsync(
         LlmConversationDocument document, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
-        var gate = ResolveGate(document.ConversationId);
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        var path = DocumentPath(document.ConversationId);
+        using var lease = await LlmConversationFileCoordinator.AcquireAsync(path, cancellationToken)
+            .ConfigureAwait(false);
+        if (File.Exists(path))
         {
-            var path = DocumentPath(document.ConversationId);
-            if (File.Exists(path))
-            {
-                throw new LlmConversationException(
-                    LlmConversationFailureKind.AlreadyExists, document.ConversationId);
-            }
+            throw new LlmConversationException(
+                LlmConversationFailureKind.AlreadyExists, document.ConversationId);
+        }
 
-            await WriteAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
-            return document;
-        }
-        finally
-        {
-            gate.Release();
-        }
+        await WriteAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
+        return document;
     }
 
     public async Task<LlmConversationDocument?> TryGetAsync(
         Guid conversationId, CancellationToken cancellationToken = default)
     {
         var path = DocumentPath(conversationId);
+        using var lease = await LlmConversationFileCoordinator.AcquireAsync(path, cancellationToken)
+            .ConfigureAwait(false);
         if (!File.Exists(path))
         {
             return null;
@@ -83,32 +88,25 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
                 "A replacement document must advance the transcript revision.");
         }
 
-        var gate = ResolveGate(document.ConversationId);
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        var path = DocumentPath(document.ConversationId);
+        using var lease = await LlmConversationFileCoordinator.AcquireAsync(path, cancellationToken)
+            .ConfigureAwait(false);
+        if (!File.Exists(path))
         {
-            var path = DocumentPath(document.ConversationId);
-            if (!File.Exists(path))
-            {
-                throw new LlmConversationException(LlmConversationFailureKind.NotFound, document.ConversationId);
-            }
-
-            var stored = await ReadAsync(document.ConversationId, path, cancellationToken).ConfigureAwait(false);
-            if (stored.TranscriptRevision != expectedTranscriptRevision)
-            {
-                throw new LlmConversationException(
-                    LlmConversationFailureKind.ConcurrencyConflict,
-                    document.ConversationId,
-                    $"Stored revision {stored.TranscriptRevision}, expected {expectedTranscriptRevision}.");
-            }
-
-            await WriteAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
-            return document;
+            throw new LlmConversationException(LlmConversationFailureKind.NotFound, document.ConversationId);
         }
-        finally
+
+        var stored = await ReadAsync(document.ConversationId, path, cancellationToken).ConfigureAwait(false);
+        if (stored.TranscriptRevision != expectedTranscriptRevision)
         {
-            gate.Release();
+            throw new LlmConversationException(
+                LlmConversationFailureKind.ConcurrencyConflict,
+                document.ConversationId,
+                $"Stored revision {stored.TranscriptRevision}, expected {expectedTranscriptRevision}.");
         }
+
+        await WriteAtomicallyAsync(path, document, cancellationToken).ConfigureAwait(false);
+        return document;
     }
 
     public async Task<IReadOnlyList<LlmConversationSummary>> ListAsync(CancellationToken cancellationToken = default)
@@ -124,6 +122,13 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
             cancellationToken.ThrowIfCancellationRequested();
             var fileName = Path.GetFileNameWithoutExtension(path);
             if (!Guid.TryParseExact(fileName, "N", out var conversationId))
+            {
+                continue;
+            }
+
+            using var lease = await LlmConversationFileCoordinator.AcquireAsync(path, cancellationToken)
+                .ConfigureAwait(false);
+            if (!File.Exists(path))
             {
                 continue;
             }
@@ -146,26 +151,16 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
 
     public async Task DeleteAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        var gate = ResolveGate(conversationId);
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        var path = DocumentPath(conversationId);
+        using var lease = await LlmConversationFileCoordinator.AcquireAsync(path, cancellationToken)
+            .ConfigureAwait(false);
+        if (!File.Exists(path))
         {
-            var path = DocumentPath(conversationId);
-            if (!File.Exists(path))
-            {
-                throw new LlmConversationException(LlmConversationFailureKind.NotFound, conversationId);
-            }
+            throw new LlmConversationException(LlmConversationFailureKind.NotFound, conversationId);
+        }
 
-            File.Delete(path);
-        }
-        finally
-        {
-            gate.Release();
-        }
+        File.Delete(path);
     }
-
-    private SemaphoreSlim ResolveGate(Guid conversationId)
-        => _conversationGates.GetOrAdd(conversationId, static _ => new SemaphoreSlim(1, 1));
 
     private string DocumentPath(Guid conversationId)
         => Path.Combine(_conversationsRoot, conversationId.ToString("N") + ".json");
@@ -176,8 +171,19 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
         Directory.CreateDirectory(_conversationsRoot);
         var payload = JsonSerializer.Serialize(ConversationDocumentDto.FromDocument(document), SerializerOptions);
         var temporaryPath = path + ".tmp-" + Guid.NewGuid().ToString("N");
-        await File.WriteAllTextAsync(temporaryPath, payload, cancellationToken).ConfigureAwait(false);
-        File.Move(temporaryPath, path, overwrite: true);
+        try
+        {
+            await _writeTemporaryFileAsync(temporaryPath, payload, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
     }
 
     private static async Task<LlmConversationDocument> ReadAsync(
@@ -219,11 +225,7 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
                 CurrentSchemaVersion,
                 document.ConversationId,
                 document.Title,
-                new ProviderSnapshotDto(
-                    document.Provider.ProviderId,
-                    document.Provider.ProviderName,
-                    document.Provider.ProviderKind.ToString(),
-                    document.Provider.Model),
+                ProviderSnapshotDto.FromSnapshot(document.Provider),
                 document.CreatedAtUtc,
                 document.UpdatedAtUtc,
                 document.TranscriptRevision,
@@ -233,14 +235,18 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
                     : new ActiveTurnDto(
                         document.ActiveTurn.TurnId,
                         document.ActiveTurn.PendingUserEntryId,
-                        document.ActiveTurn.AdmittedAtUtc),
+                        document.ActiveTurn.AdmittedAtUtc,
+                        document.ActiveTurn.AdmittedRevision,
+                        document.ActiveTurn.Compensation is null
+                            ? null
+                            : ProviderSnapshotDto.FromSnapshot(document.ActiveTurn.Compensation.Provider),
+                        document.ActiveTurn.Compensation?.AccelerationState is null
+                            ? null
+                            : AccelerationEnvelopeDto.FromEnvelope(
+                                document.ActiveTurn.Compensation.AccelerationState)),
                 document.AccelerationState is null
                     ? null
-                    : new AccelerationEnvelopeDto(
-                        document.AccelerationState.StrategyId,
-                        document.AccelerationState.ProviderName,
-                        document.AccelerationState.Model,
-                        document.AccelerationState.PayloadJson));
+                    : AccelerationEnvelopeDto.FromEnvelope(document.AccelerationState));
 
         public LlmConversationDocument ToDocument()
         {
@@ -251,38 +257,37 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
 
             ArgumentNullException.ThrowIfNull(Provider);
             ArgumentNullException.ThrowIfNull(Entries);
+            if (ActiveTurn is not null && SchemaVersion < 2)
+            {
+                throw new JsonException(
+                    "A legacy active turn does not contain durable compensation metadata.");
+            }
+
             return new LlmConversationDocument(
                 ConversationId,
                 Title ?? string.Empty,
-                new LlmConversationProviderSnapshot(
-                    Provider.ProviderId,
-                    Provider.ProviderName,
-                    ParseProviderKind(Provider.ProviderKind),
-                    Provider.Model),
+                Provider.ToSnapshot(),
                 CreatedAtUtc,
                 UpdatedAtUtc,
                 TranscriptRevision,
                 [.. Entries.Select(static entry => entry.ToEntry())],
                 ActiveTurn is null
                     ? null
-                    : new LlmConversationActiveTurn(
-                        ActiveTurn.TurnId, ActiveTurn.PendingUserEntryId, ActiveTurn.AdmittedAtUtc),
+                    : ActiveTurn.ToActiveTurn(),
                 AccelerationState is null
                     ? null
-                    : new LlmConversationAccelerationEnvelope(
-                        AccelerationState.StrategyId,
-                        AccelerationState.ProviderName,
-                        AccelerationState.Model,
-                        AccelerationState.PayloadJson));
+                    : AccelerationState.ToEnvelope());
         }
-
-        private static ProviderKind ParseProviderKind(string value)
-            => Enum.TryParse<ProviderKind>(value, ignoreCase: false, out var kind) && Enum.IsDefined(kind)
-                ? kind
-                : throw new JsonException($"Unknown provider kind '{value}'.");
     }
 
-    private sealed record ProviderSnapshotDto(Guid ProviderId, string ProviderName, string ProviderKind, string Model);
+    private sealed record ProviderSnapshotDto(Guid ProviderId, string ProviderName, string ProviderKind, string Model)
+    {
+        public static ProviderSnapshotDto FromSnapshot(LlmConversationProviderSnapshot snapshot)
+            => new(snapshot.ProviderId, snapshot.ProviderName, snapshot.ProviderKind.ToString(), snapshot.Model);
+
+        public LlmConversationProviderSnapshot ToSnapshot()
+            => new(ProviderId, ProviderName, ParseProviderKind(ProviderKind), Model);
+    }
 
     private sealed record TranscriptEntryDto(
         Guid EntryId,
@@ -318,10 +323,48 @@ public sealed class FileLlmConversationStore : ILlmConversationStore
                 Usage is null ? null : new LlmUsage(Usage.InputTokens, Usage.OutputTokens, Usage.CachedInputTokens));
     }
 
-    private sealed record ActiveTurnDto(Guid TurnId, Guid PendingUserEntryId, DateTimeOffset AdmittedAtUtc);
+    private sealed record ActiveTurnDto(
+        Guid TurnId,
+        Guid PendingUserEntryId,
+        DateTimeOffset AdmittedAtUtc,
+        long AdmittedRevision,
+        ProviderSnapshotDto? PreTurnProvider,
+        AccelerationEnvelopeDto? PreTurnAccelerationState)
+    {
+        public LlmConversationActiveTurn ToActiveTurn()
+        {
+            if (PreTurnProvider is null && PreTurnAccelerationState is not null)
+            {
+                throw new JsonException(
+                    "Active-turn acceleration compensation requires a pre-turn provider.");
+            }
+
+            return new LlmConversationActiveTurn(
+                TurnId,
+                PendingUserEntryId,
+                AdmittedAtUtc,
+                AdmittedRevision,
+                PreTurnProvider is null
+                    ? null
+                    : new LlmConversationTurnCompensation(
+                        PreTurnProvider.ToSnapshot(), PreTurnAccelerationState?.ToEnvelope()));
+        }
+    }
 
     private sealed record AccelerationEnvelopeDto(
-        string StrategyId, string ProviderName, string Model, string PayloadJson);
+        string StrategyId, string ProviderName, string Model, string PayloadJson)
+    {
+        public static AccelerationEnvelopeDto FromEnvelope(LlmConversationAccelerationEnvelope envelope)
+            => new(envelope.StrategyId, envelope.ProviderName, envelope.Model, envelope.PayloadJson);
+
+        public LlmConversationAccelerationEnvelope ToEnvelope()
+            => new(StrategyId, ProviderName, Model, PayloadJson);
+    }
 
     private sealed record UsageDto(int InputTokens, int OutputTokens, int CachedInputTokens);
+
+    private static ProviderKind ParseProviderKind(string value)
+        => Enum.TryParse<ProviderKind>(value, ignoreCase: false, out var kind) && Enum.IsDefined(kind)
+            ? kind
+            : throw new JsonException($"Unknown provider kind '{value}'.");
 }

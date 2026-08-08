@@ -26,3 +26,30 @@ project separation are the accepted baseline.
 - Produce proof manifests and session handoffs for every subbundle.
 
 Start with `01-REVIEW-VERDICT.md`, `02-FINDINGS-REGISTER.md`, and `03-EXECUTION-ORDER.md`.
+
+## Bundle compatibility map
+
+This bundle predates the canonical CanDoItAll bundle scaffold but preserves the required semantic roles:
+
+| Semantic role | Bundle surface |
+|---|---|
+| Source inputs and normalized requirements | `manifest.json`, `01-REVIEW-VERDICT.md`, `02-FINDINGS-REGISTER.md` |
+| Current repository and architecture evidence | `architecture/00-verified-baseline.md`, `architecture/09-csharp-execution-guard.md` |
+| Dependency and execution plan | `03-EXECUTION-ORDER.md`, `plan/architecture-checkpoints.md` |
+| Work units | `subbundles/SB00-*` through `subbundles/SB09-*` |
+| Traceability | `plan/traceability.md` |
+| Status and proof | `05-EXECUTION-STATUS.md`, per-subbundle proof and handoff files |
+| Closure | finding closure in `05-EXECUTION-STATUS.md`, then `reviews/FINAL-MERGE-DECISION.md` |
+
+The bundle-specific structural validator remains authoritative for its external shape. The CanDoItAll
+bundle validator is applied as a manual semantic readiness and closure gate.
+
+## Proof-tier policy
+
+- `Governed`: SB00, SB01, SB03, SB04, SB05, SB06, and SB09.
+- `Behavioral`: SB02, SB07, and SB08.
+- Every subbundle still produces the bundle-required `proof/proof-manifest.json` and
+  `SESSION-HANDOFF.md`.
+- Governed subbundles additionally produce the artifact-backed manifest, semantic invariants,
+  transcripts, hashes, source assertions, and downstream or verifier proof required by the active
+  bundle workflow skill.

@@ -71,15 +71,18 @@ public sealed class WorkflowLlmComponentInvoker(
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             var failureCompletedAtUtc = clock.GetUtcNow();
+            var failureUsage = (exception as LlmInvocationException)?.Usage;
             var unavailable = WorkflowUsageObservationFactory.FromProviderResponseMetrics(
                 CreateUsageContext(definition, node, component, invocationId, now, failureCompletedAtUtc),
                 provider,
                 model,
-                inputTokens: 0,
-                cachedInputTokens: 0,
-                outputTokens: 0,
+                inputTokens: failureUsage?.InputTokens ?? 0,
+                cachedInputTokens: failureUsage?.CachedInputTokens ?? 0,
+                outputTokens: failureUsage?.OutputTokens ?? 0,
                 reasoningTokens: 0,
-                totalTokens: 0,
+                totalTokens: failureUsage is null
+                    ? 0
+                    : checked(failureUsage.InputTokens + failureUsage.OutputTokens),
                 toolCallCount: 0,
                 failureCompletedAtUtc);
             throw new WorkflowUsageObservationException(exception.Message, exception, [unavailable]);

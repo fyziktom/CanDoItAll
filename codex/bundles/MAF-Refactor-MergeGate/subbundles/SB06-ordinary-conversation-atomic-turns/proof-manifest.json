@@ -1,0 +1,58 @@
+{
+  "subbundle": "SB06",
+  "title": "Ordinary conversation atomic turns",
+  "status": "Complete",
+  "decision": "Pass",
+  "proofTier": "Governed",
+  "startingCommit": "d27fb8307aac6a5f88be6504eb5a284ca41ac1f6",
+  "endingCommit": "d27fb8307aac6a5f88be6504eb5a284ca41ac1f6",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [
+    "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/LlmConversationContracts.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/LlmConversationService.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/FileLlmConversationStore.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/LlmConversationServiceTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/FileLlmConversationStoreTests.cs"
+  ],
+  "commands": [
+    { "name": "three failing-first SB00 conversation characterizations", "exitCode": 1, "expected": true },
+    { "name": "expanded failure, cancellation, abandonment, identity, corruption, and delete characterization matrix", "exitCode": 1, "expected": true },
+    { "name": "focused conversation service and file-store neighborhood", "exitCode": 0 },
+    { "name": "ten-characterization progression gate", "exitCode": 1, "expected": true },
+    { "name": "CodeAnalytics post snapshot and ownership queries", "exitCode": 0 },
+    { "name": "Release solution build", "exitCode": 0 },
+    { "name": "anti-stub and forbidden-dependency source audit", "exitCode": 0 }
+  ],
+  "tests": [
+    { "name": "LlmConversationServiceTests and FileLlmConversationStoreTests", "passed": 44, "failed": 0, "skipped": 0 },
+    { "name": "MRG-001 through MRG-009 progression", "passed": 9, "failed": 1, "skipped": 0, "expectedDownstreamFailures": true }
+  ],
+  "architectureChecks": [
+    { "name": "CodeAnalytics pre/post", "result": "Pass", "evidence": "snap-20260808152229-7024a527 -> snap-20260808153219-7024a527; no blocking errors, diagnostics, open questions, or dependency cycle" },
+    { "name": "durable contract ownership", "result": "Pass", "evidence": "Abstractions owns bounded compensation values; Conversations owns admission, compensation, schema mapping, and validation" },
+    { "name": "single compensation path", "result": "Pass", "evidence": "BuildCompensatedDocument is used by provider-failure/cancellation rollback and explicit/crash abandonment" },
+    { "name": "dependency isolation", "result": "Pass", "evidence": "No Core, MAF, workflow, process, workspace, or Modules dependency was introduced" },
+    { "name": "anti-stub audit", "result": "Pass", "evidence": "No NotImplementedException, TODO, FIXME, or forbidden project semantic was found in the two LLM projects" },
+    { "name": "C# architecture review", "result": "Pass", "evidence": "proof/SB06/architecture-review.md" }
+  ],
+  "bugs": [
+    "Adoption mutated provider and acceleration before invocation but active-turn state did not retain the pre-turn values needed for compensation.",
+    "Rename could mutate a document with an active turn.",
+    "Admission reserved only the user slot, allowing assistant append to exceed the transcript bound after provider invocation.",
+    "Document validation accepted duplicate entry ids and active markers pointing at the wrong role or turn."
+  ],
+  "deviations": [
+    "CodeAnalytics reports the pre-existing large-contract-file warning and a new large-file warning for the cohesive versioned file-store DTO owner; extraction/partial splitting was rejected by the bundle architecture guard, and both files remain single-responsibility owners."
+  ],
+  "knownGaps": [],
+  "acceptance": [
+    { "criterion": "Failed or abandoned Adopt restores the original provider and acceleration.", "satisfied": true, "evidence": "Provider failure, cancellation, explicit abandonment, and new-service persisted crash-recovery tests" },
+    { "criterion": "Successful Adopt remains unchanged.", "satisfied": true, "evidence": "SendAsync_with_adopt_policy_updates_the_provider_snapshot_and_clears_acceleration_state" },
+    { "criterion": "Rename during active turn fails typed without changing state.", "satisfied": true, "evidence": "RenameAsync_rejects_mutation_while_a_turn_is_in_flight" },
+    { "criterion": "Near-capacity turn fails before ILlmInvocationPort is called.", "satisfied": true, "evidence": "SendAsync_rejects_insufficient_transcript_capacity_before_invoking_the_provider" },
+    { "criterion": "Corrupted ActiveTurn metadata fails typed on load.", "satisfied": true, "evidence": "Identity corruption and legacy active-schema tests return StorageCorrupted" },
+    { "criterion": "No ordinary failure leaves an orphaned active turn.", "satisfied": true, "evidence": "Failure, cancellation, invalid context window, explicit abandon, and crash recovery clear the active marker; terminal delete removes the document" }
+  ],
+  "residualRisk": "Compensation retries compare-and-swap conflicts three times and then fails explicitly; continuous out-of-contract direct-store writers can still prevent recovery and surface that conflict.",
+  "nextSubbundleUnlocked": true
+}

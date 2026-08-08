@@ -50,10 +50,18 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
             resolvedScope,
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()));
+        services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>(serviceProvider =>
+            new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList()));
         services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
             new WorkspaceExecutionRunProcessLeaseCleaner(
                 serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
-                serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>()));
+                new WorkspaceExecutionScope(
+                    normalizedWorkspaceRoot,
+                    resolvedScope,
+                    resolvedActivityWorkspaceIdentity.DatabaseProfileId,
+                    resolvedActivityWorkspaceIdentity.DatabaseProfileGeneration),
+                serviceProvider.GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>()));
         services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddSingleton<IWorkspaceImageOperationService>(_ => new WorkspaceImageOperationService(
             normalizedWorkspaceRoot,

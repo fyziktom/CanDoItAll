@@ -88,7 +88,8 @@ public sealed class UnknownSourceExecutionAuthorityBaselineTests
             new ListOnlyWorkspaceFactory(agents),
             new FixedDatabaseProfileRuntimeAccessor(ProfileId),
             new FixedAgentExecutionProfileGenerationSource(new DatabaseProfileGeneration(1)),
-            TimeProvider.System);
+            TimeProvider.System,
+            []);
 
     private static AgentDefinition CreateAgent()
     {

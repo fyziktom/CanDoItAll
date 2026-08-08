@@ -26,6 +26,12 @@ public sealed record AgentExecutionSourceAuthorityDecision(
     bool MutationAllowed,
     string PolicyVersion);
 
+public static class AgentExecutionAuthorityPolicyVersions
+{
+    public const string Canonical = "v2-canonical";
+    public const string FailClosedSandbox = "v2-fail-closed-sandbox";
+}
+
 /// <summary>
 /// Source-keyed canonical authority rule. Exactly one provider may own a
 /// source kind; the resolver validates uniqueness at construction. Source
@@ -40,4 +46,40 @@ public interface IAgentExecutionSourceAuthorityProvider
     ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
         AgentExecutionSourceAuthorityRequest request,
         CancellationToken cancellationToken = default);
+}
+
+public static class ProjectScopedExecutionAuthority
+{
+    public static AgentExecutionSourceAuthorityDecision Resolve(
+        AgentDefinition agent,
+        Guid projectId,
+        WorkspaceScopeDescriptor? observedScope)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException("A project id is required.", nameof(projectId));
+        }
+
+        var canonicalScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+        if (observedScope is not null && observedScope != canonicalScope)
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"The published workspace scope '{observedScope.DisplayName}' does not match the canonical project scope '{canonicalScope.DisplayName}'.");
+        }
+
+        var summary = ContextualAgentAccessResolver
+            .Resolve([agent], ContextualAgentWorkspaceKind.ProjectStructure, projectId)
+            .FirstOrDefault();
+        if (summary is null || !summary.CanRead)
+        {
+            throw new AgentChatContextAccessDeniedException(agent.Id, default);
+        }
+
+        return new AgentExecutionSourceAuthorityDecision(
+            canonicalScope,
+            ReadAllowed: true,
+            MutationAllowed: summary.CanWrite,
+            AgentExecutionAuthorityPolicyVersions.Canonical);
+    }
 }

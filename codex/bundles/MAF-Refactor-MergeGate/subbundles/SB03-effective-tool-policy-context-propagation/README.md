@@ -36,3 +36,38 @@
         Create `proof/proof-manifest.json` and `SESSION-HANDOFF.md`. Record starting/ending SHA, changed
         files, commands, exit codes, test counts, architecture checks, bugs found, deviations, residual
         risk, and whether the next subbundle is unlocked.
+
+## Execution contract
+
+- **Owned finding:** MRG-003.
+- **Proof tier:** Governed.
+- **Progression gate:** SB04 unlocks only when every downstream policy consumer uses the exact effective context and process denial remains recoverable.
+- **Reopen trigger:** Any consumer retains the original neutral context or process enrichment is inferred from object identity instead of typed audit identity/restrictions.
+
+## C# Architecture Impact
+
+Make contributor enrichment an explicit pipeline output while preserving provider-neutral MAF mapping.
+
+## Boundary Ownership
+
+Core owns pipeline/result contracts; Processes owns process enrichment; MAF consumes only neutral typed fields.
+
+## Dependency Direction
+
+Processes and MAF depend on Core contracts; Core never depends on Processes and MAF gains no process semantics.
+
+## Pattern Decision
+
+Use a typed pipeline result containing effective context and decision; reject ambient mutation or a decision-only return.
+
+## Testability Contract
+
+Direct pipeline tests plus MAF composition tests must distinguish a real process contributor from an unrelated cloning contributor.
+
+## Partial Class Policy
+
+Do not expand `AgentToolInvocationPolicy.cs` or add partial policy owners; keep the result cohesive and small.
+
+## Architecture Proof Required
+
+Governed failing-first/passing transcripts, all-consumer source assertions, recoverable-denial smoke, and MAF forbidden-semantic guard.

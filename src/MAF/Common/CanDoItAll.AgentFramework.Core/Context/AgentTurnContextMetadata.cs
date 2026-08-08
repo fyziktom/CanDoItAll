@@ -141,75 +141,81 @@ public static class AgentTurnContextMetadata
         }
     }
 
-    /// <summary>
-    /// Rebuilds the immutable execution governance snapshot from the safe
-    /// persisted authority projection of one admitted run. Returns
-    /// <c>null</c> for metadata written before the authority projection
-    /// existed and for any malformed projection — callers treat that as
-    /// "no context-admitted authority", never as a wider grant. Metadata
-    /// written before the agent/profile identifiers were persisted maps them
-    /// to empty values; the execution-time validator skips empty identity
-    /// comparisons instead of failing legacy runs.
-    /// </summary>
-    public static AgentExecutionGovernanceSnapshot? TryReadExecutionGovernanceSnapshot(string? metadataJson)
+    internal static AgentExecutionGovernanceReadResult ReadExecutionGovernanceSnapshot(
+        string? metadataJson)
     {
-        if (TryParseObject(metadataJson) is not { } metadata ||
-            metadata[ExecutionAuthorityMetadataKey] is not JsonObject authority)
+        if (string.IsNullOrWhiteSpace(metadataJson))
         {
-            return null;
+            return AgentExecutionGovernanceReadResult.Absent;
+        }
+
+        if (TryParseObject(metadataJson) is not { } metadata)
+        {
+            return AgentExecutionGovernanceReadResult.Malformed;
+        }
+
+        if (!metadata.TryGetPropertyValue(ExecutionAuthorityMetadataKey, out var authorityNode))
+        {
+            return AgentExecutionGovernanceReadResult.Absent;
+        }
+
+        if (authorityNode is not JsonObject authority)
+        {
+            return AgentExecutionGovernanceReadResult.Malformed;
         }
 
         try
         {
+            var schemaVersion = ReadInt32(authority, "schemaVersion");
+            if (schemaVersion != AgentExecutionAuthorityRecord.CurrentSchemaVersion)
+            {
+                return AgentExecutionGovernanceReadResult.Malformed;
+            }
+
             var scopeKindText = ReadString(authority, "workspaceScopeKind");
             if (!Enum.TryParse<WorkspaceScopeKind>(scopeKindText, ignoreCase: true, out var scopeKind))
             {
-                return null;
+                return AgentExecutionGovernanceReadResult.Malformed;
             }
 
-            var agentIdText = authority["agentId"]?.GetValue<string>();
-            var databaseProfileIdText = authority["databaseProfileId"]?.GetValue<string>();
-            return new AgentExecutionGovernanceSnapshot(
+            var policyVersion = ReadString(authority, "policyVersion");
+            var policyFingerprint = ReadString(authority, "policyFingerprint");
+            if (policyFingerprint.Length > AgentChatContextLimits.MaximumFingerprintLength)
+            {
+                return AgentExecutionGovernanceReadResult.Malformed;
+            }
+
+            var snapshot = new AgentExecutionGovernanceSnapshot(
                 new AgentExecutionAuthorityId(ReadGuid(authority, "authorityId")),
-                string.IsNullOrWhiteSpace(agentIdText)
-                    ? LegacyProjectionAgentId
-                    : Guid.ParseExact(agentIdText, "N"),
-                string.IsNullOrWhiteSpace(databaseProfileIdText)
-                    ? LegacyProjectionProfileId
-                    : Guid.ParseExact(databaseProfileIdText, "N"),
-                new DatabaseProfileGeneration(authority["databaseProfileGeneration"]?.GetValue<long>() ?? 0),
+                ReadGuid(authority, "agentId"),
+                ReadGuid(authority, "databaseProfileId"),
+                new DatabaseProfileGeneration(ReadInt64(authority, "databaseProfileGeneration")),
                 new WorkspaceScopeDescriptor(
                     scopeKind,
                     authority["workspaceScopeKey"]?.GetValue<string>()),
-                authority["readAllowed"]?.GetValue<bool>() ?? false,
-                authority["mutationAllowed"]?.GetValue<bool>() ?? false,
-                authority["policyVersion"]?.GetValue<string>() is { Length: > 0 } policyVersion
-                    ? policyVersion
-                    : "unknown",
-                authority["policyFingerprint"]?.GetValue<string>() is { Length: > 0 } policyFingerprint
-                    ? policyFingerprint
-                    : "unknown",
-                ReadEntries(authority, "allowedOperations"),
-                ReadEntries(authority, "allowedCapabilityKeys"),
-                ReadEntries(authority, "allowedExternalTargetAliases"),
-                ReadEntries(authority, "readOnlyExternalTargetAliases"));
+                ReadBoolean(authority, "readAllowed"),
+                ReadBoolean(authority, "mutationAllowed"),
+                policyVersion,
+                policyFingerprint,
+                ReadEntriesStrict(authority, "allowedOperations"),
+                ReadEntriesStrict(authority, "allowedCapabilityKeys"),
+                ReadEntriesStrict(authority, "allowedExternalTargetAliases"),
+                ReadEntriesStrict(authority, "readOnlyExternalTargetAliases"));
+            return AgentExecutionGovernanceReadResult.Valid(snapshot);
         }
         catch (Exception exception) when (
             exception is ArgumentException or ArgumentOutOfRangeException or FormatException or InvalidOperationException)
         {
-            return null;
+            return AgentExecutionGovernanceReadResult.Malformed;
         }
     }
 
-    /// <summary>
-    /// Sentinel identities for authority projections persisted before agent and
-    /// profile identifiers were part of the projection. They are stable,
-    /// non-empty, and can never match a real identity comparison — the
-    /// execution-time validator recognizes and skips them explicitly.
-    /// </summary>
-    public static readonly Guid LegacyProjectionAgentId = new("00000000-0000-0000-0000-000000000001");
+    public static AgentExecutionGovernanceSnapshot? TryReadExecutionGovernanceSnapshot(string? metadataJson)
+        => ReadExecutionGovernanceSnapshot(metadataJson).Snapshot;
 
-    public static readonly Guid LegacyProjectionProfileId = new("00000000-0000-0000-0000-000000000001");
+    internal static bool ContainsTurnContextReference(string? metadataJson)
+        => TryParseObject(metadataJson) is { } metadata &&
+           metadata.ContainsKey(TurnContextReferenceMetadataKey);
 
     public static AgentTurnContextAuthorityProjection? TryReadExecutionAuthority(string? metadataJson)
     {
@@ -251,6 +257,46 @@ public static class AgentTurnContextMetadata
         return Guid.ParseExact(text, "N");
     }
 
+    private static bool ReadBoolean(JsonObject source, string propertyName)
+        => source[propertyName]?.GetValue<bool>()
+            ?? throw new FormatException($"Metadata property '{propertyName}' is missing.");
+
+    private static int ReadInt32(JsonObject source, string propertyName)
+        => source[propertyName]?.GetValue<int>()
+            ?? throw new FormatException($"Metadata property '{propertyName}' is missing.");
+
+    private static long ReadInt64(JsonObject source, string propertyName)
+        => source[propertyName]?.GetValue<long>()
+            ?? throw new FormatException($"Metadata property '{propertyName}' is missing.");
+
+    private static IReadOnlyList<string> ReadEntriesStrict(JsonObject source, string propertyName)
+    {
+        if (!source.TryGetPropertyValue(propertyName, out var node))
+        {
+            return [];
+        }
+
+        if (node is not JsonArray array || array.Count > AgentExecutionAuthorityRecord.MaximumAllowedEntryCount)
+        {
+            throw new FormatException($"Metadata property '{propertyName}' is invalid.");
+        }
+
+        var entries = new List<string>(array.Count);
+        foreach (var entryNode in array)
+        {
+            var entry = entryNode?.GetValue<string>()?.Trim();
+            if (string.IsNullOrWhiteSpace(entry) ||
+                entry.Length > AgentExecutionAuthorityRecord.MaximumEntryLength)
+            {
+                throw new FormatException($"Metadata property '{propertyName}' contains an invalid entry.");
+            }
+
+            entries.Add(entry);
+        }
+
+        return entries;
+    }
+
     private static string ReadString(JsonObject source, string propertyName)
         => source[propertyName]?.GetValue<string>()
             ?? throw new FormatException($"Metadata property '{propertyName}' is missing.");
@@ -288,3 +334,36 @@ public sealed record AgentTurnContextAuthorityProjection(
     bool MutationAllowed,
     string PolicyVersion,
     string PolicyFingerprint);
+
+internal enum AgentExecutionGovernanceReadState
+{
+    Absent = 0,
+    Valid = 1,
+    Malformed = 2
+}
+
+internal sealed record AgentExecutionGovernanceReadResult
+{
+    private AgentExecutionGovernanceReadResult(
+        AgentExecutionGovernanceReadState state,
+        AgentExecutionGovernanceSnapshot? snapshot)
+    {
+        State = state;
+        Snapshot = snapshot;
+    }
+
+    public AgentExecutionGovernanceReadState State { get; }
+
+    public AgentExecutionGovernanceSnapshot? Snapshot { get; }
+
+    public static AgentExecutionGovernanceReadResult Absent { get; } =
+        new(AgentExecutionGovernanceReadState.Absent, null);
+
+    public static AgentExecutionGovernanceReadResult Malformed { get; } =
+        new(AgentExecutionGovernanceReadState.Malformed, null);
+
+    public static AgentExecutionGovernanceReadResult Valid(AgentExecutionGovernanceSnapshot snapshot)
+        => new(
+            AgentExecutionGovernanceReadState.Valid,
+            snapshot ?? throw new ArgumentNullException(nameof(snapshot)));
+}

@@ -133,7 +133,11 @@ public sealed class AgentExecutionOperationIdentityTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    null
+                    null,
+                    new AgentExecutionActivityWorkspaceIdentity(
+                        Guid.NewGuid(),
+                        WorkspaceScopeDescriptor.Sandbox,
+                        new DatabaseProfileGeneration(0))
                 ]));
 
         Assert.Equal(activityOperationId, options.ActivityOperationId);

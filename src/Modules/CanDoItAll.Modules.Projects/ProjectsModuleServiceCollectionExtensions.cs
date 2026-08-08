@@ -1,4 +1,5 @@
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -9,6 +10,9 @@ public static class ProjectsModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddProjectsModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            ProjectsExecutionAuthorityProvider>());
         services.AddScoped<ProjectsService>();
         services.AddScoped<IProjectRecordQueryService, ProjectRecordQueryService>();
         services.AddScoped<IRecentProjectActivityQueryService, RecentProjectActivityQueryService>();
@@ -34,4 +38,3 @@ public static class ProjectsModuleServiceCollectionExtensions
 }
 
 public static class ProjectsModuleAssemblyMarker;
-

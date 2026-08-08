@@ -133,6 +133,7 @@ public sealed class ProviderBackedLlmInvocationAdapterTests
 
         Assert.Equal(LlmInvocationFailureKind.EmptyResponse, exception.Kind);
         Assert.Equal(ProviderBackedLlmInvocationAdapter.MaximumEmptyResponseAttempts, attempts);
+        Assert.Equal(new LlmUsage(2, 2), exception.Usage);
     }
 
     [Fact]
@@ -157,7 +158,188 @@ public sealed class ProviderBackedLlmInvocationAdapterTests
             [new LlmMessage(LlmMessageRole.User, "Q")]));
 
         Assert.Equal("recovered", result.ResponseText);
+        Assert.Equal(new LlmUsage(2, 2), result.Usage);
         Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_aggregates_usage_across_empty_and_successful_attempts()
+    {
+        var attempts = 0;
+        var driver = new RecordingChatCompletionDriver((request, cancellationToken) =>
+        {
+            attempts++;
+            return Task.FromResult(new ProviderChatCompletionResult(
+                request.Model,
+                attempts == 1 ? "   " : "recovered",
+                attempts == 1 ? 100 : 101,
+                attempts == 1 ? 3 : 10)
+            {
+                CachedInputTokens = 20
+            });
+        });
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+
+        var result = await adapter.InvokeAsync(new LlmInvocationRequest(
+            provider,
+            provider.DefaultModel,
+            [new LlmMessage(LlmMessageRole.User, "Q")]));
+
+        Assert.Equal(new LlmUsage(201, 13, 40), result.Usage);
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_preserves_prior_usage_when_the_retry_fails_at_the_provider()
+    {
+        var attempts = 0;
+        var driver = new RecordingChatCompletionDriver((request, _) =>
+        {
+            attempts++;
+            return attempts == 1
+                ? Task.FromResult(new ProviderChatCompletionResult(request.Model, " ", 20, 4)
+                {
+                    CachedInputTokens = 3
+                })
+                : throw new InvalidOperationException("raw provider detail");
+        });
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => adapter.InvokeAsync(
+            new LlmInvocationRequest(
+                provider, provider.DefaultModel, [new LlmMessage(LlmMessageRole.User, "Q")])));
+
+        Assert.Equal(LlmInvocationFailureKind.ProviderFailure, exception.Kind);
+        Assert.Equal(new LlmUsage(20, 4, 3), exception.Usage);
+        Assert.Equal(2, attempts);
+        Assert.DoesNotContain("raw provider detail", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_preserves_prior_usage_when_the_retry_exceeds_its_deadline()
+    {
+        var attempts = 0;
+        var driver = new RecordingChatCompletionDriver(async (request, cancellationToken) =>
+        {
+            attempts++;
+            if (attempts == 1)
+            {
+                return new ProviderChatCompletionResult(request.Model, " ", 30, 5)
+                {
+                    CachedInputTokens = 4
+                };
+            }
+
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The timed-out provider call must not complete.");
+        });
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => adapter.InvokeAsync(
+            new LlmInvocationRequest(
+                provider,
+                provider.DefaultModel,
+                [new LlmMessage(LlmMessageRole.User, "Q")],
+                timeout: TimeSpan.FromMilliseconds(100))));
+
+        Assert.Equal(LlmInvocationFailureKind.DeadlineExceeded, exception.Kind);
+        Assert.Equal(new LlmUsage(30, 5, 4), exception.Usage);
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_keeps_caller_cancellation_unwrapped_after_a_reported_empty_attempt()
+    {
+        var secondAttemptStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var attempts = 0;
+        var driver = new RecordingChatCompletionDriver(async (request, cancellationToken) =>
+        {
+            attempts++;
+            if (attempts == 1)
+            {
+                return new ProviderChatCompletionResult(request.Model, " ", 10, 2);
+            }
+
+            secondAttemptStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The canceled provider call must not complete.");
+        });
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+        using var cancellation = new CancellationTokenSource();
+        var invocation = adapter.InvokeAsync(
+            new LlmInvocationRequest(
+                provider, provider.DefaultModel, [new LlmMessage(LlmMessageRole.User, "Q")]),
+            cancellation.Token);
+        await secondAttemptStarted.Task;
+
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation);
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_fails_typed_when_reported_attempt_usage_is_negative()
+    {
+        var driver = new RecordingChatCompletionDriver((request, _) => Task.FromResult(
+            new ProviderChatCompletionResult(request.Model, "invalid usage", -1, 2)));
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => adapter.InvokeAsync(
+            new LlmInvocationRequest(
+                provider, provider.DefaultModel, [new LlmMessage(LlmMessageRole.User, "Q")])));
+
+        Assert.Equal(LlmInvocationFailureKind.ProviderFailure, exception.Kind);
+        Assert.Null(exception.Usage);
+        Assert.IsType<ArgumentOutOfRangeException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_fails_typed_and_preserves_prior_usage_when_aggregation_overflows()
+    {
+        var attempts = 0;
+        var driver = new RecordingChatCompletionDriver((request, _) =>
+        {
+            attempts++;
+            return Task.FromResult(new ProviderChatCompletionResult(
+                request.Model,
+                attempts == 1 ? " " : "unrepresentable total",
+                attempts == 1 ? int.MaxValue : 1,
+                0));
+        });
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => adapter.InvokeAsync(
+            new LlmInvocationRequest(
+                provider, provider.DefaultModel, [new LlmMessage(LlmMessageRole.User, "Q")])));
+
+        Assert.Equal(LlmInvocationFailureKind.ProviderFailure, exception.Kind);
+        Assert.Equal(new LlmUsage(int.MaxValue, 0), exception.Usage);
+        Assert.IsType<OverflowException>(exception.InnerException);
+        Assert.Equal(2, attempts);
+    }
+
+    [Theory]
+    [InlineData(-1, 0, 0)]
+    [InlineData(0, -1, 0)]
+    [InlineData(0, 0, -1)]
+    public void LlmUsage_rejects_negative_counters(int input, int output, int cached)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LlmUsage(input, output, cached));
+    }
+
+    [Fact]
+    public void LlmUsage_addition_is_checked()
+    {
+        var usage = new LlmUsage(int.MaxValue, 0);
+
+        Assert.Throws<OverflowException>(() => usage.Add(new LlmUsage(1, 0)));
     }
 
     [Fact]

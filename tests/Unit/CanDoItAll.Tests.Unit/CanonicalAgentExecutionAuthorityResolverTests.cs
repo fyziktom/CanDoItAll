@@ -3,6 +3,12 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Processes.AgentChat;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -123,6 +129,116 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
                 UiAccessHint: null)).AsTask());
     }
 
+    [Fact]
+    public void Authority_provider_composition_is_owned_by_the_module_registration_root()
+    {
+        var moduleRoot = Path.Combine(
+            FindRepositoryRoot(),
+            "src", "Modules", "CanDoItAll.Modules.AgentFramework");
+        var source = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(moduleRoot, "*.cs", SearchOption.AllDirectories)
+                .Select(File.ReadAllText));
+
+        Assert.DoesNotContain("CreateDefaultProviders", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(": IAgentExecutionSourceAuthorityProvider", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProjectStructureExecutionAuthorityProvider", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProjectsExecutionAuthorityProvider", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessesExecutionAuthorityProvider", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Source_authority_providers_are_registered_by_their_owning_modules()
+    {
+        var projectsServices = new ServiceCollection();
+        projectsServices.AddProjectsModule();
+        projectsServices.AddProjectsModule();
+        AssertProviderRegistration(projectsServices, "ProjectsExecutionAuthorityProvider");
+
+        var workbenchServices = new ServiceCollection();
+        workbenchServices.AddWorkbenchModule();
+        workbenchServices.AddWorkbenchModule();
+        AssertProviderRegistration(workbenchServices, "ProjectStructureExecutionAuthorityProvider");
+
+        var processesServices = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+        processesServices.AddProcessesModule(configuration);
+        processesServices.AddProcessesModule(configuration);
+        AssertProviderRegistration(processesServices, "ProcessesExecutionAuthorityProvider");
+        AssertProviderRegistration(processesServices, "LiveProcessesExecutionAuthorityProvider");
+    }
+
+    [Fact]
+    public void Duplicate_source_authority_provider_keys_fail_deterministically()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings());
+
+        var exception = Assert.Throws<InvalidOperationException>(() => CreateResolverWithProviders(
+            [
+                new StubSourceAuthorityProvider("duplicate"),
+                new StubSourceAuthorityProvider("duplicate")
+            ],
+            agent));
+
+        Assert.Equal(
+            "Duplicate execution authority provider for source kind 'duplicate'.",
+            exception.Message);
+    }
+
+    [Fact]
+    public async Task Projects_portfolio_without_selection_remains_read_only_sandboxed()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings());
+        var resolver = CreateResolverWithProviders(
+            [new ProjectsExecutionAuthorityProvider()],
+            agent);
+
+        var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+            agent.Id,
+            new AgentChatContextSourceKind(ProjectsAgentChatContextBuilder.SourceKind),
+            new AgentChatContextSourceId(ProjectsAgentChatContextBuilder.WorkspaceSourceId),
+            ObservedWorkspaceScope: null,
+            new DatabaseProfileGeneration(1),
+            UiAccessHint: null));
+
+        Assert.Equal(WorkspaceScopeDescriptor.Sandbox, authority.WorkspaceScope);
+        Assert.True(authority.ReadAllowed);
+        Assert.False(authority.MutationAllowed);
+    }
+
+    [Fact]
+    public async Task Process_sources_preserve_durable_project_authority()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings
+        {
+            CanRead = true,
+            CanWrite = true,
+            AllowAllProjects = true
+        });
+        var expectedScope = WorkspaceScopeDescriptor.Project(ProjectId.ToString("D"));
+        IAgentExecutionSourceAuthorityProvider[] providers =
+        [
+            new ProcessesExecutionAuthorityProvider(),
+            new LiveProcessesExecutionAuthorityProvider()
+        ];
+
+        foreach (var provider in providers)
+        {
+            var resolver = CreateResolverWithProviders([provider], agent);
+            var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+                agent.Id,
+                new AgentChatContextSourceKind(provider.SourceKind),
+                new AgentChatContextSourceId($"surface:project:{ProjectId:D}"),
+                expectedScope,
+                new DatabaseProfileGeneration(1),
+                UiAccessHint: null));
+
+            Assert.Equal(expectedScope, authority.WorkspaceScope);
+            Assert.True(authority.ReadAllowed);
+            Assert.True(authority.MutationAllowed);
+        }
+    }
+
     private static AgentExecutionAuthorityResolutionRequest CreateRequest(
         Guid agentId,
         WorkspaceScopeDescriptor? observedScope = null,
@@ -137,11 +253,19 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
 
     private static CanonicalAgentExecutionAuthorityResolver CreateResolver(
         params AgentDefinition[] agents)
+        => CreateResolverWithProviders(
+            [new ProjectStructureExecutionAuthorityProvider()],
+            agents);
+
+    private static CanonicalAgentExecutionAuthorityResolver CreateResolverWithProviders(
+        IEnumerable<IAgentExecutionSourceAuthorityProvider> providers,
+        params AgentDefinition[] agents)
         => new(
             new ListOnlyWorkspaceFactory(agents),
             new FixedDatabaseProfileRuntimeAccessor(ProfileId),
             new FixedAgentExecutionProfileGenerationSource(new DatabaseProfileGeneration(1)),
-            TimeProvider.System);
+            TimeProvider.System,
+            providers);
 
     private static AgentDefinition CreateAgent(AgentProjectStructureAccessSettings settings)
     {
@@ -168,6 +292,34 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
             Tags: [],
             CreatedAtUtc: now,
             UpdatedAtUtc: now);
+    }
+
+    private static void AssertProviderRegistration(
+        IServiceCollection services,
+        string implementationTypeName)
+    {
+        Assert.Single(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IAgentExecutionSourceAuthorityProvider) &&
+                descriptor.ImplementationType?.Name == implementationTypeName &&
+                descriptor.Lifetime == ServiceLifetime.Singleton);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Unable to locate repository root.");
     }
 
     private sealed class ListOnlyWorkspaceFactory(IReadOnlyList<AgentDefinition> agents)
@@ -226,5 +378,16 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
 
         public ResolvedDatabaseProfile ResolveProfile(Guid requestedProfileId)
             => resolvedProfile;
+    }
+
+    private sealed class StubSourceAuthorityProvider(string sourceKind)
+        : IAgentExecutionSourceAuthorityProvider
+    {
+        public string SourceKind { get; } = sourceKind;
+
+        public ValueTask<AgentExecutionSourceAuthorityDecision> ResolveAsync(
+            AgentExecutionSourceAuthorityRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }

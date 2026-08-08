@@ -132,6 +132,54 @@ public sealed class LlmConversationServiceTests
     }
 
     [Fact]
+    public async Task RenameAsync_rejects_mutation_while_a_turn_is_in_flight()
+    {
+        var portEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releasePort = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var harness = ConversationHarness.Create(respond: async (request, _) =>
+        {
+            portEntered.TrySetResult();
+            await releasePort.Task;
+            return new LlmInvocationResult(request.Model, "slow reply", new LlmUsage(1, 1));
+        });
+        var provider = CreateProviderProfile();
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(provider));
+        var inFlight = harness.Service.SendAsync(new LlmConversationTurnRequest(
+            conversation.ConversationId,
+            conversation.TranscriptRevision,
+            "Slow question",
+            provider));
+        await portEntered.Task;
+
+        try
+        {
+            var admitted = Assert.IsType<LlmConversationDocument>(
+                await harness.Service.TryGetAsync(conversation.ConversationId));
+            var exception = await Assert.ThrowsAsync<LlmConversationException>(() => harness.Service.RenameAsync(
+                conversation.ConversationId,
+                "Unsafe rename",
+                admitted.TranscriptRevision));
+
+            Assert.Equal(LlmConversationFailureKind.TurnAlreadyActive, exception.Kind);
+            var unchanged = Assert.IsType<LlmConversationDocument>(
+                await harness.Service.TryGetAsync(conversation.ConversationId));
+            Assert.Equal(admitted.Title, unchanged.Title);
+            Assert.Equal(admitted.TranscriptRevision, unchanged.TranscriptRevision);
+        }
+        finally
+        {
+            releasePort.TrySetResult();
+            try
+            {
+                await inFlight;
+            }
+            catch (LlmConversationException)
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task SendAsync_fails_typed_on_stale_transcript_revision_and_leaves_transcript_unchanged()
     {
         var harness = ConversationHarness.Create();
@@ -200,6 +248,246 @@ public sealed class LlmConversationServiceTests
     }
 
     [Fact]
+    public async Task SendAsync_with_adopt_policy_restores_provider_and_acceleration_when_the_port_fails()
+    {
+        var harness = ConversationHarness.Create(respond: (request, _) =>
+            throw new LlmInvocationException(
+                LlmInvocationFailureKind.ProviderFailure,
+                request.Provider.Name,
+                request.Model,
+                request.CorrelationId));
+        var providerA = CreateProviderProfile();
+        var providerB = CreateProviderProfile(name: "Other provider", model: "other-model");
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(providerA));
+        var acceleration = new LlmConversationAccelerationEnvelope(
+            "provider-conversation-id",
+            providerA.Name,
+            providerA.DefaultModel,
+            """{"id":"abc"}""");
+        var seeded = conversation with
+        {
+            AccelerationState = acceleration,
+            TranscriptRevision = conversation.TranscriptRevision + 1
+        };
+        await harness.Store.ReplaceAsync(seeded, conversation.TranscriptRevision);
+
+        await Assert.ThrowsAsync<LlmInvocationException>(() => harness.Service.SendAsync(
+            new LlmConversationTurnRequest(
+                conversation.ConversationId,
+                seeded.TranscriptRevision,
+                "Switch provider",
+                providerB,
+                providerChangePolicy: LlmConversationProviderChangePolicy.Adopt)));
+
+        var restored = Assert.IsType<LlmConversationDocument>(
+            await harness.Service.TryGetAsync(conversation.ConversationId));
+        Assert.Equal(providerA.Id, restored.Provider.ProviderId);
+        Assert.Equal(providerA.DefaultModel, restored.Provider.Model);
+        Assert.Equal(acceleration, restored.AccelerationState);
+        Assert.Empty(restored.Entries);
+        Assert.Null(restored.ActiveTurn);
+    }
+
+    [Fact]
+    public async Task SendAsync_with_adopt_policy_restores_provider_and_acceleration_when_canceled()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var harness = ConversationHarness.Create(respond: (_, cancellationToken) =>
+        {
+            cancellation.Cancel();
+            return Task.FromCanceled<LlmInvocationResult>(cancellationToken);
+        });
+        var providerA = CreateProviderProfile();
+        var providerB = CreateProviderProfile(name: "Other provider", model: "other-model");
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(providerA));
+        var acceleration = new LlmConversationAccelerationEnvelope(
+            "provider-conversation-id",
+            providerA.Name,
+            providerA.DefaultModel,
+            """{"id":"cancel"}""");
+        var seeded = conversation with
+        {
+            AccelerationState = acceleration,
+            TranscriptRevision = conversation.TranscriptRevision + 1
+        };
+        await harness.Store.ReplaceAsync(seeded, conversation.TranscriptRevision);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => harness.Service.SendAsync(
+            new LlmConversationTurnRequest(
+                conversation.ConversationId,
+                seeded.TranscriptRevision,
+                "Cancel provider switch",
+                providerB,
+                providerChangePolicy: LlmConversationProviderChangePolicy.Adopt),
+            cancellation.Token));
+
+        var restored = Assert.IsType<LlmConversationDocument>(
+            await harness.Service.TryGetAsync(conversation.ConversationId));
+        Assert.Equal(providerA.Id, restored.Provider.ProviderId);
+        Assert.Equal(acceleration, restored.AccelerationState);
+        Assert.Empty(restored.Entries);
+        Assert.Null(restored.ActiveTurn);
+        Assert.True(restored.TranscriptRevision > seeded.TranscriptRevision);
+    }
+
+    [Fact]
+    public async Task AbandonActiveTurnAsync_restores_durable_adoption_compensation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var portEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var harness = ConversationHarness.Create(respond: async (_, cancellationToken) =>
+        {
+            portEntered.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The canceled provider call must not complete.");
+        });
+        var providerA = CreateProviderProfile();
+        var providerB = CreateProviderProfile(name: "Other provider", model: "other-model");
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(providerA));
+        var acceleration = new LlmConversationAccelerationEnvelope(
+            "provider-conversation-id",
+            providerA.Name,
+            providerA.DefaultModel,
+            """{"id":"crash"}""");
+        var seeded = conversation with
+        {
+            AccelerationState = acceleration,
+            TranscriptRevision = conversation.TranscriptRevision + 1
+        };
+        await harness.Store.ReplaceAsync(seeded, conversation.TranscriptRevision);
+        var inFlight = harness.Service.SendAsync(
+            new LlmConversationTurnRequest(
+                conversation.ConversationId,
+                seeded.TranscriptRevision,
+                "Adopt before crash",
+                providerB,
+                providerChangePolicy: LlmConversationProviderChangePolicy.Adopt),
+            cancellation.Token);
+        await portEntered.Task;
+        var admitted = Assert.IsType<LlmConversationDocument>(
+            await harness.Service.TryGetAsync(conversation.ConversationId));
+
+        var recovered = await harness.Service.AbandonActiveTurnAsync(
+            conversation.ConversationId,
+            admitted.ActiveTurn!.TurnId);
+
+        Assert.Equal(providerA.Id, recovered.Provider.ProviderId);
+        Assert.Equal(acceleration, recovered.AccelerationState);
+        Assert.Empty(recovered.Entries);
+        Assert.Null(recovered.ActiveTurn);
+        Assert.True(recovered.TranscriptRevision > admitted.TranscriptRevision);
+
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => inFlight);
+    }
+
+    [Fact]
+    public async Task New_service_instance_recovers_persisted_adoption_compensation_after_a_crash()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "cdia-llm-conv-recovery-" + Guid.NewGuid().ToString("N"));
+        using var cancellation = new CancellationTokenSource();
+        var portEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            var firstStore = new FileLlmConversationStore(root);
+            var firstPort = new RecordingConversationPort(async (_, cancellationToken) =>
+            {
+                portEntered.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                throw new InvalidOperationException("The simulated crashed call must not complete.");
+            });
+            var firstService = new LlmConversationService(
+                firstPort, firstStore, new RecencyBoundedContextWindowPolicy(), TimeProvider.System);
+            var providerA = CreateProviderProfile();
+            var providerB = CreateProviderProfile(name: "Other provider", model: "other-model");
+            var conversation = await firstService.StartAsync(new LlmConversationStartRequest(providerA));
+            var acceleration = new LlmConversationAccelerationEnvelope(
+                "provider-conversation-id", providerA.Name, providerA.DefaultModel, """{"id":"durable"}""");
+            var seeded = conversation with
+            {
+                AccelerationState = acceleration,
+                TranscriptRevision = conversation.TranscriptRevision + 1
+            };
+            await firstStore.ReplaceAsync(seeded, conversation.TranscriptRevision);
+            var inFlight = firstService.SendAsync(
+                new LlmConversationTurnRequest(
+                    conversation.ConversationId,
+                    seeded.TranscriptRevision,
+                    "Persist compensation",
+                    providerB,
+                    providerChangePolicy: LlmConversationProviderChangePolicy.Adopt),
+                cancellation.Token);
+            await portEntered.Task;
+            var admitted = Assert.IsType<LlmConversationDocument>(
+                await firstStore.TryGetAsync(conversation.ConversationId));
+
+            var recoveryStore = new FileLlmConversationStore(root);
+            var recoveryService = new LlmConversationService(
+                new RecordingConversationPort((request, _) => Task.FromResult(
+                    new LlmInvocationResult(request.Model, "unused", new LlmUsage(0, 0)))),
+                recoveryStore,
+                new RecencyBoundedContextWindowPolicy(),
+                TimeProvider.System);
+            var recovered = await recoveryService.AbandonActiveTurnAsync(
+                conversation.ConversationId, admitted.ActiveTurn!.TurnId);
+
+            Assert.Equal(providerA.Id, recovered.Provider.ProviderId);
+            Assert.Equal(acceleration, recovered.AccelerationState);
+            Assert.Empty(recovered.Entries);
+            Assert.Null(recovered.ActiveTurn);
+            Assert.True(recovered.TranscriptRevision > admitted.TranscriptRevision);
+
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => inFlight);
+        }
+        finally
+        {
+            cancellation.Cancel();
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task SendAsync_rejects_insufficient_transcript_capacity_before_invoking_the_provider()
+    {
+        var harness = ConversationHarness.Create();
+        var provider = CreateProviderProfile();
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(provider));
+        var timestamp = DateTimeOffset.Parse("2026-08-08T10:00:00Z");
+        var entries = Enumerable.Range(0, LlmConversationDocument.MaximumEntries - 1)
+            .Select(index => new LlmConversationTranscriptEntry(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                LlmMessageRole.Assistant,
+                $"History {index}",
+                timestamp.AddTicks(index)))
+            .ToImmutableArray();
+        var seeded = conversation with
+        {
+            Entries = entries,
+            TranscriptRevision = conversation.TranscriptRevision + 1
+        };
+        await harness.Store.ReplaceAsync(seeded, conversation.TranscriptRevision);
+
+        var exception = await Assert.ThrowsAsync<LlmConversationException>(() => harness.Service.SendAsync(
+            new LlmConversationTurnRequest(
+                conversation.ConversationId,
+                seeded.TranscriptRevision,
+                "One entry too many for an atomic turn",
+                provider)));
+
+        Assert.Equal(LlmConversationFailureKind.InvalidRequest, exception.Kind);
+        Assert.Equal(0, harness.Port.CallCount);
+        var unchanged = Assert.IsType<LlmConversationDocument>(
+            await harness.Service.TryGetAsync(conversation.ConversationId));
+        Assert.Equal(seeded.TranscriptRevision, unchanged.TranscriptRevision);
+        Assert.Equal(entries, unchanged.Entries);
+    }
+
+    [Fact]
     public async Task SendAsync_rolls_the_transcript_back_when_the_port_fails()
     {
         var harness = ConversationHarness.Create(respond: (request, _) =>
@@ -249,7 +537,11 @@ public sealed class LlmConversationServiceTests
         var crashed = conversation with
         {
             Entries = conversation.Entries.Add(pendingEntry),
-            ActiveTurn = new LlmConversationActiveTurn(turnId, pendingEntry.EntryId, DateTimeOffset.UtcNow),
+            ActiveTurn = new LlmConversationActiveTurn(
+                turnId,
+                pendingEntry.EntryId,
+                pendingEntry.CreatedAtUtc,
+                conversation.TranscriptRevision + 1),
             TranscriptRevision = conversation.TranscriptRevision + 1
         };
         await harness.Store.ReplaceAsync(crashed, conversation.TranscriptRevision);
@@ -262,6 +554,69 @@ public sealed class LlmConversationServiceTests
         var wrongTurn = await Assert.ThrowsAsync<LlmConversationException>(
             () => harness.Service.AbandonActiveTurnAsync(conversation.ConversationId, Guid.NewGuid()));
         Assert.Equal(LlmConversationFailureKind.TurnNotActive, wrongTurn.Kind);
+    }
+
+    [Fact]
+    public void Conversation_document_rejects_duplicate_entry_ids()
+    {
+        var provider = CreateProviderProfile();
+        var entry = new LlmConversationTranscriptEntry(
+            Guid.NewGuid(), Guid.NewGuid(), LlmMessageRole.User, "Duplicate", DateTimeOffset.UtcNow);
+
+        Assert.Throws<ArgumentException>(() => new LlmConversationDocument(
+            Guid.NewGuid(),
+            "Invalid",
+            LlmConversationProviderSnapshot.FromProfile(provider),
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            1,
+            [entry, entry]));
+    }
+
+    [Fact]
+    public void Conversation_document_rejects_active_turn_whose_entry_role_or_turn_identity_does_not_match()
+    {
+        var provider = CreateProviderProfile();
+        var timestamp = DateTimeOffset.UtcNow;
+        var entry = new LlmConversationTranscriptEntry(
+            Guid.NewGuid(), Guid.NewGuid(), LlmMessageRole.Assistant, "Not pending user input", timestamp);
+
+        Assert.Throws<ArgumentException>(() => new LlmConversationDocument(
+            Guid.NewGuid(),
+            "Invalid",
+            LlmConversationProviderSnapshot.FromProfile(provider),
+            timestamp,
+            timestamp,
+            1,
+            [entry],
+            new LlmConversationActiveTurn(Guid.NewGuid(), entry.EntryId, timestamp, 1)));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_is_terminal_even_while_a_turn_is_active()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var portEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var harness = ConversationHarness.Create(respond: async (_, cancellationToken) =>
+        {
+            portEntered.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The canceled provider call must not complete.");
+        });
+        var provider = CreateProviderProfile();
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(provider));
+        var inFlight = harness.Service.SendAsync(
+            new LlmConversationTurnRequest(
+                conversation.ConversationId, conversation.TranscriptRevision, "Delete this turn", provider),
+            cancellation.Token);
+        await portEntered.Task;
+
+        await harness.Service.DeleteAsync(conversation.ConversationId);
+
+        Assert.Null(await harness.Service.TryGetAsync(conversation.ConversationId));
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => inFlight);
+        Assert.Null(await harness.Service.TryGetAsync(conversation.ConversationId));
     }
 
     [Fact]
@@ -378,15 +733,48 @@ public sealed class LlmConversationServiceTests
     }
 
     [Fact]
-    public void Production_module_composition_registers_the_conversation_foundation()
+    public void Production_module_composition_does_not_register_the_conversation_foundation()
     {
         var moduleSource = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "src", "Modules", "CanDoItAll.Modules.AgentFramework", "Services",
             "AgentFrameworkModuleServiceCollectionExtensions.cs"));
 
-        Assert.Contains("AddLlmConversations(", moduleSource, StringComparison.Ordinal);
-        Assert.Contains("llm-conversations", moduleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddLlmConversations(", moduleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("llm-conversations", moduleSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_has_no_ordinary_conversation_service_consumer()
+    {
+        var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
+        var conversationLibrarySegment = Path.Combine(
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Llm.Conversations");
+        var abstractionLibrarySegment = Path.Combine(
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Llm.Abstractions");
+        var consumers = Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                           path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) ||
+                           path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains(conversationLibrarySegment, StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains(abstractionLibrarySegment, StringComparison.OrdinalIgnoreCase))
+            .Where(path =>
+            {
+                var source = File.ReadAllText(path);
+                return source.Contains("ILlmConversationService", StringComparison.Ordinal) ||
+                       source.Contains("ILlmConversationStore", StringComparison.Ordinal) ||
+                       source.Contains("AddLlmConversations(", StringComparison.Ordinal);
+            })
+            .Select(path => Path.GetRelativePath(sourceRoot, path))
+            .ToArray();
+
+        Assert.Empty(consumers);
     }
 
     [Fact]

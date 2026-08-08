@@ -32,6 +32,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             deadlineCancellation.CancelAfter(timeout);
         }
 
+        LlmUsage? aggregateUsage = null;
         try
         {
             for (var attempt = 1; ; attempt++)
@@ -56,7 +57,27 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                         provider.Name,
                         model,
                         request.CorrelationId,
-                        exception);
+                        exception,
+                        aggregateUsage);
+                }
+
+                try
+                {
+                    var attemptUsage = new LlmUsage(
+                        result.InputTokens, result.OutputTokens, result.CachedInputTokens);
+                    aggregateUsage = aggregateUsage is null
+                        ? attemptUsage
+                        : aggregateUsage.Add(attemptUsage);
+                }
+                catch (Exception exception) when (exception is ArgumentOutOfRangeException or OverflowException)
+                {
+                    throw new LlmInvocationException(
+                        LlmInvocationFailureKind.ProviderFailure,
+                        provider.Name,
+                        model,
+                        request.CorrelationId,
+                        exception,
+                        aggregateUsage);
                 }
 
                 if (!string.IsNullOrWhiteSpace(result.ResponseText))
@@ -64,7 +85,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                     return new LlmInvocationResult(
                         result.Model,
                         result.ResponseText,
-                        new LlmUsage(result.InputTokens, result.OutputTokens, result.CachedInputTokens));
+                        aggregateUsage);
                 }
 
                 if (attempt >= MaximumEmptyResponseAttempts)
@@ -73,7 +94,8 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                         LlmInvocationFailureKind.EmptyResponse,
                         provider.Name,
                         model,
-                        request.CorrelationId);
+                        request.CorrelationId,
+                        usage: aggregateUsage);
                 }
             }
         }
@@ -85,7 +107,8 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                 provider.Name,
                 model,
                 request.CorrelationId,
-                exception);
+                exception,
+                aggregateUsage);
         }
     }
 

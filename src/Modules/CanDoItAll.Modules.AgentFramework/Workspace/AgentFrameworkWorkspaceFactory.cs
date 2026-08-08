@@ -117,20 +117,24 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         string workspaceRoot)
     {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
+        var lifecycleFactExtractors = serviceProvider
+            .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
+            .ToList();
         var workspaceRuntimeServicesFactory = new WorkspaceRuntimeServicesFactory(
-            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
+            lifecycleFactExtractors,
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>()
                 ?? new ManagedCodeMarkItDownDocumentMarkdownConverter());
         // One owned workspace aggregate: the bundle constructs the single
         // process host for this workspace identity, every consumer below uses
         // that same instance, and the workspace service disposes the bundle
         // exactly once.
+        var workspaceExecutionScope = new WorkspaceExecutionScope(
+            workspaceRoot,
+            scope,
+            workspaceIdentity.DatabaseProfileId,
+            workspaceIdentity.DatabaseProfileGeneration);
         var workspaceBundle = workspaceRuntimeServicesFactory.Create(
-            new WorkspaceExecutionScope(
-                workspaceRoot,
-                scope,
-                workspaceIdentity.DatabaseProfileId,
-                workspaceIdentity.DatabaseProfileGeneration));
+            workspaceExecutionScope);
         var processHost = workspaceBundle.ProcessHost;
         var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory);
         // SB18: the deterministic interception cores no longer implement any runtime interface or
@@ -179,7 +183,9 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             executionProfileGenerationSource,
             new WorkspaceExecutionRunProcessLeaseCleaner(
                 store,
-                workspaceBundle.CommandExecutionService),
+                workspaceExecutionScope,
+                new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                    lifecycleFactExtractors)),
             providerProfileService,
             providerProfileRegistry,
             providerCredentialResolver,

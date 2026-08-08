@@ -26,6 +26,9 @@ public static class WorkbenchModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            ProjectStructureExecutionAuthorityProvider>());
         services.AddFileInteractionComponents(builder => builder
             .AddBuiltIns()
             .AddZoomPanRenderers()

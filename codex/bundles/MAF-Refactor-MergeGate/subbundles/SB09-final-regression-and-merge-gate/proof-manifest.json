@@ -1,0 +1,68 @@
+{
+  "subbundle": "SB09",
+  "title": "Final regression and merge gate",
+  "status": "Complete",
+  "decision": "Pass",
+  "proofTier": "Governed",
+  "startingCommit": "d27fb8307aac6a5f88be6504eb5a284ca41ac1f6",
+  "endingCommit": "d27fb8307aac6a5f88be6504eb5a284ca41ac1f6",
+  "mergeBase": "26da0c55861e5d4e6ca325e561f3f4612aa93266",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [
+    "tests/Components/CanDoItAll.Tests.Components/ProcessWorkspaceShellTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/PluginsPageTests.cs"
+  ],
+  "commands": [
+    { "name": "original MAF, follow-up, and merge-gate architecture guards", "exitCode": 0 },
+    { "name": "focused blocker test suite", "exitCode": 0 },
+    { "name": "exact MRG-001 through MRG-010 progression set", "exitCode": 0 },
+    { "name": "full Unit suite", "exitCode": 0 },
+    { "name": "monolithic Integration attempt", "exitCode": 124, "expected": false },
+    { "name": "complete Integration suite in six deterministic class shards", "exitCode": 0 },
+    { "name": "initial Components regression discovery", "exitCode": 1, "expected": false },
+    { "name": "focused component repairs", "exitCode": 0 },
+    { "name": "final full Components suite", "exitCode": 0 },
+    { "name": "named Unit and Integration smoke scenarios", "exitCode": 0 },
+    { "name": "Release clean followed by from-clean solution build", "exitCode": 0 },
+    { "name": "12-project CodeAnalytics snapshot and focused queries", "exitCode": 0 },
+    { "name": "final whitespace, anti-stub, partial-type, and non-activation audit", "exitCode": 0 }
+  ],
+  "tests": [
+    { "name": "focused blockers", "passed": 122, "failed": 0, "skipped": 0 },
+    { "name": "exact finding progression", "passed": 12, "failed": 0, "skipped": 0 },
+    { "name": "full Unit", "passed": 5297, "failed": 0, "skipped": 0 },
+    { "name": "full Integration by non-overlapping class shards", "passed": 723, "failed": 0, "skipped": 1 },
+    { "name": "full Components", "passed": 954, "failed": 0, "skipped": 0 },
+    { "name": "named Unit smoke matrix", "passed": 94, "failed": 0, "skipped": 0 },
+    { "name": "named Integration smoke matrix", "passed": 7, "failed": 0, "skipped": 0 }
+  ],
+  "architectureChecks": [
+    { "name": "CodeAnalytics final snapshot", "result": "Pass", "evidence": "snap-20260808170209-7c01e0e0: 12 projects, 872 documents, no blocking error, no error diagnostic, and no project cycle" },
+    { "name": "dependency direction", "result": "Pass", "evidence": "MAF, follow-up, and merge-gate guards pass; LLM projects depend inward on Llm.Abstractions only in the focused dependency query" },
+    { "name": "source-kind ownership", "result": "Pass", "evidence": "Module-owned DI providers pass executable ownership and duplicate/unknown-key tests" },
+    { "name": "anti-stub and partial-type audit", "result": "Pass", "evidence": "No added TODO/FIXME/NotImplemented/NotSupported placeholder or production partial type" },
+    { "name": "ordinary-conversation dormancy", "result": "Pass", "evidence": "No production C#, Razor, or CSHTML registration/injection/consumer exists" },
+    { "name": "C# architecture review", "result": "Pass", "evidence": "proof/SB09/architecture-review.md" },
+    { "name": "red-team verifier", "result": "Pass", "evidence": "proof/SB09/verifier-review.md" }
+  ],
+  "bugs": [
+    "A ProcessWorkspaceShell component test reflectively invoked the obsolete Boolean approval signature and did not seed pending approvals; it now proves typed mixed decisions reach the orchestrator unchanged.",
+    "A PluginsPage bUnit test dispatched a stale event-handler id across an asynchronous render; event lookup and dispatch now occur on the renderer synchronization context."
+  ],
+  "deviations": [
+    "The monolithic Integration command exceeded 15 minutes without a failure. All 120 discovered classes were then covered exactly once by six deterministic class shards, producing 723 passes and one explicit live-provider skip."
+  ],
+  "knownGaps": [
+    "The live local Ollama installed-model test is skipped unless CANDOITALL_RUN_LIVE_OLLAMA_VALIDATION=true and the required model catalog already exists; the test explicitly forbids model downloads."
+  ],
+  "acceptance": [
+    { "criterion": "Release build is clean.", "satisfied": true, "evidence": "dotnet clean then dotnet build CanDoItAll.slnx -c Release --no-restore: 0 warnings, 0 errors" },
+    { "criterion": "All blocker tests pass.", "satisfied": true, "evidence": "122 focused blockers and the exact 12-test progression set pass" },
+    { "criterion": "No new Unit/Integration failure exists versus development.", "satisfied": true, "evidence": "Branch failure sets are empty: Unit 5297/5297 and Integration 723 pass, 0 fail, 1 environment-gated skip" },
+    { "criterion": "Architecture and cutover guards pass.", "satisfied": true, "evidence": "All original, follow-up, and merge-gate guards plus final CodeAnalytics review pass" },
+    { "criterion": "Application smoke scenarios pass.", "satisfied": true, "evidence": "Canvas-to-Gantt, mixed approval, workflow LLM, profile switch, runtime state, approval continuation, and process lease smokes pass" },
+    { "criterion": "Final decision is explicit and evidence-backed.", "satisfied": true, "evidence": "reviews/FINAL-MERGE-DECISION.md records MERGE READY and binds it to source hashes and exact repository state" }
+  ],
+  "residualRisk": "External live-Ollama behavior and remote CI were not exercised locally. The implementation is intentionally uncommitted because no commit was requested; Git must commit this validated worktree before the branch ref can carry it into a merge.",
+  "nextSubbundleUnlocked": true
+}

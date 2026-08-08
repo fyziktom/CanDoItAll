@@ -2441,7 +2441,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             handoffOptions,
             inputAttachments,
             jsonSchemaOutput,
-            transientContext);
+            transientContext,
+            activityWorkspaceIdentity);
     }
 
     private static AgentRuntimeExecutionOptions BuildRuntimeExecutionOptions(
@@ -2451,7 +2452,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentRuntimeHandoffExecutionOptions? handoffOptions,
         IReadOnlyList<AgentRuntimeInputAttachment>? inputAttachments,
         PreparedAgentJsonSchemaOutputContract? jsonSchemaOutput,
-        AgentRuntimeTransientContext? transientContext)
+        AgentRuntimeTransientContext? transientContext,
+        AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity)
     {
         ArgumentNullException.ThrowIfNull(run);
         var transientWorkspaceScope = transientContext?.WorkspaceScope;
@@ -2465,7 +2467,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         var contextWorkspaceScope = transientWorkspaceScope ?? recordedWorkspaceScope;
-        var governance = ResolveValidatedExecutionGovernance(run, contextWorkspaceScope);
+        var governance = ResolveValidatedExecutionGovernance(
+            run,
+            contextWorkspaceScope,
+            activityWorkspaceIdentity);
 
         return new AgentRuntimeExecutionOptions(
             StructuredOutput: structuredOutput,
@@ -2507,19 +2512,47 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
     /// </summary>
     private static AgentExecutionGovernanceSnapshot? ResolveValidatedExecutionGovernance(
         ExecutionRunRecord run,
-        WorkspaceScopeDescriptor? contextWorkspaceScope)
+        WorkspaceScopeDescriptor? contextWorkspaceScope,
+        AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity)
     {
-        var governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson);
-        if (governance is null)
+        ArgumentNullException.ThrowIfNull(activityWorkspaceIdentity);
+        var readResult = AgentTurnContextMetadata.ReadExecutionGovernanceSnapshot(run.MetadataJson);
+        if (readResult.State == AgentExecutionGovernanceReadState.Malformed)
         {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' carries a malformed authority projection.");
+        }
+
+        if (readResult.State == AgentExecutionGovernanceReadState.Absent)
+        {
+            if (AgentTurnContextMetadata.ContainsTurnContextReference(run.MetadataJson) ||
+                ExecutionInvocationMetadata.RequiresTransientContext(run))
+            {
+                throw new AgentExecutionAuthorityMismatchException(
+                    $"Execution run '{run.Id:N}' proves context admission but carries no authority projection.");
+            }
+
             return null;
         }
 
-        if (governance.AgentId != AgentTurnContextMetadata.LegacyProjectionAgentId &&
-            governance.AgentId != run.AgentId)
+        var governance = readResult.Snapshot
+            ?? throw new InvalidOperationException("A valid authority projection did not produce a governance snapshot.");
+        if (governance.AgentId != run.AgentId)
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"Execution run '{run.Id:N}' carries an authority projection for a different agent.");
+        }
+
+        if (governance.DatabaseProfileId != activityWorkspaceIdentity.DatabaseProfileId)
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' carries an authority projection for a different database profile.");
+        }
+
+        if (governance.DatabaseProfileGeneration != activityWorkspaceIdentity.DatabaseProfileGeneration)
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' carries an authority projection from a different database profile generation.");
         }
 
         if (contextWorkspaceScope is not null &&
@@ -2533,6 +2566,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             throw new AgentExecutionAuthorityMismatchException(
                 $"Execution run '{run.Id:N}' has no trusted workspace scope, but the admitted authority claims scope '{governance.WorkspaceScope.DisplayName}'.");
+        }
+
+        if (string.Equals(governance.PolicyVersion, "unknown", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(governance.PolicyFingerprint, "unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' carries an unrecognized authority policy identity.");
         }
 
         return governance;

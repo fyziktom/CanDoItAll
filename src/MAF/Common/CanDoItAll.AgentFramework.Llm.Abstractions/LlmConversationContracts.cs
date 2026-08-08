@@ -159,7 +159,59 @@ public sealed record LlmConversationTranscriptEntry
 /// turn rollback, or an explicit <see cref="ILlmConversationService.AbandonActiveTurnAsync"/> decision —
 /// never by a background heuristic.
 /// </summary>
-public sealed record LlmConversationActiveTurn(Guid TurnId, Guid PendingUserEntryId, DateTimeOffset AdmittedAtUtc);
+public sealed record LlmConversationActiveTurn
+{
+    public LlmConversationActiveTurn(
+        Guid turnId,
+        Guid pendingUserEntryId,
+        DateTimeOffset admittedAtUtc,
+        long admittedRevision,
+        LlmConversationTurnCompensation? compensation = null)
+    {
+        if (turnId == Guid.Empty)
+        {
+            throw new ArgumentException("An active turn requires a non-empty turn id.", nameof(turnId));
+        }
+
+        if (pendingUserEntryId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "An active turn requires a non-empty pending user entry id.", nameof(pendingUserEntryId));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(admittedRevision, 1);
+        TurnId = turnId;
+        PendingUserEntryId = pendingUserEntryId;
+        AdmittedAtUtc = admittedAtUtc;
+        AdmittedRevision = admittedRevision;
+        Compensation = compensation;
+    }
+
+    public Guid TurnId { get; }
+
+    public Guid PendingUserEntryId { get; }
+
+    public DateTimeOffset AdmittedAtUtc { get; }
+
+    public long AdmittedRevision { get; }
+
+    public LlmConversationTurnCompensation? Compensation { get; }
+}
+
+public sealed record LlmConversationTurnCompensation
+{
+    public LlmConversationTurnCompensation(
+        LlmConversationProviderSnapshot provider,
+        LlmConversationAccelerationEnvelope? accelerationState)
+    {
+        Provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        AccelerationState = accelerationState;
+    }
+
+    public LlmConversationProviderSnapshot Provider { get; }
+
+    public LlmConversationAccelerationEnvelope? AccelerationState { get; }
+}
 
 /// <summary>
 /// Optional opaque provider acceleration state (for example a provider-side conversation id). It is a
@@ -264,10 +316,36 @@ public sealed record LlmConversationDocument
             throw new ArgumentException("Transcript entries cannot contain null records.", nameof(entries));
         }
 
-        if (activeTurn is not null && !entries.Any(entry => entry.EntryId == activeTurn.PendingUserEntryId))
+        var entryIds = new HashSet<Guid>();
+        if (entries.Any(entry => !entryIds.Add(entry.EntryId)))
         {
-            throw new ArgumentException(
-                "An active turn must reference a pending user entry present in the transcript.", nameof(activeTurn));
+            throw new ArgumentException("Transcript entry ids must be unique.", nameof(entries));
+        }
+
+        if (activeTurn is not null)
+        {
+            if (activeTurn.AdmittedRevision != transcriptRevision)
+            {
+                throw new ArgumentException(
+                    "An active turn must record the current transcript revision.", nameof(activeTurn));
+            }
+
+            var pendingEntry = entries.Length == 0 ? null : entries[^1];
+            if (pendingEntry is null
+                || pendingEntry.EntryId != activeTurn.PendingUserEntryId
+                || pendingEntry.TurnId != activeTurn.TurnId
+                || pendingEntry.Role != LlmMessageRole.User
+                || pendingEntry.CreatedAtUtc != activeTurn.AdmittedAtUtc)
+            {
+                throw new ArgumentException(
+                    "An active turn must reference the exact final pending user entry and turn.", nameof(activeTurn));
+            }
+
+            if (activeTurn.Compensation?.Provider == provider)
+            {
+                throw new ArgumentException(
+                    "Turn compensation must describe a different pre-adoption provider.", nameof(activeTurn));
+            }
         }
 
         ConversationId = conversationId;
@@ -303,20 +381,16 @@ public sealed record LlmConversationDocument
     /// <summary>Aggregates usage across assistant entries; computed, never stored redundantly.</summary>
     public LlmUsage ComputeTotalUsage()
     {
-        var input = 0;
-        var output = 0;
-        var cached = 0;
+        var total = LlmUsage.Zero;
         foreach (var entry in Entries)
         {
             if (entry.Usage is { } usage)
             {
-                input += usage.InputTokens;
-                output += usage.OutputTokens;
-                cached += usage.CachedInputTokens;
+                total = total.Add(usage);
             }
         }
 
-        return new LlmUsage(input, output, cached);
+        return total;
     }
 }
 

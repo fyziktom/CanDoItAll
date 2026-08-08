@@ -1,3 +1,4 @@
+using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -144,6 +145,130 @@ public sealed class ExecutionGovernanceEnforcementTests
             """{"agentExecutionAuthority":{"authorityId":"tampered","workspaceScopeKind":"Project"}}"""));
     }
 
+    [Fact]
+    public void Persisted_malformed_authority_projection_fails_closed_during_runtime_restore()
+    {
+        var run = CreateRun(
+            """{"agentExecutionAuthority":{"authorityId":"tampered","workspaceScopeKind":"Project"}}""");
+        var identity = new AgentExecutionActivityWorkspaceIdentity(
+            Guid.NewGuid(),
+            WorkspaceScopeDescriptor.Sandbox,
+            new DatabaseProfileGeneration(1));
+
+        Assert.IsType<AgentExecutionAuthorityMismatchException>(
+            InvokeGovernanceRestore(run, null, identity));
+    }
+
+    [Fact]
+    public void Authority_projection_reader_distinguishes_absent_valid_and_malformed_metadata()
+    {
+        var authority = CreateAuthorityRecord(readAllowed: true, mutationAllowed: false);
+        var validMetadata = AgentTurnContextMetadata.Apply("{}", CreateTurnReference(), authority);
+
+        var absent = AgentTurnContextMetadata.ReadExecutionGovernanceSnapshot("{}");
+        var valid = AgentTurnContextMetadata.ReadExecutionGovernanceSnapshot(validMetadata);
+        var malformed = AgentTurnContextMetadata.ReadExecutionGovernanceSnapshot(
+            """{"agentExecutionAuthority":{"authorityId":"tampered"}}""");
+
+        Assert.Equal(AgentExecutionGovernanceReadState.Absent, absent.State);
+        Assert.Null(absent.Snapshot);
+        Assert.Equal(AgentExecutionGovernanceReadState.Valid, valid.State);
+        Assert.NotNull(valid.Snapshot);
+        Assert.Equal(AgentExecutionGovernanceReadState.Malformed, malformed.State);
+        Assert.Null(malformed.Snapshot);
+    }
+
+    [Fact]
+    public void Context_admission_evidence_requires_a_valid_authority_projection()
+    {
+        var identity = new AgentExecutionActivityWorkspaceIdentity(
+            Guid.NewGuid(),
+            WorkspaceScopeDescriptor.Sandbox,
+            new DatabaseProfileGeneration(1));
+        var transientMetadata = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
+            "{}",
+            AgentChatContextDigest.Compute(new AgentRuntimeTransientContext("Trusted selected record.")));
+        var metadataSamples = new[]
+        {
+            """{"agentTurnContextReference":{}}""",
+            transientMetadata
+        };
+
+        foreach (var metadata in metadataSamples)
+        {
+            var exception = InvokeGovernanceRestore(CreateRun(metadata), null, identity);
+            Assert.IsType<AgentExecutionAuthorityMismatchException>(exception);
+        }
+    }
+
+    [Fact]
+    public void Governance_restore_rejects_agent_profile_generation_and_scope_mismatches()
+    {
+        var agentId = Guid.NewGuid();
+        var profileId = Guid.NewGuid();
+        var generation = new DatabaseProfileGeneration(7);
+        var scope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var authority = CreateAuthorityRecord(
+            readAllowed: true,
+            mutationAllowed: false,
+            agentId: agentId,
+            databaseProfileId: profileId,
+            databaseProfileGeneration: generation,
+            workspaceScope: scope);
+        var metadata = AgentTurnContextMetadata.Apply("{}", CreateTurnReference(), authority);
+        var run = CreateRun(metadata, agentId);
+        var matchingIdentity = new AgentExecutionActivityWorkspaceIdentity(profileId, scope, generation);
+
+        Assert.IsType<AgentExecutionAuthorityMismatchException>(
+            InvokeGovernanceRestore(run with { AgentId = Guid.NewGuid() }, scope, matchingIdentity));
+        Assert.IsType<AgentExecutionAuthorityMismatchException>(InvokeGovernanceRestore(
+            run,
+            scope,
+            new AgentExecutionActivityWorkspaceIdentity(Guid.NewGuid(), scope, generation)));
+        Assert.IsType<AgentExecutionAuthorityMismatchException>(InvokeGovernanceRestore(
+            run,
+            scope,
+            new AgentExecutionActivityWorkspaceIdentity(
+                profileId,
+                scope,
+                new DatabaseProfileGeneration(8))));
+        Assert.IsType<AgentExecutionAuthorityMismatchException>(InvokeGovernanceRestore(
+            run,
+            WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+            matchingIdentity));
+        Assert.Null(InvokeGovernanceRestore(run, scope, matchingIdentity));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{}")]
+    public void Detached_or_legacy_run_without_context_evidence_remains_compatible(string? metadataJson)
+    {
+        var identity = new AgentExecutionActivityWorkspaceIdentity(
+            Guid.NewGuid(),
+            WorkspaceScopeDescriptor.Sandbox,
+            new DatabaseProfileGeneration(1));
+
+        Assert.Null(InvokeGovernanceRestore(CreateRun(metadataJson), null, identity));
+    }
+
+    [Fact]
+    public void Initial_and_continuation_execution_share_the_single_governance_restoration_gate()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Core",
+            "Execution",
+            "AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs"));
+
+        Assert.Equal(3, CountOccurrences(source, "CreateRuntimeExecutionOptionsCore("));
+        Assert.Equal(1, CountOccurrences(source, "ReadExecutionGovernanceSnapshot("));
+        Assert.DoesNotContain("TryReadExecutionGovernanceSnapshot(run.MetadataJson)", source, StringComparison.Ordinal);
+    }
+
     private static ToolInvocationPolicyContext CreateInteractiveContext(
         string toolName,
         ToolInvocationClassification classification,
@@ -187,13 +312,17 @@ public sealed class ExecutionGovernanceEnforcementTests
         bool readAllowed,
         bool mutationAllowed,
         IReadOnlyList<string>? allowedOperations = null,
-        IReadOnlyList<string>? allowedExternalTargetAliases = null)
+        IReadOnlyList<string>? allowedExternalTargetAliases = null,
+        Guid? agentId = null,
+        Guid? databaseProfileId = null,
+        DatabaseProfileGeneration? databaseProfileGeneration = null,
+        WorkspaceScopeDescriptor? workspaceScope = null)
         => new(
             AgentExecutionAuthorityId.Create(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            new DatabaseProfileGeneration(1),
-            WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+            agentId ?? Guid.NewGuid(),
+            databaseProfileId ?? Guid.NewGuid(),
+            databaseProfileGeneration ?? new DatabaseProfileGeneration(1),
+            workspaceScope ?? WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
             readAllowed,
             mutationAllowed,
             "v2-canonical",
@@ -213,4 +342,84 @@ public sealed class ExecutionGovernanceEnforcementTests
             observationVersion: 3,
             modelContextDigest: "digest-value",
             capturedAtUtc: DateTimeOffset.UtcNow);
+
+    private static Exception? InvokeGovernanceRestore(
+        ExecutionRunRecord run,
+        WorkspaceScopeDescriptor? contextWorkspaceScope,
+        AgentExecutionActivityWorkspaceIdentity identity)
+    {
+        var executionServiceType = typeof(AgentFrameworkWorkspaceService).Assembly.GetType(
+            "CanDoItAll.AgentFramework.Core.AgentFrameworkWorkspaceExecutionService");
+        Assert.NotNull(executionServiceType);
+        var restore = executionServiceType.GetMethod(
+            "ResolveValidatedExecutionGovernance",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(restore);
+
+        try
+        {
+            restore.Invoke(null, [run, contextWorkspaceScope, identity]);
+            return null;
+        }
+        catch (TargetInvocationException exception)
+        {
+            return exception.InnerException;
+        }
+    }
+
+    private static int CountOccurrences(string source, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = source.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Unable to locate repository root.");
+    }
+
+    private static ExecutionRunRecord CreateRun(string? metadataJson, Guid? agentId = null)
+        => new(
+            Id: Guid.NewGuid(),
+            AgentId: agentId ?? Guid.NewGuid(),
+            ChatSessionId: Guid.NewGuid(),
+            Title: "Governance restore test run",
+            SourceKind: "project-structure",
+            SourceId: Guid.NewGuid().ToString("D"),
+            CorrelationId: string.Empty,
+            CausationId: string.Empty,
+            RequestedBy: "test",
+            RequestedByKind: "interactive",
+            MetadataJson: metadataJson ?? string.Empty,
+            InputSummary: string.Empty,
+            ResultSummary: string.Empty,
+            ProviderName: "OpenAI",
+            Model: "unit-test-model",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            UpdatedAtUtc: DateTimeOffset.UtcNow,
+            StartedAtUtc: DateTimeOffset.UtcNow,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: []);
 }

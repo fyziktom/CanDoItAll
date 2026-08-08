@@ -1548,7 +1548,9 @@ public sealed class AgentFinalizerPolicyTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    null
+                    null,
+                    AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
+                        WorkspaceScopeDescriptor.Sandbox)
                 ]));
 
         Assert.NotNull(options.ContextWorkspaceScope);
@@ -1590,7 +1592,8 @@ public sealed class AgentFinalizerPolicyTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    transientContext
+                    transientContext,
+                    AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(projectScope)
                 ]));
 
         Assert.Equal(projectScope, options.ContextWorkspaceScope);
@@ -1625,7 +1628,8 @@ public sealed class AgentFinalizerPolicyTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    new AgentRuntimeTransientContext(string.Empty, transientScope)
+                    new AgentRuntimeTransientContext(string.Empty, transientScope),
+                    AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(recordedScope)
                 ]));
 
         var innerException = Assert.IsType<InvalidOperationException>(exception.InnerException);

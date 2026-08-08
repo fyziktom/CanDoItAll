@@ -169,6 +169,8 @@
       "id": "SB00",
       "slug": "independent-baseline-and-reproduction",
       "title": "Independent baseline and blocker reproduction",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [],
       "requiredForMerge": true
     },
@@ -176,6 +178,8 @@
       "id": "SB01",
       "slug": "fail-closed-governance-restoration",
       "title": "Fail-closed governance restoration",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB00"
       ],
@@ -185,6 +189,8 @@
       "id": "SB02",
       "slug": "module-owned-source-authority-registry",
       "title": "Module-owned source authority registry",
+      "proofTier": "Behavioral",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB01"
       ],
@@ -194,6 +200,8 @@
       "id": "SB03",
       "slug": "effective-tool-policy-context-propagation",
       "title": "Effective tool-policy context propagation",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB02"
       ],
@@ -203,6 +211,8 @@
       "id": "SB04",
       "slug": "effective-scope-process-lease-cleanup",
       "title": "Effective-scope process lease cleanup",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB03"
       ],
@@ -212,6 +222,8 @@
       "id": "SB05",
       "slug": "file-conversation-cross-instance-cas",
       "title": "File conversation cross-instance CAS",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB04"
       ],
@@ -221,6 +233,8 @@
       "id": "SB06",
       "slug": "ordinary-conversation-atomic-turns",
       "title": "Ordinary conversation atomic turns",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB05"
       ],
@@ -230,6 +244,8 @@
       "id": "SB07",
       "slug": "lightweight-llm-attempt-usage",
       "title": "Lightweight LLM attempt usage accounting",
+      "proofTier": "Behavioral",
+      "criticalFoundation": false,
       "dependsOn": [
         "SB06"
       ],
@@ -239,6 +255,8 @@
       "id": "SB08",
       "slug": "dormant-ordinary-conversation-composition",
       "title": "Dormant ordinary-conversation production composition",
+      "proofTier": "Behavioral",
+      "criticalFoundation": false,
       "dependsOn": [
         "SB07"
       ],
@@ -248,6 +266,8 @@
       "id": "SB09",
       "slug": "final-regression-and-merge-gate",
       "title": "Final regression and merge gate",
+      "proofTier": "Governed",
+      "criticalFoundation": true,
       "dependsOn": [
         "SB08"
       ],

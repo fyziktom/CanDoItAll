@@ -2,7 +2,6 @@ using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Llm.Conversations;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Memory.DependencyInjection;
@@ -95,10 +94,17 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 scope,
                 serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
         });
+        services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>(serviceProvider =>
+            new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList()));
         services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
-            new WorkspaceExecutionRunProcessLeaseCleaner(
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceExecutionRunProcessLeaseCleaner(
                 serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
-                serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>()));
+                new WorkspaceExecutionScope(workspaceRoot, scope),
+                serviceProvider.GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>());
+        });
         services.TryAddScoped<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddScoped<IWorkspaceImageOperationService>(serviceProvider =>
         {
@@ -271,14 +277,6 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Scoped);
-        // SB15: ordinary LLM conversation foundation above the stateless invocation port. Storage is
-        // profile-scoped file persistence beside the sandbox workspace data, but the conversation
-        // service itself never sees workspace identity or authority.
-        services.AddLlmConversations(serviceProvider =>
-        {
-            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return Path.Combine(scope.ResolveDataRoot(workspaceRoot), "llm-conversations");
-        });
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
