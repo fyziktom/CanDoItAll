@@ -73,8 +73,12 @@ public static class WorkflowFailureDiagnosticMapper
         var source = diagnostic.ExecutorId is { } executorId
             ? $" while running executor '{executorId}'"
             : string.Empty;
+        var detail = string.IsNullOrWhiteSpace(diagnostic.RepairHint) ||
+                     string.Equals(diagnostic.Message, diagnostic.RepairHint, StringComparison.Ordinal)
+            ? diagnostic.Message
+            : $"{diagnostic.Message} {diagnostic.RepairHint}";
 
-        return $"{location}{source} failed: {diagnostic.RepairHint}";
+        return $"{location}{source} failed: {detail}";
     }
 
     private static WorkflowFailureSourceContext ResolveSource(WorkflowValidationIssue issue)

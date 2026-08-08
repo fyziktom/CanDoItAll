@@ -130,7 +130,9 @@ public sealed class MafWorkflowEventNormalizer : IMafWorkflowEventNormalizer
 
     private static string CreateErrorMessage(WorkflowErrorEvent errorEvent)
     {
-        var message = WorkflowExecutorRedaction.RedactText(errorEvent.Exception?.Message);
+        var message = errorEvent.Exception is { } exception
+            ? MafWorkflowFailureDetails.CreateDetailedMessage(exception)
+            : string.Empty;
         return string.IsNullOrWhiteSpace(message)
             ? "Workflow error emitted."
             : $"Workflow error: {message}";
@@ -168,11 +170,17 @@ public sealed class MafWorkflowEventNormalizer : IMafWorkflowEventNormalizer
 
         if (workflowEvent is WorkflowErrorEvent errorEvent && errorEvent.Exception is not null)
         {
+            if (MafWorkflowFailureDetails.TryResolveDiagnostic(errorEvent.Exception, out var diagnostic))
+            {
+                return WorkflowRuntimeFailureDiagnosticMapper.Serialize(diagnostic);
+            }
+
+            var rootException = MafWorkflowFailureDetails.ResolveRootException(errorEvent.Exception);
             return JsonSerializer.Serialize(
                 new
                 {
-                    exceptionType = errorEvent.Exception.GetType().FullName,
-                    message = WorkflowExecutorRedaction.RedactText(errorEvent.Exception.Message)
+                    exceptionType = rootException.GetType().FullName,
+                    message = MafWorkflowFailureDetails.CreateDetailedMessage(errorEvent.Exception)
                 },
                 JsonOptions);
         }
