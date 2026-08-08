@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
@@ -315,21 +314,9 @@ internal static class MafFinalizerDriver
 
     public static string BuildRequiredFinalizerArgumentInstructions(AgentFinalizerPolicy finalizerPolicy)
     {
-        if (!string.Equals(
-                finalizerPolicy.OutputContract.ContractKey,
-                AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
+        ArgumentNullException.ThrowIfNull(finalizerPolicy);
 
-        return "- Pass exactly one `result` object argument to `submit_process_step_outcome`; do not pass scalar `result`, `status`, `reason`, or `evidenceRefs` as sibling arguments." + Environment.NewLine +
-               "- The `result` object must include `status`, `reason`, `branchOutcomeKey`, `branchOutcomeTitle`, `evidenceRefs`, `nextActions`, and `humanReadableSummaryMarkdown`. Use `Completed`, `Blocked`, `Failed`, `WaitingApproval`, or `Refused` for `status`." + Environment.NewLine +
-               "- Always include `acceptanceCriteriaEvidence` as an array. Every entry must use the exact property names `criterionId`, `status`, `summary`, and `evidenceRefs`; use `Passed`, `Failed`, or `NotVerified` for the entry `status`. Do not substitute aliases such as `id`, `passed`, or `proofRefs`." + Environment.NewLine +
-               "- `branchOutcomeTitle` requires a non-empty stable `branchOutcomeKey`, and the key must be an exact branch declared by the current process brief. If this step does not select a branch, both `branchOutcomeKey` and `branchOutcomeTitle` must be empty strings; do not use placeholders such as `none`, `n/a`, or `completed`." + Environment.NewLine +
-               "- Do not copy placeholder evidence values. Evidence refs must be exact current-run refs already created or observed during this turn." + Environment.NewLine +
-               "- If `status` is `Completed`, `evidenceRefs` must contain at least one concrete current-run evidence reference. If no such evidence exists, return `Blocked` or `Failed` with a concrete `nextActions` entry instead of claiming completion." + Environment.NewLine +
-               "- In this bounded repair turn, a missing configured primary managed output alone is not a blocker after all non-artifact work and required current-run proof succeeded. Submit the evidence-backed Completed outcome and let the process runtime materialize that canonical artifact before its completion gates; never use this rule to waive product work, validation, or required receipts." + Environment.NewLine;
+        return finalizerPolicy.RepairArgumentInstructions;
     }
 
     public static bool TryNormalizeFinalizerJsonRepairText(
@@ -635,6 +622,11 @@ internal static class MafFinalizerDriver
         }
     }
 
+    /// <summary>
+    /// Tolerant normalization for contracts that declare a <see cref="AgentFinalizerPolicy.KnownOutputNormalizer"/>.
+    /// The normalization body itself lives in the Core policy catalog, next to the contract metadata, so MAF stays
+    /// generic and never needs to know which specific contract (if any) requires tolerant repair.
+    /// </summary>
     private static bool TryNormalizeKnownFinalizerOutput(
         AgentFinalizerPolicy policy,
         string rawJson,
@@ -644,128 +636,15 @@ internal static class MafFinalizerDriver
         argumentsJson = string.Empty;
         failureMessage = string.Empty;
 
-        if (policy.OutputType == typeof(ProcessStepOutcomeResult))
-        {
-            return TryNormalizeProcessStepOutcomeResultJson(rawJson, out argumentsJson, out failureMessage);
-        }
-
-        return false;
-    }
-
-    private static bool TryNormalizeProcessStepOutcomeResultJson(
-        string rawJson,
-        out string argumentsJson,
-        out string failureMessage)
-    {
-        argumentsJson = string.Empty;
-        failureMessage = string.Empty;
-
-        try
-        {
-            if (JsonNode.Parse(rawJson) is not JsonObject jsonObject)
-            {
-                failureMessage = "The JSON payload was not an object.";
-                return false;
-            }
-
-            NormalizeStringArrayProperty(jsonObject, "evidenceRefs");
-            NormalizeStringArrayProperty(jsonObject, "nextActions");
-            NormalizeProcessStepOutcomeReason(jsonObject);
-
-            var output = jsonObject.Deserialize<ProcessStepOutcomeResult>(AgentOutputJson.SerializerOptions);
-            if (output is null)
-            {
-                failureMessage = "The normalized JSON payload deserialized to null.";
-                return false;
-            }
-
-            argumentsJson = JsonSerializer.Serialize(output, AgentOutputJson.SerializerOptions);
-            return true;
-        }
-        catch (JsonException exception)
-        {
-            failureMessage = exception.Message;
-            return false;
-        }
-    }
-
-    private static void NormalizeProcessStepOutcomeReason(JsonObject jsonObject)
-    {
-        if (TryReadNonEmptyStringProperty(jsonObject, "reason", out _))
-        {
-            return;
-        }
-
-        if (TryReadNonEmptyStringProperty(jsonObject, "humanReadableSummaryMarkdown", out var humanSummary) ||
-            TryReadNonEmptyStringProperty(jsonObject, "branchOutcomeTitle", out humanSummary))
-        {
-            jsonObject["reason"] = humanSummary;
-        }
-    }
-
-    private static bool TryReadNonEmptyStringProperty(
-        JsonObject jsonObject,
-        string propertyName,
-        out string value)
-    {
-        value = string.Empty;
-        if (!jsonObject.TryGetPropertyValue(propertyName, out var node))
+        if (policy.KnownOutputNormalizer is not { } knownOutputNormalizer)
         {
             return false;
         }
 
-        value = ConvertJsonNodeToString(node).Trim();
-        return !string.IsNullOrWhiteSpace(value);
-    }
-
-    private static void NormalizeStringArrayProperty(JsonObject jsonObject, string propertyName)
-    {
-        if (!jsonObject.TryGetPropertyValue(propertyName, out var value) ||
-            value is not JsonArray values)
-        {
-            return;
-        }
-
-        var normalizedValues = new JsonArray();
-        foreach (var item in values)
-        {
-            var text = ConvertJsonNodeToString(item);
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                normalizedValues.Add(text);
-            }
-        }
-
-        jsonObject[propertyName] = normalizedValues;
-    }
-
-    private static string ConvertJsonNodeToString(JsonNode? node)
-    {
-        if (node is null)
-        {
-            return string.Empty;
-        }
-
-        if (node is JsonValue value)
-        {
-            return value.TryGetValue<string>(out var text)
-                ? text
-                : value.ToJsonString();
-        }
-
-        if (node is JsonObject jsonObject)
-        {
-            return string.Join(
-                "; ",
-                jsonObject.Select(property => $"{property.Key}: {ConvertJsonNodeToString(property.Value)}"));
-        }
-
-        if (node is JsonArray jsonArray)
-        {
-            return string.Join(", ", jsonArray.Select(ConvertJsonNodeToString));
-        }
-
-        return node.ToJsonString();
+        var result = knownOutputNormalizer(rawJson);
+        argumentsJson = result.ArgumentsJson;
+        failureMessage = result.FailureMessage;
+        return result.Succeeded;
     }
 
     private static bool TryExtractJsonObject(

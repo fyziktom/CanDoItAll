@@ -54,7 +54,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         Action<IServiceCollection>? configureServices = null,
         bool useInMemoryDatabase = false,
         string? environmentName = null,
-        IAgentRuntime? agentRuntimeOverride = null)
+        IFakeAgentRuntime? agentRuntimeOverride = null)
     {
         var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
         var activeProfile = useInMemoryDatabase
@@ -106,7 +106,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         if (agentRuntimeOverride is not null &&
             !ReferenceEquals(
                 agentRuntimeOverride,
-                app.Services.GetRequiredService<IAgentRuntime>()))
+                app.Services.GetRequiredService<IFakeAgentRuntime>()))
         {
             throw new InvalidOperationException(
                 "The API test host did not preserve its explicit agent runtime override.");
@@ -135,9 +135,10 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     private static void ConfigureAgentRuntimeOverride(
         IServiceCollection services,
-        IAgentRuntime runtime)
+        IFakeAgentRuntime runtime)
     {
-        services.RemoveAll<IAgentRuntime>();
+        services.RemoveAll<IFakeAgentRuntime>();
+        services.RouteRuntimePortsThroughAgentRuntime();
         services.AddSingleton(runtime);
         services.RemoveAll<IAgentFrameworkWorkspaceService>();
         services.RemoveAll<IAgentPackageService>();
@@ -148,7 +149,11 @@ internal sealed class ApiTestHost : IAsyncDisposable
         services.AddScoped<IAgentPackageService>(serviceProvider => new ZipAgentPackageService(
             serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
             ResolveWorkspaceScope(serviceProvider)));
-        services.AddScoped<IProviderDiagnosticsService>(_ => new ProviderDiagnosticsService(runtime));
+        services.AddScoped<IProviderDiagnosticsService>(_ =>
+        {
+            var portFacade = new FakeAgentRuntimePortAdapter(runtime);
+            return new ProviderDiagnosticsService(portFacade, portFacade);
+        });
         services.AddScoped<IAgentExecutionCheckpointBridge>(serviceProvider =>
             new WorkflowBackedAgentExecutionCheckpointBridge(
                 serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),

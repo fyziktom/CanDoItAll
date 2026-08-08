@@ -1,19 +1,14 @@
 using System.Diagnostics;
 using System.Text.Json;
-using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Tooling;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using CapabilityAccessPolicyEvaluatorContract = CanDoItAll.AgentFramework.Capabilities.Abstractions.ICapabilityAccessPolicyEvaluator;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -24,6 +19,7 @@ internal interface IRuntimeCapabilityComposer
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyList<AgentMemoryRecord> memory,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false);
@@ -39,8 +35,10 @@ internal interface IRuntimeCapabilityComposer
         bool suppressApprovalRequirements,
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         string runtimeSessionKey = "",
-        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null);
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+        AgentExecutionGovernanceSnapshot? governance = null);
 }
 
 internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
@@ -52,26 +50,26 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     private static readonly ProviderProfileService ProviderFeatureService = new();
 
     private readonly string workspaceRoot;
-    private readonly IServiceProvider services;
     private readonly WorkspaceScopeDescriptor workspaceScope;
-    private readonly IMafRuntimeDependencyResolver dependencyResolver;
     private readonly IMafProviderCredentialService providerCredentialService;
     private readonly IAgentImageAnalysisService imageAnalysisService;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
     private readonly IMafRuntimeCompositionMetrics compositionMetrics;
+    private readonly ISpreadsheetDocumentService spreadsheetDocumentService;
+    private readonly MafRuntimeCapabilityDependencies capabilityDependencies;
     private readonly RuntimeCapabilityDescriptorCatalog descriptorCatalog;
     private readonly RuntimeCapabilityAccessPlanner capabilityAccessPlanner;
     private readonly RuntimeRegisteredToolProviderAttacher registeredToolProviderAttacher;
 
     public RuntimeCapabilityComposer(
         string workspaceRoot,
-        IServiceProvider services,
         WorkspaceScopeDescriptor workspaceScope,
-        IMafRuntimeDependencyResolver dependencyResolver,
         IMafProviderCredentialService providerCredentialService,
         IAgentImageAnalysisService imageAnalysisService,
         IRuntimeToolProviderComposer runtimeToolProviderComposer,
-        IMafRuntimeCompositionMetrics compositionMetrics)
+        IMafRuntimeCompositionMetrics compositionMetrics,
+        ISpreadsheetDocumentService spreadsheetDocumentService,
+        MafRuntimeCapabilityDependencies capabilityDependencies)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
@@ -79,51 +77,55 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         }
 
         this.workspaceRoot = Path.GetFullPath(workspaceRoot);
-        this.services = services ?? throw new ArgumentNullException(nameof(services));
         this.workspaceScope = workspaceScope;
-        this.dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
         this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
         this.imageAnalysisService = imageAnalysisService ?? throw new ArgumentNullException(nameof(imageAnalysisService));
         this.runtimeToolProviderComposer = runtimeToolProviderComposer ?? throw new ArgumentNullException(nameof(runtimeToolProviderComposer));
         this.compositionMetrics = compositionMetrics ?? throw new ArgumentNullException(nameof(compositionMetrics));
-        var capabilityAccessPolicyEvaluator = services.GetService(typeof(CapabilityAccessPolicyEvaluatorContract)) as CapabilityAccessPolicyEvaluatorContract
-            ?? new CapabilityAccessPolicyEvaluator();
+        this.spreadsheetDocumentService = spreadsheetDocumentService ?? throw new ArgumentNullException(nameof(spreadsheetDocumentService));
+        this.capabilityDependencies = capabilityDependencies ?? throw new ArgumentNullException(nameof(capabilityDependencies));
         descriptorCatalog = new RuntimeCapabilityDescriptorCatalog();
         capabilityAccessPlanner = new RuntimeCapabilityAccessPlanner(
             descriptorCatalog,
-            capabilityAccessPolicyEvaluator);
+            capabilityDependencies.CapabilityAccessPolicyEvaluator);
         registeredToolProviderAttacher = new RuntimeRegisteredToolProviderAttacher(runtimeToolProviderComposer);
     }
 
     public static RuntimeCapabilityComposer CreateDefault(
         string workspaceRoot,
-        IServiceProvider services,
+        IServiceProvider serviceProvider,
         WorkspaceScopeDescriptor? workspaceScope = null)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(serviceProvider);
 
         var effectiveWorkspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
-        var dependencyResolver = MafRuntimeDependencyResolver.Resolve(services);
-        var providerCredentialService = services.GetService(typeof(IMafProviderCredentialService)) is IMafProviderCredentialService resolvedCredentialService
+        var capabilityDependencies = MafRuntimeCapabilityDependencies.FromServices(serviceProvider);
+        var providerCredentialService = serviceProvider.GetService(typeof(IMafProviderCredentialService)) is IMafProviderCredentialService resolvedCredentialService
             ? resolvedCredentialService
-            : new MafProviderCredentialService(services);
-        var providerDependencies = dependencyResolver.ResolveProviderDependencies(services);
-        var runtimeToolProviderComposer = services.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
+            : new MafProviderCredentialService(
+                serviceProvider.GetService(typeof(IAgentProviderCredentialResolver)) as IAgentProviderCredentialResolver,
+                capabilityDependencies.A2AConfiguration);
+        var imageAnalysisService = serviceProvider.GetService<IAgentImageAnalysisService>()
+            ?? throw new InvalidOperationException(
+                $"The MAF provider runtime service graph is incomplete. Missing: {nameof(IAgentImageAnalysisService)}. Register AddMafProviderRuntimeServices().");
+        var runtimeToolProviderComposer = serviceProvider.GetService(typeof(IRuntimeToolProviderComposer)) is IRuntimeToolProviderComposer resolvedComposer
             ? resolvedComposer
             : RuntimeToolProviderComposer.Default;
-        var compositionMetrics = services.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
+        var compositionMetrics = serviceProvider.GetService(typeof(IMafRuntimeCompositionMetrics)) is IMafRuntimeCompositionMetrics resolvedMetrics
             ? resolvedMetrics
             : NoOpMafRuntimeCompositionMetrics.Instance;
+        var spreadsheetDocumentService = serviceProvider.GetService(typeof(ISpreadsheetDocumentService)) as ISpreadsheetDocumentService
+            ?? new ClosedXmlSpreadsheetDocumentService();
 
         return new RuntimeCapabilityComposer(
             workspaceRoot,
-            services,
             effectiveWorkspaceScope,
-            dependencyResolver,
             providerCredentialService,
-            providerDependencies.ImageAnalysisService,
+            imageAnalysisService,
             runtimeToolProviderComposer,
-            compositionMetrics);
+            compositionMetrics,
+            spreadsheetDocumentService,
+            capabilityDependencies);
     }
 
     public async Task<RuntimeCapabilityState> CreateCapabilityStateAsync(
@@ -131,6 +133,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         ProviderProfile provider,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyList<AgentMemoryRecord> memory,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         bool suppressApprovalRequirements = false)
@@ -147,6 +150,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             suppressApprovalRequirements,
             workspaceScope,
             AgentRuntimeContextIntent.Empty,
+            workspaceRuntimeServices,
             runtimeSessionKey: string.Empty);
     }
 
@@ -174,9 +178,12 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         bool suppressApprovalRequirements,
         WorkspaceScopeDescriptor contextWorkspaceScope,
         AgentRuntimeContextIntent contextIntent,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         string runtimeSessionKey = "",
-        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+        AgentExecutionGovernanceSnapshot? governance = null)
     {
+        ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var totalStopwatch = Stopwatch.StartNew();
         try
         {
@@ -188,6 +195,12 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             }
 
             var effectiveContextWorkspaceScope = contextIntent.WorkspaceScope ?? contextWorkspaceScope;
+            if (workspaceRuntimeServices.Scope.Scope != effectiveContextWorkspaceScope)
+            {
+                throw new WorkspaceRuntimeCompositionException(
+                    $"The workspace runtime services bundle scope '{workspaceRuntimeServices.Scope.Scope.DisplayName}' does not match the execution scope '{effectiveContextWorkspaceScope.DisplayName}'.");
+            }
+
             if (!contextIntent.ToolCapabilitiesEnabled)
             {
                 return await CreateToolFreeCapabilityStateAsync(progressCallback);
@@ -212,7 +225,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     provider,
                     model,
                     effectiveCapabilities,
-                    effectiveContextWorkspaceScope,
+                    workspaceRuntimeServices,
                     contextIntent,
                     agentConfiguration,
                     workspaceToolAccess,
@@ -260,7 +273,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     effectiveContextWorkspaceScope,
                     contextIntent,
                     runtimeSessionKey,
-                    contextAttachments));
+                    contextAttachments,
+                    governance));
             await TrackAsync(
                 "capability.a2a-tools",
                 () => AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements));
@@ -283,7 +297,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     suppressApprovalRequirements,
                     contextIntent));
 
-            TrackAction("capability.deduplicate-tools", () => DeduplicateTools(composition.State.Tools));
+            TrackAction("capability.deduplicate-tools", () => ValidateComposedToolNames(composition.State.Tools));
             TrackAction(
                 "capability.effective-external-target-context",
                 () => AttachEffectiveExternalTargetContext(composition.State, workspaceToolAccess));
@@ -398,22 +412,21 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         ProviderProfile provider,
         string model,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
-        WorkspaceScopeDescriptor contextWorkspaceScope,
+        WorkspaceRuntimeServices workspaceRuntimeServices,
         AgentRuntimeContextIntent contextIntent,
         AgentRuntimeConfiguration agentConfiguration,
         AgentWorkspaceToolAccessSettings workspaceToolAccess,
         RuntimeCapabilityAccessPlan capabilityAccessPlan)
     {
-        var workspaceServices = dependencyResolver.ResolveWorkspaceServices(services, workspaceRoot, workspaceScope);
-        var effectiveWorkspaceScope = contextWorkspaceScope;
+        var effectiveWorkspaceScope = workspaceRuntimeServices.Scope.Scope;
         var filesystemPlugin = new WorkspaceFilesystemRuntimePlugin(
-            workspaceServices.FileService,
+            workspaceRuntimeServices.FileService,
             workspaceRoot,
             effectiveWorkspaceScope,
             workspaceToolAccess);
         var workspacePlugin = new WorkspaceRuntimePlugin(
-            workspaceServices.CommandExecutionService,
-            workspaceServices.ArtifactToolService,
+            workspaceRuntimeServices.CommandExecutionService,
+            workspaceRuntimeServices.ArtifactToolService,
             workspaceRoot,
             effectiveWorkspaceScope,
             workspaceToolAccess,
@@ -421,23 +434,27 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             model,
             imageAnalysisService);
         var spreadsheetPlugin = new WorkspaceSpreadsheetRuntimePlugin(
-            ResolveSpreadsheetDocumentService(),
+            spreadsheetDocumentService,
             workspaceRoot,
             effectiveWorkspaceScope,
             workspaceToolAccess);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
-        var skillBuilder = new SkillCapabilityBuilder(workspaceRoot, services);
+        var skillBuilder = new SkillCapabilityBuilder(
+            workspaceRoot,
+            capabilityDependencies.RegisteredCapabilityServices,
+            capabilityDependencies.LoggerFactory);
         var contextBuilder = new ContextCapabilityBuilder(
             workspaceRoot,
             effectiveWorkspaceScope);
-        var contextContributors = services.GetServices<IAgentContextContributor>().ToList();
+        var contextContributors = capabilityDependencies.ContextContributors;
         var runtimeToolProviders = runtimeToolProviderComposer.ComposeRegistrations(
-            services.GetServices<IAgentRuntimeToolProvider>());
+            capabilityDependencies.RuntimeToolProviders);
         var mcpBuilder = new McpCapabilityBuilder(
-            services,
+            capabilityDependencies.McpClientFactory,
+            capabilityDependencies.SecretRuntimeResolver,
             workspaceRoot,
-            workspaceScope,
-            dependencyResolver,
+            effectiveWorkspaceScope,
+            workspaceRuntimeServices,
             providerCredentialService,
             descriptorCatalog.ResolveCatalogOperationClassifications,
             RuntimeCapabilityDescriptorCatalog.ResolveMcpServerKey,
@@ -450,15 +467,15 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             RuntimeCapabilityDescriptorCatalog.ResolveMcpMessageFraming);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(
-            services,
+            capabilityDependencies.RegisteredCapabilityServices,
             workspaceRoot,
-            workspaceScope,
+            effectiveWorkspaceScope,
             providerCredentialService,
             filesystemPlugin,
             workspacePlugin,
             spreadsheetPlugin,
             storagePlugin,
-            workspaceServices.CommandExecutionService,
+            workspaceRuntimeServices.CommandExecutionService,
             workspaceToolAccess,
             fileSkillExecutionPolicies,
             capabilityAccessPlan);
@@ -477,21 +494,14 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
     private RuntimeStorageToolAvailability ResolveStorageToolAvailability()
     {
-        var catalogService = services.GetService(typeof(IStorageCatalogService)) as IStorageCatalogService;
-        var driverRegistry = services.GetService(typeof(IStorageDriverRegistry)) as IStorageDriverRegistry;
-        var browseDriverRegistry = services.GetService(typeof(IStorageBrowseDriverRegistry)) as IStorageBrowseDriverRegistry;
-        var registeredContentProviderKinds = driverRegistry?.RegisteredKinds ?? [];
-        var contentToolsAvailable = catalogService is not null && registeredContentProviderKinds.Count > 0;
+        var storageServices = capabilityDependencies.StorageServices;
+        var registeredContentProviderKinds = storageServices?.DriverRegistry.RegisteredKinds ?? [];
+        var contentToolsAvailable = storageServices is not null && registeredContentProviderKinds.Count > 0;
         var browseToolAvailable = contentToolsAvailable &&
-                                  browseDriverRegistry is not null &&
-                                  registeredContentProviderKinds.Intersect(browseDriverRegistry.RegisteredKinds).Any();
+                                  storageServices!.BrowseDriverRegistry is not null &&
+                                  registeredContentProviderKinds.Intersect(storageServices.BrowseDriverRegistry.RegisteredKinds).Any();
         return new RuntimeStorageToolAvailability(contentToolsAvailable, browseToolAvailable);
     }
-
-    private ISpreadsheetDocumentService ResolveSpreadsheetDocumentService()
-        => services.GetService(typeof(ISpreadsheetDocumentService)) is ISpreadsheetDocumentService resolved
-            ? resolved
-            : new ClosedXmlSpreadsheetDocumentService();
 
     private void RecordCompositionMetric(string stage, TimeSpan elapsed)
     {
@@ -522,12 +532,14 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
 
     private StorageRuntimePlugin? CreateStorageRuntimePlugin(AgentWorkspaceToolAccessSettings accessSettings)
     {
-        var catalogService = services.GetService(typeof(IStorageCatalogService)) as IStorageCatalogService;
-        var driverRegistry = services.GetService(typeof(IStorageDriverRegistry)) as IStorageDriverRegistry;
-        var browseDriverRegistry = services.GetService(typeof(IStorageBrowseDriverRegistry)) as IStorageBrowseDriverRegistry;
-        return catalogService is null || driverRegistry is null
+        var storageServices = capabilityDependencies.StorageServices;
+        return storageServices is null
             ? null
-            : new StorageRuntimePlugin(catalogService, driverRegistry, browseDriverRegistry, accessSettings);
+            : new StorageRuntimePlugin(
+                storageServices.CatalogService,
+                storageServices.DriverRegistry,
+                storageServices.BrowseDriverRegistry,
+                accessSettings);
     }
 
     private Task AttachWorkspaceMemoryAsync(
@@ -783,8 +795,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         }
 
         var factory = new A2ARemoteAgentToolFactory(
-            services.GetService<IConfiguration>(),
-            services.GetService<ILoggerFactory>());
+            capabilityDependencies.A2AConfiguration,
+            capabilityDependencies.LoggerFactory);
         var result = await factory.CreateSkillToolsAsync(endpoints, cancellationToken);
         var approvalRequired = agent.Permissions.RequiresApprovalForExternalCalls;
         var tools = ApplyApprovalRequirement(
@@ -1132,16 +1144,49 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         return new CompactionProvider(pipeline);
     }
 
-    private static void DeduplicateTools(List<AITool> tools)
+    /// <summary>
+    /// SB10 replacement for the former silent first-wins tool deduplication. A tool name that is
+    /// contributed more than once is legitimate only when every contribution is the same tool
+    /// instance (the same tool object attached through more than one composition path); that
+    /// narrow case collapses to one entry exactly as before. Distinct tools that collide on a
+    /// name across capability sources now fail composition explicitly instead of one silently
+    /// shadowing the other. Runtime tool providers are validated earlier by
+    /// <see cref="RuntimeToolProviderComposer"/>, which rejects cross-provider collisions before
+    /// the tools reach this list.
+    /// </summary>
+    internal static void ValidateComposedToolNames(List<AITool> tools)
     {
-        var deduplicated = tools
-            .GroupBy(tool => tool.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToList();
+        var collisions = new List<string>();
+        var deduplicated = new List<AITool>(tools.Count);
+        foreach (var group in tools.GroupBy(tool => tool.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var contributions = group.ToList();
+            if (contributions.Skip(1).All(tool => ReferenceEquals(tool, contributions[0])))
+            {
+                deduplicated.Add(contributions[0]);
+                continue;
+            }
+
+            collisions.Add(
+                $"'{group.Key}' ({string.Join(" + ", contributions.Select(DescribeToolContribution))})");
+        }
+
+        if (collisions.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Runtime capability composition produced conflicting tool names across capability sources: " +
+                string.Join("; ", collisions) +
+                ". Rename the colliding tool(s) or remove the duplicate capability so each tool name has exactly one owner.");
+        }
 
         tools.Clear();
         tools.AddRange(deduplicated);
     }
+
+    private static string DescribeToolContribution(AITool tool)
+        => tool is ApprovalRequiredAIFunction
+            ? $"{tool.GetType().Name} (approval-wrapped)"
+            : tool.GetType().Name;
 
     private static IEnumerable<AITool> ApplyApprovalRequirement(
         IEnumerable<AITool> tools,

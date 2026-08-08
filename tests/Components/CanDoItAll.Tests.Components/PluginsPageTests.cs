@@ -90,12 +90,16 @@ public sealed class PluginsPageTests
         var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
-        cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();
-        cut.Find("[data-testid='plugins-tab-settings']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='plugins-list-item-office365-mail']").Click());
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='plugins-tab-settings']").Click());
         cut.WaitForElement("[data-testid='plugin-setting-office365-mail-office365-clientId']");
 
-        cut.Find("[data-testid='plugin-setting-office365-mail-office365-clientId']").Change(clientId);
-        cut.Find("[data-testid='plugin-connection-save-office365-mail-office365']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='plugin-setting-office365-mail-office365-clientId']").Change(clientId));
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='plugin-connection-save-office365-mail-office365']").Click());
 
         cut.WaitForAssertion(() =>
         {

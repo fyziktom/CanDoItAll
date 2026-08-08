@@ -1798,12 +1798,13 @@ public sealed class WorkspaceCommandExecutionServiceTests
             WorkspaceScopeDescriptor.Sandbox);
         store.Register(run.Id, startupReceiptPath);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(
-            workspaceRoot,
-            processHost);
         var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
             new FakeExecutionRunStore(run),
-            service);
+            new WorkspaceExecutionScope(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox),
+            new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                () => processHost));
 
         try
         {
@@ -1833,10 +1834,13 @@ public sealed class WorkspaceCommandExecutionServiceTests
             WorkspaceScopeDescriptor.Sandbox);
         store.Register(executionRunId, startupReceiptPath);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
         var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
             new FakeExecutionRunStore(),
-            service);
+            new WorkspaceExecutionScope(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox),
+            new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                () => processHost));
 
         try
         {
@@ -1855,27 +1859,40 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Theory]
-    [InlineData(ExecutionState.Completed)]
-    [InlineData(ExecutionState.Failed)]
+    [InlineData(ExecutionState.Completed, WorkspaceScopeKind.Sandbox)]
+    [InlineData(ExecutionState.Failed, WorkspaceScopeKind.Sandbox)]
+    [InlineData(ExecutionState.Completed, WorkspaceScopeKind.Organization)]
+    [InlineData(ExecutionState.Failed, WorkspaceScopeKind.Organization)]
     public async Task Authorized_cleanup_delegates_for_persisted_terminal_execution_run(
-        ExecutionState executionState)
+        ExecutionState executionState,
+        WorkspaceScopeKind workspaceScopeKind)
     {
         var workspaceRoot = CreateWorkspaceWithWebProject();
+        var workspaceScope = workspaceScopeKind == WorkspaceScopeKind.Organization
+            ? WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"))
+            : WorkspaceScopeDescriptor.Sandbox;
         var run = CreateProcessStepExecutionRun("{}") with
         {
             State = executionState
         };
-        var startupReceiptPath = "artifacts/process-runs/dotnet-run/terminal/startup.json";
+        var startupReceiptPath = workspaceScope.CombineArtifactPath(
+            "process-runs",
+            "dotnet-run",
+            "terminal",
+            "startup.json");
         await WriteStartupReceiptAsync(workspaceRoot, startupReceiptPath);
         var store = new WorkspaceExecutionRunProcessLeaseStore(
             workspaceRoot,
-            WorkspaceScopeDescriptor.Sandbox);
+            workspaceScope);
         store.Register(run.Id, startupReceiptPath);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
         var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
             new FakeExecutionRunStore(run),
-            service);
+            new WorkspaceExecutionScope(
+                workspaceRoot,
+                workspaceScope),
+            new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                () => processHost));
 
         try
         {

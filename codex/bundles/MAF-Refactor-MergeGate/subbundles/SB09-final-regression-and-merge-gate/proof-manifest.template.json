@@ -1,0 +1,50 @@
+{
+  "subbundle": "SB09",
+  "title": "Final regression and merge gate",
+  "status": "NotStarted",
+  "decision": "Blocked",
+  "startingCommit": "",
+  "endingCommit": "",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [],
+  "commands": [],
+  "tests": [],
+  "architectureChecks": [],
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "acceptance": [
+    {
+      "criterion": "Release build is clean.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "All blocker tests pass.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No new Unit/Integration failure exists versus development.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Architecture and cutover guards pass.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Application smoke scenarios pass.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Final decision is explicit and evidence-backed.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "residualRisk": "",
+  "nextSubbundleUnlocked": false
+}

@@ -3,9 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentApiPublicProjectionIntegrationTests
@@ -839,7 +841,7 @@ public sealed class AgentApiPublicProjectionIntegrationTests
             receipt.GetProperty("runtimeToolProviderName").GetString());
     }
 
-    private sealed class DisclosureSentinelAgentRuntime : IAgentRuntime
+    private sealed class DisclosureSentinelAgentRuntime : IFakeAgentRuntime
     {
         private readonly bool completeInitialRun;
 

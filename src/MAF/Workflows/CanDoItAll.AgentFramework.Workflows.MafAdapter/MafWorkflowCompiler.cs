@@ -266,7 +266,7 @@ public sealed class MafWorkflowCompiler(
                     node,
                     WorkflowNodeExecutionProgressState.Failed,
                     CancellationToken.None,
-                    errorMessage: exception.Message,
+                    errorMessage: MafWorkflowFailureDetails.CreateDetailedMessage(exception),
                     usage: usage,
                     usageObservations: usageObservations,
                     occurredAtUtc: clock.GetUtcNow());

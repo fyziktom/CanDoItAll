@@ -1,4 +1,6 @@
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -6,7 +8,8 @@ namespace CanDoItAll.AgentFramework.Core;
 internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     ISandboxWorkspaceStore store,
     IAgentExecutionReportReader executionReportReader,
-    IAgentRuntime runtime,
+    IAgentExecutionRuntime executionRuntime,
+    IAgentContinuationRuntime continuationRuntime,
     IAgentExecutionGovernanceBridge executionGovernanceBridge,
     IAgentExecutionEventSink executionEventSink,
     IAgentExecutionCheckpointBridge executionCheckpointBridge,
@@ -18,13 +21,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner,
     IAgentExecutionCancellationRegistry? executionCancellationRegistry = null,
     IAgentOutputRepairService? outputRepairService = null,
-    IWorkspacePathResolutionService? workspacePathResolutionService = null) :
+    IWorkspacePathResolutionService? workspacePathResolutionService = null,
+    IEnumerable<IAgentExecutionProviderSelectionPolicy>? providerSelectionPolicies = null,
+    IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null) :
     IDisposable
 {
     private readonly IAgentOutputRepairService outputRepairService =
         outputRepairService ?? JsonObjectExtractionAgentOutputRepairService.Instance;
     private readonly IAgentExecutionCancellationRegistry executionCancellationRegistry =
         executionCancellationRegistry ?? new AgentExecutionCancellationRegistry();
+    // IEnumerable<T> (not IReadOnlyList<T>) so plain reflection-based DI activation (AddScoped<T>() with no
+    // factory - the production AddAgentFrameworkCore/AddAgentFrameworkModule registration shape, and every test
+    // host that re-registers this type the same way) auto-supplies every registered policy without requiring a
+    // separate IReadOnlyList<T> aggregator registration in each composition root.
+    private readonly IReadOnlyList<IAgentExecutionProviderSelectionPolicy> providerSelectionPolicies =
+        providerSelectionPolicies?.ToList() ?? [];
+    private readonly IReadOnlyList<IAgentExecutionRunCriticalityPolicy> runCriticalityPolicies =
+        runCriticalityPolicies?.ToList() ?? [];
     private readonly AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity =
         activityWorkspaceIdentity
         ?? throw new ArgumentNullException(nameof(activityWorkspaceIdentity));
@@ -41,8 +54,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     private readonly ILogger logger = logger;
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);
-    private readonly AgentRunTransientContextRegistry transientContextRegistry = new();
-    private static readonly ProviderProfileService ProviderFeatureService = new();
+    private readonly AgentTurnContextLeaseRegistry transientContextRegistry =
+        new(onEvicted: eviction => logger.LogWarning(
+            "Turn-context lease TTL-evicted for execution run {ExecutionRunId} after {LeaseAgeHours:F1}h without a terminal-cleanup Remove call. This is a backstop eviction, not the primary cleanup path — an actively waiting run's lease is never evicted this way.",
+            eviction.ExecutionRunId,
+            eviction.Age.TotalHours));
 
     public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
     {

@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tools.Documents;
@@ -49,10 +50,18 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
             resolvedScope,
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()));
+        services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>(serviceProvider =>
+            new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList()));
         services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
             new WorkspaceExecutionRunProcessLeaseCleaner(
                 serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
-                serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>()));
+                new WorkspaceExecutionScope(
+                    normalizedWorkspaceRoot,
+                    resolvedScope,
+                    resolvedActivityWorkspaceIdentity.DatabaseProfileId,
+                    resolvedActivityWorkspaceIdentity.DatabaseProfileGeneration),
+                serviceProvider.GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>()));
         services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddSingleton<IWorkspaceImageOperationService>(_ => new WorkspaceImageOperationService(
             normalizedWorkspaceRoot,
@@ -119,16 +128,35 @@ public static class AgentFrameworkServiceCollectionExtensions
                     AgentExecutionActivityCoordinator>());
         services.AddAgentFrameworkA2AHosting();
         services.AddAgentFrameworkVoice();
+        services.TryAddSingleton<IWorkspaceRuntimeServicesFactory>(serviceProvider => new WorkspaceRuntimeServicesFactory(
+            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
+            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter()));
         services.TryAddSingleton<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));
-        services.TryAddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<MafAgentRuntime>());
+        // SB18: the four narrow runtime ports resolve directly to the native MAF adapters exposed
+        // by the same MafAgentRuntime composition (one adapter set per runtime scope). No broad
+        // runtime interface or compatibility facade is constructed by production registrations.
+        services.TryAddSingleton<IAgentExecutionRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().ExecutionPort);
+        services.TryAddSingleton<IAgentContinuationRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().ContinuationPort);
+        services.TryAddSingleton<IProviderDiagnosticsRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().DiagnosticsPort);
+        services.TryAddSingleton<IProviderModelAdministrationRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<MafAgentRuntime>().ModelAdministrationPort);
         services.TryAddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.TryAddSingleton<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
-            serviceProvider.GetRequiredService<IAgentRuntime>()));
+            serviceProvider.GetRequiredService<IProviderDiagnosticsRuntime>(),
+            serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Singleton);
         services.AddInMemoryWorkflowCatalogServices();
         services.AddInMemoryWorkflowRuntimeStores(normalizedWorkspaceRoot, resolvedScope);
+        // AgentFrameworkWorkspaceService takes IEnumerable<IAgentExecutionProviderSelectionPolicy> /
+        // IEnumerable<IAgentExecutionRunCriticalityPolicy>, so plain reflection-based activation below already
+        // supplies every registered policy (for example the Modules.Processes registrations) without a separate
+        // aggregator registration; an empty enumerable is the fail-open default for hosts that never load a
+        // product module (governed provider-override/criticality hardening simply stays off).
         services.TryAddScoped<AgentFrameworkWorkspaceService>();
         services.TryAddScoped<IAgentFrameworkWorkspaceService>(
             serviceProvider =>

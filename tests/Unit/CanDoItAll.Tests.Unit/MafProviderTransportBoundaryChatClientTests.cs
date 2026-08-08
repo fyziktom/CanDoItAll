@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class MafProviderTransportBoundaryChatClientTests

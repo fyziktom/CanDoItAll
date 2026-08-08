@@ -147,7 +147,7 @@ public sealed class WorkflowExecutorCategoryIsolationTests
             ["ExcelDataReader", "Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.Modules.Security"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.Security.Abstractions"],
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj",

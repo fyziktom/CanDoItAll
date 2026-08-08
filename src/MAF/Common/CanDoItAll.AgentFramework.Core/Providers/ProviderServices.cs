@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using System.Security;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Win32;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -720,13 +721,15 @@ public sealed class ProviderProfileService : IProviderProfileService
     }
 }
 
-public sealed class ProviderDiagnosticsService(IAgentRuntime runtime) : IProviderDiagnosticsService
+public sealed class ProviderDiagnosticsService(
+    IProviderDiagnosticsRuntime diagnosticsRuntime,
+    IProviderModelAdministrationRuntime modelAdministrationRuntime) : IProviderDiagnosticsService
 {
     public Task<ProviderHealthResult> TestProviderAsync(
         ProviderProfile provider,
         CancellationToken cancellationToken = default)
     {
-        return runtime.TestProviderAsync(provider, cancellationToken);
+        return diagnosticsRuntime.TestHealthAsync(provider, cancellationToken);
     }
 
     public Task<ProviderTestChatResult> RunProviderTestChatAsync(
@@ -734,7 +737,7 @@ public sealed class ProviderDiagnosticsService(IAgentRuntime runtime) : IProvide
         ProviderTestChatRequest request,
         CancellationToken cancellationToken = default)
     {
-        return runtime.RunProviderTestChatAsync(provider, request, cancellationToken);
+        return diagnosticsRuntime.RunProbeAsync(provider, request, cancellationToken);
     }
 
     public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
@@ -742,7 +745,7 @@ public sealed class ProviderDiagnosticsService(IAgentRuntime runtime) : IProvide
         ProviderModelMaintenanceEditorRequest request,
         CancellationToken cancellationToken = default)
     {
-        return runtime.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
+        return modelAdministrationRuntime.CreateOrUpdateModelAsync(provider, request, cancellationToken);
     }
 }
 

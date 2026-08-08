@@ -99,10 +99,11 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<ExecutionRunResult> ContinueExecutionRunAsync(
         Guid executionRunId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
         EnsureRequiredActivityOperationId(
             activityOperationId,
             nameof(activityOperationId));
@@ -114,7 +115,7 @@ public sealed partial class AgentFrameworkWorkspaceService
             operation => executionService.ContinueExecutionRunWithinOperationAsync(
                 operation,
                 executionRunId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }
@@ -122,13 +123,13 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<ExecutionRunResult> ContinueExecutionRunWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation,
         Guid executionRunId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
         => executionService.ContinueExecutionRunWithinOperationAsync(
             operation,
             executionRunId,
-            approved,
+            decisions,
             autoApprovePendingToolCalls,
             cancellationToken);
 
@@ -210,10 +211,11 @@ public sealed partial class AgentFrameworkWorkspaceService
         Guid agentId,
         Guid chatSessionId,
         AgentExecutionOperationId activityOperationId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(decisions);
         EnsureRequiredActivityOperationId(
             activityOperationId,
             nameof(activityOperationId));
@@ -226,7 +228,7 @@ public sealed partial class AgentFrameworkWorkspaceService
                 operation,
                 agentId,
                 chatSessionId,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
     }
@@ -235,14 +237,14 @@ public sealed partial class AgentFrameworkWorkspaceService
         IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
         => executionService.RespondToPendingApprovalsWithinOperationAsync(
             operation,
             agentId,
             chatSessionId,
-            approved,
+            decisions,
             autoApprovePendingToolCalls,
             cancellationToken);
 

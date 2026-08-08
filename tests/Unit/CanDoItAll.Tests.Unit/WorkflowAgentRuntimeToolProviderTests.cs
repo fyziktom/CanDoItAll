@@ -96,6 +96,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             harness.Context.Provider,
             harness.Context.Capabilities,
             [],
+            WorkspaceRuntimeServicesTestFactory.Create(Path.GetTempPath()),
             static (_, _, _) => Task.CompletedTask,
             CancellationToken.None,
             suppressApprovalRequirements: false);
@@ -104,6 +105,7 @@ public sealed class WorkflowAgentRuntimeToolProviderTests
             harness.Context.Provider,
             harness.Context.Capabilities,
             [],
+            WorkspaceRuntimeServicesTestFactory.Create(Path.GetTempPath()),
             static (_, _, _) => Task.CompletedTask,
             CancellationToken.None,
             suppressApprovalRequirements: true);

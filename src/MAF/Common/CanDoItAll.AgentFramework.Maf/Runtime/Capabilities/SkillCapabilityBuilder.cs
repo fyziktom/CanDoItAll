@@ -6,7 +6,8 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class SkillCapabilityBuilder(
     string workspaceRoot,
-    IServiceProvider services)
+    IRegisteredCapabilityServiceSource registeredServices,
+    ILoggerFactory loggerFactory)
 {
     public IReadOnlyList<string> ResolveSkillRoots(
         IReadOnlyList<CapabilityCatalogItem> capabilities,
@@ -146,7 +147,7 @@ internal sealed class SkillCapabilityBuilder(
             if (RetiredRegisteredSkillPolicy.IsRetiredRegisteredSkillCapability(capability, registeredSkillServiceType))
             {
                 RetiredRegisteredSkillPolicy.LogSkippedRetiredRegisteredSkill(
-                    services,
+                    loggerFactory,
                     capability.Name,
                     registeredSkillServiceType,
                     "is retired and no longer participates in runtime skill composition.");
@@ -159,7 +160,7 @@ internal sealed class SkillCapabilityBuilder(
                 if (RetiredRegisteredSkillPolicy.IsRetiredRegisteredSkillServiceType(registeredSkillServiceType))
                 {
                     RetiredRegisteredSkillPolicy.LogSkippedRetiredRegisteredSkill(
-                        services,
+                        loggerFactory,
                         capability.Name,
                         registeredSkillServiceType,
                         "points to the retired sandbox assembly and could not be resolved in the current runtime.");
@@ -169,13 +170,13 @@ internal sealed class SkillCapabilityBuilder(
                 throw new InvalidOperationException($"Registered skill type '{registeredSkillServiceType}' for capability '{capability.Name}' could not be resolved.");
             }
 
-            var service = services.GetService(serviceType);
+            var service = registeredServices.Resolve(serviceType);
             if (service is null)
             {
                 if (RetiredRegisteredSkillPolicy.IsRetiredRegisteredSkillServiceType(registeredSkillServiceType))
                 {
                     RetiredRegisteredSkillPolicy.LogSkippedRetiredRegisteredSkill(
-                        services,
+                        loggerFactory,
                         capability.Name,
                         registeredSkillServiceType,
                         "points to the retired sandbox assembly and is no longer registered in DI.");
@@ -248,15 +249,12 @@ internal static class RetiredRegisteredSkillPolicy
     }
 
     public static void LogSkippedRetiredRegisteredSkill(
-        IServiceProvider services,
+        ILoggerFactory loggerFactory,
         string capabilityName,
         string serviceTypeName,
         string reason)
     {
-        if (services.GetService(typeof(ILoggerFactory)) is not ILoggerFactory loggerFactory)
-        {
-            return;
-        }
+        ArgumentNullException.ThrowIfNull(loggerFactory);
 
         var logger = loggerFactory.CreateLogger(nameof(MafAgentRuntime));
         LoggerExtensions.LogWarning(

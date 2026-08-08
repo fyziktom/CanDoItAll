@@ -47,6 +47,15 @@ public sealed record AgentRuntimeToolProviderContext
 
     public ImmutableArray<AgentChatContextAttachmentEnvelope> Attachments { get; init; }
 
+    /// <summary>
+    /// The admitted execution governance snapshot for this run, when the turn
+    /// was admitted with application context. Tool providers must treat it as
+    /// the permission ceiling: they may validate domain invariants and narrow
+    /// access further, but must not re-derive or widen grants from agent
+    /// configuration or UI access entries when the snapshot is present.
+    /// </summary>
+    public AgentExecutionGovernanceSnapshot? Governance { get; init; }
+
     public ImmutableArray<AgentChatContextAttachmentEnvelope>
         GetAttachments<TAttachment>()
         where TAttachment : class, IAgentChatContextAttachment

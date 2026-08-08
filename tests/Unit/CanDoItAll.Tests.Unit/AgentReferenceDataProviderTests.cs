@@ -764,6 +764,8 @@ public sealed class AgentReferenceDataProviderTests
 
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, AgentExecutionOperationId activityOperationId, bool approved, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
 
+        public Task<ExecutionRunResult> ContinueExecutionRunAsync(Guid executionRunId, AgentExecutionOperationId activityOperationId, IReadOnlyList<PendingToolApprovalDecision> decisions, bool autoApprovePendingToolCalls = false, CancellationToken cancellationToken = default) => throw Unused();
+
         public Task<AgentChatRunResult> SendMessageAsync(
             Guid agentId,
             Guid? chatSessionId,
@@ -777,6 +779,14 @@ public sealed class AgentReferenceDataProviderTests
             Guid chatSessionId,
             AgentExecutionOperationId activityOperationId,
             bool approved,
+            bool autoApprovePendingToolCalls = false,
+            CancellationToken cancellationToken = default) => throw Unused();
+
+        public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
+            Guid agentId,
+            Guid chatSessionId,
+            AgentExecutionOperationId activityOperationId,
+            IReadOnlyList<PendingToolApprovalDecision> decisions,
             bool autoApprovePendingToolCalls = false,
             CancellationToken cancellationToken = default) => throw Unused();
 

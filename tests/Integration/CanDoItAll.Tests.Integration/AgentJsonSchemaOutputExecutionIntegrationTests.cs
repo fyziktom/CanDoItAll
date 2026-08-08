@@ -8,9 +8,11 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
@@ -47,9 +49,10 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
             {
                 services.RemoveAll<ISecretVault>();
                 services.AddSingleton<ISecretVault, InMemorySecretVault>();
-                services.RemoveAll<IAgentRuntime>();
+                services.RemoveAll<IFakeAgentRuntime>();
+                services.RouteRuntimePortsThroughAgentRuntime();
                 services.AddSingleton(runtime);
-                services.AddSingleton<IAgentRuntime>(serviceProvider =>
+                services.AddSingleton<IFakeAgentRuntime>(serviceProvider =>
                     serviceProvider.GetRequiredService<DeterministicJsonSchemaAgentRuntime>());
                 UseDirectWorkspaceService(services);
             });
@@ -291,8 +294,12 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
         services.AddScoped<IAgentPackageService>(serviceProvider => new ZipAgentPackageService(
             serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
             ResolveWorkspaceScope(serviceProvider)));
-        services.AddScoped<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
-            serviceProvider.GetRequiredService<IAgentRuntime>()));
+        services.AddScoped<IProviderDiagnosticsService>(serviceProvider =>
+        {
+            var portFacade = new FakeAgentRuntimePortAdapter(
+                serviceProvider.GetRequiredService<IFakeAgentRuntime>());
+            return new ProviderDiagnosticsService(portFacade, portFacade);
+        });
         services.AddScoped<IAgentExecutionCheckpointBridge>(serviceProvider => new WorkflowBackedAgentExecutionCheckpointBridge(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),
             serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
@@ -323,7 +330,7 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
         return WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N"));
     }
 
-    private sealed class DeterministicJsonSchemaAgentRuntime(params string[] responses) : IAgentRuntime
+    private sealed class DeterministicJsonSchemaAgentRuntime(params string[] responses) : IFakeAgentRuntime
     {
         private readonly Queue<string> responseQueue = new(responses);
 

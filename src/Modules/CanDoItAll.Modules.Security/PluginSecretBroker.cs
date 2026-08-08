@@ -1,3 +1,5 @@
+using CanDoItAll.Security.Abstractions;
+
 namespace CanDoItAll.Modules.Security;
 
 public enum PluginSecretResolutionPurpose

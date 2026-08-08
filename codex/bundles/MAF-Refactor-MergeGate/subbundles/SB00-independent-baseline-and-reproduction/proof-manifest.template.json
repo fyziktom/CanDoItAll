@@ -1,0 +1,35 @@
+{
+  "subbundle": "SB00",
+  "title": "Independent baseline and blocker reproduction",
+  "status": "NotStarted",
+  "decision": "Blocked",
+  "startingCommit": "",
+  "endingCommit": "",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [],
+  "commands": [],
+  "tests": [],
+  "architectureChecks": [],
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "acceptance": [
+    {
+      "criterion": "Every code blocker has a deterministic failing test or executable architecture proof.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Baseline build and test counts are recorded.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No production file is changed.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "residualRisk": "",
+  "nextSubbundleUnlocked": false
+}

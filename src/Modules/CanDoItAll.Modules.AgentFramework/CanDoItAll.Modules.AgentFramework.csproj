@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />
     <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj" />
+    <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Llm.Conversations\CanDoItAll.AgentFramework.Llm.Conversations.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
     <ProjectReference Include="..\..\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj" />
     <ProjectReference Include="..\..\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />

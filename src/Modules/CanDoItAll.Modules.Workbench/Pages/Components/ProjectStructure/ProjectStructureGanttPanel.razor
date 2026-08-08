@@ -72,12 +72,21 @@
                             ButtonStyle="ButtonStyle.Light"
                             data-testid="project-structure-gantt-agent-chats"
                             Click="OpenAgentCatalog" />
-                    <GanttTaskDragSource Task="@insertionCandidate"
-                                         Disabled="@(!CanInsertTask)"
-                                         AriaLabel="Drag a new project task onto a dependency connection">
-                        <Pill Text="Insert 8 h task on dependency"
-                              Tone="PillTone.Info" />
-                    </GanttTaskDragSource>
+                    <ErrorBoundary @ref="dragSourceErrorBoundary">
+                        <ChildContent>
+                            <GanttTaskDragSource Task="@insertionCandidate"
+                                                 Disabled="@(!CanInsertTask)"
+                                                 AriaLabel="Drag a new project task onto a dependency connection">
+                                <Pill Text="Insert 8 h task on dependency"
+                                      Tone="PillTone.Info" />
+                            </GanttTaskDragSource>
+                        </ChildContent>
+                        <ErrorContent>
+                            <Pill Text="Task drag briefly unavailable"
+                                  Tone="PillTone.Warn"
+                                  data-testid="project-structure-gantt-dragsource-degraded" />
+                        </ErrorContent>
+                    </ErrorBoundary>
                 </Cluster>
             </SurfaceCard>
 
@@ -119,6 +128,8 @@
             {
                 <Stack Class="w-full min-w-0"
                        data-testid="project-structure-gantt-chart">
+                    <ErrorBoundary @ref="chartErrorBoundary">
+                    <ChildContent>
                     <GanttChart Tasks="@projection.Tasks"
                                 Dependencies="@projection.Dependencies"
                                 TaskTitleChangeRequested="ApplyTitleAsync"
@@ -143,6 +154,14 @@
                                 MaxHeight="48rem"
                                 ExportFileName="@ExportFileName"
                                 AriaLabel="Interactive project structure Gantt schedule" />
+                    </ChildContent>
+                    <ErrorContent>
+                        <Alert AlertStyle="AlertStyle.Warning"
+                               data-testid="project-structure-gantt-chart-degraded">
+                            The interactive schedule hit a rendering fault and was paused to keep this page responsive. It recovers automatically with the next schedule refresh.
+                        </Alert>
+                    </ErrorContent>
+                    </ErrorBoundary>
                 </Stack>
             }
         </Stack>

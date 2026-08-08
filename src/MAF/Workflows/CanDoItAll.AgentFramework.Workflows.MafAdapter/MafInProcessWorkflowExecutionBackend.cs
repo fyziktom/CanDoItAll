@@ -291,7 +291,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                 Descriptor.Kind,
                 BackendRunId: run.SessionId,
                 Summary: failureEvent is not null
-                    ? WorkflowFailureDisplayFormatter.ToUserMessage(failureEvent.Message)
+                    ? WorkflowFailureDisplayFormatter.ToUserMessage(failureEvent)
                     : finalState == WorkflowRunState.Completed
                         ? $"Workflow '{definition.Name}' completed."
                         : $"Workflow '{definition.Name}' is {finalState}.",

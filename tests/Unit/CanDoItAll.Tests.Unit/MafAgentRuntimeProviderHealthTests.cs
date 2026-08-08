@@ -65,15 +65,15 @@ public sealed class MafAgentRuntimeProviderHealthTests
         var runtime = new MafAgentRuntime(Path.GetTempPath(), services);
         var provider = CreateProvider(ProviderKind.OpenAi, "gpt-test");
 
-        var health = await runtime.TestProviderAsync(provider);
-        var chat = await runtime.RunProviderTestChatAsync(
+        var health = await runtime.DiagnosticsPort.TestHealthAsync(provider);
+        var chat = await runtime.DiagnosticsPort.RunProbeAsync(
             provider,
             new ProviderTestChatRequest(
                 Model: string.Empty,
                 SystemPrompt: "system",
                 Messages: [],
                 Prompt: "ping"));
-        var maintenance = await runtime.CreateOrUpdateProviderModelAsync(
+        var maintenance = await runtime.ModelAdministrationPort.CreateOrUpdateModelAsync(
             provider,
             new ProviderModelMaintenanceEditorRequest("base", "target", "system", 4096));
 

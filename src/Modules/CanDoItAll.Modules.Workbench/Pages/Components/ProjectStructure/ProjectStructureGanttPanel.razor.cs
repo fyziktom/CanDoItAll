@@ -2,8 +2,10 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Gantt;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.AgentContext;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 
@@ -76,6 +78,46 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
     [Parameter]
     public EventCallback OpenAgentCatalog { get; set; }
 
+    /// <summary>
+    /// Publishes the bounded visible Gantt observation whenever the projection
+    /// state changes. The observation is model context only; it never grants
+    /// product access.
+    /// </summary>
+    [Parameter]
+    public EventCallback<ProjectStructureGanttObservation?> ObservationChanged { get; set; }
+
+    private string? lastPublishedObservationFingerprint;
+
+    private ErrorBoundary? dragSourceErrorBoundary;
+
+    private ErrorBoundary? chartErrorBoundary;
+
+    private Task PublishObservationAsync()
+    {
+        if (!ObservationChanged.HasDelegate || ProjectId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        var observation = ProjectStructureGanttObservationFactory.FromProjection(
+            ProjectId,
+            projection,
+            isLoading,
+            loadError,
+            selectedTaskNodeId: null,
+            DateTimeOffset.UtcNow);
+        if (string.Equals(
+                lastPublishedObservationFingerprint,
+                observation.ContentFingerprint,
+                StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        lastPublishedObservationFingerprint = observation.ContentFingerprint;
+        return ObservationChanged.InvokeAsync(observation);
+    }
+
     private bool CanMutate => !mutationInFlight && !isLoading;
 
     private bool CanInsertTask =>
@@ -127,6 +169,7 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
             loadError = "The project schedule cannot be built because the supplied structure does not match this project.";
             projection = null;
             mermaidSource = null;
+            await PublishObservationAsync();
             return;
         }
 
@@ -147,6 +190,10 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
 
         isLoading = true;
         loadError = null;
+        // Publish the explicit loading observation before the projection is
+        // built so a turn admitted mid-load sees partial facts, never stale
+        // Canvas or Gantt content.
+        await PublishObservationAsync();
         try
         {
             var assignmentsTask = ProjectPartyIntegrationBridge.ListAssignmentsDetailedAsync(
@@ -183,6 +230,14 @@ public partial class ProjectStructureGanttPanel : ComponentBase, IAsyncDisposabl
         {
             isLoading = false;
         }
+
+        // The interactive Gantt components come from a packaged library whose JS-interop
+        // registration can fault during rapid re-render/dispose cycles. The error boundaries
+        // keep such a fault scoped to the schedule area; a fresh projection retries them.
+        dragSourceErrorBoundary?.Recover();
+        chartErrorBoundary?.Recover();
+
+        await PublishObservationAsync();
     }
 
     private Task OpenMermaidPreviewAsync()

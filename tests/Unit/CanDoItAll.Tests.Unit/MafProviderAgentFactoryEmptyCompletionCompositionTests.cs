@@ -29,7 +29,9 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 })
                 .Build())
             .BuildServiceProvider();
-        var credentialService = new MafProviderCredentialService(services);
+        var credentialService = new MafProviderCredentialService(
+            services.GetService<IAgentProviderCredentialResolver>(),
+            services.GetService<IConfiguration>());
 
         var resolution = credentialService.Resolve(provider);
 
@@ -66,7 +68,9 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 })
                 .Build())
             .BuildServiceProvider();
-        var credentialService = new MafProviderCredentialService(services);
+        var credentialService = new MafProviderCredentialService(
+            services.GetService<IAgentProviderCredentialResolver>(),
+            services.GetService<IConfiguration>());
 
         var resolvedA = credentialService.Resolve(providerA);
         var unresolvedB = credentialService.Resolve(providerB);
@@ -83,8 +87,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 providerB.DefaultModel,
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
         Assert.Equal(MafProviderConfigurationFailureReason.MissingCredential, exception.Reason);
         Assert.Equal(providerB.Id, exception.ProviderIdentity.ProviderProfileId);
     }
@@ -92,7 +95,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [Fact]
     public void CreateFrameworkAgent_RejectsMissingCredentialWithTypedProviderIdentity()
     {
-        using var services = new ServiceCollection().BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.OpenAi,
             ProviderTransportKind.Responses);
@@ -104,8 +106,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 provider.DefaultModel,
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
 
         Assert.Equal(MafProviderConfigurationFailureReason.MissingCredential, exception.Reason);
         Assert.Equal(provider.Id, exception.ProviderIdentity.ProviderProfileId);
@@ -121,7 +122,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [InlineData("http://localhost/models#credential")]
     public void CreateFrameworkAgent_RejectsInvalidEndpoint(string baseUrl)
     {
-        using var services = new ServiceCollection().BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.Ollama,
             ProviderTransportKind.ChatCompletions) with
@@ -136,8 +136,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 provider.DefaultModel,
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
 
         Assert.Equal(MafProviderConfigurationFailureReason.InvalidEndpoint, exception.Reason);
     }
@@ -145,7 +144,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [Fact]
     public void CreateFrameworkAgent_RejectsAzureEndpointWithEmbeddedCredential()
     {
-        using var services = new ServiceCollection().BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.AzureOpenAi,
             ProviderTransportKind.Responses) with
@@ -160,8 +158,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 provider.DefaultModel,
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
 
         Assert.Equal(MafProviderConfigurationFailureReason.InvalidEndpoint, exception.Reason);
     }
@@ -169,7 +166,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [Fact]
     public void CreateFrameworkAgent_RejectsBlankEffectiveModel()
     {
-        using var services = new ServiceCollection().BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.Ollama,
             ProviderTransportKind.ChatCompletions);
@@ -181,8 +177,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 " ",
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
 
         Assert.Equal(MafProviderConfigurationFailureReason.InvalidModel, exception.Reason);
     }
@@ -190,7 +185,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [Fact]
     public void CreateFrameworkAgent_RejectsUnsupportedProviderTransport()
     {
-        using var services = new ServiceCollection().BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.Ollama,
             ProviderTransportKind.Responses);
@@ -202,8 +196,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 provider.DefaultModel,
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
 
         Assert.Equal(MafProviderConfigurationFailureReason.UnsupportedTransport, exception.Reason);
     }
@@ -216,7 +209,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [InlineData("{\"timeoutSeconds\":3601}")]
     public void CreateFrameworkAgent_RejectsInvalidRuntimeSettings(string configurationJson)
     {
-        using var services = new ServiceCollection().BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.Ollama,
             ProviderTransportKind.ChatCompletions) with
@@ -231,8 +223,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 provider.DefaultModel,
                 MafChatClientAgentOptionsFactory.Create(new ChatOptions()),
                 frameworkManagedHistory: false,
-                allowBackgroundResponses: false,
-                services));
+                allowBackgroundResponses: false));
 
         Assert.Equal(MafProviderConfigurationFailureReason.InvalidRuntimeSettings, exception.Reason);
     }
@@ -250,11 +241,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
         ProviderTransportKind transport,
         bool frameworkManagedHistory)
     {
-        using var services = new ServiceCollection()
-            .AddSingleton<IAgentProviderCredentialResolver>(
-                new FixedCredentialResolver())
-            .BuildServiceProvider();
-        var credentialService = new MafProviderCredentialService(services);
+        var credentialService = new MafProviderCredentialService(new FixedCredentialResolver());
         var factory = CreateFactory(credentialService);
         var provider = CreateProvider(providerKind, transport);
         var options = new ChatClientAgentOptions
@@ -269,8 +256,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
             provider.DefaultModel,
             options,
             frameworkManagedHistory,
-            allowBackgroundResponses: false,
-            services);
+            allowBackgroundResponses: false);
 
         try
         {
@@ -316,10 +302,6 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
     [Fact]
     public async Task CreateFrameworkAgent_OllamaAgentOverridePrecedesInvalidProviderThinkingDefault()
     {
-        using var services = new ServiceCollection()
-            .AddSingleton<IAgentProviderCredentialResolver>(
-                new FixedCredentialResolver())
-            .BuildServiceProvider();
         var provider = CreateProvider(
             ProviderKind.Ollama,
             ProviderTransportKind.ChatCompletions) with
@@ -345,7 +327,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
                 "{}",
                 AgentReasoningEffortLevel.Medium));
         var factory = new MafProviderAgentFactory(
-            new MafProviderCredentialService(services),
+            new MafProviderCredentialService(new FixedCredentialResolver()),
             NoOpMafProviderStreamingDispatchGate.Instance);
 
         var agent = factory.CreateFrameworkAgent(
@@ -353,8 +335,7 @@ public sealed class MafProviderAgentFactoryEmptyCompletionCompositionTests
             provider.DefaultModel,
             MafChatClientAgentOptionsFactory.Create(chatOptions),
             frameworkManagedHistory: false,
-            allowBackgroundResponses: false,
-            services);
+            allowBackgroundResponses: false);
 
         try
         {

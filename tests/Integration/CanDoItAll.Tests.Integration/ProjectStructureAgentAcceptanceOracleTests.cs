@@ -24,7 +24,7 @@ public sealed class ProjectStructureAgentAcceptanceOracleTests(ITestOutputHelper
         "architecture-parent",
         ProjectObjectType.Note,
         "authority-sentinel",
-        "SB01 authority-negative sentinel",
+        "Authority-negative sentinel",
         "Must remain unchanged",
         "locked",
         "Baseline canonical evidence",
@@ -233,11 +233,11 @@ public sealed class ProjectStructureAgentAcceptanceOracleTests(ITestOutputHelper
 
         Assert.Equal(
             [
-                "completed-prose-only|REJECT|SB01-I01|RequiredSuccessfulReceiptMissing,ExpectedCanonicalNodeMissing",
-                "failed-required-receipt|REJECT|SB01-I01|RequiredSuccessfulReceiptMissing",
-                "canonical-node-mismatch|REJECT|SB01-I01|ExpectedCanonicalNodeMismatch",
-                "missing-required-tool-manifest|REJECT|SB01-I04|RequiredToolMissingFromManifest",
-                "canonical-sentinel-mutation|REJECT|SB01-I06|CanonicalSentinelDrifted"
+                "completed-prose-only|REJECT|receipt-and-canonical-evidence|RequiredSuccessfulReceiptMissing,ExpectedCanonicalNodeMissing",
+                "failed-required-receipt|REJECT|receipt-and-canonical-evidence|RequiredSuccessfulReceiptMissing",
+                "canonical-node-mismatch|REJECT|receipt-and-canonical-evidence|ExpectedCanonicalNodeMismatch",
+                "missing-required-tool-manifest|REJECT|required-tool-manifest|RequiredToolMissingFromManifest",
+                "canonical-sentinel-mutation|REJECT|canonical-sentinel-unchanged|CanonicalSentinelDrifted"
             ],
             transcriptLines);
         Assert.All(attempts, attempt => Assert.False(attempt.Decision.IsAccepted));

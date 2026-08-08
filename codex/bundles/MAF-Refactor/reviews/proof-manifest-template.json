@@ -1,0 +1,24 @@
+{
+  "subbundleId": "SBXX-name",
+  "baselineCommit": "",
+  "resultCommit": "",
+  "status": "Pending",
+  "codeAnalytics": {
+    "available": false,
+    "snapshotId": "",
+    "dashboardHealth": "",
+    "dependencyCycleResult": "",
+    "relevantFindings": []
+  },
+  "changedFiles": [],
+  "changedProjects": [],
+  "builds": [],
+  "tests": [],
+  "sourceAssertions": [],
+  "responsibilitiesMoved": [],
+  "oldOwnerProof": [],
+  "dependencyProof": [],
+  "authorityProof": [],
+  "knownGaps": [],
+  "downstreamDecision": "Blocked"
+}

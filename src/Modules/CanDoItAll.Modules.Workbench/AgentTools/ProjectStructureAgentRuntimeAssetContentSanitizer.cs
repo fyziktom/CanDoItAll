@@ -8,7 +8,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
 
     public static ProjectStructureAssetContentDescriptor BoundForAgentRuntime(
         ProjectStructureAssetContentDescriptor content,
-        bool canAnalyzeImages = true)
+        bool canTransformArtifacts = true)
     {
         ArgumentNullException.ThrowIfNull(content);
 
@@ -25,7 +25,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
             ? "the returned asset media path"
             : content.Asset.MediaRelativePath;
         var reason = ResolveOmissionReason(content);
-        var nextAction = ResolveOmittedContentNextAction(content.Asset, mediaPath, canAnalyzeImages);
+        var nextAction = ResolveOmittedContentNextAction(content.Asset, mediaPath, canTransformArtifacts);
 
         return content with
         {
@@ -68,7 +68,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
     private static string ResolveOmittedContentNextAction(
         ProjectStructureAssetDescriptor asset,
         string mediaPath,
-        bool canAnalyzeImages)
+        bool canTransformArtifacts)
     {
         var contentType = asset.MediaContentType;
         var assetArguments = $"projectId '{asset.ProjectId:D}' and nodeId '{asset.NodeId}'";
@@ -79,17 +79,20 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
 
         if (IsImageContentType(contentType))
         {
-            return canAnalyzeImages
+            return canTransformArtifacts
                 ? $"Use {AgentToolInvocationPolicyMetadata.ProjectStructureAssetImageAnalyze} with {assetArguments}; do not pass this asset path to a workspace image tool."
                 : "The selected agent lacks artifact-transformation access. Choose a project-authorized agent that can analyze images; do not pass this asset path to a workspace image tool.";
         }
 
         if (contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
             contentType.Contains("wordprocessingml.document", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase) ||
-            contentType.Equals("text/markdown", StringComparison.OrdinalIgnoreCase))
+            contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase))
         {
-            return $"Use workspace_convert_document with '{mediaPath}' and analyze the returned markdown preview or output path.";
+            // workspace_convert_document is gated by the TransformArtifacts permission; never point an
+            // agent at a tool its composition cannot contain.
+            return canTransformArtifacts
+                ? $"Use workspace_convert_document with '{mediaPath}' and analyze the returned markdown preview or output path."
+                : "The selected agent lacks artifact-transformation access. Choose a project-authorized agent that can convert documents to markdown.";
         }
 
         if (IsSpreadsheetContentType(contentType))

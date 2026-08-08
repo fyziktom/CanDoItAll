@@ -375,6 +375,12 @@ internal sealed class ScenarioHarnessService(ICanDoItAllAgentWorkspaceFactory wo
         return await LoadScenarioSnapshotAsync(agentId, definition, runResult.ExecutionRunId, cancellationToken);
     }
 
+    /// <summary>
+    /// Test-harness convenience API: keeps its own boolean shape (used across many scenario
+    /// tests) but resolves the run's current pending approvals and calls the per-proposal
+    /// decision overload directly — SB15 requires no new production caller of the bool
+    /// workspace-service overload, and this is the harness's own surface, not that overload.
+    /// </summary>
     public async Task<ScenarioHarnessSnapshot> ContinueScenarioAsync(
         Guid agentId,
         string scenarioId,
@@ -385,10 +391,14 @@ internal sealed class ScenarioHarnessService(ICanDoItAllAgentWorkspaceFactory wo
     {
         var definition = ResolveDefinition(scenarioId);
         var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+        var decisions = detail.Run.PendingApprovals
+            .Select(item => new PendingToolApprovalDecision(item.ApprovalId, approved))
+            .ToArray();
         await workspaceService.ContinueExecutionRunAsync(
             executionRunId,
             AgentExecutionOperationId.New(),
-            approved,
+            decisions,
             autoApprovePendingToolCalls,
             cancellationToken);
 

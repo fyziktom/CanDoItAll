@@ -6,13 +6,13 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class AgentChatExecutionOrchestrator(
     IAgentFrameworkWorkspaceActivityExecutionService workspaceExecutionService,
-    IAgentChatContextRegistry contextRegistry,
+    IAgentTurnContextCaptureService turnContextCaptureService,
     IAgentChatExecutionNotificationHub notificationHub,
     IAgentExecutionActivityCoordinator activityCoordinator,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
     IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
-    TimeProvider timeProvider)
+    IAgentConversationContextService? conversationContextService = null)
     : IAgentChatExecutionOrchestrator
 {
     private const string SendAcceptedMessage = "Agent request accepted.";
@@ -38,6 +38,7 @@ public sealed class AgentChatExecutionOrchestrator(
             request.AgentId,
             request.ChatSessionId,
             SendAcceptedMessage);
+        var conversationKey = ResolveConversationKey(request);
         var completion = SendMessageCoreAsync(
             operation,
             request.AgentId,
@@ -45,6 +46,7 @@ public sealed class AgentChatExecutionOrchestrator(
             request.Prompt,
             request.AttachmentPaths?.ToArray(),
             request.Behavior,
+            conversationKey,
             cancellationToken);
         return new AgentChatOperationHandle(operation.StreamId, completion);
     }
@@ -97,12 +99,13 @@ public sealed class AgentChatExecutionOrchestrator(
     public AgentChatOperationHandle StartApprovalContinuation(
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
         ValidateAgentId(agentId);
         ValidateSessionId(chatSessionId);
+        ArgumentNullException.ThrowIfNull(decisions);
         cancellationToken.ThrowIfCancellationRequested();
 
         var operation = AdmitOperation(
@@ -113,7 +116,7 @@ public sealed class AgentChatExecutionOrchestrator(
             operation,
             agentId,
             chatSessionId,
-            approved,
+            decisions,
             autoApprovePendingToolCalls,
             cancellationToken);
         return new AgentChatOperationHandle(operation.StreamId, completion);
@@ -122,14 +125,14 @@ public sealed class AgentChatExecutionOrchestrator(
     public Task<AgentChatRunResult> RespondToPendingApprovalsAsync(
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default)
     {
         return StartApprovalContinuation(
             agentId,
             chatSessionId,
-            approved,
+            decisions,
             autoApprovePendingToolCalls,
             cancellationToken).Completion;
     }
@@ -141,6 +144,7 @@ public sealed class AgentChatExecutionOrchestrator(
         string prompt,
         IReadOnlyList<string>? attachmentPaths,
         AgentChatExecutionBehavior behavior,
+        AgentConversationKey? conversationKey,
         CancellationToken cancellationToken)
     {
         using (operation)
@@ -152,11 +156,19 @@ public sealed class AgentChatExecutionOrchestrator(
                     CapturingContextMessage);
                 await Task.Yield();
 
-                var context = await contextRegistry
-                    .CaptureAsync(cancellationToken)
+                var capture = await turnContextCaptureService
+                    .CaptureAsync(
+                        new AgentTurnContextCaptureCommand(
+                            agentId,
+                            chatSessionId,
+                            prompt,
+                            operation.StreamId.OperationId,
+                            operation.StreamId.DatabaseProfileGeneration,
+                            behavior,
+                            conversationKey),
+                        cancellationToken)
                     .ConfigureAwait(false);
-                EnsureCurrentProfileGeneration(operation);
-                if (context is not null)
+                if (capture.Context is { } context)
                 {
                     operation.BindContext(
                         context.Scope.Source,
@@ -166,15 +178,7 @@ public sealed class AgentChatExecutionOrchestrator(
                 operation.Report(
                     AgentExecutionActivityPhase.PreparingInput,
                     PreparingInputMessage);
-                var invocation = AgentChatContextInvocationFactory.Create(
-                    context,
-                    agentId,
-                    chatSessionId,
-                    prompt,
-                    operation.StreamId.OperationId,
-                    operation.StreamId.DatabaseProfileGeneration,
-                    timeProvider.GetUtcNow(),
-                    behavior);
+                var invocation = capture.Invocation;
                 var options = invocation.Options;
                 var result = await workspaceExecutionService
                     .SendMessageWithinOperationAsync(
@@ -187,6 +191,7 @@ public sealed class AgentChatExecutionOrchestrator(
                         attachmentPaths)
                     .ConfigureAwait(false);
                 EnsureTerminalized(operation);
+                CommitConversationAdoption(conversationKey, capture);
                 await PublishCompletionAsync(result).ConfigureAwait(false);
                 return result;
             }
@@ -207,7 +212,7 @@ public sealed class AgentChatExecutionOrchestrator(
         IAgentExecutionActivityOperationLease operation,
         Guid agentId,
         Guid chatSessionId,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
     {
@@ -225,7 +230,7 @@ public sealed class AgentChatExecutionOrchestrator(
                         operation,
                         agentId,
                         chatSessionId,
-                        approved,
+                        decisions,
                         autoApprovePendingToolCalls,
                         cancellationToken)
                     .ConfigureAwait(false);
@@ -304,15 +309,50 @@ public sealed class AgentChatExecutionOrchestrator(
             : Task.CompletedTask;
     }
 
-    private void EnsureCurrentProfileGeneration(
-        IAgentExecutionActivityOperationLease operation)
+    private AgentConversationKey? ResolveConversationKey(AgentChatSendRequest request)
     {
-        if (executionProfileGenerationSource.GetGeneration() !=
-            operation.StreamId.DatabaseProfileGeneration)
+        if (conversationContextService is null)
         {
-            throw new InvalidOperationException(
-                "The current database profile changed while the agent context was being captured.");
+            return null;
         }
+
+        if (request.ChatSessionId is { } sessionId && sessionId != Guid.Empty)
+        {
+            return AgentConversationKey.ForSession(sessionId);
+        }
+
+        return request.ConversationHandleId is { IsEmpty: false } handleId
+            ? AgentConversationKey.ForHandle(handleId)
+            : null;
+    }
+
+    private void CommitConversationAdoption(
+        AgentConversationKey? conversationKey,
+        AgentTurnContextCaptureResult capture)
+    {
+        // The binding advances only for an admitted, executed turn. A lost
+        // compare-and-swap means a newer turn or an explicit mode change
+        // already moved the conversation; the stale update is skipped.
+        if (conversationContextService is null ||
+            conversationKey is not { } key ||
+            capture.ConversationBinding is not { } binding ||
+            capture.TurnReference is not { } turnReference ||
+            capture.Context is not { } context)
+        {
+            return;
+        }
+
+        conversationContextService.TryCommitTurnAdoption(
+            key,
+            binding.Revision,
+            turnReference.ContextEpochId,
+            turnReference.SourceKind,
+            turnReference.SourceId,
+            context.Scope.DisplayName,
+            turnReference.Surface,
+            turnReference.View,
+            turnReference.ModelContextDigest,
+            context.Scope.SurfacePosition?.PrimarySelection?.Id ?? string.Empty);
     }
 
     private static void EnsureTerminalized(

@@ -3,10 +3,13 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Modules.Processes;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +28,6 @@ public sealed class MafRuntimeArchitectureServicesTests
         services.AddMafRuntimeArchitectureServices();
 
         using var provider = services.BuildServiceProvider();
-        Assert.IsType<MafRuntimeDependencyResolver>(provider.GetRequiredService<IMafRuntimeDependencyResolver>());
         Assert.IsType<MafProviderCredentialService>(provider.GetRequiredService<IMafProviderCredentialService>());
         Assert.Null(provider.GetService<IMafProviderAgentFactory>());
         Assert.IsType<RuntimeToolProviderComposer>(provider.GetRequiredService<IRuntimeToolProviderComposer>());
@@ -39,14 +41,16 @@ public sealed class MafRuntimeArchitectureServicesTests
     public void Missing_provider_runtime_graph_fails_fast()
     {
         using var provider = new ServiceCollection().BuildServiceProvider();
-        var resolver = new MafRuntimeDependencyResolver();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            resolver.ResolveProviderDependencies(provider));
+            MafAgentRuntimeDependencies.FromServices(provider));
 
         Assert.Contains(nameof(IMafProviderRuntimeGateway), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(IMafProviderStreamingDispatchGate), exception.Message, StringComparison.Ordinal);
         Assert.Contains(nameof(IAgentImageAnalysisService), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(IMafProviderCredentialService), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(IMafProviderAgentFactory), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(IWorkspaceRuntimeServicesFactory), exception.Message, StringComparison.Ordinal);
         Assert.Contains("AddMafProviderRuntimeServices", exception.Message, StringComparison.Ordinal);
     }
 
@@ -57,12 +61,12 @@ public sealed class MafRuntimeArchitectureServicesTests
             .AddSingleton<IMafProviderStreamingDispatchGate>(
                 NoOpMafProviderStreamingDispatchGate.Instance)
             .BuildServiceProvider();
-        var resolver = new MafRuntimeDependencyResolver();
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            resolver.ResolveProviderDependencies(provider));
+            MafAgentRuntimeDependencies.FromServices(provider));
 
         Assert.Contains("incomplete", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(IMafProviderStreamingDispatchGate), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -190,7 +194,6 @@ public sealed class MafRuntimeArchitectureServicesTests
             typeof(InputAttachmentPreparer),
             typeof(InputAttachmentSupport),
             typeof(RequestScopedSessionContentScrubber),
-            typeof(ProcessArtifactRecoveryService),
             typeof(ProviderRuntimeDiagnostics),
             typeof(MafProviderUpdatePump),
             typeof(OllamaChatResponseResilienceHandler),
@@ -247,11 +250,14 @@ public sealed class MafRuntimeArchitectureServicesTests
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToList();
 
-        Assert.Equal(["MafAgentRuntime.cs"], runtimeFiles);
-        Assert.DoesNotContain(
-            "partial class MafAgentRuntime",
-            File.ReadAllText(Path.Combine(runtimeRoot, "MafAgentRuntime.cs")),
-            StringComparison.Ordinal);
+        Assert.Equal(["MafAgentRuntime.cs", "MafAgentRuntimeDependencies.cs"], runtimeFiles);
+        foreach (var runtimeFile in runtimeFiles)
+        {
+            Assert.DoesNotContain(
+                "partial class MafAgentRuntime",
+                File.ReadAllText(Path.Combine(runtimeRoot, runtimeFile)),
+                StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -315,9 +321,28 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public void MafAgentRuntime_delegates_provider_enumerator_lifetime_to_update_pump()
+    public void Streaming_turn_executor_delegates_provider_enumerator_lifetime_to_update_pump()
     {
+        // SB10 moved the streaming loop from MafAgentRuntime into MafStreamingTurnExecutor;
+        // the invariant is unchanged: provider enumerator lifetime is owned by the update pump.
         var root = FindRepoRoot();
+        var executorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Maf",
+            "Runtime",
+            "Execution",
+            "MafStreamingTurnExecutor.cs"));
+
+        Assert.Contains(nameof(MafProviderUpdatePump), executorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(".GetAsyncEnumerator(", executorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("MafProviderEnumeratorLifetime", executorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("providerEnumerator", executorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("repairEnumerator", executorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("jsonRepairEnumerator", executorSource, StringComparison.Ordinal);
+
         var runtimeSource = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -326,13 +351,8 @@ public sealed class MafRuntimeArchitectureServicesTests
             "CanDoItAll.AgentFramework.Maf",
             "Runtime",
             "MafAgentRuntime.cs"));
-
-        Assert.Contains(nameof(MafProviderUpdatePump), runtimeSource, StringComparison.Ordinal);
         Assert.DoesNotContain(".GetAsyncEnumerator(", runtimeSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("MafProviderEnumeratorLifetime", runtimeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("providerEnumerator", runtimeSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("repairEnumerator", runtimeSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("jsonRepairEnumerator", runtimeSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -442,7 +462,9 @@ public sealed class MafRuntimeArchitectureServicesTests
         var session = CreateSession();
         driver.StorePendingApprovals(session.Id, [request]);
 
-        var messages = driver.CreateApprovalInputMessages(session, approved: true).ToList();
+        var messages = driver.CreateApprovalInputMessages(
+            session,
+            [new AgentRuntimeApprovalDecision("approval-001", Approved: true)]).ToList();
 
         var message = Assert.Single(messages);
         Assert.Equal(ChatRole.User, message.Role);
@@ -468,7 +490,9 @@ public sealed class MafRuntimeArchitectureServicesTests
                         """{"path":"artifacts/result.md"}""")
                 ]));
 
-        var messages = driver.CreateApprovalInputMessages(session, approved: false).ToList();
+        var messages = driver.CreateApprovalInputMessages(
+            session,
+            [new AgentRuntimeApprovalDecision("approval-001", Approved: false)]).ToList();
 
         var message = Assert.Single(messages);
         Assert.Equal(ChatRole.User, message.Role);
@@ -761,6 +785,8 @@ public sealed class MafRuntimeArchitectureServicesTests
             driver.TrySerializePersistableRuntimeSessionAsync(
                 agent,
                 session,
+                CreateProviderProfile(),
+                "gpt-4.1",
                 CreateExecutionOptions(),
                 pendingApprovals,
                 static (_, _, _) => Task.CompletedTask,
@@ -781,6 +807,8 @@ public sealed class MafRuntimeArchitectureServicesTests
         var serialized = await driver.TrySerializePersistableRuntimeSessionAsync(
             agent,
             session,
+            CreateProviderProfile(),
+            "gpt-4.1",
             CreateExecutionOptions(),
             [],
             (_, _, message) =>
@@ -807,6 +835,8 @@ public sealed class MafRuntimeArchitectureServicesTests
         var serialization = driver.TrySerializePersistableRuntimeSessionAsync(
             agent,
             session,
+            CreateProviderProfile(),
+            "gpt-4.1",
             CreateExecutionOptions(),
             [],
             static (_, _, _) => Task.CompletedTask,
@@ -830,6 +860,8 @@ public sealed class MafRuntimeArchitectureServicesTests
         var serialized = await driver.TrySerializePersistableRuntimeSessionAsync(
             agent,
             session,
+            CreateProviderProfile(),
+            "gpt-4.1",
             CreateExecutionOptions(),
             [],
             (_, _, message) =>
@@ -871,23 +903,25 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public void MafRuntimeDependencyResolver_prefers_registered_provider_dependencies()
+    public void MafAgentRuntimeDependencies_prefer_registered_provider_dependencies()
     {
         var gateway = new TestMafProviderRuntimeGateway();
         var streamingGate = new TestMafProviderStreamingDispatchGate();
         var imageAnalysisService = new UnavailableAgentImageAnalysisService();
-        var services = new ServiceCollection();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
         services.AddSingleton<IMafProviderRuntimeGateway>(gateway);
         services.AddSingleton<IMafProviderStreamingDispatchGate>(streamingGate);
         services.AddSingleton<IAgentImageAnalysisService>(imageAnalysisService);
         using var provider = services.BuildServiceProvider();
-        var resolver = new MafRuntimeDependencyResolver();
 
-        var dependencies = resolver.ResolveProviderDependencies(provider);
+        var dependencies = MafAgentRuntimeDependencies.FromServices(provider);
 
         Assert.Same(gateway, dependencies.ProviderRuntimeGateway);
         Assert.Same(streamingGate, dependencies.ProviderStreamingDispatchGate);
         Assert.Same(imageAnalysisService, dependencies.ImageAnalysisService);
+        Assert.Same(provider.GetRequiredService<IMafProviderCredentialService>(), dependencies.ProviderCredentialService);
+        Assert.Same(provider.GetRequiredService<IMafProviderAgentFactory>(), dependencies.ProviderAgentFactory);
+        Assert.Same(provider.GetRequiredService<IWorkspaceRuntimeServicesFactory>(), dependencies.WorkspaceRuntimeServicesFactory);
     }
 
     [Fact]
@@ -1086,6 +1120,10 @@ public sealed class MafRuntimeArchitectureServicesTests
     [Fact]
     public void ToolInvocationTraceRecorder_preserves_structured_target_path_for_primary_artifact_recovery()
     {
+        // SB13: path building and recovery synthesis moved to Modules.Processes'
+        // ProcessAgentExecutionOutcomeRecoveryPolicy (see ProcessAgentExecutionOutcomeRecoveryPolicyTests for direct
+        // coverage). This test keeps its original purpose: proving ToolInvocationTraceRecorder preserves a
+        // case-insensitively resolved structured target path end to end through a real recovery decision.
         var processRunId = Guid.NewGuid();
         var context = new AgentRuntimeContextIntent(
             SourceKind: "process-step",
@@ -1103,12 +1141,13 @@ public sealed class MafRuntimeArchitectureServicesTests
                 ProcessOperationContractNames.MutateProductTarget,
                 ProcessOperationContractNames.WriteManagedProcessArtifacts
             ]);
-        Assert.True(
-            ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
-                context,
-                out var primaryArtifactRef,
-                out var pathFailure),
-            pathFailure);
+        var primaryArtifactRef = WorkspaceScopeDescriptor.NormalizeRelativePath(
+            $"artifacts/process-runs/{processRunId:D}/steps/code-change.md");
+        const string artifactMarkdown = """
+            # Feature implementation change set
+
+            Status: Completed
+            """;
         var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(
             ToolContractCatalog.WorkspaceWriteFile,
             new Dictionary<string, object?>(StringComparer.Ordinal)
@@ -1139,21 +1178,41 @@ public sealed class MafRuntimeArchitectureServicesTests
 
         var trace = Assert.Single(recorder.Snapshot());
         Assert.Equal(primaryArtifactRef, trace.TargetPath);
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Feature implementation change set
 
-            Status: Completed
-            """,
-            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
+        var evidence = new AgentExecutionOutcomeRecoveryEvidence(
+            context,
+            AgentExecutionOutcomeFailureCause.MissingRequiredFinalizer,
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
+            typeof(ProcessStepOutcomeResult),
             [trace],
-            out var outcome,
-            out var recoveryFailure);
-        Assert.True(recovered, recoveryFailure);
-        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
+            new FixedTextArtifactReader(primaryArtifactRef, artifactMarkdown));
+        var decision = new ProcessAgentExecutionOutcomeRecoveryPolicy().Evaluate(evidence);
+
+        Assert.Equal(AgentExecutionOutcomeRecoveryStatus.Recovered, decision.Status);
+        Assert.Equal(primaryArtifactRef, decision.EvidenceReference);
+        var outcome = JsonSerializer.Deserialize<ProcessStepOutcomeResult>(
+            decision.MachineOutputJson,
+            AgentOutputJson.SerializerOptions);
+        Assert.NotNull(outcome);
+        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome!.Status);
         Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
+    }
+
+    private sealed class FixedTextArtifactReader(string expectedRelativePath, string fixedContent)
+        : IAgentExecutionRecoveryArtifactReader
+    {
+        public bool TryReadCompleteTextFile(string relativeManagedPath, out string content)
+        {
+            if (string.Equals(relativeManagedPath, expectedRelativePath, StringComparison.OrdinalIgnoreCase))
+            {
+                content = fixedContent;
+                return true;
+            }
+
+            content = string.Empty;
+            return false;
+        }
     }
 
     [Fact]

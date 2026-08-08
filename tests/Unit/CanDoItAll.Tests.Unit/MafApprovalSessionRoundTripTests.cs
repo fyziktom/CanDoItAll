@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Runtime.CompilerServices;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -71,7 +72,9 @@ public sealed class MafApprovalSessionRoundTripTests
                 serializedSessionStateJson: scrubbed,
                 pendingApprovals: [tamperedApproval]));
         var continuationMessages = new MafApprovalContinuationDriver()
-            .CreateApprovalInputMessages(persistedSession, approved: true)
+            .CreateApprovalInputMessages(
+                persistedSession,
+                [new AgentRuntimeApprovalDecision(tamperedApproval.ApprovalId, Approved: true)])
             .ToList();
 
         using var scrubbedDocument = JsonDocument.Parse(scrubbed);
@@ -145,7 +148,9 @@ public sealed class MafApprovalSessionRoundTripTests
                 serializedSessionStateJson: scrubbed,
                 pendingApprovals: [tamperedApproval]));
         var continuationMessages = new MafApprovalContinuationDriver()
-            .CreateApprovalInputMessages(persistedSession, approved: true)
+            .CreateApprovalInputMessages(
+                persistedSession,
+                [new AgentRuntimeApprovalDecision(tamperedApproval.ApprovalId, Approved: true)])
             .ToList();
 
         using var scrubbedDocument = JsonDocument.Parse(scrubbed);

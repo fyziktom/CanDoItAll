@@ -16,6 +16,7 @@ flowchart TB
     Modules --> AgentFramework["AgentFramework application boundary"]
     AgentFramework --> Maf["Microsoft Agent Framework adapter"]
     AgentFramework --> Providers["Model, tool, skill, voice, and MCP adapters"]
+    Modules -. explicit opt-in .-> LightweightLlm["Stateless and ordinary LLM boundaries"]
     Modules --> Plugins["Plugin contracts and implementations"]
     Composition --> Infrastructure["Infrastructure and AppDbContext"]
     Processes --> Infrastructure
@@ -33,7 +34,7 @@ flowchart TB
 | `src/Modules` | Product-facing pages, typed UI state, module services, and module-owned tool providers |
 | `src/Processes` | Process definitions, plans, state transitions, execution, projections, and persistence contracts |
 | `src/Memory` | Provider-neutral memory operations, source gateways, drivers, and ledger persistence |
-| `src/MAF` | Agent models, workflows, tools, skills, providers, and Microsoft Agent Framework integration |
+| `src/MAF` | Agent models, workflows, tools, skills, providers, lightweight LLM contracts, ordinary conversation foundation, and Microsoft Agent Framework integration |
 | `src/Foundation` | Shared primitives, PostgreSQL infrastructure, migrations, and Git integration |
 | `src/Integration` | Adapters for file tools and other separately owned systems |
 | `src/plugins` | Plugin contracts and bundled plugin implementations |
@@ -61,6 +62,11 @@ otherwise.
 Durable process and workflow state remains authoritative across restarts. UI state,
 server-sent event buffers, execution activity streams, caches, and provider sessions are
 projections over or participants in that durable state.
+
+The ordinary LLM conversation foundation is currently dormant product infrastructure. It is not
+registered by the composition root and exposes no HTTP or UI surface. Any future activation must bind
+storage and provider resolution to the active database profile id and generation and define retention
+and profile-switch behavior explicitly.
 
 ## Composition
 

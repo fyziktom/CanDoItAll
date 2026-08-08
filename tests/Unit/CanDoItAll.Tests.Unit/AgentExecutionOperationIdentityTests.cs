@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
@@ -106,7 +107,7 @@ public sealed class AgentExecutionOperationIdentityTests
             () => context.Service.ContinueExecutionRunAsync(
                 Guid.NewGuid(),
                 default,
-                approved: true));
+                decisions: [new PendingToolApprovalDecision("test-approval", Approved: true)]));
 
         Assert.Equal("activityOperationId", exception.ParamName);
         AssertDependenciesWereNotAccessed(context);
@@ -132,7 +133,11 @@ public sealed class AgentExecutionOperationIdentityTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    null
+                    null,
+                    new AgentExecutionActivityWorkspaceIdentity(
+                        Guid.NewGuid(),
+                        WorkspaceScopeDescriptor.Sandbox,
+                        new DatabaseProfileGeneration(0))
                 ]));
 
         Assert.Equal(activityOperationId, options.ActivityOperationId);
@@ -188,7 +193,7 @@ public sealed class AgentExecutionOperationIdentityTests
     {
         var store = CreateUnexpectedDependency<ISandboxWorkspaceStore>();
         var packageService = CreateUnexpectedDependency<IAgentPackageService>();
-        var runtime = CreateUnexpectedDependency<IAgentRuntime>();
+        var runtime = CreateUnexpectedDependency<IFakeAgentRuntime>();
         var capabilityProofService =
             CreateUnexpectedDependency<ICapabilityProofService>();
         var activityCoordinator = new AgentExecutionActivityCoordinator(
@@ -200,10 +205,16 @@ public sealed class AgentExecutionOperationIdentityTests
             TimeProvider.System);
         var preparationCache = new AgentExecutionPreparationCache(
             AgentExecutionPreparationCachePolicy.Default);
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the unexpected-call runtime proxy without invoking it.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime.Service);
         var service = new AgentFrameworkWorkspaceService(
             store.Service,
             packageService.Service,
-            runtime.Service,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             capabilityProofService.Service,
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             activityCoordinator,

@@ -33,7 +33,7 @@ public sealed class AgentFinalizerPolicyTests
             Directory.CreateDirectory(Path.GetDirectoryName(artifactPath)!);
             File.WriteAllText(artifactPath, new string('x', artifactCharacters));
 
-            var recovered = MafAgentRuntime.TryReadCompleteRecoveryArtifact(
+            var recovered = MafStreamingTurnExecutor.TryReadCompleteRecoveryArtifact(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
                 artifactRef,
@@ -48,351 +48,6 @@ public sealed class AgentFinalizerPolicyTests
         {
             TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
         }
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_creates_completed_outcome_from_primary_artifact()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "code-change");
-
-        var pathResolved = ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
-            context,
-            out var primaryArtifactRef,
-            out var pathFailure);
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Feature implementation change set
-
-            Status: completed
-
-            ## Changed files
-            - external-target/C/programovani/dotnet/output/src/App/App.csproj
-            """,
-            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var recoveryFailure);
-
-        Assert.True(pathResolved, pathFailure);
-        Assert.True(recovered, recoveryFailure);
-        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
-        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
-        Assert.Empty(outcome.NextActions);
-        Assert.DoesNotContain("provider timeout", outcome.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("required finalizer", outcome.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Status: completed", outcome.HumanReadableSummaryMarkdown, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_does_not_project_branch_outcome_key_from_primary_artifact()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "targeted-validation");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Targeted validation
-
-            Status: Completed
-            Branch outcome key: feature-accepted
-
-            ## Evidence
-            - workspace_dotnet_restore exit code 0
-            - workspace_dotnet_build exit code 0
-            - workspace_dotnet_test exit code 0
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var recoveryFailure);
-
-        Assert.True(recovered, recoveryFailure);
-        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
-        Assert.Empty(outcome.BranchOutcomeKey);
-        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
-        Assert.Contains("provider streaming timed out", outcome.Reason, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_does_not_project_branch_outcome_key_from_markdown_section()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "targeted-validation");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Targeted validation
-
-            Status: Completed
-
-            ## Branch outcome key
-            feature-accepted
-
-            ## Evidence
-            - workspace_dotnet_restore exit code 0
-            - workspace_dotnet_build exit code 0
-            - workspace_dotnet_test exit code 0
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var recoveryFailure);
-
-        Assert.True(recovered, recoveryFailure);
-        Assert.Equal(ProcessStepOutcomeStatus.Completed, outcome.Status);
-        Assert.Empty(outcome.BranchOutcomeKey);
-        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_does_not_project_conflicting_branch_metadata()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "targeted-validation");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Targeted validation
-
-            Status: Completed
-            Branch outcome key: feature-accepted
-
-            ## Invalid duplicate
-            Branch outcome key: feature-repair-required
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var recoveryFailure);
-
-        Assert.True(recovered, recoveryFailure);
-        Assert.NotNull(outcome);
-        Assert.Empty(outcome.BranchOutcomeKey);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_does_not_project_conflicting_branch_sections()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "targeted-validation");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/targeted-validation.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Targeted validation
-
-            Status: Completed
-            Branch outcome key: feature-accepted
-
-            ## Invalid duplicate
-            ## Branch outcome key
-            feature-repair-required
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var recoveryFailure);
-
-        Assert.True(recovered, recoveryFailure);
-        Assert.NotNull(outcome);
-        Assert.Empty(outcome.BranchOutcomeKey);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_rejects_in_progress_artifact()
-    {
-        var context = CreateGovernedProcessContext(Guid.NewGuid(), "code-change");
-        var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/code-change.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Feature implementation change set
-
-            Status: InProgress  # Feature implementation change set
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var failure);
-
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("invalid Status field", failure, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_rejects_status_only_blocked_artifact()
-    {
-        var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
-        var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # QA validation
-
-            Status: Blocked
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var failure);
-
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("without concrete blocker evidence", failure, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_recovers_blocked_artifact_with_concrete_evidence()
-    {
-        var context = CreateGovernedProcessContext(Guid.NewGuid(), "qa-validation");
-        var primaryArtifactRef = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # QA validation
-
-            Status: Blocked
-
-            Cannot proceed because workspace_dotnet_test failed with exit code 1.
-            Evidence: artifacts/process-runs/11111111-1111-1111-1111-111111111111/steps/qa-validation.md
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var failure);
-
-        Assert.True(recovered, failure);
-        Assert.Equal(ProcessStepOutcomeStatus.Blocked, outcome.Status);
-        Assert.Equal([primaryArtifactRef], outcome.EvidenceRefs);
-        Assert.NotEmpty(outcome.NextActions);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_rejects_nonempty_artifact_without_canonical_status()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "scaffold-contract");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/scaffold-contract.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Scaffold contract
-
-            ## Contract facts
-            - Product root: `external-target/C/output`
-            - App project: `src/App`
-
-            ## Notes
-            This step records the intended scaffold contract only.
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var failure);
-
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("canonical Status", failure, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_rejects_blocker_text_without_canonical_status()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "external-check");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/external-check.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # External check
-
-            Cannot proceed because required input is missing from the governed process context.
-            Manager action required before retry.
-            """,
-            ProcessArtifactRecoveryCause.ProviderStreamingTimeout,
-            [CreatePrimaryArtifactWriteTrace(primaryArtifactRef)],
-            out var outcome,
-            out var failure);
-
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("canonical Status", failure, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_rejects_completed_artifact_without_matching_current_write_trace()
-    {
-        var runId = Guid.NewGuid();
-        var context = CreateGovernedProcessContext(runId, "code-change");
-        var primaryArtifactRef = $"artifacts/process-runs/{runId:D}/steps/code-change.md";
-
-        var recovered = ProcessArtifactRecoveryService.TryCreateProcessStepOutcomeFromPrimaryArtifact(
-            context,
-            primaryArtifactRef,
-            """
-            # Feature implementation change set
-
-            Status: Completed
-            """,
-            ProcessArtifactRecoveryCause.MissingRequiredFinalizer,
-            [
-                CreatePrimaryArtifactWriteTrace(primaryArtifactRef) with
-                {
-                    Succeeded = false,
-                    FailureMessage = "The write failed."
-                },
-                CreatePrimaryArtifactWriteTrace(primaryArtifactRef, ToolContractCatalog.WorkspaceAppendFile),
-                CreatePrimaryArtifactWriteTrace($"{primaryArtifactRef}.stale") with
-                {
-                    Signature = $"{ToolContractCatalog.WorkspaceWriteFile}|content=Status: Completed,path={primaryArtifactRef}"
-                }
-            ],
-            out var outcome,
-            out var failure);
-
-        Assert.False(recovered);
-        Assert.Null(outcome);
-        Assert.Contains("current execution", failure, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("exact primary process artifact", failure, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Process_step_artifact_recovery_rejects_unsafe_step_artifact_file_name()
-    {
-        var context = CreateGovernedProcessContext(Guid.NewGuid(), "../code-change");
-
-        var resolved = ProcessArtifactRecoveryService.TryBuildCurrentStepPrimaryManagedArtifactPath(
-            context,
-            out _,
-            out var failure);
-
-        Assert.False(resolved);
-        Assert.Contains("safe artifact file name", failure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -962,7 +617,7 @@ public sealed class AgentFinalizerPolicyTests
         var outcomeJson = SerializeOutcome(ProcessStepOutcomeStatus.Completed, "Provider sent result as a JSON string.");
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
 
-        var response = capture.SubmitProcessStepOutcome(document.RootElement);
+        var response = capture.Submit(document.RootElement);
         var snapshot = capture.Snapshot();
 
         Assert.True(response.Succeeded);
@@ -995,7 +650,7 @@ public sealed class AgentFinalizerPolicyTests
         """;
         using var document = JsonDocument.Parse(JsonSerializer.Serialize(outcomeJson));
 
-        capture.SubmitProcessStepOutcome(document.RootElement);
+        capture.Submit(document.RootElement);
         var snapshot = capture.Snapshot();
 
         var validation = new DefaultAgentFinalizerValidator().Validate(policy, snapshot);
@@ -1016,8 +671,8 @@ public sealed class AgentFinalizerPolicyTests
             ProcessStepOutcomeStatus.Completed,
             "Duplicate governed outcome."));
 
-        var firstResponse = capture.SubmitProcessStepOutcome(firstDocument.RootElement);
-        var secondResponse = capture.SubmitProcessStepOutcome(secondDocument.RootElement);
+        var firstResponse = capture.Submit(firstDocument.RootElement);
+        var secondResponse = capture.Submit(secondDocument.RootElement);
         var invocation = Assert.Single(capture.Snapshot());
         var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
 
@@ -1049,13 +704,13 @@ public sealed class AgentFinalizerPolicyTests
             ProcessStepOutcomeStatus.Completed,
             "Corrected completion with evidence."));
 
-        var rejection = capture.SubmitProcessStepOutcome(invalidDocument.RootElement);
+        var rejection = capture.Submit(invalidDocument.RootElement);
 
         Assert.False(rejection.Succeeded);
         Assert.Contains("process.step_outcome.completed_evidence_ref_required", rejection.Message, StringComparison.Ordinal);
         Assert.Empty(capture.Snapshot());
 
-        capture.SubmitProcessStepOutcome(validDocument.RootElement);
+        capture.Submit(validDocument.RootElement);
         var invocation = Assert.Single(capture.Snapshot());
         var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
 
@@ -1085,7 +740,7 @@ public sealed class AgentFinalizerPolicyTests
             ProcessStepOutcomeStatus.Completed,
             "Peer review completed with no branch selection."));
 
-        var rejection = capture.SubmitProcessStepOutcome(invalidDocument.RootElement);
+        var rejection = capture.Submit(invalidDocument.RootElement);
 
         Assert.Contains(
             "process.step_outcome.branch_key_required",
@@ -1094,7 +749,7 @@ public sealed class AgentFinalizerPolicyTests
         Assert.False(rejection.Succeeded);
         Assert.Empty(capture.Snapshot());
 
-        capture.SubmitProcessStepOutcome(correctedDocument.RootElement);
+        capture.Submit(correctedDocument.RootElement);
 
         Assert.Single(capture.Snapshot());
     }
@@ -1353,6 +1008,7 @@ public sealed class AgentFinalizerPolicyTests
             runtimeAgent,
             agent,
             provider,
+            provider.DefaultModel,
             session,
             options,
             CancellationToken.None,
@@ -1366,60 +1022,8 @@ public sealed class AgentFinalizerPolicyTests
             runtimeAgent.SerializedState.GetProperty("conversationId").GetString());
     }
 
-    [Fact]
-    public void Governed_process_provider_order_prefers_responses_for_framework_managed_steps()
-    {
-        var responsesProvider = CreateProvider(
-            ProviderTransportKind.Responses,
-            preferFrameworkManagedHistory: false) with
-        {
-            Id = Guid.Parse("c1c103db-707e-3f52-8809-8d804fc171d1"),
-            Name = ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
-            ConfigurationJson = "{\"history\":\"service-managed\"}"
-        };
-        var chatCompletionsProvider = CreateProvider(
-            ProviderTransportKind.ChatCompletions,
-            preferFrameworkManagedHistory: true) with
-        {
-            Id = Guid.Parse("036b360a-e3f4-8350-97ca-f88de60ba2bb"),
-            Name = ManagedSeedProviderFallbacks.OpenAiChatCompletionsProviderName,
-            ConfigurationJson = "{\"history\":\"framework-managed\",\"timeoutSeconds\":600}"
-        };
-
-        var orderedProviders = AgentFrameworkWorkspaceExecutionService.OrderGovernedProcessProviderOverrideCandidates(
-            [responsesProvider, chatCompletionsProvider],
-            responsesProvider,
-            new ProviderProfileService());
-
-        Assert.Equal(responsesProvider.Id, orderedProviders[0].Id);
-    }
-
-    [Fact]
-    public void Governed_process_keeps_structured_output_capable_responses_provider()
-    {
-        var provider = CreateProvider(
-            ProviderTransportKind.Responses,
-            preferFrameworkManagedHistory: false);
-        var request = new ExecutionRunRequest(
-            Guid.NewGuid(),
-            "Classify the application.",
-            InitialActivityOperationId: AgentExecutionOperationId.New(),
-            Context: new ExecutionInvocationContext(
-                SourceKind: "process-step",
-                SourceId: "classify-dotnet-application",
-                CorrelationId: "process-run",
-                CausationId: "process-step",
-                RequestedBy: "process-runtime",
-                RequestedByKind: "system",
-                MetadataJson: "{}"),
-            StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult);
-
-        var shouldOverride = AgentFrameworkWorkspaceExecutionService.ShouldOverrideProviderForGovernedProcessStep(
-            request,
-            provider);
-
-        Assert.False(shouldOverride);
-    }
+    // Governed process-step provider override/ordering tests moved to ProcessExecutionProviderSelectionPolicyTests
+    // (SB13): the logic now lives in CanDoItAll.Modules.Processes.ProcessExecutionProviderSelectionPolicy.
 
     [Fact]
     public void Approval_continuation_uses_the_provider_persisted_for_the_original_run()
@@ -1944,7 +1548,9 @@ public sealed class AgentFinalizerPolicyTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    null
+                    null,
+                    AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(
+                        WorkspaceScopeDescriptor.Sandbox)
                 ]));
 
         Assert.NotNull(options.ContextWorkspaceScope);
@@ -1986,7 +1592,8 @@ public sealed class AgentFinalizerPolicyTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    transientContext
+                    transientContext,
+                    AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(projectScope)
                 ]));
 
         Assert.Equal(projectScope, options.ContextWorkspaceScope);
@@ -2021,7 +1628,8 @@ public sealed class AgentFinalizerPolicyTests
                     null,
                     Array.Empty<AgentRuntimeInputAttachment>(),
                     null,
-                    new AgentRuntimeTransientContext(string.Empty, transientScope)
+                    new AgentRuntimeTransientContext(string.Empty, transientScope),
+                    AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(recordedScope)
                 ]));
 
         var innerException = Assert.IsType<InvalidOperationException>(exception.InnerException);
@@ -2033,10 +1641,13 @@ public sealed class AgentFinalizerPolicyTests
 
     private static AgentFinalizerPolicy CreatePolicy()
     {
-        return AgentFinalizerPolicy.Required<ProcessStepOutcomeResult>(
-            "submit_process_step_outcome",
-            AgentStructuredOutputContracts.ProcessStepOutcomeResultKey,
-            "Final process-step outcome.");
+        // Resolve through the real catalog (rather than hand-rolling a partial policy) so every metadata field
+        // (ToolDescription, ResultParameterDescription, CaptureConfirmationMessage, RepairArgumentInstructions,
+        // KnownOutputNormalizer) matches production exactly; SB13 moved that metadata onto the policy record.
+        AgentFinalizerPolicies.TryResolveForStructuredOutput(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            out var policy);
+        return policy;
     }
 
     private static FinalizerCapture CreateFinalizerCapture(AgentFinalizerPolicy policy)
@@ -2073,22 +1684,6 @@ public sealed class AgentFinalizerPolicyTests
             CompletedAtUtc: timestamp,
             Succeeded: true,
             FailureMessage: string.Empty);
-    }
-
-    private static AgentToolInvocationTrace CreatePrimaryArtifactWriteTrace(
-        string primaryArtifactRef,
-        string toolName = ToolContractCatalog.WorkspaceWriteFile)
-    {
-        var timestamp = DateTimeOffset.UtcNow;
-        return CreateToolTrace(
-            toolName,
-            ToolInvocationClassification.Mutation,
-            sequence: 1,
-            timestamp: timestamp) with
-        {
-            Signature = $"{toolName}|path={primaryArtifactRef}",
-            TargetPath = primaryArtifactRef
-        };
     }
 
     private static void AssertBoundedRepairPrompt(string prompt)
@@ -2182,23 +1777,6 @@ public sealed class AgentFinalizerPolicyTests
             SuggestedModels: []);
     }
 
-    private static AgentRuntimeContextIntent CreateGovernedProcessContext(
-        Guid processRunId,
-        string sourceId)
-    {
-        return new AgentRuntimeContextIntent(
-            SourceKind: "process-step",
-            SourceId: sourceId,
-            ProcessRunId: processRunId.ToString("D"),
-            ProcessStepId: Guid.NewGuid().ToString("D"),
-            TargetScope: "ExternalProductTargetMutable",
-            IsGovernedProcessStep: true,
-            BrowserToolsAllowed: false,
-            AllowsProductMutation: true,
-            WorkspaceToolProfile: null,
-            WorkspaceScope: WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
-            AllowedOperations: ["MutateProductTarget", "WriteManagedProcessArtifacts"]);
-    }
 
     private sealed class UnknownOutputContract
     {

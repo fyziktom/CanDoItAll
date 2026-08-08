@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Security;
+using CanDoItAll.Security.Abstractions;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
 

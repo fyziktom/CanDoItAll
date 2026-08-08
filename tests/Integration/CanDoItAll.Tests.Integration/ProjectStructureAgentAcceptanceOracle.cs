@@ -6,10 +6,10 @@ namespace CanDoItAll.Tests.Integration;
 
 internal static class Sb01ProjectStructureInvariantIds
 {
-    public const string ReceiptAndCanonicalEvidenceRequired = "SB01-I01";
-    public const string RequiredToolManifestMustBePresent = "SB01-I04";
-    public const string CanonicalSentinelMustRemainUnchanged = "SB01-I06";
-    public const string CanonicalAllowedDeltaMustBeExact = "SB01-I07";
+    public const string ReceiptAndCanonicalEvidenceRequired = "receipt-and-canonical-evidence";
+    public const string RequiredToolManifestMustBePresent = "required-tool-manifest";
+    public const string CanonicalSentinelMustRemainUnchanged = "canonical-sentinel-unchanged";
+    public const string CanonicalAllowedDeltaMustBeExact = "canonical-delta-exact";
 }
 
 internal enum ProjectStructureAcceptanceReceiptOutcome

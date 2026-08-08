@@ -376,6 +376,6 @@ public sealed class MafAgentRuntimeAttachmentTests
         string prompt,
         AgentRuntimeExecutionOptions runtimeOptions)
     {
-        return MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, provider, session, prompt, runtimeOptions).ToList();
+        return MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, provider, provider.DefaultModel, session, prompt, runtimeOptions).ToList();
     }
 }

@@ -365,7 +365,9 @@ public sealed class WorkspaceFileServiceTests
             var result = service.UnzipArchive("archive.zip", "expanded", overwrite: true);
 
             Assert.False(result.Succeeded);
-            Assert.Contains("reparse-point traversal", result.Message, StringComparison.OrdinalIgnoreCase);
+            // The deny stays reparse-specific; the message wording follows the typed
+            // WorkspacePathResolutionException reparse-point failure.
+            Assert.Contains("reparse", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.False(File.Exists(Path.Combine(outsideDirectory, "escaped.txt")));
         }
         finally

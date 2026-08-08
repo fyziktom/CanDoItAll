@@ -7,6 +7,7 @@ using CanDoItAll.Tools.Documents;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -236,11 +237,12 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             });
         var runtimeFactory = new MafRuntimeAgentFactory(
             temp.Path,
-            services,
             WorkspaceScopeDescriptor.Sandbox,
             new UnusedProviderCredentialService(),
             new UnusedProviderAgentFactory(),
-            new UnusedRuntimeCapabilityComposer());
+            new UnusedRuntimeCapabilityComposer(),
+            services.GetRequiredService<ILoggerFactory>(),
+            new AgentToolInvocationPolicyPipeline(new DefaultAgentToolInvocationPolicy()));
         var agentDefinition = CreateToolEnabledAgent();
         var instrumentedAgent = runtimeFactory.CreateInstrumentedAgent(
             uninstrumentedAgent,
@@ -250,7 +252,11 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             suppressApprovalRequirements: true,
             toolInvocationTraceRecorder: new ToolInvocationTraceRecorder(),
             finalizerPolicy: null,
-            finalizerMode: AgentFinalizerMode.Disabled);
+            finalizerMode: AgentFinalizerMode.Disabled,
+            executionGovernance: null,
+            scriptPolicyInspectionService: new MafScriptPolicyInspectionService(
+                temp.Path,
+                WorkspaceScopeDescriptor.Sandbox));
         var session = await instrumentedAgent.CreateSessionAsync();
 
         var response = await instrumentedAgent.RunAsync(
@@ -307,11 +313,12 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             });
         var runtimeFactory = new MafRuntimeAgentFactory(
             temp.Path,
-            services,
             WorkspaceScopeDescriptor.Sandbox,
             new UnusedProviderCredentialService(),
             new UnusedProviderAgentFactory(),
-            new UnusedRuntimeCapabilityComposer());
+            new UnusedRuntimeCapabilityComposer(),
+            services.GetRequiredService<ILoggerFactory>(),
+            new AgentToolInvocationPolicyPipeline(new DefaultAgentToolInvocationPolicy()));
         var instrumentedAgent = runtimeFactory.CreateInstrumentedAgent(
             uninstrumentedAgent,
             CreateProviderProfile(),
@@ -320,7 +327,11 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             suppressApprovalRequirements: true,
             toolInvocationTraceRecorder: new ToolInvocationTraceRecorder(),
             finalizerPolicy: null,
-            finalizerMode: AgentFinalizerMode.Disabled);
+            finalizerMode: AgentFinalizerMode.Disabled,
+            executionGovernance: null,
+            scriptPolicyInspectionService: new MafScriptPolicyInspectionService(
+                temp.Path,
+                WorkspaceScopeDescriptor.Sandbox));
         var session = await instrumentedAgent.CreateSessionAsync();
 
         var response = await instrumentedAgent.RunAsync(
@@ -1275,8 +1286,7 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             string model,
             ChatClientAgentOptions options,
             bool frameworkManagedHistory,
-            bool allowBackgroundResponses,
-            IServiceProvider services)
+            bool allowBackgroundResponses)
             => throw new NotSupportedException();
     }
 
@@ -1287,6 +1297,7 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             ProviderProfile provider,
             IReadOnlyList<CapabilityCatalogItem> capabilities,
             IReadOnlyList<AgentMemoryRecord> memory,
+            WorkspaceRuntimeServices workspaceRuntimeServices,
             Func<ExecutionState, string, string, Task> progressCallback,
             CancellationToken cancellationToken,
             bool suppressApprovalRequirements = false)
@@ -1303,8 +1314,10 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             bool suppressApprovalRequirements,
             WorkspaceScopeDescriptor contextWorkspaceScope,
             AgentRuntimeContextIntent contextIntent,
+            WorkspaceRuntimeServices workspaceRuntimeServices,
             string runtimeSessionKey = "",
-            IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
+            IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+            AgentExecutionGovernanceSnapshot? governance = null)
             => throw new NotSupportedException();
     }
 }

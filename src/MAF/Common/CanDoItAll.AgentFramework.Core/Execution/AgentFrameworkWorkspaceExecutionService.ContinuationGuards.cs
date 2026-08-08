@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -68,10 +69,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentExecutionPreparationSnapshot preparation,
         ExecutionRunRecord expectedRun,
         ProviderProfile provider,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
     {
+        var allApproved = decisions.All(decision => decision.Approved);
         if (store is ISandboxWorkspaceExecutionRunMutationStore mutationStore)
         {
             return await BeginPendingApprovalContinuationWithSplitStoreAsync(
@@ -79,7 +81,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 preparation,
                 expectedRun,
                 provider,
-                approved,
+                decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken);
         }
@@ -133,17 +135,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             EnsureContinuationProviderLeaseMatches(currentRun, provider);
 
             var decidedAtUtc = DateTimeOffset.UtcNow;
-            var effectiveAutoApprove = approved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
+            var effectiveAutoApprove = allApproved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
             var approvalDecision = ExecutionRunStateTransitions.ApplyApprovalDecision(
                 executionState.ExecutionApprovals.Where(item => item.ExecutionRunId == currentRun.Id).ToList(),
                 currentRun,
-                approved,
+                decisions,
                 decidedAtUtc,
                 currentRun.ChatSessionId.HasValue ? "chat-session" : "execution-run",
                 currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"));
             var transitionedRun = ExecutionRunStateTransitions.CreateContinuationStartRun(
                 currentRun,
-                approved,
+                allApproved,
                 effectiveAutoApprove,
                 decidedAtUtc);
             var transitionedSession = currentSession is null
@@ -188,10 +190,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         AgentExecutionPreparationSnapshot preparation,
         ExecutionRunRecord expectedRun,
         ProviderProfile provider,
-        bool approved,
+        IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls,
         CancellationToken cancellationToken)
     {
+        var allApproved = decisions.All(decision => decision.Approved);
         ExecutionRunContinuationStart? result = null;
 
         await mutationStore.UpdateExecutionRunDetailAsync(
@@ -242,17 +245,17 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     provider);
 
                 var decidedAtUtc = DateTimeOffset.UtcNow;
-                var effectiveAutoApprove = approved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
+                var effectiveAutoApprove = allApproved && (autoApprovePendingToolCalls || currentRun.AutoApprovePendingToolCalls);
                 var approvalDecision = ExecutionRunStateTransitions.ApplyApprovalDecision(
                     currentDetail.Approvals,
                     currentRun,
-                    approved,
+                    decisions,
                     decidedAtUtc,
                     currentRun.ChatSessionId.HasValue ? "chat-session" : "execution-run",
                     currentRun.ChatSessionId?.ToString("N") ?? currentRun.Id.ToString("N"));
                 var transitionedRun = ExecutionRunStateTransitions.CreateContinuationStartRun(
                     currentRun,
-                    approved,
+                    allApproved,
                     effectiveAutoApprove,
                     decidedAtUtc);
                 var transitionedSession = currentSession is null
@@ -291,4 +294,18 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionRunRecord expectedRun,
         ExecutionRunRecord currentRun)
         => ExecutionRunStateTransitions.PendingApprovalStateMatches(expectedRun, currentRun);
+
+    /// <summary>
+    /// Projects application-owned per-proposal decisions onto the runtime port's decision
+    /// shape unmangled — no collapse to a single boolean. Callers must have already validated
+    /// (<see cref="AgentApprovalDecisionMismatchException.ValidateExactCoverage"/>) that
+    /// <paramref name="decisions"/> exactly covers the run's pending approvals.
+    /// </summary>
+    private static IReadOnlyList<AgentRuntimeApprovalDecision> ToRuntimeApprovalDecisions(
+        IReadOnlyList<PendingToolApprovalDecision> decisions)
+    {
+        return decisions
+            .Select(decision => new AgentRuntimeApprovalDecision(decision.ApprovalId, decision.Approved))
+            .ToArray();
+    }
 }

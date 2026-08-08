@@ -5,12 +5,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentApiFailureContractIntegrationTests
@@ -36,7 +38,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             agentRuntimeOverride: runtime);
         Assert.Same(
             runtime,
-            host.App.Services.GetRequiredService<IAgentRuntime>());
+            host.App.Services.GetRequiredService<IFakeAgentRuntime>());
 
         Guid agentId;
         Guid chatSessionId;
@@ -96,7 +98,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             agentRuntimeOverride: runtime);
         Assert.Same(
             runtime,
-            host.App.Services.GetRequiredService<IAgentRuntime>());
+            host.App.Services.GetRequiredService<IFakeAgentRuntime>());
 
         Guid agentId;
         Guid chatSessionId;
@@ -164,7 +166,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             agentRuntimeOverride: runtime);
         Assert.Same(
             runtime,
-            host.App.Services.GetRequiredService<IAgentRuntime>());
+            host.App.Services.GetRequiredService<IFakeAgentRuntime>());
 
         Guid agentId;
         Guid chatSessionId;
@@ -692,7 +694,7 @@ public sealed class AgentApiFailureContractIntegrationTests
             StringSplitOptions.TrimEntries);
     }
 
-    private sealed class FailingAgentRuntime : IAgentRuntime
+    private sealed class FailingAgentRuntime : IFakeAgentRuntime
     {
         public const string Secret = "http-provider-secret";
 

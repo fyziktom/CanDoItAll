@@ -1,0 +1,40 @@
+{
+  "subbundle": "SB08",
+  "title": "Dormant ordinary-conversation production composition",
+  "status": "NotStarted",
+  "decision": "Blocked",
+  "startingCommit": "",
+  "endingCommit": "",
+  "executor": "Codex GPT-5.6 Sol xHigh",
+  "changedFiles": [],
+  "commands": [],
+  "tests": [],
+  "architectureChecks": [],
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "acceptance": [
+    {
+      "criterion": "No production module registers or injects ILlmConversationService.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "The foundation library still builds and composes in isolation.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No agent or workflow path changes.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Future activation contract is documented.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "residualRisk": "",
+  "nextSubbundleUnlocked": false
+}

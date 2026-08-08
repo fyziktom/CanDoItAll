@@ -50,6 +50,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
                                           Surface="@surface"
                                           ActiveView="@ActiveAgentChatView"
                                           SelectedNodes="@(surface is not null && structureViewIndex == CanvasViewIndex ? selectedNodes : [])"
+                                          GanttObservation="@(structureViewIndex == GanttViewIndex ? ganttObservation : null)"
                                           ContextNavigationIdentity="@AgentChatNavigationFence"
                                           ContextAccessState="@agentChatContextAccessState"
                                           RefreshRequested="HandleAgentExecutionCompletedAsync" />
@@ -342,7 +343,8 @@ else
                 <ProjectStructureGanttPanel ProjectId="@ProjectId"
                                             Surface="@surface"
                                             OpenAgentCatalog="ToggleAgentWindowAsync"
-                                            MutationCommitted="@(() => ReloadSurfaceAsync())" />
+                                            MutationCommitted="@(() => ReloadSurfaceAsync())"
+                                            ObservationChanged="HandleGanttObservationChanged" />
             </TabsItem>
             <TabsItem Text="Manager Summary" Icon="monitoring">
                 <ProjectManagerSummaryPanel ProjectId="@ProjectId" />
@@ -778,6 +780,13 @@ else
     private CanvasWorkbenchSurface? canvasSurface;
     private CanvasWorkbench? workbenchRef;
     private int structureViewIndex;
+    private AgentContext.ProjectStructureGanttObservation? ganttObservation;
+
+    private void HandleGanttObservationChanged(
+        AgentContext.ProjectStructureGanttObservation? observation)
+    {
+        ganttObservation = observation;
+    }
     private StructureViewNavigationIdentity? appliedStructureViewNavigationIdentity;
 
     private bool IsGanttViewVisible => structureViewIndex == GanttViewIndex;

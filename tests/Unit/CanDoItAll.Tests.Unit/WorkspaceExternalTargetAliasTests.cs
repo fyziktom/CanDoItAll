@@ -79,7 +79,9 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
             out var validationMessage);
 
         Assert.False(succeeded);
-        Assert.Contains("reparse-point traversal", validationMessage, StringComparison.OrdinalIgnoreCase);
+        // The deny stays reparse-specific; the message wording follows the typed
+        // WorkspacePathResolutionException reparse-point failure.
+        Assert.Contains("reparse", validationMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

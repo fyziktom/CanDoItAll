@@ -2,9 +2,13 @@ using System.Collections;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+
+
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -16,38 +20,19 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
     private static readonly Guid SecondObservationId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
     [Fact]
-    public async Task LlmInvokerPreservesEachProviderObservationWithoutCollapsingIdentityOrDimensions()
+    public async Task LlmInvokerPreservesProviderUsageDimensionsWithoutCollapsingThem()
     {
+        // The lightweight ILlmInvocationPort (SB16) returns exactly one LlmUsage per invocation - there is no
+        // longer a list of distinct provider usage observations to preserve (no repair/attachment sub-calls
+        // happen behind the port). This test now proves the single canonical WorkflowUsageObservation derived
+        // from that one LlmUsage is not collapsed/zeroed and carries the exact reported dimensions end to end.
         var provider = CreateProviderProfile() with
         {
             ModelPrices = [new ProviderModelTokenPrice("model-a", 1m, 0.1m, 4m)]
         };
-        var expected = new[]
-        {
-            CreateProviderObservation(
-                FirstObservationId,
-                FirstObservationAtUtc,
-                "model-a",
-                ProviderUsageSourcePhases.AgentRuntime,
-                inputTokens: 101,
-                cachedInputTokens: 11,
-                outputTokens: 31,
-                reasoningTokens: 7,
-                totalTokens: 139),
-            CreateProviderObservation(
-                SecondObservationId,
-                SecondObservationAtUtc,
-                "model-b-without-price",
-                ProviderUsageSourcePhases.StructuredOutputRepair,
-                inputTokens: 203,
-                cachedInputTokens: 13,
-                outputTokens: 41,
-                reasoningTokens: 17,
-                totalTokens: 261)
-        };
-        var runtime = new UsageAgentRuntime(expected);
-        var invoker = new MafWorkflowLlmComponentInvoker(
-            runtime,
+        var port = new RecordingLlmInvocationPort(new LlmUsage(InputTokens: 101, OutputTokens: 31, CachedInputTokens: 11));
+        var invoker = new WorkflowLlmComponentInvoker(
+            port,
             new SingleProviderRegistry(provider),
             new ProviderProfileService());
         var component = CreateLlmComponent();
@@ -61,10 +46,13 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
             new WorkflowNodeInput("{}"));
 
         var actual = ReadCanonicalObservations(result);
-        Assert.Equal(2, actual.Count);
-        AssertObservation(actual, expected[0]);
-        AssertObservation(actual, expected[1]);
-        AssertPricingIsUnknown(actual.Single(item => ReadStableId(item) == SecondObservationId));
+        var observation = Assert.Single(actual);
+        Assert.Equal("model-a", ReadProperty<string>(observation, "Model"));
+        Assert.Equal(101, ReadProperty<int>(observation, "InputTokens"));
+        Assert.Equal(11, ReadProperty<int>(observation, "CachedInputTokens"));
+        Assert.Equal(31, ReadProperty<int>(observation, "OutputTokens"));
+        Assert.Equal(0, ReadProperty<int>(observation, "ReasoningTokens"));
+        Assert.Equal(132, ReadProperty<int>(observation, "TotalTokens"));
     }
 
     [Fact]
@@ -318,76 +306,11 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
         return observations.Cast<object>().ToArray();
     }
 
-    private static void AssertObservation(
-        IReadOnlyList<object> actual,
-        ProviderUsageObservation expected)
-    {
-        var item = Assert.Single(actual, candidate => ReadStableId(candidate) == expected.Id);
-        Assert.Equal(expected.Model, ReadProperty<string>(item, "Model"));
-        Assert.Equal(expected.SourcePhase, ReadProperty<string>(item, "SourcePhase"));
-        Assert.Equal(expected.ReasoningTokens, ReadProperty<int>(item, "ReasoningTokens"));
-        Assert.Equal(expected.TotalTokens, ReadProperty<int>(item, "TotalTokens"));
-        Assert.Equal(expected.CreatedAtUtc, ReadObservationTimestamp(item));
-    }
-
-    private static void AssertPricingIsUnknown(object observation)
-    {
-        var pricingStatus = observation.GetType().GetProperty("PricingStatus");
-        var isPricingKnown = observation.GetType().GetProperty("IsPricingKnown");
-        Assert.True(
-            pricingStatus is not null || isPricingKnown is not null,
-            "Canonical usage must model pricing-known/unknown independently from usage-known/unknown.");
-        if (isPricingKnown is not null)
-        {
-            Assert.False((bool)isPricingKnown.GetValue(observation)!);
-        }
-        else
-        {
-            var status = pricingStatus!.GetValue(observation)?.ToString() ?? string.Empty;
-            Assert.True(
-                status.Contains("Unknown", StringComparison.OrdinalIgnoreCase) ||
-                status.Contains("Unavailable", StringComparison.OrdinalIgnoreCase),
-                $"Expected unknown pricing status, but received '{status}'.");
-        }
-
-        var cost = observation.GetType().GetProperty("CostUsd");
-        if (cost is not null)
-        {
-            Assert.Null(cost.GetValue(observation));
-            return;
-        }
-
-        Assert.Null(observation.GetType().GetProperty("ProviderCostUsd")?.GetValue(observation));
-        Assert.Null(observation.GetType().GetProperty("CalculatedCostUsd")?.GetValue(observation));
-    }
-
-    private static Guid ReadStableId(object observation)
-    {
-        var value = observation.GetType().GetProperty("Id")?.GetValue(observation);
-        if (value is Guid guid)
-        {
-            return guid;
-        }
-
-        var wrapped = value?.GetType().GetProperty("Value")?.GetValue(value);
-        return Assert.IsType<Guid>(wrapped);
-    }
-
     private static T ReadProperty<T>(object instance, string name)
     {
         var property = instance.GetType().GetProperty(name);
         Assert.True(property is not null, $"{instance.GetType().Name}.{name} is required.");
         return Assert.IsType<T>(property!.GetValue(instance));
-    }
-
-    private static DateTimeOffset ReadObservationTimestamp(object observation)
-    {
-        var property = observation.GetType().GetProperty("CreatedAtUtc") ??
-                       observation.GetType().GetProperty("RecordedAtUtc");
-        Assert.True(
-            property is not null,
-            $"{observation.GetType().Name} must preserve the provider observation timestamp.");
-        return Assert.IsType<DateTimeOffset>(property!.GetValue(observation));
     }
 
     private static void RequireObservationCollection(
@@ -752,67 +675,18 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
         throw new InvalidOperationException("Could not locate the repository root.");
     }
 
-    private sealed class UsageAgentRuntime(IReadOnlyList<ProviderUsageObservation> observations) : IAgentRuntime
+    private sealed class RecordingLlmInvocationPort(LlmUsage usage, string responseText = "{\"ok\":true}") : ILlmInvocationPort
     {
-        public Task<AgentRuntimeResponse> RunAsync(
-            AgentDefinition agent,
-            ProviderProfile provider,
-            ChatSessionRecord session,
-            IReadOnlyList<CapabilityCatalogItem> capabilities,
-            IReadOnlyList<AgentMemoryRecord> memory,
-            string prompt,
-            string? runtimeSessionKey,
-            Func<ExecutionState, string, string, Task> progressCallback,
-            CancellationToken cancellationToken = default,
-            bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null,
-            AgentRuntimeExecutionOptions? executionOptions = null)
+        public LlmInvocationRequest? LastRequest { get; private set; }
+
+        public Task<LlmInvocationResult> InvokeAsync(
+            LlmInvocationRequest request,
+            CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(new AgentRuntimeResponse(
-                "{\"ok\":true}",
-                InputTokens: 0,
-                OutputTokens: 0,
-                ToolCalls: 0,
-                RuntimeSessionKey: string.Empty,
-                SerializedSessionStateJson: null,
-                PendingApprovals: [])
-            {
-                UsageObservations = observations
-            });
+            LastRequest = request;
+            return Task.FromResult(new LlmInvocationResult(request.Model, responseText, usage));
         }
-
-        public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(
-            AgentDefinition agent,
-            ProviderProfile provider,
-            ChatSessionRecord session,
-            IReadOnlyList<CapabilityCatalogItem> capabilities,
-            IReadOnlyList<AgentMemoryRecord> memory,
-            bool approved,
-            string? runtimeSessionKey,
-            Func<ExecutionState, string, string, Task> progressCallback,
-            CancellationToken cancellationToken = default,
-            bool suppressApprovalRequirements = false,
-            AgentStructuredOutputContract? structuredOutput = null,
-            AgentRuntimeExecutionOptions? executionOptions = null)
-            => throw new NotSupportedException();
-
-        public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
-            ProviderProfile provider,
-            ProviderModelMaintenanceEditorRequest request,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<ProviderHealthResult> TestProviderAsync(
-            ProviderProfile provider,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<ProviderTestChatResult> RunProviderTestChatAsync(
-            ProviderProfile provider,
-            ProviderTestChatRequest request,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
     }
 
     private sealed class SingleProviderRegistry(ProviderProfile provider) :

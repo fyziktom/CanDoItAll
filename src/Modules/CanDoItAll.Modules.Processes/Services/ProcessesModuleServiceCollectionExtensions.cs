@@ -2,8 +2,12 @@ using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core.Execution;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Memory.Application;
+using CanDoItAll.Modules.Processes.AgentChat;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Drivers.Abstractions;
@@ -28,6 +32,12 @@ public static class ProcessesModuleServiceCollectionExtensions
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            ProcessesExecutionAuthorityProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            LiveProcessesExecutionAuthorityProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             ProcessesProjectTransferTargetStateParticipant>());
@@ -45,13 +55,26 @@ public static class ProcessesModuleServiceCollectionExtensions
         {
             var executionRunStore =
                 serviceProvider.GetService<ISandboxWorkspaceExecutionRunStore>();
-            var commandExecutionService =
-                serviceProvider.GetService<IWorkspaceCommandExecutionService>();
+            var cleanupScopeFactory = serviceProvider
+                .GetService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>();
+            var workspacePathResolver = serviceProvider
+                .GetService<IWorkspacePathResolver>();
+            var databaseProfileRuntimeAccessor = serviceProvider
+                .GetService<IDatabaseProfileRuntimeAccessor>();
             return executionRunStore is not null &&
-                   commandExecutionService is not null
+                   cleanupScopeFactory is not null &&
+                   workspacePathResolver is not null &&
+                   databaseProfileRuntimeAccessor is not null
                 ? new WorkspaceExecutionRunProcessLeaseCleaner(
                     executionRunStore,
-                    commandExecutionService)
+                    new WorkspaceExecutionScope(
+                        workspacePathResolver.ResolveWorkspaceRoot(),
+                        WorkspaceScopeDescriptor.Organization(
+                            databaseProfileRuntimeAccessor
+                                .ResolveCurrentProfile()
+                                .Profile.Id
+                                .ToString("N"))),
+                    cleanupScopeFactory)
                 : UnavailableWorkspaceExecutionRunProcessLeaseCleaner.Instance;
         });
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
@@ -156,6 +179,21 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessRuntimeStrategyFactoryResolver, StandardProcessRuntimeStrategyFactoryResolver>();
         services.TryAddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMemorySourceGatewayAdapter, ProcessRuntimeMemorySourceGatewayAdapter>());
+        // SB13: generic execution/recovery policy contracts implemented by Processes. Stateless (pure functions
+        // over injected read-only services), so singleton registration is safe; an absent Processes module leaves
+        // these lists empty and generic Core stays in its fail-closed no-override/no-recovery default.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionOutcomeRecoveryPolicy,
+            ProcessAgentExecutionOutcomeRecoveryPolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IToolInvocationPolicyContextContributor,
+            ProcessToolInvocationPolicyContextContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionProviderSelectionPolicy,
+            ProcessExecutionProviderSelectionPolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionRunCriticalityPolicy,
+            ProcessExecutionRunCriticalityPolicy>());
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
         services.AddOptions<ProcessRuntimeDispatchOptions>()

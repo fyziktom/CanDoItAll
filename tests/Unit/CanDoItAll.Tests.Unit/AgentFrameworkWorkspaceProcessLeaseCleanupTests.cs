@@ -4,8 +4,10 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
@@ -68,7 +70,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             await context.Service.ContinueExecutionRunAsync(
                 initialResult.ExecutionRunId,
                 AgentExecutionOperationId.New(),
-                approved: true);
+                decisions: [new PendingToolApprovalDecision("approval-initial", Approved: true)]);
         var persistedRun = Assert.IsType<ExecutionRunRecord>(
             await context.Store.GetExecutionRunAsync(
                 continuationResult.ExecutionRunId));
@@ -104,12 +106,308 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             Assert.Single(cleaner.ExecutionRunIds));
     }
 
+    [Fact]
+    public async Task Organization_execution_cleans_a_real_project_scoped_process_lease()
+    {
+        var organizationScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        LeaseProcessHost? processHost = null;
+        WorkspaceCommandExecutionService? projectCommands = null;
+        string? startupReceiptPath = null;
+        var runtime = new StubAgentRuntime(() =>
+        {
+            var launch = projectCommands!.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5128/",
+                    keepAlive: true)
+                .GetAwaiter()
+                .GetResult();
+            Assert.True(launch.Succeeded, launch.Message);
+            startupReceiptPath = Assert.Single(
+                launch.Receipt.TargetPaths,
+                path => path.EndsWith("/startup.json", StringComparison.OrdinalIgnoreCase));
+            return CreateCompletedResponse();
+        });
+        using var context = await CreateContextAsync(
+            runtime,
+            organizationScope,
+            (workspaceRoot, store) =>
+            {
+                processHost = new LeaseProcessHost(workspaceRoot);
+                projectCommands = new WorkspaceCommandExecutionService(
+                    workspaceRoot,
+                    processHost,
+                    projectScope);
+                return new WorkspaceExecutionRunProcessLeaseCleaner(
+                    store,
+                    new WorkspaceExecutionScope(workspaceRoot, organizationScope),
+                    new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                        () => processHost));
+            });
+        await CreateSampleWebProjectAsync(context.Workspace.Path);
+        var result = await context.Service.ExecuteRunAsync(
+            CreateScopedRequest(context, projectScope));
+
+        Assert.Equal(ExecutionState.Completed, result.State);
+        Assert.False(string.IsNullOrWhiteSpace(startupReceiptPath));
+        var projectLeaseStore = new WorkspaceExecutionRunProcessLeaseStore(
+            context.Workspace.Path,
+            projectScope);
+        Assert.False(projectLeaseStore.HasLease(result.ExecutionRunId, startupReceiptPath!));
+        Assert.Contains(processHost!.Requests, request => request.ToolName == "workspace_dotnet_stop");
+        Assert.True(processHost.IsDisposed);
+    }
+
+    [Fact]
+    public async Task Approval_continuation_cleans_a_real_project_scoped_process_lease()
+    {
+        var organizationScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        LeaseProcessHost? processHost = null;
+        WorkspaceCommandExecutionService? projectCommands = null;
+        string? startupReceiptPath = null;
+        var runtime = new StubAgentRuntime(
+            () =>
+            {
+                var launch = projectCommands!.DotnetRun(
+                        "apps/SampleWeb/SampleWeb.csproj",
+                        url: "http://127.0.0.1:5129/",
+                        keepAlive: true)
+                    .GetAwaiter()
+                    .GetResult();
+                Assert.True(launch.Succeeded, launch.Message);
+                startupReceiptPath = Assert.Single(
+                    launch.Receipt.TargetPaths,
+                    path => path.EndsWith("/startup.json", StringComparison.OrdinalIgnoreCase));
+                return CreateWaitingResponse("approval-project-lease");
+            },
+            CreateCompletedResponse);
+        using var context = await CreateContextAsync(
+            runtime,
+            organizationScope,
+            (workspaceRoot, store) =>
+            {
+                processHost = new LeaseProcessHost(workspaceRoot);
+                projectCommands = new WorkspaceCommandExecutionService(
+                    workspaceRoot,
+                    processHost,
+                    projectScope);
+                return new WorkspaceExecutionRunProcessLeaseCleaner(
+                    store,
+                    new WorkspaceExecutionScope(workspaceRoot, organizationScope),
+                    new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                        () => processHost));
+            });
+        await CreateSampleWebProjectAsync(context.Workspace.Path);
+
+        var initial = await context.Service.ExecuteRunAsync(
+            CreateScopedRequest(context, projectScope));
+        var result = await context.Service.ContinueExecutionRunAsync(
+            initial.ExecutionRunId,
+            AgentExecutionOperationId.New(),
+            decisions:
+            [
+                new PendingToolApprovalDecision(
+                    "approval-project-lease",
+                    Approved: true)
+            ]);
+
+        Assert.Equal(ExecutionState.WaitingOnTool, initial.State);
+        Assert.Equal(ExecutionState.Completed, result.State);
+        var leaseStore = new WorkspaceExecutionRunProcessLeaseStore(
+            context.Workspace.Path,
+            projectScope);
+        Assert.False(leaseStore.HasLease(result.ExecutionRunId, startupReceiptPath!));
+        Assert.Single(
+            processHost!.Requests,
+            request => request.ToolName == "workspace_dotnet_stop");
+        Assert.True(processHost.IsDisposed);
+    }
+
+    [Fact]
+    public async Task Failed_terminal_execution_cleans_a_real_project_scoped_process_lease()
+    {
+        var organizationScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        LeaseProcessHost? processHost = null;
+        WorkspaceCommandExecutionService? projectCommands = null;
+        string? startupReceiptPath = null;
+        var runtimeFailure = new InvalidOperationException("Fail after launching the project process.");
+        var runtime = new StubAgentRuntime(() =>
+        {
+            var launch = projectCommands!.DotnetRun(
+                    "apps/SampleWeb/SampleWeb.csproj",
+                    url: "http://127.0.0.1:5130/",
+                    keepAlive: true)
+                .GetAwaiter()
+                .GetResult();
+            Assert.True(launch.Succeeded, launch.Message);
+            startupReceiptPath = Assert.Single(
+                launch.Receipt.TargetPaths,
+                path => path.EndsWith("/startup.json", StringComparison.OrdinalIgnoreCase));
+            throw runtimeFailure;
+        });
+        using var context = await CreateContextAsync(
+            runtime,
+            organizationScope,
+            (workspaceRoot, store) =>
+            {
+                processHost = new LeaseProcessHost(workspaceRoot);
+                projectCommands = new WorkspaceCommandExecutionService(
+                    workspaceRoot,
+                    processHost,
+                    projectScope);
+                return new WorkspaceExecutionRunProcessLeaseCleaner(
+                    store,
+                    new WorkspaceExecutionScope(workspaceRoot, organizationScope),
+                    new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                        () => processHost));
+            });
+        await CreateSampleWebProjectAsync(context.Workspace.Path);
+
+        var exception = await Assert.ThrowsAsync<AgentRunFailedException>(
+            () => context.Service.ExecuteRunAsync(
+                CreateScopedRequest(context, projectScope)));
+
+        Assert.Same(runtimeFailure, exception.InnerException);
+        var leaseStore = new WorkspaceExecutionRunProcessLeaseStore(
+            context.Workspace.Path,
+            projectScope);
+        Assert.False(leaseStore.HasLease(exception.ExecutionRunId, startupReceiptPath!));
+        Assert.Single(
+            processHost!.Requests,
+            request => request.ToolName == "workspace_dotnet_stop");
+        Assert.True(processHost.IsDisposed);
+    }
+
+    [Fact]
+    public async Task Conflicting_metadata_and_governance_scope_retains_the_lease_for_retry()
+    {
+        var organizationScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var metadataScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var governanceScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        using var context = await CreateContextAsync(
+            new StubAgentRuntime(CreateCompletedResponse),
+            new RecordingProcessLeaseCleaner());
+        var completed = await context.Service.ExecuteRunAsync(
+            CreateRequest(context.Agent.Id));
+        var detail = Assert.IsType<ExecutionRunDetail>(
+            await context.Store.GetExecutionRunDetailAsync(completed.ExecutionRunId));
+        var conflictingRun = detail.Run with
+        {
+            MetadataJson = CreateGovernedMetadata(
+                context,
+                metadataScope,
+                governanceScope),
+            Revision = detail.Run.Revision + 1
+        };
+        await context.Store.SaveExecutionRunDetailAsync(
+            detail with
+            {
+                Run = conflictingRun
+            });
+        var startupReceiptPath =
+            "artifacts/process-runs/dotnet-run/scope-conflict/startup.json";
+        var leaseStore = new WorkspaceExecutionRunProcessLeaseStore(
+            context.Workspace.Path,
+            metadataScope);
+        leaseStore.Register(completed.ExecutionRunId, startupReceiptPath);
+        var cleanupFactoryCallCount = 0;
+        var cleaner = new WorkspaceExecutionRunProcessLeaseCleaner(
+            context.Store,
+            new WorkspaceExecutionScope(
+                context.Workspace.Path,
+                organizationScope),
+            new TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
+                () =>
+                {
+                    cleanupFactoryCallCount++;
+                    return new LeaseProcessHost(context.Workspace.Path);
+                }));
+
+        var result = await cleaner.CleanupAsync(completed.ExecutionRunId);
+
+        Assert.Empty(result.CleanedStartupReceiptPaths);
+        var failure = Assert.Single(result.Failures);
+        Assert.Contains("conflicting workspace scope", failure.Message, StringComparison.Ordinal);
+        Assert.Equal(0, cleanupFactoryCallCount);
+        Assert.True(leaseStore.HasLease(completed.ExecutionRunId, startupReceiptPath));
+    }
+
     private static ExecutionRunRequest CreateRequest(Guid agentId)
     {
         return new(
             agentId,
             "Return the terminal process lease test response.",
             AgentExecutionOperationId.New());
+    }
+
+    private static ExecutionRunRequest CreateScopedRequest(
+        TestContext context,
+        WorkspaceScopeDescriptor scope)
+    {
+        var transientContext = new AgentRuntimeTransientContext(
+            "Trusted project context for process lease cleanup.",
+            scope);
+        var metadata = CreateGovernedMetadata(context, scope, scope);
+        return new ExecutionRunRequest(
+            context.Agent.Id,
+            "Return the terminal process lease test response.",
+            AgentExecutionOperationId.New(),
+            Context: new ExecutionInvocationContext(
+                SourceKind: "project-structure",
+                SourceId: scope.Key,
+                CorrelationId: Guid.NewGuid().ToString("N"),
+                CausationId: string.Empty,
+                RequestedBy: "unit-test",
+                RequestedByKind: "interactive",
+                MetadataJson: metadata))
+        {
+            TransientContext = transientContext
+        };
+    }
+
+    private static string CreateGovernedMetadata(
+        TestContext context,
+        WorkspaceScopeDescriptor metadataScope,
+        WorkspaceScopeDescriptor governanceScope)
+    {
+        var authority = new AgentExecutionAuthorityRecord(
+            AgentExecutionAuthorityId.Create(),
+            context.Agent.Id,
+            context.WorkspaceIdentity.DatabaseProfileId,
+            context.WorkspaceIdentity.DatabaseProfileGeneration,
+            governanceScope,
+            readAllowed: true,
+            mutationAllowed: true,
+            policyVersion: "process-lease-cleanup-v1",
+            policyFingerprint: "process-lease-cleanup-policy",
+            resolvedAtUtc: DateTimeOffset.UtcNow);
+        var turnReference = new AgentTurnContextReference(
+            AgentTurnContextId.Create(),
+            AgentContextEpochId.Create(),
+            new AgentChatContextSourceKind("project-structure"),
+            new AgentChatContextSourceId(metadataScope.Key),
+            surface: "project-structure",
+            view: "hierarchy",
+            observationVersion: 1,
+            modelContextDigest: "process-lease-cleanup-context",
+            capturedAtUtc: DateTimeOffset.UtcNow);
+        return AgentTurnContextMetadata.Apply(
+            ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+                "{}",
+                metadataScope),
+            turnReference,
+            authority);
+    }
+
+    private static async Task CreateSampleWebProjectAsync(string workspaceRoot)
+    {
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(projectDirectory, "SampleWeb.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
     }
 
     private static AgentRuntimeResponse CreateCompletedResponse()
@@ -147,12 +445,19 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
     }
 
     private static async Task<TestContext> CreateContextAsync(
-        IAgentRuntime runtime,
+        IFakeAgentRuntime runtime,
         IWorkspaceExecutionRunProcessLeaseCleaner cleaner)
+        => await CreateContextAsync(
+            runtime,
+            WorkspaceScopeDescriptor.Project($"process-lease-cleanup-{Guid.NewGuid():N}"),
+            (_, _) => cleaner);
+
+    private static async Task<TestContext> CreateContextAsync(
+        IFakeAgentRuntime runtime,
+        WorkspaceScopeDescriptor workspaceScope,
+        Func<string, FileSandboxWorkspaceStore, IWorkspaceExecutionRunProcessLeaseCleaner> createCleaner)
     {
         var workspace = new TemporaryWorkspace();
-        var workspaceScope = WorkspaceScopeDescriptor.Project(
-            $"process-lease-cleanup-{Guid.NewGuid():N}");
         var workspaceIdentity = new AgentExecutionActivityWorkspaceIdentity(
             Guid.NewGuid(),
             workspaceScope,
@@ -171,10 +476,17 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
                 Memory: []));
         var preparationCache = new AgentExecutionPreparationCache(
             AgentExecutionPreparationCachePolicy.Default);
+        // SB18: the workspace service consumes the narrow runtime ports; the test-only adapter
+        // adapts the fake runtime for all four ports.
+        var portFacade = new FakeAgentRuntimePortAdapter(runtime);
+        var cleaner = createCleaner(workspace.Path, store);
         var service = new AgentFrameworkWorkspaceService(
             store,
             CreateUnexpectedDependency<IAgentPackageService>(),
-            runtime,
+            portFacade,
+            portFacade,
+            portFacade,
+            portFacade,
             CreateUnexpectedDependency<ICapabilityProofService>(),
             NullLogger<AgentFrameworkWorkspaceService>.Instance,
             CreateActivityCoordinator(),
@@ -189,6 +501,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             workspace,
             store,
             agent,
+            workspaceIdentity,
             preparationCache,
             service);
     }
@@ -264,6 +577,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
         TemporaryWorkspace Workspace,
         FileSandboxWorkspaceStore Store,
         AgentDefinition Agent,
+        AgentExecutionActivityWorkspaceIdentity WorkspaceIdentity,
         AgentExecutionPreparationCache PreparationCache,
         AgentFrameworkWorkspaceService Service) : IDisposable
     {
@@ -305,7 +619,71 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
         }
     }
 
-    private sealed class StubAgentRuntime : IAgentRuntime
+    private sealed class LeaseProcessHost(string workspaceRoot) :
+        IWorkspaceProcessHost,
+        IAsyncDisposable
+    {
+        private readonly ConcurrentQueue<WorkspaceProcessExecutionRequest> requests = new();
+
+        public IReadOnlyList<WorkspaceProcessExecutionRequest> Requests => requests.ToArray();
+
+        public string StartupReceiptPath { get; private set; } = string.Empty;
+
+        public bool IsDisposed { get; private set; }
+
+        public ExecutionBoundaryDescriptor DescribeBoundary()
+            => new(
+                Mode: "Test",
+                FilesystemScope: "Workspace",
+                NetworkScope: "None",
+                CredentialScope: "None",
+                HostLabel: "Lease topology test",
+                IsEnforcedByHost: false,
+                Notes: "Deterministic in-process process host.");
+
+        public Task<WorkspaceProcessExecutionResult> ExecuteAsync(
+            WorkspaceProcessExecutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            requests.Enqueue(request);
+            if (request.ToolName == "workspace_dotnet_run")
+            {
+                var fileIndex = request.Arguments.ToList().IndexOf("-File");
+                Assert.True(fileIndex >= 0 && fileIndex + 1 < request.Arguments.Count);
+                var scriptDirectory = Path.GetDirectoryName(request.Arguments[fileIndex + 1]);
+                Assert.False(string.IsNullOrWhiteSpace(scriptDirectory));
+                var receiptPath = Path.Combine(scriptDirectory!, "startup.json");
+                File.WriteAllText(
+                    receiptPath,
+                    """{"succeeded":true,"appProcessTreeIds":[12345]}""");
+                StartupReceiptPath = Path.GetRelativePath(workspaceRoot, receiptPath)
+                    .Replace(Path.DirectorySeparatorChar, '/');
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            return Task.FromResult(new WorkspaceProcessExecutionResult(
+                Started: true,
+                ExitCode: 0,
+                Stdout: "ok",
+                Stderr: string.Empty,
+                StdoutTruncated: false,
+                StderrTruncated: false,
+                StartedAtUtc: now,
+                CompletedAtUtc: now,
+                TimedOut: false,
+                Boundary: DescribeBoundary(),
+                FailureMessage: string.Empty));
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            IsDisposed = true;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class StubAgentRuntime : IFakeAgentRuntime
     {
         private readonly Func<AgentRuntimeResponse> run;
         private readonly Func<AgentRuntimeResponse>? continuation;

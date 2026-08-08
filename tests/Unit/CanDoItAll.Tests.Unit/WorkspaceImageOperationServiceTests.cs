@@ -211,25 +211,23 @@ public sealed class WorkspaceImageOperationServiceTests
     }
 
     [Fact]
-    public async Task RuntimeFallbackComposition_UsesRegisteredImageOperationService()
+    public async Task WorkspaceRuntimeServicesFactory_ComposesArtifactImageOperationsFromScope()
     {
         var workspaceRoot = CreateWorkspaceRoot();
         try
         {
-            var imageOperations = new RecordingImageOperationService();
-            var services = new ServiceCollection();
-            services.AddSingleton<IWorkspaceImageOperationService>(imageOperations);
-            await using var provider = services.BuildServiceProvider();
-            var resolver = new MafRuntimeDependencyResolver();
+            await File.WriteAllBytesAsync(Path.Combine(workspaceRoot, "fallback.png"), PngBytes());
+            var factory = new WorkspaceRuntimeServicesFactory([], new UnusedDocumentMarkdownConverter());
+            await using var workspaceServices = factory.Create(
+                new WorkspaceExecutionScope(workspaceRoot, WorkspaceScopeDescriptor.Sandbox));
 
-            var workspaceServices = resolver.ResolveWorkspaceServices(
-                provider,
-                workspaceRoot,
-                WorkspaceScopeDescriptor.Sandbox);
             var result = await workspaceServices.ArtifactToolService.InspectImageFile("fallback.png");
+            var direct = await workspaceServices.ImageOperationService.InspectImageFile("fallback.png");
 
-            Assert.Same(imageOperations.InspectionResult, result);
-            Assert.Equal("fallback.png", imageOperations.InspectedPath);
+            Assert.True(result.Succeeded, result.Diagnostics);
+            Assert.Equal("PNG", result.Format);
+            Assert.Equal(direct.Format, result.Format);
+            Assert.Equal(direct.SizeBytes, result.SizeBytes);
         }
         finally
         {

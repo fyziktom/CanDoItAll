@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class ToolCapabilityBuilder(
-    IServiceProvider services,
+    IRegisteredCapabilityServiceSource registeredServices,
     string workspaceRoot,
     WorkspaceScopeDescriptor workspaceScope,
     IMafProviderCredentialService providerCredentialService,
@@ -141,6 +141,12 @@ internal sealed class ToolCapabilityBuilder(
                 ResolveSkillScriptArguments(arguments),
                 cancellationToken);
 
+        /// <remarks>
+        /// The <paramref name="serviceProvider"/> parameter exists only to satisfy the SDK-owned
+        /// <see cref="AgentFileSkillScriptRunner"/> delegate contract consumed by
+        /// <c>AgentSkillsProviderBuilder.UseFileScriptRunner</c>. It is intentionally unused: skill script
+        /// execution resolves its collaborators through constructor-injected typed dependencies.
+        /// </remarks>
         public async Task<object?> RunSkillScriptAsync(
             AgentFileSkill skill,
             AgentFileSkillScript script,
@@ -270,7 +276,7 @@ internal sealed class ToolCapabilityBuilder(
                 throw new InvalidOperationException($"Registered plugin type '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' could not be resolved.");
             }
 
-            var service = services.GetService(serviceType);
+            var service = registeredServices.Resolve(serviceType);
             if (service is null)
             {
                 throw new InvalidOperationException($"Registered plugin type '{configuration.RegisteredPluginServiceType}' for capability '{capability.Name}' is not available in DI.");
