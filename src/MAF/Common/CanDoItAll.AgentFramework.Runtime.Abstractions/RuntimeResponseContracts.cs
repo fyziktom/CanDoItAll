@@ -1,12 +1,14 @@
 // Runtime response/failure contracts moved verbatim from
-// CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs (SB09). The namespace is intentionally kept
-// as CanDoItAll.AgentFramework.Core so every existing consumer keeps compiling without
-// using-churn. SB18 deleted the broad IAgentRuntime interface that used to live in this file
+// CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs. The namespace now matches the owning
+// project (CanDoItAll.AgentFramework.Runtime.Abstractions); the trace payload models referenced
+// below still live in the Models project. SB18 deleted the broad IAgentRuntime interface that used to live in this file
 // (production/tests now consume the four narrow runtime ports exclusively) — the types below are
 // still the canonical response/failure shapes the ports return and are not legacy.
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Core;
+
+namespace CanDoItAll.AgentFramework.Runtime.Abstractions;
 
 public sealed record AgentRuntimeResponse(
     string ResponseText,

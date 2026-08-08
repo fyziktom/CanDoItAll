@@ -1586,7 +1586,7 @@
                                     VoiceStatusText="@managerChatVoiceStatusText"
                                     VoiceStatusTone="@managerChatVoiceStatusTone"
                                     SendRequested="SendManagerChatMessageAsync"
-                                    ApprovalDecisionRequested="HandleManagerChatApprovalDecisionAsync"
+                                    ApprovalDecisionsRequested="HandleManagerChatApprovalDecisionsAsync"
                                     ApprovalDecisionForConversationRequested="ApproveManagerChatConversationAsync"
                                     AttachmentRequested="StageManagerChatRunArtifactsAsync"
                                     SessionTitleChanged="RenameManagerChatSessionAsync"
@@ -2596,17 +2596,19 @@
         }
     }
 
-    private async Task HandleManagerChatApprovalDecisionAsync(bool approved)
+    private async Task HandleManagerChatApprovalDecisionsAsync(IReadOnlyList<PendingToolApprovalDecision> decisions)
     {
-        await ContinueManagerChatApprovalAsync(approved, autoApprovePendingToolCalls: false);
+        await ContinueManagerChatApprovalAsync(decisions, autoApprovePendingToolCalls: false);
     }
 
     private async Task ApproveManagerChatConversationAsync()
     {
-        await ContinueManagerChatApprovalAsync(approved: true, autoApprovePendingToolCalls: true);
+        await ContinueManagerChatApprovalAsync(decisions: null, autoApprovePendingToolCalls: true);
     }
 
-    private async Task ContinueManagerChatApprovalAsync(bool approved, bool autoApprovePendingToolCalls)
+    private async Task ContinueManagerChatApprovalAsync(
+        IReadOnlyList<PendingToolApprovalDecision>? decisions,
+        bool autoApprovePendingToolCalls)
     {
         var workspaceService = ResolveManagerChatWorkspaceService();
         if (workspaceService is null || managerChatAgentId is null || managerChatSessionId is null)
@@ -2620,16 +2622,24 @@
             return;
         }
 
-        var decisions = pendingApprovals
-            .Select(item => new PendingToolApprovalDecision(item.ApprovalId, approved))
-            .ToArray();
+        // Per-proposal decisions come from the panel unchanged; the
+        // approve-remaining action explicitly approves every pending proposal.
+        var effectiveDecisions = decisions
+            ?? pendingApprovals
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                .ToArray();
+        if (effectiveDecisions.Count == 0)
+        {
+            return;
+        }
+
         managerChatIsBusy = true;
         try
         {
             var operation = ChatExecutionOrchestrator.StartApprovalContinuation(
                 managerChatAgentId.Value,
                 managerChatSessionId.Value,
-                decisions,
+                effectiveDecisions,
                 autoApprovePendingToolCalls);
             managerChatActivityStreamId = operation.StreamId;
             await InvokeAsync(StateHasChanged);

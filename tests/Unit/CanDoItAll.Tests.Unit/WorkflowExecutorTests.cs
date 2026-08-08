@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
@@ -817,7 +818,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerNeverGrantsWorkspaceAuthorityFromWorkflowPayload()
+    public async Task WorkflowLlmComponentInvokerNeverGrantsWorkspaceAuthorityFromWorkflowPayload()
     {
         var projectId = Guid.Parse("ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f");
         var port = new CapturingLlmInvocationPort(
@@ -829,7 +830,7 @@ public sealed class WorkflowExecutorTests
             }
             """);
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -865,11 +866,11 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerUsesNodeInstructionSnapshot()
+    public async Task WorkflowLlmComponentInvokerUsesNodeInstructionSnapshot()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -898,12 +899,12 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerUsesNodeProviderModelAndInstructionOverrides()
+    public async Task WorkflowLlmComponentInvokerUsesNodeProviderModelAndInstructionOverrides()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var componentProvider = CreateProviderProfile("component-model");
         var nodeProvider = CreateProviderProfile("node-model");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([componentProvider, nodeProvider]),
             new ProviderProfileService());
@@ -941,11 +942,11 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsBlankNodeInstructionSnapshot()
+    public async Task WorkflowLlmComponentInvokerRejectsBlankNodeInstructionSnapshot()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -974,11 +975,11 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsLegacyTemplateInstructionPlaceholder()
+    public async Task WorkflowLlmComponentInvokerRejectsLegacyTemplateInstructionPlaceholder()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1005,7 +1006,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
+    public async Task WorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}")
         {
@@ -1017,7 +1018,7 @@ public sealed class WorkflowExecutorTests
         {
             ModelPrices = [new ProviderModelTokenPrice("gpt-5-mini", 1.00m, 0.10m, 4.00m)]
         };
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1041,7 +1042,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerMarksUnavailableWorkflowUsageAsUnknown()
+    public async Task WorkflowLlmComponentInvokerMarksUnavailableWorkflowUsageAsUnknown()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}")
         {
@@ -1053,7 +1054,7 @@ public sealed class WorkflowExecutorTests
         {
             ModelPrices = [new ProviderModelTokenPrice("gpt-5-mini", 1.00m, 0.10m, 4.00m)]
         };
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1075,7 +1076,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRequestsJsonResponseFormatSchemaForJsonComponents()
+    public async Task WorkflowLlmComponentInvokerRequestsJsonResponseFormatSchemaForJsonComponents()
     {
         var port = new CapturingLlmInvocationPort(
             """
@@ -1086,7 +1087,7 @@ public sealed class WorkflowExecutorTests
             }
             """);
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1113,7 +1114,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerAcceptsValidSchemaKeywordsOutsidePortableContractSubset()
+    public async Task WorkflowLlmComponentInvokerAcceptsValidSchemaKeywordsOutsidePortableContractSubset()
     {
         const string responseSchema =
             """
@@ -1140,7 +1141,7 @@ public sealed class WorkflowExecutorTests
         var port = new CapturingLlmInvocationPort(
             """{"projectId":"ad8e7db7-4041-4fd7-a5f7-b5c6756f9a1f","result":"complete"}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1161,7 +1162,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerDoesNotMisapplySupportedRestrictionsToUnsupportedSchemaKeywords()
+    public async Task WorkflowLlmComponentInvokerDoesNotMisapplySupportedRestrictionsToUnsupportedSchemaKeywords()
     {
         const string responseSchema =
             """
@@ -1175,7 +1176,7 @@ public sealed class WorkflowExecutorTests
             """;
         var port = new CapturingLlmInvocationPort("""{"x-workflow":"complete"}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1196,7 +1197,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerDoesNotMisclassifyIndirectBusinessRefusalProperty()
+    public async Task WorkflowLlmComponentInvokerDoesNotMisclassifyIndirectBusinessRefusalProperty()
     {
         const string responseSchema =
             """
@@ -1215,7 +1216,7 @@ public sealed class WorkflowExecutorTests
             """;
         var port = new CapturingLlmInvocationPort("""{"refusal":"No objections"}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1236,11 +1237,11 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerAcceptsUnconstrainedObjectResponseSchema()
+    public async Task WorkflowLlmComponentInvokerAcceptsUnconstrainedObjectResponseSchema()
     {
         var port = new CapturingLlmInvocationPort("""{"ok":true}""");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1261,7 +1262,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsJsonMissingRequiredSchemaFieldsAndPreservesUsage()
+    public async Task WorkflowLlmComponentInvokerRejectsJsonMissingRequiredSchemaFieldsAndPreservesUsage()
     {
         var port = new CapturingLlmInvocationPort("""{"markdown":"# Summary"}""")
         {
@@ -1269,7 +1270,7 @@ public sealed class WorkflowExecutorTests
             OutputTokens = 7
         };
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1302,7 +1303,7 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsSchemaShapedJsonInsteadOfBusinessResult()
+    public async Task WorkflowLlmComponentInvokerRejectsSchemaShapedJsonInsteadOfBusinessResult()
     {
         var port = new CapturingLlmInvocationPort(
             """
@@ -1316,7 +1317,7 @@ public sealed class WorkflowExecutorTests
             }
             """);
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1341,11 +1342,11 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRequestsGenericJsonResponseFormatWhenSchemaIsMissing()
+    public async Task WorkflowLlmComponentInvokerRequestsGenericJsonResponseFormatWhenSchemaIsMissing()
     {
         var port = new CapturingLlmInvocationPort("{\"ok\":true}");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -1367,11 +1368,11 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
-    public async Task MafWorkflowLlmComponentInvokerRejectsInvalidJsonWithoutRepairingPayload()
+    public async Task WorkflowLlmComponentInvokerRejectsInvalidJsonWithoutRepairingPayload()
     {
         var port = new CapturingLlmInvocationPort("{\"markdown\":\"ok\"} + invalid");
         var provider = CreateProviderProfile("gpt-5-mini");
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new TestProviderProfileRegistry([provider]),
             new ProviderProfileService());
@@ -2043,7 +2044,9 @@ public sealed class WorkflowExecutorTests
 
         await RecordAsync("spreadsheet fails predictably for missing workbook", async () =>
         {
-            await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(spreadsheetExecutor, new WorkflowSpreadsheetExecutorSettings
+            // The workspace path seam now raises its typed resolution failure
+            // (a WorkspacePathResolutionException subtype of InvalidOperationException).
+            await Assert.ThrowsAsync<WorkspacePathResolutionException>(() => ExecuteDirectAsync(spreadsheetExecutor, new WorkflowSpreadsheetExecutorSettings
             {
                 Operation = WorkflowSpreadsheetOperation.WorkbookSummary,
                 WorkbookPath = "missing.xlsx"

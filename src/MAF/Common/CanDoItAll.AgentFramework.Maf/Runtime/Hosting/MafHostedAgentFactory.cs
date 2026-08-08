@@ -49,11 +49,12 @@ internal sealed class MafHostedAgentFactory
         bool forceOmitTemperature = false,
         AgentRuntimeExecutionOptions? executionOptions = null)
     {
+        var effectiveExecutionOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
         var effectiveWorkspaceScope = MafRuntimeAgentFactory.ResolveContextWorkspaceScope(
-            executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null),
+            effectiveExecutionOptions,
             workspaceScope);
         var workspaceRuntimeServices = workspaceRuntimeServicesFactory.Create(
-            new WorkspaceExecutionScope(workspaceRoot, effectiveWorkspaceScope));
+            WorkspaceExecutionScope.ForRun(workspaceRoot, effectiveWorkspaceScope, effectiveExecutionOptions.Governance));
         try
         {
             return await runtimeAgentFactory.CreateHostedAgentAsync(

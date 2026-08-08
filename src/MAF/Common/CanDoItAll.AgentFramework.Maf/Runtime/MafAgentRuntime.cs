@@ -49,7 +49,8 @@ public sealed class MafAgentRuntime
             dependencies.ProviderCredentialService,
             dependencies.ProviderAgentFactory,
             runtimeCapabilityComposer,
-            dependencies.CapabilityDependencies.LoggerFactory);
+            dependencies.CapabilityDependencies.LoggerFactory,
+            dependencies.ToolInvocationPolicyPipeline);
         var streamingTurnExecutor = new MafStreamingTurnExecutor(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,

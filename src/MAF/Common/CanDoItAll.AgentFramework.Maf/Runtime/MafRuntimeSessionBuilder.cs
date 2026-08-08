@@ -33,51 +33,28 @@ internal static class MafRuntimeSessionBuilder
         }
 
         var pendingApprovalCount = session.Compatibility?.PendingApprovals.Count ?? 0;
-
-        if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions, isApprovalContinuation))
+        var evaluation = ResolveRestoreEvaluation(agent, provider, model, session, runtimeOptions, isApprovalContinuation);
+        if (evaluation.Decision is { } evaluatedDecision && progressCallback is not null)
         {
-            var rawStateJson = session.Compatibility!.SerializedSessionStateJson!;
-            var decision = EvaluateStoredRuntimeState(rawStateJson, provider, model, runtimeOptions, out var envelope);
-            if (progressCallback is not null)
-            {
-                await progressCallback(
-                    ExecutionState.Preparing,
-                    "Session compatibility",
-                    DescribeCompatibilityDecision(decision));
-            }
+            await progressCallback(
+                ExecutionState.Preparing,
+                "Session compatibility",
+                DescribeCompatibilityDecision(evaluatedDecision));
+        }
 
-            switch (decision.Outcome)
-            {
-                case RuntimeStateCompatibilityOutcome.CompatibleRestore:
-                {
-                    var restoreResult = StateAdapter.TryRestore(envelope!);
-                    if (restoreResult.Succeeded)
-                    {
-                        return await DeserializeSerializedSessionAsync(runtimeAgent, restoreResult.PayloadJson, cancellationToken);
-                    }
+        if (evaluation.ShouldRestore)
+        {
+            return await DeserializeSerializedSessionAsync(runtimeAgent, evaluation.RestorePayloadJson!, cancellationToken);
+        }
 
-                    // Defensive: the policy judged this envelope compatible but the adapter itself
-                    // could not unwrap it. Fail exactly like an Incompatible decision — never trust
-                    // an envelope the owning adapter refuses.
-                    return await FailClosedOrCreateSessionAsync(
-                        runtimeAgent,
-                        isApprovalContinuation,
-                        pendingApprovalCount,
-                        restoreResult.FailureReason,
-                        cancellationToken);
-                }
-
-                case RuntimeStateCompatibilityOutcome.RegisteredMigration:
-                    return await DeserializeSerializedSessionAsync(runtimeAgent, rawStateJson, cancellationToken);
-
-                default:
-                    return await FailClosedOrCreateSessionAsync(
-                        runtimeAgent,
-                        isApprovalContinuation,
-                        pendingApprovalCount,
-                        decision.Reason,
-                        cancellationToken);
-            }
+        if (evaluation.FailClosedReason is { } failClosedReason)
+        {
+            return await FailClosedOrCreateSessionAsync(
+                runtimeAgent,
+                isApprovalContinuation,
+                pendingApprovalCount,
+                failClosedReason,
+                cancellationToken);
         }
 
         if (isApprovalContinuation && pendingApprovalCount > 0)
@@ -86,6 +63,126 @@ internal static class MafRuntimeSessionBuilder
         }
 
         return await runtimeAgent.CreateSessionAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// One evaluation shared by session creation, prompt-message composition,
+    /// and progress messaging: parse the persisted state, decide envelope
+    /// compatibility, unwrap the adapter payload, and apply the restore
+    /// eligibility rules to the INNER payload. The provider-conversation-id
+    /// probe always inspects the adapter payload, never the envelope wrapper,
+    /// so a wrapped provider-managed conversation cannot slip past the
+    /// transient-context and history-mode gates.
+    /// </summary>
+    internal sealed record RestoreEvaluation(
+        bool ShouldRestore,
+        RuntimeStateCompatibilityDecision? Decision,
+        string? RestorePayloadJson,
+        string? FailClosedReason);
+
+    internal static RestoreEvaluation ResolveRestoreEvaluation(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        string model,
+        ChatSessionRecord session,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        bool isApprovalContinuation = false)
+    {
+        var compatibility = session.Compatibility;
+        if (compatibility is null || string.IsNullOrWhiteSpace(compatibility.SerializedSessionStateJson))
+        {
+            return new RestoreEvaluation(false, null, null, null);
+        }
+
+        var rawStateJson = compatibility.SerializedSessionStateJson!;
+        var decision = EvaluateStoredRuntimeState(rawStateJson, provider, model, runtimeOptions, out var envelope);
+        string? payloadJson;
+        string? failClosedReason = null;
+        switch (decision.Outcome)
+        {
+            case RuntimeStateCompatibilityOutcome.CompatibleRestore:
+            {
+                var restoreResult = StateAdapter.TryRestore(envelope!);
+                if (restoreResult.Succeeded)
+                {
+                    payloadJson = restoreResult.PayloadJson;
+                }
+                else
+                {
+                    // Defensive: the policy judged this envelope compatible but
+                    // the adapter itself could not unwrap it. Fail exactly like
+                    // an Incompatible decision — never trust an envelope the
+                    // owning adapter refuses.
+                    payloadJson = null;
+                    failClosedReason = restoreResult.FailureReason;
+                }
+
+                break;
+            }
+
+            case RuntimeStateCompatibilityOutcome.RegisteredMigration:
+                // Legacy unversioned state: the raw stored JSON IS the adapter
+                // payload; it was captured before envelopes existed.
+                payloadJson = rawStateJson;
+                break;
+
+            case RuntimeStateCompatibilityOutcome.SafeCanonicalReplay:
+                payloadJson = null;
+                break;
+
+            default:
+                payloadJson = null;
+                failClosedReason = decision.Reason;
+                break;
+        }
+
+        if (payloadJson is null)
+        {
+            return new RestoreEvaluation(false, decision, null, failClosedReason);
+        }
+
+        var containsProviderConversationId = SerializedSessionContainsProviderConversationId(payloadJson);
+        var shouldRestore = ResolveRestoreEligibility(
+            agent,
+            provider,
+            runtimeOptions,
+            isApprovalContinuation,
+            containsProviderConversationId);
+        return shouldRestore
+            ? new RestoreEvaluation(true, decision, payloadJson, null)
+            : new RestoreEvaluation(false, decision, null, failClosedReason);
+    }
+
+    /// <summary>
+    /// The restore eligibility rules, applied to the inner adapter payload's
+    /// provider-conversation flag: a transient-context ordinary send never
+    /// reattaches to a provider-managed conversation; framework-managed
+    /// history restores local-history state and service-managed conversations
+    /// only where the provider supports them.
+    /// </summary>
+    private static bool ResolveRestoreEligibility(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        AgentRuntimeExecutionOptions runtimeOptions,
+        bool isApprovalContinuation,
+        bool containsProviderConversationId)
+    {
+        if (runtimeOptions.TransientContext is not null && !isApprovalContinuation)
+        {
+            return !containsProviderConversationId;
+        }
+
+        if (ShouldUseFrameworkManagedHistory(agent, provider))
+        {
+            return !containsProviderConversationId || SupportsServiceManagedConversations(provider);
+        }
+
+        if (SupportsServiceManagedConversations(provider))
+        {
+            return true;
+        }
+
+        return !containsProviderConversationId;
     }
 
     private static async ValueTask<AgentSession> DeserializeSerializedSessionAsync(
@@ -136,8 +233,14 @@ internal static class MafRuntimeSessionBuilder
             CurrentProviderTransport: provider.Transport,
             CurrentModel: model,
             CurrentToolsetFingerprint: runtimeOptions.ToolsetFingerprint,
-            CurrentContextPolicyFingerprint: runtimeOptions.ContextPolicyFingerprint,
-            CurrentHistoryMode: runtimeOptions.HistoryMode);
+            CurrentContextPolicyFingerprint: runtimeOptions.ModelContextDigest,
+            CurrentHistoryMode: runtimeOptions.HistoryMode)
+        {
+            CurrentAuthorityPolicyFingerprint = runtimeOptions.AuthorityPolicyFingerprint,
+            CurrentCapabilityPolicyFingerprint = runtimeOptions.CapabilityPolicyFingerprint,
+            CurrentLegacyToolsetNameFingerprint = runtimeOptions.LegacyToolsetNameFingerprint,
+            CurrentAdapterPackageVersion = MafRuntimeStateAdapter.AdapterPackageVersion
+        };
         return CompatibilityPolicy.Evaluate(request);
     }
 
@@ -162,6 +265,7 @@ internal static class MafRuntimeSessionBuilder
     public static IEnumerable<ChatMessage> CreatePromptInputMessages(
         AgentDefinition agent,
         ProviderProfile provider,
+        string model,
         ChatSessionRecord session,
         string prompt,
         AgentRuntimeExecutionOptions runtimeOptions)
@@ -175,7 +279,7 @@ internal static class MafRuntimeSessionBuilder
             ];
         }
 
-        if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions))
+        if (ResolveRestoreEvaluation(agent, provider, model, session, runtimeOptions).ShouldRestore)
         {
             return
             [
@@ -320,6 +424,7 @@ internal static class MafRuntimeSessionBuilder
     public static string ResolveSessionMessage(
         AgentDefinition agent,
         ProviderProfile provider,
+        string model,
         ChatSessionRecord session,
         AgentRuntimeExecutionOptions runtimeOptions)
     {
@@ -328,7 +433,7 @@ internal static class MafRuntimeSessionBuilder
             return "Creating an isolated Microsoft Agent Framework session for this governed process step.";
         }
 
-        if (ShouldRestoreSerializedSession(agent, provider, session, runtimeOptions))
+        if (ResolveRestoreEvaluation(agent, provider, model, session, runtimeOptions).ShouldRestore)
         {
             return "Restoring the serialized Microsoft Agent Framework session for this conversation.";
         }
@@ -363,39 +468,6 @@ internal static class MafRuntimeSessionBuilder
         return provider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
             && provider.Transport == ProviderTransportKind.Responses
             && provider.SupportsBackgroundResponses;
-    }
-
-    private static bool ShouldRestoreSerializedSession(
-        AgentDefinition agent,
-        ProviderProfile provider,
-        ChatSessionRecord session,
-        AgentRuntimeExecutionOptions runtimeOptions,
-        bool isApprovalContinuation = false)
-    {
-        var compatibility = session.Compatibility;
-        if (compatibility is null || string.IsNullOrWhiteSpace(compatibility.SerializedSessionStateJson))
-        {
-            return false;
-        }
-
-        var containsProviderConversationId = SerializedSessionContainsProviderConversationId(compatibility.SerializedSessionStateJson);
-
-        if (runtimeOptions.TransientContext is not null && !isApprovalContinuation)
-        {
-            return !containsProviderConversationId;
-        }
-
-        if (ShouldUseFrameworkManagedHistory(agent, provider))
-        {
-            return !containsProviderConversationId || SupportsServiceManagedConversations(provider);
-        }
-
-        if (SupportsServiceManagedConversations(provider))
-        {
-            return true;
-        }
-
-        return !containsProviderConversationId;
     }
 
     private static bool SerializedSessionContainsProviderConversationId(string serializedSessionStateJson)

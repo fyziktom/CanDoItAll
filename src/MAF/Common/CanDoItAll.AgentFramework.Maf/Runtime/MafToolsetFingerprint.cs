@@ -1,5 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.AgentFramework.Core;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -34,6 +37,43 @@ internal static class MafToolsetFingerprint
         var payload = string.Join(NameSeparator, ordered);
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
         var digestBytes = SHA256.HashData(payloadBytes);
+        return Convert.ToHexString(digestBytes).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Stable SHA-256 hex digest of the composed tool contracts: for every
+    /// tool, its name, invocation-policy classification, approval-wrapper
+    /// flag, and (for functions) the JSON schema. Unlike the names-only
+    /// digest, a schema, classification, or approval change with the same
+    /// tool name produces a different fingerprint, so stale state cannot be
+    /// restored across a tool-contract change (schema v2 dimension).
+    /// </summary>
+    public static string ComputeContractFingerprint(IEnumerable<AITool> tools)
+    {
+        ArgumentNullException.ThrowIfNull(tools);
+
+        var entries = tools
+            .Where(tool => !string.IsNullOrWhiteSpace(tool.Name))
+            .Select(tool =>
+            {
+                var schemaText = tool is AIFunction function
+                    ? function.JsonSchema.GetRawText()
+                    : string.Empty;
+                var classification = AgentToolInvocationPolicyMetadata.Classify(tool.Name);
+                var approvalWrapped = tool is ApprovalRequiredAIFunction;
+                return string.Join(
+                    NameSeparator,
+                    tool.Name.Trim(),
+                    classification.ToString(),
+                    approvalWrapped ? "approval" : "direct",
+                    schemaText);
+            })
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(entry => entry, StringComparer.Ordinal)
+            .ToArray();
+
+        var payload = string.Join("", entries);
+        var digestBytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
         return Convert.ToHexString(digestBytes).ToLowerInvariant();
     }
 }

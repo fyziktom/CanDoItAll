@@ -22,7 +22,13 @@ public static class RuntimeStateAdapterIds
 /// </summary>
 public sealed record RuntimeStateEnvelope
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>
+    /// Schema v2 adds the separated authority-policy and capability-policy
+    /// fingerprints and switches the toolset fingerprint to the tool-contract
+    /// hash. v1 envelopes (names-only toolset fingerprint, no policy split)
+    /// remain readable through the adapter's explicit compatibility rules.
+    /// </summary>
+    public const int CurrentSchemaVersion = 2;
     public const int MaximumAdapterIdLength = 100;
     public const int MaximumIdentifierLength = 200;
 
@@ -148,6 +154,46 @@ public sealed record RuntimeStateEnvelope
 
             historyMode = value;
         }
+    }
+
+    private readonly string authorityPolicyFingerprint = string.Empty;
+
+    /// <summary>
+    /// Fingerprint of the admitted execution authority policy at capture time
+    /// (schema v2). Separate from the model-context digest so an authority
+    /// policy change invalidates state even when the visible UI context is
+    /// unchanged. Empty for v1 envelopes and for runs without an admitted
+    /// authority.
+    /// </summary>
+    public string AuthorityPolicyFingerprint
+    {
+        get => authorityPolicyFingerprint;
+        init => authorityPolicyFingerprint = NormalizeFingerprint(value, nameof(AuthorityPolicyFingerprint));
+    }
+
+    private readonly string capabilityPolicyFingerprint = string.Empty;
+
+    /// <summary>
+    /// Fingerprint of the effectively exposed capability set at capture time
+    /// (schema v2). Empty for v1 envelopes.
+    /// </summary>
+    public string CapabilityPolicyFingerprint
+    {
+        get => capabilityPolicyFingerprint;
+        init => capabilityPolicyFingerprint = NormalizeFingerprint(value, nameof(CapabilityPolicyFingerprint));
+    }
+
+    private static string NormalizeFingerprint(string? value, string propertyName)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > AgentChatContextLimits.MaximumFingerprintLength)
+        {
+            throw new ArgumentException(
+                $"A fingerprint cannot exceed {AgentChatContextLimits.MaximumFingerprintLength} characters.",
+                propertyName);
+        }
+
+        return normalized;
     }
 
     /// <summary>

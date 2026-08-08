@@ -6,6 +6,7 @@ using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentFrameworkWorkspaceActivityAdmissionTests

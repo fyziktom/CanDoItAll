@@ -83,8 +83,8 @@ public sealed class ProviderBackedLlmInvocationAdapterTests
             provider,
             provider.DefaultModel,
             [new LlmMessage(LlmMessageRole.User, "Q")],
-            ResponseFormat: new LlmResponseFormat(true, """{"type":"object"}""", "result", "A result."),
-            Settings: new LlmModelSettings(0.4, """{"maxOutputTokens":123}""")));
+            responseFormat: new LlmResponseFormat(true, """{"type":"object"}""", "result", "A result."),
+            settings: new LlmModelSettings(0.4, """{"maxOutputTokens":123}""")));
 
         Assert.NotNull(captured);
         Assert.Equal(0.4, captured!.Temperature);
@@ -115,19 +115,49 @@ public sealed class ProviderBackedLlmInvocationAdapterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_throws_when_the_provider_returns_a_blank_response()
+    public async Task InvokeAsync_retries_once_then_fails_typed_on_persistently_blank_responses()
     {
+        var attempts = 0;
         var driver = new RecordingChatCompletionDriver((request, cancellationToken) =>
-            Task.FromResult(new ProviderChatCompletionResult(request.Model, "   ", 1, 1)));
+        {
+            attempts++;
+            return Task.FromResult(new ProviderChatCompletionResult(request.Model, "   ", 1, 1));
+        });
         var adapter = CreateAdapter(driver);
         var provider = CreateProvider();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => adapter.InvokeAsync(new LlmInvocationRequest(
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => adapter.InvokeAsync(new LlmInvocationRequest(
             provider,
             provider.DefaultModel,
             [new LlmMessage(LlmMessageRole.User, "Q")])));
 
-        Assert.Contains("lightweight LLM invocation", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(LlmInvocationFailureKind.EmptyResponse, exception.Kind);
+        Assert.Equal(ProviderBackedLlmInvocationAdapter.MaximumEmptyResponseAttempts, attempts);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_recovers_when_the_retry_returns_text()
+    {
+        var attempts = 0;
+        var driver = new RecordingChatCompletionDriver((request, cancellationToken) =>
+        {
+            attempts++;
+            return Task.FromResult(new ProviderChatCompletionResult(
+                request.Model,
+                attempts == 1 ? "   " : "recovered",
+                1,
+                1));
+        });
+        var adapter = CreateAdapter(driver);
+        var provider = CreateProvider();
+
+        var result = await adapter.InvokeAsync(new LlmInvocationRequest(
+            provider,
+            provider.DefaultModel,
+            [new LlmMessage(LlmMessageRole.User, "Q")]));
+
+        Assert.Equal("recovered", result.ResponseText);
+        Assert.Equal(2, attempts);
     }
 
     [Fact]
@@ -155,19 +185,25 @@ public sealed class ProviderBackedLlmInvocationAdapterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_propagates_provider_failures_unwrapped()
+    public async Task InvokeAsync_wraps_provider_failures_in_sanitized_typed_exceptions()
     {
         var driver = new RecordingChatCompletionDriver((request, cancellationToken) =>
             throw new InvalidOperationException("simulated provider failure"));
         var adapter = CreateAdapter(driver);
         var provider = CreateProvider();
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => adapter.InvokeAsync(new LlmInvocationRequest(
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => adapter.InvokeAsync(new LlmInvocationRequest(
             provider,
             provider.DefaultModel,
-            [new LlmMessage(LlmMessageRole.User, "Q")])));
+            [new LlmMessage(LlmMessageRole.User, "Q")],
+            correlationId: "caller-42")));
 
-        Assert.Equal("simulated provider failure", exception.Message);
+        Assert.Equal(LlmInvocationFailureKind.ProviderFailure, exception.Kind);
+        // The user-facing message never carries raw provider exception text;
+        // the original exception stays available for structured logging only.
+        Assert.DoesNotContain("simulated provider failure", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("caller-42", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("simulated provider failure", exception.InnerException?.Message);
     }
 
     private static ProviderBackedLlmInvocationAdapter CreateAdapter(RecordingChatCompletionDriver driver)

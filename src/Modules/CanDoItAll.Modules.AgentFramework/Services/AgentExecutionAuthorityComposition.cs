@@ -9,22 +9,70 @@ namespace CanDoItAll.Modules.AgentFramework;
 /// <summary>
 /// Canonical <see cref="IAgentExecutionAuthorityResolver"/> backed by durable
 /// agent configuration and the current database profile. UI-published access
-/// entries never grant authority here: for the trusted project-structure
-/// source the resolver independently re-derives read/mutation rights from the
-/// agent's stored configuration, and every workspace-scope claim is validated
-/// against the canonical scope shape before admission. Source kinds without a
-/// canonical authority rule yet keep their current observed behavior and are
-/// marked with the compatibility policy version so later hardening can find
-/// and tighten them.
+/// entries never grant authority here: every source kind with a canonical
+/// rule owns a registered <see cref="IAgentExecutionSourceAuthorityProvider"/>
+/// that re-derives scope and rights from stored configuration, and every
+/// workspace-scope claim is validated against the canonical scope before
+/// admission. Source kinds without a provider fail closed to a bounded
+/// read-only sandbox and can never inherit an observed workspace scope. A UI
+/// access hint may deny a turn early but can never select scope, grant read,
+/// or grant mutation.
 /// </summary>
-internal sealed class CanonicalAgentExecutionAuthorityResolver(
-    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
-    IAgentExecutionProfileGenerationSource profileGenerationSource,
-    TimeProvider timeProvider) : IAgentExecutionAuthorityResolver
+internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecutionAuthorityResolver
 {
     public const string CanonicalPolicyVersion = "v2-canonical";
-    public const string ObservedCompatibilityPolicyVersion = "v1-observed-compat";
+    public const string FailClosedSandboxPolicyVersion = "v2-fail-closed-sandbox";
+
+    private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
+    private readonly IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor;
+    private readonly IAgentExecutionProfileGenerationSource profileGenerationSource;
+    private readonly TimeProvider timeProvider;
+    private readonly IReadOnlyDictionary<string, IAgentExecutionSourceAuthorityProvider> providersBySourceKind;
+
+    public CanonicalAgentExecutionAuthorityResolver(
+        ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+        IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
+        IAgentExecutionProfileGenerationSource profileGenerationSource,
+        TimeProvider timeProvider,
+        IReadOnlyList<IAgentExecutionSourceAuthorityProvider>? sourceAuthorityProviders = null)
+    {
+        this.workspaceFactory = workspaceFactory ?? throw new ArgumentNullException(nameof(workspaceFactory));
+        this.databaseProfileRuntimeAccessor = databaseProfileRuntimeAccessor ?? throw new ArgumentNullException(nameof(databaseProfileRuntimeAccessor));
+        this.profileGenerationSource = profileGenerationSource ?? throw new ArgumentNullException(nameof(profileGenerationSource));
+        this.timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        providersBySourceKind = BuildProviderRegistry(sourceAuthorityProviders ?? CreateDefaultProviders());
+    }
+
+    /// <summary>
+    /// The built-in canonical source rules. Deterministic order; construction
+    /// fails on duplicate source kinds so exactly one provider owns each key.
+    /// </summary>
+    internal static IReadOnlyList<IAgentExecutionSourceAuthorityProvider> CreateDefaultProviders()
+        =>
+        [
+            new ProjectStructureExecutionAuthorityProvider(),
+            new ProjectsExecutionAuthorityProvider(),
+            new ProcessesExecutionAuthorityProvider("processes"),
+            new ProcessesExecutionAuthorityProvider("processes-live")
+        ];
+
+    private static Dictionary<string, IAgentExecutionSourceAuthorityProvider> BuildProviderRegistry(
+        IReadOnlyList<IAgentExecutionSourceAuthorityProvider> providers)
+    {
+        var registry = new Dictionary<string, IAgentExecutionSourceAuthorityProvider>(StringComparer.Ordinal);
+        foreach (var provider in providers)
+        {
+            ArgumentNullException.ThrowIfNull(provider);
+            ArgumentException.ThrowIfNullOrWhiteSpace(provider.SourceKind);
+            if (!registry.TryAdd(provider.SourceKind, provider))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate execution authority provider for source kind '{provider.SourceKind}'.");
+            }
+        }
+
+        return registry;
+    }
 
     public async ValueTask<AgentExecutionAuthorityRecord> ResolveAsync(
         AgentExecutionAuthorityResolutionRequest request,
@@ -32,23 +80,21 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var currentGeneration = profileGenerationSource.GetGeneration();
-        if (currentGeneration != request.ExpectedDatabaseProfileGeneration)
-        {
-            throw new InvalidOperationException(
-                "The current database profile changed while execution authority was being resolved.");
-        }
-
+        EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
         var currentProfile = databaseProfileRuntimeAccessor
             .ResolveCurrentProfile()
             .Profile;
         var agent = await ResolveActiveAgentAsync(request.AgentId, cancellationToken)
             .ConfigureAwait(false);
+        EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
 
-        var (workspaceScope, readAllowed, mutationAllowed, policyVersion) = ResolveSourceAuthority(
+        var (workspaceScope, readAllowed, mutationAllowed, policyVersion) = await ResolveSourceAuthorityAsync(
             request,
             agent,
-            currentProfile.Id);
+            currentProfile.Id,
+            cancellationToken)
+            .ConfigureAwait(false);
+        EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
 
         return new AgentExecutionAuthorityRecord(
             AgentExecutionAuthorityId.Create(),
@@ -94,86 +140,60 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver(
         return agent;
     }
 
-    private (WorkspaceScopeDescriptor Scope, bool ReadAllowed, bool MutationAllowed, string PolicyVersion) ResolveSourceAuthority(
+    private async ValueTask<(WorkspaceScopeDescriptor Scope, bool ReadAllowed, bool MutationAllowed, string PolicyVersion)> ResolveSourceAuthorityAsync(
         AgentExecutionAuthorityResolutionRequest request,
         AgentDefinition agent,
-        Guid currentProfileId)
+        Guid currentProfileId,
+        CancellationToken cancellationToken)
     {
-        var observedScope = request.ObservedWorkspaceScope;
-
-        if (string.Equals(
-                request.SourceKind.Value,
-                AgentChatTrustedSourceKinds.ProjectStructure,
-                StringComparison.Ordinal))
+        // A UI access hint can deny a turn early, but it can never select a
+        // scope, grant read, or grant mutation — those come only from the
+        // source-keyed durable rules below.
+        if (request.UiAccessHint is { } hint &&
+            !hint.Permissions.HasFlag(AgentChatContextPermission.Read))
         {
-            // Trusted project-structure source: the canonical scope is derived
-            // from the source identity, and rights come from durable agent
-            // configuration — never from the UI access projection.
-            if (!Guid.TryParse(request.SourceId.Value, out var projectId) || projectId == Guid.Empty)
-            {
-                throw new AgentExecutionAuthorityMismatchException(
-                    "The project-structure source id is not a valid project identifier.");
-            }
-
-            var canonicalScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
-            if (observedScope is not null && observedScope != canonicalScope)
-            {
-                throw new AgentExecutionAuthorityMismatchException(
-                    $"The published workspace scope '{observedScope.DisplayName}' does not match the canonical project scope '{canonicalScope.DisplayName}'.");
-            }
-
-            var summary = ContextualAgentAccessResolver
-                .Resolve([agent], ContextualAgentWorkspaceKind.ProjectStructure, projectId)
-                .FirstOrDefault();
-            if (summary is null || !summary.CanRead)
-            {
-                throw new AgentChatContextAccessDeniedException(agent.Id, default);
-            }
-
-            return (canonicalScope, true, summary.CanWrite, CanonicalPolicyVersion);
+            throw new AgentChatContextAccessDeniedException(agent.Id, default);
         }
 
-        if (observedScope is null)
+        if (providersBySourceKind.TryGetValue(request.SourceKind.Value, out var provider))
         {
-            return (WorkspaceScopeDescriptor.Sandbox, true, false, ObservedCompatibilityPolicyVersion);
+            var decision = await provider
+                .ResolveAsync(
+                    new AgentExecutionSourceAuthorityRequest(
+                        agent,
+                        request.SourceKind,
+                        request.SourceId,
+                        request.ObservedWorkspaceScope,
+                        currentProfileId),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            // Fence the database profile generation again after the provider's
+            // asynchronous lookup so a mid-resolution profile switch cannot
+            // smuggle a stale decision into admission.
+            EnsureCurrentGeneration(request.ExpectedDatabaseProfileGeneration);
+            return (decision.WorkspaceScope, decision.ReadAllowed, decision.MutationAllowed, decision.PolicyVersion);
         }
 
-        switch (observedScope.Kind)
+        // Unknown source kinds fail closed. A published workspace claim from a
+        // source without a canonical rule is denied outright — it can never be
+        // adopted or silently downgraded; without a claim the turn receives a
+        // bounded read-only sandbox.
+        if (request.ObservedWorkspaceScope is { } observedScope)
         {
-            case WorkspaceScopeKind.Organization:
-                var canonicalOrganizationScope = WorkspaceScopeDescriptor.Organization(
-                    currentProfileId.ToString("N"));
-                if (observedScope != canonicalOrganizationScope)
-                {
-                    throw new AgentExecutionAuthorityMismatchException(
-                        $"The published organization scope '{observedScope.DisplayName}' does not belong to the current database profile.");
-                }
-
-                break;
-            case WorkspaceScopeKind.Project:
-                if (!Guid.TryParse(observedScope.Key, out var scopedProjectId) ||
-                    scopedProjectId == Guid.Empty)
-                {
-                    throw new AgentExecutionAuthorityMismatchException(
-                        $"The published project scope key '{observedScope.Key}' is not a valid project identifier.");
-                }
-
-                break;
-            case WorkspaceScopeKind.Sandbox:
-                break;
-            default:
-                throw new AgentExecutionAuthorityMismatchException(
-                    $"The published workspace scope kind '{observedScope.Kind}' has no canonical authority rule.");
+            throw new AgentExecutionAuthorityMismatchException(
+                $"The source kind '{request.SourceKind.Value}' has no canonical authority rule for the published workspace scope '{observedScope.DisplayName}'.");
         }
 
-        // Compatibility path for sources without a canonical authority rule
-        // yet: keep the currently observed permission projection, explicitly
-        // versioned so it can be tightened per-source later. The UI hint can
-        // only narrow (read-only) — a hint can never grant more than the
-        // recorded compatibility baseline.
-        var hintAllowsMutation = request.UiAccessHint is { } hint &&
-            hint.Permissions.HasFlag(AgentChatContextPermission.Mutate);
-        return (observedScope, true, hintAllowsMutation, ObservedCompatibilityPolicyVersion);
+        return (WorkspaceScopeDescriptor.Sandbox, true, false, FailClosedSandboxPolicyVersion);
+    }
+
+    private void EnsureCurrentGeneration(DatabaseProfileGeneration expectedGeneration)
+    {
+        if (profileGenerationSource.GetGeneration() != expectedGeneration)
+        {
+            throw new InvalidOperationException(
+                "The current database profile changed while execution authority was being resolved.");
+        }
     }
 
     private static string ComputePolicyFingerprint(

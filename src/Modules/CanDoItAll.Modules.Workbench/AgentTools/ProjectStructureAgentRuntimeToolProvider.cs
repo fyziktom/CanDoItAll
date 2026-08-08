@@ -255,7 +255,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 ResolveScopedProcessAccess(context),
                 context.ContextIntent,
                 context.Purpose,
-                ProjectStructureInvocationSnapshotReadContext.Capture(context));
+                ProjectStructureInvocationSnapshotReadContext.Capture(context),
+                context.Governance);
             if (!accessState.CanRead &&
                 !accessState.CanWrite &&
                 !accessState.CanCreateProjects &&
@@ -3341,19 +3342,27 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             ProjectStructureScopedProcessAccess? scopedProcessAccess,
             AgentRuntimeContextIntent contextIntent,
             AgentRuntimeToolProviderPurpose purpose,
-            ProjectStructureInvocationSnapshotReadContext invocationSnapshotReadContext)
+            ProjectStructureInvocationSnapshotReadContext invocationSnapshotReadContext,
+            AgentExecutionGovernanceSnapshot? governance = null)
         {
             ArgumentNullException.ThrowIfNull(contextIntent);
             ArgumentNullException.ThrowIfNull(invocationSnapshotReadContext);
 
+            // The admitted execution governance snapshot is the permission
+            // ceiling for a context-admitted turn: durable configuration and
+            // scoped process access can only narrow within it, never widen
+            // beyond it. Runs without a snapshot (governed process steps,
+            // detached conversations) keep their own authority sources.
+            var governanceReadCeiling = governance?.ReadAllowed ?? true;
+            var governanceMutationCeiling = governance?.MutationAllowed ?? true;
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
-            CanRead = normalized.CanRead || scopedProcessAccess?.CanRead == true;
-            CanWrite = ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized) || scopedProcessAccess?.CanWrite == true;
-            CanWriteUnscoped = normalized.CanWrite;
-            CanWriteStructureUnscoped = normalized.CanWrite || normalized.CanWriteNonTaskStructure;
-            CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized);
-            CanCreateProjects = normalized.CanCreateProjects;
-            CanCreateSubprojects = normalized.CanCreateSubprojects;
+            CanRead = (normalized.CanRead || scopedProcessAccess?.CanRead == true) && governanceReadCeiling;
+            CanWrite = (ProjectStructureNonTaskWritePolicy.CanUseStructureMutationTools(normalized) || scopedProcessAccess?.CanWrite == true) && governanceMutationCeiling;
+            CanWriteUnscoped = normalized.CanWrite && governanceMutationCeiling;
+            CanWriteStructureUnscoped = (normalized.CanWrite || normalized.CanWriteNonTaskStructure) && governanceMutationCeiling;
+            CanWriteTasksUnscoped = ProjectStructureNonTaskWritePolicy.CanUseTaskMutationTools(normalized) && governanceMutationCeiling;
+            CanCreateProjects = normalized.CanCreateProjects && governanceMutationCeiling;
+            CanCreateSubprojects = normalized.CanCreateSubprojects && governanceMutationCeiling;
             RequiresNonTaskWriteGuard = normalized.CanWriteNonTaskStructure &&
                 !normalized.CanWrite &&
                 scopedProcessAccess?.CanWrite != true;

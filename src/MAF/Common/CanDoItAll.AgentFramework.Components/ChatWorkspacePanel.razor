@@ -246,11 +246,18 @@
 
                             @foreach (var approval in PendingApprovals)
                             {
+                                var approvalId = approval.ApprovalId;
+                                var argumentSummary = FormatApprovalArguments(approval.ArgumentsJson);
                                 <div class="rounded-[1.2rem] border border-amber-200 bg-white px-4 py-3">
                                     <Stack GapScale="LayoutGap.Small">
                                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                             <StatusBadge Tone="info" Text="@approval.ToolKind" />
                                             <TextBlock TextStyle="TextStyle.Subtitle2" Value="@approval.ToolName" />
+                                            @if (TryGetApprovalChoice(approvalId, out var choice))
+                                            {
+                                                <StatusBadge Tone="@(choice ? "success" : "warning")"
+                                                             Text="@(choice ? "Will approve" : "Will reject")" />
+                                            }
                                         </Cluster>
 
                                         @if (!string.IsNullOrWhiteSpace(approval.Details))
@@ -258,12 +265,36 @@
                                             <TextBlock TextStyle="TextStyle.Body2" Value="@approval.Details" />
                                         }
 
-                                        @if (!string.IsNullOrWhiteSpace(approval.ArgumentsJson) && approval.ArgumentsJson != "{}")
+                                        @if (!string.IsNullOrWhiteSpace(argumentSummary))
                                         {
-                                            <TextBlock TextStyle="TextStyle.Caption" Value="@approval.ArgumentsJson" />
+                                            <TextBlock TextStyle="TextStyle.Caption" Value="@argumentSummary" />
                                         }
+
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                            <Button Text="Approve"
+                                                    ButtonStyle="@(IsApprovalChoice(approvalId, true) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@IsBusy"
+                                                    Click="@(() => SetApprovalChoice(approvalId, true))"
+                                                    data-testid="@($"chat-approval-approve-{approvalId}")" />
+                                            <Button Text="Reject"
+                                                    ButtonStyle="@(IsApprovalChoice(approvalId, false) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@IsBusy"
+                                                    Click="@(() => SetApprovalChoice(approvalId, false))"
+                                                    data-testid="@($"chat-approval-reject-{approvalId}")" />
+                                        </Cluster>
                                     </Stack>
                                 </div>
+                            }
+
+                            @if (PendingApprovals.Count > 1)
+                            {
+                                <Button Text="Submit decisions"
+                                        Disabled="@(IsBusy || !AllApprovalChoicesMade)"
+                                        IsBusy="@IsBusy"
+                                        Click="SubmitApprovalChoicesAsync"
+                                        data-testid="chat-submit-approval-decisions-button" />
                             }
                         </Stack>
                     </div>
@@ -406,16 +437,16 @@
                                 Click="@(async () => await ApprovalDecisionForConversationRequested.InvokeAsync())"
                                 data-testid="chat-approve-conversation-button" />
                     }
-                    <Button Text="Approve once"
+                    <Button Text="@(PendingApprovals.Count > 1 ? "Approve all once" : "Approve once")"
                             ButtonStyle="ButtonStyle.Light"
                             Disabled="@IsBusy"
                             IsBusy="@IsBusy"
-                            Click="@(async () => await ApprovalDecisionRequested.InvokeAsync(true))"
+                            Click="@(() => SubmitUniformDecisionAsync(true))"
                             data-testid="chat-approve-once-button" />
-                    <Button Text="Reject and continue"
+                    <Button Text="@(PendingApprovals.Count > 1 ? "Reject all and continue" : "Reject and continue")"
                             ButtonStyle="ButtonStyle.Light"
                             Disabled="@IsBusy"
-                            Click="@(async () => await ApprovalDecisionRequested.InvokeAsync(false))"
+                            Click="@(() => SubmitUniformDecisionAsync(false))"
                             data-testid="chat-reject-button" />
                 }
             </Cluster>
@@ -499,8 +530,12 @@
     [Parameter]
     public EventCallback SendRequested { get; set; }
 
+    /// <summary>
+    /// Emits one explicit decision per pending approval (exact coverage). The
+    /// host submits the list unchanged; no bool is expanded across proposals.
+    /// </summary>
     [Parameter]
-    public EventCallback<bool> ApprovalDecisionRequested { get; set; }
+    public EventCallback<IReadOnlyList<PendingToolApprovalDecision>> ApprovalDecisionsRequested { get; set; }
 
     [Parameter]
     public EventCallback ApprovalDecisionForConversationRequested { get; set; }
@@ -527,6 +562,141 @@
         => ActiveRun?.PendingApprovals ?? [];
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
+
+    private readonly Dictionary<string, bool> approvalChoices = new(StringComparer.Ordinal);
+
+    private bool AllApprovalChoicesMade =>
+        PendingApprovals.Count > 0 &&
+        PendingApprovals.All(approval => approvalChoices.ContainsKey(approval.ApprovalId));
+
+    private bool TryGetApprovalChoice(string approvalId, out bool approved)
+        => approvalChoices.TryGetValue(approvalId, out approved);
+
+    private bool IsApprovalChoice(string approvalId, bool approved)
+        => approvalChoices.TryGetValue(approvalId, out var choice) && choice == approved;
+
+    private Task SetApprovalChoice(string approvalId, bool approved)
+    {
+        approvalChoices[approvalId] = approved;
+        // A single pending approval needs no separate submit step — the
+        // explicit per-proposal choice is already the complete decision set.
+        return PendingApprovals.Count == 1 && AllApprovalChoicesMade
+            ? SubmitApprovalChoicesAsync()
+            : Task.CompletedTask;
+    }
+
+    private Task SubmitApprovalChoicesAsync()
+    {
+        if (!AllApprovalChoicesMade)
+        {
+            return Task.CompletedTask;
+        }
+
+        var decisions = PendingApprovals
+            .Select(approval => new PendingToolApprovalDecision(
+                approval.ApprovalId,
+                approvalChoices[approval.ApprovalId]))
+            .ToArray();
+        return ApprovalDecisionsRequested.InvokeAsync(decisions);
+    }
+
+    private Task SubmitUniformDecisionAsync(bool approved)
+    {
+        // Explicit whole-set action: the user chose to apply one decision to
+        // every pending proposal.
+        var decisions = PendingApprovals
+            .Select(approval => new PendingToolApprovalDecision(approval.ApprovalId, approved))
+            .ToArray();
+        return decisions.Length == 0
+            ? Task.CompletedTask
+            : ApprovalDecisionsRequested.InvokeAsync(decisions);
+    }
+
+    private void PruneStaleApprovalChoices()
+    {
+        if (approvalChoices.Count == 0)
+        {
+            return;
+        }
+
+        var pendingIds = PendingApprovals
+            .Select(approval => approval.ApprovalId)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var staleId in approvalChoices.Keys.Where(id => !pendingIds.Contains(id)).ToList())
+        {
+            approvalChoices.Remove(staleId);
+        }
+    }
+
+    /// <summary>
+    /// Display-safe projection of the proposal's arguments: values for
+    /// sensitive-looking keys are masked and long values are truncated, so the
+    /// user sees exactly which tool and targets are requested without the raw
+    /// argument payload leaking secrets into the UI.
+    /// </summary>
+    internal static string FormatApprovalArguments(string? argumentsJson)
+    {
+        if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson.Trim() == "{}")
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                parts.Add($"{property.Name}: {FormatApprovalArgumentValue(property.Name, property.Value)}");
+            }
+
+            return string.Join(" · ", parts);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return string.Empty;
+        }
+    }
+
+    private static readonly string[] SensitiveArgumentKeyMarkers =
+    [
+        "secret",
+        "token",
+        "password",
+        "credential",
+        "apikey",
+        "api_key",
+        "authorization",
+        "connectionstring"
+    ];
+
+    private static string FormatApprovalArgumentValue(string key, System.Text.Json.JsonElement value)
+    {
+        if (SensitiveArgumentKeyMarkers.Any(marker =>
+                key.Contains(marker, StringComparison.OrdinalIgnoreCase)))
+        {
+            return "•••";
+        }
+
+        var text = value.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.String => value.GetString() ?? string.Empty,
+            System.Text.Json.JsonValueKind.Number or
+            System.Text.Json.JsonValueKind.True or
+            System.Text.Json.JsonValueKind.False => value.GetRawText(),
+            System.Text.Json.JsonValueKind.Null => "null",
+            _ => $"({value.ValueKind.ToString().ToLowerInvariant()})"
+        };
+        const int maximumDisplayLength = 160;
+        return text.Length <= maximumDisplayLength
+            ? text
+            : $"{text[..maximumDisplayLength]}… ({text.Length} chars)";
+    }
     private readonly EditableThreadTitleModel titleEditor = new();
     private readonly string attachmentInputId = $"chat-attachment-file-input-{Guid.NewGuid():N}";
     private Guid? titleEditorSessionId;
@@ -534,6 +704,7 @@
 
     protected override void OnParametersSet()
     {
+        PruneStaleApprovalChoices();
         if (Session is null)
         {
             titleEditorSessionId = null;

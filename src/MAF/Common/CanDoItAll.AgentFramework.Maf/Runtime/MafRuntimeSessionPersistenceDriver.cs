@@ -136,10 +136,14 @@ internal sealed class MafRuntimeSessionPersistenceDriver : IMafRuntimeSessionPer
             ProviderTransport: provider.Transport,
             Model: model,
             ToolsetFingerprint: runtimeOptions.ToolsetFingerprint,
-            ContextPolicyFingerprint: runtimeOptions.ContextPolicyFingerprint,
+            ContextPolicyFingerprint: runtimeOptions.ModelContextDigest,
             PayloadJson: payloadJson,
             CapturedAtUtc: DateTimeOffset.UtcNow,
-            HistoryMode: runtimeOptions.HistoryMode));
+            HistoryMode: runtimeOptions.HistoryMode)
+        {
+            AuthorityPolicyFingerprint = runtimeOptions.AuthorityPolicyFingerprint,
+            CapabilityPolicyFingerprint = runtimeOptions.CapabilityPolicyFingerprint
+        });
         return envelope.ToJson();
     }
 

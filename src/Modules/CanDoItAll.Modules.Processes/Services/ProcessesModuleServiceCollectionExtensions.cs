@@ -164,6 +164,9 @@ public static class ProcessesModuleServiceCollectionExtensions
             IAgentExecutionOutcomeRecoveryPolicy,
             ProcessAgentExecutionOutcomeRecoveryPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IToolInvocationPolicyContextContributor,
+            ProcessToolInvocationPolicyContextContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionProviderSelectionPolicy,
             ProcessExecutionProviderSelectionPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<

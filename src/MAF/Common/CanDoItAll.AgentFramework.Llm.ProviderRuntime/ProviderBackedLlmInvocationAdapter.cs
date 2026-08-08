@@ -15,6 +15,9 @@ public sealed class ProviderBackedLlmInvocationAdapter(
     IProviderRuntimeDescriptorStore descriptorStore,
     IProviderRuntimePool runtimePool) : ILlmInvocationPort
 {
+    /// <summary>One stateless retry for intermittent empty terminal responses.</summary>
+    public const int MaximumEmptyResponseAttempts = 2;
+
     public async Task<LlmInvocationResult> InvokeAsync(
         LlmInvocationRequest request,
         CancellationToken cancellationToken = default)
@@ -23,6 +26,75 @@ public sealed class ProviderBackedLlmInvocationAdapter(
 
         var provider = request.Provider;
         var model = ResolveModel(provider, request.Model);
+        using var deadlineCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (request.Timeout is { } timeout)
+        {
+            deadlineCancellation.CancelAfter(timeout);
+        }
+
+        try
+        {
+            for (var attempt = 1; ; attempt++)
+            {
+                ProviderChatCompletionResult result;
+                try
+                {
+                    result = await DispatchAsync(request, provider, model, deadlineCancellation.Token)
+                        .ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    // Sanitized typed failure: stable identifiers only. The raw
+                    // provider exception stays as the inner exception for
+                    // structured logging and never reaches user-facing text.
+                    throw new LlmInvocationException(
+                        LlmInvocationFailureKind.ProviderFailure,
+                        provider.Name,
+                        model,
+                        request.CorrelationId,
+                        exception);
+                }
+
+                if (!string.IsNullOrWhiteSpace(result.ResponseText))
+                {
+                    return new LlmInvocationResult(
+                        result.Model,
+                        result.ResponseText,
+                        new LlmUsage(result.InputTokens, result.OutputTokens, result.CachedInputTokens));
+                }
+
+                if (attempt >= MaximumEmptyResponseAttempts)
+                {
+                    throw new LlmInvocationException(
+                        LlmInvocationFailureKind.EmptyResponse,
+                        provider.Name,
+                        model,
+                        request.CorrelationId);
+                }
+            }
+        }
+        catch (OperationCanceledException exception) when (
+            !cancellationToken.IsCancellationRequested && deadlineCancellation.IsCancellationRequested)
+        {
+            throw new LlmInvocationException(
+                LlmInvocationFailureKind.DeadlineExceeded,
+                provider.Name,
+                model,
+                request.CorrelationId,
+                exception);
+        }
+    }
+
+    private async Task<ProviderChatCompletionResult> DispatchAsync(
+        LlmInvocationRequest request,
+        ProviderProfile provider,
+        string model,
+        CancellationToken cancellationToken)
+    {
         var handle = await GetRuntimeHandleAsync(provider, cancellationToken).ConfigureAwait(false);
         var query = new ProviderDispatchQuery(
             provider,
@@ -39,7 +111,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             request.Settings?.ModelParameterConfigurationJson ?? string.Empty,
             request.Settings?.Temperature,
             BuildResponseFormat(request.ResponseFormat));
-        var result = await handle.DispatchAsync(
+        return await handle.DispatchAsync(
             new ProviderRuntimeDispatchRequest<ProviderChatCompletionRequest>(query, payload),
             async (context, token) =>
             {
@@ -48,16 +120,6 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                 return await driver.CompleteChatAsync(context.Payload, token).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
-
-        if (string.IsNullOrWhiteSpace(result.ResponseText))
-        {
-            throw new InvalidOperationException("The provider returned an empty response to the lightweight LLM invocation.");
-        }
-
-        return new LlmInvocationResult(
-            result.Model,
-            result.ResponseText,
-            new LlmUsage(result.InputTokens, result.OutputTokens, result.CachedInputTokens));
     }
 
     private async ValueTask<IProviderRuntimeHandle> GetRuntimeHandleAsync(
@@ -168,11 +230,13 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             _ => ChatMessageRole.User
         };
 
-    private static IReadOnlyList<ProviderChatAttachment>? BuildAttachments(IReadOnlyList<LlmAttachment>? attachments)
-        => attachments?.Select(attachment => new ProviderChatAttachment(
-            attachment.Name,
-            attachment.ContentType,
-            attachment.Bytes)).ToArray();
+    private static IReadOnlyList<ProviderChatAttachment>? BuildAttachments(IReadOnlyList<LlmAttachment> attachments)
+        => attachments.Count == 0
+            ? null
+            : attachments.Select(attachment => new ProviderChatAttachment(
+                attachment.Name,
+                attachment.ContentType,
+                [.. attachment.Bytes])).ToArray();
 
     private static ProviderChatResponseFormat? BuildResponseFormat(LlmResponseFormat? responseFormat)
         => responseFormat is null

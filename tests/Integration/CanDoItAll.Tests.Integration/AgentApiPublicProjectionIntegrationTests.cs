@@ -7,6 +7,7 @@ using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentApiPublicProjectionIntegrationTests

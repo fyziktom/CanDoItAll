@@ -16,6 +16,9 @@ internal sealed class MafRuntimeStateAdapter : IAgentRuntimeStateAdapter
 {
     private static readonly Lazy<string> CachedAdapterPackageVersion = new(ResolveAdapterPackageVersion);
 
+    /// <summary>The current Microsoft.Agents.AI package version this adapter runs against.</summary>
+    internal static string AdapterPackageVersion => CachedAdapterPackageVersion.Value;
+
     public string AdapterId => RuntimeStateAdapterIds.Maf;
 
     public RuntimeStateEnvelope CreateEnvelope(AgentRuntimeStateCaptureRequest request)
@@ -34,7 +37,9 @@ internal sealed class MafRuntimeStateAdapter : IAgentRuntimeStateAdapter
             request.CapturedAtUtc,
             request.PayloadJson)
         {
-            HistoryMode = request.HistoryMode
+            HistoryMode = request.HistoryMode,
+            AuthorityPolicyFingerprint = request.AuthorityPolicyFingerprint,
+            CapabilityPolicyFingerprint = request.CapabilityPolicyFingerprint
         };
     }
 

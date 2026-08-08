@@ -32,7 +32,8 @@ internal sealed record MafAgentRuntimeDependencies(
     IMafApprovalContinuationDriver ApprovalContinuationDriver,
     IMafRuntimeSessionPersistenceDriver SessionPersistenceDriver,
     MafRuntimeCapabilityDependencies CapabilityDependencies,
-    IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy> ExecutionOutcomeRecoveryPolicies)
+    IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy> ExecutionOutcomeRecoveryPolicies,
+    AgentToolInvocationPolicyPipeline ToolInvocationPolicyPipeline)
 {
     public static MafAgentRuntimeDependencies FromServices(IServiceProvider serviceProvider)
     {
@@ -78,12 +79,17 @@ internal sealed record MafAgentRuntimeDependencies(
             workspaceRuntimeServicesFactory!,
             serviceProvider.GetService(typeof(ISpreadsheetDocumentService)) as ISpreadsheetDocumentService
                 ?? new ClosedXmlSpreadsheetDocumentService(),
-            serviceProvider.GetService(typeof(IMafApprovalContinuationDriver)) as IMafApprovalContinuationDriver
-                ?? new MafApprovalContinuationDriver(),
-            serviceProvider.GetService(typeof(IMafRuntimeSessionPersistenceDriver)) as IMafRuntimeSessionPersistenceDriver
-                ?? new MafRuntimeSessionPersistenceDriver(),
+            // Internal single-implementation drivers are constructed directly:
+            // they are not composition seams, so a container can never swap in
+            // a divergent graph silently.
+            new MafApprovalContinuationDriver(),
+            new MafRuntimeSessionPersistenceDriver(),
             MafRuntimeCapabilityDependencies.FromServices(serviceProvider),
-            serviceProvider.GetServices<IAgentExecutionOutcomeRecoveryPolicy>().ToList());
+            serviceProvider.GetServices<IAgentExecutionOutcomeRecoveryPolicy>().ToList(),
+            new AgentToolInvocationPolicyPipeline(
+                serviceProvider.GetService(typeof(IAgentToolInvocationPolicy)) as IAgentToolInvocationPolicy
+                    ?? new DefaultAgentToolInvocationPolicy(),
+                serviceProvider.GetServices<IToolInvocationPolicyContextContributor>().ToList()));
     }
 }
 
@@ -123,7 +129,11 @@ internal sealed record MafRuntimeCapabilityDependencies(
             serviceProvider.GetService(typeof(IMcpClientFactory)) as IMcpClientFactory
                 ?? new LocalStdioMcpClientFactory(),
             serviceProvider.GetService(typeof(ISecretRuntimeResolver)) as ISecretRuntimeResolver,
-            new ServiceProviderRegisteredCapabilityServiceSource(serviceProvider));
+            new ServiceProviderRegisteredCapabilityServiceSource(
+                serviceProvider,
+                serviceProvider.GetServices<RegisteredCapabilityServiceDescriptor>()
+                    .Select(descriptor => descriptor.ServiceType)
+                    .ToHashSet()));
     }
 }
 
@@ -149,11 +159,34 @@ internal interface IRegisteredCapabilityServiceSource
 /// It lives in this composition file so runtime code depends on the typed
 /// <see cref="IRegisteredCapabilityServiceSource"/> contract instead of <see cref="IServiceProvider"/>.
 /// </summary>
-internal sealed class ServiceProviderRegisteredCapabilityServiceSource(IServiceProvider serviceProvider) : IRegisteredCapabilityServiceSource
+internal sealed class ServiceProviderRegisteredCapabilityServiceSource(
+    IServiceProvider serviceProvider,
+    IReadOnlySet<Type> approvedServiceTypes) : IRegisteredCapabilityServiceSource
 {
     public object? Resolve(Type serviceType)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
+        // Capability configuration can only reach service types a module
+        // explicitly approved via RegisteredCapabilityServiceDescriptor; an
+        // arbitrary configured type name fails closed instead of resolving
+        // whatever happens to be registered in the container.
+        if (!approvedServiceTypes.Contains(serviceType))
+        {
+            throw new InvalidOperationException(
+                $"Service type '{serviceType.FullName}' is not an approved registered capability service. Register a RegisteredCapabilityServiceDescriptor for it in the owning module.");
+        }
+
         return serviceProvider.GetService(serviceType);
     }
+}
+
+/// <summary>
+/// Explicit approval of one service type for data-driven capability
+/// configuration. Modules register a descriptor for every plugin/skill service
+/// type their capability configurations may reference; anything else fails
+/// closed at composition time.
+/// </summary>
+public sealed record RegisteredCapabilityServiceDescriptor(Type ServiceType)
+{
+    public Type ServiceType { get; } = ServiceType ?? throw new ArgumentNullException(nameof(ServiceType));
 }

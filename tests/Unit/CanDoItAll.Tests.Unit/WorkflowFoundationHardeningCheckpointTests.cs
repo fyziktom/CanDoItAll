@@ -47,9 +47,15 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
                 "CanDoItAll.AgentFramework.Workflows.Runtime",
                 [
                     "CanDoItAll.AgentFramework.Core",
+                    // The neutral workflow LLM invocation stack (stateless
+                    // port + invoker) is owned by the Workflows runtime, not
+                    // the MAF adapter.
+                    "CanDoItAll.AgentFramework.Llm.Abstractions",
+                    "CanDoItAll.AgentFramework.Llm.ProviderRuntime",
                     "CanDoItAll.AgentFramework.Models",
                     "CanDoItAll.AgentFramework.WorkflowExecutors.Core",
-                    "CanDoItAll.AgentFramework.Workflows.Abstractions"
+                    "CanDoItAll.AgentFramework.Workflows.Abstractions",
+                    "CanDoItAll.AgentFramework.Workflows.Core"
                 ],
                 ["Microsoft.Extensions.DependencyInjection.Abstractions"])
         };

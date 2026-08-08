@@ -94,7 +94,7 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
             runtimeOptions,
             workspaceScope);
         var workspaceRuntimeServices = workspaceRuntimeServicesFactory.Create(
-            new WorkspaceExecutionScope(workspaceRoot, effectiveWorkspaceScope));
+            WorkspaceExecutionScope.ForRun(workspaceRoot, effectiveWorkspaceScope, runtimeOptions.Governance));
         RuntimeBuildResult runtimeBuild;
         try
         {
@@ -132,8 +132,13 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
             var capabilityState = runtimeBuild.CapabilityState;
             runtimeOptions = runtimeOptions with
             {
-                ToolsetFingerprint = MafToolsetFingerprint.Compute(
+                ToolsetFingerprint = MafToolsetFingerprint.ComputeContractFingerprint(
+                    capabilityState?.Tools ?? []),
+                LegacyToolsetNameFingerprint = MafToolsetFingerprint.Compute(
                     (capabilityState?.Tools ?? []).Select(tool => tool.Name)),
+                CapabilityPolicyFingerprint = MafToolsetFingerprint.Compute(
+                    (capabilityState?.EffectiveCapabilityDescriptors ?? [])
+                        .Select(descriptor => descriptor.Identity.ToString())),
                 HistoryMode = agent.ChatHistoryMode
             };
 

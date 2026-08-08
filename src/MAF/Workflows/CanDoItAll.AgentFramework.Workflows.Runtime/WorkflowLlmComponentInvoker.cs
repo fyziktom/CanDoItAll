@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.AgentFramework.Maf;
+namespace CanDoItAll.AgentFramework.Workflows.Runtime;
 
 /// <summary>
 /// Executes ordinary workflow LLM-call nodes over the lightweight, provider-neutral <see cref="ILlmInvocationPort"/>.
@@ -11,7 +11,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 /// contributors, and never infers workspace/authority scope from workflow payload content - the port is a
 /// stateless single-turn transformation, not a reduced agent runtime.
 /// </summary>
-public sealed class MafWorkflowLlmComponentInvoker(
+public sealed class WorkflowLlmComponentInvoker(
     ILlmInvocationPort llmInvocationPort,
     IProviderRuntimeProfileSource providerSource,
     IProviderProfileService providerProfileService,
@@ -53,14 +53,15 @@ public sealed class MafWorkflowLlmComponentInvoker(
             provider,
             model,
             messages,
-            ResponseFormat: requiresJson
+            responseFormat: requiresJson
                 ? new LlmResponseFormat(
                     true,
                     ResolveResponseFormatJsonSchema(effectiveComponent),
                     "workflow_llm_component_result",
                     $"Workflow LLM component '{effectiveComponent.Name}' JSON result.")
                 : null,
-            Settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature ?? 0.2));
+            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature ?? 0.2),
+            correlationId: $"workflow:{definition.Id:N}:{node.Id}");
 
         LlmInvocationResult response;
         try

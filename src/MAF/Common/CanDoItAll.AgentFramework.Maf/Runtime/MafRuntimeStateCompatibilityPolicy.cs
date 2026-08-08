@@ -7,13 +7,18 @@ namespace CanDoItAll.AgentFramework.Maf;
 /// Explicit MAF compatibility rule set for restoring a persisted <see cref="RuntimeStateEnvelope"/>.
 /// Every rule returns a named, log-safe outcome — never a silent reset or replay. Order matters:
 /// adapter/schema range is checked first (a completely foreign envelope never reaches the
-/// fingerprint comparisons), then provider/model identity, then toolset/context-policy
-/// fingerprints. Missing state and legacy state are handled before any envelope fields exist to
-/// compare.
+/// fingerprint comparisons), then the explicit adapter package range, then provider/model
+/// identity, then the effective history mode, then the versioned fingerprint dimensions.
+/// Schema v1 envelopes compare their names-only toolset fingerprint against the current
+/// legacy digest and carry no policy-split fingerprints; schema v2 envelopes compare the
+/// tool-contract fingerprint plus the separated authority-policy, capability-policy, and
+/// model-context dimensions. Missing state and legacy state are handled before any envelope
+/// fields exist to compare.
 /// </summary>
 internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatibilityPolicy
 {
     internal const string LegacyWrapMigrationId = "legacy-v0-wrap-v1";
+    internal const string EnvelopeV1ReadMigrationId = "envelope-v1-names-toolset-read";
 
     public RuntimeStateCompatibilityDecision Evaluate(RuntimeStateCompatibilityRequest request)
     {
@@ -25,7 +30,7 @@ internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatib
             {
                 return new RuntimeStateCompatibilityDecision(
                     RuntimeStateCompatibilityOutcome.RegisteredMigration,
-                    "Legacy unversioned Microsoft Agent Framework session state was found and is parseable; wrapping it as schema v1 for this restore.",
+                    "Legacy unversioned Microsoft Agent Framework session state was found and is parseable; wrapping it as a versioned envelope for this restore.",
                     LegacyWrapMigrationId);
             }
 
@@ -53,6 +58,16 @@ internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatib
                 $"Envelope adapter '{envelope.AdapterId}' schema {envelope.SchemaVersion} is outside the readable range for adapter '{RuntimeStateAdapterIds.Maf}' (1-{RuntimeStateEnvelope.CurrentSchemaVersion}).");
         }
 
+        if (!IsAdapterPackageWithinCompatibilityRange(
+                envelope.AdapterPackageVersion,
+                request.CurrentAdapterPackageVersion,
+                out var packageRangeReason))
+        {
+            return new RuntimeStateCompatibilityDecision(
+                RuntimeStateCompatibilityOutcome.Incompatible,
+                packageRangeReason);
+        }
+
         if (envelope.ProviderProfileId != request.CurrentProviderProfileId ||
             envelope.ProviderTransport != request.CurrentProviderTransport)
         {
@@ -68,22 +83,134 @@ internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatib
                 $"Model changed since this state was captured (captured '{envelope.Model}', current '{request.CurrentModel}').");
         }
 
-        if (!string.Equals(envelope.ToolsetFingerprint, request.CurrentToolsetFingerprint, StringComparison.Ordinal))
+        // Effective history mode: state captured under a different history
+        // mode is never restored as-is. Envelopes written before the field
+        // existed omit it; absence stays tolerated rather than widening or
+        // narrowing eligibility retroactively.
+        if (envelope.HistoryMode is { } capturedHistoryMode &&
+            request.CurrentHistoryMode is { } currentHistoryMode &&
+            capturedHistoryMode != currentHistoryMode)
         {
             return new RuntimeStateCompatibilityDecision(
                 RuntimeStateCompatibilityOutcome.Incompatible,
-                "The composed runtime toolset fingerprint no longer matches the fingerprint captured with this state.");
+                $"The effective chat-history mode changed since this state was captured (captured {capturedHistoryMode}, current {currentHistoryMode}).");
+        }
+
+        if (envelope.SchemaVersion == 1)
+        {
+            return EvaluateSchemaV1(envelope, request);
+        }
+
+        return EvaluateSchemaV2(envelope, request);
+    }
+
+    private static RuntimeStateCompatibilityDecision EvaluateSchemaV1(
+        RuntimeStateEnvelope envelope,
+        RuntimeStateCompatibilityRequest request)
+    {
+        // v1 toolset fingerprints hash tool names only. Comparing them against
+        // the current names-only digest keeps conversations captured before
+        // the contract hash restorable; the next persist stamps schema v2.
+        if (!string.Equals(envelope.ToolsetFingerprint, request.CurrentLegacyToolsetNameFingerprint, StringComparison.Ordinal))
+        {
+            return new RuntimeStateCompatibilityDecision(
+                RuntimeStateCompatibilityOutcome.Incompatible,
+                "The composed runtime toolset no longer matches the tool names captured with this schema-v1 state.");
         }
 
         if (!string.Equals(envelope.ContextPolicyFingerprint, request.CurrentContextPolicyFingerprint, StringComparison.Ordinal))
         {
             return new RuntimeStateCompatibilityDecision(
                 RuntimeStateCompatibilityOutcome.Incompatible,
-                "The context-policy fingerprint no longer matches the fingerprint captured with this state.");
+                "The model-context digest (context-policy fingerprint) no longer matches the digest captured with this schema-v1 state.");
         }
 
         return new RuntimeStateCompatibilityDecision(
             RuntimeStateCompatibilityOutcome.CompatibleRestore,
-            "Envelope adapter, schema, provider, model, toolset, and context-policy fingerprints all match the current run.");
+            "Schema-v1 envelope matches the current run by provider, model, history mode, tool names, and model-context digest; restoring and re-stamping as schema v2 on the next persist.",
+            EnvelopeV1ReadMigrationId);
+    }
+
+    private static RuntimeStateCompatibilityDecision EvaluateSchemaV2(
+        RuntimeStateEnvelope envelope,
+        RuntimeStateCompatibilityRequest request)
+    {
+        if (!string.Equals(envelope.ToolsetFingerprint, request.CurrentToolsetFingerprint, StringComparison.Ordinal))
+        {
+            return new RuntimeStateCompatibilityDecision(
+                RuntimeStateCompatibilityOutcome.Incompatible,
+                "The composed runtime toolset contracts (names, schemas, classifications, approval wrappers) no longer match the contracts captured with this state.");
+        }
+
+        if (!string.Equals(envelope.ContextPolicyFingerprint, request.CurrentContextPolicyFingerprint, StringComparison.Ordinal))
+        {
+            return new RuntimeStateCompatibilityDecision(
+                RuntimeStateCompatibilityOutcome.Incompatible,
+                "The model-context digest (context-policy fingerprint) no longer matches the digest captured with this state.");
+        }
+
+        if (!string.Equals(envelope.AuthorityPolicyFingerprint, request.CurrentAuthorityPolicyFingerprint, StringComparison.Ordinal))
+        {
+            return new RuntimeStateCompatibilityDecision(
+                RuntimeStateCompatibilityOutcome.Incompatible,
+                "The admitted execution authority policy changed since this state was captured.");
+        }
+
+        if (!string.Equals(envelope.CapabilityPolicyFingerprint, request.CurrentCapabilityPolicyFingerprint, StringComparison.Ordinal))
+        {
+            return new RuntimeStateCompatibilityDecision(
+                RuntimeStateCompatibilityOutcome.Incompatible,
+                "The effectively exposed capability set changed since this state was captured.");
+        }
+
+        return new RuntimeStateCompatibilityDecision(
+            RuntimeStateCompatibilityOutcome.CompatibleRestore,
+            "Envelope adapter, schema, package range, provider, model, history mode, tool contracts, authority policy, capability policy, and model-context digest all match the current run.");
+    }
+
+    /// <summary>
+    /// Explicit adapter package compatibility range: the same major version is
+    /// compatible; a different major version fails closed. When either side's
+    /// version is unavailable or unparseable, the range check is skipped and
+    /// the fingerprint dimensions above remain the deciding rules.
+    /// </summary>
+    internal static bool IsAdapterPackageWithinCompatibilityRange(
+        string capturedVersion,
+        string currentVersion,
+        out string incompatibleReason)
+    {
+        incompatibleReason = string.Empty;
+        if (!TryParseMajor(capturedVersion, out var capturedMajor) ||
+            !TryParseMajor(currentVersion, out var currentMajor))
+        {
+            return true;
+        }
+
+        if (capturedMajor == currentMajor)
+        {
+            return true;
+        }
+
+        incompatibleReason =
+            $"The Microsoft Agent Framework adapter package major version changed since this state was captured (captured '{capturedVersion}', current '{currentVersion}').";
+        return false;
+    }
+
+    private static bool TryParseMajor(string version, out int major)
+    {
+        major = 0;
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            return false;
+        }
+
+        var span = version.AsSpan().Trim();
+        var end = 0;
+        while (end < span.Length && char.IsAsciiDigit(span[end]))
+        {
+            end++;
+        }
+
+        return end > 0 && int.TryParse(span[..end], out major);
     }
 }

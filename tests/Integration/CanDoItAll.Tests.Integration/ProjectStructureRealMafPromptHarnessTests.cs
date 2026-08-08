@@ -21,7 +21,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectStructureRealMafPromptHarnessTests
 {
-    private const string UnauthorizedSentinelAssetTitle = "SB01 authority-negative sentinel asset";
+    private const string UnauthorizedSentinelAssetTitle = "Authority-negative sentinel asset";
 
     private static readonly byte[] BaselineAssetBytes = Encoding.UTF8.GetBytes(
         "# Acceptance baseline\n\nThis content hash must remain exact.\n");
@@ -93,25 +93,23 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         Assert.Equal(ExecutionState.Completed, executionResult.State);
         Assert.Equal("Deterministic Project Structure tool loop completed.", executionResult.ResponseText);
 
-        Assert.Equal(5, scriptedClient.InvocationCount);
+        Assert.Equal(3, scriptedClient.InvocationCount);
         Assert.False(string.IsNullOrWhiteSpace(scriptedClient.FactoryProviderName));
         Assert.False(string.IsNullOrWhiteSpace(scriptedClient.FactoryModel));
         Assert.Equal(
             [
-                ScriptedProjectStructureChatClient.ProjectLeaseAcquireToolName,
                 ScriptedProjectStructureChatClient.NodeCreateToolName,
-                ScriptedProjectStructureChatClient.StructureReadToolName,
-                ScriptedProjectStructureChatClient.LeaseReleaseToolName
+                ScriptedProjectStructureChatClient.StructureReadToolName
             ],
             scriptedClient.IssuedToolNames);
         Assert.All(
             scriptedClient.CapturedToolNames,
             toolNames =>
             {
-                Assert.Contains(ScriptedProjectStructureChatClient.ProjectLeaseAcquireToolName, toolNames);
                 Assert.Contains(ScriptedProjectStructureChatClient.NodeCreateToolName, toolNames);
                 Assert.Contains(ScriptedProjectStructureChatClient.StructureReadToolName, toolNames);
-                Assert.Contains(ScriptedProjectStructureChatClient.LeaseReleaseToolName, toolNames);
+                Assert.DoesNotContain(ScriptedProjectStructureChatClient.ProjectLeaseAcquireToolName, toolNames);
+                Assert.DoesNotContain(ScriptedProjectStructureChatClient.LeaseReleaseToolName, toolNames);
             });
 
         var derivedNode = Assert.IsType<ProjectStructureNodeSummary>(scriptedClient.CreatedNode);
@@ -136,11 +134,14 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         Assert.Equal(ProjectObjectType.ProjectBlock, canonicalNode.ObjectType);
         Assert.Equal("architecture", canonicalNode.ObjectSubtype);
 
+        // Success facts (exit summary, provider key) are internal acceptance
+        // evidence read through the workspace service; the public receipts API
+        // deliberately exposes only the privacy-safe projection.
         using var receiptsResponse = await host.Client.GetAsync(
             $"/api/agents/{agentId:D}/execution-runs/{executionResult.ExecutionRunId:D}/tool-receipts");
         Assert.Equal(HttpStatusCode.OK, receiptsResponse.StatusCode);
-        var receipts = await receiptsResponse.Content.ReadFromJsonAsync<List<ToolExecutionReceiptRecord>>(ApiJsonOptions)
-            ?? throw new InvalidOperationException("The execution receipt endpoint returned no result.");
+        var receipts = (await workspaceService.ListToolExecutionReceiptsAsync(
+            executionResult.ExecutionRunId)).ToList();
         var expectedReceiptNames = scriptedClient.IssuedToolNames.ToHashSet(StringComparer.Ordinal);
         var projectStructureReceipts = receipts
             .Where(receipt => expectedReceiptNames.Contains(receipt.ToolName))
@@ -152,9 +153,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             Assert.Equal("project-structure.runtime-tools", receipt.RuntimeToolProviderKey);
         });
 
-        Assert.NotNull(scriptedClient.AcquiredLease);
-        Assert.NotNull(scriptedClient.ReleasedLease);
-        Assert.False(scriptedClient.ReleasedLease!.IsActive);
+        // Implicit mutation lease: acquired and released inside the mutation
+        // tool; nothing may remain active afterwards.
         Assert.Null(await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
             project.Id.ToString("D")));
@@ -306,23 +306,21 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
             ?? throw new InvalidOperationException("The execution endpoint returned no result.");
         Assert.Equal(ExecutionState.Completed, executionResult.State);
         Assert.Equal("Deterministic Project Structure tool loop completed.", executionResult.ResponseText);
-        Assert.Equal(5, scriptedClient.InvocationCount);
+        Assert.Equal(3, scriptedClient.InvocationCount);
         Assert.Equal(
             [
-                ScriptedProjectStructureChatClient.ProjectLeaseAcquireToolName,
                 ScriptedProjectStructureChatClient.NodesCopyToolName,
-                ScriptedProjectStructureChatClient.StructureReadToolName,
-                ScriptedProjectStructureChatClient.LeaseReleaseToolName
+                ScriptedProjectStructureChatClient.StructureReadToolName
             ],
             scriptedClient.IssuedToolNames);
         Assert.All(
             scriptedClient.CapturedToolNames,
             toolNames =>
             {
-                Assert.Contains(ScriptedProjectStructureChatClient.ProjectLeaseAcquireToolName, toolNames);
                 Assert.Contains(ScriptedProjectStructureChatClient.NodesCopyToolName, toolNames);
                 Assert.Contains(ScriptedProjectStructureChatClient.StructureReadToolName, toolNames);
-                Assert.Contains(ScriptedProjectStructureChatClient.LeaseReleaseToolName, toolNames);
+                Assert.DoesNotContain(ScriptedProjectStructureChatClient.ProjectLeaseAcquireToolName, toolNames);
+                Assert.DoesNotContain(ScriptedProjectStructureChatClient.LeaseReleaseToolName, toolNames);
             });
 
         var copyResult = Assert.IsType<ProjectStructureNodesCopyResult>(scriptedClient.CopyResult);
@@ -358,11 +356,14 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 .Order(StringComparer.Ordinal)
                 .ToArray());
 
+        // Success facts (exit summary, provider key) are internal acceptance
+        // evidence read through the workspace service; the public receipts API
+        // deliberately exposes only the privacy-safe projection.
         using var receiptsResponse = await host.Client.GetAsync(
             $"/api/agents/{agentId:D}/execution-runs/{executionResult.ExecutionRunId:D}/tool-receipts");
         Assert.Equal(HttpStatusCode.OK, receiptsResponse.StatusCode);
-        var receipts = await receiptsResponse.Content.ReadFromJsonAsync<List<ToolExecutionReceiptRecord>>(ApiJsonOptions)
-            ?? throw new InvalidOperationException("The execution receipt endpoint returned no result.");
+        var receipts = (await workspaceService.ListToolExecutionReceiptsAsync(
+            executionResult.ExecutionRunId)).ToList();
         var requiredToolNames = scriptedClient.IssuedToolNames.ToArray();
         var requiredToolNameSet = requiredToolNames.ToHashSet(StringComparer.Ordinal);
         var projectStructureReceipts = receipts
@@ -386,9 +387,8 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
                 StringComparison.Ordinal));
         Assert.Equal("RuntimeProvider:Mutation", copyReceipt.RiskClass);
 
-        Assert.NotNull(scriptedClient.AcquiredLease);
-        Assert.NotNull(scriptedClient.ReleasedLease);
-        Assert.False(scriptedClient.ReleasedLease!.IsActive);
+        // Implicit mutation lease: acquired and released inside the mutation
+        // tool; nothing may remain active afterwards.
         Assert.Null(await leaseService.GetActiveLeaseAsync(
             ProjectStructureLeaseScopeKind.Project,
             project.Id.ToString("D")));
@@ -544,11 +544,14 @@ public sealed class ProjectStructureRealMafPromptHarnessTests
         Assert.Equal(project.Id, toolReadback.ProjectId);
         Assert.Equal(ProjectStructureReadSource.CanonicalCurrent, toolReadback.Source);
 
+        // Success facts (exit summary, provider key) are internal acceptance
+        // evidence read through the workspace service; the public receipts API
+        // deliberately exposes only the privacy-safe projection.
         using var receiptsResponse = await host.Client.GetAsync(
             $"/api/agents/{agentId:D}/execution-runs/{executionResult.ExecutionRunId:D}/tool-receipts");
         Assert.Equal(HttpStatusCode.OK, receiptsResponse.StatusCode);
-        var receipts = await receiptsResponse.Content.ReadFromJsonAsync<List<ToolExecutionReceiptRecord>>(ApiJsonOptions)
-            ?? throw new InvalidOperationException("The execution receipt endpoint returned no result.");
+        var receipts = (await workspaceService.ListToolExecutionReceiptsAsync(
+            executionResult.ExecutionRunId)).ToList();
         var projectStructureReceipts = receipts
             .Where(receipt => receipt.ToolName.StartsWith("project_structure_", StringComparison.Ordinal))
             .ToArray();

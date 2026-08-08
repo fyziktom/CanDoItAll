@@ -20,6 +20,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
     private readonly IAgentExecutionActivityCoordinator activityCoordinator;
     private readonly AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity;
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher;
+    private readonly WorkspaceRuntimeServices? ownedWorkspaceBundle;
     private bool disposed;
 
     public AgentFrameworkWorkspaceService(
@@ -49,7 +50,8 @@ public sealed partial class AgentFrameworkWorkspaceService :
         IWorkspacePathResolutionService? workspacePathResolutionService = null,
         IProviderRuntimeProfileSource? providerRuntimeProfileSource = null,
         IEnumerable<IAgentExecutionProviderSelectionPolicy>? providerSelectionPolicies = null,
-        IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null)
+        IEnumerable<IAgentExecutionRunCriticalityPolicy>? runCriticalityPolicies = null,
+        WorkspaceRuntimeServices? ownedWorkspaceBundle = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
@@ -68,6 +70,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         this.logger = logger;
         this.activityCoordinator = activityCoordinator;
         this.activityWorkspaceIdentity = activityWorkspaceIdentity;
+        this.ownedWorkspaceBundle = ownedWorkspaceBundle;
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
@@ -171,6 +174,13 @@ public sealed partial class AgentFrameworkWorkspaceService :
         executionService.ExecutionUpdated -= HandleExecutionUpdated;
         executionUpdatedDispatcher.Dispose();
         executionService.Dispose();
+        // The workspace owner disposes its scope-bound service bundle exactly
+        // once; the bundle owns the workspace-level process host and every
+        // other scope-bound service it constructed.
+        if (ownedWorkspaceBundle is not null)
+        {
+            ownedWorkspaceBundle.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     private static IsolatedCompatibilityEventDispatcher<ExecutionLogEntry>

@@ -241,7 +241,8 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             new UnusedProviderCredentialService(),
             new UnusedProviderAgentFactory(),
             new UnusedRuntimeCapabilityComposer(),
-            services.GetRequiredService<ILoggerFactory>());
+            services.GetRequiredService<ILoggerFactory>(),
+            new AgentToolInvocationPolicyPipeline(new DefaultAgentToolInvocationPolicy()));
         var agentDefinition = CreateToolEnabledAgent();
         var instrumentedAgent = runtimeFactory.CreateInstrumentedAgent(
             uninstrumentedAgent,
@@ -251,7 +252,11 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             suppressApprovalRequirements: true,
             toolInvocationTraceRecorder: new ToolInvocationTraceRecorder(),
             finalizerPolicy: null,
-            finalizerMode: AgentFinalizerMode.Disabled);
+            finalizerMode: AgentFinalizerMode.Disabled,
+            executionGovernance: null,
+            scriptPolicyInspectionService: new MafScriptPolicyInspectionService(
+                temp.Path,
+                WorkspaceScopeDescriptor.Sandbox));
         var session = await instrumentedAgent.CreateSessionAsync();
 
         var response = await instrumentedAgent.RunAsync(
@@ -312,7 +317,8 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             new UnusedProviderCredentialService(),
             new UnusedProviderAgentFactory(),
             new UnusedRuntimeCapabilityComposer(),
-            services.GetRequiredService<ILoggerFactory>());
+            services.GetRequiredService<ILoggerFactory>(),
+            new AgentToolInvocationPolicyPipeline(new DefaultAgentToolInvocationPolicy()));
         var instrumentedAgent = runtimeFactory.CreateInstrumentedAgent(
             uninstrumentedAgent,
             CreateProviderProfile(),
@@ -321,7 +327,11 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             suppressApprovalRequirements: true,
             toolInvocationTraceRecorder: new ToolInvocationTraceRecorder(),
             finalizerPolicy: null,
-            finalizerMode: AgentFinalizerMode.Disabled);
+            finalizerMode: AgentFinalizerMode.Disabled,
+            executionGovernance: null,
+            scriptPolicyInspectionService: new MafScriptPolicyInspectionService(
+                temp.Path,
+                WorkspaceScopeDescriptor.Sandbox));
         var session = await instrumentedAgent.CreateSessionAsync();
 
         var response = await instrumentedAgent.RunAsync(
@@ -1306,7 +1316,8 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             AgentRuntimeContextIntent contextIntent,
             WorkspaceRuntimeServices workspaceRuntimeServices,
             string runtimeSessionKey = "",
-            IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
+            IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+            AgentExecutionGovernanceSnapshot? governance = null)
             => throw new NotSupportedException();
     }
 }

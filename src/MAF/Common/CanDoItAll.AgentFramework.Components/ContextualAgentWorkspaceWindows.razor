@@ -227,7 +227,7 @@
                                 VoiceStatusText="@voiceStatusText"
                                 VoiceStatusTone="@voiceStatusTone"
                                 SendRequested="SendMessageAsync"
-                                ApprovalDecisionRequested="HandleApprovalDecisionAsync"
+                                ApprovalDecisionsRequested="HandleApprovalDecisionsAsync"
                                 ApprovalDecisionForConversationRequested="ApproveConversationAsync"
                                 AttachmentRequested="StageAttachmentsAsync"
                                 AttachmentFilesSelected="StageUploadedAttachmentFilesAsync"
@@ -948,17 +948,19 @@
             : $"{sanitizedDisplayMessage} The failed run was persisted, but runtime details could not be refreshed. Reload this workspace to see the persisted failure.";
     }
 
-    private async Task HandleApprovalDecisionAsync(bool approved)
+    private async Task HandleApprovalDecisionsAsync(IReadOnlyList<PendingToolApprovalDecision> decisions)
     {
-        await ContinueApprovalAsync(approved, autoApprovePendingToolCalls: false);
+        await ContinueApprovalAsync(decisions, autoApprovePendingToolCalls: false);
     }
 
     private async Task ApproveConversationAsync()
     {
-        await ContinueApprovalAsync(approved: true, autoApprovePendingToolCalls: true);
+        await ContinueApprovalAsync(decisions: null, autoApprovePendingToolCalls: true);
     }
 
-    private async Task ContinueApprovalAsync(bool approved, bool autoApprovePendingToolCalls)
+    private async Task ContinueApprovalAsync(
+        IReadOnlyList<PendingToolApprovalDecision>? decisions,
+        bool autoApprovePendingToolCalls)
     {
         if (!selectedAgentId.HasValue || !selectedSessionId.HasValue)
         {
@@ -976,9 +978,18 @@
             return;
         }
 
-        var decisions = pendingApprovals
-            .Select(item => new PendingToolApprovalDecision(item.ApprovalId, approved))
-            .ToArray();
+        // Per-proposal decisions come from the panel unchanged; the
+        // approve-remaining action explicitly approves every pending proposal.
+        var effectiveDecisions = decisions
+            ?? pendingApprovals
+                .Select(item => new PendingToolApprovalDecision(item.ApprovalId, Approved: true))
+                .ToArray();
+        if (effectiveDecisions.Count == 0)
+        {
+            return;
+        }
+
+        var approved = effectiveDecisions.All(item => item.Approved);
         isChatBusy = true;
         try
         {
@@ -986,7 +997,7 @@
                 executionAgentId,
                 executionSessionId,
                 AgentExecutionOperationId.New(),
-                decisions,
+                effectiveDecisions,
                 autoApprovePendingToolCalls);
             executionCompleted = true;
             if (!IsWorkspaceSelectionCurrent(

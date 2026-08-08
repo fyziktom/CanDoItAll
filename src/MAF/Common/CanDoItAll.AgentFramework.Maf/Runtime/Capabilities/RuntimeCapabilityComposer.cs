@@ -37,7 +37,8 @@ internal interface IRuntimeCapabilityComposer
         AgentRuntimeContextIntent contextIntent,
         WorkspaceRuntimeServices workspaceRuntimeServices,
         string runtimeSessionKey = "",
-        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null);
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+        AgentExecutionGovernanceSnapshot? governance = null);
 }
 
 internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
@@ -179,7 +180,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         AgentRuntimeContextIntent contextIntent,
         WorkspaceRuntimeServices workspaceRuntimeServices,
         string runtimeSessionKey = "",
-        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null)
+        IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
+        AgentExecutionGovernanceSnapshot? governance = null)
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var totalStopwatch = Stopwatch.StartNew();
@@ -271,7 +273,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     effectiveContextWorkspaceScope,
                     contextIntent,
                     runtimeSessionKey,
-                    contextAttachments));
+                    contextAttachments,
+                    governance));
             await TrackAsync(
                 "capability.a2a-tools",
                 () => AttachA2ARemoteAgentToolsAsync(composition, agent, progressCallback, cancellationToken, suppressApprovalRequirements));

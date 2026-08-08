@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafRuntimeFailureOriginClassifier

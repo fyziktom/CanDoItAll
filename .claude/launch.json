@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "candoitall-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/App/CanDoItAll.Web", "-c", "Release", "--no-build"],
+      "port": 5032
+    }
+  ]
+}

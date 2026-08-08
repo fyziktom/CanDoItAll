@@ -15,7 +15,14 @@ public sealed record AgentRuntimeStateCaptureRequest(
     string ContextPolicyFingerprint,
     string PayloadJson,
     DateTimeOffset CapturedAtUtc,
-    AgentChatHistoryMode? HistoryMode = null);
+    AgentChatHistoryMode? HistoryMode = null)
+{
+    /// <summary>Admitted authority policy fingerprint (schema v2 dimension).</summary>
+    public string AuthorityPolicyFingerprint { get; init; } = string.Empty;
+
+    /// <summary>Effective capability set fingerprint (schema v2 dimension).</summary>
+    public string CapabilityPolicyFingerprint { get; init; } = string.Empty;
+}
 
 /// <summary>
 /// Outcome of unwrapping a <see cref="RuntimeStateEnvelope"/> that a compatibility policy
@@ -137,7 +144,20 @@ public sealed record RuntimeStateCompatibilityRequest(
     string CurrentModel,
     string CurrentToolsetFingerprint,
     string CurrentContextPolicyFingerprint,
-    AgentChatHistoryMode? CurrentHistoryMode);
+    AgentChatHistoryMode? CurrentHistoryMode)
+{
+    /// <summary>Admitted authority policy fingerprint for the current run.</summary>
+    public string CurrentAuthorityPolicyFingerprint { get; init; } = string.Empty;
+
+    /// <summary>Effective capability set fingerprint for the current run.</summary>
+    public string CurrentCapabilityPolicyFingerprint { get; init; } = string.Empty;
+
+    /// <summary>Names-only toolset fingerprint used to evaluate schema-v1 envelopes.</summary>
+    public string CurrentLegacyToolsetNameFingerprint { get; init; } = string.Empty;
+
+    /// <summary>The current adapter package version for the explicit compatibility range.</summary>
+    public string CurrentAdapterPackageVersion { get; init; } = string.Empty;
+}
 
 /// <summary>
 /// Owns the explicit restore/migrate/replay/fail decision for one adapter's runtime state.

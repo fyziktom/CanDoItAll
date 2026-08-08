@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -16,9 +17,11 @@ public sealed class MafWorkflowAdapterIsolationTests
         Assert.Equal(
             "CanDoItAll.AgentFramework.Workflows.MafAdapter",
             typeof(MafWorkflowEventNormalizer).Assembly.GetName().Name);
+        // The neutral workflow LLM invoker moved out of the MAF adapter into
+        // the provider-neutral Workflows runtime.
         Assert.Equal(
-            "CanDoItAll.AgentFramework.Workflows.MafAdapter",
-            typeof(MafWorkflowLlmComponentInvoker).Assembly.GetName().Name);
+            "CanDoItAll.AgentFramework.Workflows.Runtime",
+            typeof(WorkflowLlmComponentInvoker).Assembly.GetName().Name);
 
         Assert.Equal(
             "CanDoItAll.AgentFramework.Maf",
@@ -82,7 +85,6 @@ public sealed class MafWorkflowAdapterIsolationTests
             "MafInProcessWorkflowExecutionBackend.cs",
             "MafWorkflowCompiler.cs",
             "MafWorkflowEventNormalizer.cs",
-            "MafWorkflowLlmComponentInvoker.cs",
             "MafConfiguredFileArtifactResolver.cs",
             "WorkflowBackendExternalRequestCapture.cs",
             "WorkflowBackendProgressEventObserver.cs",

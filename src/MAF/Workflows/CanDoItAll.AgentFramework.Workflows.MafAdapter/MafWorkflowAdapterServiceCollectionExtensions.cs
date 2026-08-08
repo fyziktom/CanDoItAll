@@ -1,8 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Llm.Abstractions;
-using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
-using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -19,16 +17,10 @@ public static class MafWorkflowAdapterServiceCollectionExtensions
 
         services.AddStandardWorkflowExecutors(executorLifetime);
         services.AddWorkflowExecutorCoreServices();
-        // The lightweight port is stateless and only depends on the (already singleton) provider runtime
-        // descriptor store/pool registered by AddMafProviderRuntimeServices, so it is always a singleton
-        // regardless of executorLifetime.
-        services.TryAddSingleton<ILlmInvocationPort>(serviceProvider => new ProviderBackedLlmInvocationAdapter(
-            serviceProvider.GetRequiredService<IProviderRuntimeDescriptorStore>(),
-            serviceProvider.GetRequiredService<IProviderRuntimePool>()));
-        services.TryAdd(ServiceDescriptor.Describe(
-            typeof(IWorkflowLlmComponentInvoker),
-            typeof(MafWorkflowLlmComponentInvoker),
-            executorLifetime));
+        // Neutral workflow LLM invocation (stateless port + invoker) is owned
+        // by the provider-neutral Workflows runtime; the MAF adapter only
+        // composes it alongside its own MAF-specific services.
+        services.AddWorkflowLlmInvocation(executorLifetime);
         services.AddWorkflowCoreServices();
         services.AddWorkflowRuntimeServices();
         services.TryAddScoped<MafWorkflowCompiler>();

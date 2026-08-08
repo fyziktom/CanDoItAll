@@ -22,7 +22,7 @@ internal sealed class MafRuntimeAgentFactory
     private readonly IMafProviderAgentFactory providerAgentFactory;
     private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
     private readonly ILoggerFactory loggerFactory;
-    private readonly MafScriptPolicyInspectionService scriptPolicyInspectionService;
+    private readonly AgentToolInvocationPolicyPipeline toolInvocationPolicyPipeline;
 
     public MafRuntimeAgentFactory(
         string workspaceRoot,
@@ -30,8 +30,10 @@ internal sealed class MafRuntimeAgentFactory
         IMafProviderCredentialService providerCredentialService,
         IMafProviderAgentFactory providerAgentFactory,
         IRuntimeCapabilityComposer runtimeCapabilityComposer,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        AgentToolInvocationPolicyPipeline? toolInvocationPolicyPipeline = null)
     {
+        ArgumentNullException.ThrowIfNull(toolInvocationPolicyPipeline);
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
             throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
@@ -43,7 +45,10 @@ internal sealed class MafRuntimeAgentFactory
         this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
         this.providerAgentFactory = providerAgentFactory ?? throw new ArgumentNullException(nameof(providerAgentFactory));
         this.runtimeCapabilityComposer = runtimeCapabilityComposer ?? throw new ArgumentNullException(nameof(runtimeCapabilityComposer));
-        scriptPolicyInspectionService = new MafScriptPolicyInspectionService(this.workspaceRoot, workspaceScope);
+        // The injected governance pipeline is the only policy seam: the
+        // factory never constructs a policy itself, so composition decides the
+        // policy and its domain contributors in one place.
+        this.toolInvocationPolicyPipeline = toolInvocationPolicyPipeline;
     }
 
     public async Task<AIAgent> CreateHostedAgentAsync(
@@ -83,7 +88,8 @@ internal sealed class MafRuntimeAgentFactory
         bool suppressApprovalRequirements = false,
         bool forceOmitTemperature = false,
         AgentRuntimeExecutionOptions? executionOptions = null,
-        string runtimeSessionKey = "")
+        string runtimeSessionKey = "",
+        bool ownsWorkspaceRuntimeServices = true)
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var runtimeOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
@@ -98,7 +104,8 @@ internal sealed class MafRuntimeAgentFactory
                 suppressApprovalRequirements,
                 forceOmitTemperature,
                 runtimeOptions,
-                runtimeSessionKey);
+                runtimeSessionKey,
+                ownsWorkspaceRuntimeServices);
         }
 
         var toolInvocationTraceRecorder = new ToolInvocationTraceRecorder();
@@ -144,8 +151,19 @@ internal sealed class MafRuntimeAgentFactory
             runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty,
             workspaceRuntimeServices,
             runtimeSessionKey,
-            runtimeOptions.TransientContext?.Attachments);
-        capabilityState.AsyncDisposables.Add(workspaceRuntimeServices);
+            runtimeOptions.TransientContext?.Attachments,
+            runtimeOptions.Governance);
+        // Exactly one owner disposes the run's workspace bundle: the top-level
+        // build result. Handoff participant builds share the bundle and must
+        // not register a second ownership.
+        if (ownsWorkspaceRuntimeServices)
+        {
+            capabilityState.AsyncDisposables.Add(workspaceRuntimeServices);
+        }
+        await FilterToolsOutsideExecutionGovernanceAsync(
+            capabilityState,
+            runtimeOptions.Governance,
+            progressCallback);
         await FilterUnusableApprovalToolsAsync(
             capabilityState,
             effectiveProvider,
@@ -223,7 +241,12 @@ internal sealed class MafRuntimeAgentFactory
             suppressApprovalRequirements,
             toolInvocationTraceRecorder,
             finalizerCapture?.Policy,
-            runtimeOptions.FinalizerMode);
+            runtimeOptions.FinalizerMode,
+            runtimeOptions.Governance,
+            // Script inspection reads through the effective run scope so
+            // policy evaluation inspects exactly the file the run's tools can
+            // execute — never the runtime construction scope.
+            new MafScriptPolicyInspectionService(workspaceRoot, contextWorkspaceScope));
         return new RuntimeBuildResult(
             runtimeAgent,
             effectiveProvider,
@@ -287,7 +310,8 @@ internal sealed class MafRuntimeAgentFactory
         bool suppressApprovalRequirements,
         bool forceOmitTemperature,
         AgentRuntimeExecutionOptions runtimeOptions,
-        string runtimeSessionKey)
+        string runtimeSessionKey,
+        bool ownsWorkspaceRuntimeServices)
     {
         var handoffOptions = runtimeOptions.Handoff
             ?? throw new InvalidOperationException("Handoff runtime build requires handoff execution options.");
@@ -334,7 +358,8 @@ internal sealed class MafRuntimeAgentFactory
                     suppressApprovalRequirements,
                     forceOmitTemperature,
                     effectiveParticipantOptions,
-                    runtimeSessionKey);
+                    runtimeSessionKey,
+                    ownsWorkspaceRuntimeServices: false);
                 participantBuilds.Add(participantBuild);
                 participantAgents[participant.Agent.Id] = participantBuild.Agent;
             }
@@ -349,11 +374,16 @@ internal sealed class MafRuntimeAgentFactory
                 handoffOptions.EntryAgentId,
                 handoffOptions.CorrelationId);
 
+            // The handoff result is the single owner of the shared workspace
+            // bundle (participant builds were created with ownership disabled).
+            IReadOnlyList<IAsyncDisposable> handoffAsyncDisposables = ownsWorkspaceRuntimeServices
+                ? [.. participantBuilds, workspaceRuntimeServices]
+                : [.. participantBuilds];
             return new RuntimeBuildResult(
                 buildResult.Agent,
                 entryBuild.Provider,
                 entryBuild.Model,
-                participantBuilds,
+                handoffAsyncDisposables,
                 [],
                 participantBuilds.Any(item => item.HasApprovalTools),
                 entryBuild.IsTemperatureOmitted,
@@ -408,10 +438,13 @@ internal sealed class MafRuntimeAgentFactory
         bool suppressApprovalRequirements,
         ToolInvocationTraceRecorder toolInvocationTraceRecorder,
         AgentFinalizerPolicy? finalizerPolicy,
-        AgentFinalizerMode finalizerMode)
+        AgentFinalizerMode finalizerMode,
+        AgentExecutionGovernanceSnapshot? executionGovernance,
+        MafScriptPolicyInspectionService scriptPolicyInspectionService)
     {
+        ArgumentNullException.ThrowIfNull(scriptPolicyInspectionService);
         var builder = agent.AsBuilder();
-        var toolPolicy = new DefaultAgentToolInvocationPolicy();
+        var toolPolicy = toolInvocationPolicyPipeline;
         var knownToolNames = capabilityState.Tools
             .Select(tool => tool.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -456,6 +489,11 @@ internal sealed class MafRuntimeAgentFactory
                 invocationArguments,
                 auditScope,
                 scriptSideEffectManifestJson);
+            // Provider-neutral policy context: the adapter maps generic run,
+            // tool, workspace, and governance facts only. Domain restrictions
+            // (for example governed process rules) are contributed by the
+            // owning module through the injected policy pipeline; this adapter
+            // does not interpret process fields.
             var policyContext = new ToolInvocationPolicyContext(
                 AgentId: agentDefinition.Id,
                 AgentName: agentDefinition.Name,
@@ -467,20 +505,12 @@ internal sealed class MafRuntimeAgentFactory
                 ApprovalWrapperAvailable: approvalWrappedToolNames.Contains(functionName),
                 ExecutionRunId: auditScope?.ExecutionRunId.ToString("D") ?? string.Empty,
                 SourceKind: auditScope?.SourceKind ?? string.Empty,
-                ProcessRunId: auditScope?.ProcessRunId ?? string.Empty,
-                ProcessStepId: auditScope?.ProcessStepId ?? string.Empty,
+                ProcessRunId: string.Empty,
+                ProcessStepId: string.Empty,
                 AllowedExternalTargetAliases: externalTargetAccess.WritableAliases,
                 ReadOnlyExternalTargetAliases: externalTargetAccess.ReadOnlyAliases,
                 ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
                 ApplicationApprovalAvailable: false,
-                ProcessAllowsProductMutation: auditScope?.ProcessAllowsProductMutation != false,
-                ProcessRequiresProductMutationBeforeManagedOutput:
-                    auditScope?.ProcessRequiresProductMutationBeforeManagedOutput == true,
-                ProcessProductMutationToolNames: auditScope?.ProcessProductMutationToolNames ?? [],
-                ProcessProductMutationRequiredBranchOutcomeKeys:
-                    auditScope?.ProcessProductMutationRequiredBranchOutcomeKeys ?? [],
-                ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
-                ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
                 ContextWorkspaceScopeKind: auditScope?.ContextWorkspaceScope?.Kind.ToString() ?? string.Empty,
                 ContextWorkspaceScopeKey: auditScope?.ContextWorkspaceScope?.Key ?? string.Empty,
                 InspectedScriptContent: scriptInspection.Content,
@@ -490,9 +520,10 @@ internal sealed class MafRuntimeAgentFactory
             {
                 SourceId = auditScope?.SourceId ?? string.Empty,
                 AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? [],
+                ExecutionGovernance = executionGovernance,
                 PathArguments = pathArguments
             };
-            var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
+            var policyDecision = await toolPolicy.ComposeAndEvaluateAsync(policyContext, auditScope, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
             activity?.SetTag("agentframework.tool_name", functionName);
@@ -675,6 +706,60 @@ internal sealed class MafRuntimeAgentFactory
         return finalizerMode == AgentFinalizerMode.Required &&
                finalizerPolicy is { IsRequired: true } &&
                string.Equals(functionName, finalizerPolicy.ToolName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Removes composed tools whose operation class exceeds the admitted
+    /// execution governance snapshot. Composition may only narrow: a read-only
+    /// authority never exposes mutation-classified tools to the model, and an
+    /// authority without read access exposes no workspace tools at all. The
+    /// invocation policy independently re-enforces the same snapshot at call
+    /// time.
+    /// </summary>
+    internal static async Task FilterToolsOutsideExecutionGovernanceAsync(
+        RuntimeCapabilityState capabilityState,
+        AgentExecutionGovernanceSnapshot? governance,
+        Func<ExecutionState, string, string, Task> progressCallback)
+    {
+        if (governance is null || (governance.MutationAllowed && governance.ReadAllowed))
+        {
+            return;
+        }
+
+        var removedTools = capabilityState.Tools
+            .Where(tool => !string.IsNullOrWhiteSpace(tool.Name))
+            .Where(tool =>
+            {
+                var classification = AgentToolInvocationPolicyMetadata.Classify(tool.Name);
+                if (!governance.MutationAllowed && classification == ToolInvocationClassification.Mutation)
+                {
+                    return true;
+                }
+
+                return !governance.ReadAllowed &&
+                       classification is ToolInvocationClassification.Read or ToolInvocationClassification.Mutation;
+            })
+            .ToList();
+        if (removedTools.Count == 0)
+        {
+            return;
+        }
+
+        capabilityState.Tools.RemoveAll(removedTools.Contains);
+        capabilityState.HasApprovalTools = capabilityState.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
+        var removedToolNames = string.Join(
+            ", ",
+            removedTools
+                .Select(tool => tool.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase));
+        var authorityDescription = governance.ReadAllowed
+            ? "read-only authority"
+            : "authority without workspace access";
+        await progressCallback(
+            ExecutionState.Preparing,
+            "Execution authority",
+            $"Excluded tool(s) outside the admitted execution authority ({authorityDescription}, scope '{governance.WorkspaceScope.DisplayName}'): {removedToolNames}.");
     }
 
     private async Task FilterUnusableApprovalToolsAsync(

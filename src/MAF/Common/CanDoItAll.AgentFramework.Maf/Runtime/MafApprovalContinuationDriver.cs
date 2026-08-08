@@ -29,8 +29,21 @@ internal interface IMafApprovalContinuationDriver
 
 internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDriver
 {
+    /// <summary>
+    /// Cache bound: the durable session compatibility records remain the
+    /// source of truth for pending approvals, so this in-memory cache is a
+    /// pure rehydration optimization. Evicted or restart-lost entries are
+    /// rebuilt from the persisted records; nothing here owns approval state.
+    /// </summary>
+    internal const int MaximumCachedSessions = 128;
+    internal static readonly TimeSpan CacheEntryTimeToLive = TimeSpan.FromHours(24);
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-    private readonly ConcurrentDictionary<Guid, IReadOnlyList<ToolApprovalRequestContent>> pendingApprovalCache = new();
+    private readonly ConcurrentDictionary<Guid, CachedApprovals> pendingApprovalCache = new();
+
+    private sealed record CachedApprovals(
+        IReadOnlyList<ToolApprovalRequestContent> Requests,
+        DateTimeOffset StoredAtUtc);
 
     public IEnumerable<ChatMessage> CreateApprovalInputMessages(
         ChatSessionRecord session,
@@ -67,12 +80,44 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
     public void StorePendingApprovals(Guid sessionId, IReadOnlyList<ToolApprovalRequestContent> approvalRequests)
     {
         ArgumentNullException.ThrowIfNull(approvalRequests);
-        pendingApprovalCache[sessionId] = approvalRequests;
+        EvictStaleOrOverflowingEntries();
+        pendingApprovalCache[sessionId] = new CachedApprovals(approvalRequests, DateTimeOffset.UtcNow);
     }
 
     public void ClearPendingApprovals(Guid sessionId)
     {
         pendingApprovalCache.TryRemove(sessionId, out _);
+    }
+
+    /// <summary>
+    /// Keeps the rehydration cache bounded on long-lived hosts: entries older
+    /// than the TTL are dropped, and when the cache is full the oldest entries
+    /// are dropped first. Dropping is always safe — a later continuation
+    /// rehydrates the same approvals from the durable session records, and a
+    /// session with no durable records fails closed exactly as before.
+    /// </summary>
+    private void EvictStaleOrOverflowingEntries()
+    {
+        var nowUtc = DateTimeOffset.UtcNow;
+        foreach (var (sessionId, entry) in pendingApprovalCache)
+        {
+            if (nowUtc - entry.StoredAtUtc >= CacheEntryTimeToLive)
+            {
+                pendingApprovalCache.TryRemove(sessionId, out _);
+            }
+        }
+
+        if (pendingApprovalCache.Count < MaximumCachedSessions)
+        {
+            return;
+        }
+
+        foreach (var (sessionId, _) in pendingApprovalCache
+                     .OrderBy(item => item.Value.StoredAtUtc)
+                     .Take(pendingApprovalCache.Count - MaximumCachedSessions + 1))
+        {
+            pendingApprovalCache.TryRemove(sessionId, out _);
+        }
     }
 
     public PendingToolApprovalRecord MapPendingApproval(ToolApprovalRequestContent request)
@@ -152,7 +197,7 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
 
         if (pendingApprovalCache.TryGetValue(session.Id, out var cached))
         {
-            return cached;
+            return cached.Requests;
         }
 
         var compatibility = session.Compatibility;
@@ -165,7 +210,7 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
             .Select(RehydratePendingApproval)
             .ToList();
 
-        pendingApprovalCache[session.Id] = rehydrated;
+        StorePendingApprovals(session.Id, rehydrated);
         return rehydrated;
     }
 

@@ -117,13 +117,21 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         string workspaceRoot)
     {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope);
-        var processHost = new LocalWorkspaceProcessHost();
         var workspaceRuntimeServicesFactory = new WorkspaceRuntimeServicesFactory(
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>()
                 ?? new ManagedCodeMarkItDownDocumentMarkdownConverter());
+        // One owned workspace aggregate: the bundle constructs the single
+        // process host for this workspace identity, every consumer below uses
+        // that same instance, and the workspace service disposes the bundle
+        // exactly once.
         var workspaceBundle = workspaceRuntimeServicesFactory.Create(
-            new WorkspaceExecutionScope(workspaceRoot, scope));
+            new WorkspaceExecutionScope(
+                workspaceRoot,
+                scope,
+                workspaceIdentity.DatabaseProfileId,
+                workspaceIdentity.DatabaseProfileGeneration));
+        var processHost = workspaceBundle.ProcessHost;
         var mafRuntime = new MafAgentRuntime(workspaceRoot, serviceProvider, scope, workspaceRuntimeServicesFactory);
         // SB18: the deterministic interception cores no longer implement any runtime interface or
         // hold an inner fallback; the workspace service consumes the narrow runtime ports directly:
@@ -184,7 +192,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             workspacePathResolutionService: new WorkspacePathResolutionService(workspaceRoot, scope),
             providerRuntimeProfileSource: providerRuntimeProfileSource,
             providerSelectionPolicies: serviceProvider.GetServices<IAgentExecutionProviderSelectionPolicy>().ToList(),
-            runCriticalityPolicies: serviceProvider.GetServices<IAgentExecutionRunCriticalityPolicy>().ToList());
+            runCriticalityPolicies: serviceProvider.GetServices<IAgentExecutionRunCriticalityPolicy>().ToList(),
+            ownedWorkspaceBundle: workspaceBundle);
         return workspaceService;
     }
 

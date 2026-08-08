@@ -2465,6 +2465,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         var contextWorkspaceScope = transientWorkspaceScope ?? recordedWorkspaceScope;
+        var governance = ResolveValidatedExecutionGovernance(run, contextWorkspaceScope);
 
         return new AgentRuntimeExecutionOptions(
             StructuredOutput: structuredOutput,
@@ -2484,9 +2485,57 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             ActivityOperationId = activityOperationId,
             TransientContext = transientContext,
-            ContextPolicyFingerprint = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)?.ModelContextDigest
-                ?? AgentTurnContextMetadata.EmptyModelContextDigest
+            // Separated fingerprint dimensions: the model-context digest and
+            // the authority policy fingerprint are independent compatibility
+            // inputs; the capability and tool-contract fingerprints are
+            // stamped by the adapter after capability composition.
+            ModelContextDigest = AgentTurnContextMetadata.TryReadTurnContextReference(run.MetadataJson)?.ModelContextDigest
+                ?? AgentTurnContextMetadata.EmptyModelContextDigest,
+            AuthorityPolicyFingerprint = governance?.PolicyFingerprint ?? string.Empty,
+            Governance = governance
         };
+    }
+
+    /// <summary>
+    /// Rebuilds the admitted execution governance snapshot from the run's
+    /// persisted authority projection and validates it against the run facts
+    /// before it becomes the runtime enforcement input. Ordinary sends and
+    /// approval continuation share this single restore path, so continuation
+    /// always enforces the original turn's authority instead of recaptured
+    /// state. A run without a projection (detached or legacy) yields
+    /// <c>null</c>; a projection that contradicts the run fails closed.
+    /// </summary>
+    private static AgentExecutionGovernanceSnapshot? ResolveValidatedExecutionGovernance(
+        ExecutionRunRecord run,
+        WorkspaceScopeDescriptor? contextWorkspaceScope)
+    {
+        var governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(run.MetadataJson);
+        if (governance is null)
+        {
+            return null;
+        }
+
+        if (governance.AgentId != AgentTurnContextMetadata.LegacyProjectionAgentId &&
+            governance.AgentId != run.AgentId)
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' carries an authority projection for a different agent.");
+        }
+
+        if (contextWorkspaceScope is not null &&
+            governance.WorkspaceScope != contextWorkspaceScope)
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' workspace scope '{contextWorkspaceScope.DisplayName}' does not match the admitted authority scope '{governance.WorkspaceScope.DisplayName}'.");
+        }
+
+        if (contextWorkspaceScope is null && !governance.WorkspaceScope.IsDefaultSandbox)
+        {
+            throw new AgentExecutionAuthorityMismatchException(
+                $"Execution run '{run.Id:N}' has no trusted workspace scope, but the admitted authority claims scope '{governance.WorkspaceScope.DisplayName}'.");
+        }
+
+        return governance;
     }
 
     private static ExecutionInvocationContext PrepareInvocationContext(

@@ -20,6 +20,7 @@ public sealed class WorkspaceRuntimeServices : IAsyncDisposable
         IWorkspaceCommandExecutionService commandExecutionService,
         IWorkspaceArtifactToolService artifactToolService,
         IWorkspaceImageOperationService imageOperationService,
+        IWorkspaceProcessHost processHost,
         IReadOnlyList<object>? ownedServices = null)
     {
         Scope = scope ?? throw new ArgumentNullException(nameof(scope));
@@ -27,6 +28,7 @@ public sealed class WorkspaceRuntimeServices : IAsyncDisposable
         CommandExecutionService = commandExecutionService ?? throw new ArgumentNullException(nameof(commandExecutionService));
         ArtifactToolService = artifactToolService ?? throw new ArgumentNullException(nameof(artifactToolService));
         ImageOperationService = imageOperationService ?? throw new ArgumentNullException(nameof(imageOperationService));
+        ProcessHost = processHost ?? throw new ArgumentNullException(nameof(processHost));
         this.ownedServices = ownedServices ?? [];
     }
 
@@ -39,6 +41,13 @@ public sealed class WorkspaceRuntimeServices : IAsyncDisposable
     public IWorkspaceArtifactToolService ArtifactToolService { get; }
 
     public IWorkspaceImageOperationService ImageOperationService { get; }
+
+    /// <summary>
+    /// The single process host for this bundle. Every consumer of the bundle
+    /// (command execution, process leases, workspace service) uses exactly
+    /// this instance; the bundle owns its disposal.
+    /// </summary>
+    public IWorkspaceProcessHost ProcessHost { get; }
 
     public async ValueTask DisposeAsync()
     {
@@ -133,6 +142,7 @@ public sealed class WorkspaceRuntimeServicesFactory(
             commandExecutionService,
             artifactToolService,
             imageOperationService,
+            processHost,
             ownedServices:
             [
                 fileService,

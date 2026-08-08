@@ -4,10 +4,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 /// <summary>
 /// Immutable identity of one workspace execution: the physical workspace root
-/// plus the effective workspace scope descriptor for the run, optionally
-/// annotated with the admission facts that produced it. Every scope-bound
-/// workspace service used by one execution shares exactly this identity;
-/// scope mismatches fail at construction instead of during a tool call.
+/// plus the effective workspace scope descriptor for the run, annotated with
+/// the admission facts that produced it. Every scope-bound workspace service
+/// used by one execution shares exactly this identity; scope mismatches fail
+/// at construction instead of during a tool call. Root identity comparison is
+/// OS-aware: case-insensitive on Windows and macOS, case-sensitive on Linux.
 /// </summary>
 public sealed record WorkspaceExecutionScope
 {
@@ -59,5 +60,38 @@ public sealed record WorkspaceExecutionScope
 
     public bool SharesIdentityWith(WorkspaceExecutionScope? other)
         => other is not null &&
-           string.Equals(Identity, other.Identity, StringComparison.OrdinalIgnoreCase);
+           string.Equals(Identity, other.Identity, RootIdentityComparison);
+
+    /// <summary>
+    /// Builds the per-run execution scope with full provenance from the
+    /// admitted governance snapshot. This is the production construction path
+    /// for run-owned workspace bundles; runs without an admitted snapshot
+    /// keep an unannotated scope.
+    /// </summary>
+    public static WorkspaceExecutionScope ForRun(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor scope,
+        AgentExecutionGovernanceSnapshot? governance,
+        Guid? executionRunId = null)
+        => governance is null
+            ? new WorkspaceExecutionScope(workspaceRoot, scope, executionRunId: executionRunId)
+            : new WorkspaceExecutionScope(
+                workspaceRoot,
+                scope,
+                governance.DatabaseProfileId,
+                governance.DatabaseProfileGeneration,
+                governance.AuthorityId,
+                governance.PolicyFingerprint,
+                executionRunId);
+
+    /// <summary>
+    /// The current process's root identity comparison: Linux compares roots
+    /// case-sensitively, Windows and macOS case-insensitively.
+    /// </summary>
+    public static StringComparison RootIdentityComparison { get; } =
+        ResolveRootIdentityComparison(caseSensitiveFileSystem: OperatingSystem.IsLinux());
+
+    /// <summary>Pure decision seam so both branches stay testable on any OS.</summary>
+    internal static StringComparison ResolveRootIdentityComparison(bool caseSensitiveFileSystem)
+        => caseSensitiveFileSystem ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 }

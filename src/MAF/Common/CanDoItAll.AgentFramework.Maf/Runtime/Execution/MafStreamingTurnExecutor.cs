@@ -7,6 +7,7 @@ using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
+using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.AgentFramework.Maf;
 
 /// <summary>
@@ -1093,6 +1094,12 @@ internal sealed class MafStreamingTurnExecutor
         cancellationToken.ThrowIfCancellationRequested();
         var contextIntent = runtimeOptions.ContextIntent ?? AgentRuntimeContextIntent.Empty;
         var existingToolTraces = snapshotToolInvocationTraces();
+        // Recovery evidence reads through the effective run scope — the same
+        // scope the run's workspace bundle and tools used — never the scope
+        // this long-lived executor was constructed for.
+        var effectiveRunScope = MafRuntimeAgentFactory.ResolveContextWorkspaceScope(
+            runtimeOptions,
+            workspaceScope);
         var evidence = new AgentExecutionOutcomeRecoveryEvidence(
             contextIntent,
             recoveryCause,
@@ -1100,7 +1107,7 @@ internal sealed class MafStreamingTurnExecutor
             policy.OutputContract.ContractKey,
             policy.OutputType,
             existingToolTraces,
-            new WorkspaceRecoveryArtifactReader(workspaceRoot, workspaceScope));
+            new WorkspaceRecoveryArtifactReader(workspaceRoot, effectiveRunScope));
 
         AgentExecutionOutcomeRecoveryDecision? recoveredDecision = null;
         foreach (var recoveryPolicy in executionOutcomeRecoveryPolicies)

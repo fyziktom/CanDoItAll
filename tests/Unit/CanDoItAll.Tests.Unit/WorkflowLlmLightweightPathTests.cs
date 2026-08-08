@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -48,7 +49,7 @@ public sealed class WorkflowLlmLightweightPathTests
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
-            "src", "MAF", "Workflows", "CanDoItAll.AgentFramework.Workflows.MafAdapter", "MafWorkflowLlmComponentInvoker.cs"));
+            "src", "MAF", "Workflows", "CanDoItAll.AgentFramework.Workflows.Runtime", "WorkflowLlmComponentInvoker.cs"));
 
         foreach (var token in ForbiddenFullAgentTokens)
         {
@@ -94,7 +95,7 @@ public sealed class WorkflowLlmLightweightPathTests
         // Reflection member order is unspecified for records that mix explicit (validated) and
         // compiler-synthesized positional properties, so this compares the property set, not its order.
         Assert.Equal(
-            new[] { "Provider", "Model", "Messages", "Attachments", "ResponseFormat", "Settings" }.OrderBy(name => name, StringComparer.Ordinal),
+            new[] { "Provider", "Model", "Messages", "Attachments", "ResponseFormat", "Settings", "Timeout", "CorrelationId" }.OrderBy(name => name, StringComparer.Ordinal),
             propertyNames.OrderBy(name => name, StringComparer.Ordinal));
         Assert.DoesNotContain(propertyNames, name =>
             name.Contains("Scope", StringComparison.OrdinalIgnoreCase) ||
@@ -110,7 +111,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(40, 12, 4))));
         var provider = CreateProviderProfile();
-        var invoker = new MafWorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -130,7 +131,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             throw new InvalidOperationException("simulated port failure"));
         var provider = CreateProviderProfile();
-        var invoker = new MafWorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -153,7 +154,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromCanceled<LlmInvocationResult>(new CancellationToken(canceled: true)));
         var provider = CreateProviderProfile();
-        var invoker = new MafWorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -173,7 +174,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"unexpected\":true}", new LlmUsage(10, 5))));
         var provider = CreateProviderProfile();
-        var invoker = new MafWorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
         var component = CreateComponent(
             """{"type":"object","required":["markdown"],"properties":{"markdown":{"type":"string"}}}""");
         var node = CreateNode(component.Id);
@@ -195,7 +196,7 @@ public sealed class WorkflowLlmLightweightPathTests
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
             Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(1, 1))));
         var provider = CreateProviderProfile();
-        var invoker = new MafWorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
         var component = CreateComponent();
         var node = CreateNode(component.Id);
         var definition = CreateDefinition(node);
@@ -210,7 +211,7 @@ public sealed class WorkflowLlmLightweightPathTests
         Assert.Equal(provider.Id, port.LastRequest!.Provider.Id);
         Assert.Equal(provider.DefaultModel, port.LastRequest.Model);
         Assert.All(port.LastRequest.Messages, message => Assert.True(message.Role is LlmMessageRole.System or LlmMessageRole.User));
-        Assert.Null(port.LastRequest.Attachments);
+        Assert.Empty(port.LastRequest.Attachments);
     }
 
     private static string FindRepositoryRoot()

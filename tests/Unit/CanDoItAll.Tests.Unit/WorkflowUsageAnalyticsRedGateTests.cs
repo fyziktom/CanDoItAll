@@ -5,7 +5,10 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Runtime;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+
+
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -28,7 +31,7 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
             ModelPrices = [new ProviderModelTokenPrice("model-a", 1m, 0.1m, 4m)]
         };
         var port = new RecordingLlmInvocationPort(new LlmUsage(InputTokens: 101, OutputTokens: 31, CachedInputTokens: 11));
-        var invoker = new MafWorkflowLlmComponentInvoker(
+        var invoker = new WorkflowLlmComponentInvoker(
             port,
             new SingleProviderRegistry(provider),
             new ProviderProfileService());

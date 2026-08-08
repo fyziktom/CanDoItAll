@@ -77,13 +77,25 @@ public sealed record ToolInvocationPolicyContext(
 
     public IReadOnlyList<string> AllowedManagedArtifactReadRefs { get; init; } = [];
 
+    /// <summary>
+    /// The admitted execution governance snapshot for this run, when present.
+    /// The invocation policy enforces it independently of capability
+    /// composition: a mutation-classified tool is denied when the snapshot
+    /// forbids mutation, and workspace tools are denied when it forbids read.
+    /// Absent for runs admitted without application context.
+    /// </summary>
+    public AgentExecutionGovernanceSnapshot? ExecutionGovernance { get; init; }
+
     public required ToolInvocationPathArgumentSet PathArguments { get; init; }
 
-    public IReadOnlyList<AgentToolInvocationTrace> RecentToolInvocationTraces { get; } = ToolInvocationTraces ?? [];
+    // Expression-bodied so `with` mutations of the positional parameters stay
+    // visible through these projections (a stored initializer would keep the
+    // pre-mutation value on the cloned record).
+    public IReadOnlyList<AgentToolInvocationTrace> RecentToolInvocationTraces => ToolInvocationTraces ?? [];
 
-    public IReadOnlyList<string> ProductMutationToolNames { get; } = ProcessProductMutationToolNames ?? [];
+    public IReadOnlyList<string> ProductMutationToolNames => ProcessProductMutationToolNames ?? [];
 
-    public IReadOnlyList<string> ProductMutationRequiredBranchOutcomeKeys { get; } =
+    public IReadOnlyList<string> ProductMutationRequiredBranchOutcomeKeys =>
         ProcessProductMutationRequiredBranchOutcomeKeys ?? [];
 
     public bool HasEffectiveApprovalPath =>
@@ -567,6 +579,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"Tool '{context.ToolName}' has no registered invocation policy classification."));
         }
 
+        var governanceDecision = EvaluateExecutionGovernanceBoundary(context, signature);
+        if (governanceDecision is not null)
+        {
+            return ValueTask.FromResult(governanceDecision);
+        }
+
         var pathArgumentDecision = EvaluatePathArgumentResolution(context, signature);
         if (pathArgumentDecision is not null)
         {
@@ -688,6 +706,43 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return ValueTask.FromResult(ToolInvocationPolicyDecision.Allow(signature));
+    }
+
+    /// <summary>
+    /// Independent enforcement of the admitted execution governance snapshot.
+    /// Composition already filters tools outside the snapshot, but the
+    /// invocation policy re-checks so a tool that slipped into the graph (or a
+    /// provider-side alias) still cannot exceed the admitted authority. The
+    /// snapshot can only deny here — allowance still flows through every other
+    /// policy below.
+    /// </summary>
+    private static ToolInvocationPolicyDecision? EvaluateExecutionGovernanceBoundary(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (context.ExecutionGovernance is not { } governance)
+        {
+            return null;
+        }
+
+        if (!governance.ReadAllowed &&
+            context.Classification is ToolInvocationClassification.Read or ToolInvocationClassification.Mutation &&
+            ExternalTargetManagedWorkspaceIsolationTools.Contains(context.ToolName))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Tool '{context.ToolName}' is denied because the admitted execution authority for this turn does not grant workspace read access.");
+        }
+
+        if (!governance.MutationAllowed &&
+            context.Classification == ToolInvocationClassification.Mutation)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Tool '{context.ToolName}' is denied because the admitted execution authority for this turn is read-only. Approval cannot widen an admitted read-only authority; start a new turn from a surface with mutation access instead.");
+        }
+
+        return null;
     }
 
     private static ToolInvocationPolicyDecision? EvaluateGovernedProcessOperationAuthorization(

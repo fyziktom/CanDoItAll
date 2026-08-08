@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -49,13 +50,30 @@ for rel, token, message in checks:
     if token in path.read_text(encoding='utf-8', errors='replace'):
         errors.append(f'{message} Found in {rel}')
 
-# Broad runtime must remain absent.
-for path in repo.rglob('*.cs'):
-    if any(part in {'bin', 'obj', '.git', 'codex'} for part in path.parts):
+# Broad runtime must remain absent. Scan only tracked source roots; build
+# artifact directories can contain generated workspaces with unreadable
+# long paths on Windows.
+import os
+
+skip_dirs = {'bin', 'obj', '.git', 'codex', '.artifacts', 'node_modules'}
+source_roots = [repo / 'src', repo / 'tests']
+for root in source_roots:
+    if not root.is_dir():
         continue
-    text = path.read_text(encoding='utf-8', errors='replace')
-    if 'interface IAgentRuntime' in text:
-        errors.append(f'Broad IAgentRuntime interface returned: {path.relative_to(repo)}')
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in skip_dirs]
+        for filename in filenames:
+            if not filename.endswith('.cs'):
+                continue
+            path = Path(dirpath) / filename
+            try:
+                text = path.read_text(encoding='utf-8', errors='replace')
+            except OSError:
+                continue
+            # Match the exact broad interface name only; narrow ports such as
+            # IAgentRuntimeToolProvider or IAgentRuntimeStateAdapter are allowed.
+            if re.search(r'\binterface\s+IAgentRuntime\b', text):
+                errors.append(f'Broad IAgentRuntime interface returned: {path.relative_to(repo)}')
 
 if errors:
     print('\n'.join(errors))

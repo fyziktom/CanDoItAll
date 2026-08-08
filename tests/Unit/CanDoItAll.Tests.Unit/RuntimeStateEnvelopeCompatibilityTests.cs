@@ -210,7 +210,7 @@ public sealed class RuntimeStateEnvelopeCompatibilityTests
             MaxStructuredOutputRepairAttempts: 0)
         {
             ToolsetFingerprint = ToolsetFingerprint,
-            ContextPolicyFingerprint = ContextPolicyFingerprint
+            ModelContextDigest = ContextPolicyFingerprint
         };
 
         var decision = MafRuntimeSessionBuilder.EvaluateStoredRuntimeState(
@@ -235,7 +235,7 @@ public sealed class RuntimeStateEnvelopeCompatibilityTests
             MaxStructuredOutputRepairAttempts: 0)
         {
             ToolsetFingerprint = ToolsetFingerprint,
-            ContextPolicyFingerprint = ContextPolicyFingerprint
+            ModelContextDigest = ContextPolicyFingerprint
         };
 
         var decision = MafRuntimeSessionBuilder.EvaluateStoredRuntimeState(

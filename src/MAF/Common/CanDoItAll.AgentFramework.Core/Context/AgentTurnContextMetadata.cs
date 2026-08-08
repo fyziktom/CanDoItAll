@@ -46,9 +46,11 @@ public static class AgentTurnContextMetadata
         }
 
         metadata[TurnContextReferenceMetadataKey] = referenceObject;
-        metadata[ExecutionAuthorityMetadataKey] = new JsonObject
+        var authorityObject = new JsonObject
         {
             ["authorityId"] = authority.AuthorityId.Value.ToString("N"),
+            ["agentId"] = authority.AgentId.ToString("N"),
+            ["databaseProfileId"] = authority.DatabaseProfileId.ToString("N"),
             ["workspaceScopeKind"] = authority.WorkspaceScope.Kind.ToString(),
             ["workspaceScopeKey"] = authority.WorkspaceScope.Key,
             ["databaseProfileGeneration"] = authority.DatabaseProfileGeneration.Value,
@@ -58,7 +60,47 @@ public static class AgentTurnContextMetadata
             ["policyFingerprint"] = authority.PolicyFingerprint,
             ["schemaVersion"] = authority.SchemaVersion
         };
+        WriteEntries(authorityObject, "allowedOperations", authority.AllowedOperations);
+        WriteEntries(authorityObject, "allowedCapabilityKeys", authority.AllowedCapabilityKeys);
+        WriteEntries(authorityObject, "allowedExternalTargetAliases", authority.AllowedExternalTargetAliases);
+        WriteEntries(authorityObject, "readOnlyExternalTargetAliases", authority.ReadOnlyExternalTargetAliases);
+        metadata[ExecutionAuthorityMetadataKey] = authorityObject;
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    private static void WriteEntries(JsonObject target, string propertyName, IReadOnlyList<string> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        var array = new JsonArray();
+        foreach (var entry in entries)
+        {
+            array.Add(entry);
+        }
+
+        target[propertyName] = array;
+    }
+
+    private static IReadOnlyList<string> ReadEntries(JsonObject source, string propertyName)
+    {
+        if (source[propertyName] is not JsonArray array || array.Count == 0)
+        {
+            return [];
+        }
+
+        var entries = new List<string>(array.Count);
+        foreach (var node in array)
+        {
+            if (node?.GetValue<string>() is { } value && !string.IsNullOrWhiteSpace(value))
+            {
+                entries.Add(value);
+            }
+        }
+
+        return entries;
     }
 
     public static AgentTurnContextReference? TryReadTurnContextReference(string? metadataJson)
@@ -98,6 +140,76 @@ public static class AgentTurnContextMetadata
             return null;
         }
     }
+
+    /// <summary>
+    /// Rebuilds the immutable execution governance snapshot from the safe
+    /// persisted authority projection of one admitted run. Returns
+    /// <c>null</c> for metadata written before the authority projection
+    /// existed and for any malformed projection — callers treat that as
+    /// "no context-admitted authority", never as a wider grant. Metadata
+    /// written before the agent/profile identifiers were persisted maps them
+    /// to empty values; the execution-time validator skips empty identity
+    /// comparisons instead of failing legacy runs.
+    /// </summary>
+    public static AgentExecutionGovernanceSnapshot? TryReadExecutionGovernanceSnapshot(string? metadataJson)
+    {
+        if (TryParseObject(metadataJson) is not { } metadata ||
+            metadata[ExecutionAuthorityMetadataKey] is not JsonObject authority)
+        {
+            return null;
+        }
+
+        try
+        {
+            var scopeKindText = ReadString(authority, "workspaceScopeKind");
+            if (!Enum.TryParse<WorkspaceScopeKind>(scopeKindText, ignoreCase: true, out var scopeKind))
+            {
+                return null;
+            }
+
+            var agentIdText = authority["agentId"]?.GetValue<string>();
+            var databaseProfileIdText = authority["databaseProfileId"]?.GetValue<string>();
+            return new AgentExecutionGovernanceSnapshot(
+                new AgentExecutionAuthorityId(ReadGuid(authority, "authorityId")),
+                string.IsNullOrWhiteSpace(agentIdText)
+                    ? LegacyProjectionAgentId
+                    : Guid.ParseExact(agentIdText, "N"),
+                string.IsNullOrWhiteSpace(databaseProfileIdText)
+                    ? LegacyProjectionProfileId
+                    : Guid.ParseExact(databaseProfileIdText, "N"),
+                new DatabaseProfileGeneration(authority["databaseProfileGeneration"]?.GetValue<long>() ?? 0),
+                new WorkspaceScopeDescriptor(
+                    scopeKind,
+                    authority["workspaceScopeKey"]?.GetValue<string>()),
+                authority["readAllowed"]?.GetValue<bool>() ?? false,
+                authority["mutationAllowed"]?.GetValue<bool>() ?? false,
+                authority["policyVersion"]?.GetValue<string>() is { Length: > 0 } policyVersion
+                    ? policyVersion
+                    : "unknown",
+                authority["policyFingerprint"]?.GetValue<string>() is { Length: > 0 } policyFingerprint
+                    ? policyFingerprint
+                    : "unknown",
+                ReadEntries(authority, "allowedOperations"),
+                ReadEntries(authority, "allowedCapabilityKeys"),
+                ReadEntries(authority, "allowedExternalTargetAliases"),
+                ReadEntries(authority, "readOnlyExternalTargetAliases"));
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or ArgumentOutOfRangeException or FormatException or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Sentinel identities for authority projections persisted before agent and
+    /// profile identifiers were part of the projection. They are stable,
+    /// non-empty, and can never match a real identity comparison — the
+    /// execution-time validator recognizes and skips them explicitly.
+    /// </summary>
+    public static readonly Guid LegacyProjectionAgentId = new("00000000-0000-0000-0000-000000000001");
+
+    public static readonly Guid LegacyProjectionProfileId = new("00000000-0000-0000-0000-000000000001");
 
     public static AgentTurnContextAuthorityProjection? TryReadExecutionAuthority(string? metadataJson)
     {

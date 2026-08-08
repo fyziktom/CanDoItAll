@@ -19,14 +19,29 @@ internal sealed class AgentTurnContextLeaseRegistry
     /// <summary>Generous default: long enough that no realistic human approval delay trips it while an entry's last-observed state still allows eviction.</summary>
     public static readonly TimeSpan DefaultTimeToLive = TimeSpan.FromHours(24);
 
+    /// <summary>
+    /// Abandoned-waiting-run reconciliation cutoff: a lease whose run was last
+    /// observed as <see cref="ExecutionState.WaitingOnTool"/> is protected from
+    /// ordinary TTL eviction, but once nothing has observed the run for this
+    /// long the waiting run is treated as abandoned and its lease is
+    /// reconciled away so it cannot exhaust the bounded registry. Continuation
+    /// after reconciliation stays fail-closed: the pending approvals remain
+    /// durable, and resolving the evicted lease raises
+    /// <see cref="AgentRunTransientContextUnavailableException"/> instead of
+    /// recapturing or guessing context.
+    /// </summary>
+    public static readonly TimeSpan DefaultAbandonedWaitingRunCutoff = TimeSpan.FromDays(7);
+
     private readonly object gate = new();
     private readonly Dictionary<Guid, LeaseEntry> leases = [];
     private readonly TimeSpan timeToLive;
+    private readonly TimeSpan abandonedWaitingRunCutoff;
     private readonly Action<AgentTurnContextLeaseEvictionDiagnostic>? onEvicted;
 
     public AgentTurnContextLeaseRegistry(
         TimeSpan? timeToLive = null,
-        Action<AgentTurnContextLeaseEvictionDiagnostic>? onEvicted = null)
+        Action<AgentTurnContextLeaseEvictionDiagnostic>? onEvicted = null,
+        TimeSpan? abandonedWaitingRunCutoff = null)
     {
         if (timeToLive.HasValue && timeToLive.Value <= TimeSpan.Zero)
         {
@@ -37,6 +52,21 @@ internal sealed class AgentTurnContextLeaseRegistry
         }
 
         this.timeToLive = timeToLive ?? DefaultTimeToLive;
+        // The default cutoff always covers a custom longer TTL; an explicit
+        // cutoff must not undercut the ordinary lease lifetime.
+        var resolvedCutoff = abandonedWaitingRunCutoff
+            ?? (DefaultAbandonedWaitingRunCutoff > this.timeToLive
+                ? DefaultAbandonedWaitingRunCutoff
+                : this.timeToLive);
+        if (resolvedCutoff < this.timeToLive)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(abandonedWaitingRunCutoff),
+                resolvedCutoff,
+                "The abandoned-waiting-run cutoff cannot be shorter than the ordinary lease time-to-live.");
+        }
+
+        this.abandonedWaitingRunCutoff = resolvedCutoff;
         this.onEvicted = onEvicted;
     }
 
@@ -131,11 +161,13 @@ internal sealed class AgentTurnContextLeaseRegistry
     }
 
     /// <summary>
-    /// Removes leases older than the configured TTL, skipping any whose last-observed state is
-    /// <see cref="ExecutionState.WaitingOnTool"/> — an actively waiting run's lease is never
-    /// evicted by this sweep no matter how old, only <see cref="Remove"/> (terminal cleanup) or a
-    /// fresh <see cref="Resolve"/>/<see cref="Register"/> observation with a different state can
-    /// move it out of the protected window. Must be called with <see cref="gate"/> held.
+    /// Removes leases older than the configured TTL. A lease whose
+    /// last-observed state is <see cref="ExecutionState.WaitingOnTool"/> is
+    /// protected from ordinary TTL eviction, but not indefinitely: once no
+    /// observation has touched the waiting run for the abandoned-waiting-run
+    /// cutoff, the lease is reconciled away so abandoned continuations cannot
+    /// exhaust the bounded registry. Must be called with <see cref="gate"/>
+    /// held.
     /// </summary>
     private void EvictExpiredLocked(DateTimeOffset nowUtc)
     {
@@ -143,7 +175,15 @@ internal sealed class AgentTurnContextLeaseRegistry
         foreach (var (runId, entry) in leases)
         {
             var age = nowUtc - entry.RegisteredAtUtc;
-            if (age < timeToLive || entry.LastObservedState == ExecutionState.WaitingOnTool)
+            if (entry.LastObservedState == ExecutionState.WaitingOnTool)
+            {
+                var idleTime = nowUtc - entry.LastObservedAtUtc;
+                if (idleTime < abandonedWaitingRunCutoff)
+                {
+                    continue;
+                }
+            }
+            else if (age < timeToLive)
             {
                 continue;
             }

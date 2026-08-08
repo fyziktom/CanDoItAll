@@ -101,7 +101,7 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
             runtimeOptions,
             workspaceScope);
         var workspaceRuntimeServices = workspaceRuntimeServicesFactory.Create(
-            new WorkspaceExecutionScope(workspaceRoot, effectiveWorkspaceScope));
+            WorkspaceExecutionScope.ForRun(workspaceRoot, effectiveWorkspaceScope, runtimeOptions.Governance));
         RuntimeBuildResult runtimeBuild;
         try
         {
@@ -141,12 +141,17 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
             var capabilityState = runtimeBuild.CapabilityState;
             runtimeOptions = runtimeOptions with
             {
-                ToolsetFingerprint = MafToolsetFingerprint.Compute(
+                ToolsetFingerprint = MafToolsetFingerprint.ComputeContractFingerprint(
+                    capabilityState?.Tools ?? []),
+                LegacyToolsetNameFingerprint = MafToolsetFingerprint.Compute(
                     (capabilityState?.Tools ?? []).Select(tool => tool.Name)),
+                CapabilityPolicyFingerprint = MafToolsetFingerprint.Compute(
+                    (capabilityState?.EffectiveCapabilityDescriptors ?? [])
+                        .Select(descriptor => descriptor.Identity.ToString())),
                 HistoryMode = agent.ChatHistoryMode
             };
 
-            await progressCallback(ExecutionState.Preparing, "Session", MafRuntimeSessionBuilder.ResolveSessionMessage(agent, runtimeBuild.Provider, session, runtimeOptions));
+            await progressCallback(ExecutionState.Preparing, "Session", MafRuntimeSessionBuilder.ResolveSessionMessage(agent, runtimeBuild.Provider, runtimeBuild.Model, session, runtimeOptions));
             var runtimeSession = await MafRuntimeSessionBuilder.RestoreOrCreateSessionAsync(
                 runtimeBuild.Agent,
                 agent,
@@ -165,7 +170,7 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
                 continuationToken: null,
                 forceOmitTemperature: forceOmitTemperature,
                 runtimeOptions);
-            var inputMessages = MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, runtimeBuild.Provider, session, prompt, runtimeOptions).ToList();
+            var inputMessages = MafRuntimeSessionBuilder.CreatePromptInputMessages(agent, runtimeBuild.Provider, runtimeBuild.Model, session, prompt, runtimeOptions).ToList();
             var contextManifest = MafContextManifestBuilder.Create(
                 agent,
                 runtimeBuild.Provider,
