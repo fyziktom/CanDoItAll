@@ -22,7 +22,7 @@ public sealed class PluginCapabilityFacadeTests
 
         try
         {
-            var facade = new PluginWorkspaceFiles(new WorkspaceFileService(temp.Path));
+            var facade = new PluginWorkspaceFiles(TestWorkspaceServices.CreateFileService(temp.Path));
 
             var exception = Assert.Throws<InvalidOperationException>(() => facade.ReadTextFile(outsidePath));
 
@@ -38,7 +38,7 @@ public sealed class PluginCapabilityFacadeTests
     public void WorkspaceFile_plugin_facade_rejects_oversized_read_limits_before_io()
     {
         using var temp = new TempDirectory();
-        var facade = new PluginWorkspaceFiles(new WorkspaceFileService(temp.Path));
+        var facade = new PluginWorkspaceFiles(TestWorkspaceServices.CreateFileService(temp.Path));
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
             facade.ReadTextFile("missing.txt", PluginWorkspaceFileLimits.MaxReadCharacters + 1));

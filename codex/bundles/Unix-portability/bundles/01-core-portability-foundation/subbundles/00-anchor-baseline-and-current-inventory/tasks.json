@@ -5,7 +5,7 @@
   "title": "Anchor, baseline, and current portability inventory",
   "critical": true,
   "conditional": false,
-  "status": "Eligible — first executable subbundle",
+  "status": "Completed — Gate C0 GO",
   "depends_on": [],
   "unlocks": [
     "A01"
@@ -40,7 +40,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -59,7 +59,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -78,7 +78,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -97,7 +97,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -116,7 +116,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -135,7 +135,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -154,7 +154,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -173,7 +173,7 @@
         "PREP-003",
         "PREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

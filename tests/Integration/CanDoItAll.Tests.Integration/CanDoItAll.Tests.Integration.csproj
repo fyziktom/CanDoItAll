@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\..\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj" />
     <ProjectReference Include="..\..\..\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
@@ -50,4 +51,3 @@
   </ItemGroup>
 
 </Project>
-

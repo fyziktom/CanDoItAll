@@ -1738,7 +1738,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             briefBuilder,
             dispatchQueue: null!,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
 
         await service.PreviewAsync(new ProcessLaunchRequest(
             DefinitionKey: definition.Key,

@@ -71,21 +71,19 @@ internal static class FileSystemStorageBrowseEntryMapper
         }
 
         string current = string.Empty;
-        foreach (string segment in container.Key.Split(
-                     ['/', '\\'],
-                     StringSplitOptions.RemoveEmptyEntries))
+        foreach (var segment in FileSystemStorageKeyCodec.Decode(container.Key))
         {
-            current = CombineKey(current, segment);
-            path.Add(new StorageBrowsePathSegment(segment, new StorageBrowseContainer(current)));
+            current = FileSystemStorageKeyCodec.AppendEncoded(current, segment.Encoded);
+            path.Add(new StorageBrowsePathSegment(
+                segment.Physical,
+                new StorageBrowseContainer(current)));
         }
 
         return path;
     }
 
     private static string CombineKey(string container, string name)
-        => string.IsNullOrWhiteSpace(container)
-            ? name.Replace('\\', '/')
-            : $"{container.TrimEnd('/', '\\').Replace('\\', '/')}/{name.Replace('\\', '/')}";
+        => FileSystemStorageKeyCodec.Append(container, name);
 
     private static string ResolveMediaType(string extension)
     {
@@ -132,5 +130,86 @@ internal static class FileSystemStorageBrowseEntryMapper
         }
 
         return "application/octet-stream";
+    }
+}
+
+internal static class FileSystemStorageKeyCodec
+{
+    public static string Canonicalize(string key)
+    {
+        string canonical = string.Empty;
+        foreach (var segment in Decode(key))
+        {
+            canonical = Append(canonical, segment.Physical);
+        }
+
+        return canonical;
+    }
+
+    public static string Append(string container, string physicalName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(physicalName);
+        return AppendEncoded(container, Uri.EscapeDataString(physicalName));
+    }
+
+    public static string AppendEncoded(string container, string encodedSegment)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(encodedSegment);
+        var canonicalContainer = string.Join(
+            '/',
+            container.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries));
+        return canonicalContainer.Length == 0
+            ? encodedSegment
+            : $"{canonicalContainer}/{encodedSegment}";
+    }
+
+    public static IReadOnlyList<(string Encoded, string Physical)> Decode(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key) || string.Equals(key.Trim(), ".", StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        var segments = key.Trim().Split(['/', '\\'], StringSplitOptions.None);
+        if (segments.Any(string.IsNullOrEmpty))
+        {
+            throw new ArgumentException("Filesystem storage keys cannot contain empty segments.", nameof(key));
+        }
+
+        return segments
+            .Select(segment => (Encoded: segment, Physical: DecodeSegment(segment)))
+            .ToArray();
+    }
+
+    private static string DecodeSegment(string encoded)
+    {
+        for (var index = 0; index < encoded.Length; index++)
+        {
+            if (encoded[index] != '%')
+            {
+                continue;
+            }
+
+            if (index + 2 >= encoded.Length ||
+                !Uri.IsHexDigit(encoded[index + 1]) ||
+                !Uri.IsHexDigit(encoded[index + 2]))
+            {
+                throw new ArgumentException("Filesystem storage keys contain invalid percent encoding.", nameof(encoded));
+            }
+
+            index += 2;
+        }
+
+        var physical = Uri.UnescapeDataString(encoded);
+        if (physical.Length == 0 ||
+            physical is "." or ".." ||
+            physical.Contains('\0') ||
+            physical.Contains(Path.DirectorySeparatorChar) ||
+            physical.Contains(Path.AltDirectorySeparatorChar))
+        {
+            throw new ArgumentException("Filesystem storage keys contain an invalid physical path segment.", nameof(encoded));
+        }
+
+        return physical;
     }
 }

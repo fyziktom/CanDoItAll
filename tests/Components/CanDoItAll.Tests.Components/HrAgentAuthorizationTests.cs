@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.AI;
@@ -148,6 +149,7 @@ public sealed class HrAgentAuthorizationTests
                 StringComparison.Ordinal)));
         var administrationService = new HrAgentAdministrationService(
             workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
         var originalAgentCount = agents.Count;
 
@@ -221,6 +223,7 @@ public sealed class HrAgentAuthorizationTests
             provider => provider.Id == hrAgent.ProviderProfileId);
         var administrationService = new HrAgentAdministrationService(
             workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
         var created = await administrationService.CreateAsync(
             HrAgentIdentity.AgentId,
@@ -304,6 +307,7 @@ public sealed class HrAgentAuthorizationTests
             capability => capability.Key == PromptsCuratorAgentCapabilityKeys.DraftCreate);
         var administration = new HrAgentAdministrationService(
             workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
 
         var options = await administration.GetCreationOptionsAsync(CancellationToken.None);

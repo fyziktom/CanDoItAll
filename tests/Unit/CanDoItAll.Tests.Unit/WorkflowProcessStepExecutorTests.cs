@@ -293,7 +293,7 @@ public sealed class WorkflowProcessStepExecutorTests
         IWorkflowLaunchService launchService,
         IWorkflowRuntimeManager runtimeManager)
     {
-        var workspaceFiles = new WorkspaceFileService(Path.Combine(
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.WorkflowProcessStepExecutor.{Guid.NewGuid():N}"));
         var receiptPolicies = new ProcessToolReceiptPolicyCatalog([]);

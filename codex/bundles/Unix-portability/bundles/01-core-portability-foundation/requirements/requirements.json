@@ -8,7 +8,7 @@
       "owner": "A00",
       "requirement": "The execution checkout is anchored, dirty-state-safe, and compared with the prepared commit before edits.",
       "acceptance": "Anchor report records branch, HEAD, merge-base/delta, SDK, OS, architecture, and preserved working-tree changes.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PREP-002",
@@ -16,7 +16,7 @@
       "owner": "A00",
       "requirement": "Every platform-sensitive source/project is inventoried and classified by path, filesystem, secret, process, desktop, hosting, test, or external-dependency concern.",
       "acceptance": "Generated inventory covers all projects and has no unclassified P0/P1 item at gate C0.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PREP-003",
@@ -24,7 +24,7 @@
       "owner": "A00",
       "requirement": "Every persisted path/key/secret record and migration boundary affected by portability is mapped before schema or provider changes.",
       "acceptance": "Persistence map identifies writer, reader, format, migration owner, rollback, and host affinity.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PREP-004",
@@ -32,7 +32,7 @@
       "owner": "A00",
       "requirement": "Existing stable Windows behavior and available Linux/macOS baselines are captured before implementation.",
       "acceptance": "Baseline evidence includes exact commands, exit codes, logs, and known pre-existing failures.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-001",
@@ -40,7 +40,7 @@
       "owner": "A01",
       "requirement": "Persisted logical workspace/storage/artifact paths use '/' as their canonical serialized separator.",
       "acceptance": "New writers emit only canonical logical paths; round-trip tests pass on all target OSes.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-002",
@@ -48,7 +48,7 @@
       "owner": "A01",
       "requirement": "Known legacy logical-path fields accept Windows backslashes on read without treating every Unix backslash as a separator.",
       "acceptance": "Compatibility is field-scoped, versioned, tested, and does not rewrite arbitrary physical paths or filenames.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-003",
@@ -56,7 +56,7 @@
       "owner": "A01",
       "requirement": "Logical paths, physical host paths, routes/URIs, executable identifiers, and opaque command/script text have distinct contracts.",
       "acceptance": "Inventory and APIs prevent a normalization routine from crossing categories.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-004",
@@ -64,7 +64,7 @@
       "owner": "A01",
       "requirement": "Portable configuration roots support '~' and an explicit environment-token syntax, while legacy Windows tokens remain readable where required.",
       "acceptance": "Windows, Linux, and macOS tests cover expansion, unset variables, escaping, and fail-safe diagnostics.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-005",
@@ -72,7 +72,7 @@
       "owner": "A01",
       "requirement": "Foreign absolute path syntax is never silently reinterpreted as a relative path on another OS.",
       "acceptance": "Windows drive/UNC and Unix absolute paths are detected, marked host-bound/unresolved, and require explicit rebind or migration.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-006",
@@ -80,7 +80,7 @@
       "owner": "A01",
       "requirement": "Infrastructure, storage, MAF workspace, and MAF runtime containment share compatible semantics without creating reverse project references.",
       "acceptance": "Contract tests feed identical logical/physical cases through each owner and prove equivalent outcomes.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-007",
@@ -88,7 +88,7 @@
       "owner": "A01",
       "requirement": "External-root aliases use a versioned platform-neutral format.",
       "acceptance": "Aliases round-trip Unix roots, Windows roots, and multiple allowed roots without exposing physical paths to untrusted output.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-008",
@@ -96,7 +96,7 @@
       "owner": "A01",
       "requirement": "Traversal, rooted input, dot segments, empty segments, and invalid logical names fail consistently.",
       "acceptance": "Named negative tests cover '/', '\\', '..', drive roots, UNC, symlink candidates, and Unicode edge cases.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-009",
@@ -104,7 +104,7 @@
       "owner": "A01",
       "requirement": "All persisted logical path writers are deterministic and independent of host separators.",
       "acceptance": "Golden serialization fixtures are byte-equivalent across Windows, Linux, and macOS.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "PATH-010",
@@ -112,7 +112,7 @@
       "owner": "A01",
       "requirement": "Path conversion is localized to typed boundaries rather than a repository-wide string replacement.",
       "acceptance": "Architecture scan shows no blanket slash rewrite in URLs, project files, scripts, or opaque command content.",
-      "status": "Planned"
+      "status": "Satisfied"
     },
     {
       "id": "FS-001",
@@ -120,7 +120,7 @@
       "owner": "A02",
       "requirement": "Logical identifiers use ordinal semantics; physical path equality uses a root/volume-specific filesystem policy.",
       "acceptance": "Case-sensitive and case-insensitive volume fixtures or actual-host probes are covered, including macOS uncertainty.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-002",
@@ -128,7 +128,7 @@
       "owner": "A02",
       "requirement": "All decision-bearing or persisted filesystem enumeration is explicitly sorted by normalized logical key.",
       "acceptance": "Determinism tests randomize source enumeration and assert identical results.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-003",
@@ -136,7 +136,7 @@
       "owner": "A02",
       "requirement": "Managed roots and trusted operations have one documented symlink/reparse policy applied to reads, writes, opens, process targets, and migrations.",
       "acceptance": "Linux symlink and Windows reparse/junction tests prove containment; unsupported ambiguous cases fail closed.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-004",
@@ -144,7 +144,7 @@
       "owner": "A02",
       "requirement": "Path checks and file operations minimize time-of-check/time-of-use gaps and document residual platform limits.",
       "acceptance": "Security review accepts the implementation and failure cases cannot escape a managed root in test fixtures.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-005",
@@ -152,7 +152,7 @@
       "owner": "A02",
       "requirement": "Catalog, storage, control-plane, key, and vault writes use a shared atomic same-volume commit pattern where applicable.",
       "acceptance": "Crash/failure injection leaves either the previous complete generation or the new complete generation, never truncation.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-006",
@@ -160,7 +160,7 @@
       "owner": "A02",
       "requirement": "Concurrent application processes coordinate writes with bounded cross-process locking or a transactional authority.",
       "acceptance": "Two-process contention tests prove timeout, recovery, and no corruption.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-007",
@@ -168,7 +168,7 @@
       "owner": "A02",
       "requirement": "Secret-bearing directories and files receive restrictive Unix modes and are verified after creation/migration.",
       "acceptance": "Linux/macOS tests verify expected modes; hardening failure blocks secret use with actionable diagnostics.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-008",
@@ -176,7 +176,7 @@
       "owner": "A02",
       "requirement": "Physical artifact filenames follow an application-level portable policy independent of Path.GetInvalidFileNameChars.",
       "acceptance": "Golden cases produce the same physical name on all OSes while preserving original display names.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-009",
@@ -184,7 +184,7 @@
       "owner": "A02",
       "requirement": "File watchers are treated as hints and recover through deterministic rescan/fingerprint or polling.",
       "acceptance": "Overflow, duplicate, rename, and dropped-event tests converge to correct state.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "FS-010",
@@ -192,7 +192,7 @@
       "owner": "A02",
       "requirement": "Temporary files, locks, and migration markers are cleaned safely without following links or deleting outside owned roots.",
       "acceptance": "Failure-injection and malicious-link fixtures prove bounded cleanup.",
-      "status": "Planned"
+      "status": "Verified"
     },
     {
       "id": "STO-001",
@@ -200,7 +200,7 @@
       "owner": "A03",
       "requirement": "Windows, Linux, and macOS have explicit default roots for workspace, control-plane data, keys, logs/state, and temporary runtime artifacts.",
       "acceptance": "Root matrix is documented and actual-host tests confirm writable, owned, non-repository locations.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-002",
@@ -208,7 +208,7 @@
       "owner": "A03",
       "requirement": "Interactive-user and service/headless profiles can override roots without changing persisted logical locators.",
       "acceptance": "systemd/launchd/service-user scenarios use explicit configuration and retain identical application semantics.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-003",
@@ -216,7 +216,7 @@
       "owner": "A03",
       "requirement": "Storage locators and related JSON/database records are versioned and migrate legacy separator formats transactionally.",
       "acceptance": "Migration can dry-run, back up, resume, roll back, and produce a redacted report.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-004",
@@ -224,7 +224,7 @@
       "owner": "A03",
       "requirement": "Absolute workspace roots, storage roots, repository paths, and executable preferences are explicitly host-bound.",
       "acceptance": "Foreign records become unresolved with a safe UX/API status rather than being executed or opened.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-005",
@@ -232,7 +232,7 @@
       "owner": "A03",
       "requirement": "Database profile control-plane records preserve password decryptability while workspace roots are migrated/rebound.",
       "acceptance": "Profile selection, restart, old-data read, and rollback tests pass.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-006",
@@ -240,7 +240,7 @@
       "owner": "A03",
       "requirement": "Preferred application records are versioned by platform/host and never auto-launch a foreign executable path.",
       "acceptance": "Cross-host import requires explicit confirmation/rebind and desktop launch remains disabled by default.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-007",
@@ -248,7 +248,7 @@
       "owner": "A03",
       "requirement": "FileSystemStorageDriver Save/Replace semantics are atomic, conflict-aware, and consistent across processes.",
       "acceptance": "Concurrent writes, revision conflicts, cancellation, and crash simulation pass on Windows/Linux/macOS.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-008",
@@ -256,7 +256,7 @@
       "owner": "A03",
       "requirement": "Storage bootstrap authority compares canonical roots using the owning filesystem semantics and migration state.",
       "acceptance": "Copied or rebound profiles select the intended authoritative storage and reject ambiguous duplicates.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "STO-009",
@@ -264,7 +264,7 @@
       "owner": "A03",
       "requirement": "A pre-migration backup and rollback path exists for control-plane files, storage catalog records, and path-bearing database data.",
       "acceptance": "Operator rehearsal restores the previous application version and data without loss.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C2a GO"
     },
     {
       "id": "SEC-001",
@@ -272,7 +272,7 @@
       "owner": "A04",
       "requirement": "Auto secret-provider selection never returns an unsupported provider.",
       "acceptance": "Startup either registers a proven provider or fails fast with a non-secret remediation message.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-002",
@@ -280,7 +280,7 @@
       "owner": "A04",
       "requirement": "The macOS interactive profile has a real Keychain-backed secret implementation or an explicitly supported secure alternative.",
       "acceptance": "Create/read/update/delete/restart/concurrency tests run on macOS and prove access-control behavior.",
-      "status": "Planned"
+      "status": "Blocked — actual macOS validation required for Gate C2"
     },
     {
       "id": "SEC-003",
@@ -288,7 +288,7 @@
       "owner": "A04",
       "requirement": "The Linux interactive profile has a real Secret Service implementation with explicit session/availability semantics.",
       "acceptance": "Tests cover available service, locked/unavailable service, and headless absence; no silent fallback occurs.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-004",
@@ -296,7 +296,7 @@
       "owner": "A04",
       "requirement": "Linux/macOS headless operation has an explicit secure provider that does not depend on an interactive keyring.",
       "acceptance": "A configured certificate, remote vault, or externally supplied wrapping-key mode is documented and restart-tested.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-005",
@@ -304,7 +304,7 @@
       "owner": "A04",
       "requirement": "The Data Protection key ring is protected at rest in supported production profiles.",
       "acceptance": "The selected protector is bootstrapped independently, restart-tested, and its files/keys meet permission policy.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-006",
@@ -312,7 +312,7 @@
       "owner": "A04",
       "requirement": "Key-ring protection has no circular dependency on secrets encrypted by that same key ring.",
       "acceptance": "Architecture test/review traces bootstrap dependencies and detects cycles.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-007",
@@ -320,7 +320,7 @@
       "owner": "A04",
       "requirement": "The current plaintext Base64 file-vault master key is removed from production paths and cannot be selected by Auto.",
       "acceptance": "Legacy development data has a named migration or explicit discard path; production startup rejects insecure configuration.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-008",
@@ -328,7 +328,7 @@
       "owner": "A04",
       "requirement": "Legacy DPAPI-protected data has a Windows-side transactional export/re-encryption path before Unix migration.",
       "acceptance": "Dry-run, interruption, retry, verification, and rollback preserve every source record.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-009",
@@ -336,7 +336,7 @@
       "owner": "A04",
       "requirement": "Legacy Data Protection secret records and control-plane database passwords remain readable through migration and restart.",
       "acceptance": "Golden fixtures from the old key ring decrypt before and after staged migration.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-010",
@@ -344,7 +344,7 @@
       "owner": "A04",
       "requirement": "Vault payloads and key metadata are versioned, atomic, cross-process safe, permission-hardened, and rotatable.",
       "acceptance": "Rotation interruption/recovery tests prove no key/payload orphaning and old generation retention until commit.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-011",
@@ -352,7 +352,7 @@
       "owner": "A04",
       "requirement": "Secret values never enter logs, exceptions, receipts, migration reports, scanner output, or test artifacts.",
       "acceptance": "Automated redaction tests and artifact scan pass with seeded sentinel secrets.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-012",
@@ -360,7 +360,7 @@
       "owner": "A04",
       "requirement": "Provider capability and health diagnostics reveal only provider type/state and remediation, never identifiers or values.",
       "acceptance": "Readiness/UI/API snapshots are security-reviewed.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-013",
@@ -368,7 +368,7 @@
       "owner": "A04",
       "requirement": "Secret migration and deletion are auditable without exposing values and have explicit orphan cleanup semantics.",
       "acceptance": "Staged reference cleanup and old-payload deletion are idempotent and tested.",
-      "status": "Planned"
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "PLAT-001",

@@ -1,5 +1,23 @@
 # Secrets and key bootstrap
 
+## A04 implementation decision
+
+A04 implements explicit provider profiles and makes provider capability a startup contract:
+
+- Windows Auto selects DPAPI.
+- macOS Auto selects Keychain and requires an interactive session.
+- Linux Auto selects Secret Service and requires an available, unlocked D-Bus session keyring.
+- Unix headless/service profiles explicitly select an external wrapping-key vault. The AES-256-GCM key is supplied by a protected environment source, is never written to the vault directory, and supports current plus retained previous key identifiers for rotation.
+- The legacy Data Protection file vault and in-memory vault are rejected outside Development and require explicit insecure-development opt-in. The legacy file vault may otherwise be opened only through the read/delete migration-source boundary.
+
+Every selected vault implements a capability probe. A hosted startup validator publishes only provider kind, availability state, and remediation; it prevents the application from serving when the configured provider is unsupported, unavailable, locked, dependency-missing, or incompatible with the current session/profile.
+
+ASP.NET Data Protection uses a separate bootstrap policy. Windows Auto uses DPAPI. Unix production requires explicit certificate protection, with current and previous PFX certificates loaded directly from configured files and passwords supplied by named environment inputs. Unprotected persistence exists only as an explicit Development choice. The private XML repository uses the A02 durable writer, atomic create-new commits, and restrictive directory/file modes. No Data Protection bootstrap path resolves a secret encrypted by the same ring.
+
+One migration coordinator handles legacy Data Protection payloads, DPAPI/file-vault sources, control-plane database-password continuity, and vault-reference destinations. It uses a private journal, cross-process lock, deterministic selection, destination read-back, optimistic source checks, restart verification, source cleanup after checkpoint, rollback, and redacted audit events. Rollback verifies a source before restoring its reference and treats an already-restored verified reference as an idempotent resume state. Malformed, tampered, source-changed, or selection-changed journals fail closed.
+
+Actual Windows DPAPI and Linux Secret Service/headless restart proof is recorded in `reviews/13-a04-evidence-report.md`. The Keychain adapter has contract/fake-native coverage, but genuine macOS execution is not available in the current environment and remains an explicit gate input.
+
 ## Current mechanisms to preserve
 
 1. DPAPI-protected legacy material on Windows.
@@ -77,3 +95,5 @@ Use sentinel secrets in tests. Scan:
 - backups/manifests;
 - screenshots/browser traces;
 - generated portability scan excerpts.
+
+A04's schema-2 scanner reports only metadata and fingerprints for reviewed synthetic secret-scanner/redaction fixtures embedded in TRX parameterized test names. It accepts private sentinel-file inputs without echoing or scanning them; all four seeded runtime/migration sentinels produced zero findings. See `artifacts/unix-portability/A04/A04-secret-scan-classification.md`.

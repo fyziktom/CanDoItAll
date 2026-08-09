@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tests.Support;
@@ -134,7 +135,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             (workspaceRoot, store) =>
             {
                 processHost = new LeaseProcessHost(workspaceRoot);
-                projectCommands = new WorkspaceCommandExecutionService(
+                projectCommands = TestWorkspaceServices.CreateCommandExecutionService(
                     workspaceRoot,
                     processHost,
                     projectScope);
@@ -188,7 +189,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             (workspaceRoot, store) =>
             {
                 processHost = new LeaseProcessHost(workspaceRoot);
-                projectCommands = new WorkspaceCommandExecutionService(
+                projectCommands = TestWorkspaceServices.CreateCommandExecutionService(
                     workspaceRoot,
                     processHost,
                     projectScope);
@@ -253,7 +254,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             (workspaceRoot, store) =>
             {
                 processHost = new LeaseProcessHost(workspaceRoot);
-                projectCommands = new WorkspaceCommandExecutionService(
+                projectCommands = TestWorkspaceServices.CreateCommandExecutionService(
                     workspaceRoot,
                     processHost,
                     projectScope);
@@ -494,6 +495,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
             cleaner,
+            new ExternalTargetPathRegistryFactory(),
             providerCredentialResolver:
                 FixedAgentProviderCredentialResolver.Instance);
 

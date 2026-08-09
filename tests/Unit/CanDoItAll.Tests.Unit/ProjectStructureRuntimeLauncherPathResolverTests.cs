@@ -105,24 +105,28 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
 
         try
         {
+            var externalTargetsFactory = new ExternalTargetPathRegistryFactory();
+            var externalTargets = externalTargetsFactory.Create([]);
+            Assert.True(externalTargets.TryCreateAlias(externalRoot, out var externalAlias));
+            string projectAlias = $"{externalAlias}/Calculator.csproj";
+            var bindings = externalTargets.ExportBindings([externalAlias]);
             using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
-                CreateExecutionRun(
-                    AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)));
+                CreateExecutionRun(externalAlias, bindings));
 
             var node = CreateEnvironmentNode(
                 ProjectEnvironmentKind.DotNetWatch,
                 new ProjectEnvironmentMetadata
                 {
-                    ProjectPath = projectPath
+                    ProjectPath = projectAlias
                 });
-            var result = CreateSut().Resolve(
+            var result = CreateSut(externalTargetPathRegistryFactory: externalTargetsFactory).Resolve(
                 node.ObjectType,
                 node.ObjectSubtype,
                 node.Notes,
                 node.MetadataJson,
                 ProjectStructureRuntimePathAuthorityMode.AgentExecution);
 
-            Assert.True(result.IsSuccess);
+            Assert.True(result.IsSuccess, result.Message);
             Assert.Equal(projectPath, result.Plan!.Target!.Path);
         }
         finally
@@ -149,19 +153,26 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
         try
         {
             Directory.CreateSymbolicLink(linkedRoot, linkedTargetRoot);
+            var externalTargetsFactory = new ExternalTargetPathRegistryFactory();
+            var externalTargets = externalTargetsFactory.Create([]);
+            Assert.True(externalTargets.TryCreateAlias(externalRoot, out var externalAlias));
+            string projectAlias = $"{externalAlias}/linked/Calculator.csproj";
+            var bindings = externalTargets.ExportBindings([externalAlias]);
             using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
-                CreateExecutionRun(
-                    AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)));
+                CreateExecutionRun(externalAlias, bindings));
 
-            var result = CreateSut().Resolve(CreateEnvironmentNode(
+            var result = CreateSut(externalTargetPathRegistryFactory: externalTargetsFactory).Resolve(CreateEnvironmentNode(
                 ProjectEnvironmentKind.DotNetWatch,
                 new ProjectEnvironmentMetadata
                 {
-                    ProjectPath = Path.Combine(linkedRoot, "Calculator.csproj")
+                    ProjectPath = projectAlias
                 }));
 
             Assert.False(result.IsSuccess);
-            Assert.Contains("cannot traverse symbolic links or filesystem reparse points", result.Message, StringComparison.Ordinal);
+            Assert.True(
+                result.Message.Contains("symbolic", StringComparison.OrdinalIgnoreCase) &&
+                result.Message.Contains("reparse", StringComparison.OrdinalIgnoreCase),
+                result.Message);
         }
         finally
         {
@@ -176,11 +187,16 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
     }
 
     private static ProjectStructureRuntimeLauncher CreateSut(
-        IProjectStructureDotNetProjectTargetResolver? projectTargetResolver = null)
+        IProjectStructureDotNetProjectTargetResolver? projectTargetResolver = null,
+        IExternalTargetPathRegistryFactory? externalTargetPathRegistryFactory = null)
         => new(
-            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(@"C:\workspace")),
+            new WorkspacePathAccessGuard(
+                new TestWorkspacePathResolver(@"C:\workspace"),
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
             NullLogger<ProjectStructureRuntimeLauncher>.Instance,
-            projectTargetResolver ?? new ExistingProjectTargetResolver());
+            projectTargetResolver ?? new ExistingProjectTargetResolver(),
+            externalTargetPathRegistryFactory ?? new ExternalTargetPathRegistryFactory(),
+            new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(Path.GetTempPath())));
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
     {
@@ -245,18 +261,20 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
                 "An unauthorized external runtime path must be rejected before project inspection.");
     }
 
-    private static ExecutionRunRecord CreateExecutionRun(string? readOnlyExternalTargetAlias)
+    private static ExecutionRunRecord CreateExecutionRun(
+        string? readOnlyExternalTargetAlias,
+        IReadOnlyList<ExternalTargetRootBinding>? externalTargetRootBindings = null)
     {
         var now = DateTimeOffset.UtcNow;
         var metadataJson = readOnlyExternalTargetAlias is null
             ? "{}"
             : System.Text.Json.JsonSerializer.Serialize(
-                new Dictionary<string, string[]>
+                new Dictionary<string, object>
                 {
                     [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
-                    [
-                        readOnlyExternalTargetAlias
-                    ]
+                        new[] { readOnlyExternalTargetAlias! },
+                    [ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey] =
+                        externalTargetRootBindings ?? []
                 });
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),

@@ -500,6 +500,8 @@ public sealed class ProjectEnvironmentMetadata
 
 public sealed class ProjectInfrastructureMetadata
 {
+    private string storagePathPrefix = string.Empty;
+
     [ProjectStructurePreviewField("Kind", 10)]
     public ProjectInfrastructureKind InfrastructureKind { get; set; }
 
@@ -567,7 +569,13 @@ public sealed class ProjectInfrastructureMetadata
     public string StoragePurpose { get; set; } = string.Empty;
 
     [ProjectStructurePreviewField("Storage path prefix", 230)]
-    public string StoragePathPrefix { get; set; } = string.Empty;
+    public string StoragePathPrefix
+    {
+        get => storagePathPrefix;
+        set => storagePathPrefix = string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : LogicalPath.ParseLegacyWindowsLogicalPath(value).Value;
+    }
 
     [ProjectStructurePreviewField("AI reference kind", 240)]
     public ProjectAiReferenceKind? AiReferenceKind { get; set; }

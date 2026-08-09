@@ -1,9 +1,12 @@
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Manager;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class CapsuleCatalogServiceIntegrationTests
 {
     [Fact]
@@ -51,7 +54,10 @@ public sealed class CapsuleCatalogServiceIntegrationTests
                 })
                 .Build();
 
-            var service = new CapsuleCatalogService(NullLogger<CapsuleCatalogService>.Instance, configuration);
+            var service = new CapsuleCatalogService(
+                NullLogger<CapsuleCatalogService>.Instance,
+                configuration,
+                new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory()));
             await service.RefreshAsync();
             var coverage = service.GetCoverage();
 

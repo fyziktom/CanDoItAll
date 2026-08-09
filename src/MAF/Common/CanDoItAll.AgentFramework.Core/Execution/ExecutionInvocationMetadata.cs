@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -11,6 +13,7 @@ public static class ExecutionInvocationMetadata
     public const string AllowRequiredFinalizerStructuredOutputRecoveryMetadataKey = "agentAllowRequiredFinalizerStructuredOutputRecovery";
     public const string AllowedExternalTargetAliasesMetadataKey = "agentAllowedExternalTargetAliases";
     public const string ReadOnlyExternalTargetAliasesMetadataKey = "agentReadOnlyExternalTargetAliases";
+    public const string ExternalTargetRootBindingsMetadataKey = "agentExternalTargetRootBindings";
     public const string AllowedManagedArtifactReadRefsMetadataKey = "agentAllowedManagedArtifactReadRefs";
     public const string ProcessCooperationModeMetadataKey = "agentProcessCooperationMode";
     public const string ProcessWorkspaceToolProfileMetadataKey = "agentProcessWorkspaceToolProfile";
@@ -214,8 +217,10 @@ public static class ExecutionInvocationMetadata
     public static string GroundPromptExternalTargetAliases(
         string? metadataJson,
         string? prompt,
-        AgentWorkspaceToolAccessSettings? workspaceToolAccess)
+        AgentWorkspaceToolAccessSettings? workspaceToolAccess,
+        IExternalTargetPathRegistry externalTargetRegistry)
     {
+        ArgumentNullException.ThrowIfNull(externalTargetRegistry);
         var metadata = ParseObject(metadataJson);
         var accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess ?? new AgentWorkspaceToolAccessSettings());
         if ((!accessSettings.CanReadFiles && !accessSettings.CanWriteFiles) ||
@@ -224,20 +229,45 @@ public static class ExecutionInvocationMetadata
             return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
         }
 
-        var aliases = ExtractPromptExternalTargetAliases(prompt);
-        if (aliases.Count == 0)
+        if (metadata[AllowedExternalTargetAliasesMetadataKey] is JsonArray)
         {
-            return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+            MergeExternalTargetAliases(
+                metadata,
+                AllowedExternalTargetAliasesMetadataKey,
+                [],
+                externalTargetRegistry);
         }
 
-        var targetMetadataKey = accessSettings.CanWriteFiles &&
-                                !HasProcessBoundaryMetadata(metadata)
-            ? AllowedExternalTargetAliasesMetadataKey
-            : ReadOnlyExternalTargetAliasesMetadataKey;
-        MergeExternalTargetAliases(
+        if (metadata[ReadOnlyExternalTargetAliasesMetadataKey] is JsonArray)
+        {
+            MergeExternalTargetAliases(
+                metadata,
+                ReadOnlyExternalTargetAliasesMetadataKey,
+                [],
+                externalTargetRegistry);
+        }
+
+        var aliases = ExtractPromptExternalTargetAliases(prompt, externalTargetRegistry);
+        if (aliases.Count > 0)
+        {
+            var targetMetadataKey = accessSettings.CanWriteFiles &&
+                                    !HasProcessBoundaryMetadata(metadata)
+                ? AllowedExternalTargetAliasesMetadataKey
+                : ReadOnlyExternalTargetAliasesMetadataKey;
+            MergeExternalTargetAliases(
+                metadata,
+                targetMetadataKey,
+                aliases,
+                externalTargetRegistry);
+        }
+
+        var groundedAliases = ReadExternalTargetAliases(metadata, AllowedExternalTargetAliasesMetadataKey)
+            .Concat(ReadExternalTargetAliases(metadata, ReadOnlyExternalTargetAliasesMetadataKey))
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .ToArray();
+        MergeExternalTargetRootBindings(
             metadata,
-            targetMetadataKey,
-            aliases);
+            externalTargetRegistry.ExportBindings(groundedAliases));
         RemoveWritableCoveredReadOnlyExternalTargetAliases(metadata);
 
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
@@ -252,8 +282,8 @@ public static class ExecutionInvocationMetadata
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(static alias => !string.IsNullOrWhiteSpace(alias))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .Order(StringComparer.Ordinal)
             .ToArray() ?? [];
         if (aliases.Length == 0)
         {
@@ -268,8 +298,51 @@ public static class ExecutionInvocationMetadata
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
 
-    public static IReadOnlyList<string> ExtractPromptExternalTargetAliases(string? prompt)
+    public static string ApplyExternalTargetRootBindings(
+        string? metadataJson,
+        IReadOnlyList<ExternalTargetRootBinding>? bindings)
     {
+        var metadata = ParseObject(metadataJson);
+        if (bindings is { Count: > 0 })
+        {
+            if (bindings.Any(binding => !IsValidExternalTargetRootBinding(binding)))
+            {
+                throw new InvalidOperationException("An external-target root binding is malformed.");
+            }
+
+            MergeExternalTargetRootBindings(metadata, bindings);
+        }
+
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static string ProtectForUntrustedOutput(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return "{}";
+        }
+
+        JsonObject metadata;
+        try
+        {
+            metadata = JsonNode.Parse(metadataJson) as JsonObject
+                ?? throw new InvalidOperationException("Execution metadata must be a JSON object.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException("Execution metadata is malformed.", exception);
+        }
+
+        metadata.Remove(ExternalTargetRootBindingsMetadataKey);
+        return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
+    }
+
+    public static IReadOnlyList<string> ExtractPromptExternalTargetAliases(
+        string? prompt,
+        IExternalTargetPathRegistry externalTargetRegistry)
+    {
+        ArgumentNullException.ThrowIfNull(externalTargetRegistry);
         if (string.IsNullOrWhiteSpace(prompt))
         {
             return [];
@@ -284,7 +357,9 @@ public static class ExecutionInvocationMetadata
             }
 
             var candidate = ReadPathCandidate(prompt, index, out var nextIndex);
-            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(candidate);
+            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                candidate,
+                externalTargetRegistry);
             if (!string.IsNullOrWhiteSpace(alias))
             {
                 aliases.Add(alias);
@@ -294,8 +369,8 @@ public static class ExecutionInvocationMetadata
         }
 
         return aliases
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(item => item, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -348,6 +423,44 @@ public static class ExecutionInvocationMetadata
         ArgumentNullException.ThrowIfNull(run);
 
         return ResolveExternalTargetAliases(run, ReadOnlyExternalTargetAliasesMetadataKey);
+    }
+
+    public static IReadOnlyList<ExternalTargetRootBinding> ResolveExternalTargetRootBindings(
+        ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        if (string.IsNullOrWhiteSpace(run.MetadataJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(run.MetadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new InvalidOperationException("Execution metadata must be a JSON object.");
+            }
+
+            if (!document.RootElement.TryGetProperty(ExternalTargetRootBindingsMetadataKey, out var value))
+            {
+                return [];
+            }
+
+            if (value.ValueKind != JsonValueKind.Array)
+            {
+                throw new InvalidOperationException("External-target root binding metadata must be a JSON array.");
+            }
+
+            return ValidateExternalTargetRootBindings(
+                value.Deserialize<ExternalTargetRootBinding[]>(AgentOutputJson.SerializerOptions) ?? []);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "External-target root binding metadata is malformed.",
+                exception);
+        }
     }
 
     public static IReadOnlyList<string> ResolveAllowedManagedArtifactReadRefs(ExecutionRunRecord run)
@@ -789,7 +902,7 @@ public static class ExecutionInvocationMetadata
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Cast<string>()
                 .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(ExternalTargetAliasCodec.EqualityComparer)
                 .ToArray();
         }
         catch (JsonException)
@@ -960,7 +1073,8 @@ public static class ExecutionInvocationMetadata
     private static void MergeExternalTargetAliases(
         JsonObject metadata,
         string metadataKey,
-        IReadOnlyList<string> aliases)
+        IReadOnlyList<string> aliases,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
     {
         var mergedAliases = new List<string>();
         if (metadata[metadataKey] is JsonArray existingAliases)
@@ -968,7 +1082,11 @@ public static class ExecutionInvocationMetadata
             mergedAliases.AddRange(existingAliases
                 .Select(item => item?.GetValue<string>())
                 .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item))
+                .Select(item => externalTargetRegistry is null
+                    ? AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item)
+                    : AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                        item,
+                        externalTargetRegistry))
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Cast<string>());
         }
@@ -976,10 +1094,85 @@ public static class ExecutionInvocationMetadata
         mergedAliases.AddRange(aliases);
         metadata[metadataKey] = new JsonArray(
             mergedAliases
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+                .OrderBy(item => item, StringComparer.Ordinal)
                 .Select(alias => JsonValue.Create(alias))
                 .ToArray());
+    }
+
+    private static void MergeExternalTargetRootBindings(
+        JsonObject metadata,
+        IReadOnlyList<ExternalTargetRootBinding> bindings)
+    {
+        if (bindings.Count == 0)
+        {
+            return;
+        }
+
+        List<ExternalTargetRootBinding> mergedBindings;
+        try
+        {
+            mergedBindings = metadata[ExternalTargetRootBindingsMetadataKey] is { } existingNode
+                ? ValidateExternalTargetRootBindings(
+                    existingNode.Deserialize<ExternalTargetRootBinding[]>(AgentOutputJson.SerializerOptions) ?? [])
+                    .ToList()
+                : [];
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "External-target root binding metadata is malformed.",
+                exception);
+        }
+
+        foreach (var binding in ValidateExternalTargetRootBindings(bindings))
+        {
+            var existing = mergedBindings.FirstOrDefault(candidate =>
+                string.Equals(candidate.RootId, binding.RootId, StringComparison.OrdinalIgnoreCase));
+            if (existing is not null && existing != binding)
+            {
+                throw new InvalidOperationException(
+                    $"Conflicting external-target root bindings use identity '{binding.RootId}'.");
+            }
+
+            if (existing is null)
+            {
+                mergedBindings.Add(binding);
+            }
+        }
+
+        metadata[ExternalTargetRootBindingsMetadataKey] = JsonSerializer.SerializeToNode(
+            mergedBindings.OrderBy(binding => binding.RootId, StringComparer.OrdinalIgnoreCase),
+            AgentOutputJson.SerializerOptions);
+    }
+
+    private static bool IsValidExternalTargetRootBinding(ExternalTargetRootBinding? binding)
+    {
+        return binding is not null &&
+               binding.RootId.Length == ExternalTargetAliasCodec.RootIdLength &&
+               binding.RootId.All(Uri.IsHexDigit) &&
+               !string.IsNullOrWhiteSpace(binding.HostPlatform) &&
+               !string.IsNullOrWhiteSpace(binding.ProtectedRootToken);
+    }
+
+    private static IReadOnlyList<ExternalTargetRootBinding> ValidateExternalTargetRootBindings(
+        IEnumerable<ExternalTargetRootBinding> bindings)
+    {
+        ArgumentNullException.ThrowIfNull(bindings);
+        var normalized = bindings.ToArray();
+        if (normalized.Any(binding => !IsValidExternalTargetRootBinding(binding)))
+        {
+            throw new InvalidOperationException("An external-target root binding is malformed.");
+        }
+
+        return normalized
+            .GroupBy(binding => binding.RootId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Distinct().Count() == 1
+                ? group.First()
+                : throw new InvalidOperationException(
+                    $"Conflicting external-target root bindings use identity '{group.Key}'."))
+            .OrderBy(binding => binding.RootId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static void RemoveWritableCoveredReadOnlyExternalTargetAliases(JsonObject metadata)
@@ -994,8 +1187,8 @@ public static class ExecutionInvocationMetadata
         var readOnlyAliases = ReadExternalTargetAliases(metadata, ReadOnlyExternalTargetAliasesMetadataKey);
         var filteredAliases = readOnlyAliases
             .Where(readOnlyAlias => !IsExternalTargetAliasCoveredByAny(readOnlyAlias, writableAliases))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(item => item, StringComparer.Ordinal)
             .ToArray();
 
         if (filteredAliases.Length == 0)
@@ -1025,7 +1218,7 @@ public static class ExecutionInvocationMetadata
             .Select(item => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item))
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
     }
 
@@ -1033,9 +1226,7 @@ public static class ExecutionInvocationMetadata
         string alias,
         IReadOnlyList<string> roots)
     {
-        return roots.Any(root =>
-            string.Equals(alias, root, StringComparison.OrdinalIgnoreCase) ||
-            alias.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
+        return roots.Any(root => ExternalTargetAliasCodec.IsAliasWithinRoot(alias, root));
     }
 
     private static bool IsPathCandidateStart(string value, int index)

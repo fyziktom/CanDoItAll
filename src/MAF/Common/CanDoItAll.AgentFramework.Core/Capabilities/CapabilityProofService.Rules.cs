@@ -4,7 +4,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class CapabilityProofService
 {
-    private static async Task<CapabilityVerificationResult> VerifySkillAsync(
+    private async Task<CapabilityVerificationResult> VerifySkillAsync(
         CapabilityCatalogItem capability,
         List<string> notes,
         DateTimeOffset checkedAt,
@@ -211,7 +211,7 @@ public sealed partial class CapabilityProofService
         return await VerifyEndpointProofAsync(capability, notes, checkedAt, cancellationToken);
     }
 
-    private static async Task<CapabilityVerificationResult> VerifyMcpCapabilityAsync(
+    private async Task<CapabilityVerificationResult> VerifyMcpCapabilityAsync(
         AgentDefinition agent,
         ProviderProfile? provider,
         CapabilityCatalogItem capability,

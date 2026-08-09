@@ -1,15 +1,21 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Application;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetProcessLaunchVariableContributor(
+    IExternalTargetPathRegistry externalTargetPathRegistry,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     IWorkspaceFileService? workspaceFiles = null) : IProcessLaunchVariableContributor
 {
     private readonly DotNetSolutionSetupLaunchPlanBuilder solutionSetupLaunchPlanBuilder = new();
     private readonly IWorkspaceFileService? workspaceFiles = workspaceFiles;
     private readonly DotNetSolutionContextParser solutionContextParser = new();
-    private readonly DotNetSolutionContextPathResolver contextPathResolver = new();
+    private readonly DotNetSolutionContextPathResolver contextPathResolver = new(
+        externalTargetPathRegistry,
+        physicalPathPolicyFactory);
 
     public void Enrich(
         ProcessLaunchPreparationContext context,
@@ -55,7 +61,9 @@ internal sealed class DotNetProcessLaunchVariableContributor(
             return;
         }
 
-        var contractFactory = new DotNetProcessLaunchContractFactory(contextPathResolver);
+        var contractFactory = new DotNetProcessLaunchContractFactory(
+            contextPathResolver,
+            externalTargetPathRegistry);
         if (!contractFactory.TryCreate(solutionContext, variables, out var contract, out var contractIssue))
         {
             throw new InvalidOperationException(

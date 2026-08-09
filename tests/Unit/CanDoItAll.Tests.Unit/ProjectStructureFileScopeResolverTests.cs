@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
@@ -192,7 +193,7 @@ public sealed class ProjectStructureFileScopeResolverTests
     public async Task ResolveKnownFileAsync_rejects_absolute_or_escaped_metadata_before_a_provider(
         string locator)
     {
-        await using var fixture = await ResolverFixture.CreateAsync(
+        await using var fixture = await ResolverFixture.CreateLegacyPersistedReferenceAsync(
             ProjectObjectType.File,
             new StorageObjectReference(
                 ResolverFixture.StorageId,
@@ -345,7 +346,7 @@ public sealed class ProjectStructureFileScopeResolverTests
         FileBrowserProviderException exception = await Assert.ThrowsAsync<FileBrowserProviderException>(
             () => fixture.Sut.ResolveNodeCollectionAsync(fixture.ProjectId, fixture.NodeKey).AsTask());
 
-        Assert.Equal(FileBrowserErrorCode.Forbidden, exception.Error.Code);
+        Assert.Equal(FileBrowserErrorCode.InvalidOperation, exception.Error.Code);
     }
 
     [Fact]
@@ -446,6 +447,21 @@ public sealed class ProjectStructureFileScopeResolverTests
             ProjectObjectType objectType,
             StorageObjectReference? reference)
         {
+            return await CreateAsync(objectType, reference, preserveUnvalidatedReference: false);
+        }
+
+        public static async Task<ResolverFixture> CreateLegacyPersistedReferenceAsync(
+            ProjectObjectType objectType,
+            StorageObjectReference reference)
+        {
+            return await CreateAsync(objectType, reference, preserveUnvalidatedReference: true);
+        }
+
+        private static async Task<ResolverFixture> CreateAsync(
+            ProjectObjectType objectType,
+            StorageObjectReference? reference,
+            bool preserveUnvalidatedReference)
+        {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
             var options = AppDbContextTestOptionsBuilder.Create()
                 .UseInMemoryDatabase($"project-structure-file-scope-{Guid.NewGuid():N}")
@@ -470,7 +486,9 @@ public sealed class ProjectStructureFileScopeResolverTests
                     ProjectObjectId = node.Id,
                     MediaContentType = reference.ContentType,
                     MediaOriginalFileName = reference.DisplayName,
-                    StorageObjectReferenceJson = StorageJson.SerializeReference(reference)
+                    StorageObjectReferenceJson = preserveUnvalidatedReference
+                        ? JsonSerializer.Serialize(reference, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                        : StorageJson.SerializeReference(reference)
                 });
             }
 
@@ -494,11 +512,11 @@ public sealed class ProjectStructureFileScopeResolverTests
                 NodeKey = nodeKey,
                 ObjectType = ProjectObjectType.Infrastructure,
                 Title = "Report storage",
-                MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                MetadataJson = JsonSerializer.Serialize(new
                 {
-                    Infrastructure = new ProjectInfrastructureMetadata
+                    infrastructure = new
                     {
-                        StoragePathPrefix = prefix
+                        storagePathPrefix = prefix
                     }
                 })
             };

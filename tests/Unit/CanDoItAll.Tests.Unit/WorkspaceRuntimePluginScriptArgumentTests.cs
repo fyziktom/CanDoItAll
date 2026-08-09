@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -19,7 +20,7 @@ public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
         var deniedRoot = CreateDirectory("denied");
         var scriptPath = CreateScript(workspaceRoot, "Read-Input.ps1", "Write-Output 'ok'");
         var processHost = new RecordingWorkspaceProcessHost();
-        var plugin = CreatePlugin(workspaceRoot, allowedRoot, processHost);
+        var plugin = CreatePlugin(workspaceRoot, allowedRoot, processHost, out _);
 
         var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(() =>
         {
@@ -41,13 +42,13 @@ public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
         var inputPath = Path.Combine(allowedRoot, "request.json");
         await File.WriteAllTextAsync(inputPath, "{}");
         var processHost = new RecordingWorkspaceProcessHost();
-        var plugin = CreatePlugin(workspaceRoot, allowedRoot, processHost);
+        var plugin = CreatePlugin(workspaceRoot, allowedRoot, processHost, out var allowedAlias);
 
         var result = await plugin.RunWorkspacePowerShellScript(
             Path.GetRelativePath(workspaceRoot, scriptPath),
             arguments:
             [
-                $"--input={inputPath}",
+                $"--input={allowedAlias}/request.json",
                 "--mode=validate"
             ]);
 
@@ -77,21 +78,28 @@ public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
     private WorkspaceRuntimePlugin CreatePlugin(
         string workspaceRoot,
         string allowedRoot,
-        IWorkspaceProcessHost processHost)
+        IWorkspaceProcessHost processHost,
+        out string allowedAlias)
     {
         var accessSettings = AgentWorkspaceToolAccessProfiles.CreateSettings(
             AgentWorkspaceToolProfileKind.SoftwareDevelopment);
-        accessSettings.AllowedExternalTargetAliases =
-        [
-            AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(allowedRoot)
-            ?? throw new InvalidOperationException("The test external root could not be normalized.")
-        ];
-        var commandService = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var externalTargets = new ExternalTargetPathRegistry();
+        if (!externalTargets.TryCreateAlias(allowedRoot, out allowedAlias))
+        {
+            throw new InvalidOperationException("The test external root could not be bound.");
+        }
+
+        accessSettings.AllowedExternalTargetAliases = [allowedAlias];
+        var commandService = TestWorkspaceServices.CreateCommandExecutionService(
+            workspaceRoot,
+            processHost,
+            externalTargetRegistry: externalTargets);
 
         return new WorkspaceRuntimePlugin(
             commandService,
             null!,
             workspaceRoot,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
             accessSettings,
             CreateProvider(),

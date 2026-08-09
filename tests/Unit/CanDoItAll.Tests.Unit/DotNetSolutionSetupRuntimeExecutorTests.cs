@@ -50,6 +50,12 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             receipt.ToolName == "workspace_pwsh_run_script" &&
             receipt.ExitSummary.Contains("Succeeded", StringComparison.OrdinalIgnoreCase) &&
             receipt.DeclaredSideEffectMode == ToolExecutionSideEffectMode.ProductMutation);
+        Assert.All(
+            result.ToolReceipts.Where(receipt => !string.IsNullOrWhiteSpace(receipt.WorkingDirectory)),
+            receipt => Assert.DoesNotContain(productRoot, receipt.WorkingDirectory, StringComparison.Ordinal));
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt => receipt.WorkingDirectory.StartsWith("external-target/v1/", StringComparison.Ordinal));
         Assert.Equal(3, processHost.Requests.Count);
         Assert.Contains("src/Calculator/Calculator.csproj", await File.ReadAllTextAsync(Path.Combine(productRoot, "Calculator.slnx")), StringComparison.OrdinalIgnoreCase);
     }
@@ -388,6 +394,37 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
     }
 
     [Fact]
+    public async Task Linux_verify_existing_requires_case_exact_solution_membership()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using var workspace = new RuntimeExecutorWorkspace();
+        string productRoot = workspace.CreateProductRoot();
+        string projectFile = Path.Combine(productRoot, "modules", "Portal", "Portal.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+        await File.WriteAllTextAsync(projectFile, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        Directory.CreateDirectory(Path.Combine(productRoot, "build"));
+        await File.WriteAllTextAsync(
+            Path.Combine(productRoot, "build", "EnterpriseSuite.sln"),
+            "modules/portal/Portal.csproj");
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        ProcessRuntimeOwnedStepExecutionResult? result = await executor.TryExecuteAsync(CreateAssignment(
+            productRoot,
+            "template-owned-existing-solution-verification",
+            CreateVerifyExistingLaunchVariables(productRoot, [projectFile])));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Contains("does not include required project", result.Summary, StringComparison.Ordinal);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
     public async Task TryExecuteAsync_rejects_missing_existing_context_file_without_mutation_tools()
     {
         using var workspace = new RuntimeExecutorWorkspace();
@@ -443,7 +480,9 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             "template-owned-existing-solution-verification",
             CreateVerifyExistingLaunchVariables(productRoot, [Path.Combine(productRoot, "modules", "Portal", "Portal.csproj")]));
 
-        var result = DotNetSolutionSetupToolPlanGuard.Evaluate(assignment);
+        var result = DotNetSolutionSetupToolPlanGuard.Evaluate(
+            assignment,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
         Assert.True(result.IsSatisfied);
         Assert.Null(result.Plan);
@@ -1042,11 +1081,24 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         RuntimeExecutorWorkspace workspace,
         IWorkspaceProcessHost processHost)
     {
-        var workspaceFiles = new WorkspaceFileService(workspace.WorkspaceRoot);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.WorkspaceRoot, processHost);
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(
+            workspace.WorkspaceRoot,
+            externalTargetRegistry: externalTargets);
+        var workspaceCommands = TestWorkspaceServices.CreateCommandExecutionService(
+            workspace.WorkspaceRoot,
+            processHost,
+            externalTargetRegistry: externalTargets);
         return new DotNetSolutionSetupRuntimeExecutor(
             workspaceCommands,
-            new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands));
+            new WorkspaceManagedScriptPlanExecutor(
+                workspaceFiles,
+                workspaceCommands,
+                externalTargets,
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
+            externalTargets,
+            new DotNetExistingSolutionVerifier(TestWorkspaceServices.PhysicalPathPolicyFactory),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(

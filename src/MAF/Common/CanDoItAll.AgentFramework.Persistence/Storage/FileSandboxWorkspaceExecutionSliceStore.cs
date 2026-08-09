@@ -240,39 +240,39 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         foreach (var sessionId in plan.SessionIds)
         {
-            DeleteFileIfExists(layout.SessionPath(sessionId));
+            await DeleteFileIfExistsAsync(layout.SessionPath(sessionId), cancellationToken);
         }
 
         foreach (var item in plan.OrphanLogs)
         {
-            DeleteFileIfExists(Path.Combine(layout.OrphanLogsRoot, $"{item.Id:N}.json"));
+            await DeleteFileIfExistsAsync(Path.Combine(layout.OrphanLogsRoot, $"{item.Id:N}.json"), cancellationToken);
         }
 
         foreach (var item in plan.OrphanMetrics)
         {
-            DeleteFileIfExists(Path.Combine(layout.OrphanMetricsRoot, $"{item.Id:N}.json"));
+            await DeleteFileIfExistsAsync(Path.Combine(layout.OrphanMetricsRoot, $"{item.Id:N}.json"), cancellationToken);
         }
 
         foreach (var item in plan.OrphanUsage)
         {
-            DeleteFileIfExists(Path.Combine(layout.OrphanUsageRoot, $"{item.Id:N}.json"));
+            await DeleteFileIfExistsAsync(Path.Combine(layout.OrphanUsageRoot, $"{item.Id:N}.json"), cancellationToken);
         }
 
         foreach (var item in plan.OrphanApprovals)
         {
-            DeleteFileIfExists(Path.Combine(
+            await DeleteFileIfExistsAsync(Path.Combine(
                 layout.OrphanApprovalsRoot,
-                $"{item.ExecutionRunId:N}-{jsonStore.NormalizeFileName(item.ApprovalId)}.json"));
+                $"{item.ExecutionRunId:N}-{jsonStore.NormalizeFileName(item.ApprovalId)}.json"), cancellationToken);
         }
 
         foreach (var item in plan.OrphanArtifacts)
         {
-            DeleteFileIfExists(Path.Combine(layout.OrphanArtifactsRoot, $"{item.Id:N}.json"));
+            await DeleteFileIfExistsAsync(Path.Combine(layout.OrphanArtifactsRoot, $"{item.Id:N}.json"), cancellationToken);
         }
 
         foreach (var item in plan.OrphanReceipts)
         {
-            DeleteFileIfExists(Path.Combine(layout.OrphanReceiptsRoot, $"{item.Id:N}.json"));
+            await DeleteFileIfExistsAsync(Path.Combine(layout.OrphanReceiptsRoot, $"{item.Id:N}.json"), cancellationToken);
         }
 
         await jsonStore.WriteJsonIfChangedAsync(
@@ -301,7 +301,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             return runs;
         }
 
-        foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+        foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
+                     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                     .ThenBy(path => path, StringComparer.Ordinal))
         {
             var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(Path.Combine(runDirectory, "run.json"), cancellationToken);
             if (run is not null)
@@ -1234,7 +1236,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         var normalizedDetail = NormalizeRunDetail(detail);
         EnsureRunDetailConsistency(normalizedDetail);
 
-        Directory.CreateDirectory(layout.ExecutionStorageRoot);
+        jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
 
         var sessionExistedBefore = normalizedDetail.ChatSession is not null
             && File.Exists(layout.SessionPath(normalizedDetail.ChatSession.Id));
@@ -1303,7 +1305,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         SandboxWorkspaceExecutionState executionState,
         CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(layout.ExecutionStorageRoot);
+        jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
 
         var changed = false;
         changed |= await jsonStore.PersistRecordDirectoryDiffAsync(
@@ -1356,7 +1358,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 var runRoot = layout.RunRoot(runId);
                 if (Directory.Exists(runRoot))
                 {
-                    Directory.Delete(runRoot, recursive: true);
+                    jsonStore.DeleteDirectory(runRoot);
                     changed = true;
                 }
 
@@ -1490,7 +1492,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         if (Directory.Exists(layout.ExecutionRunsRoot))
         {
-            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
+                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
             {
                 var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(Path.Combine(runDirectory, "run.json"), cancellationToken);
                 if (run is null)
@@ -1555,7 +1559,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         IReadOnlyList<ToolExecutionReceiptRecord> receipts,
         CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(layout.RunRoot(run.Id));
+        jsonStore.EnsureDirectory(layout.RunRoot(run.Id));
 
         var changed = false;
         if (previousRun is null || !EqualityComparer<ExecutionRunRecord>.Default.Equals(previousRun, run) || !File.Exists(layout.RunPath(run.Id)))
@@ -1961,7 +1965,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         var usageObservations = new List<ProviderUsageObservation>();
         if (Directory.Exists(layout.ExecutionRunsRoot))
         {
-            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
+                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
             {
                 if (!Guid.TryParse(Path.GetFileName(runDirectory), out var runId))
                 {
@@ -3142,27 +3148,19 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
     private void DeleteRunRoot(Guid executionRunId)
     {
-        var runsRoot = Path.GetFullPath(layout.ExecutionRunsRoot)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
-            Path.DirectorySeparatorChar;
-        var runRoot = Path.GetFullPath(layout.RunRoot(executionRunId));
-        if (!runRoot.StartsWith(runsRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException(
-                $"Execution run deletion target '{runRoot}' is outside the canonical runs root.");
-        }
+        var runRoot = layout.RunRoot(executionRunId);
 
         if (Directory.Exists(runRoot))
         {
-            Directory.Delete(runRoot, recursive: true);
+            jsonStore.DeleteDirectory(runRoot);
         }
     }
 
-    private static void DeleteFileIfExists(string path)
+    private async Task DeleteFileIfExistsAsync(string path, CancellationToken cancellationToken)
     {
         if (File.Exists(path))
         {
-            File.Delete(path);
+            await jsonStore.DeleteFileAsync(path, cancellationToken);
         }
     }
 }

@@ -41,7 +41,12 @@ public sealed class DatabaseConfigurationTests
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-inmemory-tests");
         var profile = testEnvironment.CreateInMemoryProfile("unit", "rpi3-validation");
-        var configuration = TestApplicationBootstrap.BuildConfiguration(profile);
+        var configuration = TestApplicationBootstrap.BuildConfiguration(
+            profile,
+            new Dictionary<string, string?>
+            {
+                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath
+            });
 
         var services = new ServiceCollection();
         TestApplicationBootstrap.ConfigureDefaultServices(

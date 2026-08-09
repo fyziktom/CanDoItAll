@@ -5,8 +5,12 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class AgentChatExternalTargetAccessAttachmentTests
+public sealed class AgentChatExternalTargetAccessAttachmentTests : IDisposable
 {
+    private readonly string externalRoot = Path.Combine(
+        Path.GetTempPath(),
+        $"CanDoItAll.AgentChatExternalTargets.{Guid.NewGuid():N}");
+
     private static readonly DateTimeOffset CapturedAtUtc =
         new(2026, 8, 1, 18, 0, 0, TimeSpan.Zero);
 
@@ -27,9 +31,13 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
     [Fact]
     public void CTX_AUTH_001_Create_applies_current_project_structure_access_as_read_only()
     {
+        var root = CreateExternalRoot("calculator-e2e-test");
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        Assert.True(externalTargets.TryCreateAlias(root, out var expectedAlias));
         var attachmentDraft = Assert.IsType<AgentChatContextAttachmentDraft>(
-            AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
-                [@"C:\programovani\dotnet\calculator-e2e-test"],
+            AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
+                [root],
+                externalTargets,
                 new DatabaseProfileGeneration(7),
                 CapturedAtUtc,
                 CapturedAtUtc.AddMinutes(5)));
@@ -53,18 +61,16 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
             .Select(static item => item.GetString()!)
             .ToArray();
 
-        Assert.Equal(
-            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
-            readOnlyAliases);
+        Assert.Equal([expectedAlias], readOnlyAliases);
         Assert.False(metadata.RootElement.TryGetProperty(
             ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey,
             out _));
         Assert.DoesNotContain(
-            "external-target/C/programovani/dotnet/calculator-e2e-test",
+            expectedAlias,
             invocation.Options.TransientContext!.Content,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
-            @"C:\programovani\dotnet\calculator-e2e-test",
+            root,
             invocation.Options.TransientContext.Content,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -72,9 +78,12 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
     [Fact]
     public void CTX_AUTH_001_Create_does_not_trust_the_attachment_outside_project_structure_context()
     {
+        var root = CreateExternalRoot("sensitive-unrelated");
+        var externalTargets = TestExternalTargetPathRegistry.Create();
         var attachmentDraft = Assert.IsType<AgentChatContextAttachmentDraft>(
-            AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
-                [@"C:\sensitive\unrelated"],
+            AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
+                [root],
+                externalTargets,
                 new DatabaseProfileGeneration(7),
                 CapturedAtUtc,
                 CapturedAtUtc.AddMinutes(5)));
@@ -124,10 +133,13 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
     public void Invocation_does_not_mint_authority_from_a_tampered_attachment(
         TamperedFingerprint tamperedFingerprint)
     {
-        const string root = @"C:\programovani\dotnet\calculator-e2e-test";
+        var root = CreateExternalRoot("calculator-e2e-test");
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        Assert.True(externalTargets.TryCreateAlias(root, out var alias));
         var validDraft = Assert.IsType<AgentChatContextAttachmentDraft>(
-            AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
+            AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
                 [root],
+                externalTargets,
                 new DatabaseProfileGeneration(7),
                 CapturedAtUtc,
                 CapturedAtUtc.AddMinutes(5)));
@@ -145,7 +157,9 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
                 : validDraft.FreshnessFingerprint,
             validDraft.CapturedAtUtc,
             validDraft.FreshUntilUtc,
-            new AgentChatExternalTargetAccessAttachment([root]));
+            new AgentChatExternalTargetAccessAttachment(
+                [alias],
+                externalTargets.ExportBindings([alias])));
         var context = CreateContext("project-structure", tamperedDraft);
 
         var invocation = AgentChatContextInvocationFactory.Create(
@@ -169,9 +183,12 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
     public void Invocation_rejects_external_authority_attachment_before_capture_time()
     {
         var futureCapturedAtUtc = CapturedAtUtc.AddMinutes(2);
+        var root = CreateExternalRoot("calculator-e2e-test");
+        var externalTargets = TestExternalTargetPathRegistry.Create();
         var attachmentDraft = Assert.IsType<AgentChatContextAttachmentDraft>(
-            AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
-                [@"C:\programovani\dotnet\calculator-e2e-test"],
+            AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
+                [root],
+                externalTargets,
                 new DatabaseProfileGeneration(7),
                 futureCapturedAtUtc,
                 futureCapturedAtUtc.AddMinutes(5)));
@@ -195,9 +212,12 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
     [Fact]
     public void Invocation_rejects_expired_external_authority_attachment()
     {
+        var root = CreateExternalRoot("calculator-e2e-test");
+        var externalTargets = TestExternalTargetPathRegistry.Create();
         var attachmentDraft = Assert.IsType<AgentChatContextAttachmentDraft>(
-            AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
-                [@"C:\programovani\dotnet\calculator-e2e-test"],
+            AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
+                [root],
+                externalTargets,
                 new DatabaseProfileGeneration(7),
                 CapturedAtUtc,
                 CapturedAtUtc.AddMinutes(5)));
@@ -216,6 +236,21 @@ public sealed class AgentChatExternalTargetAccessAttachmentTests
         Assert.Equal(
             AgentChatContextAttachmentFreshness.Expired,
             exception.Freshness);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(externalRoot))
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    private string CreateExternalRoot(string name)
+    {
+        var path = Path.Combine(externalRoot, name);
+        Directory.CreateDirectory(path);
+        return path;
     }
 
     private static AgentChatContextSnapshot CreateContext(

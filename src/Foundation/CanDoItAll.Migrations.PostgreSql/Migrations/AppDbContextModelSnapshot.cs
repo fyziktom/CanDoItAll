@@ -175,6 +175,26 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("ProviderKind")
                         .HasColumnType("integer");
 
+                    b.Property<int>("RootBindingFormatVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RootHostBindingId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("RootLastValidatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RootPathState")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RootPathSyntax")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RootPlatformFamily")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 

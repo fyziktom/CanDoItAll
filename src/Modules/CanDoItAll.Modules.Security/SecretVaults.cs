@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.Infrastructure;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Modules.Security;
@@ -14,6 +16,43 @@ public interface ISecretVault
     Task DeleteAsync(string key, CancellationToken ct = default);
 }
 
+public interface ISecretVaultCapability
+{
+    SecretVaultProviderKind Provider { get; }
+
+    ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default);
+}
+
+public enum SecretVaultAvailability
+{
+    Available,
+    UnsupportedPlatform,
+    DependencyMissing,
+    SessionUnavailable,
+    Locked,
+    InvalidConfiguration,
+    InsecureConfiguration,
+    Unavailable
+}
+
+public sealed record SecretVaultProbeResult(
+    SecretVaultProviderKind Provider,
+    SecretVaultAvailability Availability,
+    string Remediation)
+{
+    public bool IsAvailable => Availability == SecretVaultAvailability.Available;
+
+    public static SecretVaultProbeResult Available(SecretVaultProviderKind provider)
+        => new(provider, SecretVaultAvailability.Available, string.Empty);
+}
+
+public sealed class SecretVaultUnavailableException(SecretVaultProbeResult result)
+    : InvalidOperationException(
+        $"Secret vault provider '{result.Provider}' is not available ({result.Availability}). {result.Remediation}".Trim())
+{
+    public SecretVaultProbeResult Result { get; } = result;
+}
+
 public enum SecretVaultProviderKind
 {
     Auto,
@@ -21,10 +60,17 @@ public enum SecretVaultProviderKind
     MauiSecureStorage,
     MacOsKeychain,
     LinuxSecretService,
+    ExternalWrappingKeyFile,
     DataProtectionFile,
     AzureKeyVault,
     HashiCorp,
     InMemory
+}
+
+public enum SecretVaultUsageProfile
+{
+    Interactive,
+    Headless
 }
 
 public sealed class SecretVaultOptions
@@ -33,27 +79,94 @@ public sealed class SecretVaultOptions
 
     public SecretVaultProviderKind Provider { get; set; } = SecretVaultProviderKind.Auto;
 
+    public SecretVaultUsageProfile UsageProfile { get; set; } = SecretVaultUsageProfile.Interactive;
+
     public string? ApplicationName { get; set; }
 
     public string? VaultPath { get; set; }
+
+    public string? WrappingKeyId { get; set; }
+
+    public string? WrappingKeyEnvironmentVariable { get; set; }
+
+    public Dictionary<string, string> PreviousWrappingKeyEnvironmentVariables { get; set; } = new(StringComparer.Ordinal);
+
+    public string? LinuxSecretToolPath { get; set; }
+
+    public TimeSpan ProbeTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    public bool AllowInsecureDevelopmentProviders { get; set; }
 }
 
 public static class SecretVaultFactory
 {
-    public static ISecretVault CreateDefault(SecretVaultOptions options)
+    public static ISecretVault CreateDefault(
+        SecretVaultOptions options,
+        DurableFileWriter durableFileWriter,
+        bool isDevelopment = false,
+        Func<string, string?>? environmentVariableResolver = null)
+        => Create(
+            options,
+            durableFileWriter,
+            isDevelopment,
+            allowLegacyFileMigrationSource: false,
+            environmentVariableResolver);
+
+    public static ISecretVault CreateMigrationSource(
+        SecretVaultOptions options,
+        DurableFileWriter durableFileWriter,
+        Func<string, string?>? environmentVariableResolver = null)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(durableFileWriter);
+        if (options.Provider is SecretVaultProviderKind.Auto or SecretVaultProviderKind.InMemory)
+        {
+            throw new SecretVaultConfigurationException(
+                "Secret migration requires an explicit persisted source provider.");
+        }
+
+        return new MigrationSourceSecretVault(Create(
+            options,
+            durableFileWriter,
+            isDevelopment: false,
+            allowLegacyFileMigrationSource: true,
+            environmentVariableResolver));
+    }
+
+    private static ISecretVault Create(
+        SecretVaultOptions options,
+        DurableFileWriter durableFileWriter,
+        bool isDevelopment,
+        bool allowLegacyFileMigrationSource,
+        Func<string, string?>? environmentVariableResolver)
+    {
         var provider = options.Provider == SecretVaultProviderKind.Auto
-            ? ResolveAutoProvider()
+            ? ResolveAutoProvider(options.UsageProfile)
             : options.Provider;
+
+        bool legacyFileMigrationSource =
+            allowLegacyFileMigrationSource && provider == SecretVaultProviderKind.DataProtectionFile;
+        if (provider is (SecretVaultProviderKind.DataProtectionFile or SecretVaultProviderKind.InMemory) &&
+            !legacyFileMigrationSource &&
+            (!isDevelopment || !options.AllowInsecureDevelopmentProviders))
+        {
+            throw new SecretVaultUnavailableException(new SecretVaultProbeResult(
+                provider,
+                SecretVaultAvailability.InsecureConfiguration,
+                "Select an operating-system vault or ExternalWrappingKeyFile. Development-only providers require an explicit development opt-in."));
+        }
 
         return provider switch
         {
-            SecretVaultProviderKind.Dpapi => new DpapiSecretVault(options),
+            SecretVaultProviderKind.Dpapi => new DpapiSecretVault(options, durableFileWriter),
             SecretVaultProviderKind.MauiSecureStorage => new MauiSecureStorageVault(options),
             SecretVaultProviderKind.MacOsKeychain => new MacOsKeychainSecretVault(options),
             SecretVaultProviderKind.LinuxSecretService => new LinuxSecretServiceVault(options),
-            SecretVaultProviderKind.DataProtectionFile => new DataProtectionFileVault(options),
+            SecretVaultProviderKind.ExternalWrappingKeyFile => new ExternalWrappingKeySecretVault(
+                options,
+                durableFileWriter,
+                environmentVariableResolver ?? Environment.GetEnvironmentVariable),
+            SecretVaultProviderKind.DataProtectionFile => new DataProtectionFileVault(options, durableFileWriter),
             SecretVaultProviderKind.AzureKeyVault => new AzureKeyVaultSecretVault(options),
             SecretVaultProviderKind.HashiCorp => new HashiCorpSecretVault(options),
             SecretVaultProviderKind.InMemory => new InMemorySecretVault(),
@@ -61,8 +174,16 @@ public static class SecretVaultFactory
         };
     }
 
-    private static SecretVaultProviderKind ResolveAutoProvider()
+    private static SecretVaultProviderKind ResolveAutoProvider(SecretVaultUsageProfile usageProfile)
     {
+        if (usageProfile == SecretVaultUsageProfile.Headless && !OperatingSystem.IsWindows())
+        {
+            throw new SecretVaultUnavailableException(new SecretVaultProbeResult(
+                SecretVaultProviderKind.Auto,
+                SecretVaultAvailability.InvalidConfiguration,
+                "Configure ExternalWrappingKeyFile or a supported remote vault for a Unix headless profile."));
+        }
+
         if (OperatingSystem.IsWindows())
         {
             return SecretVaultProviderKind.Dpapi;
@@ -78,23 +199,54 @@ public static class SecretVaultFactory
             return SecretVaultProviderKind.LinuxSecretService;
         }
 
-        return SecretVaultProviderKind.DataProtectionFile;
+        throw new PlatformNotSupportedException("No automatic secret vault provider is defined for this operating system.");
+    }
+
+    private sealed class MigrationSourceSecretVault(ISecretVault inner) : ISecretVault
+    {
+        public Task SetAsync(string key, string value, CancellationToken ct = default)
+            => throw new InvalidOperationException("A migration source vault is read/delete-only.");
+
+        public Task<string?> GetAsync(string key, CancellationToken ct = default)
+            => inner.GetAsync(key, ct);
+
+        public Task DeleteAsync(string key, CancellationToken ct = default)
+            => inner.DeleteAsync(key, ct);
     }
 }
 
-public sealed class SecretVaultOptionsBackedFactory(IOptions<SecretVaultOptions> options)
+public sealed class SecretVaultOptionsBackedFactory(
+    IOptions<SecretVaultOptions> options,
+    DurableFileWriter durableFileWriter,
+    Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment)
 {
-    public ISecretVault Create() => SecretVaultFactory.CreateDefault(options.Value);
+    public ISecretVault Create() => SecretVaultFactory.CreateDefault(
+        options.Value,
+        durableFileWriter,
+        hostEnvironment.IsDevelopment());
 }
 
-public sealed class DpapiSecretVault : FileBackedSecretVault
+public sealed class DpapiSecretVault : FileBackedSecretVault, ISecretVaultCapability
 {
     private readonly string applicationName;
 
-    public DpapiSecretVault(SecretVaultOptions options)
-        : base(options, "dpapi")
+    public DpapiSecretVault(SecretVaultOptions options, DurableFileWriter durableFileWriter)
+        : base(options, "dpapi", durableFileWriter)
     {
         applicationName = ResolveApplicationName(options);
+    }
+
+    public SecretVaultProviderKind Provider => SecretVaultProviderKind.Dpapi;
+
+    public ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(OperatingSystem.IsWindows()
+            ? SecretVaultProbeResult.Available(Provider)
+            : new SecretVaultProbeResult(
+                Provider,
+                SecretVaultAvailability.UnsupportedPlatform,
+                "Select DPAPI only on Windows."));
     }
 
     protected override byte[] Protect(string key, byte[] plainBytes)
@@ -127,17 +279,28 @@ public sealed class DpapiSecretVault : FileBackedSecretVault
         => SHA256.HashData(Encoding.UTF8.GetBytes($"{applicationName}\0{key}"));
 }
 
-public sealed class DataProtectionFileVault : FileBackedSecretVault
+public sealed class DataProtectionFileVault : FileBackedSecretVault, ISecretVaultCapability
 {
     private const int KeySize = 32;
     private const int NonceSize = 12;
     private const int TagSize = 16;
     private readonly string keyFilePath;
 
-    public DataProtectionFileVault(SecretVaultOptions options)
-        : base(options, "file")
+    public DataProtectionFileVault(SecretVaultOptions options, DurableFileWriter durableFileWriter)
+        : base(options, "file", durableFileWriter)
     {
         keyFilePath = Path.Combine(VaultRoot, "vault.key");
+    }
+
+    public SecretVaultProviderKind Provider => SecretVaultProviderKind.DataProtectionFile;
+
+    public ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(new SecretVaultProbeResult(
+            Provider,
+            SecretVaultAvailability.InsecureConfiguration,
+            "This legacy provider is supported only for explicit development or migration reads."));
     }
 
     protected override byte[] Protect(string key, byte[] plainBytes)
@@ -192,15 +355,33 @@ public sealed class DataProtectionFileVault : FileBackedSecretVault
 
     private byte[] GetOrCreateKey()
     {
-        Directory.CreateDirectory(VaultRoot);
+        string coordinationPath = keyFilePath + ".generation.lock";
+        using IDisposable coordination = DurableFileWriter.AcquireCoordination(
+            VaultRoot,
+            coordinationPath,
+            DurableFileWriteOptions.Private.LockTimeout,
+            requirePrivateUnixMode: true);
         if (File.Exists(keyFilePath))
         {
+            DurableFileWriter.HardenPrivateFile(VaultRoot, keyFilePath);
             return Convert.FromBase64String(File.ReadAllText(keyFilePath));
         }
 
         var key = RandomNumberGenerator.GetBytes(KeySize);
-        File.WriteAllText(keyFilePath, Convert.ToBase64String(key));
-        return key;
+        try
+        {
+            DurableFileWriter.WriteText(
+                VaultRoot,
+                keyFilePath,
+                Convert.ToBase64String(key),
+                DurableFileWriteOptions.Private);
+            return key;
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(key);
+            throw;
+        }
     }
 
     private static byte[] BuildAssociatedData(string key)
@@ -211,22 +392,6 @@ public sealed class MauiSecureStorageVault : UnsupportedSecretVault
 {
     public MauiSecureStorageVault(SecretVaultOptions options)
         : base(SecretVaultProviderKind.MauiSecureStorage, options)
-    {
-    }
-}
-
-public sealed class MacOsKeychainSecretVault : UnsupportedSecretVault
-{
-    public MacOsKeychainSecretVault(SecretVaultOptions options)
-        : base(SecretVaultProviderKind.MacOsKeychain, options)
-    {
-    }
-}
-
-public sealed class LinuxSecretServiceVault : UnsupportedSecretVault
-{
-    public LinuxSecretServiceVault(SecretVaultOptions options)
-        : base(SecretVaultProviderKind.LinuxSecretService, options)
     {
     }
 }
@@ -247,9 +412,17 @@ public sealed class HashiCorpSecretVault : UnsupportedSecretVault
     }
 }
 
-public sealed class InMemorySecretVault : ISecretVault
+public sealed class InMemorySecretVault : ISecretVault, ISecretVaultCapability
 {
     private readonly ConcurrentDictionary<string, string> values = new(StringComparer.Ordinal);
+
+    public SecretVaultProviderKind Provider => SecretVaultProviderKind.InMemory;
+
+    public ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(SecretVaultProbeResult.Available(Provider));
+    }
 
     public Task SetAsync(string key, string value, CancellationToken ct = default)
     {
@@ -278,7 +451,7 @@ public sealed class InMemorySecretVault : ISecretVault
             : key.Trim();
 }
 
-public abstract class UnsupportedSecretVault : ISecretVault
+public abstract class UnsupportedSecretVault : ISecretVault, ISecretVaultCapability
 {
     private readonly SecretVaultProviderKind provider;
 
@@ -286,6 +459,17 @@ public abstract class UnsupportedSecretVault : ISecretVault
     {
         this.provider = provider;
         _ = options;
+    }
+
+    public SecretVaultProviderKind Provider => provider;
+
+    public ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(new SecretVaultProbeResult(
+            provider,
+            SecretVaultAvailability.Unavailable,
+            "Configure an implemented operating-system or headless secret provider."));
     }
 
     public Task SetAsync(string key, string value, CancellationToken ct = default)
@@ -303,12 +487,18 @@ public abstract class UnsupportedSecretVault : ISecretVault
 
 public abstract class FileBackedSecretVault : ISecretVault
 {
-    protected FileBackedSecretVault(SecretVaultOptions options, string providerFolder)
+    protected FileBackedSecretVault(
+        SecretVaultOptions options,
+        string providerFolder,
+        DurableFileWriter durableFileWriter)
     {
         VaultRoot = ResolveVaultRoot(options, providerFolder);
+        DurableFileWriter = durableFileWriter ?? throw new ArgumentNullException(nameof(durableFileWriter));
     }
 
     protected string VaultRoot { get; }
+
+    protected DurableFileWriter DurableFileWriter { get; }
 
     public async Task SetAsync(string key, string value, CancellationToken ct = default)
     {
@@ -316,18 +506,24 @@ public abstract class FileBackedSecretVault : ISecretVault
         ct.ThrowIfCancellationRequested();
         var normalizedKey = NormalizeKey(key);
         var plainBytes = Encoding.UTF8.GetBytes(value);
+        byte[]? protectedBytes = null;
         try
         {
-            var protectedBytes = Protect(normalizedKey, plainBytes);
-            Directory.CreateDirectory(VaultRoot);
-            await File.WriteAllTextAsync(
+            protectedBytes = Protect(normalizedKey, plainBytes);
+            await DurableFileWriter.WriteTextAsync(
+                VaultRoot,
                 ResolvePayloadPath(normalizedKey),
                 Convert.ToBase64String(protectedBytes),
+                DurableFileWriteOptions.Private,
                 ct).ConfigureAwait(false);
-            CryptographicOperations.ZeroMemory(protectedBytes);
         }
         finally
         {
+            if (protectedBytes is not null)
+            {
+                CryptographicOperations.ZeroMemory(protectedBytes);
+            }
+
             CryptographicOperations.ZeroMemory(plainBytes);
         }
     }
@@ -342,6 +538,7 @@ public abstract class FileBackedSecretVault : ISecretVault
             return null;
         }
 
+        DurableFileWriter.HardenPrivateFile(VaultRoot, payloadPath);
         var protectedBytes = Convert.FromBase64String(await File.ReadAllTextAsync(payloadPath, ct)
             .ConfigureAwait(false));
         byte[]? plainBytes = null;
@@ -360,17 +557,15 @@ public abstract class FileBackedSecretVault : ISecretVault
         }
     }
 
-    public Task DeleteAsync(string key, CancellationToken ct = default)
+    public async Task DeleteAsync(string key, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
         var normalizedKey = NormalizeKey(key);
-        var payloadPath = ResolvePayloadPath(normalizedKey);
-        if (File.Exists(payloadPath))
-        {
-            File.Delete(payloadPath);
-        }
-
-        return Task.CompletedTask;
+        await DurableFileWriter.DeleteAsync(
+            VaultRoot,
+            ResolvePayloadPath(normalizedKey),
+            DurableFileWriteOptions.Private,
+            ct).ConfigureAwait(false);
     }
 
     protected abstract byte[] Protect(string key, byte[] plainBytes);
@@ -386,16 +581,21 @@ public abstract class FileBackedSecretVault : ISecretVault
     {
         if (!string.IsNullOrWhiteSpace(options.VaultPath))
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(options.VaultPath, "secret vault root");
+            if (!Path.IsPathRooted(options.VaultPath))
+            {
+                throw new SecretVaultConfigurationException(
+                    "Configure SecretVault:VaultPath as an absolute native-host path.");
+            }
+
             return Path.GetFullPath(options.VaultPath);
         }
 
-        var basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(basePath))
-        {
-            basePath = AppContext.BaseDirectory;
-        }
-
-        return Path.Combine(basePath, ResolveApplicationName(options), "secrets", providerFolder);
+        return Path.Combine(
+            ApplicationPurposeRootPolicy.ResolveCurrent().StateRoot,
+            "secrets",
+            ResolveApplicationName(options),
+            providerFolder);
     }
 
     private string ResolvePayloadPath(string key)

@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.FileTools.FileInteraction.Components;
@@ -143,7 +144,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
             var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
             var profile = serviceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveCurrentProfile();
             var scope = WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N"));
-            return new WorkspacePathResolutionService(workspaceRoot, scope);
+            return new WorkspacePathResolutionService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                scope,
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.AddScoped<ProjectStructureSourceWorkspacePathResolver>();
         services.AddScoped<ProjectStructureSubprojectTransferCoordinator>();

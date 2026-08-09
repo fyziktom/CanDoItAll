@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -28,6 +30,7 @@ public static class WorkspaceExecutionAuditContext
             run.MessageId,
             run.ProviderName,
             run.Model,
+            ExecutionInvocationMetadata.ResolveExternalTargetRootBindings(run),
             ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run),
             ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run),
             ExecutionInvocationMetadata.ResolveAllowedManagedArtifactReadRefs(run),
@@ -59,6 +62,7 @@ public static class WorkspaceExecutionAuditContext
         string MessageId,
         string ProviderName,
         string Model,
+        IReadOnlyList<ExternalTargetRootBinding> ExternalTargetRootBindings,
         IReadOnlyList<string> AllowedExternalTargetAliases,
         IReadOnlyList<string> ReadOnlyExternalTargetAliases,
         IReadOnlyList<string> AllowedManagedArtifactReadRefs,

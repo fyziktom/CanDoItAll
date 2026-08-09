@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
@@ -107,8 +108,7 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
 
     private static string SanitizeSegment(string value)
     {
-        var sanitized = string.Concat(value.Trim().Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
+        string sanitized = PortablePhysicalFileNamePolicy.Encode(value.Trim()).PhysicalName;
 
         if (string.IsNullOrWhiteSpace(sanitized))
         {

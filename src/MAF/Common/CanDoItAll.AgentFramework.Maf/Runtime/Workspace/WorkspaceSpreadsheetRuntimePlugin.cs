@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tools.Documents;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -7,14 +9,24 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     ISpreadsheetDocumentService spreadsheets,
     string workspaceRoot,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     WorkspaceScopeDescriptor workspaceScope,
-    AgentWorkspaceToolAccessSettings accessSettings)
+    AgentWorkspaceToolAccessSettings accessSettings,
+    IExternalTargetPathRegistry externalTargetPathRegistry)
 {
     private const string SpreadsheetPreviewOperation = "workspace_spreadsheet_preview";
 
     private readonly ISpreadsheetDocumentService spreadsheets = spreadsheets ?? throw new ArgumentNullException(nameof(spreadsheets));
-    private readonly WorkspacePathResolutionService paths = new(workspaceRoot, workspaceScope);
-    private readonly WorkspaceRuntimeFileAccessGuard pathAccess = new(workspaceRoot, workspaceScope, accessSettings);
+    private readonly WorkspacePathResolutionService paths = new(
+        workspaceRoot,
+        physicalPathPolicyFactory,
+        workspaceScope,
+        externalTargetPathRegistry);
+    private readonly WorkspaceRuntimeFileAccessGuard pathAccess = new(
+        workspaceRoot,
+        physicalPathPolicyFactory,
+        workspaceScope,
+        accessSettings);
     private readonly WorkspaceSpreadsheetReceiptWriter receiptWriter = new(workspaceRoot, workspaceScope);
 
     public WorkspaceSpreadsheetSummaryToolResult InspectWorkbook(string workbookPath)

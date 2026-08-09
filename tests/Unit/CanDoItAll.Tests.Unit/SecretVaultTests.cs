@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
@@ -31,12 +32,14 @@ public sealed class SecretVaultTests
         var root = CreateTempVaultPath();
         try
         {
-            var vault = new DataProtectionFileVault(new SecretVaultOptions
-            {
-                Provider = SecretVaultProviderKind.DataProtectionFile,
-                VaultPath = root,
-                ApplicationName = "CanDoItAll.Tests"
-            });
+            var vault = new DataProtectionFileVault(
+                new SecretVaultOptions
+                {
+                    Provider = SecretVaultProviderKind.DataProtectionFile,
+                    VaultPath = root,
+                    ApplicationName = "CanDoItAll.Tests"
+                },
+                CreateDurableFileWriter());
 
             await vault.SetAsync("workflow/http/api-key", "file-secret");
 
@@ -45,6 +48,72 @@ public sealed class SecretVaultTests
             await vault.DeleteAsync("workflow/http/api-key");
 
             Assert.Null(await vault.GetAsync("workflow/http/api-key"));
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(root);
+        }
+    }
+
+    [Fact]
+    public async Task DataProtectionFileVault_coordinates_concurrent_master_key_generation()
+    {
+        string root = CreateTempVaultPath();
+        try
+        {
+            var options = new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.DataProtectionFile,
+                VaultPath = root,
+                ApplicationName = "CanDoItAll.Tests"
+            };
+            var firstVault = new DataProtectionFileVault(options, CreateDurableFileWriter());
+            var secondVault = new DataProtectionFileVault(options, CreateDurableFileWriter());
+
+            await Task.WhenAll(
+                firstVault.SetAsync("concurrent/first", "first-secret"),
+                secondVault.SetAsync("concurrent/second", "second-secret"));
+
+            Assert.Equal("first-secret", await secondVault.GetAsync("concurrent/first"));
+            Assert.Equal("second-secret", await firstVault.GetAsync("concurrent/second"));
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(root);
+        }
+    }
+
+    [Fact]
+    public async Task DataProtectionFileVault_hardens_secret_files_on_unix()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string root = CreateTempVaultPath();
+        try
+        {
+            var vault = new DataProtectionFileVault(
+                new SecretVaultOptions
+                {
+                    Provider = SecretVaultProviderKind.DataProtectionFile,
+                    VaultPath = root,
+                    ApplicationName = "CanDoItAll.Tests"
+                },
+                CreateDurableFileWriter());
+
+            await vault.SetAsync("permissions/key", "permission-secret");
+
+            Assert.Equal(
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+                File.GetUnixFileMode(root));
+            foreach (string path in Directory.EnumerateFiles(root))
+            {
+                Assert.Equal(
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite,
+                    File.GetUnixFileMode(path));
+            }
         }
         finally
         {
@@ -63,12 +132,14 @@ public sealed class SecretVaultTests
         var root = CreateTempVaultPath();
         try
         {
-            var vault = new DpapiSecretVault(new SecretVaultOptions
-            {
-                Provider = SecretVaultProviderKind.Dpapi,
-                VaultPath = root,
-                ApplicationName = "CanDoItAll.Tests"
-            });
+            var vault = new DpapiSecretVault(
+                new SecretVaultOptions
+                {
+                    Provider = SecretVaultProviderKind.Dpapi,
+                    VaultPath = root,
+                    ApplicationName = "CanDoItAll.Tests"
+                },
+                CreateDurableFileWriter());
 
             await vault.SetAsync("local/provider", "dpapi-secret");
 
@@ -83,11 +154,13 @@ public sealed class SecretVaultTests
     [Fact]
     public void SecretVaultFactory_auto_uses_dpapi_on_windows()
     {
-        var vault = SecretVaultFactory.CreateDefault(new SecretVaultOptions
-        {
-            Provider = SecretVaultProviderKind.Auto,
-            VaultPath = CreateTempVaultPath()
-        });
+        var vault = SecretVaultFactory.CreateDefault(
+            new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.Auto,
+                VaultPath = CreateTempVaultPath()
+            },
+            CreateDurableFileWriter());
 
         if (OperatingSystem.IsWindows())
         {
@@ -103,17 +176,19 @@ public sealed class SecretVaultTests
         }
         else
         {
-            Assert.IsType<DataProtectionFileVault>(vault);
+            Assert.Fail("The test host operating system must have an explicitly supported automatic provider.");
         }
     }
 
     [Fact]
     public async Task UnsupportedSecretVault_fails_explicitly()
     {
-        var vault = SecretVaultFactory.CreateDefault(new SecretVaultOptions
-        {
-            Provider = SecretVaultProviderKind.MauiSecureStorage
-        });
+        var vault = SecretVaultFactory.CreateDefault(
+            new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.MauiSecureStorage
+            },
+            CreateDurableFileWriter());
 
         var exception = await Assert.ThrowsAsync<NotSupportedException>(() =>
             vault.SetAsync("mobile/key", "secret"));
@@ -231,6 +306,9 @@ public sealed class SecretVaultTests
 
     private static string CreateTempVaultPath()
         => Path.Combine(Path.GetTempPath(), "candoitall-secret-vault-tests", Guid.NewGuid().ToString("N"));
+
+    private static DurableFileWriter CreateDurableFileWriter()
+        => new(TestWorkspaceServices.PhysicalPathPolicyFactory);
 
     private static void DeleteDirectoryIfExists(string path)
     {

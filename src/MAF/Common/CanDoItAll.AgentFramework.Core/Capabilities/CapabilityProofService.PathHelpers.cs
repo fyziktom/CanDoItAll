@@ -2,8 +2,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class CapabilityProofService
 {
-    private static async Task<string> ReadPreviewAsync(string filePath, CancellationToken cancellationToken)
+    private async Task<string> ReadPreviewAsync(string filePath, CancellationToken cancellationToken)
     {
+        string nativeRoot = Path.GetPathRoot(Path.GetFullPath(filePath))
+            ?? throw new InvalidOperationException("The capability proof file does not have a filesystem root.");
+        physicalPathPolicyFactory.Create(nativeRoot).EnsureSafePath(filePath);
         await using var stream = File.OpenRead(filePath);
         using var reader = new StreamReader(stream);
         var buffer = new char[512];
@@ -89,18 +92,6 @@ public sealed partial class CapabilityProofService
         return Path.Combine(home, relativePath);
     }
 
-    private static bool IsPathWithinRoot(string fullPath, string rootPath)
-    {
-        var normalizedFullPath = Path.GetFullPath(fullPath);
-        var normalizedRoot = Path.GetFullPath(rootPath);
-        if (string.Equals(normalizedFullPath, normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        var rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar) || normalizedRoot.EndsWith(Path.AltDirectorySeparatorChar)
-            ? normalizedRoot
-            : normalizedRoot + Path.DirectorySeparatorChar;
-        return normalizedFullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
-    }
+    private bool IsPathWithinRoot(string fullPath, string rootPath)
+        => physicalPathPolicyFactory.Create(rootPath).IsWithinRoot(fullPath);
 }

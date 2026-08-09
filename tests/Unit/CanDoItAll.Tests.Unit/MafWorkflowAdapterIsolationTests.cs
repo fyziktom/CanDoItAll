@@ -64,7 +64,7 @@ public sealed class MafWorkflowAdapterIsolationTests
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs"));
 
-        Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Singleton)", hostRegistration, StringComparison.Ordinal);
+        Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)", hostRegistration, StringComparison.Ordinal);
         Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)", moduleRegistration, StringComparison.Ordinal);
 
         foreach (var registration in new[] { hostRegistration, moduleRegistration })

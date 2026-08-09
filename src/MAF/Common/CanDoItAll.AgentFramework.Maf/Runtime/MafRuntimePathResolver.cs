@@ -1,3 +1,7 @@
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
+
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class MafRuntimePathResolver
@@ -6,18 +10,25 @@ internal static class MafRuntimePathResolver
         string workspaceRoot,
         string path,
         bool allowExternal,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         IReadOnlyList<string>? allowedExternalRoots = null)
     {
+        var workspacePathPolicy = physicalPathPolicyFactory.Create(workspaceRoot);
+        var normalizedWorkspaceRoot = workspacePathPolicy.RootPath;
         if (string.IsNullOrWhiteSpace(path))
         {
-            return workspaceRoot;
+            return normalizedWorkspaceRoot;
         }
 
         var expandedPath = ExpandPortablePath(path);
-        var fullPath = Path.GetFullPath(Path.IsPathRooted(expandedPath)
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(expandedPath, "MAF runtime path");
+        var nativePath = Path.IsPathRooted(expandedPath)
             ? expandedPath
-            : Path.Combine(workspaceRoot, expandedPath));
-        if (IsPathWithinRoot(fullPath, workspaceRoot))
+            : ToNativeLogicalPath(expandedPath);
+        var fullPath = Path.GetFullPath(Path.IsPathRooted(nativePath)
+            ? nativePath
+            : Path.Combine(normalizedWorkspaceRoot, nativePath));
+        if (workspacePathPolicy.IsWithinRoot(fullPath))
         {
             return fullPath;
         }
@@ -30,12 +41,19 @@ internal static class MafRuntimePathResolver
         var allowedRoots = allowedExternalRoots?
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Select(ExpandPortablePath)
-            .Select(item => Path.GetFullPath(Path.IsPathRooted(item) ? item : Path.Combine(workspaceRoot, item)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(item =>
+            {
+                PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(item, "MAF allowed external root");
+                var nativeAllowedRoot = Path.IsPathRooted(item) ? item : ToNativeLogicalPath(item);
+                var fullAllowedRoot = Path.GetFullPath(Path.IsPathRooted(nativeAllowedRoot)
+                    ? nativeAllowedRoot
+                    : Path.Combine(normalizedWorkspaceRoot, nativeAllowedRoot));
+                return physicalPathPolicyFactory.Create(fullAllowedRoot);
+            })
             .ToList()
             ?? [];
 
-        if (allowedRoots.Any(allowedRoot => IsPathWithinRoot(fullPath, allowedRoot)))
+        if (allowedRoots.Any(allowedRoot => allowedRoot.IsWithinRoot(fullPath)))
         {
             return fullPath;
         }
@@ -45,43 +63,39 @@ internal static class MafRuntimePathResolver
 
     public static string ExpandPortablePath(string path)
     {
-        var expanded = Environment.ExpandEnvironmentVariables(path.Trim());
-        if (string.Equals(expanded, "~", StringComparison.Ordinal))
-        {
-            var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            return string.IsNullOrWhiteSpace(homeDirectory)
-                ? expanded
-                : homeDirectory;
-        }
-
-        if (!expanded.StartsWith("~" + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
-            !expanded.StartsWith("~" + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
-        {
-            return expanded;
-        }
-
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (string.IsNullOrWhiteSpace(home))
-        {
-            return expanded;
-        }
-
-        var relativePath = expanded[2..]
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        return Path.Combine(home, relativePath);
+        return ExpandPortablePath(
+            path,
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.GetEnvironmentVariable,
+            PortablePathTemplateCompatibility.LegacyWindowsEnvironmentTokens);
     }
 
-    public static bool IsPathWithinRoot(string fullPath, string rootPath)
+    internal static string ExpandPortablePath(
+        string path,
+        string? homeDirectory,
+        Func<string, string?> variableResolver,
+        PortablePathTemplateCompatibility compatibility)
     {
-        var normalizedRoot = Path.GetFullPath(rootPath);
-        if (string.Equals(fullPath, normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        return PortablePathTemplate.Expand(path, homeDirectory, variableResolver, compatibility);
+    }
+
+    public static bool IsPathWithinRoot(
+        string fullPath,
+        string rootPath,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+    {
+        return physicalPathPolicyFactory.Create(rootPath).IsWithinRoot(fullPath);
+    }
+
+    private static string ToNativeLogicalPath(string path)
+    {
+        if (string.Equals(path, ".", StringComparison.Ordinal))
         {
-            return true;
+            return path;
         }
 
-        var rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar) || normalizedRoot.EndsWith(Path.AltDirectorySeparatorChar)
-            ? normalizedRoot
-            : normalizedRoot + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
+        var logicalPath = LogicalPath.ParseLegacyWindowsLogicalPath(path);
+        return Path.Combine(logicalPath.Segments.ToArray());
     }
+
 }

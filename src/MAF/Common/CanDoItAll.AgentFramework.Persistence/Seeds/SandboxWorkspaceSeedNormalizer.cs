@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
@@ -800,7 +801,9 @@ internal static class SandboxWorkspaceSeedNormalizer
                existing.CanReadStorage == seeded.CanReadStorage &&
                existing.CanWriteStorage == seeded.CanWriteStorage &&
                existing.AllowAllStorageCatalogs == seeded.AllowAllStorageCatalogs &&
-               existing.AllowedExternalTargetAliases.SequenceEqual(seeded.AllowedExternalTargetAliases, StringComparer.OrdinalIgnoreCase) &&
+               existing.AllowedExternalTargetAliases.SequenceEqual(
+                   seeded.AllowedExternalTargetAliases,
+                   ExternalTargetAliasCodec.EqualityComparer) &&
                existing.AllowedStorageCatalogIds.SequenceEqual(seeded.AllowedStorageCatalogIds);
     }
 

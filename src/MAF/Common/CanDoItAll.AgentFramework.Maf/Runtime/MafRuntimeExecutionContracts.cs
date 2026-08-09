@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -272,7 +273,7 @@ internal sealed class ToolInvocationTraceRecorder
                 string.Equals(argument.Name, "targetPath", StringComparison.OrdinalIgnoreCase))
             .Select(argument => argument.Value)
             .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .Take(2)
             .ToArray();
         return targetPaths.Length == 1

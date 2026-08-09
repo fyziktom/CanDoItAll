@@ -712,10 +712,14 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var metadataJson = ExecutionInvocationMetadata.Build(context.MetadataJson, context.Policy);
         if (ShouldGroundPromptExternalTargetAliases(sourceKind, context))
         {
+            var workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
+            var externalTargetPathRegistry = externalTargetPathRegistryFactory.Create(
+                workspaceToolAccess.ExternalTargetRootBindings);
             metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
                 metadataJson,
                 prompt,
-                AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson));
+                workspaceToolAccess,
+                externalTargetPathRegistry);
         }
 
         return new ExecutionRunRecord(
@@ -990,7 +994,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             CausationId: run.CausationId,
             RequestedBy: run.RequestedBy,
             RequestedByKind: run.RequestedByKind,
-            MetadataJson: run.MetadataJson,
+            MetadataJson: ExecutionInvocationMetadata.ProtectForUntrustedOutput(run.MetadataJson),
             State: entry.State,
             Phase: entry.Phase,
             Message: entry.Message,

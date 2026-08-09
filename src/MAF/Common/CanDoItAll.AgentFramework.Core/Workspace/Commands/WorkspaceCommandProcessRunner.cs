@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
 using System.Security.Cryptography;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -9,17 +11,20 @@ internal sealed class WorkspaceCommandProcessRunner
     private readonly WorkspaceCommandEnvironmentPolicy environmentPolicy;
     private readonly WorkspaceExecutableLocator executableLocator;
     private readonly WorkspaceCommandReceiptWriter receiptWriter;
+    private readonly WorkspacePathPolicy pathPolicy;
 
     public WorkspaceCommandProcessRunner(
         IWorkspaceProcessHost processHost,
         WorkspaceCommandEnvironmentPolicy environmentPolicy,
         WorkspaceExecutableLocator executableLocator,
-        WorkspaceCommandReceiptWriter receiptWriter)
+        WorkspaceCommandReceiptWriter receiptWriter,
+        WorkspacePathPolicy pathPolicy)
     {
         this.processHost = processHost;
         this.environmentPolicy = environmentPolicy;
         this.executableLocator = executableLocator;
         this.receiptWriter = receiptWriter;
+        this.pathPolicy = pathPolicy;
     }
 
     public ExecutionBoundaryDescriptor DescribeBoundary() => processHost.DescribeBoundary();
@@ -112,14 +117,17 @@ internal sealed class WorkspaceCommandProcessRunner
         var executablePath = executableLocator.ResolveExecutablePath(plan.ExecutableCandidates);
         var productTargetAudit = ProductTargetMutationAudit.CaptureBefore(
             plan,
-            WorkspaceExecutionAuditContext.Current);
+            WorkspaceExecutionAuditContext.Current,
+            pathPolicy);
         using var pathAliasSession = WorkspacePathAliasSession.TryCreate(
             plan.WorkspaceRootPath,
             plan.WorkingDirectoryPath,
-            plan.Arguments);
+            plan.Arguments,
+            pathPolicy);
         var effectiveWorkingDirectoryPath = pathAliasSession?.RewritePath(plan.WorkingDirectoryPath) ?? plan.WorkingDirectoryPath;
         var effectiveArguments = pathAliasSession?.RewriteArguments(plan.Arguments) ?? plan.Arguments;
         var environmentVariables = environmentPolicy.MergeEnvironmentVariables(plan.EnvironmentVariables);
+        pathPolicy.ValidatePathForUse(plan.WorkingDirectoryPath);
         var processResult = await processHost.ExecuteAsync(
             new WorkspaceProcessExecutionRequest(
                 ToolName: plan.Decision.ToolName,
@@ -300,7 +308,8 @@ internal sealed class WorkspaceCommandProcessRunner
 
         public static ProductTargetMutationAudit CaptureBefore(
             WorkspaceCommandPlan plan,
-            WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)
+            WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope,
+            WorkspacePathPolicy pathPolicy)
         {
             if (auditScope is null ||
                 auditScope.ProcessAllowsProductMutation ||
@@ -312,7 +321,7 @@ internal sealed class WorkspaceCommandProcessRunner
             var aliases = auditScope.AllowedExternalTargetAliases
                 .Concat(auditScope.ReadOnlyExternalTargetAliases)
                 .Where(alias => IsProductExternalTargetAlias(alias))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(ExternalTargetAliasCodec.EqualityComparer)
                 .Take(MaximumAuditRoots + 1)
                 .ToArray();
             if (aliases.Length > MaximumAuditRoots)
@@ -320,7 +329,6 @@ internal sealed class WorkspaceCommandProcessRunner
                 throw new ProductTargetAuditUnavailableException(aliases[MaximumAuditRoots]);
             }
 
-            var pathPolicy = new WorkspacePathPolicy(plan.WorkspaceRootPath);
             var budget = new ProductTargetAuditBudget();
             var snapshots = aliases
                 .Select(alias => CaptureSnapshot(pathPolicy, alias, budget))
@@ -395,10 +403,12 @@ internal sealed class WorkspaceCommandProcessRunner
 
             try
             {
+                var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(resolution.FullPath);
                 return new ProductTargetSnapshot(
                     alias,
                     resolution.FullPath,
-                    CaptureFileFingerprints(resolution.FullPath, budget));
+                    physicalPathPolicy,
+                    CaptureFileFingerprints(resolution.FullPath, physicalPathPolicy, budget));
             }
             catch (Exception exception) when (
                 exception is UnauthorizedAccessException or IOException)
@@ -413,26 +423,28 @@ internal sealed class WorkspaceCommandProcessRunner
 
         private static IReadOnlyDictionary<string, ProductTargetFileFingerprint> CaptureFileFingerprints(
             string rootPath,
+            IPhysicalFileSystemPathPolicy physicalPathPolicy,
             ProductTargetAuditBudget budget)
         {
             if (string.IsNullOrWhiteSpace(rootPath))
             {
-                return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase);
+                return CreateFingerprintDictionary(physicalPathPolicy.PathComparer);
             }
 
+            physicalPathPolicy.EnsureSafePath(rootPath);
             var rootIsFile = File.Exists(rootPath);
             if (!rootIsFile && !Directory.Exists(rootPath))
             {
-                return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase);
+                return CreateFingerprintDictionary(physicalPathPolicy.PathComparer);
             }
 
             IEnumerable<string> paths = rootIsFile
                 ? [rootPath]
-                : EnumerateAuditFiles(rootPath, budget);
-            var fingerprints = new Dictionary<string, ProductTargetFileFingerprint>(
-                StringComparer.OrdinalIgnoreCase);
+                : EnumerateAuditFiles(rootPath, physicalPathPolicy, budget);
+            var fingerprints = CreateFingerprintDictionary(physicalPathPolicy.PathComparer);
             foreach (var path in paths)
             {
+                physicalPathPolicy.EnsureSafePath(path);
                 var key = rootIsFile
                     ? "."
                     : WorkspacePathPolicy.NormalizeRelativePath(
@@ -443,34 +455,48 @@ internal sealed class WorkspaceCommandProcessRunner
             return fingerprints;
         }
 
+        private static Dictionary<string, ProductTargetFileFingerprint> CreateFingerprintDictionary(
+            StringComparer pathComparer)
+            => new(pathComparer);
+
         private static IEnumerable<string> EnumerateAuditFiles(
             string rootPath,
+            IPhysicalFileSystemPathPolicy physicalPathPolicy,
             ProductTargetAuditBudget budget)
         {
             var pendingDirectories = new Stack<string>();
             pendingDirectories.Push(rootPath);
             while (pendingDirectories.TryPop(out var directoryPath))
             {
+                physicalPathPolicy.EnsureSafePath(directoryPath);
                 budget.CountDirectory();
-                foreach (var entryPath in Directory.EnumerateFileSystemEntries(
-                             directoryPath,
-                             "*",
-                             SearchOption.TopDirectoryOnly))
+                string[] entryPaths = Directory.EnumerateFileSystemEntries(
+                        directoryPath,
+                        "*",
+                        SearchOption.TopDirectoryOnly)
+                    .OrderBy(
+                        entryPath => WorkspacePathPolicy.NormalizeRelativePath(
+                            Path.GetRelativePath(rootPath, entryPath)),
+                        StringComparer.Ordinal)
+                    .ToArray();
+                var childDirectories = new List<string>();
+                foreach (var entryPath in entryPaths)
                 {
                     budget.CountEntry();
+                    physicalPathPolicy.EnsureSafePath(entryPath);
                     var attributes = File.GetAttributes(entryPath);
-                    if ((attributes & FileAttributes.ReparsePoint) != 0)
-                    {
-                        continue;
-                    }
-
                     if ((attributes & FileAttributes.Directory) != 0)
                     {
-                        pendingDirectories.Push(entryPath);
+                        childDirectories.Add(entryPath);
                         continue;
                     }
 
                     yield return entryPath;
+                }
+
+                for (int index = childDirectories.Count - 1; index >= 0; index--)
+                {
+                    pendingDirectories.Push(childDirectories[index]);
                 }
             }
         }
@@ -627,11 +653,12 @@ internal sealed class WorkspaceCommandProcessRunner
         private sealed record ProductTargetSnapshot(
             string Alias,
             string RootPath,
+            IPhysicalFileSystemPathPolicy PhysicalPathPolicy,
             IReadOnlyDictionary<string, ProductTargetFileFingerprint> Files)
         {
             public bool HasChanged(ProductTargetAuditBudget budget)
             {
-                var afterFiles = CaptureFileFingerprints(RootPath, budget);
+                var afterFiles = CaptureFileFingerprints(RootPath, PhysicalPathPolicy, budget);
                 if (Files.Count != afterFiles.Count)
                 {
                     return true;

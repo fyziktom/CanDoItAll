@@ -1,14 +1,18 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureSourceWorkspacePathResolver(
     IWorkspacePathResolutionService workspacePaths,
-    IWorkspacePathResolver workspacePathResolver)
+    IWorkspacePathResolver workspacePathResolver,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+    IExternalTargetPathRegistry externalTargetPathRegistry)
 {
-    private readonly string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+    private readonly string workspaceRoot = ResolveWorkspaceRoot(workspacePathResolver);
 
     public WorkspaceResolvedPath ResolveExistingFile(Guid projectId, string sourceWorkspacePath)
     {
@@ -80,13 +84,24 @@ public sealed class ProjectStructureSourceWorkspacePathResolver(
             throw CreateScopeDeniedException(projectId);
         }
 
-        return (new WorkspacePathResolutionService(workspaceRoot, targetScope), targetScope);
+        return (new WorkspacePathResolutionService(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            targetScope,
+            externalTargetPathRegistry), targetScope);
     }
 
     private static bool ContainsDotPathSegment(string normalizedPath)
         => normalizedPath
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(segment => segment is "." or "..");
+
+    private static string ResolveWorkspaceRoot(IWorkspacePathResolver resolver)
+    {
+        var root = resolver.ResolveWorkspaceRoot();
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(root, "project-structure workspace root");
+        return Path.GetFullPath(root);
+    }
 
     private static ProjectStructureAgentException CreateScopeDeniedException(Guid projectId)
         => ProjectStructureAgentException.CreateAgentVisible(

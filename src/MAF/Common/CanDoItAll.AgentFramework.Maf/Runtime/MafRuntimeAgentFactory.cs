@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.FileSystem;
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.AI;
@@ -23,6 +24,7 @@ internal sealed class MafRuntimeAgentFactory
     private readonly IRuntimeCapabilityComposer runtimeCapabilityComposer;
     private readonly ILoggerFactory loggerFactory;
     private readonly AgentToolInvocationPolicyPipeline toolInvocationPolicyPipeline;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
 
     public MafRuntimeAgentFactory(
         string workspaceRoot,
@@ -30,6 +32,7 @@ internal sealed class MafRuntimeAgentFactory
         IMafProviderCredentialService providerCredentialService,
         IMafProviderAgentFactory providerAgentFactory,
         IRuntimeCapabilityComposer runtimeCapabilityComposer,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         ILoggerFactory? loggerFactory = null,
         AgentToolInvocationPolicyPipeline? toolInvocationPolicyPipeline = null)
     {
@@ -45,6 +48,7 @@ internal sealed class MafRuntimeAgentFactory
         this.providerCredentialService = providerCredentialService ?? throw new ArgumentNullException(nameof(providerCredentialService));
         this.providerAgentFactory = providerAgentFactory ?? throw new ArgumentNullException(nameof(providerAgentFactory));
         this.runtimeCapabilityComposer = runtimeCapabilityComposer ?? throw new ArgumentNullException(nameof(runtimeCapabilityComposer));
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
         // The injected governance pipeline is the only policy seam: the
         // factory never constructs a policy itself, so composition decides the
         // policy and its domain contributors in one place.
@@ -246,7 +250,11 @@ internal sealed class MafRuntimeAgentFactory
             // Script inspection reads through the effective run scope so
             // policy evaluation inspects exactly the file the run's tools can
             // execute — never the runtime construction scope.
-            new MafScriptPolicyInspectionService(workspaceRoot, contextWorkspaceScope));
+            new MafScriptPolicyInspectionService(
+                workspaceRoot,
+                contextWorkspaceScope,
+                physicalPathPolicyFactory,
+                workspaceRuntimeServices.ExternalTargetPathRegistry));
         return new RuntimeBuildResult(
             runtimeAgent,
             effectiveProvider,

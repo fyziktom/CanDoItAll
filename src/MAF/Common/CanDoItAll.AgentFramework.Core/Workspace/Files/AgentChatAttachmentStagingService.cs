@@ -1,3 +1,5 @@
+using CanDoItAll.SharedKernel;
+
 namespace CanDoItAll.AgentFramework.Core;
 
 public interface IAgentChatAttachmentStagingService
@@ -132,7 +134,8 @@ public sealed class AgentChatAttachmentStagingService(IWorkspacePathResolutionSe
 
     private static string NormalizeFileName(string fileName)
     {
-        var name = Path.GetFileName(fileName.Trim());
+        string[] segments = fileName.Trim().Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+        string name = segments.LastOrDefault() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
             name = "image.png";
@@ -140,21 +143,9 @@ public sealed class AgentChatAttachmentStagingService(IWorkspacePathResolutionSe
 
         var extension = Path.GetExtension(name);
         var baseName = Path.GetFileNameWithoutExtension(name);
-        var invalidCharacters = Path.GetInvalidFileNameChars().ToHashSet();
-        var safeBaseName = new string(baseName
-            .Select(character => invalidCharacters.Contains(character) ? '-' : character)
-            .ToArray())
-            .Trim(' ', '.', '-');
-        if (string.IsNullOrWhiteSpace(safeBaseName))
-        {
-            safeBaseName = "image";
-        }
-
-        if (safeBaseName.Length > 80)
-        {
-            safeBaseName = safeBaseName[..80].Trim(' ', '.', '-');
-        }
-
+        string safeBaseName = PortablePhysicalFileNamePolicy.Encode(
+            string.IsNullOrWhiteSpace(baseName) ? "image" : baseName,
+            maximumUtf8Bytes: 96).PhysicalName;
         return $"{safeBaseName}{extension.ToLowerInvariant()}";
     }
 

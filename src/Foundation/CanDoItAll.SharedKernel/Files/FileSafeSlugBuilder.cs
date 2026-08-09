@@ -4,15 +4,12 @@ public static class FileSafeSlugBuilder
 {
     public static string Build(string input)
     {
-        var slug = input.Trim().ToLowerInvariant();
-        foreach (var character in Path.GetInvalidFileNameChars())
+        var slug = input.Trim().ToLowerInvariant().Replace(' ', '-');
+        if (slug.Length == 0)
         {
-            slug = slug.Replace(character.ToString(), string.Empty, StringComparison.Ordinal);
+            return Guid.NewGuid().ToString("N");
         }
 
-        slug = slug.Replace(' ', '-');
-        return string.IsNullOrWhiteSpace(slug)
-            ? Guid.NewGuid().ToString("N")
-            : slug;
+        return PortablePhysicalFileNamePolicy.Encode(slug).PhysicalName;
     }
 }

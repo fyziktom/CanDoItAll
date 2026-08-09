@@ -58,7 +58,7 @@ Absolute workspace/storage/application paths are persisted today and can become 
 
 ## Entry gate
 
-- Status before execution: `Blocked by Gate C1`
+- Status at execution entry: `Eligible — Gate C1 GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -71,7 +71,7 @@ Absolute workspace/storage/application paths are persisted today and can become 
 
 ## Status
 
-- `Blocked by Gate C1`
+- `Completed — Gate C2a GO`
 
 ## Handoff
 

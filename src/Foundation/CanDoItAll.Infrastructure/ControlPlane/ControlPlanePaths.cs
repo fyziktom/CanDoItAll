@@ -1,5 +1,7 @@
 using System.IO;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -18,6 +20,12 @@ public interface IControlPlanePathResolver
     string ResolveFileApplicationPreferencesFilePath();
 
     string ResolveDataProtectionKeysPath();
+
+    string ResolveStateRootPath();
+
+    string ResolveLogsRootPath();
+
+    string ResolveRuntimeTemporaryRootPath();
 }
 
 public static class ControlPlanePathDefaults
@@ -29,18 +37,32 @@ public static class ControlPlanePathDefaults
             return ResolveConfiguredPath(environment.ContentRootPath, options.RootPath);
         }
 
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localAppData))
+        return ApplicationPurposeRootPolicy.ResolveCurrent().ControlPlaneRoot;
+    }
+
+    public static string ResolveDataProtectionKeysPath(IHostEnvironment environment, ControlPlaneOptions options)
+    {
+        if (!string.IsNullOrWhiteSpace(options.DataProtectionKeysPath))
         {
-            return Path.Combine(environment.ContentRootPath, ".artifacts", "control-plane");
+            return ResolveConfiguredPath(environment.ContentRootPath, options.DataProtectionKeysPath);
         }
 
-        return Path.Combine(localAppData, "CanDoItAll", "control-plane");
+        if (!string.IsNullOrWhiteSpace(options.RootPath))
+        {
+            return Path.Combine(ResolveControlPlaneRootPath(environment, options), "dataprotection-keys");
+        }
+
+        return ApplicationPurposeRootPolicy.ResolveCurrent().DataProtectionKeysRoot;
     }
 
     public static string ResolveConfiguredPath(string contentRootPath, string configuredPath)
     {
-        var expandedPath = Environment.ExpandEnvironmentVariables(configuredPath);
+        var expandedPath = ExpandConfiguredPath(
+            configuredPath,
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            Environment.GetEnvironmentVariable,
+            PortablePathTemplateCompatibility.LegacyWindowsEnvironmentTokens);
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(expandedPath, "configured control-plane path");
         if (Path.IsPathRooted(expandedPath))
         {
             return Path.GetFullPath(expandedPath);
@@ -48,25 +70,39 @@ public static class ControlPlanePathDefaults
 
         return Path.GetFullPath(Path.Combine(contentRootPath, expandedPath));
     }
+
+    internal static string ExpandConfiguredPath(
+        string configuredPath,
+        string? homeDirectory,
+        Func<string, string?> variableResolver,
+        PortablePathTemplateCompatibility compatibility)
+    {
+        return PortablePathTemplate.Expand(
+            configuredPath,
+            homeDirectory,
+            variableResolver,
+            compatibility);
+    }
 }
 
 public sealed class ControlPlanePathResolver(
     IOptions<ControlPlaneOptions> options,
-    IHostEnvironment hostEnvironment) : IControlPlanePathResolver
+    IHostEnvironment hostEnvironment,
+    DurableFileWriter durableFileWriter) : IControlPlanePathResolver
 {
     private readonly ControlPlaneOptions _options = options.Value;
 
     public string ResolveRootPath()
     {
         var path = ControlPlanePathDefaults.ResolveControlPlaneRootPath(hostEnvironment, _options);
-        Directory.CreateDirectory(path);
+        durableFileWriter.EnsureDirectory(path, path, requirePrivateUnixMode: true);
         return path;
     }
 
     public string ResolveDatabaseProfilesRootPath()
     {
         var path = Path.Combine(ResolveRootPath(), "database-profiles");
-        Directory.CreateDirectory(path);
+        durableFileWriter.EnsureDirectory(ResolveRootPath(), path, requirePrivateUnixMode: true);
         return path;
     }
 
@@ -79,9 +115,36 @@ public sealed class ControlPlanePathResolver(
 
     public string ResolveDataProtectionKeysPath()
     {
-        var path = Path.Combine(ResolveRootPath(), "dataprotection-keys");
-        Directory.CreateDirectory(path);
+        string path = ControlPlanePathDefaults.ResolveDataProtectionKeysPath(hostEnvironment, _options);
+        durableFileWriter.EnsureDirectory(path, path, requirePrivateUnixMode: true);
         return path;
+    }
+
+    public string ResolveStateRootPath()
+        => EnsurePurposeRoot(_options.StateRootPath, static roots => roots.StateRoot);
+
+    public string ResolveLogsRootPath()
+        => EnsurePurposeRoot(_options.LogsRootPath, static roots => roots.LogsRoot);
+
+    public string ResolveRuntimeTemporaryRootPath()
+        => EnsurePurposeRoot(_options.RuntimeTemporaryRootPath, static roots => roots.RuntimeTemporaryRoot);
+
+    private string EnsurePurposeRoot(
+        string? configuredPath,
+        Func<ApplicationPurposeRoots, string> defaultSelector)
+    {
+        string path = ResolvePurposeRoot(configuredPath, defaultSelector);
+        durableFileWriter.EnsureDirectory(path, path, requirePrivateUnixMode: true);
+        return path;
+    }
+
+    private string ResolvePurposeRoot(
+        string? configuredPath,
+        Func<ApplicationPurposeRoots, string> defaultSelector)
+    {
+        return string.IsNullOrWhiteSpace(configuredPath)
+            ? defaultSelector(ApplicationPurposeRootPolicy.ResolveCurrent())
+            : ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, configuredPath);
     }
 
 }

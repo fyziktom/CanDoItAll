@@ -1,4 +1,5 @@
 using CanDoItAll.SharedKernel;
+using System.Text.Json.Serialization;
 
 namespace CanDoItAll.Infrastructure.ControlPlane;
 
@@ -75,7 +76,24 @@ public sealed class DatabaseProfileStorageDescriptor
 {
     public DatabaseProfileStorageMode Mode { get; set; } = DatabaseProfileStorageMode.ExternalWorkspaceRoot;
 
-    public string WorkspaceRoot { get; set; } = string.Empty;
+    public HostBoundPathRecord? WorkspacePath { get; set; }
+
+    [JsonIgnore]
+    public string WorkspaceRoot
+    {
+        get => WorkspacePath?.Path ?? LegacyWorkspaceRoot ?? string.Empty;
+        set
+        {
+            WorkspacePath = string.IsNullOrWhiteSpace(value)
+                ? null
+                : HostBoundPathPolicy.BindCurrent(value, DateTimeOffset.UtcNow);
+            LegacyWorkspaceRoot = null;
+        }
+    }
+
+    [JsonPropertyName("workspaceRoot")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyWorkspaceRoot { get; set; }
 }
 
 public sealed class DatabaseProfileRuntimeMetadata
@@ -116,6 +134,10 @@ public sealed record DatabaseProfileSummary(
     DateTimeOffset? LastUsedUtc)
 {
     public bool IsPendingRestartActivation { get; init; }
+
+    public HostBoundPathState WorkspacePathState { get; init; } = HostBoundPathState.NeedsRebind;
+
+    public bool RequiresWorkspaceRebind => WorkspacePathState != HostBoundPathState.Active;
 }
 
 public enum DatabaseProfileSchemaStatus
@@ -151,6 +173,8 @@ public sealed class DatabaseProfileEditorModel
     public string? InMemoryDatabaseName { get; set; }
 
     public string? WorkspaceRoot { get; set; }
+
+    public HostBoundPathState WorkspacePathState { get; set; } = HostBoundPathState.NeedsRebind;
 
     public string PostgresHost { get; set; } = "localhost";
 
@@ -195,6 +219,10 @@ public sealed class DatabaseSelectionStateModel
 
     public string WorkspaceRoot { get; set; } = string.Empty;
 
+    public HostBoundPathState WorkspacePathState { get; set; } = HostBoundPathState.NeedsRebind;
+
+    public bool RequiresWorkspaceRebind => WorkspacePathState != HostBoundPathState.Active;
+
     public string Descriptor { get; set; } = string.Empty;
 
     public Guid? PendingRestartProfileId { get; set; }
@@ -218,6 +246,13 @@ public interface IControlPlaneSecretProtector
     string Protect(string plainText);
 
     string Unprotect(string protectedValue);
+}
+
+public sealed record ControlPlaneSecretContinuityReport(int ProtectedPasswordCount);
+
+public interface IControlPlaneSecretContinuityVerifier
+{
+    Task<ControlPlaneSecretContinuityReport> VerifyAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IActiveDatabaseProfileResolver
@@ -250,6 +285,10 @@ public interface IDatabaseProfileService
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<Result> RebindWorkspaceAsync(Guid id, string workspaceRoot, CancellationToken cancellationToken = default);
+
+    Task<Result> RollbackWorkspacePathMigrationAsync(CancellationToken cancellationToken = default);
 
     Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default);
 }

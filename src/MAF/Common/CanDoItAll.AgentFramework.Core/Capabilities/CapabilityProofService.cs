@@ -1,11 +1,20 @@
 using System.Net.Http;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class CapabilityProofService : ICapabilityProofService
 {
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
+
+    public CapabilityProofService(IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+    {
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory
+            ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
+    }
+
     private static readonly HttpClient HttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(10)

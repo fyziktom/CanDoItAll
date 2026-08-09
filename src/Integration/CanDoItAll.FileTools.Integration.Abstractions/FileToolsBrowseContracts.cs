@@ -103,8 +103,9 @@ public readonly record struct FileToolsStorageRoot
     {
         ArgumentNullException.ThrowIfNull(value);
         string normalized = value.Trim().Replace('\\', '/').TrimEnd('/');
+        string[] segments = normalized.Split('/');
         if (normalized.Length > 4096 ||
-            normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            (normalized.Length > 0 && segments.Any(segment => segment.Length == 0 || segment is "." or "..")))
         {
             throw new ArgumentException("The storage binding root is invalid.", nameof(value));
         }

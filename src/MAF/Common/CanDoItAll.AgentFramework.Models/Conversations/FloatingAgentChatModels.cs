@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -146,15 +148,16 @@ public interface IAgentChatContextAttachment
 internal sealed record AgentChatExternalTargetAccessAttachment : IAgentChatContextAttachment
 {
     internal AgentChatExternalTargetAccessAttachment(
-        IEnumerable<string> readOnlyAliases)
+        IEnumerable<string> readOnlyAliases,
+        IEnumerable<ExternalTargetRootBinding>? externalTargetRootBindings = null)
     {
         ArgumentNullException.ThrowIfNull(readOnlyAliases);
         ReadOnlyAliases = readOnlyAliases
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(static alias => !string.IsNullOrWhiteSpace(alias))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .Order(StringComparer.Ordinal)
             .ToImmutableArray();
         if (ReadOnlyAliases.IsEmpty)
         {
@@ -162,9 +165,16 @@ internal sealed record AgentChatExternalTargetAccessAttachment : IAgentChatConte
                 "At least one bounded external-target alias is required.",
                 nameof(readOnlyAliases));
         }
+
+        ExternalTargetRootBindings = externalTargetRootBindings?
+            .Distinct()
+            .OrderBy(binding => binding.RootId, StringComparer.Ordinal)
+            .ToImmutableArray() ?? [];
     }
 
     internal ImmutableArray<string> ReadOnlyAliases { get; }
+
+    internal ImmutableArray<ExternalTargetRootBinding> ExternalTargetRootBindings { get; }
 }
 
 public readonly record struct AgentChatContextAttachmentKind

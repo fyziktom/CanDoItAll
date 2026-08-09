@@ -58,7 +58,7 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
         await File.WriteAllTextAsync(Path.Combine(items, "keep.txt"), "keep");
         await File.WriteAllTextAsync(Path.Combine(items, "skip.log"), "skip");
         await File.WriteAllTextAsync(Path.Combine(items, "folder", "nested.txt"), "nested");
-        var files = new RecordingWorkspaceFileService(new WorkspaceFileService(temp.Path));
+        var files = new RecordingWorkspaceFileService(TestWorkspaceServices.CreateFileService(temp.Path));
 
         var result = await ExecuteAsync(
             new WorkspaceFileWorkflowExecutor(files),
@@ -92,7 +92,7 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
         await File.WriteAllTextAsync(Path.Combine(items, "a.txt"), "a");
         await File.WriteAllTextAsync(Path.Combine(items, "b.txt"), "b");
         await File.WriteAllTextAsync(Path.Combine(items, "c.txt"), "c");
-        var files = new RecordingWorkspaceFileService(new WorkspaceFileService(temp.Path));
+        var files = new RecordingWorkspaceFileService(TestWorkspaceServices.CreateFileService(temp.Path));
 
         var result = await ExecuteAsync(
             new WorkspaceFileWorkflowExecutor(files),
@@ -117,7 +117,7 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
     public async Task Storage_list_directory_propagates_traversal_and_service_failures(string path)
     {
         using var temp = new TempDirectory();
-        var files = new RecordingWorkspaceFileService(new WorkspaceFileService(temp.Path));
+        var files = new RecordingWorkspaceFileService(TestWorkspaceServices.CreateFileService(temp.Path));
         var executor = new WorkspaceFileWorkflowExecutor(files);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteAsync(

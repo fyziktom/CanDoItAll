@@ -1201,10 +1201,11 @@ public partial class ProjectStructurePage
             return "project-structure";
         }
 
-        return string.Join(
+        string displayName = string.Join(
             "-",
-            value.Split(Path.GetInvalidFileNameChars().Concat([' ']).ToArray(), StringSplitOptions.RemoveEmptyEntries))
+            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
             .ToLowerInvariant();
+        return PortablePhysicalFileNamePolicy.Encode(displayName).PhysicalName;
     }
 
 }

@@ -10,7 +10,6 @@ public sealed class AgentToolInvocationPolicyTests
     [Theory]
     [InlineData("managed-files/project-media/files/be2ebfd7776643f99b2e8051d0b0d99d/foreign.md")]
     [InlineData("./managed-files/project-media/files/be2ebfd7776643f99b2e8051d0b0d99d/foreign.md")]
-    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\be2ebfd7776643f99b2e8051d0b0d99d\foreign.md")]
     public async Task EvaluateAsync_denies_foreign_project_media_for_interactive_project_scope(
         string path)
     {
@@ -32,7 +31,6 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/current.md")]
     [InlineData("./managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9/current.md")]
     [InlineData("managed-files/project-media/files/3324868f-66e2-478a-bb8f-14f32a5db1e9/current.md")]
-    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9\current.md")]
     public async Task EvaluateAsync_allows_current_project_media_for_interactive_project_scope(
         string path)
     {
@@ -51,7 +49,6 @@ public sealed class AgentToolInvocationPolicyTests
 
     [Theory]
     [InlineData("project-structure-context-brief.md")]
-    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace\project-structure-context-brief.md")]
     public async Task EvaluateAsync_denies_ambiguous_shared_project_brief_for_interactive_project_scope(
         string path)
     {
@@ -69,15 +66,15 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains("not project-owned", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
-    [InlineData(".")]
-    [InlineData(@"C:\Users\test\AppData\Local\CanDoItAll\workspace")]
-    public async Task EvaluateAsync_denies_broad_workspace_discovery_for_interactive_project_scope(
-        string path)
+    [Fact]
+    public async Task EvaluateAsync_denies_ambiguous_shared_project_brief_by_native_absolute_path()
     {
+        var path = OperatingSystem.IsWindows()
+            ? @"C:\Users\test\AppData\Local\CanDoItAll\workspace\project-structure-context-brief.md"
+            : "/var/lib/candoitall/workspace/project-structure-context-brief.md";
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateInteractiveProjectContext(
-            ToolContractCatalog.WorkspaceListFiles,
+            ToolContractCatalog.WorkspaceReadFile,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["path"] = path
@@ -86,7 +83,44 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("not project-owned", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_broad_workspace_discovery_for_interactive_project_scope()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceListFiles,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "."
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("shared workspace root", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_foreign_absolute_workspace_discovery_for_interactive_project_scope()
+    {
+        var foreignPath = OperatingSystem.IsWindows()
+            ? "/var/lib/candoitall/workspace"
+            : @"C:\Users\test\AppData\Local\CanDoItAll\workspace";
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceListFiles,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = foreignPath
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("foreign-host physical path syntax", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -187,17 +221,42 @@ public sealed class AgentToolInvocationPolicyTests
     [Fact]
     public async Task EvaluateAsync_allows_current_project_media_discovery_by_absolute_path()
     {
+        var path = OperatingSystem.IsWindows()
+            ? @"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9"
+            : "/var/lib/candoitall/workspace/managed-files/project-media/files/3324868f66e2478abb8f14f32a5db1e9";
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateInteractiveProjectContext(
             ToolContractCatalog.WorkspaceListFiles,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["path"] = @"C:\Users\test\AppData\Local\CanDoItAll\workspace\managed-files\project-media\files\3324868f66e2478abb8f14f32a5db1e9"
+                ["path"] = path
             });
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_does_not_treat_unix_backslash_filename_as_project_media_separator()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateInteractiveProjectContext(
+            ToolContractCatalog.WorkspaceListFiles,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "/var/lib/candoitall/workspace/managed-files\\project-media/files/3324868f66e2478abb8f14f32a5db1e9"
+            });
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("shared workspace root", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1529,6 +1588,39 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_does_not_collapse_case_distinct_versioned_aliases_before_authorization()
+    {
+        const string upperAlias = "external-target/v1/0123456789abcdef01234567/Foo";
+        const string lowerAlias = "external-target/v1/0123456789abcdef01234567/foo";
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/read-product.ps1"
+            },
+            allowedExternalTargetAliases: [upperAlias],
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.NoMutation,
+                declaredReadPaths:
+                [
+                    upperAlias + "/input.json",
+                    lowerAlias + "/secret.json"
+                ]),
+            inspectedScriptContent: "Write-Output 'validated'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(lowerAlias, decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_denies_python_script_product_write_when_process_step_disallows_product_mutation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
@@ -2424,6 +2516,7 @@ public sealed class AgentToolInvocationPolicyTests
         }
 
         var policy = new DefaultAgentToolInvocationPolicy();
+        const string expectedAlias = "external-target/v1/0123456789abcdef01234567";
         var context = CreateContext(
             "workspace_list_files",
             ToolInvocationClassification.Read,
@@ -2434,14 +2527,13 @@ public sealed class AgentToolInvocationPolicyTests
             {
                 ["relativePath"] = @"C:\programovani\dotnet\output"
             },
-            allowedExternalTargetAliases: ["external-target/C/programovani/dotnet/output"]);
+            allowedExternalTargetAliases: [expectedAlias]);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("not native absolute paths", decision.Reason, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Retry this structured workspace tool", decision.Reason, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/programovani/dotnet/output", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("Native absolute path", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("outside the workspace-tool boundary", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -2471,7 +2563,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("outside the current-run external-target roots", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("outside the workspace-tool boundary", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -2500,7 +2592,7 @@ public sealed class AgentToolInvocationPolicyTests
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("outside the current-run external-target roots", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("outside the workspace-tool boundary", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

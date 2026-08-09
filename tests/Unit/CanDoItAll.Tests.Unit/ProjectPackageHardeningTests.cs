@@ -271,6 +271,7 @@ public sealed class ProjectPackageHardeningTests
             var exception = await Assert.ThrowsAsync<InvalidDataException>(
                 () => ProjectPackageArchive.ExtractPackageAsync(
                     packagePath,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
                     CancellationToken.None));
 
             Assert.Contains("duplicate", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -296,6 +297,7 @@ public sealed class ProjectPackageHardeningTests
             await Assert.ThrowsAsync<InvalidDataException>(
                 () => ProjectPackageArchive.ExtractPackageAsync(
                     packagePath,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
                     CancellationToken.None));
             Assert.False(File.Exists(Path.Combine(root, "escape.json")));
         }
@@ -326,6 +328,7 @@ public sealed class ProjectPackageHardeningTests
                     stagingRoot,
                     packagePath,
                     DateTimeOffset.UtcNow,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
                     CancellationToken.None));
 
             Assert.Contains("too many", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -355,6 +358,7 @@ public sealed class ProjectPackageHardeningTests
                     stagingRoot,
                     packagePath,
                     DateTimeOffset.UtcNow,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
                     CancellationToken.None));
 
             Assert.Equal(original, await File.ReadAllBytesAsync(packagePath));
@@ -423,6 +427,7 @@ public sealed class ProjectPackageHardeningTests
             var exception = await Assert.ThrowsAsync<InvalidDataException>(
                 () => ProjectPackageArchive.ExtractPackageAsync(
                     packagePath,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
                     CancellationToken.None));
 
             Assert.Contains("symbolic-link", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -456,6 +461,7 @@ public sealed class ProjectPackageHardeningTests
                     stagingRoot,
                     Path.Combine(root, "oversized.zip"),
                     DateTimeOffset.UtcNow,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
                     CancellationToken.None));
 
             Assert.Contains("entry size", exception.Message, StringComparison.OrdinalIgnoreCase);
@@ -1535,10 +1541,12 @@ public sealed class ProjectPackageHardeningTests
         var registry = new StorageDriverRegistry([driver]);
         var physicalIdentityPolicy = new ProjectManagedStoragePhysicalIdentityPolicy(
             new FileSystemStoragePathPolicy(
-                new TestWorkspacePathResolver(workspaceRoot)));
+                new TestWorkspacePathResolver(workspaceRoot)),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         return new ProjectPackageStorageImporter(
             registry,
             physicalIdentityPolicy,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             new FixedClock(),
             NullLogger<StoragePlacementService>.Instance,
             NullLogger<ProjectPackageService>.Instance);
@@ -1548,7 +1556,8 @@ public sealed class ProjectPackageHardeningTests
         StorageProviderKind providerKind,
         string endpointOrRoot,
         StorageCapability capabilities)
-        => new()
+    {
+        var storage = new StorageCatalogRecord
         {
             Id = Guid.NewGuid(),
             Name = $"Test {providerKind}",
@@ -1560,6 +1569,13 @@ public sealed class ProjectPackageHardeningTests
             CreatedAtUtc = DateTimeOffset.UtcNow,
             UpdatedAtUtc = DateTimeOffset.UtcNow
         };
+        if (providerKind == StorageProviderKind.FileSystem)
+        {
+            StorageCatalogHostBindingPolicy.BindCurrent(storage, endpointOrRoot, DateTimeOffset.UtcNow);
+        }
+
+        return storage;
+    }
 
     private static ResolvedDatabaseProfile TestProfile(string workspaceRoot)
         => new(

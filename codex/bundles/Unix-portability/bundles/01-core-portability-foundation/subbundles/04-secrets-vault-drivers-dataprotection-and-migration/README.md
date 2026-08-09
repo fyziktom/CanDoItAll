@@ -56,7 +56,7 @@ Auto currently selects unsupported macOS/Linux vaults, the file-vault master key
 
 ## Entry gate
 
-- Status before execution: `Blocked by A03`
+- Status before execution: `C2a GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -69,7 +69,7 @@ Auto currently selects unsupported macOS/Linux vaults, the file-vault master key
 
 ## Status
 
-- `Blocked by A03`
+- `Blocked — Gate C2 NO-GO; local remediation complete, actual macOS Keychain evidence unavailable`
 
 ## Handoff
 

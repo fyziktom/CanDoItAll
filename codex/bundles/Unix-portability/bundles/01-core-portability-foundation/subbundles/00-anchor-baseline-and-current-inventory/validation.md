@@ -6,7 +6,10 @@
 python ./scripts/scan_portability.py --repo-root <repo> --output <repo>/artifacts/unix-portability/A00/portability-scan.json
 ```
 ```text
-dotnet restore ./CanDoItAll.slnx
+python ./scripts/classify_portability_scan.py --input <repo>/artifacts/unix-portability/A00/portability-scan.json --json-output <repo>/artifacts/unix-portability/A00/portability-scan-reviewed.json --csv-output <repo>/artifacts/unix-portability/A00/portability-scan-reviewed.csv --summary-output ./bundles/01-core-portability-foundation/inventories/01-execution-portability-scan-review.md
+```
+```text
+dotnet restore ./CanDoItAll.slnx --configfile ./NuGet.config
 ```
 ```text
 dotnet build ./CanDoItAll.slnx -c Release --no-restore /m:1
@@ -16,6 +19,9 @@ dotnet test ./CanDoItAll.slnx -c Release --no-build --filter "Category!=Playwrig
 ```
 ```text
 python ./scripts/validate_bundle.py --bundle-root . --repo-root <repo> --stage prepared
+```
+```text
+python ./scripts/scan_artifacts_for_secrets.py --root <repo>/artifacts/unix-portability/A00 --output <repo>/artifacts/unix-portability/A00/secret-scan.json
 ```
 
 ## Required proof

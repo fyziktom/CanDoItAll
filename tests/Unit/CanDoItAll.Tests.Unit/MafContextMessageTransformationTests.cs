@@ -155,7 +155,8 @@ public sealed class MafContextMessageTransformationTests
         {
             var contextBuilder = new ContextCapabilityBuilder(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
             var state = new RuntimeCapabilityState();
             var providerAdded = contextBuilder.AddRagProvider(
                 state,
@@ -199,7 +200,8 @@ public sealed class MafContextMessageTransformationTests
         {
             var contextBuilder = new ContextCapabilityBuilder(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
             var state = new RuntimeCapabilityState();
             var providerAdded = contextBuilder.AddRagProvider(
                 state,

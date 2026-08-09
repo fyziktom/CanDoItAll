@@ -320,7 +320,8 @@ public sealed class WorkflowExecutorFoundationExtractionTests
         var project = XDocument.Load(projectPath);
         var projectReferences = project
             .Descendants("ProjectReference")
-            .Select(element => Path.GetFileNameWithoutExtension(element.Attribute("Include")?.Value ?? string.Empty))
+            .Select(element => Path.GetFileNameWithoutExtension(
+                (element.Attribute("Include")?.Value ?? string.Empty).Replace('\\', '/')))
             .Where(reference => !string.IsNullOrWhiteSpace(reference))
             .ToArray();
         var packageReferences = project

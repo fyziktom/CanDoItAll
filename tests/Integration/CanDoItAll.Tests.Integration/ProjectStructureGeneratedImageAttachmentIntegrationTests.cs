@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
 {
     private static readonly byte[] GeneratedPngBytes =
@@ -174,6 +176,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var projectScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
         var projectPaths = new WorkspacePathResolutionService(
             services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+            services.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
             projectScope);
         var (rootName, scopedRoot) = ResolveManagedRoot(projectScope, managedRoot);
         var source = projectPaths.ResolveFilePath(
@@ -292,6 +295,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         var foreignScope = WorkspaceScopeDescriptor.Project(foreignProjectId.ToString("D"));
         var foreignPaths = new WorkspacePathResolutionService(
             services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+            services.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
             foreignScope);
         var (rootName, _) = ResolveManagedRoot(foreignScope, managedRoot);
         var source = foreignPaths.ResolveFilePath(
@@ -354,6 +358,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
             CancellationToken.None);
         var foreignPaths = new WorkspacePathResolutionService(
             services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(),
+            services.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
             WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N")));
         var source = foreignPaths.ResolveFilePath(
             $"artifacts/agent-project-structure-hardening/{Guid.NewGuid():N}/foreign-organization.xlsx",

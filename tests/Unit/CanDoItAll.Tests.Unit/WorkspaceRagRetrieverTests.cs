@@ -27,7 +27,8 @@ public sealed class WorkspaceRagRetrieverTests
         {
             var retriever = new WorkspaceRagRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
 
             var searchRoots = retriever.ResolveSearchRoots(workspaceRoot);
             var results = (await retriever.SearchAsync(
@@ -74,7 +75,8 @@ public sealed class WorkspaceRagRetrieverTests
                 "stale shared context");
             var retriever = new WorkspaceRagRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")));
+                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
 
             var searchRoots = retriever.ResolveSearchRoots(workspaceRoot);
             var results = await retriever.SearchAsync(
@@ -114,10 +116,12 @@ public sealed class WorkspaceRagRetrieverTests
         {
             var projectRetriever = new WorkspaceRagRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")));
+                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
             var sandboxRetriever = new WorkspaceRagRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Sandbox);
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
 
             Assert.Equal(
                 Path.GetFullPath(explicitRoot),
@@ -150,7 +154,8 @@ public sealed class WorkspaceRagRetrieverTests
         {
             var retriever = new WorkspaceRagRetriever(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+                WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
 
             Assert.Empty(retriever.ResolveSearchRoots(foreignRoot));
             Assert.Empty(retriever.ResolveSearchRoots(sharedMediaRoot));

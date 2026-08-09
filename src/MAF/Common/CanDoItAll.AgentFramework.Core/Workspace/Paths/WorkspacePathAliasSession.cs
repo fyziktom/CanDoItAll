@@ -12,22 +12,26 @@ internal sealed class WorkspacePathAliasSession : IDisposable
     private readonly string aliasRootPath;
     private readonly char driveLetter;
     private readonly string workspaceRootPath;
+    private readonly WorkspacePathPolicy pathPolicy;
     private int disposeState;
 
     private WorkspacePathAliasSession(
         string workspaceRootPath,
         string aliasRootPath,
-        char driveLetter)
+        char driveLetter,
+        WorkspacePathPolicy pathPolicy)
     {
         this.workspaceRootPath = Path.GetFullPath(workspaceRootPath);
         this.aliasRootPath = aliasRootPath;
         this.driveLetter = driveLetter;
+        this.pathPolicy = pathPolicy;
     }
 
     public static WorkspacePathAliasSession? TryCreate(
         string workspaceRootPath,
         string workingDirectoryPath,
-        IReadOnlyList<string> arguments)
+        IReadOnlyList<string> arguments,
+        WorkspacePathPolicy pathPolicy)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -35,7 +39,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         }
 
         var normalizedWorkspaceRoot = Path.GetFullPath(workspaceRootPath);
-        if (!NeedsAlias(normalizedWorkspaceRoot, workingDirectoryPath, arguments))
+        if (!NeedsAlias(normalizedWorkspaceRoot, workingDirectoryPath, arguments, pathPolicy))
         {
             return null;
         }
@@ -51,7 +55,8 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         return new WorkspacePathAliasSession(
             normalizedWorkspaceRoot,
             $"{driveLetter}:\\",
-            driveLetter);
+            driveLetter,
+            pathPolicy);
     }
 
     public string RewritePath(string path)
@@ -62,7 +67,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         }
 
         var normalizedPath = Path.GetFullPath(path);
-        if (!WorkspacePathPolicy.IsPathWithinRoot(normalizedPath, workspaceRootPath))
+        if (!pathPolicy.IsPathWithinRoot(normalizedPath, workspaceRootPath))
         {
             return path;
         }
@@ -112,7 +117,11 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         return RewritePath(argument);
     }
 
-    private static bool NeedsAlias(string workspaceRootPath, string workingDirectoryPath, IReadOnlyList<string> arguments)
+    private static bool NeedsAlias(
+        string workspaceRootPath,
+        string workingDirectoryPath,
+        IReadOnlyList<string> arguments,
+        WorkspacePathPolicy pathPolicy)
     {
         if (workspaceRootPath.Length >= WindowsPathBudget - RelativePathSafetyAllowance)
         {
@@ -133,7 +142,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
 
             if (Path.IsPathRooted(argument))
             {
-                if (WorkspacePathPolicy.IsPathWithinRoot(argument, workspaceRootPath) &&
+                if (pathPolicy.IsPathWithinRoot(argument, workspaceRootPath) &&
                     argument.Length >= WindowsPathBudget)
                 {
                     return true;
@@ -148,7 +157,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
             }
 
             var candidatePath = Path.GetFullPath(Path.Combine(workingDirectoryPath, argument));
-            if (WorkspacePathPolicy.IsPathWithinRoot(candidatePath, workspaceRootPath) &&
+            if (pathPolicy.IsPathWithinRoot(candidatePath, workspaceRootPath) &&
                 candidatePath.Length >= WindowsPathBudget)
             {
                 return true;

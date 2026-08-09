@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -27,6 +28,7 @@ internal sealed class MafStreamingTurnExecutor
     private readonly IMafProviderAgentFactory providerAgentFactory;
     private readonly IMafApprovalContinuationDriver approvalContinuationDriver;
     private readonly IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
     private readonly IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy> executionOutcomeRecoveryPolicies;
     private readonly MafProviderUpdatePump providerUpdatePump = new();
 
@@ -36,6 +38,7 @@ internal sealed class MafStreamingTurnExecutor
         IMafProviderAgentFactory providerAgentFactory,
         IMafApprovalContinuationDriver approvalContinuationDriver,
         IMafRuntimeSessionPersistenceDriver sessionPersistenceDriver,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         IReadOnlyList<IAgentExecutionOutcomeRecoveryPolicy>? executionOutcomeRecoveryPolicies = null)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
@@ -48,6 +51,7 @@ internal sealed class MafStreamingTurnExecutor
         this.providerAgentFactory = providerAgentFactory ?? throw new ArgumentNullException(nameof(providerAgentFactory));
         this.approvalContinuationDriver = approvalContinuationDriver ?? throw new ArgumentNullException(nameof(approvalContinuationDriver));
         this.sessionPersistenceDriver = sessionPersistenceDriver ?? throw new ArgumentNullException(nameof(sessionPersistenceDriver));
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
         this.executionOutcomeRecoveryPolicies = executionOutcomeRecoveryPolicies ?? [];
     }
 
@@ -1107,7 +1111,7 @@ internal sealed class MafStreamingTurnExecutor
             policy.OutputContract.ContractKey,
             policy.OutputType,
             existingToolTraces,
-            new WorkspaceRecoveryArtifactReader(workspaceRoot, effectiveRunScope));
+            new WorkspaceRecoveryArtifactReader(workspaceRoot, effectiveRunScope, physicalPathPolicyFactory));
 
         AgentExecutionOutcomeRecoveryDecision? recoveredDecision = null;
         foreach (var recoveryPolicy in executionOutcomeRecoveryPolicies)
@@ -1192,10 +1196,11 @@ internal sealed class MafStreamingTurnExecutor
     internal static bool TryReadCompleteRecoveryArtifact(
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         string artifactRef,
         out string artifactMarkdown)
     {
-        var readResult = new WorkspaceFileService(workspaceRoot, workspaceScope)
+        var readResult = new WorkspaceFileService(workspaceRoot, physicalPathPolicyFactory, workspaceScope)
             .ReadTextFile(artifactRef, WorkspaceFileLimits.MaxTextReadCharacters);
         if (!readResult.Succeeded ||
             readResult.IsTruncated ||
@@ -1215,11 +1220,19 @@ internal sealed class MafStreamingTurnExecutor
     /// policies. Closes over the current turn's workspace root/scope so policies never receive workspace SDK
     /// objects.
     /// </summary>
-    private sealed class WorkspaceRecoveryArtifactReader(string workspaceRoot, WorkspaceScopeDescriptor workspaceScope)
+    private sealed class WorkspaceRecoveryArtifactReader(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
         : IAgentExecutionRecoveryArtifactReader
     {
         public bool TryReadCompleteTextFile(string relativeManagedPath, out string content)
-            => TryReadCompleteRecoveryArtifact(workspaceRoot, workspaceScope, relativeManagedPath, out content);
+            => TryReadCompleteRecoveryArtifact(
+                workspaceRoot,
+                workspaceScope,
+                physicalPathPolicyFactory,
+                relativeManagedPath,
+                out content);
     }
 
     private async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(

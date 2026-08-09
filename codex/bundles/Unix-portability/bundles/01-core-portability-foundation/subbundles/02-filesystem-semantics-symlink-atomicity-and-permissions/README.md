@@ -55,7 +55,7 @@ Case behavior, enumeration order, links, atomic writes, cross-process coordinati
 
 ## Entry gate
 
-- Status before execution: `Blocked by A01`
+- Status before execution: `Eligible — Gate C1a GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -68,7 +68,7 @@ Case behavior, enumeration order, links, atomic writes, cross-process coordinati
 
 ## Status
 
-- `Blocked by A01`
+- `Completed — Gate C1 GO`
 
 ## Handoff
 

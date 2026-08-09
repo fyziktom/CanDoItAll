@@ -2,6 +2,9 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
 using System.Text;
 
 namespace CanDoItAll.Infrastructure.Storage;
@@ -61,9 +64,11 @@ public sealed class WorkspacePathResolver(
     public string ResolveWorkspaceRoot()
     {
         var activeProfile = activeDatabaseProfileResolver.ResolveCurrentProfile();
-        var root = string.IsNullOrWhiteSpace(activeProfile.Profile.Storage.WorkspaceRoot)
-            ? ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, _options.WorkspaceRoot)
-            : Path.GetFullPath(activeProfile.Profile.Storage.WorkspaceRoot);
+        var configuredRoot = string.IsNullOrWhiteSpace(activeProfile.Profile.Storage.WorkspaceRoot)
+            ? ResolveConfiguredWorkspaceRoot()
+            : activeProfile.Profile.Storage.WorkspaceRoot;
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(configuredRoot, "workspace root");
+        var root = Path.GetFullPath(configuredRoot);
         Directory.CreateDirectory(root);
         return root;
     }
@@ -76,11 +81,20 @@ public sealed class WorkspacePathResolver(
 
     public string ResolveManagerArtifactsRoot()
     {
-        var root = ControlPlanePathDefaults.ResolveConfiguredPath(
-            hostEnvironment.ContentRootPath,
-            _options.ManagerArtifactsFolder);
+        string root = string.IsNullOrWhiteSpace(_options.ManagerArtifactsFolder)
+            ? Path.Combine(ApplicationPurposeRootPolicy.ResolveCurrent().StateRoot, "manager-artifacts")
+            : ControlPlanePathDefaults.ResolveConfiguredPath(
+                hostEnvironment.ContentRootPath,
+                _options.ManagerArtifactsFolder);
         Directory.CreateDirectory(root);
         return root;
+    }
+
+    private string ResolveConfiguredWorkspaceRoot()
+    {
+        return string.IsNullOrWhiteSpace(_options.WorkspaceRoot)
+            ? ApplicationPurposeRootPolicy.ResolveCurrent().WorkspaceRoot
+            : ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, _options.WorkspaceRoot);
     }
 
     private string EnsureDirectory(string folder)
@@ -91,7 +105,9 @@ public sealed class WorkspacePathResolver(
     }
 }
 
-public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : IWorkspacePathAccessGuard
+public sealed class WorkspacePathAccessGuard(
+    IWorkspacePathResolver resolver,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory) : IWorkspacePathAccessGuard
 {
     public WorkspacePathAccessResult ResolveWorkspacePath(string path, string? basePath = null)
     {
@@ -100,20 +116,39 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
             return WorkspacePathAccessResult.Failure("A workspace path is required.");
         }
 
-        var workspaceRoot = Path.GetFullPath(resolver.ResolveWorkspaceRoot());
-        var resolutionBase = string.IsNullOrWhiteSpace(basePath)
-            ? workspaceRoot
-            : Path.GetFullPath(basePath);
-
-        if (!IsWithinRoot(workspaceRoot, resolutionBase))
+        try
         {
-            return WorkspacePathAccessResult.Failure("The resolved base path is outside the active workspace root.");
-        }
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path.Trim(), "workspace path");
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(basePath.Trim(), "workspace base path");
+            }
 
-        var candidate = ResolveCandidatePath(path, resolutionBase);
-        return IsWithinRoot(workspaceRoot, candidate)
-            ? WorkspacePathAccessResult.Success(candidate)
-            : WorkspacePathAccessResult.Failure("The resolved path is outside the active workspace root.");
+            var resolvedWorkspaceRoot = resolver.ResolveWorkspaceRoot();
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(resolvedWorkspaceRoot, "workspace root");
+            var workspacePathPolicy = physicalPathPolicyFactory.Create(resolvedWorkspaceRoot);
+            var workspaceRoot = workspacePathPolicy.RootPath;
+            var resolutionBase = string.IsNullOrWhiteSpace(basePath)
+                ? workspaceRoot
+                : Path.GetFullPath(basePath);
+
+            if (!workspacePathPolicy.IsWithinRoot(resolutionBase))
+            {
+                return WorkspacePathAccessResult.Failure("The resolved base path is outside the active workspace root.");
+            }
+
+            var candidate = ResolveCandidatePath(path, resolutionBase);
+            return workspacePathPolicy.IsWithinRoot(candidate)
+                ? WorkspacePathAccessResult.Success(candidate)
+                : WorkspacePathAccessResult.Failure("The resolved path is outside the active workspace root.");
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or PathTooLongException)
+        {
+            return WorkspacePathAccessResult.Failure(
+                exception is InvalidOperationException
+                    ? exception.Message
+                    : "The resolved path is outside the active workspace root.");
+        }
     }
 
     public WorkspacePathAccessResult ResolveManagedFilePath(string path)
@@ -123,17 +158,34 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
             return WorkspacePathAccessResult.Failure("A managed file path is required.");
         }
 
-        var workspaceRoot = Path.GetFullPath(resolver.ResolveWorkspaceRoot());
-        var managedFilesRoot = Path.GetFullPath(resolver.ResolveManagedFilesRoot());
-        var managedFilesRelativeRoot = NormalizeRelativePath(Path.GetRelativePath(workspaceRoot, managedFilesRoot));
-        var trimmedPath = path.Trim();
-        var candidate = Path.IsPathRooted(trimmedPath)
-            ? Path.GetFullPath(trimmedPath)
-            : ResolveRelativeManagedFilePath(trimmedPath, workspaceRoot, managedFilesRoot, managedFilesRelativeRoot);
+        try
+        {
+            var trimmedPath = path.Trim();
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(trimmedPath, "managed file path");
+            var resolvedWorkspaceRoot = resolver.ResolveWorkspaceRoot();
+            var resolvedManagedFilesRoot = resolver.ResolveManagedFilesRoot();
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(resolvedWorkspaceRoot, "workspace root");
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(resolvedManagedFilesRoot, "managed files root");
+            var workspacePathPolicy = physicalPathPolicyFactory.Create(resolvedWorkspaceRoot);
+            var managedFilesPathPolicy = physicalPathPolicyFactory.Create(resolvedManagedFilesRoot);
+            var workspaceRoot = workspacePathPolicy.RootPath;
+            var managedFilesRoot = managedFilesPathPolicy.RootPath;
+            var managedFilesRelativeRoot = NormalizeRelativePath(Path.GetRelativePath(workspaceRoot, managedFilesRoot));
+            var candidate = Path.IsPathRooted(trimmedPath)
+                ? Path.GetFullPath(trimmedPath)
+                : ResolveRelativeManagedFilePath(trimmedPath, workspaceRoot, managedFilesRoot, managedFilesRelativeRoot);
 
-        return IsWithinRoot(managedFilesRoot, candidate)
-            ? WorkspacePathAccessResult.Success(candidate)
-            : WorkspacePathAccessResult.Failure("The resolved path is outside the active managed files root.");
+            return managedFilesPathPolicy.IsWithinRoot(candidate)
+                ? WorkspacePathAccessResult.Success(candidate)
+                : WorkspacePathAccessResult.Failure("The resolved path is outside the active managed files root.");
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or PathTooLongException)
+        {
+            return WorkspacePathAccessResult.Failure(
+                exception is InvalidOperationException
+                    ? exception.Message
+                    : "The resolved path is outside the active managed files root.");
+        }
     }
 
     private static string ResolveRelativeManagedFilePath(
@@ -147,9 +199,9 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
             ? string.Empty
             : managedFilesRelativeRoot + Path.DirectorySeparatorChar;
 
-        return normalizedPath.Equals(managedFilesRelativeRoot, PathComparison) ||
+        return normalizedPath.Equals(managedFilesRelativeRoot, StringComparison.Ordinal) ||
                (!string.IsNullOrWhiteSpace(managedPrefix) &&
-                normalizedPath.StartsWith(managedPrefix, PathComparison))
+                normalizedPath.StartsWith(managedPrefix, StringComparison.Ordinal))
             ? Path.GetFullPath(Path.Combine(workspaceRoot, normalizedPath))
             : Path.GetFullPath(Path.Combine(managedFilesRoot, normalizedPath));
     }
@@ -164,22 +216,16 @@ public sealed class WorkspacePathAccessGuard(IWorkspacePathResolver resolver) : 
 
     private static string NormalizeRelativePath(string path)
     {
-        return path
-            .Trim()
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-            .TrimStart(Path.DirectorySeparatorChar);
+        var trimmedPath = path.Trim();
+        if (string.Equals(trimmedPath, ".", StringComparison.Ordinal))
+        {
+            return trimmedPath;
+        }
+
+        var logicalPath = LogicalPath.ParseLegacyWindowsLogicalPath(trimmedPath);
+        return Path.Combine(logicalPath.Segments.ToArray());
     }
 
-    private static bool IsWithinRoot(string root, string candidate)
-    {
-        var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return candidate.StartsWith(normalizedRoot, PathComparison) ||
-               string.Equals(candidate, root.TrimEnd(Path.DirectorySeparatorChar), PathComparison);
-    }
-
-    private static StringComparison PathComparison => OperatingSystem.IsWindows()
-        ? StringComparison.OrdinalIgnoreCase
-        : StringComparison.Ordinal;
 }
 
 public sealed class LocalFileStore(
@@ -189,40 +235,43 @@ public sealed class LocalFileStore(
 {
     public async Task<string> SaveTextAsync(string relativePath, string content, CancellationToken cancellationToken = default)
     {
-        var fullPath = ResolveWorkspacePath(relativePath);
+        var logicalPath = NormalizeLogicalStoragePath(relativePath);
+        var fullPath = ResolveWorkspacePath(logicalPath);
         var (storage, driver) = await ResolveFileSystemDriverAsync(cancellationToken);
         await driver.SaveAsync(
             storage,
             new StorageWriteRequest(
-                Path.GetFileName(relativePath),
+                Path.GetFileName(logicalPath),
                 "text/plain",
                 Encoding.UTF8.GetBytes(content),
                 StorageUsagePurpose.Unknown,
                 StorageContentKind.Text,
-                RelativePathHint: relativePath),
+                RelativePathHint: logicalPath),
             cancellationToken);
         return fullPath;
     }
 
     public async Task<string> SaveBytesAsync(string relativePath, byte[] content, CancellationToken cancellationToken = default)
     {
-        var fullPath = ResolveWorkspacePath(relativePath);
+        var logicalPath = NormalizeLogicalStoragePath(relativePath);
+        var fullPath = ResolveWorkspacePath(logicalPath);
         var (storage, driver) = await ResolveFileSystemDriverAsync(cancellationToken);
         await driver.SaveAsync(
             storage,
             new StorageWriteRequest(
-                Path.GetFileName(relativePath),
+                Path.GetFileName(logicalPath),
                 "application/octet-stream",
                 content,
                 StorageUsagePurpose.Unknown,
-                RelativePathHint: relativePath),
+                RelativePathHint: logicalPath),
             cancellationToken);
         return fullPath;
     }
 
     public async Task<string?> ReadTextAsync(string relativePath, CancellationToken cancellationToken = default)
     {
-        var fullPath = ResolveWorkspacePath(relativePath);
+        var logicalPath = NormalizeLogicalStoragePath(relativePath);
+        var fullPath = ResolveWorkspacePath(logicalPath);
         if (!File.Exists(fullPath))
         {
             return null;
@@ -235,10 +284,15 @@ public sealed class LocalFileStore(
                 storage.Id,
                 StorageProviderKind.FileSystem,
                 StorageLocatorKind.RelativePath,
-                relativePath.Replace('\\', '/').TrimStart('/')),
+                logicalPath),
             cancellationToken);
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
         return await reader.ReadToEndAsync(cancellationToken);
+    }
+
+    private static string NormalizeLogicalStoragePath(string relativePath)
+    {
+        return LogicalPath.ParseLegacyWindowsLogicalPath(relativePath).Value;
     }
 
     private string ResolveWorkspacePath(string relativePath)
@@ -261,7 +315,8 @@ public sealed class LocalFileStore(
 
 public sealed class ManagedArtifactStore(IFileStore fileStore) : IManagedArtifactStore, IStorageCompatibilityArtifactStoreAdapter
 {
-    public string GetRelativePath(string category, string fileName) => Path.Combine("managed-files", category, fileName);
+    public string GetRelativePath(string category, string fileName)
+        => LogicalPath.ParseLegacyWindowsLogicalPath($"managed-files/{category}/{fileName}").Value;
 
     public Task<string> SaveTextAsync(string category, string fileName, string content, CancellationToken cancellationToken = default)
         => fileStore.SaveTextAsync(GetRelativePath(category, fileName), content, cancellationToken);

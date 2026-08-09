@@ -5,7 +5,7 @@
   "title": "Storage, control-plane roots, and host-bound path migration",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by Gate C1",
+  "status": "Completed — Gate C2a GO",
   "depends_on": [
     "A02",
     "Gate C1"
@@ -48,7 +48,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -72,7 +72,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -96,7 +96,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -120,7 +120,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -144,7 +144,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -168,7 +168,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -192,7 +192,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -216,7 +216,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -240,7 +240,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -264,7 +264,7 @@
         "STO-008",
         "STO-009"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

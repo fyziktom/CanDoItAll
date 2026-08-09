@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 
@@ -304,7 +305,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
 
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface: null,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            new ExternalTargetPathRegistry());
 
         Assert.Empty(roots);
     }
@@ -313,21 +315,25 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     public void Chat_discovery_accepts_the_bounded_calculator_root()
     {
         var projectId = Guid.NewGuid();
+        var expectedRoot = ToNativeFixturePath(@"C:\programovani\dotnet\calculator-e2e-test");
         var focus = CreateNode(
             "focus",
             null,
             "Focus",
             metadataJson: CreateProjectBlockMetadata(
-                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+                outputRoot: expectedRoot));
         var surface = CreateSurface(projectId, focus);
 
+        var registry = new ExternalTargetPathRegistry();
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            registry);
 
-        Assert.Equal(
-            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
-            roots);
+        AssertSingleBoundAlias(
+            roots,
+            registry,
+            expectedRoot);
     }
 
     [Fact]
@@ -345,7 +351,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
 
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            new ExternalTargetPathRegistry());
 
         Assert.Empty(roots);
     }
@@ -354,18 +361,19 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     public void Chat_discovery_uses_the_nearest_canonical_typed_owner()
     {
         var projectId = Guid.NewGuid();
+        var expectedRoot = ToNativeFixturePath(@"C:\programovani\dotnet\calculator-e2e-test");
         var outer = CreateNode(
             "outer",
             null,
             "Outer",
             metadataJson: CreateProjectBlockMetadata(
-                outputRoot: @"C:\programovani\dotnet\outer-app"));
+                outputRoot: ToNativeFixturePath(@"C:\programovani\dotnet\outer-app")));
         var owner = CreateNode(
             "owner",
             outer.Id,
             "Owner",
             metadataJson: CreateProjectBlockMetadata(
-                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+                outputRoot: expectedRoot));
         var focus = CreateNode(
             "focus",
             owner.Id,
@@ -374,13 +382,16 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             objectSubtype: "dotnet-watch");
         var surface = CreateSurface(projectId, outer, owner, focus);
 
+        var registry = new ExternalTargetPathRegistry();
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            registry);
 
-        Assert.Equal(
-            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
-            roots);
+        AssertSingleBoundAlias(
+            roots,
+            registry,
+            expectedRoot);
     }
 
     [Fact]
@@ -397,7 +408,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
 
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            new ExternalTargetPathRegistry());
 
         Assert.Empty(roots);
     }
@@ -406,12 +418,13 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     public void Chat_discovery_ignores_generic_hierarchy_links_for_authority()
     {
         var projectId = Guid.NewGuid();
+        var expectedRoot = ToNativeFixturePath(@"C:\programovani\dotnet\calculator-e2e-test");
         var focus = CreateNode(
             "focus",
             null,
             "Focus",
             metadataJson: CreateProjectBlockMetadata(
-                outputRoot: @"C:\programovani\dotnet\calculator-e2e-test"));
+                outputRoot: expectedRoot));
         var surface = new ProjectStructureSurface(
             projectId,
             "Launch context test",
@@ -425,13 +438,16 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             ],
             ViewStateJson: null);
 
+        var registry = new ExternalTargetPathRegistry();
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            registry);
 
-        Assert.Equal(
-            ["external-target/C/programovani/dotnet/calculator-e2e-test"],
-            roots);
+        AssertSingleBoundAlias(
+            roots,
+            registry,
+            expectedRoot);
     }
 
     [Theory]
@@ -454,21 +470,21 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
 
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            new ExternalTargetPathRegistry());
 
         Assert.Empty(roots);
     }
 
     [Theory]
-    [InlineData(@"C:\src", "external-target/C/src")]
-    [InlineData(@"C:\projects", "external-target/C/projects")]
-    [InlineData(@"D:\Calculator", "external-target/D/Calculator")]
-    [InlineData(@"C:\src\Product", "external-target/C/src/Product")]
-    [InlineData(@"D:\repos\App", "external-target/D/repos/App")]
-    public void Chat_discovery_accepts_bounded_non_protected_project_roots(
-        string root,
-        string expectedAlias)
+    [InlineData(@"C:\src")]
+    [InlineData(@"C:\projects")]
+    [InlineData(@"D:\Calculator")]
+    [InlineData(@"C:\src\Product")]
+    [InlineData(@"D:\repos\App")]
+    public void Chat_discovery_accepts_bounded_non_protected_project_roots(string fixturePath)
     {
+        var root = ToNativeFixturePath(fixturePath);
         var projectId = Guid.NewGuid();
         var focus = CreateNode(
             "focus",
@@ -477,11 +493,13 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             metadataJson: CreateProjectBlockMetadata(outputRoot: root));
         var surface = CreateSurface(projectId, focus);
 
+        var registry = new ExternalTargetPathRegistry();
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            registry);
 
-        Assert.Equal([expectedAlias], roots);
+        AssertSingleBoundAlias(roots, registry, root);
     }
 
     [Fact]
@@ -499,7 +517,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
 
         var roots = ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
             surface,
-            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)]);
+            [new AgentChatContextEntityReference("project-node", focus.Id, focus.Title)],
+            new ExternalTargetPathRegistry());
 
         Assert.Empty(roots);
     }
@@ -723,6 +742,27 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             [],
             0,
             MetadataJson: metadataJson);
+
+    private static void AssertSingleBoundAlias(
+        IReadOnlyList<string> roots,
+        IExternalTargetPathRegistry registry,
+        string expectedRoot)
+    {
+        var alias = Assert.Single(roots);
+        Assert.StartsWith("external-target/v1/", alias, StringComparison.Ordinal);
+        Assert.Equal(
+            ExternalTargetAliasResolutionKind.Resolved,
+            registry.TryResolve(alias, out var resolvedRoot, out _));
+        Assert.Equal(
+            Path.GetFullPath(expectedRoot),
+            resolvedRoot,
+            ignoreCase: OperatingSystem.IsWindows());
+    }
+
+    private static string ToNativeFixturePath(string windowsPath)
+        => OperatingSystem.IsWindows()
+            ? windowsPath
+            : "/" + windowsPath[3..].Replace('\\', '/');
 
     public enum ProjectBlockRootField
     {

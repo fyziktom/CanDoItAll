@@ -43,7 +43,7 @@ public static class PostgresTestAvailability
             return localDefaultResult;
         }
 
-        var composeFilePath = Path.Combine(repositoryRoot, "docker-compose.yml");
+        var composeFilePath = Path.Combine(repositoryRoot, "compose.yaml");
         if (!File.Exists(composeFilePath))
         {
             return new PostgresAvailabilityResult(false, false, null, $"Missing docker compose file at '{composeFilePath}'.");

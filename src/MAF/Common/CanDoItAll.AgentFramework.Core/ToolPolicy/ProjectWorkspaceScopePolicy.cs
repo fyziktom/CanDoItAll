@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -41,6 +42,13 @@ internal sealed class ProjectWorkspaceScopePolicy
 
         foreach (var pathArgument in pathArguments)
         {
+            if (IsForeignPhysicalPath(pathArgument.Value))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"Project-scoped tool '{context.ToolName}' cannot use foreign-host physical path syntax. Use a canonical workspace-relative path, a native managed-workspace path, or an independently authorized external-target alias.");
+            }
+
             var normalizedPath = ManagedProjectMediaPath.NormalizeForMatching(pathArgument.Value);
             if (BroadDiscoveryTools.Contains(context.ToolName) &&
                 IsBroadWorkspaceRoot(normalizedPath))
@@ -132,6 +140,16 @@ internal sealed class ProjectWorkspaceScopePolicy
                string.Equals(path, ".", StringComparison.Ordinal) ||
                string.Equals(path, "workspace", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(path, "managed-files", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsForeignPhysicalPath(string path)
+    {
+        return PhysicalPathSyntaxClassifier.Classify(path) switch
+        {
+            PhysicalPathSyntax.WindowsDriveAbsolute or PhysicalPathSyntax.WindowsUnc => !OperatingSystem.IsWindows(),
+            PhysicalPathSyntax.UnixAbsolute => OperatingSystem.IsWindows(),
+            _ => false
+        };
     }
 
     private static bool IsAmbiguousSharedBrief(string path)

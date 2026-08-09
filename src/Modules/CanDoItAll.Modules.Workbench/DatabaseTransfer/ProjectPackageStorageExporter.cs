@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -15,7 +16,8 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal sealed class ProjectPackageStorageExporter(
     IStorageDriverRegistry storageDrivers,
-    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy)
+    ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
 {
     internal async Task CopyReferencedStorageAsync(
         ResolvedDatabaseProfile sourceProfile,
@@ -96,7 +98,10 @@ internal sealed class ProjectPackageStorageExporter(
             }
 
             var packageRelativePath = $"storage/{mutableIndex++:D8}.payload";
-            var packagePath = ResolvePackageFilePath(workingRoot, packageRelativePath);
+            var packagePath = ResolvePackageFilePath(
+                workingRoot,
+                packageRelativePath,
+                physicalPathPolicyFactory);
             Directory.CreateDirectory(Path.GetDirectoryName(packagePath)!);
 
             var integrity = await CopyToNewFileWithIntegrityAsync(
@@ -180,4 +185,3 @@ internal sealed class ProjectPackageStorageExporter(
         }
     }
 }
-

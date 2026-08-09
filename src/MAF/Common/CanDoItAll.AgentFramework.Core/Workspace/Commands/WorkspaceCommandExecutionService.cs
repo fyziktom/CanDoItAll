@@ -1,4 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -15,10 +18,16 @@ public sealed class WorkspaceCommandExecutionService :
     public WorkspaceCommandExecutionService(
         string workspaceRoot,
         IWorkspaceProcessHost processHost,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         WorkspaceScopeDescriptor? workspaceScope = null,
-        IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null)
+        IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
     {
-        var pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
+        var pathPolicy = new WorkspacePathPolicy(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            workspaceScope,
+            externalTargetRegistry);
         environmentPolicy = new WorkspaceCommandEnvironmentPolicy();
         processLeaseStore = new WorkspaceExecutionRunProcessLeaseStore(
             pathPolicy.WorkspaceRoot,
@@ -32,7 +41,8 @@ public sealed class WorkspaceCommandExecutionService :
             processHost,
             environmentPolicy,
             new WorkspaceExecutableLocator(),
-            receiptWriter);
+            receiptWriter,
+            pathPolicy);
     }
 
     public ExecutionBoundaryDescriptor DescribeBoundary() => processRunner.DescribeBoundary();

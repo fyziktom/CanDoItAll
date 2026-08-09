@@ -60,6 +60,38 @@ The prepared analysis is anchored to development commit 62ea8ee..., but the bran
 - Use typed process arguments; shell only for explicitly modeled scripts.
 - Keep source-code comments in English.
 
+## C# Architecture Impact
+
+A00 changes no product code. It establishes the enforceable ownership, dependency, pattern, partial-class, and testability constraints for A01-A07. See `architecture/00-csharp-current-state-inventory.md` through `architecture/04-csharp-testability-plan.md` and `plan/architecture-checkpoints.md`.
+
+## Current Responsibility Inventory
+
+The execution snapshot contains 103 projects and 608 project-reference edges with zero project-level cycles. Infrastructure owns physical filesystem/storage behavior; Security abstractions and implementation remain separate; MAF owns generic execution; Workbench owns runtime-node meaning/presentation; Manager owns supervision; Processes owns domain semantics; composition selects host capabilities.
+
+## Target Responsibility Slicing
+
+The only new core slice approved at C0 is a pure logical-path value in SharedKernel. It has no I/O or host probing. Physical path policy stays in Infrastructure, secret providers stay in Modules.Security, and runtime/process work remains blocked until C4.
+
+## Pattern Decisions
+
+Approved patterns are immutable typed path values, narrow capability contracts with composition-selected leaf adapters, versioned migration readers with backup/verify/commit/rollback, explicit secret-provider strategies, and durable same-directory atomic replacement. Broad platform services and silent fallbacks are rejected.
+
+## Project/Dependency Direction
+
+New references must point inward to existing contracts. A01 may use SharedKernel without introducing a reverse edge. Every changed graph is re-snapshotted and must retain zero project-level cycles. Temporary Components/FileTools project references are deferred to B00.
+
+## Partial-Class Strategy
+
+The current source has 171 partial declarations across 73 type names. No new partial split is approved. A changed cluster must extract an independently testable responsibility; moving methods between files is not an architectural improvement.
+
+## Testability Contract
+
+Each phase requires isolated behavior proof at the contract boundary plus actual-host characterization where OS behavior matters. Migrations expose restart/rollback state, secret tests never disclose values, filesystem tests use disposable roots, and process tests consume typed plans rather than shell strings.
+
+## Proof tier
+
+`Standard` for A00. It changes inventories and validation utilities only; security, migration, and process implementation phases use their stricter behavioral/governed proof requirements.
+
 ## Entry gate
 
 - Status before execution: `Eligible — first executable subbundle`
@@ -75,8 +107,8 @@ The prepared analysis is anchored to development commit 62ea8ee..., but the bran
 
 ## Status
 
-- `Eligible — first executable subbundle`
+- `Completed — Gate C0 GO`
 
 ## Handoff
 
-Record changed files, commands/results, evidence paths, design decisions, residual risks, and the next eligible subbundle. Stop on NO-GO.
+Recorded in `reviews/A00-HANDOFF.md`. The only next eligible subbundle is A01.

@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.SharedKernel.Streaming;
@@ -222,7 +223,8 @@ public sealed class AgentExecutionOperationIdentityTests
                 WorkspaceScopeDescriptor.Sandbox),
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
-            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance,
+            new ExternalTargetPathRegistryFactory());
         return new ServiceContext(
             service,
             preparationCache,

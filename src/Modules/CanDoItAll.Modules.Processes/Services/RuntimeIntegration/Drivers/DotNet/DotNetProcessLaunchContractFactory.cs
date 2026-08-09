@@ -1,9 +1,13 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetProcessLaunchContractFactory(
-    DotNetSolutionContextPathResolver pathResolver)
+    DotNetSolutionContextPathResolver pathResolver,
+    IExternalTargetPathRegistry externalTargetPathRegistry)
 {
     public bool TryCreate(
         DotNetSolutionContext context,
@@ -23,25 +27,25 @@ internal sealed class DotNetProcessLaunchContractFactory(
         }
 
         if (!pathResolver.TryResolve(context, variables, out var resolved, out issue) ||
-            !DotNetSolutionContextPathResolver.TryResolveRelativePath(
+            !pathResolver.TryResolveRelativePath(
                 resolved.ProductRoot,
                 initialization.Application.Directory,
                 "initialization.application.directory",
                 out var appDirectory,
                 out issue) ||
-            !DotNetSolutionContextPathResolver.TryResolveRelativePath(
+            !pathResolver.TryResolveRelativePath(
                 resolved.ProductRoot,
                 initialization.Application.File,
                 "initialization.application.file",
                 out var appProjectFile,
                 out issue) ||
-            !DotNetSolutionContextPathResolver.TryResolveRelativePath(
+            !pathResolver.TryResolveRelativePath(
                 resolved.ProductRoot,
                 initialization.TestProject.Directory,
                 "initialization.tests.directory",
                 out var testDirectory,
                 out issue) ||
-            !DotNetSolutionContextPathResolver.TryResolveRelativePath(
+            !pathResolver.TryResolveRelativePath(
                 resolved.ProductRoot,
                 initialization.TestProject.File,
                 "initialization.tests.file",
@@ -281,6 +285,8 @@ internal sealed class DotNetProcessLaunchContractFactory(
             ? path
             : path + Path.DirectorySeparatorChar;
 
-    private static string Alias(string path)
-        => CanDoItAll.AgentFramework.Models.AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path) ?? string.Empty;
+    private string Alias(string path)
+        => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            path,
+            externalTargetPathRegistry) ?? string.Empty;
 }

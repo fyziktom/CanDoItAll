@@ -98,7 +98,7 @@ EOF
 failures=0
 run_step "dotnet-info" dotnet --info || failures=$((failures + 1))
 run_step "git-status" git status --short --branch || failures=$((failures + 1))
-run_step "restore" dotnet restore ./CanDoItAll.slnx || failures=$((failures + 1))
+run_step "restore" dotnet restore ./CanDoItAll.slnx --configfile ./NuGet.config || failures=$((failures + 1))
 run_step "build" dotnet build ./CanDoItAll.slnx -c "$configuration" --no-restore /m:1 || failures=$((failures + 1))
 run_step "stable-tests" dotnet test ./CanDoItAll.slnx -c "$configuration" --no-build --filter 'Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined' /m:1 || failures=$((failures + 1))
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -14,9 +15,12 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             return;
         }
 
-        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(@"C:\repositories\OtherRepo");
+        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            @"C:\repositories\OtherRepo",
+            new ExternalTargetPathRegistry());
 
-        Assert.Equal("external-target/C/repositories/OtherRepo", alias);
+        Assert.Matches("^external-target/v1/[0-9a-f]{24}$", alias!);
+        Assert.DoesNotContain("repositories", alias, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -27,7 +31,9 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             return;
         }
 
-        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(@"C:\");
+        var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            @"C:\",
+            new ExternalTargetPathRegistry());
 
         Assert.Null(alias);
     }
@@ -185,6 +191,11 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     public void Write_and_read_round_trip_file_and_storage_tool_settings()
     {
         var storageId = Guid.NewGuid();
+        var externalRoot = Path.Combine(Path.GetTempPath(), "agent-access-round-trip", Guid.NewGuid().ToString("N"));
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            externalRoot,
+            externalTargetRegistry)!;
         var configurationJson = AgentWorkspaceToolAccessMetadata.Write(
             """{"existing":true}""",
             new AgentWorkspaceToolAccessSettings
@@ -193,7 +204,7 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
                 CanWriteFiles = true,
                 AllowedExternalTargetAliases =
                 [
-                    "external-target/c/repositories/demo"
+                    externalAlias
                 ],
                 CanReadStorage = true,
                 CanWriteStorage = true,
@@ -201,13 +212,15 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
                 [
                     storageId
                 ]
-            });
+            },
+            externalTargetRegistry);
 
         var settings = AgentWorkspaceToolAccessMetadata.Read(configurationJson);
 
         Assert.True(settings.CanReadFiles);
         Assert.True(settings.CanWriteFiles);
-        Assert.Equal(["external-target/C/repositories/demo"], settings.AllowedExternalTargetAliases);
+        Assert.Equal([externalAlias], settings.AllowedExternalTargetAliases);
+        Assert.StartsWith("external-target/v1/", externalAlias, StringComparison.Ordinal);
         Assert.True(settings.CanReadStorage);
         Assert.True(settings.CanWriteStorage);
         Assert.Equal([storageId], settings.AllowedStorageCatalogIds);
@@ -290,6 +303,15 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     [Fact]
     public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_allowed_alias_for_write_enabled_agent()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var expectedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            @"C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler",
+            externalTargetRegistry);
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             "{}",
             """analyze "C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler" and add architecture""",
@@ -297,7 +319,8 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             {
                 CanReadFiles = true,
                 CanWriteFiles = true
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
         var aliases = document.RootElement
@@ -306,13 +329,30 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             .Select(item => item.GetString())
             .ToArray();
 
-        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", aliases);
+        Assert.Contains(expectedAlias, aliases);
+        Assert.True(document.RootElement.TryGetProperty(
+            ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey,
+            out var bindings));
+        Assert.Equal(JsonValueKind.Array, bindings.ValueKind);
+        Assert.DoesNotContain(
+            @"C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler",
+            metadataJson,
+            StringComparison.OrdinalIgnoreCase);
         Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
     }
 
     [Fact]
     public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_readonly_alias_for_read_only_agent()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var expectedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            @"C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler",
+            externalTargetRegistry);
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             "{}",
             """inspect C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler before reporting""",
@@ -320,7 +360,8 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             {
                 CanReadFiles = true,
                 CanWriteFiles = false
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
         var aliases = document.RootElement
@@ -329,12 +370,21 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             .Select(item => item.GetString())
             .ToArray();
 
-        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", aliases);
+        Assert.Contains(expectedAlias, aliases);
     }
 
     [Fact]
     public void GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_readonly_alias_when_process_step_disallows_product_mutation()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var expectedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            @"C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler",
+            externalTargetRegistry);
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $"{{\"{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}\":false}}",
             """inspect C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler before reporting""",
@@ -342,7 +392,8 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             {
                 CanReadFiles = true,
                 CanWriteFiles = true
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
         var readOnlyAliases = document.RootElement
@@ -351,13 +402,22 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             .Select(item => item.GetString())
             .ToArray();
 
-        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", readOnlyAliases);
+        Assert.Contains(expectedAlias, readOnlyAliases);
         Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
     }
 
     [Fact]
     public void GroundPromptExternalTargetAliases_keeps_process_free_text_alias_read_only_even_when_product_mutation_is_allowed()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var expectedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            @"C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler",
+            externalTargetRegistry);
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $"{{\"{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}\":true}}",
             """implementation prompt mentions C:\programovani\outputsfromtests\dotnet\BikeRepairSlotScheduler""",
@@ -365,7 +425,8 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             {
                 CanReadFiles = true,
                 CanWriteFiles = true
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
         var readOnlyAliases = document.RootElement
@@ -374,14 +435,16 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             .Select(item => item.GetString())
             .ToArray();
 
-        Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", readOnlyAliases);
+        Assert.Contains(expectedAlias, readOnlyAliases);
         Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
     }
 
     [Fact]
     public void GroundPromptExternalTargetAliases_does_not_add_same_trusted_writable_alias_as_read_only()
     {
-        const string writableAlias = "external-target/C/work/apps/Inventory";
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var writablePath = Path.Combine(Path.GetTempPath(), "work", "apps", "Inventory");
+        Assert.True(externalTargetRegistry.TryCreateAlias(writablePath, out var writableAlias));
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $$"""
               {
@@ -389,12 +452,13 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
                 "{{ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey}}": ["{{writableAlias}}"]
               }
               """,
-            "Implement the change in external-target/C/work/apps/Inventory.",
+            $"Implement the change in {writableAlias}.",
             new AgentWorkspaceToolAccessSettings
             {
                 CanReadFiles = true,
                 CanWriteFiles = true
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
         var allowedAliases = document.RootElement
@@ -410,7 +474,11 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     [Fact]
     public void GroundPromptExternalTargetAliases_does_not_add_child_alias_covered_by_writable_parent_as_read_only()
     {
-        const string writableAlias = "external-target/C/work/apps/Inventory";
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var writablePath = Path.Combine(Path.GetTempPath(), "work", "apps", "Inventory");
+        var childPath = Path.Combine(writablePath, "src", "Program.cs");
+        Assert.True(externalTargetRegistry.TryCreateAlias(writablePath, out var writableAlias));
+        Assert.True(externalTargetRegistry.TryCreateAlias(childPath, out var childAlias));
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $$"""
               {
@@ -418,12 +486,13 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
                 "{{ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey}}": ["{{writableAlias}}"]
               }
               """,
-            "Implement the change in external-target/C/work/apps/Inventory/src/Program.cs.",
+            $"Implement the change in {childAlias}.",
             new AgentWorkspaceToolAccessSettings
             {
                 CanReadFiles = true,
                 CanWriteFiles = true
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
 
@@ -433,8 +502,10 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
     [Fact]
     public void GroundPromptExternalTargetAliases_adds_sibling_alias_outside_writable_parent_as_read_only()
     {
-        const string writableAlias = "external-target/C/work/apps/Inventory";
-        const string siblingAlias = "external-target/C/work/apps/Billing";
+        var externalTargetRegistry = new ExternalTargetPathRegistry();
+        var appsPath = Path.Combine(Path.GetTempPath(), "work", "apps");
+        Assert.True(externalTargetRegistry.TryCreateAlias(Path.Combine(appsPath, "Inventory"), out var writableAlias));
+        Assert.True(externalTargetRegistry.TryCreateAlias(Path.Combine(appsPath, "Billing"), out var siblingAlias));
         var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
             $$"""
               {
@@ -447,7 +518,8 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             {
                 CanReadFiles = true,
                 CanWriteFiles = true
-            });
+            },
+            externalTargetRegistry);
 
         using var document = JsonDocument.Parse(metadataJson);
         var readOnlyAliases = document.RootElement
@@ -457,5 +529,119 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
             .ToArray();
 
         Assert.Contains(siblingAlias, readOnlyAliases);
+    }
+
+    [Fact]
+    public void ApplyExternalTargetRootBindings_rejects_malformed_persisted_authority_metadata()
+    {
+        var binding = new ExternalTargetRootBinding(
+            "0123456789abcdef01234567",
+            "windows",
+            "protected-token");
+        var metadataJson = $$"""
+          {
+            "{{ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey}}": {
+              "rootId": "not-an-array"
+            }
+          }
+          """;
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+                metadataJson,
+                [binding]));
+
+        Assert.Contains("malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ResolveExternalTargetRootBindings_rejects_malformed_persisted_authority_record()
+    {
+        var run = CreateExecutionRun(
+            $$"""
+              {
+                "{{ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey}}": [
+                  {
+                    "rootId": "invalid",
+                    "hostPlatform": "windows",
+                    "protectedRootToken": "protected-token"
+                  }
+                ]
+              }
+              """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ExecutionInvocationMetadata.ResolveExternalTargetRootBindings(run));
+
+        Assert.Contains("malformed", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execution_events_keep_opaque_aliases_without_external_root_binding_authority()
+    {
+        const string alias = "external-target/v1/0123456789abcdef01234567";
+        const string protectedToken = "protected-root-token-must-not-leak";
+        var binding = new ExternalTargetRootBinding(
+            "0123456789abcdef01234567",
+            OperatingSystem.IsWindows() ? "windows" : "linux",
+            protectedToken);
+        var metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+            $$"""
+              {
+                "{{ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey}}": ["{{alias}}"]
+              }
+              """,
+            [binding]);
+        var run = CreateExecutionRun(metadataJson);
+        var entry = new ExecutionLogEntry(
+            Guid.NewGuid(),
+            run.AgentId,
+            run.ChatSessionId,
+            DateTimeOffset.UtcNow,
+            ExecutionState.Running,
+            "test",
+            "event projection");
+        var factory = typeof(AgentFrameworkWorkspaceExecutionService).GetMethod(
+            "CreateExecutionEvent",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        var executionEvent = Assert.IsType<ExecutionEvent>(factory?.Invoke(null, [run, entry]));
+
+        Assert.Contains(alias, executionEvent.MetadataJson, StringComparison.Ordinal);
+        Assert.DoesNotContain(protectedToken, executionEvent.MetadataJson, StringComparison.Ordinal);
+        using var document = JsonDocument.Parse(executionEvent.MetadataJson);
+        Assert.False(document.RootElement.TryGetProperty(
+            ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey,
+            out _));
+    }
+
+    private static ExecutionRunRecord CreateExecutionRun(string metadataJson)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            null,
+            "External target binding test",
+            "chat-session",
+            Guid.NewGuid().ToString("N"),
+            string.Empty,
+            string.Empty,
+            "test",
+            "interactive",
+            metadataJson,
+            string.Empty,
+            string.Empty,
+            "test-provider",
+            "test-model",
+            ExecutionState.Idle,
+            null,
+            now,
+            now,
+            null,
+            null,
+            string.Empty,
+            null,
+            []);
     }
 }

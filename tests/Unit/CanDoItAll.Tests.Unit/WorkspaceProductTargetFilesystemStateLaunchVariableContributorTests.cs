@@ -64,7 +64,8 @@ public sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContribut
             ["ProductRootAlias"] = "external-target/invalid"
         };
         var contributor = new WorkspaceProductTargetFilesystemStateLaunchVariableContributor(
-            new WorkspaceFileService(root));
+            TestWorkspaceServices.CreateFileService(root),
+            TestExternalTargetPathRegistry.Create());
 
         contributor.Enrich(CreateContext(), variables);
 
@@ -77,7 +78,8 @@ public sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContribut
         Directory.CreateDirectory(root);
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var contributor = new WorkspaceProductTargetFilesystemStateLaunchVariableContributor(
-            new WorkspaceFileService(root));
+            TestWorkspaceServices.CreateFileService(root),
+            TestExternalTargetPathRegistry.Create());
 
         contributor.Enrich(CreateContext(), variables);
 
@@ -102,8 +104,12 @@ public sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContribut
         {
             ["ProductRoot"] = targetRoot
         };
+        var externalTargets = TestExternalTargetPathRegistry.Create();
         var contributor = new WorkspaceProductTargetFilesystemStateLaunchVariableContributor(
-            new WorkspaceFileService(Path.Combine(root, "workspace")));
+            TestWorkspaceServices.CreateFileService(
+                Path.Combine(root, "workspace"),
+                externalTargetRegistry: externalTargets),
+            externalTargets);
 
         contributor.Enrich(CreateContext(), variables);
 

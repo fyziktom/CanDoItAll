@@ -24,7 +24,10 @@ The web host should orchestrate startup, endpoint mapping, and Blazor rendering.
 
 Development and Visual Studio `http`/`https` launch profiles are PostgreSQL-first. They
 target `127.0.0.1:5432/candoitall_development` with the tracked development credentials
-and keep development workspace/control-plane files under `%LOCALAPPDATA%\CanDoItAll`.
+and use purpose-specific platform roots rather than repository-local state. Windows
+uses `%LOCALAPPDATA%\CanDoItAll`; Linux separates XDG data, config, state, and runtime
+roots; macOS separates Application Support, Logs, and temporary runtime data. See the
+development-runtime root matrix for exact defaults and service/container overrides.
 Use `tools/dev/Ensure-DevelopmentPostgres.ps1` to prepare native development PostgreSQL,
 or `docker compose up -d --wait db` for the repository-managed development database.
 

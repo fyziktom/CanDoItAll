@@ -1,3 +1,5 @@
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 
 namespace CanDoItAll.Tests.Unit;
@@ -17,7 +19,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
     public void Resolve_accepts_an_exact_existing_project_file()
     {
         var projectPath = CreateProject("Calculator", "Calculator.csproj");
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         var result = sut.Resolve(projectPath);
 
@@ -29,7 +31,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
     public void Resolve_resolves_a_directory_with_one_top_level_project()
     {
         var projectPath = CreateProject("Calculator", "Calculator.csproj");
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         var result = sut.Resolve(Path.GetDirectoryName(projectPath)!);
 
@@ -43,7 +45,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
         _ = CreateProject("Calculator", "Calculator.csproj");
         _ = CreateProject("Calculator.Tests", "Calculator.Tests.csproj");
         File.WriteAllText(Path.Combine(root, "Calculator.slnx"), "<Solution />");
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         var result = sut.Resolve(root);
 
@@ -57,7 +59,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
     {
         _ = CreateProject(string.Empty, "Calculator.csproj");
         _ = CreateProject(string.Empty, "Calculator.Tests.csproj");
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         var result = sut.Resolve(root);
 
@@ -73,7 +75,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
     {
         var solutionPath = Path.Combine(root, fileName);
         File.WriteAllText(solutionPath, string.Empty);
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         var result = sut.Resolve(solutionPath);
 
@@ -84,7 +86,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
     [Fact]
     public void Resolve_rejects_an_unverified_project_file()
     {
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         var result = sut.Resolve(Path.Combine(root, "Missing", "Missing.csproj"));
 
@@ -99,7 +101,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
         var projectPath = CreateProject("real", "Calculator.csproj");
         var linkedDirectory = Path.Combine(root, "linked");
         Directory.CreateSymbolicLink(linkedDirectory, Path.GetDirectoryName(projectPath)!);
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         try
         {
@@ -128,7 +130,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
         File.WriteAllText(targetProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         var linkedProjectPath = Path.Combine(root, "Calculator.csproj");
         File.CreateSymbolicLink(linkedProjectPath, targetProjectPath);
-        var sut = new ProjectStructureDotNetProjectTargetResolver();
+        var sut = CreateSut();
 
         try
         {
@@ -168,5 +170,22 @@ public sealed class ProjectStructureDotNetProjectTargetResolverTests : IDisposab
         var projectPath = Path.Combine(directoryPath, fileName);
         File.WriteAllText(projectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         return projectPath;
+    }
+
+    private ProjectStructureDotNetProjectTargetResolver CreateSut()
+        => new(
+            new FileSystemStoragePathPolicy(new LocalWorkspacePathResolver(root)));
+
+    private sealed class LocalWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
+    {
+        public string ResolveWorkspaceRoot() => workspaceRoot;
+
+        public string ResolveManagedFilesRoot() => Path.Combine(workspaceRoot, "managed-files");
+
+        public string ResolveExportsRoot() => Path.Combine(workspaceRoot, "exports");
+
+        public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
+
+        public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, "manager-artifacts");
     }
 }

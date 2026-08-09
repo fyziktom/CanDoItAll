@@ -331,7 +331,9 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
     {
         var pathResolver = new TestWorkspacePathResolver(workspaceRoot);
         return new ProjectStructureLocalFileOpener(
-            new WorkspacePathAccessGuard(pathResolver),
+            new WorkspacePathAccessGuard(
+                pathResolver,
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
             new FileSystemStoragePathPolicy(pathResolver),
             new EmptyFileApplicationPreferenceService(),
             desktopFileLauncher ?? new AvailableDesktopFileLauncher(),
@@ -403,6 +405,10 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
             FileApplicationExtension extension,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<bool> RollbackPathMigrationAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
 
         public FileApplicationPreference? ResolveForFile(string fileName) => null;
     }

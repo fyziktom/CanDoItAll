@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-08T18:42:51.471265+00:00",
-  "root_name": "CanDoItAll-unix-portability-codex-program-2026-08-08",
-  "payload_file_count": 256,
-  "payload_total_bytes": 863350,
+  "generated_utc": "2026-08-09T19:31:42.753920+00:00",
+  "root_name": "Unix-portability",
+  "payload_file_count": 288,
+  "payload_total_bytes": 1105579,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -51,8 +51,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/README.md",
-      "size_bytes": 1811,
-      "sha256": "ae25a6223ac2a93904661528a03e852cefec0cbd5cb9e7bffe429c81b76d9644"
+      "size_bytes": 2204,
+      "sha256": "3dc9ab7dff009dbfa80253ce5f38d4befee5467c2925de93616f68560a181fef"
     },
     {
       "path": "bundles/01-core-portability-foundation/analysis/00-executive-summary-cs.md",
@@ -90,9 +90,24 @@
       "sha256": "916a40b80a1015a45b75121c605409974f7345ed32dfde854a2d4c3385928116"
     },
     {
+      "path": "bundles/01-core-portability-foundation/architecture/00-csharp-current-state-inventory.md",
+      "size_bytes": 3956,
+      "sha256": "7dc9abf41b5ec68dd83bd2ccf937c58ec63bb090b68301493eb240973173478d"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/architecture/01-csharp-boundary-map.md",
+      "size_bytes": 4091,
+      "sha256": "baa51f93833323a838120c63313fe01168a6c1ba96a74a1bbb518b9d68393819"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/architecture/01-target-solution.md",
       "size_bytes": 2680,
       "sha256": "08eebff42bca173ff3c7624f4db92b203704941cb24ca824fc713c046f479c1a"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/architecture/02-csharp-dependency-direction.md",
+      "size_bytes": 4098,
+      "sha256": "a930d4a95537c4c4a5a39d118e9b24cff28dd3776ec8e49fb63e32716c81005d"
     },
     {
       "path": "bundles/01-core-portability-foundation/architecture/02-path-and-filesystem-model.md",
@@ -100,14 +115,24 @@
       "sha256": "65661a15a07af020e2b278716462638be12f9c93986c8ffd3972e46bf59ca587"
     },
     {
+      "path": "bundles/01-core-portability-foundation/architecture/03-csharp-pattern-selection-records.md",
+      "size_bytes": 2135,
+      "sha256": "9a75f5d04e8cabfa876b9057070238c8a068a6cb40e362a40906e20c995eb46b"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/architecture/03-storage-and-host-bound-records.md",
-      "size_bytes": 1794,
-      "sha256": "63c8fb22070b3477f940960107fc3017ad12e72a269c8a2ba956d2d2e49e13c4"
+      "size_bytes": 3557,
+      "sha256": "03531afb6dca9992acba1903b8de0a7f14ebbc23f19cd6747591ef93446c9ef2"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/architecture/04-csharp-testability-plan.md",
+      "size_bytes": 2420,
+      "sha256": "81e87a3d478852d1a45c1e58efd6b43f09d12651a442c97826cf38f79b25ea93"
     },
     {
       "path": "bundles/01-core-portability-foundation/architecture/04-secrets-and-key-bootstrap.md",
-      "size_bytes": 2928,
-      "sha256": "eb2086c530f1639632a953ecb5d36721bcb27abc49a26548e5835564e18dc26c"
+      "size_bytes": 5893,
+      "sha256": "278a5aa407bff9e1139adc5ee570982d0e43e127b0ca16c36e5e48af24ab84f1"
     },
     {
       "path": "bundles/01-core-portability-foundation/architecture/05-composition-and-capabilities.md",
@@ -125,6 +150,11 @@
       "sha256": "d274bb4c6a8eb0863f6a8e542d7659230f4ccd1f39830b78be7634181353fa58"
     },
     {
+      "path": "bundles/01-core-portability-foundation/architecture/08-a02-filesystem-semantics.md",
+      "size_bytes": 7414,
+      "sha256": "520c3f628c6f532bcc9e8c9f751551fc2f8d58461368a4bc6252fe69e338ef74"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/evidence/README.md",
       "size_bytes": 576,
       "sha256": "960c14b854fbbb6771c42c6705bf6cdee7d5895a7ea6b2b549ab4c5e0eb2bb3a"
@@ -138,6 +168,11 @@
       "path": "bundles/01-core-portability-foundation/inventories/00-preparation-inventory.md",
       "size_bytes": 362,
       "sha256": "6bbade6b5e250caba7273a109a8e0d4576939038ebb6a509fa8bcb1528a439d5"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/inventories/01-execution-portability-scan-review.md",
+      "size_bytes": 7022,
+      "sha256": "72a917f454ce1310b6e829ddd710eca0defbb56cd789b56494066a183580bd24"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/capability-profile-template.json",
@@ -155,9 +190,19 @@
       "sha256": "147a683c0e511b50c819654b99d437eeaa289e15ad75c390ae353011ba7f430a"
     },
     {
+      "path": "bundles/01-core-portability-foundation/inventories/path-field-inventory.csv",
+      "size_bytes": 8788,
+      "sha256": "bfc07b11b153d87b0593932a9784f5041b080061ca8c942187f5b581b5a1bad0"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/inventories/persistence-migration-inventory-template.csv",
       "size_bytes": 162,
       "sha256": "1dda260eef6cca38408cfda8fc159d2567e05d4f9d013afe3ff3784a6cb5cbc4"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/inventories/persistence-migration-inventory.csv",
+      "size_bytes": 6577,
+      "sha256": "a2bd4b77adb3d77693614032e594a8aa0e25152515e9d1c67c4bd83fbedd55f0"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/platform-sensitive-patterns.txt",
@@ -166,13 +211,13 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/requirement-traceability.csv",
-      "size_bytes": 1591,
-      "sha256": "36a80bcea2d17d97d148c2a2d697c0ee16bc3fb1ffec1ec5b9d6ecf66f7bdb2c"
+      "size_bytes": 2718,
+      "sha256": "4243d7d6de9531feef11ed7646e426dec228b818f0a538b0df1121a64c11afd3"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/source-reference-manifest.json",
-      "size_bytes": 13991,
-      "sha256": "d2986a5cfeb1a08183dd258fd9d3f6d04de1a58195892df1b6ae951782dcc43f"
+      "size_bytes": 25902,
+      "sha256": "698fa813126e372244ec9b3e794d57f9016c1086b5f3b8993570414fea425a1a"
     },
     {
       "path": "bundles/01-core-portability-foundation/manifest.json",
@@ -205,6 +250,11 @@
       "sha256": "248709cf41d274f159a7998591458bc6f5e69294a51231d9b10fd0421dda4322"
     },
     {
+      "path": "bundles/01-core-portability-foundation/plan/architecture-checkpoints.md",
+      "size_bytes": 1805,
+      "sha256": "fa75677488622706ff3f18aee185829838d18cb47aaccf35c83fb2d70da6fc30"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/requirements/01-normalized-requirements.md",
       "size_bytes": 15520,
       "sha256": "9145b1c28a3c9c7702525f71ca9c65d0f82d3fa1c8edeb33cd9b22dd34d199fb"
@@ -221,8 +271,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/requirements/requirements.json",
-      "size_bytes": 23404,
-      "sha256": "c40a553459a7c9e54e1dbe4856d675dd50eee40722115a67c1fe8d62fa0c5deb"
+      "size_bytes": 24577,
+      "sha256": "975d91954ba596e80b02b483be43ae1f75cf600060ec1221db35b8a81df33f6b"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/00-preparation-review.md",
@@ -231,18 +281,98 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/01-execution-report.md",
-      "size_bytes": 1694,
-      "sha256": "34447ae6e026bb87ed5d4f97feda873420a680d03aad65ce71cbdab07ac4d59f"
+      "size_bytes": 6343,
+      "sha256": "217742026cac925e6fb6da04304a83cba00edaffc2fb0207dfdf684a42fa025e"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/02-gate-log.md",
-      "size_bytes": 337,
-      "sha256": "e369573d0b453355767e2cb2abd5669470cdd40950a6de167af7e14d6116f63d"
+      "size_bytes": 2863,
+      "sha256": "6ac18730c43f693f3027841911a18087c63c3ba9c3f881417176670dc71d476d"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/03-open-questions.md",
-      "size_bytes": 1000,
-      "sha256": "a973afb616fb71b9a4f1111595449a1b568144e4746352a0d8a150bf6a5ad14d"
+      "size_bytes": 1525,
+      "sha256": "87a0864e9439f0b5a9b08d813a50791491db239e5cba0704d79ae8447c336fcd"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/04-a00-rebase-report.md",
+      "size_bytes": 3396,
+      "sha256": "2880a74b3b38c62e230f4eb32d4dbc3afd934c0c4fcc0d619cfaba66ebc0bb3c"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/05-a00-baseline-report.md",
+      "size_bytes": 4318,
+      "sha256": "57b59d58c3d4613a287a971578cad2b6a15ea27d71b0b405267f2d0328ad0284"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/06-a00-linux-failure-classification.md",
+      "size_bytes": 4461,
+      "sha256": "90c560d01e47dfbaa7b55784cdba50c26852cb4cfb247045aab37aab719d7880"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/07-a01-evidence-report.md",
+      "size_bytes": 7005,
+      "sha256": "5e22444d571b3ac7f6ff1c0d42a6bb3fe39f214898bffc883cde3d29bfb187c0"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/08-a01-independent-review.md",
+      "size_bytes": 4453,
+      "sha256": "f04c62ca75eca36fdeea5a7ec40094591bb866964ca5096c664c41f179fee36d"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/09-a02-evidence-report.md",
+      "size_bytes": 12583,
+      "sha256": "b95e46aeb0cbee37d4b14ba48f2d3d2b03a5c8eed9c1cc35b5c3025944313f9d"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/10-a02-independent-review.md",
+      "size_bytes": 8432,
+      "sha256": "b22c4ae57a90eb99b65365a471e74444c021f549a700d6beb781d42792216fbe"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/11-a03-evidence-report.md",
+      "size_bytes": 10831,
+      "sha256": "33af6b5c8135e9359677ff0f9b160d0d6bc3fa71054d9efb009544d87fe5a13d"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/12-a03-independent-review.md",
+      "size_bytes": 13155,
+      "sha256": "3562031c81233819b662756e0ddbb2eb49f8d3e62e6a04fb55f7e19fa76ec3b3"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/13-a04-evidence-report.md",
+      "size_bytes": 12950,
+      "sha256": "f6bdfafa867eadbe9396fdf490ff63e70e40154c4637a8e1688910e26b569ba6"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/14-a04-independent-review.md",
+      "size_bytes": 14757,
+      "sha256": "2acd22c76af3f71067312bc37ece7b3418b9bfbc956d3f4ffc33ef57766762cf"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/A00-HANDOFF.md",
+      "size_bytes": 3225,
+      "sha256": "36821f03dd09bb90be8ec54f0a5733be1e959db952c97ee6a6e59aa7efcd9f04"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/A01-HANDOFF.md",
+      "size_bytes": 952,
+      "sha256": "76fd7369cac0f94301ba01da8e0c5d166bd755fb1f961b05cf519e94dd2d79a4"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/A02-HANDOFF.md",
+      "size_bytes": 1876,
+      "sha256": "a95cc0f6f70315ea834199db394d9a7b2fd13d4e9fd79d4550a332b63510120f"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/A03-HANDOFF.md",
+      "size_bytes": 1691,
+      "sha256": "447fc1e0cb12490b36e9a6d9a97908cde0c8e9d22c372b5bc2eac89f171f35e2"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/A04-HANDOFF.md",
+      "size_bytes": 2502,
+      "sha256": "c2fe25c1292cac1d484b19f86ec5e2438d5d18edcd6003a89b0cd9f12c50ee16"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md",
@@ -250,9 +380,14 @@
       "sha256": "f0134e142ae0c670171e17585590aa774dd79a5dcc8b556477ec4e5853a36289"
     },
     {
+      "path": "bundles/01-core-portability-foundation/reviews/csharp-architecture-gate.md",
+      "size_bytes": 3378,
+      "sha256": "31e4d9ac15d9031596dc32c255a3c322546f83607cf9527d1712ac0fadb5a501"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory/README.md",
-      "size_bytes": 3197,
-      "sha256": "9b725a764a9244f1c89fb4bb86559de37f78ab988244a188c411dc129f451907"
+      "size_bytes": 5644,
+      "sha256": "c63fbda277a2b5e30c6d1c96d00bc13fa5b6bd106651d9fccc1b46f5fd7ad3e1"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory/agent-prompt.md",
@@ -261,28 +396,28 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory/exit-criteria.md",
-      "size_bytes": 398,
-      "sha256": "f490f893609045a0c4baed528ba17d016eeb29992760d74c8efdce8cd4aa7e62"
+      "size_bytes": 445,
+      "sha256": "13e17cffc1965821836e77d4a7926aab00485eff7827d2260bded6b4de20395e"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory/tasks.json",
-      "size_bytes": 6408,
-      "sha256": "5e4809378608bce17c8b662f2b35aae1e649f331188f1296cefc5ac51a1d25de"
+      "size_bytes": 6409,
+      "sha256": "b9e823bd8316fa57b652ddbaeb84ae9784aa938d8dae846265a9396093f19376"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory/tasks.md",
-      "size_bytes": 3828,
-      "sha256": "634ac15b9443486059dc36d974db0596a8fb911b39ba272065e61717b9f385c3"
+      "size_bytes": 3841,
+      "sha256": "6938550025c1b5d53d44c5a85a40f8de85b32ed16960879890ce6aa0e4035d0b"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory/validation.md",
-      "size_bytes": 1192,
-      "sha256": "8d0c1c7dd67d036be6258d8078ddc83c3d0bb32c7a9d5f14d0a3c500f02e4877"
+      "size_bytes": 1788,
+      "sha256": "21201f0c6731a73d2c4cf35ecff324e346314cc359744c3432c51773fcb39e2f"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/01-logical-path-contract-and-configuration-cleanup/README.md",
-      "size_bytes": 2983,
-      "sha256": "fa38a570cb588252cf63e6bc257eb2204682be3c9dd54e43a2209cce9598fb18"
+      "size_bytes": 2995,
+      "sha256": "debbde8e471d611d62ce8320630fac848eac558dff745e42438f3d45188c0e2b"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/01-logical-path-contract-and-configuration-cleanup/agent-prompt.md",
@@ -292,17 +427,17 @@
     {
       "path": "bundles/01-core-portability-foundation/subbundles/01-logical-path-contract-and-configuration-cleanup/exit-criteria.md",
       "size_bytes": 446,
-      "sha256": "3aaa82000747ccbff045f46b4cc2925c58aea0b16518d750e6bc6ef605233019"
+      "sha256": "a149949df9f6bf20c6db87d31efc398401af34aac97f743df1c6acb240acde9a"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/01-logical-path-contract-and-configuration-cleanup/tasks.json",
-      "size_bytes": 8080,
-      "sha256": "e2647997331e2f6a081e12bb6d2af21344695dc624d2be668b0937808d23b783"
+      "size_bytes": 8089,
+      "sha256": "c2cd9599be4119c001232bacdbc4a2427f41ac05712f9a25518caf247aa4158f"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/01-logical-path-contract-and-configuration-cleanup/tasks.md",
       "size_bytes": 4202,
-      "sha256": "a411ee024443c6b14febbb892c782a664fa69ac8434edecc8b02154e364ce6db"
+      "sha256": "2a9534280c71e1f3cbff0ba24f2e754cb6ae0790eae8161a877ee9b02e297e2f"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/01-logical-path-contract-and-configuration-cleanup/validation.md",
@@ -311,8 +446,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions/README.md",
-      "size_bytes": 2732,
-      "sha256": "b91d0002fe5dd323f9f9a319a2ca278cbe50e3df8640e1a56f9acbb940b82bfd"
+      "size_bytes": 2752,
+      "sha256": "1e0b1bbb271f6f3c8768c28e66a897a5b5e3f87dddae1809cf18a2c8eceeb318"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions/agent-prompt.md",
@@ -321,28 +456,28 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions/exit-criteria.md",
-      "size_bytes": 420,
-      "sha256": "1f57b290f6df5b2c9454c46983431650027b5b5e07254aec95de2a5f7e4e606d"
+      "size_bytes": 570,
+      "sha256": "01f0644a914ac560349cdd1a67293eb3b4468021b74eb722ed1220c8bd8b702f"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions/tasks.json",
-      "size_bytes": 8489,
-      "sha256": "3055dbb282ee5b8845c8b55911ae1008ca953482d7db4b33ad0eb0c230690220"
+      "size_bytes": 8519,
+      "sha256": "087c5458d21c51da0e84892d8458cb7f8a48fb386a8cf9a0f66a47ec69d930e1"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions/tasks.md",
-      "size_bytes": 4631,
-      "sha256": "3cb47add9529a15978ad75e76f8314b4d4d9924458794fceb8344f054d9bb75b"
+      "size_bytes": 4686,
+      "sha256": "4206ecb26a30dfc2c21b2a1d5ccec782e128d5ad70e409314d0b1962b594e943"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions/validation.md",
-      "size_bytes": 1184,
-      "sha256": "029fb4e8051ba0790281f2d1bf133a7754617626f1730666c4d5266c95c87e9b"
+      "size_bytes": 2337,
+      "sha256": "fb792b08a14fbfb996dc776f72f0d2c13aefdf2c67d18d509ef8ccdab3240245"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/03-storage-control-plane-and-host-bound-path-migration/README.md",
-      "size_bytes": 2967,
-      "sha256": "b68b178947a240da9ced28cc72244b3899d13b7df416c93a57d14f29c4f176ac"
+      "size_bytes": 2981,
+      "sha256": "fe1f088c6e4c34437a2b176aa883f3c871b5c025ddde9f5914da472061f010fc"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/03-storage-control-plane-and-host-bound-path-migration/agent-prompt.md",
@@ -352,27 +487,27 @@
     {
       "path": "bundles/01-core-portability-foundation/subbundles/03-storage-control-plane-and-host-bound-path-migration/exit-criteria.md",
       "size_bytes": 415,
-      "sha256": "c056189f3c4061c5564306eb16152cdddb7bf5d7cfc1eb6b8b86a27b51439f69"
+      "sha256": "d4e4b438d3c8e4d37234b88cefbb4e551441c1e6b462c0df00c6cb442f2f0cce"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/03-storage-control-plane-and-host-bound-path-migration/tasks.json",
-      "size_bytes": 8259,
-      "sha256": "48411994a36af5d07f143dc0261cb35de14a7a9d3545bdb470aea0c6b8c11efc"
+      "size_bytes": 8286,
+      "sha256": "ec4fbb1cbc57bbbe3c1d3d4c957100de1d9dc7879fdec82f1702f5efda6c8953"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/03-storage-control-plane-and-host-bound-path-migration/tasks.md",
       "size_bytes": 4313,
-      "sha256": "70861618cc7a17a1a20b0273bd5e4b5c3079550a1cb30d018c8155fbf3f54a31"
+      "sha256": "93bbf6d3f4f5642e3b1fabaa9509807e17cf65fa49d8e412cbb91ca496e9abdf"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/03-storage-control-plane-and-host-bound-path-migration/validation.md",
-      "size_bytes": 1160,
-      "sha256": "5aef5de38780d69448b20c7f08af350f006cf88c361ac605d31a34088eb3a006"
+      "size_bytes": 1999,
+      "sha256": "0f11fdfbb52efd8379b0d2a2ff20015b21582bcc973c472206c1ff5cec74e316"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/04-secrets-vault-drivers-dataprotection-and-migration/README.md",
-      "size_bytes": 2883,
-      "sha256": "a09228e9e3f01fcfe1684d5ab8ce8bd6de2cd7d1a8d13914285672713a49529e"
+      "size_bytes": 2958,
+      "sha256": "50778c44277075b4a3aa641764556ea00f307a89ce1a2c09cd942cf6ac61ba3b"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/04-secrets-vault-drivers-dataprotection-and-migration/agent-prompt.md",
@@ -381,23 +516,23 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/04-secrets-vault-drivers-dataprotection-and-migration/exit-criteria.md",
-      "size_bytes": 433,
-      "sha256": "236b9d256868a94b196275005fc4e09077c8627f7567d1697435c1b0c52ace83"
+      "size_bytes": 442,
+      "sha256": "3997d24c5d3a9adf193bc7d855c242646241ebcb9c50b96377404fecdd7f9291"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/04-secrets-vault-drivers-dataprotection-and-migration/tasks.json",
-      "size_bytes": 10065,
-      "sha256": "9ac9e908e1486dbe9a377a9e599f59749c92cab5005c9a2f214c6f7e227b3ee0"
+      "size_bytes": 10229,
+      "sha256": "f5da9e88e810b554dede429249b29940f3d02c28588abd795a492cf9ab29c323"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/04-secrets-vault-drivers-dataprotection-and-migration/tasks.md",
-      "size_bytes": 4992,
-      "sha256": "2adcf58f1cc2213217f82115727beb02b68c4dfa1176c607f5a6c69fc6f63fbf"
+      "size_bytes": 5326,
+      "sha256": "17439ebc9495a8d6c6e388eda4f961b5fd610534f94b082002e50b4188f5acc5"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/04-secrets-vault-drivers-dataprotection-and-migration/validation.md",
-      "size_bytes": 1225,
-      "sha256": "8c46f74556e1340567356505cf4b6ae4ed293c5d11e5c02ab141eae9c2dba3f2"
+      "size_bytes": 2467,
+      "sha256": "bf0996d7171e79fdf894b91058f5282ff311afb18934e6a368356ca6e06e3ae2"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/05-platform-composition-capabilities-and-readiness/README.md",
@@ -1180,9 +1315,29 @@
       "sha256": "e6668467aae587c867675900c53b38d220bb6ad2a900dde342f96d8086b2727a"
     },
     {
+      "path": "scripts/__pycache__/classify_portability_scan.cpython-311.pyc",
+      "size_bytes": 14316,
+      "sha256": "c6d87973967d412093dc0c10233743e275ab98d20188667a3fb5261284b536b5"
+    },
+    {
+      "path": "scripts/__pycache__/scan_artifacts_for_secrets.cpython-311.pyc",
+      "size_bytes": 11443,
+      "sha256": "183fef090ed0ce237927d95c6c87b88601a63b553c0f6ec01de98106d9a07895"
+    },
+    {
+      "path": "scripts/__pycache__/test_scan_artifacts_for_secrets.cpython-311.pyc",
+      "size_bytes": 6192,
+      "sha256": "fd8c7f3a6579588131469fe802d5f402efa9c775416b432c02d891d29704a6e9"
+    },
+    {
       "path": "scripts/calculate_checksums.py",
       "size_bytes": 6016,
       "sha256": "74a59508934779c119c9b8060be282cd74d7525c5c1aa1b3cb7bc0fbe39726dc"
+    },
+    {
+      "path": "scripts/classify_portability_scan.py",
+      "size_bytes": 10957,
+      "sha256": "34eeb90bf94d3926233874638d50bce9f02a4844ea0710d171c6f5cf28e1fd49"
     },
     {
       "path": "scripts/materialize_bundle.py",
@@ -1191,23 +1346,28 @@
     },
     {
       "path": "scripts/run-baseline.ps1",
-      "size_bytes": 5485,
-      "sha256": "8b2db74d8e6dc5c85cc27b0d233333bc8d08b4d6767da529dba085f9ad33dc1e"
+      "size_bytes": 5946,
+      "sha256": "716172836580b5219172cc78c69626cc704bc83e2d45bbc44c384c4774999d15"
     },
     {
       "path": "scripts/run-baseline.sh",
-      "size_bytes": 3942,
-      "sha256": "398634e1eb809cdd22863807014dd1aded7fba2bb6d6e991a2eacd718443961d"
+      "size_bytes": 3970,
+      "sha256": "3b9d9907e7c39e26f5558c3824f4833b92414e500d3e8d64a2da33d4380098c6"
     },
     {
       "path": "scripts/scan_artifacts_for_secrets.py",
-      "size_bytes": 5988,
-      "sha256": "fba4a1bf9cb590c9a8e2407cb2ccc6b937cba0efe39b2ea95f9ed93f1ccfa292"
+      "size_bytes": 8509,
+      "sha256": "698fdfe70e60b39e8f14eef76dee732d4f8a1bc8c63ce8618ae53ffb0c3471d5"
     },
     {
       "path": "scripts/scan_portability.py",
       "size_bytes": 17509,
       "sha256": "6f676ab7d4a50c77b3adb2cf1043198651e30ee6af3ff6b2bf3ffcab3d6891d8"
+    },
+    {
+      "path": "scripts/test_scan_artifacts_for_secrets.py",
+      "size_bytes": 3771,
+      "sha256": "f32089e1676e10ce82eb5704ecbe9631f9e4a5c500ddc2407251825ed8255ab5"
     },
     {
       "path": "scripts/validate_bundle.py",

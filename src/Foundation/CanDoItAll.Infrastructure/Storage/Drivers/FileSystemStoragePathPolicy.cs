@@ -1,43 +1,61 @@
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
+
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspacePathResolver)
+public sealed class FileSystemStoragePathPolicy
 {
+    private readonly IWorkspacePathResolver workspacePathResolver;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
+
+    public FileSystemStoragePathPolicy(IWorkspacePathResolver workspacePathResolver)
+        : this(workspacePathResolver, new PhysicalFileSystemPathPolicyFactory())
+    {
+    }
+
+    public FileSystemStoragePathPolicy(
+        IWorkspacePathResolver workspacePathResolver,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+    {
+        this.workspacePathResolver = workspacePathResolver ?? throw new ArgumentNullException(nameof(workspacePathResolver));
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
+    }
+
     public string ResolveWorkspaceRootPath()
-        => Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        => ResolveWorkspaceRoot();
 
     public string ResolveRootPath(StorageCatalogRecord storage)
+        => ResolveRootPolicy(storage).RootPath;
+
+    private string ResolveConfiguredRootPath(StorageCatalogRecord storage)
     {
         ArgumentNullException.ThrowIfNull(storage);
-        string configuredRoot = string.IsNullOrWhiteSpace(storage.EndpointOrRoot)
-            ? workspacePathResolver.ResolveWorkspaceRoot()
-            : storage.EndpointOrRoot;
-        return Path.GetFullPath(configuredRoot);
+        return StorageCatalogHostBindingPolicy.ResolveRequired(
+            storage,
+            workspacePathResolver.ResolveWorkspaceRoot());
     }
 
     public string ResolveFullPath(StorageCatalogRecord storage, string relativePath)
     {
         ArgumentNullException.ThrowIfNull(relativePath);
-        string rootPath = ResolveRootPath(storage);
+        IPhysicalFileSystemPathPolicy rootPolicy = ResolveRootPolicy(storage);
         string normalizedPath = NormalizeRelativeKey(relativePath);
-        string fullPath = Path.GetFullPath(Path.Combine(rootPath, normalizedPath));
-        EnsureWithinRoot(rootPath, fullPath);
-        EnsureNoReparseTraversal(rootPath, fullPath);
-        return fullPath;
+        return TranslateValidation(() => rootPolicy.ResolveContainedPath(normalizedPath));
     }
 
     public string ResolveTrustedWorkspacePath(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        string fullPath = Path.GetFullPath(path);
-        EnsureWithinRoot(workspaceRoot, fullPath);
-        EnsureNoReparseTraversal(workspaceRoot, fullPath);
-        return fullPath;
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "trusted workspace path");
+        IPhysicalFileSystemPathPolicy workspacePolicy = ResolveWorkspacePolicy();
+        return TranslateValidation(() => workspacePolicy.ResolveContainedPath(path));
     }
 
-    public static string ResolveReparseSafeFullPath(string path)
+    public string ResolveReparseSafeFullPath(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "filesystem path");
         string fullPath = Path.GetFullPath(path);
         string? rootPath = Path.GetPathRoot(fullPath);
         if (string.IsNullOrWhiteSpace(rootPath))
@@ -47,21 +65,20 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
                 "The requested filesystem path does not have a trusted root."));
         }
 
-        EnsureNoReparseTraversal(rootPath, fullPath);
-        return fullPath;
+        IPhysicalFileSystemPathPolicy rootPolicy = physicalPathPolicyFactory.Create(rootPath);
+        return TranslateValidation(() => rootPolicy.ResolveContainedPath(fullPath));
     }
 
     public string ResolveTrustedLocalOpenPath(StorageCatalogRecord storage, string relativePath)
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(relativePath);
-        string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        string storageRoot = ResolveRootPath(storage);
-        EnsureWithinRoot(workspaceRoot, storageRoot);
+        IPhysicalFileSystemPathPolicy workspacePolicy = ResolveWorkspacePolicy();
+        IPhysicalFileSystemPathPolicy storagePolicy = ResolveRootPolicy(storage);
+        TranslateValidation(() => workspacePolicy.EnsureSafePath(storagePolicy.RootPath, allowMissingLeaf: true));
         string normalizedPath = NormalizeRelativeKey(relativePath);
-        string fullPath = Path.GetFullPath(Path.Combine(storageRoot, normalizedPath));
-        EnsureWithinRoot(storageRoot, fullPath);
-        EnsureNoReparseTraversal(workspaceRoot, fullPath);
+        string fullPath = TranslateValidation(() => storagePolicy.ResolveContainedPath(normalizedPath));
+        TranslateValidation(() => workspacePolicy.EnsureSafePath(fullPath, allowMissingLeaf: true));
         return fullPath;
     }
 
@@ -83,10 +100,9 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
     {
         try
         {
-            string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-            string storageRoot = ResolveRootPath(storage);
-            EnsureWithinRoot(workspaceRoot, storageRoot);
-            EnsureNoReparseTraversal(workspaceRoot, storageRoot);
+            IPhysicalFileSystemPathPolicy workspacePolicy = ResolveWorkspacePolicy();
+            IPhysicalFileSystemPathPolicy storagePolicy = ResolveRootPolicy(storage);
+            workspacePolicy.EnsureSafePath(storagePolicy.RootPath, allowMissingLeaf: true);
             return true;
         }
         catch (Exception exception) when (
@@ -101,60 +117,79 @@ public sealed class FileSystemStoragePathPolicy(IWorkspacePathResolver workspace
     }
 
     internal static string NormalizeRelativeKey(string path)
-        => path
-            .Trim()
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-            .TrimStart(Path.DirectorySeparatorChar);
-
-    private static void EnsureWithinRoot(string rootPath, string fullPath)
     {
-        if (!IsWithinRoot(rootPath, fullPath))
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return ".";
+        }
+
+        var trimmedPath = path.Trim();
+        if (string.Equals(trimmedPath, ".", StringComparison.Ordinal))
+        {
+            return trimmedPath;
+        }
+
+        try
+        {
+            var physicalSegments = FileSystemStorageKeyCodec.Decode(trimmedPath)
+                .Select(segment => segment.Physical)
+                .ToArray();
+            return physicalSegments.Length == 0
+                ? "."
+                : Path.Combine(physicalSegments);
+        }
+        catch (ArgumentException exception)
         {
             throw new StorageBrowseException(new StorageBrowseError(
                 StorageBrowseErrorCode.AccessDenied,
-                "The requested filesystem path is outside the configured storage root."));
+                "The requested filesystem path is not a valid storage-relative path."), exception);
         }
     }
 
-    private static bool IsWithinRoot(string rootPath, string fullPath)
+    private string ResolveWorkspaceRoot()
+        => ResolveWorkspacePolicy().RootPath;
+
+    private string ResolveConfiguredWorkspaceRoot()
     {
-        string normalizedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(normalizedRoot, PathComparison) ||
-               string.Equals(
-                   fullPath,
-                   rootPath.TrimEnd(Path.DirectorySeparatorChar),
-                   PathComparison);
+        var root = workspacePathResolver.ResolveWorkspaceRoot();
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(root, "workspace root");
+        return Path.GetFullPath(root);
     }
 
-    private static StringComparison PathComparison => OperatingSystem.IsWindows()
-        ? StringComparison.OrdinalIgnoreCase
-        : StringComparison.Ordinal;
+    internal IPhysicalFileSystemPathPolicy ResolveRootPolicy(StorageCatalogRecord storage)
+        => TranslateValidation(() => physicalPathPolicyFactory.Create(ResolveConfiguredRootPath(storage)));
 
-    private static void EnsureNoReparseTraversal(string rootPath, string fullPath)
+    internal void RevalidateMutationTarget(StorageCatalogRecord storage, string fullPath)
+        => TranslateValidation(() => ResolveRootPolicy(storage).RevalidateMutationTarget(fullPath));
+
+    private IPhysicalFileSystemPathPolicy ResolveWorkspacePolicy()
+        => TranslateValidation(() => physicalPathPolicyFactory.Create(ResolveConfiguredWorkspaceRoot()));
+
+    private static T TranslateValidation<T>(Func<T> action)
     {
-        string relativePath = Path.GetRelativePath(rootPath, fullPath);
-        if (relativePath == ".")
+        try
         {
-            return;
+            return action();
         }
-
-        string currentPath = rootPath;
-        foreach (string segment in relativePath.Split(
-                     Path.DirectorySeparatorChar,
-                     StringSplitOptions.RemoveEmptyEntries))
+        catch (PhysicalPathValidationException exception)
         {
-            currentPath = Path.Combine(currentPath, segment);
-            if (!Directory.Exists(currentPath) && !File.Exists(currentPath))
-            {
-                continue;
-            }
+            throw new StorageBrowseException(new StorageBrowseError(
+                StorageBrowseErrorCode.AccessDenied,
+                exception.Message), exception);
+        }
+    }
 
-            if (File.GetAttributes(currentPath).HasFlag(FileAttributes.ReparsePoint))
-            {
-                throw new StorageBrowseException(new StorageBrowseError(
-                    StorageBrowseErrorCode.AccessDenied,
-                    "Filesystem reparse-point traversal is not allowed."));
-            }
+    private static void TranslateValidation(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (PhysicalPathValidationException exception)
+        {
+            throw new StorageBrowseException(new StorageBrowseError(
+                StorageBrowseErrorCode.AccessDenied,
+                exception.Message), exception);
         }
     }
 }

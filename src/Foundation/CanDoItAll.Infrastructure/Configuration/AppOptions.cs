@@ -24,7 +24,7 @@ public sealed class PostgreSqlStartupReadinessOptions
 
 public sealed class StorageOptions
 {
-    public string WorkspaceRoot { get; set; } = ".artifacts/workspace";
+    public string? WorkspaceRoot { get; set; }
 
     public string ManagedFilesFolder { get; set; } = "managed-files";
 
@@ -32,7 +32,7 @@ public sealed class StorageOptions
 
     public string EvidenceFolder { get; set; } = "evidence";
 
-    public string ManagerArtifactsFolder { get; set; } = ".artifacts/codex-manager";
+    public string? ManagerArtifactsFolder { get; set; }
 }
 
 public sealed class WorkbenchOptions
@@ -59,5 +59,34 @@ public sealed class ControlPlaneOptions
 {
     public string? RootPath { get; set; }
 
+    public string? DataProtectionKeysPath { get; set; }
+
+    public string? StateRootPath { get; set; }
+
+    public string? LogsRootPath { get; set; }
+
+    public string? RuntimeTemporaryRootPath { get; set; }
+
     public string? IpfsApiBaseUrl { get; set; }
+}
+
+public enum DataProtectionKeyProtectionProvider
+{
+    Auto,
+    Dpapi,
+    Certificate,
+    UnprotectedDevelopment
+}
+
+public sealed class DataProtectionKeyProtectionOptions
+{
+    public const string SectionName = "DataProtection:KeyProtection";
+
+    public DataProtectionKeyProtectionProvider Provider { get; set; } = DataProtectionKeyProtectionProvider.Auto;
+
+    public string? CertificatePath { get; set; }
+
+    public string? CertificatePasswordEnvironmentVariable { get; set; }
+
+    public List<string> PreviousCertificatePaths { get; set; } = [];
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "source_anchor": {
+  "prepared_source_anchor": {
     "repository": "fyziktom/CanDoItAll",
     "branch": "development",
     "commit": "62ea8ee0cc42c1c06da934d126a5c18f8237a89f",
@@ -9,6 +9,16 @@
     "prepared_date": "2026-08-08",
     "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
     "local_build_reproduction": false
+  },
+  "source_anchor": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "unix-adoption",
+    "commit": "a2856070e7303de077088fc7f2f7e96a5bcf0e70",
+    "commit_message": "added bundle",
+    "dotnet_sdk": "10.0.302",
+    "execution_date": "2026-08-08",
+    "analysis_method": "Local checkout inspection, generated portability scan, CodeAnalytics project graph, Windows baseline, and Linux Docker actual-runtime baseline",
+    "local_build_reproduction": true
   },
   "portable_token": "{{REPO_ROOT}}",
   "references": [
@@ -73,7 +83,8 @@
       "owner_bundle": "core",
       "area": "Configuration",
       "prepared_observation": "Workspace and control-plane roots use %LOCALAPPDATA% and Windows separators.",
-      "evidence_status": "Verified"
+      "execution_observation": "A03 removes Windows-only development roots; platform purpose defaults and explicit environment/configuration overrides are resolved at the typed Infrastructure boundary.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "APP-004",
@@ -82,7 +93,8 @@
       "owner_bundle": "core",
       "area": "Configuration",
       "prepared_observation": "Development profiles repeat Windows-only roots and enable desktop launch.",
-      "evidence_status": "Verified"
+      "execution_observation": "A03 removes persisted Windows-only root variables from launch profiles. Desktop launch remains an independent explicit policy.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-001",
@@ -91,7 +103,8 @@
       "owner_bundle": "core",
       "area": "Configuration",
       "prepared_observation": "Defines storage and control-plane options and relative defaults.",
-      "evidence_status": "Verified"
+      "execution_observation": "A03 makes physical-root options nullable and resolves distinct workspace/control-plane/key/state/log/runtime defaults through ApplicationPurposeRootPolicy.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-002",
@@ -100,7 +113,8 @@
       "owner_bundle": "core",
       "area": "Paths",
       "prepared_observation": "Expands environment variables and derives LocalApplicationData-based control-plane paths.",
-      "evidence_status": "Verified"
+      "execution_observation": "A03 resolves portable configuration templates and purpose-specific platform roots without treating a foreign absolute path as native.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-003",
@@ -109,7 +123,8 @@
       "owner_bundle": "core",
       "area": "Control plane",
       "prepared_observation": "Persists database profiles, encrypted passwords, and host filesystem workspace roots.",
-      "evidence_status": "Verified"
+      "execution_observation": "A02 supplies coordinated durable persistence. A03 adds schema-2 host-bound workspace records, legacy quarantine, explicit rebind, staged checksums, restart repair, encrypted-password byte preservation, and rollback guarded by an independent backup-integrity manifest.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-004",
@@ -118,7 +133,8 @@
       "owner_bundle": "core",
       "area": "Control plane",
       "prepared_observation": "Persists absolute preferred application executable paths.",
-      "evidence_status": "Verified"
+      "execution_observation": "A02 applies shared durable persistence. A03 adds schema-2 host/platform-bound executable records, legacy quarantine, explicit rebind, foreign-host disablement, restart repair, and rollback guarded by an independent backup-integrity manifest.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-005",
@@ -127,7 +143,8 @@
       "owner_bundle": "core",
       "area": "Composition",
       "prepared_observation": "Persists ASP.NET Data Protection keys under the control plane.",
-      "evidence_status": "Verified"
+      "execution_observation": "A02 registers the root-scoped physical path policy, durable writer, scoped external-target registry, and private control-plane directory policy at the Infrastructure boundary.",
+      "evidence_status": "Implemented and verified — Gate C1 GO"
     },
     {
       "id": "CORE-006",
@@ -136,7 +153,8 @@
       "owner_bundle": "core",
       "area": "Paths",
       "prepared_observation": "Workspace path guard uses native separator conversion that does not treat backslash as a legacy logical separator on Unix.",
-      "evidence_status": "Verified"
+      "execution_observation": "A03 resolves the workspace from an explicit override or purpose-specific platform default, validates native physical syntax, and creates the managed root through the A02 filesystem authority.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-007",
@@ -145,7 +163,8 @@
       "owner_bundle": "core",
       "area": "Filesystem",
       "prepared_observation": "Storage root containment and reparse checks; separator semantics differ from MAF workspace policy.",
-      "evidence_status": "Verified"
+      "execution_observation": "A02 delegates to the shared root-scoped physical policy for detected case behavior, containment, link/reparse rejection, and mutation-parent revalidation.",
+      "evidence_status": "Implemented and verified — Gate C1 GO"
     },
     {
       "id": "CORE-008",
@@ -154,7 +173,8 @@
       "owner_bundle": "core",
       "area": "Storage",
       "prepared_observation": "Direct non-atomic SaveAsync, temporary replace path, platform-dependent filename sanitization, and case-insensitive lock hashing.",
-      "evidence_status": "Verified"
+      "execution_observation": "A02 supplies durable same-directory commit, root-specific comparison, portable collision-aware allocation, and atomic create-new. A03 preserves those semantics while adding format-2 canonical logical locators and host-bound catalog roots.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "CORE-009",
@@ -163,79 +183,188 @@
       "owner_bundle": "core",
       "area": "Storage",
       "prepared_observation": "Treats persisted filesystem root equality according to the current OS.",
-      "evidence_status": "Verified"
+      "execution_observation": "A03 selects exactly one reserved filesystem bootstrap, verifies canonical current-host authority before mutation, preserves unrelated remote defaults, disables missing/foreign legacy roots, and rejects ambiguity.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
+    },
+    {
+      "id": "CORE-010",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Common/HostBoundPathPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Common/HostBoundPathPolicy.cs",
+      "owner_bundle": "core",
+      "area": "Paths",
+      "prepared_observation": "A03 implementation source added after preparation.",
+      "execution_observation": "Defines versioned host-bound physical-path records, native/foreign syntax validation, opaque host binding, redacted resolution diagnostics, legacy NeedsRebind quarantine, and explicit rebind.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
+    },
+    {
+      "id": "CORE-011",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Common/ApplicationPurposeRootPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Common/ApplicationPurposeRootPolicy.cs",
+      "owner_bundle": "core",
+      "area": "Configuration",
+      "prepared_observation": "A03 implementation source added after preparation.",
+      "execution_observation": "Defines distinct Windows, Linux XDG/service, and macOS workspace/control-plane/key/state/log/runtime roots with explicit overrides.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
+    },
+    {
+      "id": "CORE-012",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageCatalogService.cs",
+      "owner_bundle": "core",
+      "area": "Storage",
+      "prepared_observation": "Persists filesystem and remote storage catalog records.",
+      "execution_observation": "A03 persists host-binding metadata and provides transactional dry-run, source-bound backup integrity, staged checksum, commit-marker repair, restart verification, explicit root rebind, unrelated-default preservation, and checksum-verified rollback.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
+    },
+    {
+      "id": "CORE-013",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Storage/StorageJson.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Storage/StorageJson.cs",
+      "owner_bundle": "core",
+      "area": "Storage",
+      "prepared_observation": "Serializes storage object references and provider configuration.",
+      "execution_observation": "A03 writes format-2 canonical logical locators, keeps legacy separator handling field-scoped, and rejects rooted/foreign syntax, traversal, dot, empty, or malformed logical segments before conversion.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
+    },
+    {
+      "id": "CORE-014",
+      "relative_path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260809131426_AddStorageRootHostBinding.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260809131426_AddStorageRootHostBinding.cs",
+      "owner_bundle": "core",
+      "area": "Persistence",
+      "prepared_observation": "A03 implementation source added after preparation.",
+      "execution_observation": "Adds format/platform/syntax/host/state/validation columns for host-bound storage catalog roots.",
+      "evidence_status": "Implemented and verified — Gate C2a GO"
     },
     {
       "id": "SEC-001",
-      "relative_path": "src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj",
-      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretVaultStartupValidation.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretVaultStartupValidation.cs",
       "owner_bundle": "core",
       "area": "Security",
-      "prepared_observation": "New abstractions project introduced by the MAF refactor.",
-      "evidence_status": "Verified"
+      "prepared_observation": "Provider names and actual capability were not separated.",
+      "execution_observation": "Hosted startup validation probes the selected vault and fails closed with typed non-secret state/remediation.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-002",
-      "relative_path": "src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj",
-      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs",
       "owner_bundle": "core",
       "area": "Security",
-      "prepared_observation": "References ProtectedData and Security.Abstractions.",
-      "evidence_status": "Verified"
+      "prepared_observation": "The macOS provider was selected but unsupported.",
+      "execution_observation": "Security.framework Keychain CRUD is implemented with session/locked/headless semantics and injected-native contracts.",
+      "evidence_status": "Blocked — actual macOS validation required for Gate C2"
     },
     {
       "id": "SEC-003",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "The Linux provider was selected but unsupported.",
+      "execution_observation": "Secret Service is implemented through typed secret-tool invocation and actual D-Bus/GNOME Keyring restart proof.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-004",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/ExternalWrappingKeySecretVault.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/ExternalWrappingKeySecretVault.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "No supported Unix headless provider existed.",
+      "execution_observation": "Versioned AES-256-GCM envelopes use externally supplied current/previous wrapping keys without persisting key bytes.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-005",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Unix Data Protection keys lacked an explicit protected-at-rest production profile.",
+      "execution_observation": "Private durable XML repository supports Windows DPAPI and explicit Unix certificate protection with previous-key retention.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-006",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Key-ring bootstrap dependencies required an explicit cycle review.",
+      "execution_observation": "Protectors load only from OS/profile startup input; no vault or ring-protected secret participates in bootstrap.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-007",
       "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
       "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
       "owner_bundle": "core",
       "area": "Security",
-      "prepared_observation": "Auto selects macOS/Linux providers that are currently unsupported; file vault stores a Base64 master key beside ciphertext.",
-      "evidence_status": "Verified"
-    },
-    {
-      "id": "SEC-004",
-      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
-      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
-      "owner_bundle": "core",
-      "area": "Security",
-      "prepared_observation": "Secret records support vault references and legacy Data Protection payloads.",
-      "evidence_status": "Verified"
-    },
-    {
-      "id": "SEC-005",
-      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs",
-      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs",
-      "owner_bundle": "core",
-      "area": "Security",
-      "prepared_observation": "Registers secret protector, vault factory, and runtime secret services.",
-      "evidence_status": "Verified"
-    },
-    {
-      "id": "SEC-006",
-      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretRuntimeResolver.cs",
-      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretRuntimeResolver.cs",
-      "owner_bundle": "core",
-      "area": "Security",
-      "prepared_observation": "Runtime secret resolution boundary; full local scan required after materialization.",
-      "evidence_status": "Search-confirmed"
-    },
-    {
-      "id": "SEC-007",
-      "relative_path": "src/Modules/CanDoItAll.Modules.Security/StorageSecretResolver.cs",
-      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/StorageSecretResolver.cs",
-      "owner_bundle": "core",
-      "area": "Security",
-      "prepared_observation": "Storage credential resolution boundary.",
-      "evidence_status": "Search-confirmed"
+      "prepared_observation": "The file vault stored a Base64 master key beside ciphertext and was reachable by production selection.",
+      "execution_observation": "File/in-memory providers require explicit Development opt-in; legacy file data is available only as a read/delete migration source.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "SEC-008",
-      "relative_path": "src/Modules/CanDoItAll.Modules.Security/PluginSecretBroker.cs",
-      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/PluginSecretBroker.cs",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretMigration.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretMigration.cs",
       "owner_bundle": "core",
       "area": "Security",
-      "prepared_observation": "Plugin secret dispatch boundary.",
-      "evidence_status": "Search-confirmed"
+      "prepared_observation": "Legacy DPAPI data had no transactional portable export path.",
+      "execution_observation": "Windows-only DPAPI source migration supports dry-run, interruption, retry, verification, restart cleanup, and rollback.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-009",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Legacy Data Protection payload and database-password continuity required restart verification.",
+      "execution_observation": "The control-plane continuity verifier decrypt-checks every encrypted password without exposing values; legacy payload migration is restart-tested.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-010",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/ExternalWrappingKeySecretVault.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/ExternalWrappingKeySecretVault.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Vault payload versioning, atomicity, locking, permissions, and rotation required one contract.",
+      "execution_observation": "Versioned authenticated envelopes plus A02 durable writes, private modes, prior generations, and the locked migration journal provide the contract.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-011",
+      "relative_path": "tests/Unit/CanDoItAll.Tests.Unit/SecretMigrationTests.cs",
+      "portable_reference": "{{REPO_ROOT}}/tests/Unit/CanDoItAll.Tests.Unit/SecretMigrationTests.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Secret success/failure artifacts required sentinel proof.",
+      "execution_observation": "Redaction contracts and final artifact scans show no seeded runtime/migration sentinel; synthetic scanner fixtures are independently classified.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-012",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretVaultStartupValidation.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretVaultStartupValidation.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Capability diagnostics needed a non-secret projection.",
+      "execution_observation": "Readiness state exposes only provider kind, typed availability, and remediation.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-013",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretMigration.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretMigration.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Migration/deletion audit and orphan cleanup required explicit semantics.",
+      "execution_observation": "Redacted audit events, restart checkpoint cleanup, rollback, and orphan cleanup are idempotent and tested.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
       "id": "MAF-001",

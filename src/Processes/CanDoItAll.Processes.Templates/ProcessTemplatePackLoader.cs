@@ -278,7 +278,7 @@ public sealed class ProcessTemplatePackLoader
         var rootPrefix = normalizedPackRoot.EndsWith(Path.DirectorySeparatorChar)
             ? normalizedPackRoot
             : normalizedPackRoot + Path.DirectorySeparatorChar;
-        if (!path.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!path.StartsWith(rootPrefix, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Execution guidance reference '{reference}' in '{definitionPath}' must remain inside the process template pack.");
@@ -855,7 +855,7 @@ public sealed class ProcessTemplatePackLoader
         foreach (var startPath in startPaths
                      .Where(path => !string.IsNullOrWhiteSpace(path))
                      .Select(path => Path.GetFullPath(path!))
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
+                     .Distinct(StringComparer.Ordinal))
         {
             var current = new DirectoryInfo(startPath);
             while (current is not null)

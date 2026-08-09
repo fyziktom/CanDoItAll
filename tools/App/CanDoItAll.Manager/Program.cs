@@ -1,4 +1,6 @@
 using System.Text.Json;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Manager;
 using Microsoft.AspNetCore.OpenApi;
 
@@ -16,6 +18,8 @@ builder.Services.AddSingleton<CapsuleCatalogService>();
 builder.Services.AddSingleton<ICapsuleCatalogService>(serviceProvider => serviceProvider.GetRequiredService<CapsuleCatalogService>());
 builder.Services.AddSingleton<WatchSupervisorService>();
 builder.Services.AddSingleton<IWatchSupervisor>(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
+builder.Services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
+builder.Services.AddSingleton<DurableFileWriter>();
 builder.Services.AddSingleton<TailwindWatchSupervisorService>();
 builder.Services.AddSingleton<ITuningExecutionAdapter, LocalProcessTuningExecutionAdapter>();
 builder.Services.AddSingleton<TuningRequestService>();

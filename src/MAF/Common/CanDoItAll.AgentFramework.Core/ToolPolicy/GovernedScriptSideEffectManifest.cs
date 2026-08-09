@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -88,7 +89,7 @@ public sealed record GovernedScriptSideEffectManifest
         return paths?
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => path.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray() ?? [];
     }
 

@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Modules.Workbench;
 
@@ -14,11 +15,17 @@ internal static class ProjectPackageArchive
         string workingRoot,
         string packagePath,
         DateTimeOffset createdUtc,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         CancellationToken cancellationToken)
     {
+        var workingPathPolicy = physicalPathPolicyFactory.Create(workingRoot);
+        var packageDirectory = Path.GetDirectoryName(Path.GetFullPath(packagePath))
+            ?? throw new InvalidDataException("The project package destination does not have a directory parent.");
+        var packagePathPolicy = physicalPathPolicyFactory.Create(packageDirectory);
         var stagingPath = $"{packagePath}.{Guid.NewGuid():N}.tmp";
         try
         {
+            EnsureTrustedPath(packagePathPolicy, stagingPath, allowMissingLeaf: true);
             await using (var fileStream = new FileStream(
                              stagingPath,
                              FileMode.CreateNew,
@@ -31,11 +38,7 @@ internal static class ProjectPackageArchive
                        ZipArchiveMode.Create,
                        leaveOpen: false))
             {
-                var sourcePaths = EnumerateTrustedFiles(workingRoot)
-                    .OrderBy(
-                        path => Path.GetRelativePath(workingRoot, path),
-                        StringComparer.Ordinal)
-                    .ToList();
+                var sourcePaths = EnumerateTrustedFiles(workingPathPolicy);
                 if (sourcePaths.Count > MaximumArchiveEntries)
                 {
                     throw new InvalidDataException(
@@ -90,7 +93,9 @@ internal static class ProjectPackageArchive
                 }
             }
 
+            packagePathPolicy.RevalidateMutationTarget(packagePath);
             File.Move(stagingPath, packagePath, overwrite: false);
+            EnsureTrustedPath(packagePathPolicy, packagePath);
         }
         finally
         {
@@ -103,6 +108,7 @@ internal static class ProjectPackageArchive
 
     internal static async Task<string> ExtractPackageAsync(
         string packagePath,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         CancellationToken cancellationToken)
     {
         if (!File.Exists(packagePath))
@@ -112,7 +118,10 @@ internal static class ProjectPackageArchive
                 packagePath);
         }
 
-        EnsureNotReparsePoint(packagePath);
+        var packageDirectory = Path.GetDirectoryName(Path.GetFullPath(packagePath))
+            ?? throw new InvalidDataException("The project package path does not have a directory parent.");
+        var packagePathPolicy = physicalPathPolicyFactory.Create(packageDirectory);
+        EnsureTrustedPath(packagePathPolicy, packagePath);
 
         var packageLength = new FileInfo(packagePath).Length;
         if (packageLength > MaximumArchiveBytes)
@@ -125,6 +134,7 @@ internal static class ProjectPackageArchive
             Path.GetDirectoryName(packagePath)!,
             $"{Path.GetFileNameWithoutExtension(packagePath)}.{Guid.NewGuid():N}.extract");
         Directory.CreateDirectory(extractionRoot);
+        var extractionPathPolicy = physicalPathPolicyFactory.Create(extractionRoot);
 
         try
         {
@@ -186,7 +196,7 @@ internal static class ProjectPackageArchive
                 }
 
                 var destinationPath = ResolvePackageFilePath(
-                    extractionRoot,
+                    extractionPathPolicy,
                     relativePath);
                 if (isDirectory)
                 {
@@ -197,13 +207,14 @@ internal static class ProjectPackageArchive
                     }
 
                     Directory.CreateDirectory(destinationPath);
-                    EnsureNoReparseTraversal(extractionRoot, destinationPath);
+                    EnsureTrustedPath(extractionPathPolicy, destinationPath);
                     continue;
                 }
 
                 var destinationDirectory = Path.GetDirectoryName(destinationPath)!;
                 Directory.CreateDirectory(destinationDirectory);
-                EnsureNoReparseTraversal(extractionRoot, destinationDirectory);
+                EnsureTrustedPath(extractionPathPolicy, destinationDirectory);
+                extractionPathPolicy.RevalidateMutationTarget(destinationPath);
                 await using var sourceStream = entry.Open();
                 var integrity = await CopyToNewFileWithIntegrityAsync(
                     sourceStream,
@@ -216,7 +227,7 @@ internal static class ProjectPackageArchive
                         $"Project package entry '{relativePath}' length changed while extracting.");
                 }
 
-                EnsureNoReparseTraversal(extractionRoot, destinationPath);
+                EnsureTrustedPath(extractionPathPolicy, destinationPath);
             }
 
             return extractionRoot;
@@ -230,24 +241,28 @@ internal static class ProjectPackageArchive
 
     internal static string ResolvePackageFilePath(
         string root,
+        string relativePath,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+        => ResolvePackageFilePath(physicalPathPolicyFactory.Create(root), relativePath);
+
+    private static string ResolvePackageFilePath(
+        IPhysicalFileSystemPathPolicy rootPathPolicy,
         string relativePath)
     {
         var normalizedRelativePath = NormalizePackageRelativePath(
             relativePath,
             isDirectory: false);
-        var rootPath = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
-        var fullPath = Path.GetFullPath(Path.Combine(
-            rootPath,
-            normalizedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-        var normalizedRoot = rootPath + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(normalizedRoot, PathComparison))
+        try
+        {
+            return rootPathPolicy.ResolveContainedPath(
+                normalizedRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        }
+        catch (PhysicalPathValidationException exception)
         {
             throw new InvalidDataException(
-                "The project package contains a path outside its extraction root.");
+                "The project package contains an unsafe path outside its trusted root.",
+                exception);
         }
-
-        EnsureNoReparseTraversal(rootPath, fullPath);
-        return fullPath;
     }
 
     internal static string NormalizePackageRelativePath(
@@ -432,22 +447,23 @@ internal static class ProjectPackageArchive
     internal static bool IsSha256(string value)
         => value is { Length: 64 } && value.All(Uri.IsHexDigit);
 
-    private static IReadOnlyList<string> EnumerateTrustedFiles(string root)
+    private static IReadOnlyList<string> EnumerateTrustedFiles(
+        IPhysicalFileSystemPathPolicy rootPathPolicy)
     {
-        var rootPath = Path.GetFullPath(root);
-        EnsureNotReparsePoint(rootPath);
+        var rootPath = rootPathPolicy.RootPath;
+        EnsureTrustedPath(rootPathPolicy, rootPath);
         var files = new List<string>();
         var pendingDirectories = new Stack<string>();
         pendingDirectories.Push(rootPath);
         while (pendingDirectories.TryPop(out var directory))
         {
-            EnsureNoReparseTraversal(rootPath, directory);
+            EnsureTrustedPath(rootPathPolicy, directory);
             foreach (var entry in Directory.EnumerateFileSystemEntries(
                          directory,
                          "*",
                          SearchOption.TopDirectoryOnly))
             {
-                EnsureNoReparseTraversal(rootPath, entry);
+                EnsureTrustedPath(rootPathPolicy, entry);
                 if (Directory.Exists(entry))
                 {
                     pendingDirectories.Push(entry);
@@ -464,7 +480,12 @@ internal static class ProjectPackageArchive
             }
         }
 
-        return files;
+        return files
+            .OrderBy(
+                path => NormalizeEnumerationKey(Path.GetRelativePath(rootPath, path)),
+                StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static async Task<long> CopyBoundedAsync(
@@ -510,53 +531,27 @@ internal static class ProjectPackageArchive
         return (unixMode & UnixFileTypeMask) == UnixSymbolicLink;
     }
 
-    private static void EnsureNoReparseTraversal(
-        string root,
-        string destination)
+    private static void EnsureTrustedPath(
+        IPhysicalFileSystemPathPolicy rootPathPolicy,
+        string path,
+        bool allowMissingLeaf = false)
     {
-        var rootPath = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
-        var destinationPath = Path.GetFullPath(destination);
-        var relativePath = Path.GetRelativePath(rootPath, destinationPath);
-        if (relativePath == ".")
+        try
         {
-            EnsureNotReparsePoint(rootPath);
-            return;
+            rootPathPolicy.EnsureSafePath(path, allowMissingLeaf);
         }
-
-        if (relativePath == ".." ||
-            relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        catch (PhysicalPathValidationException exception)
         {
             throw new InvalidDataException(
-                "The project package path escapes its trusted root.");
-        }
-
-        EnsureNotReparsePoint(rootPath);
-        var current = rootPath;
-        foreach (var segment in relativePath.Split(
-                     Path.DirectorySeparatorChar,
-                     StringSplitOptions.RemoveEmptyEntries))
-        {
-            current = Path.Combine(current, segment);
-            if (Directory.Exists(current) || File.Exists(current))
-            {
-                EnsureNotReparsePoint(current);
-            }
+                "Project package paths cannot escape or traverse links in their trusted root.",
+                exception);
         }
     }
 
-    private static void EnsureNotReparsePoint(string path)
-    {
-        if ((Directory.Exists(path) || File.Exists(path)) &&
-            File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint))
-        {
-            throw new InvalidDataException(
-                "Project package paths cannot traverse filesystem reparse points.");
-        }
-    }
-
-    private static StringComparison PathComparison => OperatingSystem.IsWindows()
-        ? StringComparison.OrdinalIgnoreCase
-        : StringComparison.Ordinal;
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 }
 
 internal sealed record FileIntegrity(long Length, string Sha256);

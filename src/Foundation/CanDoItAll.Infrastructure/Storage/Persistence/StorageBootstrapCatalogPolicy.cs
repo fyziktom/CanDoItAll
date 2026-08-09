@@ -1,44 +1,41 @@
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+
 namespace CanDoItAll.Infrastructure.Storage;
 
 public static class StorageBootstrapCatalogPolicy
 {
+    private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
+        new PhysicalFileSystemPathPolicyFactory();
+
     public static StorageCatalogRecord? ResolveAuthoritativeFileSystemStorage(
         IEnumerable<StorageCatalogRecord> storages,
         string currentWorkspaceRoot)
     {
         ArgumentNullException.ThrowIfNull(storages);
         ArgumentException.ThrowIfNullOrWhiteSpace(currentWorkspaceRoot);
-        var authoritative = storages
-            .Where(storage => storage.IsSystemDefault)
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(currentWorkspaceRoot, "workspace root");
+        IPhysicalFileSystemPathPolicy workspacePathPolicy = PhysicalPathPolicyFactory.Create(currentWorkspaceRoot);
+        List<StorageCatalogRecord> candidates = storages
+            .Where(storage => storage.IsSystemDefault &&
+                storage.IsEnabled &&
+                storage.ProviderKind == StorageProviderKind.FileSystem)
             .OrderBy(storage => storage.DisplayOrder)
             .ThenBy(storage => storage.CreatedAtUtc)
             .ThenBy(storage => storage.Id)
-            .FirstOrDefault();
-        if (authoritative?.ProviderKind != StorageProviderKind.FileSystem ||
-            string.IsNullOrWhiteSpace(authoritative.EndpointOrRoot))
+            .Where(storage => StorageCatalogHostBindingPolicy.TryResolve(
+                storage,
+                workspacePathPolicy.RootPath,
+                out string configuredRoot,
+                out _) &&
+                workspacePathPolicy.PathComparer.Equals(configuredRoot, workspacePathPolicy.RootPath))
+            .ToList();
+        return candidates.Count switch
         {
-            return null;
-        }
-
-        string configuredRoot;
-        try
-        {
-            configuredRoot = Path.GetFullPath(authoritative.EndpointOrRoot);
-        }
-        catch (Exception exception) when (
-            exception is ArgumentException or
-                IOException or
-                NotSupportedException)
-        {
-            return null;
-        }
-
-        var workspaceRoot = Path.GetFullPath(currentWorkspaceRoot);
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-        return string.Equals(configuredRoot, workspaceRoot, comparison)
-            ? authoritative
-            : null;
+            0 => null,
+            1 => candidates[0],
+            _ => throw new InvalidOperationException(
+                "The storage catalog contains multiple authoritative filesystem roots for the current workspace.")
+        };
     }
 }

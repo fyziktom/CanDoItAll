@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,9 +17,13 @@ internal static class MafRuntimeTestServices
         services.AddSingleton<IMafProviderRuntimeGateway>(new UnavailableMafProviderRuntimeGateway());
         services.AddSingleton<IMafProviderStreamingDispatchGate>(NoOpMafProviderStreamingDispatchGate.Instance);
         services.AddSingleton<IAgentImageAnalysisService, UnavailableAgentImageAnalysisService>();
+        services.AddSingleton<IPhysicalFileSystemPathPolicyFactory>(
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         services.AddSingleton<IWorkspaceRuntimeServicesFactory>(new WorkspaceRuntimeServicesFactory(
             [],
-            new ManagedCodeMarkItDownDocumentMarkdownConverter()));
+            new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            new ExternalTargetPathRegistryFactory()));
         services.AddMafRuntimeArchitectureServices();
         services.AddSingleton<IMafProviderAgentFactory>(serviceProvider => new MafProviderAgentFactory(
             serviceProvider.GetRequiredService<IMafProviderCredentialService>(),

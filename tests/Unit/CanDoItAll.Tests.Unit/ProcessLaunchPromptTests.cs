@@ -6,6 +6,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -611,6 +612,9 @@ public sealed class ProcessLaunchPromptTests
     [Fact]
     public void AgentFramework_step_brief_uses_launch_variables_as_project_structure_context_instead_of_invented_snapshot_file()
     {
+        var productAlias = ExternalTargetAliasCodec.BuildAlias(
+            "0123456789abcdef01234567",
+            ["programovani", "dotnet", "output"]);
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
         var step = CreatePromptStep("Classify app type from current process context.");
         step.Key = "classify-dotnet-application";
@@ -636,6 +640,7 @@ public sealed class ProcessLaunchPromptTests
                 """,
                 ["DotNetScaffoldContract"] = "AppArchetype: Blazor WebAssembly PWA",
                 ["ProductRoot"] = @"C:\programovani\dotnet\output",
+                [ProcessRuntimeLaunchVariables.ProductRootAlias] = productAlias,
                 ["ParentProcessRunId"] = "f22fa5af-9cad-44fb-a56d-e5d5d1eeae4d",
                 ["SubprocessDefinitionKey"] = "dotnet-architecture-design-review"
             });
@@ -650,7 +655,7 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("Launch variables whose names end with Contract are typed project-structure facts", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("DotNetScaffoldContract and DotNet* launch variables are typed project-structure facts", prompt, StringComparison.Ordinal);
         Assert.Contains("ProductRoot, OutputRoot, and ExternalTargetRoot launch variables identify the external target", prompt, StringComparison.Ordinal);
-        Assert.Contains("Grounded external-target aliases for structured workspace tool path arguments: external-target/C/programovani/dotnet/output", prompt, StringComparison.Ordinal);
+        Assert.Contains($"Grounded external-target aliases for structured workspace tool path arguments: {productAlias}", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("The project-structure context lists visual target assets", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("compare the delivered screenshot against that visual target", prompt, StringComparison.Ordinal);
         Assert.DoesNotContain("Exact visual target media path rule", prompt, StringComparison.Ordinal);
@@ -700,6 +705,9 @@ public sealed class ProcessLaunchPromptTests
     [Fact]
     public void AgentFramework_step_brief_adds_product_mutation_gate_for_mutable_steps()
     {
+        var outputAlias = ExternalTargetAliasCodec.BuildAlias(
+            "0123456789abcdef01234567",
+            ["programovani", "dotnet", "calculator-output"]);
         var runId = new ProcessRunId(Guid.Parse("d9450dd1-4920-457c-92a4-48d1ec648181"));
         var step = CreatePromptStep("Implement the focused product behavior.");
         step.Key = "code-change";
@@ -719,13 +727,14 @@ public sealed class ProcessLaunchPromptTests
             step,
             variables: new Dictionary<string, string>
             {
-                ["OutputRoot"] = @"C:\programovani\dotnet\calculator-output"
+                ["OutputRoot"] = @"C:\programovani\dotnet\calculator-output",
+                [ProcessRuntimeLaunchVariables.OutputRootAlias] = outputAlias
             });
 
         Assert.Contains("AgentFramework product mutation gate:", prompt, StringComparison.Ordinal);
         Assert.Contains("This step is product-mutating.", prompt, StringComparison.Ordinal);
         Assert.Contains("produce a current-run successful product-target mutation receipt", prompt, StringComparison.Ordinal);
-        Assert.Contains("external-target/C/programovani/dotnet/calculator-output", prompt, StringComparison.Ordinal);
+        Assert.Contains(outputAlias, prompt, StringComparison.Ordinal);
         Assert.Contains("Writing only artifacts/process-runs/... is managed evidence, not product mutation.", prompt, StringComparison.Ordinal);
         Assert.Contains("Do not claim changed product files until those files exist under the grounded product target.", prompt, StringComparison.Ordinal);
     }

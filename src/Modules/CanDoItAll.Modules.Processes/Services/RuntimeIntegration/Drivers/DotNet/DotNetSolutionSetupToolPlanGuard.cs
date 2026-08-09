@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
@@ -67,9 +68,12 @@ internal static class DotNetSolutionSetupToolPlanGuard
     private const string AddTestProjectPlanKind = "DotNetSolutionAddTestProject";
     private const string RepairSolutionSetupPlanKind = "DotNetSolutionRepair";
 
-    public static DotNetSolutionSetupToolPlanGuardResult Evaluate(ProcessRuntimeStepAssignment assignment)
+    public static DotNetSolutionSetupToolPlanGuardResult Evaluate(
+        ProcessRuntimeStepAssignment assignment,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
     {
         ArgumentNullException.ThrowIfNull(assignment);
+        ArgumentNullException.ThrowIfNull(physicalPathPolicyFactory);
 
         var selectsDotNetSetupExecutor =
             ProcessRuntimeLaunchVariables.TryReadProcessStepRuntimeOwnedExecutorKey(
@@ -86,6 +90,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             {
                 return DotNetExistingSolutionVerifier.TryResolveInputs(
                     assignment.LaunchVariables,
+                    physicalPathPolicyFactory,
                     out _,
                     out var verificationIssue)
                     ? DotNetSolutionSetupToolPlanGuardResult.Satisfied

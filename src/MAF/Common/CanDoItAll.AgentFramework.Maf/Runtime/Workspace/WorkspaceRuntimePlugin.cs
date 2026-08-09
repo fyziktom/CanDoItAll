@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,6 +11,7 @@ internal sealed class WorkspaceRuntimePlugin(
     IWorkspaceCommandExecutionService commandExecutionService,
     IWorkspaceArtifactToolService artifactToolService,
     string workspaceRoot,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     WorkspaceScopeDescriptor workspaceScope,
     AgentWorkspaceToolAccessSettings accessSettings,
     ProviderProfile provider,
@@ -18,7 +21,11 @@ internal sealed class WorkspaceRuntimePlugin(
         private readonly IWorkspaceCommandExecutionService commandExecutionService = commandExecutionService;
         private readonly IWorkspaceArtifactToolService artifactToolService = artifactToolService;
         private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
-        private readonly WorkspaceRuntimeFileAccessGuard fileAccess = new(workspaceRoot, workspaceScope, accessSettings);
+        private readonly WorkspaceRuntimeFileAccessGuard fileAccess = new(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            workspaceScope,
+            accessSettings);
         private readonly ProviderProfile provider = provider;
         private readonly string runtimeModel = runtimeModel;
         private readonly IAgentImageAnalysisService imageAnalysisService = imageAnalysisService;
@@ -221,7 +228,7 @@ internal sealed class WorkspaceRuntimePlugin(
             var normalizedPaths = (paths ?? [])
                 .Where(path => !string.IsNullOrWhiteSpace(path))
                 .Select(path => path.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(ExternalTargetAliasCodec.EqualityComparer)
                 .ToArray();
             if (normalizedPaths.Length == 0)
             {

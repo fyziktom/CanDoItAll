@@ -1,5 +1,8 @@
 using System.Buffers.Binary;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -34,18 +37,31 @@ public sealed class WorkspaceImageOperationService : IWorkspaceImageOperationSer
 
     public WorkspaceImageOperationService(
         string workspaceRoot,
-        WorkspaceScopeDescriptor? workspaceScope = null)
-        : this(workspaceRoot, workspaceScope, File.ReadAllBytes)
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
+        : this(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            workspaceScope,
+            File.ReadAllBytes,
+            externalTargetRegistry)
     {
     }
 
     internal WorkspaceImageOperationService(
         string workspaceRoot,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         WorkspaceScopeDescriptor? workspaceScope,
-        Func<string, byte[]> readAllBytes)
+        Func<string, byte[]> readAllBytes,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
     {
         ArgumentNullException.ThrowIfNull(readAllBytes);
-        pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
+        pathPolicy = new WorkspacePathPolicy(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            workspaceScope,
+            externalTargetRegistry);
         receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot, workspaceScope);
         this.readAllBytes = readAllBytes;
     }

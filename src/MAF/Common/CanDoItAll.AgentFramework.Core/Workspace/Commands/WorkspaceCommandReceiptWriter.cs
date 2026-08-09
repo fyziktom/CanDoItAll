@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -75,7 +76,9 @@ internal sealed class WorkspaceCommandReceiptWriter
             new("generated-output", stderrRelativePath, $"{recipeId} stderr", "text/plain", "Captured stderr preview.")
         };
 
-        foreach (var targetPath in targetPaths.Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var targetPath in targetPaths
+                     .Where(item => !string.IsNullOrWhiteSpace(item))
+                     .Distinct(ExternalTargetAliasCodec.EqualityComparer))
         {
             var zone = TryClassifyArtifactZone(targetPath, out var classifiedZone)
                 ? classifiedZone
@@ -356,7 +359,7 @@ internal sealed class WorkspaceCommandReceiptWriter
 
     private static bool IsWithinScopedRoot(string relativePath, string rootRelativePath)
     {
-        return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase)
-               || relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(relativePath, rootRelativePath, StringComparison.Ordinal)
+               || relativePath.StartsWith(rootRelativePath + "/", StringComparison.Ordinal);
     }
 }

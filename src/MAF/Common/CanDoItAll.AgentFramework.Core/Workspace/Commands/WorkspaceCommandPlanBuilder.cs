@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Git;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -551,17 +552,14 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "workspace_dotnet_new targetFramework must be a supported value such as 'net8.0'.");
         }
 
-        if (string.IsNullOrWhiteSpace(name)
-            || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
-            || name.Contains(Path.DirectorySeparatorChar)
-            || name.Contains(Path.AltDirectorySeparatorChar))
+        string trimmedName = name?.Trim() ?? string.Empty;
+        if (trimmedName.Length == 0 || !PortablePhysicalFileNamePolicy.IsPortable(trimmedName))
         {
             throw WorkspaceCommandInputException.Create(
                 "Provide a project name without path separators or invalid file-name characters.",
                 "Provide a project name without path separators or invalid file-name characters.");
         }
 
-        var trimmedName = name.Trim();
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(parentDirectory, createIfMissing: true, out var workingDirectoryResolution);
         if (AllowedProjectExtensions.Contains(Path.GetExtension(workingDirectoryRelative)))
         {
@@ -705,7 +703,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
     }
 
-    private static bool InspectTopLevelProjectFiles(
+    private bool InspectTopLevelProjectFiles(
         string directory,
         string displayPath,
         bool includeSolutionFiles)
@@ -748,32 +746,36 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
     }
 
-    private static bool ContainsProjectFileInAccessibleTree(string directory)
+    private bool ContainsProjectFileInAccessibleTree(string directory)
     {
+        var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(directory);
         var pendingDirectories = new Stack<string>();
         pendingDirectories.Push(directory);
 
         while (pendingDirectories.TryPop(out var currentDirectory))
         {
-            foreach (var entry in Directory.EnumerateFileSystemEntries(
-                         currentDirectory,
-                         "*",
-                         new EnumerationOptions
-                         {
-                             RecurseSubdirectories = false,
-                             IgnoreInaccessible = false,
-                             AttributesToSkip = 0
-                         }))
+            var entries = Directory.EnumerateFileSystemEntries(
+                    currentDirectory,
+                    "*",
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = false,
+                        IgnoreInaccessible = false,
+                        AttributesToSkip = 0
+                    })
+                .OrderBy(
+                    entry => NormalizeEnumerationKey(Path.GetRelativePath(directory, entry)),
+                    StringComparer.Ordinal)
+                .ThenBy(entry => entry, StringComparer.Ordinal)
+                .ToArray();
+            var childDirectories = new List<string>();
+            foreach (var entry in entries)
             {
+                physicalPathPolicy.EnsureSafePath(entry);
                 var attributes = File.GetAttributes(entry);
-                if (attributes.HasFlag(FileAttributes.ReparsePoint))
-                {
-                    throw new IOException("Project-target inspection cannot cross a filesystem reparse point.");
-                }
-
                 if (attributes.HasFlag(FileAttributes.Directory))
                 {
-                    pendingDirectories.Push(entry);
+                    childDirectories.Add(entry);
                     continue;
                 }
 
@@ -782,16 +784,30 @@ internal sealed class WorkspaceCommandPlanBuilder
                     return true;
                 }
             }
+
+            for (var index = childDirectories.Count - 1; index >= 0; index--)
+            {
+                pendingDirectories.Push(childDirectories[index]);
+            }
         }
 
         return false;
     }
 
-    private static bool ContainsTopLevelProjectFile(
+    private bool ContainsTopLevelProjectFile(
         string directory,
         bool includeSolutionFiles = true)
-        => Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-            .Any(path => IsProjectFileExtension(Path.GetExtension(path), includeSolutionFiles));
+    {
+        var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(directory);
+        return Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .Any(path =>
+            {
+                physicalPathPolicy.EnsureSafePath(path);
+                return IsProjectFileExtension(Path.GetExtension(path), includeSolutionFiles);
+            });
+    }
 
     private static bool IsProjectFileExtension(
         string extension,
@@ -808,6 +824,11 @@ internal sealed class WorkspaceCommandPlanBuilder
     private static bool IsSolutionExtension(string extension)
         => string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 
     public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
@@ -1166,7 +1187,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         var resolvedPaths = (paths ?? [])
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => ResolveWorkspacePath(path))
-            .DistinctBy(path => path.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(path => path.RelativePath, ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         var pathSpecs = resolvedPaths
             .Select(path => BuildGitPathSpec(repositoryPath, path))
@@ -1180,11 +1201,14 @@ internal sealed class WorkspaceCommandPlanBuilder
             resolvedPaths.Select(path => path.RelativePath).ToArray());
     }
 
-    private static GitPathSpec BuildGitPathSpec(
+    private GitPathSpec BuildGitPathSpec(
         GitRepositoryPath repositoryPath,
         WorkspacePathResolution resolution)
     {
-        var authorization = GitPathAuthorizer.Authorize(repositoryPath, resolution.FullPath);
+        var authorization = GitPathAuthorizer.Authorize(
+            repositoryPath,
+            resolution.FullPath,
+            pathPolicy.PhysicalPathPolicyFactory);
         if (!authorization.IsAuthorized || authorization.Path is null)
         {
             throw WorkspaceCommandInputException.Create(
@@ -1894,15 +1918,22 @@ internal sealed class WorkspaceCommandPlanBuilder
             return resolution;
         }
 
+        var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(resolution.FullPath);
         var candidates = Directory.EnumerateFiles(resolution.FullPath, "*", SearchOption.TopDirectoryOnly)
             .Where(file => allowedExtensions.Contains(Path.GetExtension(file)))
-            .Select(file => new
+            .Select(file =>
             {
-                FullPath = Path.GetFullPath(file),
-                DisplayPath = pathPolicy.ToDisplayPath(Path.GetFullPath(file)),
-                Extension = Path.GetExtension(file)
+                physicalPathPolicy.EnsureSafePath(file);
+                var fullPath = Path.GetFullPath(file);
+                return new
+                {
+                    FullPath = fullPath,
+                    DisplayPath = pathPolicy.ToDisplayPath(fullPath),
+                    Extension = Path.GetExtension(fullPath)
+                };
             })
-            .OrderBy(item => item.DisplayPath, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item.DisplayPath, StringComparer.Ordinal)
+            .ThenBy(item => item.FullPath, StringComparer.Ordinal)
             .ToList();
 
         if (allowedExtensions.Contains(".sln") || allowedExtensions.Contains(".slnx"))
@@ -1964,7 +1995,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(ResolveWorkspacePath)
             .Select(resolution => resolution.RelativePath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToList();
     }
 

@@ -19,7 +19,10 @@ public sealed class WorkspaceCommandReceiptWriterTests
             processHost,
             new WorkspaceCommandEnvironmentPolicy(),
             new WorkspaceExecutableLocator(),
-            new WorkspaceCommandReceiptWriter(workspaceRoot));
+            new WorkspaceCommandReceiptWriter(workspaceRoot),
+            TestWorkspaceServices.CreatePathPolicy(
+                workspaceRoot,
+                externalTargetRegistry: TestExternalTargetPathRegistry.Create()));
         var plan = new WorkspaceCommandPlan(
             Decision: new ToolExecutionDecision(
                 ToolName: "workspace_receipt_test",

@@ -62,7 +62,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             planStore,
             assignmentStore,
             projectionCatchupService,
-            CreateCompletionCoordinator(new WorkspaceFileService(Path.GetTempPath())));
+            CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(Path.GetTempPath())));
         var stateBeforeAttempt = runtimeStore.State;
         var executionWithoutIdentity = executionRun with
         {
@@ -124,7 +124,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             planStore,
             assignmentStore,
             CreateProjectionCatchupService(projectionDbContext, clock),
-            CreateCompletionCoordinator(new WorkspaceFileService(Path.GetTempPath())));
+            CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(Path.GetTempPath())));
 
         var blocked = await coordinator.BlockRecoveredExecutionClaimAsync(
             executionRun,
@@ -196,7 +196,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 projectionDbContext,
                 clock);
             var completionCoordinator = CreateCompletionCoordinator(
-                new WorkspaceFileService(workspaceRoot));
+                TestWorkspaceServices.CreateFileService(workspaceRoot));
             var coordinator = CreateCoordinator(
                 workspaceFactory,
                 clock,
@@ -300,7 +300,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 planStore,
                 assignmentStore,
                 CreateProjectionCatchupService(projectionDbContext, clock),
-                CreateCompletionCoordinator(new WorkspaceFileService(workspaceRoot)));
+                CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(workspaceRoot)));
             var stateBeforeAttempt = runtimeStore.State;
 
             var recovered = await coordinator.SubmitRecoveredExecutionResultAsync(
@@ -380,7 +380,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 planStore,
                 assignmentStore,
                 projectionCatchupService,
-                CreateCompletionCoordinator(new WorkspaceFileService(workspaceRoot)));
+                CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(workspaceRoot)));
 
             var failedExecution = executionRun with
             {

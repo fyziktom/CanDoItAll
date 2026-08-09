@@ -3281,7 +3281,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         ];
 
         var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
-            new WorkspaceFileService(Path.GetTempPath()),
+            TestWorkspaceServices.CreateFileService(Path.GetTempPath()),
             new ProcessCompletionDefectEvidenceCatalog(
             [
                 new BrowserConsoleDefectEvidenceContribution()
@@ -3341,7 +3341,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             [],
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
-        var workspaceFiles = new WorkspaceFileService(Path.GetTempPath());
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(Path.GetTempPath());
         var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
             workspaceFiles,
             ProcessCompletionDefectEvidenceCatalog.Empty);
@@ -3427,7 +3427,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 executionRunId: receiptExecutionRunId)
         ];
         var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
-            new WorkspaceFileService(Path.GetTempPath()),
+            TestWorkspaceServices.CreateFileService(Path.GetTempPath()),
             new ProcessCompletionDefectEvidenceCatalog(
             [
                 new BrowserConsoleDefectEvidenceContribution()
@@ -4097,7 +4097,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             NextActions = ["Run downstream validation."]
         };
         var validator = new ProcessOutcomeGroundingValidator(
-            new WorkspaceFileService(Path.GetTempPath()));
+            TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
         var normalized = validator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
             assignment,
@@ -4157,7 +4157,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             NextActions = []
         };
         var validator = new ProcessOutcomeGroundingValidator(
-            new WorkspaceFileService(Path.GetTempPath()));
+            TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
         var normalized = validator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
             assignment,
@@ -4200,7 +4200,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             NextActions = []
         };
         var validator = new ProcessOutcomeGroundingValidator(
-            new WorkspaceFileService(Path.GetTempPath()));
+            TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
         var normalized = validator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
             assignment,
@@ -4249,7 +4249,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = []
             };
             var validator = new ProcessOutcomeGroundingValidator(
-                new WorkspaceFileService(Path.GetTempPath()));
+                TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
             var normalized = validator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
                 assignment,
@@ -4298,7 +4298,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = ["Collect authoritative defect evidence."]
             };
             var validator = new ProcessOutcomeGroundingValidator(
-                new WorkspaceFileService(Path.GetTempPath()));
+                TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
             var stepContract = BranchStepContract("repair-required");
 
             var normalized = validator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
@@ -4437,7 +4437,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             var toolReceipts =
                 new[] { CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Wrote QA evidence.") };
             var validator = new ProcessOutcomeGroundingValidator(
-                new WorkspaceFileService(Path.GetTempPath()));
+                TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
             var stepContract = ProcessStepExecutionContract.Empty with
             {
                 ConfiguredBranchOutcomeIds = [new BranchOutcomeId("repair-required")]
@@ -4502,7 +4502,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = ["Repair the failed criterion and rerun QA."]
             };
             var validator = new ProcessOutcomeGroundingValidator(
-                new WorkspaceFileService(Path.GetTempPath()));
+                TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
             var normalized = validator.RemoveUngroundedSupplementalEvidenceRefsFromGroundedDefectOutcome(
                 assignment,
@@ -4554,7 +4554,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = ["Repair the failed criterion and rerun QA."]
             };
             var validator = new ProcessOutcomeGroundingValidator(
-                new WorkspaceFileService(Path.GetTempPath()));
+                TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
             var normalized = validator.RemoveUngroundedSupplementalEvidenceRefsFromGroundedDefectOutcome(
                 assignment,
@@ -4603,7 +4603,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = ["Repair the failed criterion and rerun QA."]
             };
             var validator = new ProcessOutcomeGroundingValidator(
-                new WorkspaceFileService(Path.GetTempPath()));
+                TestWorkspaceServices.CreateFileService(Path.GetTempPath()));
 
             var normalized = validator.RemoveUngroundedSupplementalEvidenceRefsFromGroundedDefectOutcome(
                 assignment,
@@ -7990,7 +7990,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 workspaceFiles,
                 runtimeToolPreflightService: new ProcessRuntimeToolPreflightService(
                     [],
-                    [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+                    [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
                     ProcessRuntimeToolPreflightContributionCatalog.Empty));
 
             var result = await adapter.ExecuteAsync(
@@ -8178,7 +8178,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts,
                     "workspace_dotnet_new;workspace_pwsh_run_script"))
         };
-        var runtimeExecutor = new DotNetSolutionSetupRuntimeExecutor(null!, null!);
+        var runtimeExecutor = new DotNetSolutionSetupRuntimeExecutor(
+            null!,
+            null!,
+            null!,
+            new DotNetExistingSolutionVerifier(TestWorkspaceServices.PhysicalPathPolicyFactory),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The agent must not run for runtime-owned existing-solution verification."));
@@ -8931,6 +8936,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 output,
                 executionRunId,
                 [writeReceipt]);
+            var stagedReadResult = workspaceFiles.ReadTextFile(
+                primaryRef,
+                WorkspaceFileLimits.MaxTextReadCharacters);
             var acceptanceIssue = service.AcceptManagedOutcomeArtifactIfNeeded(
                 assignment,
                 materialization,
@@ -8944,6 +8952,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
             Assert.True(writeResult.Succeeded, writeResult.Message);
             Assert.Null(materialization.Issue);
+            Assert.True(stagedReadResult.Succeeded, stagedReadResult.Message);
+            Assert.False(stagedReadResult.IsTruncated);
             Assert.NotNull(acceptanceIssue);
             Assert.Equal(
                 ProcessManagedArtifactService.ManagedArtifactAcceptanceTooLargeDiagnosticCode,
@@ -8952,7 +8962,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             Assert.Null(acceptedArtifactContentHashes);
             Assert.True(readResult.Succeeded, readResult.Message);
             Assert.False(readResult.IsTruncated);
-            Assert.Equal(originalContent + capturedContent, readResult.Content);
+            Assert.Equal(stagedReadResult.Content, readResult.Content);
             Assert.True(acceptanceContent.Length > 1);
             Assert.Contains(
                 ProcessManagedArtifactFormatter.BuildManagedOutcomeArtifactLifecycleMarker(
@@ -10674,7 +10684,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     {
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
         var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
-            new WorkspaceFileService(Path.GetTempPath()),
+            TestWorkspaceServices.CreateFileService(Path.GetTempPath()),
             new ProcessCompletionDefectEvidenceCatalog(
             [
                 new BrowserConsoleDefectEvidenceContribution(),
@@ -10682,7 +10692,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ]));
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,
-                new ProcessToolReceiptEvidenceGate(new WorkspaceFileService(Path.GetTempPath()), []),
+                new ProcessToolReceiptEvidenceGate(TestWorkspaceServices.CreateFileService(Path.GetTempPath()), []),
                 [
                     new WorkspaceProductSourceInspectionCompletionGateContribution(),
                     new WorkspaceProductFilesystemCompletionGateContribution(),
@@ -10690,7 +10700,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     new BrowserInteractiveAcceptanceCompletionGateContribution()
                 ],
                 completionIssueResultFactory,
-                new ProcessOutcomeGroundingValidator(new WorkspaceFileService(Path.GetTempPath())))
+                new ProcessOutcomeGroundingValidator(TestWorkspaceServices.CreateFileService(Path.GetTempPath())))
             .CreateCompletionGateEvaluator();
         var resultConverter = new ProcessExecutionResultConverter(
             completionGateEvaluator,
@@ -11311,7 +11321,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     {
         workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProcessAdapter.{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
-        return new WorkspaceFileService(workspaceRoot);
+        return TestWorkspaceServices.CreateFileService(workspaceRoot);
     }
 
     private static AgentFrameworkProcessExecutionAdapter CreateAdapter(

@@ -5,6 +5,7 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class FileSandboxWorkspaceGenericNewRunCommitRecoveryIntegrationTests
 {
     [Theory]

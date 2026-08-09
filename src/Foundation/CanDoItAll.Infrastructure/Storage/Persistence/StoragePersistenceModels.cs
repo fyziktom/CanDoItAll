@@ -24,6 +24,18 @@ public sealed class StorageCatalogRecord
 
     public string EndpointOrRoot { get; set; } = string.Empty;
 
+    public int RootBindingFormatVersion { get; set; }
+
+    public HostPlatformFamily RootPlatformFamily { get; set; }
+
+    public CanDoItAll.SharedKernel.PhysicalPathSyntax RootPathSyntax { get; set; }
+
+    public string RootHostBindingId { get; set; } = string.Empty;
+
+    public HostBoundPathState RootPathState { get; set; } = HostBoundPathState.NeedsRebind;
+
+    public DateTimeOffset? RootLastValidatedAtUtc { get; set; }
+
     public string ConfigJson { get; set; } = "{}";
 
     public StorageCapability CapabilityMask { get; set; } =
@@ -59,6 +71,7 @@ internal sealed class StorageCatalogRecordConfiguration : IEntityTypeConfigurati
         builder.HasKey(item => item.Id);
         builder.Property(item => item.Name).HasMaxLength(200).IsRequired();
         builder.Property(item => item.EndpointOrRoot).HasMaxLength(1200).IsRequired();
+        builder.Property(item => item.RootHostBindingId).HasMaxLength(128).IsRequired();
         builder.Property(item => item.ConfigJson).HasColumnType("TEXT");
         builder.Property(item => item.LastHealthMessage).HasMaxLength(500);
         builder.HasIndex(item => item.Name).IsUnique();

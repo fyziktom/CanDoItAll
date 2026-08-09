@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
@@ -25,6 +26,7 @@ internal sealed class McpCapabilityBuilder(
     string workspaceRoot,
     WorkspaceScopeDescriptor workspaceScope,
     WorkspaceRuntimeServices workspaceRuntimeServices,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     IMafProviderCredentialService providerCredentialService,
     Func<CapabilityCatalogItem, RuntimeToolName?, IReadOnlySet<CapabilityOperationClassification>> resolveCatalogOperationClassifications,
     Func<CapabilityCatalogItem, McpCapabilityConfiguration, McpServerKey> resolveMcpServerKey,
@@ -547,6 +549,7 @@ internal sealed class McpCapabilityBuilder(
                     workspaceRoot,
                     configuration.WorkingDirectory,
                     allowExternal: (configuration.AllowedWorkingDirectories?.Count ?? 0) > 0,
+                    physicalPathPolicyFactory: physicalPathPolicyFactory,
                     allowedExternalRoots: configuration.AllowedWorkingDirectories);
             var commandExecutionService = workspaceRuntimeServices.CommandExecutionService;
             var environmentVariables = (await ResolveSecretBindingsAsync(

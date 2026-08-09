@@ -36,6 +36,46 @@ public sealed class WorkflowTemplatePackLoaderTests
     }
 
     [Fact]
+    public void Load_canonicalizes_legacy_manifest_path_at_the_known_logical_boundary()
+    {
+        using var packDirectory = TemporaryWorkflowTemplatePack.Create(
+            "legacy-path.yaml",
+            CreateLinearExecutorWorkflow("legacy-path", "known.executor"));
+        var manifestPath = Path.Combine(packDirectory.RootPath, "manifest.yaml");
+        File.WriteAllText(
+            manifestPath,
+            File.ReadAllText(manifestPath).Replace(
+                "workflows/legacy-path.yaml",
+                @"workflows\legacy-path.yaml",
+                StringComparison.Ordinal));
+
+        var pack = new WorkflowTemplatePackLoader(packDirectory.RootPath).Load();
+
+        Assert.Equal("workflows/legacy-path.yaml", Assert.Single(pack.Manifest.WorkflowFiles).RelativePath);
+    }
+
+    [Fact]
+    public void Load_rejects_manifest_path_with_dot_segments()
+    {
+        using var packDirectory = TemporaryWorkflowTemplatePack.Create(
+            "invalid-path.yaml",
+            CreateLinearExecutorWorkflow("invalid-path", "known.executor"));
+        var manifestPath = Path.Combine(packDirectory.RootPath, "manifest.yaml");
+        File.WriteAllText(
+            manifestPath,
+            File.ReadAllText(manifestPath).Replace(
+                "workflows/invalid-path.yaml",
+                "workflows/../invalid-path.yaml",
+                StringComparison.Ordinal));
+
+        var exception = Assert.Throws<WorkflowTemplatePackException>(() =>
+            new WorkflowTemplatePackLoader(packDirectory.RootPath).Load());
+
+        Assert.Equal(WorkflowTemplateFailureKind.ManifestLoadFailed, exception.FailureKind);
+        Assert.Contains("workflowFiles[0].relativePath", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Load_default_pack_snapshots_component_instructions_for_every_llm_node()
     {
         var pack = new WorkflowTemplatePackLoader().Load();

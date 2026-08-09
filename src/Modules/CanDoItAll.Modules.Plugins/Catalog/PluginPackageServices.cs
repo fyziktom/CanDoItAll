@@ -40,7 +40,7 @@ public sealed class PluginPackageService(
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var itemsByPackageId = new Dictionary<string, PluginPackageCatalogItem>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var archivePath in Directory.EnumerateFiles(options.CatalogRootPath, "*.zip", SearchOption.TopDirectoryOnly))
+        foreach (var archivePath in PluginPackageManifestStore.EnumerateCatalogArchives(options.CatalogRootPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var manifest = await manifestStore.ReadArchiveManifestAsync(archivePath, cancellationToken);
@@ -82,7 +82,7 @@ public sealed class PluginPackageService(
         ArgumentNullException.ThrowIfNull(request);
         Directory.CreateDirectory(options.CatalogRootPath);
 
-        foreach (var archivePath in Directory.EnumerateFiles(options.CatalogRootPath, "*.zip", SearchOption.TopDirectoryOnly))
+        foreach (var archivePath in PluginPackageManifestStore.EnumerateCatalogArchives(options.CatalogRootPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
             PluginPackageManifest manifest;
@@ -492,9 +492,15 @@ public sealed class PluginPackageManifestStore(
             .Where(path => !IsTemporaryPackageRoot(path))
             .Select(path => new InstalledPluginPackageRoot(Path.GetFullPath(path), Path.Combine(Path.GetFullPath(path), ManifestFileName)))
             .Where(root => File.Exists(root.ManifestPath))
-            .OrderBy(root => root.PackageRootPath, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(root => Path.GetFileName(root.PackageRootPath), StringComparer.Ordinal)
+            .ThenBy(root => root.PackageRootPath, StringComparer.Ordinal)
             .ToArray();
     }
+
+    internal static IEnumerable<string> EnumerateCatalogArchives(string catalogRootPath)
+        => Directory.EnumerateFiles(catalogRootPath, "*.zip", SearchOption.TopDirectoryOnly)
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal);
 
     private static bool IsTemporaryPackageRoot(string path)
     {

@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -2857,7 +2858,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var requestedPaths = attachmentPaths?
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => path.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToList()
             ?? [];
         if (requestedPaths.Count == 0)

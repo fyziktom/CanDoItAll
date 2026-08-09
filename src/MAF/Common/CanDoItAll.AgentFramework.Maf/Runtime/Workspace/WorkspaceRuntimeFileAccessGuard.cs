@@ -1,15 +1,19 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class WorkspaceRuntimeFileAccessGuard(
     string workspaceRoot,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     WorkspaceScopeDescriptor workspaceScope,
     AgentWorkspaceToolAccessSettings accessSettings)
 {
-    private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-    private readonly string workspaceRootWithSeparator = EnsureTrailingSeparator(Path.GetFullPath(workspaceRoot));
+    private readonly IPhysicalFileSystemPathPolicy workspacePathPolicy =
+        physicalPathPolicyFactory.Create(NormalizeWorkspaceRoot(workspaceRoot));
     private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope;
     private readonly AgentWorkspaceToolAccessSettings accessSettings = AgentWorkspaceToolAccessMetadata.Normalize(accessSettings);
 
@@ -52,10 +56,21 @@ internal sealed class WorkspaceRuntimeFileAccessGuard(
             return;
         }
 
-        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
-        if (string.IsNullOrWhiteSpace(normalizedAlias) || IsManagedWorkspaceAbsolutePath(path))
+        if (IsManagedWorkspaceAbsolutePath(path))
         {
             return;
+        }
+
+        var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path);
+        if (string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            if (PhysicalPathSyntaxPolicy.Classify(path) == PhysicalPathSyntax.Relative)
+            {
+                return;
+            }
+
+            throw WorkspaceToolAccessDeniedException.ExternalTargetNotAuthorized(
+                "external-target/unresolved");
         }
 
         var externalAccess = ResolveExternalTargetAccess();
@@ -103,14 +118,14 @@ internal sealed class WorkspaceRuntimeFileAccessGuard(
     {
         try
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "MAF managed-workspace candidate path");
             if (!Path.IsPathRooted(path))
             {
                 return false;
             }
 
             var fullPath = Path.GetFullPath(path);
-            return string.Equals(fullPath, workspaceRoot, StringComparison.OrdinalIgnoreCase) ||
-                   fullPath.StartsWith(workspaceRootWithSeparator, StringComparison.OrdinalIgnoreCase);
+            return workspacePathPolicy.IsWithinRoot(fullPath);
         }
         catch (Exception)
         {
@@ -137,10 +152,10 @@ internal sealed class WorkspaceRuntimeFileAccessGuard(
             : path;
     }
 
-    private static string EnsureTrailingSeparator(string path)
+    private static string NormalizeWorkspaceRoot(string path)
     {
-        return path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
+        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "MAF workspace root");
+        return Path.GetFullPath(path);
     }
+
 }

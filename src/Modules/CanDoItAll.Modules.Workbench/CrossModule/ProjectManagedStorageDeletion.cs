@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +55,6 @@ internal sealed class ProjectManagedStorageBindingException : IOException
 
 internal sealed class ProjectManagedStorageObjectKey : IEquatable<ProjectManagedStorageObjectKey>
 {
-    private static readonly StringComparer WindowsPathComparer = StringComparer.OrdinalIgnoreCase;
     private static readonly HashSet<string> WindowsReservedSegmentNames = new(
         [
             "CON", "PRN", "AUX", "NUL",
@@ -114,7 +114,7 @@ internal sealed class ProjectManagedStorageObjectKey : IEquatable<ProjectManaged
             return false;
         }
 
-        return ResolveLocatorComparer(ProviderKind).Equals(Locator, other.Locator);
+        return StringComparer.Ordinal.Equals(Locator, other.Locator);
     }
 
     public override bool Equals(object? obj)
@@ -126,7 +126,7 @@ internal sealed class ProjectManagedStorageObjectKey : IEquatable<ProjectManaged
         hash.Add(StorageId);
         hash.Add(ProviderKind);
         hash.Add(LocatorKind);
-        hash.Add(Locator, ResolveLocatorComparer(ProviderKind));
+        hash.Add(Locator, StringComparer.Ordinal);
         return hash.ToHashCode();
     }
 
@@ -134,13 +134,7 @@ internal sealed class ProjectManagedStorageObjectKey : IEquatable<ProjectManaged
         StorageProviderKind providerKind,
         string left,
         string right)
-        => ResolveLocatorComparer(providerKind).Equals(left, right);
-
-    private static StringComparer ResolveLocatorComparer(StorageProviderKind providerKind)
-        => providerKind == StorageProviderKind.Ftp ||
-           providerKind == StorageProviderKind.FileSystem && OperatingSystem.IsWindows()
-            ? WindowsPathComparer
-            : StringComparer.Ordinal;
+        => StringComparer.Ordinal.Equals(left, right);
 
     private static string NormalizeLocator(
         StorageProviderKind providerKind,
@@ -179,7 +173,6 @@ internal sealed class ProjectManagedStorageObjectKey : IEquatable<ProjectManaged
         }
 
         if (providerKind == StorageProviderKind.FileSystem &&
-            OperatingSystem.IsWindows() &&
             segments.Any(IsNonCanonicalWindowsSegment))
         {
             throw new InvalidDataException(
@@ -220,7 +213,8 @@ internal sealed class ProjectManagedStorageObjectKey : IEquatable<ProjectManaged
 }
 
 public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
-    FileSystemStoragePathPolicy fileSystemStoragePathPolicy)
+    FileSystemStoragePathPolicy fileSystemStoragePathPolicy,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
 {
     internal string ResolveWorkspaceRootPath()
         => fileSystemStoragePathPolicy.ResolveWorkspaceRootPath();
@@ -255,13 +249,16 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
         if (reference.ProviderKind == StorageProviderKind.FileSystem &&
             OperatingSystem.IsWindows())
         {
-            var fullPath = ResolveFileSystemFullPath(
+            var (fullPath, rootPolicy) = ResolveFileSystemPath(
                 storage,
                 key.Locator,
                 authoritativeBootstrapStorageId);
-            var physicalIdentity =
-                WindowsFileSystemObjectIdentity.ResolveConservativePhysicalIdentity(fullPath)
-                    .ToUpperInvariant();
+            string physicalIdentity = WindowsFileSystemObjectIdentity.ResolveConservativePhysicalIdentity(fullPath);
+            if (rootPolicy.CaseSensitivity == PhysicalFileSystemCaseSensitivity.Insensitive)
+            {
+                physicalIdentity = physicalIdentity.ToUpperInvariant();
+            }
+
             return Convert.ToHexStringLower(
                 SHA256.HashData(Encoding.UTF8.GetBytes($"filesystem|{physicalIdentity}")));
         }
@@ -284,44 +281,60 @@ public sealed class ProjectManagedStoragePhysicalIdentityPolicy(
         string locator,
         Guid? authoritativeBootstrapStorageId)
     {
-        var fullPath = ResolveFileSystemFullPath(
+        var (fullPath, rootPolicy) = ResolveFileSystemPath(
             storage,
             locator,
             authoritativeBootstrapStorageId);
-        var canonicalPath = OperatingSystem.IsWindows()
+        string canonicalPath = OperatingSystem.IsWindows()
             ? WindowsFileSystemObjectIdentity.ResolveCanonicalPath(fullPath)
             : fullPath;
-        return OperatingSystem.IsWindows()
-            ? $"filesystem|{canonicalPath.ToUpperInvariant()}"
-            : $"filesystem|{canonicalPath}";
+        if (rootPolicy.CaseSensitivity == PhysicalFileSystemCaseSensitivity.Insensitive)
+        {
+            canonicalPath = canonicalPath.ToUpperInvariant();
+        }
+
+        return $"filesystem|{canonicalPath}";
     }
 
-    private string ResolveFileSystemFullPath(
+    private (string FullPath, IPhysicalFileSystemPathPolicy RootPolicy) ResolveFileSystemPath(
         StorageCatalogRecord? storage,
         string locator,
         Guid? authoritativeBootstrapStorageId)
     {
-        var effectiveStorage = storage ?? new StorageCatalogRecord
-        {
-            ProviderKind = StorageProviderKind.FileSystem,
-            EndpointOrRoot = string.Empty
-        };
+        StorageCatalogRecord effectiveStorage = storage ?? CreateCurrentWorkspaceStorage();
         var isAuthoritativeBootstrap = authoritativeBootstrapStorageId.HasValue &&
             effectiveStorage.Id == authoritativeBootstrapStorageId.Value;
         if (isAuthoritativeBootstrap)
         {
-            effectiveStorage = new StorageCatalogRecord
+            effectiveStorage = CreateCurrentWorkspaceStorage();
+        }
+
+        string fullPath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(
+            fileSystemStoragePathPolicy.ResolveFullPath(effectiveStorage, locator));
+        IPhysicalFileSystemPathPolicy rootPolicy = physicalPathPolicyFactory.Create(
+            fileSystemStoragePathPolicy.ResolveRootPath(effectiveStorage));
+        rootPolicy.EnsureSafePath(fullPath, allowMissingLeaf: true);
+        return (fullPath, rootPolicy);
+
+        StorageCatalogRecord CreateCurrentWorkspaceStorage()
+        {
+            string workspaceRoot = fileSystemStoragePathPolicy.ResolveWorkspaceRootPath();
+            var currentStorage = new StorageCatalogRecord
             {
                 ProviderKind = StorageProviderKind.FileSystem,
                 IsSystemDefault = true,
-                EndpointOrRoot = string.Empty
+                EndpointOrRoot = workspaceRoot
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(
+                currentStorage,
+                workspaceRoot,
+                DateTimeOffset.UtcNow);
+            return currentStorage;
         }
-
-        var fullPath = FileSystemStoragePathPolicy.ResolveReparseSafeFullPath(
-            fileSystemStoragePathPolicy.ResolveFullPath(effectiveStorage, locator));
-        return fullPath;
     }
+
+    internal string ResolveReparseSafeFullPath(string path)
+        => fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path);
 
     private static string ResolveFtpIdentity(
         StorageCatalogRecord? storage,
@@ -630,12 +643,8 @@ internal static class ProjectManagedStorageProvenancePolicy
             return false;
         }
 
-        var comparison = providerKind == StorageProviderKind.FileSystem &&
-                         OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
-        return string.Equals(path, normalized, comparison) &&
-               normalized.StartsWith(ManagedProjectMediaPrefix, comparison);
+        return string.Equals(path, normalized, StringComparison.Ordinal) &&
+               normalized.StartsWith(ManagedProjectMediaPrefix, StringComparison.Ordinal);
     }
 
     internal static string NormalizeManagedPath(string path)
@@ -650,7 +659,7 @@ internal static class ProjectManagedStorageProvenancePolicy
             StorageLocatorKind.RelativePath,
             normalizedInput);
         var normalized = ProjectManagedStorageObjectKey.FromReference(reference).Locator;
-        if (!normalized.StartsWith(ManagedProjectMediaPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!normalized.StartsWith(ManagedProjectMediaPrefix, StringComparison.Ordinal))
         {
             throw new InvalidDataException("The managed asset path is outside the project-media namespace.");
         }

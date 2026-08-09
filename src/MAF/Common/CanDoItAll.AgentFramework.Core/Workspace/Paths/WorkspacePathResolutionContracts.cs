@@ -1,4 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -14,10 +17,22 @@ public interface IWorkspacePathResolutionService
     WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing);
 }
 
-public sealed class WorkspacePathResolutionService(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
-    : IWorkspacePathResolutionService
+public sealed class WorkspacePathResolutionService : IWorkspacePathResolutionService
 {
-    private readonly WorkspacePathPolicy pathPolicy = new(workspaceRoot, workspaceScope);
+    private readonly WorkspacePathPolicy pathPolicy;
+
+    public WorkspacePathResolutionService(
+        string workspaceRoot,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
+    {
+        pathPolicy = new WorkspacePathPolicy(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            workspaceScope,
+            externalTargetRegistry);
+    }
 
     public WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing)
     {

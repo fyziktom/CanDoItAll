@@ -1,6 +1,7 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
@@ -628,7 +629,8 @@ public sealed class ProcessRunNarrativeGeneratorTests
                 WorkspaceScopeDescriptor.Sandbox),
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
-            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance,
+            new ExternalTargetPathRegistryFactory());
     }
 
     private static IAgentFrameworkWorkspaceService CreateAdversarialWorkspaceService(

@@ -5,7 +5,7 @@
   "title": "Secrets, vault drivers, Data Protection, and migration",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by A03",
+  "status": "Blocked — Gate C2 NO-GO pending actual macOS Keychain evidence",
   "depends_on": [
     "A03"
   ],
@@ -55,7 +55,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -83,7 +83,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed — actual macOS gate proof pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -111,7 +111,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -139,7 +139,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -167,7 +167,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -195,7 +195,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -223,7 +223,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -251,7 +251,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -279,7 +279,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -307,7 +307,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -335,7 +335,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Planned",
+      "status": "Blocked — independent NO-GO pending actual macOS Keychain proof",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

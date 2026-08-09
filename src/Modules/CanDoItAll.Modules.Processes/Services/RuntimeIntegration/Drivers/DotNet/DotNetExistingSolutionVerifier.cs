@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 
@@ -8,7 +10,8 @@ using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class DotNetExistingSolutionVerifier
+internal sealed class DotNetExistingSolutionVerifier(
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
 {
     public ValueTask<ProcessRuntimeOwnedStepExecutionResult> VerifyAsync(
         ProcessRuntimeStepAssignment assignment,
@@ -18,7 +21,7 @@ internal sealed class DotNetExistingSolutionVerifier
         cancellationToken.ThrowIfCancellationRequested();
 
         var executionRunId = Guid.NewGuid();
-        if (!TryResolveInputs(assignment.LaunchVariables, out var inputs, out var issue))
+        if (!TryResolveInputs(assignment.LaunchVariables, physicalPathPolicyFactory, out var inputs, out var issue))
         {
             return ValueTask.FromResult(Failed(
                 assignment,
@@ -28,7 +31,7 @@ internal sealed class DotNetExistingSolutionVerifier
                 ProcessRuntimeOwnedStepFailures.ContractInvalid));
         }
 
-        var files = new WorkspaceFileService(inputs.ProductRoot);
+        var files = new WorkspaceFileService(inputs.ProductRoot, physicalPathPolicyFactory);
         var receipts = new List<ToolExecutionReceiptRecord>();
         foreach (var path in inputs.RequiredFiles)
         {
@@ -92,7 +95,7 @@ internal sealed class DotNetExistingSolutionVerifier
                 .Where(projectFile =>
                     !normalizedSolution.Contains(
                         NormalizePathText(Path.GetRelativePath(inputs.ProductRoot, projectFile)),
-                        StringComparison.OrdinalIgnoreCase))
+                        inputs.PathComparison))
                 .Select(Path.GetFileName)
                 .ToArray();
             if (missingProjects.Length > 0)
@@ -159,6 +162,7 @@ internal sealed class DotNetExistingSolutionVerifier
 
     internal static bool TryResolveInputs(
         IReadOnlyDictionary<string, string> launchVariables,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         out DotNetExistingSolutionVerificationInputs inputs,
         out string issue)
     {
@@ -179,19 +183,30 @@ internal sealed class DotNetExistingSolutionVerifier
             return false;
         }
 
+        IPhysicalFileSystemPathPolicy productRootPolicy;
         try
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(
+                productRoot,
+                "read-only .NET solution verification ProductRoot");
+            if (!Path.IsPathRooted(productRoot))
+            {
+                issue = "Read-only .NET solution verification requires ProductRoot or ExternalTargetRoot to be an absolute path.";
+                return false;
+            }
+
             productRoot = Path.GetFullPath(productRoot);
+            productRootPolicy = physicalPathPolicyFactory.Create(productRoot);
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException or PhysicalPathValidationException)
         {
             issue = "Read-only .NET solution verification received an invalid product root.";
             return false;
         }
 
-        if (!TryResolveSolutionCandidatePaths(launchVariables, productRoot, out var solutionCandidateFiles, out issue) ||
-            !TryReadProductPathList(launchVariables, "DotNetRequiredProjectFiles", productRoot, requireAtLeastOne: true, out var implementationProjectFiles, out issue) ||
-            !TryReadProductPathList(launchVariables, "DotNetTestProjectFiles", productRoot, requireAtLeastOne: false, out var testProjectFiles, out issue))
+        if (!TryResolveSolutionCandidatePaths(launchVariables, productRootPolicy, out var solutionCandidateFiles, out issue) ||
+            !TryReadProductPathList(launchVariables, "DotNetRequiredProjectFiles", productRootPolicy, requireAtLeastOne: true, out var implementationProjectFiles, out issue) ||
+            !TryReadProductPathList(launchVariables, "DotNetTestProjectFiles", productRootPolicy, requireAtLeastOne: false, out var testProjectFiles, out issue))
         {
             return false;
         }
@@ -201,14 +216,15 @@ internal sealed class DotNetExistingSolutionVerifier
             solutionCandidateFiles,
             implementationProjectFiles,
             testProjectFiles,
-            [.. implementationProjectFiles, .. testProjectFiles]);
+            [.. implementationProjectFiles, .. testProjectFiles],
+            productRootPolicy.PathComparison);
         issue = string.Empty;
         return true;
     }
 
     private static bool TryResolveSolutionCandidatePaths(
         IReadOnlyDictionary<string, string> launchVariables,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         out IReadOnlyList<string> paths,
         out string issue)
     {
@@ -220,7 +236,7 @@ internal sealed class DotNetExistingSolutionVerifier
                 StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .ToList();
         if (!string.IsNullOrWhiteSpace(preferred) &&
-            !candidates.Contains(preferred, StringComparer.OrdinalIgnoreCase))
+            !candidates.Contains(preferred, productRootPolicy.PathComparer))
         {
             candidates.Insert(0, preferred);
         }
@@ -237,21 +253,21 @@ internal sealed class DotNetExistingSolutionVerifier
             if (!TryResolveProductPath(
                     candidate,
                     "DotNetSolutionFileCandidates",
-                    productRoot,
+                    productRootPolicy,
                     out var path,
                     out issue))
             {
                 return false;
             }
 
-            if (!resolved.Contains(path, StringComparer.OrdinalIgnoreCase))
+            if (!resolved.Contains(path, productRootPolicy.PathComparer))
             {
                 resolved.Add(path);
             }
         }
 
         paths = DotNetSolutionContextPathResolver
-            .IncludeSupportedSolutionFormatAlternatives(resolved);
+            .IncludeSupportedSolutionFormatAlternatives(resolved, productRootPolicy.PathComparer);
         issue = string.Empty;
         return true;
     }
@@ -259,7 +275,7 @@ internal sealed class DotNetExistingSolutionVerifier
     private static bool TryReadProductPathList(
         IReadOnlyDictionary<string, string> launchVariables,
         string variableKey,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         bool requireAtLeastOne,
         out IReadOnlyList<string> paths,
         out string issue)
@@ -278,12 +294,12 @@ internal sealed class DotNetExistingSolutionVerifier
             var resolved = new List<string>();
             foreach (var candidate in declared)
             {
-                if (!TryResolveProductPath(candidate, variableKey, productRoot, out var path, out issue))
+                if (!TryResolveProductPath(candidate, variableKey, productRootPolicy, out var path, out issue))
                 {
                     return false;
                 }
 
-                if (!resolved.Contains(path, StringComparer.OrdinalIgnoreCase))
+                if (!resolved.Contains(path, productRootPolicy.PathComparer))
                 {
                     resolved.Add(path);
                 }
@@ -309,20 +325,20 @@ internal sealed class DotNetExistingSolutionVerifier
     private static bool TryResolveProductPath(
         IReadOnlyDictionary<string, string> launchVariables,
         string variableKey,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         out string path,
         out string issue)
-        => TryResolveProductPath(ResolveVariable(launchVariables, variableKey), variableKey, productRoot, out path, out issue);
+        => TryResolveProductPath(ResolveVariable(launchVariables, variableKey), variableKey, productRootPolicy, out path, out issue);
 
     private static bool TryResolveProductPath(
         string value,
         string fieldName,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         out string path,
         out string issue)
     {
         path = string.Empty;
-        if (string.IsNullOrWhiteSpace(value) || !Path.IsPathRooted(value))
+        if (string.IsNullOrWhiteSpace(value))
         {
             issue = $"Read-only .NET solution verification requires authoritative absolute product path '{fieldName}'.";
             return false;
@@ -330,16 +346,24 @@ internal sealed class DotNetExistingSolutionVerifier
 
         try
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(
+                value,
+                $"read-only .NET solution verification {fieldName}");
+            if (!Path.IsPathRooted(value))
+            {
+                issue = $"Read-only .NET solution verification requires authoritative absolute product path '{fieldName}'.";
+                return false;
+            }
+
             path = Path.GetFullPath(value);
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             issue = $"Read-only .NET solution verification received an invalid path for '{fieldName}'.";
             return false;
         }
 
-        var normalizedRoot = EnsureTrailingDirectorySeparator(productRoot);
-        if (!path.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        if (!productRootPolicy.IsWithinRoot(path))
         {
             issue = $"Read-only .NET solution verification requires '{fieldName}' to remain under ProductRoot.";
             return false;
@@ -354,13 +378,8 @@ internal sealed class DotNetExistingSolutionVerifier
             ? value.Trim()
             : fallback;
 
-    private static string EnsureTrailingDirectorySeparator(string path)
-        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
-
     private static string NormalizePathText(string value)
-        => value.Replace('\\', '/').Trim().ToLowerInvariant();
+        => value.Replace('\\', '/').Trim();
 
     private static string BuildManagedStepEvidenceRef(ProcessRuntimeStepAssignment assignment)
         => $"artifacts/process-runs/{assignment.RunId:D}/steps/{assignment.StepKey}.md";
@@ -370,5 +389,6 @@ internal sealed class DotNetExistingSolutionVerifier
         IReadOnlyList<string> SolutionCandidateFiles,
         IReadOnlyList<string> ImplementationProjectFiles,
         IReadOnlyList<string> TestProjectFiles,
-        IReadOnlyList<string> RequiredFiles);
+        IReadOnlyList<string> RequiredFiles,
+        StringComparison PathComparison);
 }

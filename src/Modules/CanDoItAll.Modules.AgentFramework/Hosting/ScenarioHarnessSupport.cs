@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Modules.AgentFramework.Hosting;
 
@@ -180,7 +181,9 @@ internal static class ScenarioHarnessCatalog
     }
 }
 
-internal sealed class ScenarioHarnessService(ICanDoItAllAgentWorkspaceFactory workspaceFactory)
+internal sealed class ScenarioHarnessService(
+    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -321,7 +324,10 @@ internal sealed class ScenarioHarnessService(ICanDoItAllAgentWorkspaceFactory wo
         var responsePreview = string.Empty;
         if (!string.IsNullOrWhiteSpace(responseArtifactPath))
         {
-            var fileService = new WorkspaceFileService(workspaceFactory.GetWorkspaceRoot(), workspaceFactory.GetOrganizationScope());
+            var fileService = new WorkspaceFileService(
+                workspaceFactory.GetWorkspaceRoot(),
+                physicalPathPolicyFactory,
+                workspaceFactory.GetOrganizationScope());
             var readResult = fileService.ReadTextFile(responseArtifactPath, 8000);
             if (readResult.Succeeded)
             {

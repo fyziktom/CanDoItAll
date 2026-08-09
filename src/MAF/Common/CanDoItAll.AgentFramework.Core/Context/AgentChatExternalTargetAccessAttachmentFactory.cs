@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -9,14 +10,26 @@ public static class AgentChatExternalTargetAccessAttachmentPublisher
 {
     public static AgentChatContextAttachmentDraft? CreateReadOnlyDraft(
         IEnumerable<string>? pathsOrAliases,
+        IExternalTargetPathRegistry externalTargetPathRegistry,
         DatabaseProfileGeneration databaseProfileGeneration,
         DateTimeOffset capturedAtUtc,
         DateTimeOffset? freshUntilUtc)
-        => AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
-            pathsOrAliases,
+    {
+        ArgumentNullException.ThrowIfNull(externalTargetPathRegistry);
+        var aliases = pathsOrAliases?
+            .Select(path => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                path,
+                externalTargetPathRegistry))
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Cast<string>()
+            .ToArray() ?? [];
+        return AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
+            aliases,
+            externalTargetPathRegistry.ExportBindings(aliases),
             databaseProfileGeneration,
             capturedAtUtc,
             freshUntilUtc);
+    }
 
     public static AgentChatContextAttachmentDraft ReuseCurrent(
         AgentChatContextAttachmentDraft? previous,
@@ -47,24 +60,39 @@ internal static class AgentChatExternalTargetAccessAttachmentFactory
         DatabaseProfileGeneration databaseProfileGeneration,
         DateTimeOffset capturedAtUtc,
         DateTimeOffset? freshUntilUtc)
+        => CreateReadOnlyDraft(
+            pathsOrAliases,
+            [],
+            databaseProfileGeneration,
+            capturedAtUtc,
+            freshUntilUtc);
+
+    internal static AgentChatContextAttachmentDraft? CreateReadOnlyDraft(
+        IEnumerable<string>? pathsOrAliases,
+        IEnumerable<ExternalTargetRootBinding> externalTargetRootBindings,
+        DatabaseProfileGeneration databaseProfileGeneration,
+        DateTimeOffset capturedAtUtc,
+        DateTimeOffset? freshUntilUtc)
     {
         var aliases = pathsOrAliases?
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(static alias => !string.IsNullOrWhiteSpace(alias))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .Order(StringComparer.Ordinal)
             .ToArray() ?? [];
         if (aliases.Length == 0)
         {
             return null;
         }
 
-        var attachment = new AgentChatExternalTargetAccessAttachment(aliases);
+        var attachment = new AgentChatExternalTargetAccessAttachment(
+            aliases,
+            externalTargetRootBindings);
         var contentFingerprint = new SnapshotContentFingerprint(
             ComputeHash(
                 ContentFingerprintVersion,
-                attachment.ReadOnlyAliases));
+                EnumerateFingerprintValues(attachment)));
         var coverageFingerprint = new SnapshotCoverageFingerprint(
             ComputeCoverageFingerprint());
         var freshnessFingerprint = new SnapshotFreshnessFingerprint(
@@ -106,14 +134,16 @@ internal static class AgentChatExternalTargetAccessAttachmentFactory
             : candidate;
     }
 
-    internal static bool TryGetValidatedReadOnlyAliases(
+    internal static bool TryGetValidatedReadOnlyAccess(
         AgentChatContextAttachmentEnvelope envelope,
         DatabaseProfileGeneration currentDatabaseProfileGeneration,
         DateTimeOffset nowUtc,
-        out IReadOnlyList<string> readOnlyAliases)
+        out IReadOnlyList<string> readOnlyAliases,
+        out IReadOnlyList<ExternalTargetRootBinding> externalTargetRootBindings)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         readOnlyAliases = [];
+        externalTargetRootBindings = [];
         if (!string.Equals(
                 envelope.Kind.Value,
                 AttachmentKindValue,
@@ -130,7 +160,7 @@ internal static class AgentChatExternalTargetAccessAttachmentFactory
         var expectedContentFingerprint = new SnapshotContentFingerprint(
             ComputeHash(
                 ContentFingerprintVersion,
-                attachment.ReadOnlyAliases));
+                EnumerateFingerprintValues(attachment)));
         var expectedCoverageFingerprint = new SnapshotCoverageFingerprint(
             ComputeCoverageFingerprint());
         var expectedFreshnessFingerprint = new SnapshotFreshnessFingerprint(
@@ -146,7 +176,24 @@ internal static class AgentChatExternalTargetAccessAttachmentFactory
         }
 
         readOnlyAliases = attachment.ReadOnlyAliases;
+        externalTargetRootBindings = attachment.ExternalTargetRootBindings;
         return true;
+    }
+
+    private static IEnumerable<string> EnumerateFingerprintValues(
+        AgentChatExternalTargetAccessAttachment attachment)
+    {
+        foreach (var alias in attachment.ReadOnlyAliases)
+        {
+            yield return alias;
+        }
+
+        foreach (var binding in attachment.ExternalTargetRootBindings)
+        {
+            yield return binding.RootId;
+            yield return binding.HostPlatform;
+            yield return binding.ProtectedRootToken;
+        }
     }
 
     private static string ComputeCoverageFingerprint()

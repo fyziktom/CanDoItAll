@@ -4,9 +4,11 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -120,10 +122,14 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
             .ToList();
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory =
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>();
         var workspaceRuntimeServicesFactory = new WorkspaceRuntimeServicesFactory(
             lifecycleFactExtractors,
             serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>()
-                ?? new ManagedCodeMarkItDownDocumentMarkdownConverter());
+                ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+            physicalPathPolicyFactory,
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>());
         // One owned workspace aggregate: the bundle constructs the single
         // process host for this workspace identity, every consumer below uses
         // that same instance, and the workspace service disposes the bundle
@@ -132,7 +138,8 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             workspaceRoot,
             scope,
             workspaceIdentity.DatabaseProfileId,
-            workspaceIdentity.DatabaseProfileGeneration);
+            workspaceIdentity.DatabaseProfileGeneration,
+            rootCaseSensitivity: physicalPathPolicyFactory.Create(workspaceRoot).CaseSensitivity);
         var workspaceBundle = workspaceRuntimeServicesFactory.Create(
             workspaceExecutionScope);
         var processHost = workspaceBundle.ProcessHost;
@@ -185,7 +192,10 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
                 store,
                 workspaceExecutionScope,
                 new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
-                    lifecycleFactExtractors)),
+                    lifecycleFactExtractors,
+                    serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                    serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>())),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>(),
             providerProfileService,
             providerProfileRegistry,
             providerCredentialResolver,
@@ -195,7 +205,11 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             checkpointBridge,
             processHost,
             serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
-            workspacePathResolutionService: new WorkspacePathResolutionService(workspaceRoot, scope),
+            workspacePathResolutionService: new WorkspacePathResolutionService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                scope,
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()),
             providerRuntimeProfileSource: providerRuntimeProfileSource,
             providerSelectionPolicies: serviceProvider.GetServices<IAgentExecutionProviderSelectionPolicy>().ToList(),
             runCriticalityPolicies: serviceProvider.GetServices<IAgentExecutionRunCriticalityPolicy>().ToList(),

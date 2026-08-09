@@ -3,13 +3,72 @@ using CanDoItAll.AgentFramework.Hosting;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel.Streaming;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class AgentFrameworkHostingServiceCollectionTests
 {
+    [Fact]
+    public async Task AddAgentFrameworkCore_scopes_external_target_authority_and_consumers()
+    {
+        var testRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"candoitall-agent-framework-authority-{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(testRoot, "workspace");
+        var externalRoot = Path.Combine(testRoot, "external");
+        Directory.CreateDirectory(workspaceRoot);
+        Directory.CreateDirectory(externalRoot);
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
+            services.AddAgentFrameworkCore(workspaceRoot);
+
+            AssertScoped<IExternalTargetPathRegistry>(services);
+            AssertScoped<IWorkspaceFileService>(services);
+            AssertScoped<IPluginWorkspaceFiles>(services);
+            AssertScoped<IWorkspacePathResolutionService>(services);
+            AssertScoped<IWorkspaceCommandExecutionService>(services);
+            AssertScoped<IWorkspaceImageOperationService>(services);
+            AssertScoped<IWorkspaceArtifactToolService>(services);
+
+            await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            });
+            await using var firstScope = provider.CreateAsyncScope();
+            await using var secondScope = provider.CreateAsyncScope();
+
+            var firstRegistry = firstScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
+            var sameScopeRegistry = firstScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
+            var secondRegistry = secondScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
+
+            Assert.Same(firstRegistry, sameScopeRegistry);
+            Assert.NotSame(firstRegistry, secondRegistry);
+            Assert.True(firstRegistry.TryCreateAlias(externalRoot, out var alias));
+            Assert.Equal(
+                ExternalTargetAliasResolutionKind.Resolved,
+                firstRegistry.TryResolve(alias, out var resolvedRoot, out _));
+            Assert.Equal(Path.GetFullPath(externalRoot), resolvedRoot);
+            Assert.Equal(
+                ExternalTargetAliasResolutionKind.Unbound,
+                secondRegistry.TryResolve(alias, out _, out _));
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot))
+            {
+                Directory.Delete(testRoot, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public async Task AddAgentFrameworkCore_builds_with_scope_validation()
     {
@@ -45,6 +104,12 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
                 Directory.Delete(workspaceRoot, recursive: true);
             }
         }
+    }
+
+    private static void AssertScoped<TService>(IServiceCollection services)
+    {
+        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(TService));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 
     [Fact]

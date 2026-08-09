@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -8,6 +10,8 @@ namespace CanDoItAll.Modules.Workbench;
 internal static class ProjectStructureAgentRootAuthorityWriteGuard
 {
     internal const string FailureCode = "ProjectBlockRootOutsideExecutionScope";
+    private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
+        new PhysicalFileSystemPathPolicyFactory();
 
     public static void EnsureAllowed(
         string? metadataJson,
@@ -40,7 +44,7 @@ internal static class ProjectStructureAgentRootAuthorityWriteGuard
             ? []
             : auditScope.AllowedExternalTargetAliases
                 .Concat(auditScope.ReadOnlyExternalTargetAliases)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(ExternalTargetAliasCodec.EqualityComparer)
                 .ToArray();
         foreach (var (fieldName, root) in EnumerateRoots(projectBlock))
         {
@@ -108,21 +112,12 @@ internal static class ProjectStructureAgentRootAuthorityWriteGuard
 
         try
         {
-            var normalizedWorkspaceRoot = Path.GetFullPath(workspaceRoot)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var normalizedCandidate = Path.IsPathRooted(candidate)
-                ? Path.GetFullPath(candidate)
-                : Path.GetFullPath(candidate, normalizedWorkspaceRoot);
-            return string.Equals(
-                       normalizedCandidate,
-                       normalizedWorkspaceRoot,
-                       StringComparison.OrdinalIgnoreCase) ||
-                   normalizedCandidate.StartsWith(
-                       normalizedWorkspaceRoot + Path.DirectorySeparatorChar,
-                       StringComparison.OrdinalIgnoreCase);
+            var workspacePathPolicy = PhysicalPathPolicyFactory.Create(workspaceRoot);
+            var normalizedCandidate = workspacePathPolicy.ResolveContainedPath(candidate);
+            return workspacePathPolicy.IsWithinRoot(normalizedCandidate);
         }
         catch (Exception exception) when (
-            exception is ArgumentException or NotSupportedException or PathTooLongException)
+            exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             return false;
         }

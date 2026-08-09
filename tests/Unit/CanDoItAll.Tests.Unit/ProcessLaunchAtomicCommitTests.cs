@@ -31,7 +31,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             new GenericProcessStepBriefBuilder(),
             dispatchQueue: null!,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
 
         var result = await service.LaunchAsync(new ProcessLaunchRequest(
             DefinitionKey: "dotnet-runtime-command-writeback",
@@ -117,7 +118,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             new GenericProcessStepBriefBuilder(),
             dispatchQueue: null!,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
 
         var result = await service.LaunchAsync(new ProcessLaunchRequest(
             DefinitionKey: null,
@@ -173,7 +175,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             new GenericProcessStepBriefBuilder(),
             dispatchQueue,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
     }
 
     private static ProcessLaunchRequest NewLaunchRequest(bool execute)

@@ -1,5 +1,8 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Core;
 
 using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
@@ -8,7 +11,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class WorkspaceManagedScriptPlanExecutor(
     IWorkspaceFileService workspaceFiles,
-    IWorkspaceCommandExecutionService workspaceCommands)
+    IWorkspaceCommandExecutionService workspaceCommands,
+    IExternalTargetPathRegistry externalTargetPathRegistry,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
 {
     private const int MaximumReadbackCharacters = 200000;
     private const string PostconditionVerifiedRiskClass = "RuntimeOwned:PostconditionVerified";
@@ -140,7 +145,7 @@ internal sealed class WorkspaceManagedScriptPlanExecutor(
             DeclaredSideEffectMode = scriptRun.Receipt.DeclaredSideEffectMode
         };
 
-    private static bool TryValidateRequest(
+    private bool TryValidateRequest(
         WorkspaceManagedScriptPlanExecutionRequest request,
         out string issue)
     {
@@ -380,17 +385,20 @@ internal sealed class WorkspaceManagedScriptPlanExecutor(
             ", ",
             candidates
                 .Select(candidate => $"'{DescribeCandidatePath(productRoot, candidate)}'")
-                .Distinct(StringComparer.OrdinalIgnoreCase));
+                .Distinct(StringComparer.Ordinal));
 
     private static string DescribeCandidatePath(string productRoot, string candidate)
     {
         var resolvedPath = Path.IsPathRooted(candidate)
             ? Path.GetFullPath(candidate)
             : Path.GetFullPath(Path.Combine(productRoot, candidate));
-        return Path.GetRelativePath(productRoot, resolvedPath).Replace('\\', '/');
+        var relativePath = Path.GetRelativePath(productRoot, resolvedPath);
+        return OperatingSystem.IsWindows()
+            ? relativePath.Replace('\\', '/')
+            : relativePath;
     }
 
-    private static bool TryResolveReadbackAlias(
+    private bool TryResolveReadbackAlias(
         string productRoot,
         string candidate,
         out string alias,
@@ -407,24 +415,32 @@ internal sealed class WorkspaceManagedScriptPlanExecutor(
         string resolvedPath;
         try
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(candidate, "managed script readback path");
             resolvedPath = Path.IsPathRooted(candidate)
                 ? Path.GetFullPath(candidate)
                 : Path.GetFullPath(Path.Combine(productRoot, candidate));
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             issue = "Required readback path is invalid.";
             return false;
         }
 
-        if (!IsPathWithinProductRoot(resolvedPath, productRoot))
+        try
         {
-            issue = "Required readback path escapes ProductRoot.";
+            if (!IsPathWithinProductRoot(resolvedPath, productRoot))
+            {
+                issue = "Required readback path escapes ProductRoot.";
+                return false;
+            }
+        }
+        catch (IOException)
+        {
+            issue = "Required readback path cannot be validated safely inside ProductRoot.";
             return false;
         }
 
-        alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(resolvedPath) ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(alias))
+        if (!externalTargetPathRegistry.TryCreateAlias(resolvedPath, out alias))
         {
             issue = "Required readback path cannot be represented as a managed external target alias.";
             return false;
@@ -433,32 +449,29 @@ internal sealed class WorkspaceManagedScriptPlanExecutor(
         return true;
     }
 
-    private static bool TryNormalizeProductRoot(string productRoot, out string normalizedProductRoot)
+    private bool TryNormalizeProductRoot(string productRoot, out string normalizedProductRoot)
     {
         normalizedProductRoot = string.Empty;
-        if (string.IsNullOrWhiteSpace(productRoot) || !Path.IsPathRooted(productRoot))
+        if (string.IsNullOrWhiteSpace(productRoot))
         {
             return false;
         }
 
         try
         {
-            normalizedProductRoot = Path.GetFullPath(productRoot);
+            IPhysicalFileSystemPathPolicy policy = physicalPathPolicyFactory.Create(productRoot);
+            normalizedProductRoot = policy.RootPath;
             return true;
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             return false;
         }
     }
 
-    private static bool IsPathWithinProductRoot(string path, string productRoot)
-        => path.StartsWith(EnsureTrailingDirectorySeparator(productRoot), StringComparison.OrdinalIgnoreCase);
-
-    private static string EnsureTrailingDirectorySeparator(string path)
-        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
+    private bool IsPathWithinProductRoot(string path, string productRoot)
+        => physicalPathPolicyFactory.Create(productRoot).IsWithinRoot(path);
 
     private static string NormalizeReadbackText(string value)
         => value.Replace('\\', '/').ReplaceLineEndings("\n");

@@ -103,6 +103,10 @@ public sealed class ProjectAssetStorageServiceTests
                     StorageCapability.Download |
                     StorageCapability.InlinePreview
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(
+                storage,
+                StubWorkspacePathResolver.Root,
+                DateTimeOffset.UtcNow);
             var reference = new StorageObjectReference(
                 storage.Id,
                 storage.ProviderKind,
@@ -146,11 +150,13 @@ public sealed class ProjectAssetStorageServiceTests
     }
 
     private static ProjectManagedStoragePhysicalIdentityPolicy CreatePhysicalIdentityPolicy()
-        => new(new FileSystemStoragePathPolicy(new StubWorkspacePathResolver()));
+        => new(
+            new FileSystemStoragePathPolicy(new StubWorkspacePathResolver()),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
     private sealed class StubWorkspacePathResolver : IWorkspacePathResolver
     {
-        private static readonly string Root = Path.Combine(
+        internal static readonly string Root = Path.Combine(
             Path.GetTempPath(),
             "candoitall-project-asset-storage-tests");
 

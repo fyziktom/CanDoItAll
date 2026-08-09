@@ -29,9 +29,15 @@ public sealed class DatabaseProfileControlPlaneService(
     IHostEnvironment hostEnvironment,
     IControlPlanePathResolver controlPlanePathResolver,
     IControlPlaneSecretProtector secretProtector,
+    DurableFileWriter durableFileWriter,
     IClock clock,
-    ILogger<DatabaseProfileControlPlaneService> logger) : IDatabaseProfileService, IDatabaseProfileRuntimeAccessor
+    ILogger<DatabaseProfileControlPlaneService> logger) :
+    IDatabaseProfileService,
+    IDatabaseProfileRuntimeAccessor,
+    IControlPlaneSecretContinuityVerifier
 {
+    private const int CurrentCatalogSchemaVersion = 2;
+    private const string WorkspacePathMigrationDirectoryName = "workspace-path-v2";
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
     private readonly StorageOptions _storageOptions = storageOptions.Value;
     private readonly object _sync = new();
@@ -41,17 +47,45 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         lock (_sync)
         {
-            var currentSelection = ResolveCurrentProfileLocked(logSelection: false);
-            var summaries = ReadCatalogLocked()
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
+            DatabaseProfileCatalogDocument document = ReadCatalogLocked();
+            Guid? activeProfileId = TryResolveExplicitOverrideLocked() is null
+                ? ReadActiveProfileStateLocked().ActiveProfileId
+                : null;
+            var summaries = document
                 .Profiles
                 .Where(IsPersistedRuntimeProfile)
                 .OrderBy(profile => profile.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(profile => CreateSummary(
                     profile,
-                    !currentSelection.Profile.Runtime.LockedByRuntimeOverride && currentSelection.Profile.Id == profile.Id))
+                    activeProfileId == profile.Id))
                 .ToList();
 
             return Task.FromResult<IReadOnlyList<DatabaseProfileSummary>>(summaries);
+        }
+    }
+
+    public Task<ControlPlaneSecretContinuityReport> VerifyAsync(
+        CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
+            int protectedPasswordCount = 0;
+            foreach (DatabaseProfileRecord profile in ReadCatalogLocked().Profiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string? protectedPassword = profile.PostgreSql?.EncryptedPassword;
+                if (string.IsNullOrWhiteSpace(protectedPassword))
+                {
+                    continue;
+                }
+
+                _ = secretProtector.Unprotect(protectedPassword);
+                protectedPasswordCount++;
+            }
+
+            return Task.FromResult(new ControlPlaneSecretContinuityReport(protectedPasswordCount));
         }
     }
 
@@ -59,6 +93,7 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
             if (!id.HasValue)
             {
                 return Task.FromResult(CreateDefaultEditor());
@@ -137,6 +172,7 @@ public sealed class DatabaseProfileControlPlaneService(
 
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
             var document = ReadCatalogLocked();
             var existing = model.Id.HasValue
                 ? document.Profiles.FirstOrDefault(item => item.Id == model.Id.Value)
@@ -167,6 +203,7 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
             var document = ReadCatalogLocked();
             var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
             if (profile is null)
@@ -193,11 +230,22 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
             var document = ReadCatalogLocked();
             var profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
             if (profile is null)
             {
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
+            }
+
+            if (!HostBoundPathPolicy.TryResolve(
+                    profile.Storage.WorkspacePath,
+                    HostPathContext.CaptureCurrent(),
+                    out _,
+                    out string diagnostic))
+            {
+                return Task.FromResult(Result.Failure(Error.Validation(
+                    $"The database profile workspace is unavailable. {diagnostic}")));
             }
 
             profile.Audit.LastUsedUtc = clock.GetUtcNow();
@@ -213,10 +261,126 @@ public sealed class DatabaseProfileControlPlaneService(
         }
     }
 
+    public Task<Result> RebindWorkspaceAsync(
+        Guid id,
+        string workspaceRoot,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
+        lock (_sync)
+        {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
+            DatabaseProfileCatalogDocument document = ReadCatalogLocked();
+            DatabaseProfileRecord? profile = document.Profiles.FirstOrDefault(item => item.Id == id && IsPersistedRuntimeProfile(item));
+            if (profile is null)
+            {
+                return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
+            }
+
+            string resolvedRoot = ControlPlanePathDefaults.ResolveConfiguredPath(
+                hostEnvironment.ContentRootPath,
+                workspaceRoot);
+            profile.Storage.WorkspacePath = HostBoundPathPolicy.RebindCurrent(resolvedRoot, clock.GetUtcNow());
+            profile.Storage.LegacyWorkspaceRoot = null;
+            profile.Runtime.Fingerprint = BuildFingerprint(profile);
+            WriteCatalogLocked(document);
+            ClearSelectionLogLocked();
+            return Task.FromResult(Result.Success());
+        }
+    }
+
+    public Task<Result> RollbackWorkspacePathMigrationAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
+            string migrationRoot = ResolveWorkspacePathMigrationRoot();
+            string backupPath = Path.Combine(migrationRoot, "catalog.v1.backup.json");
+            if (!File.Exists(backupPath))
+            {
+                return Task.FromResult(Result.Failure(Error.Validation(
+                    "No database-profile workspace-path migration backup is available.")));
+            }
+
+            string backupJson;
+            try
+            {
+                backupJson = MigrationBackupIntegrity.ReadVerified(backupPath);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Task.FromResult(Result.Failure(Error.Failure(exception.Message)));
+            }
+            DatabaseProfileCatalogDocument backup = DeserializeCatalog(backupJson);
+            if (backup.SchemaVersion != 1)
+            {
+                return Task.FromResult(Result.Failure(Error.Failure(
+                    "The database-profile migration backup has an unexpected schema version.")));
+            }
+
+            string commitPath = Path.Combine(migrationRoot, "commit.json");
+            if (File.Exists(commitPath))
+            {
+                WorkspacePathMigrationManifest? commit;
+                try
+                {
+                    commit = JsonSerializer.Deserialize<WorkspacePathMigrationManifest>(
+                        File.ReadAllText(commitPath),
+                        SerializerOptions);
+                }
+                catch (JsonException)
+                {
+                    return Task.FromResult(Result.Failure(Error.Failure(
+                        "The database-profile migration commit marker is invalid.")));
+                }
+
+                string backupSha256 = ComputeSha256(backupJson);
+                if (commit is null ||
+                    commit.FormatVersion != 1 ||
+                    !string.Equals(commit.State, "PointerCommitted", StringComparison.Ordinal) ||
+                    !string.Equals(commit.SourceSha256, backupSha256, StringComparison.Ordinal))
+                {
+                    return Task.FromResult(Result.Failure(Error.Failure(
+                        "The database-profile migration backup checksum is invalid.")));
+                }
+            }
+
+            string currentCatalogPath = controlPlanePathResolver.ResolveCatalogFilePath();
+            string preRollbackPath = Path.Combine(migrationRoot, "catalog.v2.pre-rollback.json");
+            if (!File.Exists(preRollbackPath) && File.Exists(currentCatalogPath))
+            {
+                durableFileWriter.WriteText(
+                    controlPlanePathResolver.ResolveRootPath(),
+                    preRollbackPath,
+                    File.ReadAllText(currentCatalogPath),
+                    CreateNewPrivateWriteOptions());
+            }
+
+            durableFileWriter.WriteText(
+                controlPlanePathResolver.ResolveRootPath(),
+                currentCatalogPath,
+                backupJson,
+                DurableFileWriteOptions.Private);
+            durableFileWriter.WriteText(
+                controlPlanePathResolver.ResolveRootPath(),
+                Path.Combine(migrationRoot, "rollback.commit.json"),
+                JsonSerializer.Serialize(new
+                {
+                    formatVersion = 1,
+                    state = "RolledBack",
+                    rolledBackAtUtc = clock.GetUtcNow()
+                }, SerializerOptions),
+                DurableFileWriteOptions.Private);
+            ClearSelectionLogLocked();
+            return Task.FromResult(Result.Success());
+        }
+    }
+
     public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(CancellationToken cancellationToken = default)
     {
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination(cancellationToken);
             var resolvedProfile = ResolveCurrentProfileLocked(logSelection: false);
             return Task.FromResult(new DatabaseSelectionStateModel
             {
@@ -229,6 +393,7 @@ public sealed class DatabaseProfileControlPlaneService(
                 IsRuntimeLocked = resolvedProfile.Profile.Runtime.LockedByRuntimeOverride,
                 Fingerprint = resolvedProfile.Profile.Runtime.Fingerprint,
                 WorkspaceRoot = resolvedProfile.Profile.Storage.WorkspaceRoot,
+                WorkspacePathState = ResolveWorkspacePathState(resolvedProfile.Profile.Storage.WorkspacePath),
                 Descriptor = BuildDescriptor(resolvedProfile.Profile)
             });
         }
@@ -238,6 +403,7 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination();
             return ResolveCurrentProfileLocked(logSelection: true);
         }
     }
@@ -246,6 +412,7 @@ public sealed class DatabaseProfileControlPlaneService(
     {
         lock (_sync)
         {
+            using IDisposable coordination = AcquireCoordination();
             var explicitOverride = TryResolveExplicitOverrideLocked();
             if (explicitOverride is not null && explicitOverride.Profile.Id == profileId)
             {
@@ -550,7 +717,9 @@ public sealed class DatabaseProfileControlPlaneService(
 
         if (!string.IsNullOrWhiteSpace(existing?.Storage.WorkspaceRoot))
         {
-            return Path.GetFullPath(existing.Storage.WorkspaceRoot);
+            return HostBoundPathPolicy.ResolveRequired(
+                existing.Storage.WorkspacePath,
+                "database profile workspace");
         }
 
         return ResolveDefaultWorkspaceRoot();
@@ -558,6 +727,7 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private ResolvedDatabaseProfile BuildResolvedProfile(DatabaseProfileRecord profile, DatabaseProfileResolutionSource resolutionSource)
     {
+        HostBoundPathPolicy.ResolveRequired(profile.Storage.WorkspacePath, "database profile workspace");
         var connectionString = profile.ProviderKind switch
         {
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile),
@@ -600,7 +770,10 @@ public sealed class DatabaseProfileControlPlaneService(
             isActive,
             profile.Runtime.LockedByRuntimeOverride,
             profile.Audit.CreatedUtc,
-            profile.Audit.LastUsedUtc);
+            profile.Audit.LastUsedUtc)
+        {
+            WorkspacePathState = ResolveWorkspacePathState(profile.Storage.WorkspacePath)
+        };
     }
 
     private DatabaseProfileEditorModel CreateEditor(DatabaseProfileRecord profile)
@@ -612,6 +785,7 @@ public sealed class DatabaseProfileControlPlaneService(
             ProviderKind = profile.ProviderKind,
             SourceKind = profile.SourceKind,
             WorkspaceRoot = profile.Storage.WorkspaceRoot,
+            WorkspacePathState = ResolveWorkspacePathState(profile.Storage.WorkspacePath),
             PostgresHost = profile.PostgreSql?.Host ?? "localhost",
             PostgresPort = profile.PostgreSql?.Port ?? 5432,
             PostgresDatabaseName = profile.PostgreSql?.DatabaseName ?? "candoitall",
@@ -648,7 +822,9 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private string ResolveDefaultWorkspaceRoot()
     {
-        return ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, _storageOptions.WorkspaceRoot);
+        return string.IsNullOrWhiteSpace(_storageOptions.WorkspaceRoot)
+            ? ApplicationPurposeRootPolicy.ResolveCurrent().WorkspaceRoot
+            : ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, _storageOptions.WorkspaceRoot);
     }
 
     private string ResolveRuntimeOverrideWorkspaceRoot(
@@ -790,13 +966,29 @@ public sealed class DatabaseProfileControlPlaneService(
     private DatabaseProfileCatalogDocument ReadCatalogLocked()
     {
         LegacyDatabaseProfileCatalogQuarantine.QuarantineIfNeeded(
+            controlPlanePathResolver.ResolveRootPath(),
             controlPlanePathResolver.ResolveCatalogFilePath(),
             controlPlanePathResolver.ResolveActiveProfileStateFilePath(),
+            durableFileWriter,
             logger);
 
-        return ReadDocument(
-            controlPlanePathResolver.ResolveCatalogFilePath(),
+        string catalogPath = controlPlanePathResolver.ResolveCatalogFilePath();
+        DatabaseProfileCatalogDocument document = ReadDocument(
+            catalogPath,
             static () => new DatabaseProfileCatalogDocument());
+        if (document.SchemaVersion > CurrentCatalogSchemaVersion)
+        {
+            throw new InvalidOperationException(
+                $"Unsupported database profile catalog schema version '{document.SchemaVersion}'.");
+        }
+
+        if (document.SchemaVersion < CurrentCatalogSchemaVersion)
+        {
+            return MigrateCatalogWorkspacePathsLocked(catalogPath, document);
+        }
+
+        EnsureWorkspacePathMigrationCommitMarker(document);
+        return document;
     }
 
     private DatabaseActiveProfileState ReadActiveProfileStateLocked()
@@ -808,7 +1000,176 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private void WriteCatalogLocked(DatabaseProfileCatalogDocument document)
     {
+        document.SchemaVersion = CurrentCatalogSchemaVersion;
         WriteDocument(controlPlanePathResolver.ResolveCatalogFilePath(), document);
+    }
+
+    private DatabaseProfileCatalogDocument MigrateCatalogWorkspacePathsLocked(
+        string catalogPath,
+        DatabaseProfileCatalogDocument document)
+    {
+        string sourceJson = File.Exists(catalogPath)
+            ? File.ReadAllText(catalogPath)
+            : JsonSerializer.Serialize(document, SerializerOptions);
+        string migrationRoot = ResolveWorkspacePathMigrationRoot();
+        durableFileWriter.EnsureDirectory(
+            controlPlanePathResolver.ResolveRootPath(),
+            migrationRoot,
+            requirePrivateUnixMode: true);
+        string backupPath = Path.Combine(migrationRoot, "catalog.v1.backup.json");
+        string backupJson = MigrationBackupIntegrity.CreateOrVerify(
+            durableFileWriter,
+            controlPlanePathResolver.ResolveRootPath(),
+            backupPath,
+            sourceJson);
+
+        Dictionary<Guid, string?> protectedPasswords = document.Profiles.ToDictionary(
+            profile => profile.Id,
+            profile => profile.PostgreSql?.EncryptedPassword);
+        HostPathContext currentHost = HostPathContext.CaptureCurrent();
+        foreach (DatabaseProfileRecord profile in document.Profiles)
+        {
+            if (profile.Storage.WorkspacePath is not null)
+            {
+                continue;
+            }
+
+            string? legacyRoot = profile.Storage.LegacyWorkspaceRoot;
+            if (string.IsNullOrWhiteSpace(legacyRoot))
+            {
+                continue;
+            }
+
+            string migrationCandidate = PhysicalPathSyntaxClassifier.Classify(legacyRoot) == PhysicalPathSyntax.Relative
+                ? ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, legacyRoot)
+                : legacyRoot;
+            profile.Storage.WorkspacePath = HostBoundPathPolicy.ImportLegacy(
+                migrationCandidate,
+                currentHost);
+            profile.Storage.LegacyWorkspaceRoot = null;
+        }
+
+        document.SchemaVersion = CurrentCatalogSchemaVersion;
+        string targetJson = JsonSerializer.Serialize(document, SerializerOptions);
+        DatabaseProfileCatalogDocument verified = DeserializeCatalog(targetJson);
+        foreach ((Guid profileId, string? encryptedPassword) in protectedPasswords)
+        {
+            string? verifiedPassword = verified.Profiles
+                .Single(profile => profile.Id == profileId)
+                .PostgreSql?
+                .EncryptedPassword;
+            if (!string.Equals(encryptedPassword, verifiedPassword, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Database-profile workspace migration did not preserve protected connection credentials.");
+            }
+        }
+
+        string stagedPath = Path.Combine(migrationRoot, "catalog.v2.staged.json");
+        durableFileWriter.WriteText(
+            controlPlanePathResolver.ResolveRootPath(),
+            stagedPath,
+            targetJson,
+            DurableFileWriteOptions.Private);
+        durableFileWriter.WriteText(
+            controlPlanePathResolver.ResolveRootPath(),
+            catalogPath,
+            targetJson,
+            DurableFileWriteOptions.Private);
+        WriteWorkspacePathMigrationCommitMarker(backupJson, targetJson, document.Profiles.Count);
+        return verified;
+    }
+
+    private void EnsureWorkspacePathMigrationCommitMarker(DatabaseProfileCatalogDocument document)
+    {
+        string migrationRoot = ResolveWorkspacePathMigrationRoot();
+        string backupPath = Path.Combine(migrationRoot, "catalog.v1.backup.json");
+        string commitPath = Path.Combine(migrationRoot, "commit.json");
+        if (!File.Exists(backupPath) || File.Exists(commitPath))
+        {
+            return;
+        }
+
+        string stagedPath = Path.Combine(migrationRoot, "catalog.v2.staged.json");
+        if (!File.Exists(stagedPath))
+        {
+            throw new InvalidOperationException(
+                "The database-profile workspace-path migration is missing its staged catalog.");
+        }
+
+        string targetJson = JsonSerializer.Serialize(document, SerializerOptions);
+        if (!string.Equals(
+                ComputeSha256(File.ReadAllText(stagedPath)),
+                ComputeSha256(targetJson),
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "The database-profile workspace-path migration stage does not match the committed catalog.");
+        }
+
+        string backupJson = MigrationBackupIntegrity.ReadVerified(backupPath);
+        WriteWorkspacePathMigrationCommitMarker(backupJson, targetJson, document.Profiles.Count);
+    }
+
+    private void WriteWorkspacePathMigrationCommitMarker(string sourceJson, string targetJson, int profileCount)
+    {
+        string migrationRoot = ResolveWorkspacePathMigrationRoot();
+        durableFileWriter.EnsureDirectory(
+            controlPlanePathResolver.ResolveRootPath(),
+            migrationRoot,
+            requirePrivateUnixMode: true);
+        string manifestJson = JsonSerializer.Serialize(new WorkspacePathMigrationManifest
+        {
+            SourceSha256 = ComputeSha256(sourceJson),
+            TargetSha256 = ComputeSha256(targetJson),
+            ProfileCount = profileCount,
+            CommittedAtUtc = clock.GetUtcNow()
+        }, SerializerOptions);
+        durableFileWriter.WriteText(
+            controlPlanePathResolver.ResolveRootPath(),
+            Path.Combine(migrationRoot, "commit.json"),
+            manifestJson,
+            DurableFileWriteOptions.Private);
+    }
+
+    private static string ComputeSha256(string value)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+
+    private string ResolveWorkspacePathMigrationRoot()
+        => Path.Combine(
+            controlPlanePathResolver.ResolveDatabaseProfilesRootPath(),
+            "migrations",
+            WorkspacePathMigrationDirectoryName);
+
+    private static DurableFileWriteOptions CreateNewPrivateWriteOptions()
+        => new()
+        {
+            CommitMode = DurableFileCommitMode.CreateNew,
+            RequirePrivateUnixMode = true
+        };
+
+    private static DatabaseProfileCatalogDocument DeserializeCatalog(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<DatabaseProfileCatalogDocument>(json, SerializerOptions)
+                ?? throw new InvalidOperationException("The database-profile catalog is empty.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException("The database-profile catalog migration payload is invalid.", exception);
+        }
+    }
+
+    private static HostBoundPathState ResolveWorkspacePathState(HostBoundPathRecord? record)
+    {
+        return HostBoundPathPolicy.TryResolve(
+            record,
+            HostPathContext.CaptureCurrent(),
+            out _,
+            out _)
+            ? HostBoundPathState.Active
+            : HostBoundPathState.NeedsRebind;
     }
 
     private void WriteActiveProfileStateLocked(DatabaseActiveProfileState state)
@@ -839,17 +1200,22 @@ public sealed class DatabaseProfileControlPlaneService(
         }
     }
 
-    private static void WriteDocument<T>(string path, T document)
+    private void WriteDocument<T>(string path, T document)
     {
-        var directory = Path.GetDirectoryName(path)
-            ?? throw new InvalidOperationException($"Unable to resolve a directory for '{path}'.");
-        Directory.CreateDirectory(directory);
-
-        var tempPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
         var json = JsonSerializer.Serialize(document, SerializerOptions);
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, path, true);
+        durableFileWriter.WriteText(
+            controlPlanePathResolver.ResolveRootPath(),
+            path,
+            json,
+            DurableFileWriteOptions.Private);
     }
+
+    private IDisposable AcquireCoordination(CancellationToken cancellationToken = default)
+        => ControlPlaneFileCoordination.Acquire(
+            durableFileWriter,
+            controlPlanePathResolver.ResolveRootPath(),
+            ControlPlaneCoordinationScope.DatabaseProfiles,
+            cancellationToken);
 
     private static void UpsertProfile(DatabaseProfileCatalogDocument document, DatabaseProfileRecord profile)
     {
@@ -881,8 +1247,23 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private sealed class DatabaseProfileCatalogDocument
     {
-        public int SchemaVersion { get; set; } = 1;
+        public int SchemaVersion { get; set; } = CurrentCatalogSchemaVersion;
 
         public List<DatabaseProfileRecord> Profiles { get; set; } = [];
+    }
+
+    private sealed class WorkspacePathMigrationManifest
+    {
+        public int FormatVersion { get; set; } = 1;
+
+        public string State { get; set; } = "PointerCommitted";
+
+        public string SourceSha256 { get; set; } = string.Empty;
+
+        public string TargetSha256 { get; set; } = string.Empty;
+
+        public int ProfileCount { get; set; }
+
+        public DateTimeOffset CommittedAtUtc { get; set; }
     }
 }

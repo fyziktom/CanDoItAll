@@ -1,50 +1,50 @@
 requirement_id,priority,owner_subbundle,status
-PREP-001,P0,A00,Planned
-PREP-002,P0,A00,Planned
-PREP-003,P0,A00,Planned
-PREP-004,P1,A00,Planned
-PATH-001,P0,A01,Planned
-PATH-002,P0,A01,Planned
-PATH-003,P0,A01,Planned
-PATH-004,P1,A01,Planned
-PATH-005,P0,A01,Planned
-PATH-006,P0,A01,Planned
-PATH-007,P1,A01,Planned
-PATH-008,P0,A01,Planned
-PATH-009,P1,A01,Planned
-PATH-010,P1,A01,Planned
-FS-001,P0,A02,Planned
-FS-002,P1,A02,Planned
-FS-003,P0,A02,Planned
-FS-004,P0,A02,Planned
-FS-005,P0,A02,Planned
-FS-006,P1,A02,Planned
-FS-007,P0,A02,Planned
-FS-008,P1,A02,Planned
-FS-009,P1,A02,Planned
-FS-010,P1,A02,Planned
-STO-001,P0,A03,Planned
-STO-002,P1,A03,Planned
-STO-003,P0,A03,Planned
-STO-004,P0,A03,Planned
-STO-005,P0,A03,Planned
-STO-006,P1,A03,Planned
-STO-007,P0,A03,Planned
-STO-008,P1,A03,Planned
-STO-009,P0,A03,Planned
-SEC-001,P0,A04,Planned
-SEC-002,P0,A04,Planned
-SEC-003,P0,A04,Planned
-SEC-004,P0,A04,Planned
-SEC-005,P0,A04,Planned
-SEC-006,P0,A04,Planned
-SEC-007,P0,A04,Planned
-SEC-008,P0,A04,Planned
-SEC-009,P0,A04,Planned
-SEC-010,P0,A04,Planned
-SEC-011,P0,A04,Planned
-SEC-012,P1,A04,Planned
-SEC-013,P0,A04,Planned
+PREP-001,P0,A00,Satisfied
+PREP-002,P0,A00,Satisfied
+PREP-003,P0,A00,Satisfied
+PREP-004,P1,A00,Satisfied
+PATH-001,P0,A01,Satisfied
+PATH-002,P0,A01,Satisfied
+PATH-003,P0,A01,Satisfied
+PATH-004,P1,A01,Satisfied
+PATH-005,P0,A01,Satisfied
+PATH-006,P0,A01,Satisfied
+PATH-007,P1,A01,Satisfied
+PATH-008,P0,A01,Satisfied
+PATH-009,P1,A01,Satisfied
+PATH-010,P1,A01,Satisfied
+FS-001,P0,A02,Verified
+FS-002,P1,A02,Verified
+FS-003,P0,A02,Verified
+FS-004,P0,A02,Verified
+FS-005,P0,A02,Verified
+FS-006,P1,A02,Verified
+FS-007,P0,A02,Verified
+FS-008,P1,A02,Verified
+FS-009,P1,A02,Verified
+FS-010,P1,A02,Verified
+STO-001,P0,A03,Satisfied — Gate C2a GO
+STO-002,P1,A03,Satisfied — Gate C2a GO
+STO-003,P0,A03,Satisfied — Gate C2a GO
+STO-004,P0,A03,Satisfied — Gate C2a GO
+STO-005,P0,A03,Satisfied — Gate C2a GO
+STO-006,P1,A03,Satisfied — Gate C2a GO
+STO-007,P0,A03,Satisfied — Gate C2a GO
+STO-008,P1,A03,Satisfied — Gate C2a GO
+STO-009,P0,A03,Satisfied — Gate C2a GO
+SEC-001,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-002,P0,A04,Blocked — actual macOS validation required for Gate C2
+SEC-003,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-004,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-005,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-006,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-007,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-008,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-009,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-010,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-011,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-012,P1,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
+SEC-013,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
 PLAT-001,P0,A05,Planned
 PLAT-002,P0,A05,Planned
 PLAT-003,P1,A05,Planned

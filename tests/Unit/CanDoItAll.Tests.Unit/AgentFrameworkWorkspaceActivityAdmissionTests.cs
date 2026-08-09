@@ -1,6 +1,7 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tests.Support;
@@ -106,7 +107,8 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
             serviceIdentity,
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
-            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance,
+            new ExternalTargetPathRegistryFactory());
         var agentId = Guid.NewGuid();
         var operationId = AgentExecutionOperationId.New();
         using var operation = Assert.IsType<AgentExecutionActivityAdmitted>(
@@ -158,7 +160,8 @@ public sealed class AgentFrameworkWorkspaceActivityAdmissionTests
             workspaceIdentity,
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
-            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance);
+            SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance,
+            new ExternalTargetPathRegistryFactory());
     }
 
     private static AgentExecutionActivityCoordinator CreateCoordinator()

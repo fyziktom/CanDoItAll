@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit;
@@ -48,7 +49,7 @@ public sealed class WorkspacePathResolverGuardTests
     }
 
     [Fact]
-    public void ResolveWorkspacePath_uses_platform_path_case_semantics()
+    public void ResolveWorkspacePath_uses_detected_root_case_semantics()
     {
         var parentRoot = TestFileSystem.CreateTemporaryRoot("workspace-path-case");
 
@@ -56,11 +57,18 @@ public sealed class WorkspacePathResolverGuardTests
         {
             string workspaceRoot = Path.Combine(parentRoot, "workspace");
             string caseDifferentSibling = Path.Combine(parentRoot, "Workspace", "escape.txt");
+            Directory.CreateDirectory(workspaceRoot);
             var sut = CreateSut(workspaceRoot);
+            PhysicalFileSystemCaseSensitivity caseSensitivity = TestWorkspaceServices
+                .PhysicalPathPolicyFactory
+                .Create(workspaceRoot)
+                .CaseSensitivity;
 
             WorkspacePathAccessResult result = sut.ResolveWorkspacePath(caseDifferentSibling);
 
-            Assert.Equal(OperatingSystem.IsWindows(), result.IsSuccess);
+            Assert.Equal(
+                caseSensitivity == PhysicalFileSystemCaseSensitivity.Insensitive,
+                result.IsSuccess);
         }
         finally
         {
@@ -69,7 +77,9 @@ public sealed class WorkspacePathResolverGuardTests
     }
 
     private static IWorkspacePathAccessGuard CreateSut(string workspaceRoot)
-        => new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot));
+        => new WorkspacePathAccessGuard(
+            new TestWorkspacePathResolver(workspaceRoot),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
     private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
     {

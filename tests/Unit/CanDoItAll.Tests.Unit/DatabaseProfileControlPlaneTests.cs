@@ -1,12 +1,16 @@
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
 
 namespace CanDoItAll.Tests.Unit;
@@ -51,6 +55,132 @@ public sealed class ControlPlaneDatabaseProfileCatalogTests
         var catalogJson = await File.ReadAllTextAsync(catalogPath);
         Assert.Contains("Local postgres", catalogJson);
         Assert.DoesNotContain("super-secret", catalogJson);
+        Assert.Contains("\"schemaVersion\": 2", catalogJson, StringComparison.Ordinal);
+        Assert.Contains("\"workspacePath\"", catalogJson, StringComparison.Ordinal);
+        Assert.Contains("\"hostBindingId\"", catalogJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"workspaceRoot\"", catalogJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Legacy_catalog_migration_preserves_protected_password_and_supports_rollback()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-catalog-path-migration");
+        string workspaceRoot = Path.Combine(testEnvironment.RootPath, "profiles", "migration-workspace");
+        Directory.CreateDirectory(workspaceRoot);
+
+        await using (var firstProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: true))
+        {
+            IDatabaseProfileService service = firstProvider.GetRequiredService<IDatabaseProfileService>();
+            Result<Guid> save = await service.SaveAsync(new DatabaseProfileEditorModel
+            {
+                DisplayName = "Migration profile",
+                ProviderKind = DatabaseProviderKind.PostgreSql,
+                SourceKind = DatabaseProfileSourceKind.PostgresConnection,
+                PostgresHost = "localhost",
+                PostgresDatabaseName = "migration_profile",
+                PostgresUsername = "postgres",
+                PostgresPassword = "migration-secret",
+                WorkspaceRoot = workspaceRoot
+            });
+            Assert.True(save.IsSuccess);
+        }
+
+        string catalogPath = Path.Combine(
+            testEnvironment.ControlPlaneRootPath,
+            "database-profiles",
+            "catalog.json");
+        JsonObject legacyCatalog = JsonNode.Parse(await File.ReadAllTextAsync(catalogPath))!.AsObject();
+        JsonObject legacyProfile = legacyCatalog["profiles"]!.AsArray()[0]!.AsObject();
+        JsonObject storage = legacyProfile["storage"]!.AsObject();
+        string protectedPassword = legacyProfile["postgreSql"]!["encryptedPassword"]!.GetValue<string>();
+        storage["workspaceRoot"] = storage["workspacePath"]!["path"]!.GetValue<string>();
+        storage.Remove("workspacePath");
+        legacyCatalog["schemaVersion"] = 1;
+        await File.WriteAllTextAsync(catalogPath, legacyCatalog.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        await using var secondProvider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: true);
+        IDatabaseProfileService migratedService = secondProvider.GetRequiredService<IDatabaseProfileService>();
+        DatabaseProfileSummary summary = Assert.Single(await migratedService.ListAsync());
+        JsonObject migratedCatalog = JsonNode.Parse(await File.ReadAllTextAsync(catalogPath))!.AsObject();
+        JsonObject migratedProfile = migratedCatalog["profiles"]!.AsArray()[0]!.AsObject();
+        string migrationRoot = Path.Combine(
+            testEnvironment.ControlPlaneRootPath,
+            "database-profiles",
+            "migrations",
+            "workspace-path-v2");
+
+        Assert.True(summary.RequiresWorkspaceRebind);
+        Assert.Equal(2, migratedCatalog["schemaVersion"]!.GetValue<int>());
+        Assert.Equal(protectedPassword, migratedProfile["postgreSql"]!["encryptedPassword"]!.GetValue<string>());
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "catalog.v1.backup.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "catalog.v1.backup.json.integrity.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "catalog.v2.staged.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "commit.json")));
+
+        File.Delete(Path.Combine(migrationRoot, "commit.json"));
+        Assert.Single(await migratedService.ListAsync());
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "commit.json")));
+
+        File.Delete(Path.Combine(migrationRoot, "commit.json"));
+        Result rollback = await migratedService.RollbackWorkspacePathMigrationAsync();
+        JsonObject rolledBackCatalog = JsonNode.Parse(await File.ReadAllTextAsync(catalogPath))!.AsObject();
+        JsonObject rolledBackProfile = rolledBackCatalog["profiles"]!.AsArray()[0]!.AsObject();
+
+        Assert.True(rollback.IsSuccess);
+        Assert.Equal(1, rolledBackCatalog["schemaVersion"]!.GetValue<int>());
+        Assert.Equal(protectedPassword, rolledBackProfile["postgreSql"]!["encryptedPassword"]!.GetValue<string>());
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "catalog.v2.pre-rollback.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "rollback.commit.json")));
+
+        File.Delete(Path.Combine(migrationRoot, "commit.json"));
+        await File.AppendAllTextAsync(
+            Path.Combine(migrationRoot, "catalog.v1.backup.json"),
+            Environment.NewLine);
+        Result rejectedRollback = await migratedService.RollbackWorkspacePathMigrationAsync();
+        Assert.True(rejectedRollback.IsFailure);
+        Assert.Contains("checksum", rejectedRollback.Errors[0].Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(workspaceRoot, rejectedRollback.Errors[0].Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Foreign_legacy_workspace_is_unresolved_until_explicit_rebind()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-catalog-foreign-rebind");
+        Guid profileId = Guid.NewGuid();
+        string foreignWorkspaceRoot = OperatingSystem.IsWindows()
+            ? "/foreign-host/workspace"
+            : @"C:\foreign-host\workspace";
+        await LegacyCatalogTestData.WriteCatalogAsync(
+            testEnvironment,
+            [LegacyCatalogTestData.CreatePostgreSqlProfileJson(
+                profileId,
+                "Foreign workspace",
+                foreignWorkspaceRoot)],
+            profileId);
+
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: true);
+        IDatabaseProfileService service = provider.GetRequiredService<IDatabaseProfileService>();
+
+        DatabaseProfileSummary unresolved = Assert.Single(await service.ListAsync());
+        Result activation = await service.ActivateAsync(profileId);
+
+        Assert.True(unresolved.RequiresWorkspaceRebind);
+        Assert.True(activation.IsFailure);
+        Assert.Contains("rebind", activation.Errors[0].Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(foreignWorkspaceRoot, activation.Errors[0].Message, StringComparison.Ordinal);
+
+        string reboundRoot = Path.Combine(testEnvironment.RootPath, "rebound-workspace");
+        Directory.CreateDirectory(reboundRoot);
+        Assert.True((await service.RebindWorkspaceAsync(profileId, reboundRoot)).IsSuccess);
+        Assert.True((await service.ActivateAsync(profileId)).IsSuccess);
+        DatabaseProfileSummary rebound = Assert.Single(await service.ListAsync());
+        Assert.False(rebound.RequiresWorkspaceRebind);
     }
 }
 
@@ -177,7 +307,9 @@ public sealed class DatabaseProfileOverrideTests
 
         var firstProfile = firstProvider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
         var secondProfile = secondProvider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
-        var expectedRootPrefix = Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace", "runtime-overrides") +
+        var expectedRootPrefix = Path.Combine(
+            ApplicationPurposeRootPolicy.ResolveCurrent().WorkspaceRoot,
+            "runtime-overrides") +
                                  Path.DirectorySeparatorChar;
 
         Assert.Equal(DatabaseProfileResolutionSource.ExplicitOverride, firstProfile.ResolutionSource);
@@ -221,13 +353,15 @@ public sealed class DatabaseProfileOverrideTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
             {
-                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath
+                ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+                ["DataProtection:KeyProtection:Provider"] = "UnprotectedDevelopment"
             })
             .Build();
 
         var resolution = DatabaseProfileStartupConnectionResolver.TryResolve(
             configuration,
-            testEnvironment.RootPath);
+            testEnvironment.RootPath,
+            Environments.Development);
 
         Assert.NotNull(resolution);
         Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, resolution!.ResolutionSource);
@@ -317,11 +451,15 @@ public sealed class LegacyDatabaseProfileCatalogQuarantineTests
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-mixed-quarantine");
         var retiredProfileId = Guid.NewGuid();
         var postgresProfileId = Guid.NewGuid();
+        string workspaceRoot = CreateLegacyWorkspaceRoot(testEnvironment, "retained-postgres");
         await LegacyCatalogTestData.WriteCatalogAsync(
             testEnvironment,
             [
                 LegacyCatalogTestData.CreateRetiredProfileJson(retiredProfileId, "Retired local profile"),
-                LegacyCatalogTestData.CreatePostgreSqlProfileJson(postgresProfileId, "Retained PostgreSQL")
+                LegacyCatalogTestData.CreatePostgreSqlProfileJson(
+                    postgresProfileId,
+                    "Retained PostgreSQL",
+                    workspaceRoot)
             ],
             retiredProfileId);
 
@@ -330,6 +468,10 @@ public sealed class LegacyDatabaseProfileCatalogQuarantineTests
             includeDatabaseOverride: false);
 
         var service = provider.GetRequiredService<IDatabaseProfileService>();
+        DatabaseProfileSummary unresolved = Assert.Single(await service.ListAsync());
+        Assert.True(unresolved.RequiresWorkspaceRebind);
+        Result rebind = await service.RebindWorkspaceAsync(postgresProfileId, workspaceRoot);
+        Assert.True(rebind.IsSuccess);
         var resolved = provider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
         var summaries = await service.ListAsync();
         var catalogJson = await File.ReadAllTextAsync(LegacyCatalogTestData.CatalogPath(testEnvironment));
@@ -349,17 +491,26 @@ public sealed class LegacyDatabaseProfileCatalogQuarantineTests
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-postgres-null-sqlite");
         var postgresProfileId = Guid.NewGuid();
+        string workspaceRoot = CreateLegacyWorkspaceRoot(testEnvironment, "retained-postgres-null-sqlite");
         await LegacyCatalogTestData.WriteCatalogAsync(
             testEnvironment,
-            [LegacyCatalogTestData.CreatePostgreSqlProfileJson(postgresProfileId, "Retained PostgreSQL", includeNullSqliteMetadata: true)],
+            [LegacyCatalogTestData.CreatePostgreSqlProfileJson(
+                postgresProfileId,
+                "Retained PostgreSQL",
+                workspaceRoot,
+                includeNullSqliteMetadata: true)],
             postgresProfileId);
 
         await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
             testEnvironment,
             includeDatabaseOverride: false);
 
-        var resolved = provider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
         var service = provider.GetRequiredService<IDatabaseProfileService>();
+        DatabaseProfileSummary unresolved = Assert.Single(await service.ListAsync());
+        Assert.True(unresolved.RequiresWorkspaceRebind);
+        Result rebind = await service.RebindWorkspaceAsync(postgresProfileId, workspaceRoot);
+        Assert.True(rebind.IsSuccess);
+        var resolved = provider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
         var summaries = await service.ListAsync();
 
         Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, resolved.ResolutionSource);
@@ -389,6 +540,15 @@ public sealed class LegacyDatabaseProfileCatalogQuarantineTests
         var summary = Assert.Single(summaries);
         Assert.Equal(saveResult.Value, summary.Id);
         Assert.False(Directory.Exists(LegacyCatalogTestData.QuarantinePath(testEnvironment)));
+    }
+
+    private static string CreateLegacyWorkspaceRoot(
+        CanDoItAllTestEnvironment testEnvironment,
+        string name)
+    {
+        string path = Path.Combine(testEnvironment.RootPath, name);
+        Directory.CreateDirectory(path);
+        return path;
     }
 }
 
@@ -465,6 +625,7 @@ internal static class LegacyCatalogTestData
     public static string CreatePostgreSqlProfileJson(
         Guid profileId,
         string displayName,
+        string workspaceRoot,
         bool includeNullSqliteMetadata = false)
     {
         var nullSqliteMetadata = includeNullSqliteMetadata
@@ -491,7 +652,7 @@ internal static class LegacyCatalogTestData
               },
               "storage": {
                 "mode": "ExternalWorkspaceRoot",
-                "workspaceRoot": "C:\\postgres-workspace"
+                "workspaceRoot": {{JsonSerializer.Serialize(workspaceRoot)}}
               },
               "runtime": {
                 "fingerprint": "postgres:localhost:5432:candoitall:postgres",
@@ -575,7 +736,8 @@ internal static class DatabaseProfileControlPlaneTestHost
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",
             ["DevelopmentManager:TuningModeEnabled"] = "true",
             ["DevelopmentManager:ReviewBeforeSend"] = "true",
-            ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407"
+            ["DevelopmentManager:ManagerBaseUrl"] = "http://127.0.0.1:6407",
+            ["DataProtection:KeyProtection:Provider"] = "UnprotectedDevelopment"
         };
 
         if (includeDatabaseOverride)

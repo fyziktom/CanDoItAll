@@ -5,6 +5,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProfileTestSupportTests
 {
     [Fact]
+    [Trait("RequiresHostDocker", "true")]
     public async Task PostgreSql_profiles_create_isolated_database_and_storage_roots()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-profile-tests");

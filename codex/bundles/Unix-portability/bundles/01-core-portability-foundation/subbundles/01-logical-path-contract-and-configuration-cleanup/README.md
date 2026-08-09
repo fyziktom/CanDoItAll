@@ -58,7 +58,7 @@ Current Infrastructure, MAF workspace, and MAF runtime path policies disagree; s
 
 ## Entry gate
 
-- Status before execution: `Blocked by Gate C0`
+- Status before execution: `Eligible — Gate C0 GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -71,7 +71,7 @@ Current Infrastructure, MAF workspace, and MAF runtime path policies disagree; s
 
 ## Status
 
-- `Blocked by Gate C0`
+- `Completed — Gate C1a GO`
 
 ## Handoff
 

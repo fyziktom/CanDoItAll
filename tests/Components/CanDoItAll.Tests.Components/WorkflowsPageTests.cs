@@ -13,6 +13,7 @@ using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -1543,12 +1544,13 @@ public sealed class WorkflowsPageTests
         var store = new InMemoryWorkflowCatalogStore();
         var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
         var templatePack = new WorkflowTemplatePackLoader().Load();
+        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         var seeder = new WorkflowExampleCatalogSeedService(
             catalogService,
             catalogService,
             catalogService,
-            new WorkspaceFileService(workspaceRoot),
-            new WorkspacePathResolutionService(workspaceRoot),
+            new WorkspaceFileService(workspaceRoot, physicalPathPolicyFactory),
+            new WorkspacePathResolutionService(workspaceRoot, physicalPathPolicyFactory),
             new ClosedXmlSpreadsheetDocumentService(),
             Options.Create(new WorkflowExampleCatalogSeedOptions
             {
@@ -1650,12 +1652,13 @@ public sealed class WorkflowsPageTests
                 RequireDurableProductionRuns: false,
                 ExposeAzureFunctionsStatusEndpoint: false,
                 ExposeAzureFunctionsMcpTool: false)));
+        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         var seeder = new WorkflowExampleCatalogSeedService(
             catalogService,
             catalogService,
             catalogService,
-            new WorkspaceFileService(workspaceRoot),
-            new WorkspacePathResolutionService(workspaceRoot),
+            new WorkspaceFileService(workspaceRoot, physicalPathPolicyFactory),
+            new WorkspacePathResolutionService(workspaceRoot, physicalPathPolicyFactory),
             new ClosedXmlSpreadsheetDocumentService(),
             Options.Create(new WorkflowExampleCatalogSeedOptions
             {

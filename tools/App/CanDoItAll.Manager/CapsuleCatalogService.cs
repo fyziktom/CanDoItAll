@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.Infrastructure;
 
 namespace CanDoItAll.Manager;
 
@@ -52,7 +53,10 @@ tests: unit:CapsuleCatalogServiceTests
 inputs: source files under workspace root
 outputs: capsule json and markdown artifacts
 */
-public sealed class CapsuleCatalogService(ILogger<CapsuleCatalogService> logger, IConfiguration configuration) : ICapsuleCatalogService
+public sealed class CapsuleCatalogService(
+    ILogger<CapsuleCatalogService> logger,
+    IConfiguration configuration,
+    DurableFileWriter durableFileWriter) : ICapsuleCatalogService
 {
     private static readonly string[] RequiredFields = ["kind", "name", "summary", "owns", "deps", "risks", "tests"];
 
@@ -69,7 +73,10 @@ public sealed class CapsuleCatalogService(ILogger<CapsuleCatalogService> logger,
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}.artifacts{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(
+                path => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, path)),
+                StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
             .ToList();
 
         var records = new List<CapsuleRecord>();
@@ -80,7 +87,7 @@ public sealed class CapsuleCatalogService(ILogger<CapsuleCatalogService> logger,
         foreach (var file in files)
         {
             var text = await File.ReadAllTextAsync(file, cancellationToken);
-            var relativePath = Path.GetRelativePath(workspaceRoot, file).Replace('\\', '/');
+            var relativePath = NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, file));
             if (text.Contains("codex-capsule-skip", StringComparison.Ordinal))
             {
                 skipped++;
@@ -136,6 +143,11 @@ public sealed class CapsuleCatalogService(ILogger<CapsuleCatalogService> logger,
         await WriteArtifactsAsync(workspaceRoot, records, coverage, cancellationToken);
     }
 
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
+
     public IReadOnlyList<CapsuleRecord> GetIndex()
     {
         lock (_gate)
@@ -172,23 +184,52 @@ public sealed class CapsuleCatalogService(ILogger<CapsuleCatalogService> logger,
     {
         var artifactsRoot = Path.Combine(workspaceRoot, _options.CapsuleArtifactsRoot);
         var symbolsRoot = Path.Combine(artifactsRoot, "symbols");
-        Directory.CreateDirectory(artifactsRoot);
-        Directory.CreateDirectory(symbolsRoot);
+        await using IAsyncDisposable coordination = await durableFileWriter.AcquireCoordinationAsync(
+            workspaceRoot,
+            Path.Combine(artifactsRoot, ".capsule-catalog.candoitall.lock"),
+            TimeSpan.FromSeconds(15),
+            requirePrivateUnixMode: false,
+            cancellationToken);
+        durableFileWriter.EnsureDirectory(workspaceRoot, artifactsRoot, requirePrivateUnixMode: false);
+        durableFileWriter.EnsureDirectory(workspaceRoot, symbolsRoot, requirePrivateUnixMode: false);
 
-        foreach (var existingFile in Directory.GetFiles(symbolsRoot, "*.json", SearchOption.TopDirectoryOnly))
+        var desiredSymbolFiles = records
+            .Select(record => Path.Combine(symbolsRoot, $"{record.SymbolId}.json"))
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var existingFile in Directory.GetFiles(symbolsRoot, "*.json", SearchOption.TopDirectoryOnly)
+                     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                     .ThenBy(path => path, StringComparer.Ordinal))
         {
-            File.Delete(existingFile);
+            if (!desiredSymbolFiles.Contains(existingFile))
+            {
+                await durableFileWriter.DeleteAsync(
+                    workspaceRoot,
+                    existingFile,
+                    cancellationToken: cancellationToken);
+            }
         }
 
-        await File.WriteAllTextAsync(
+        foreach (var record in records.OrderBy(record => record.SymbolId, StringComparer.Ordinal))
+        {
+            await durableFileWriter.WriteTextAsync(
+                workspaceRoot,
+                Path.Combine(symbolsRoot, $"{record.SymbolId}.json"),
+                JsonSerializer.Serialize(record, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }),
+                cancellationToken: cancellationToken);
+        }
+
+        await durableFileWriter.WriteTextAsync(
+            workspaceRoot,
             Path.Combine(artifactsRoot, "index.json"),
             JsonSerializer.Serialize(records, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }),
-            cancellationToken);
-        await File.WriteAllTextAsync(
+            cancellationToken: cancellationToken);
+        await durableFileWriter.WriteTextAsync(
+            workspaceRoot,
             Path.Combine(artifactsRoot, "coverage.json"),
             JsonSerializer.Serialize(coverage, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }),
-            cancellationToken);
-        await File.WriteAllTextAsync(
+            cancellationToken: cancellationToken);
+        await durableFileWriter.WriteTextAsync(
+            workspaceRoot,
             Path.Combine(artifactsRoot, "index.md"),
             string.Join(
                 Environment.NewLine,
@@ -199,15 +240,7 @@ public sealed class CapsuleCatalogService(ILogger<CapsuleCatalogService> logger,
                     string.Empty,
                     .. records.Select(record => $"- `{record.SymbolId}` {record.Kind} {record.Name} ({record.RelativePath})")
                 ]),
-            cancellationToken);
-
-        foreach (var record in records)
-        {
-            await File.WriteAllTextAsync(
-                Path.Combine(symbolsRoot, $"{record.SymbolId}.json"),
-                JsonSerializer.Serialize(record, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }),
-                cancellationToken);
-        }
+            cancellationToken: cancellationToken);
     }
 
     private static CapsuleParseOutcome ParseCapsule(string text, string relativePath)

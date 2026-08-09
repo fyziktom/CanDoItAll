@@ -9,6 +9,8 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -25,7 +27,8 @@ public sealed class ProcessLaunchApplicationService(
     IProcessStepBriefBuilder stepBriefBuilder,
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
-    ILaunchVariableTemplateResolver launchVariableTemplateResolver)
+    ILaunchVariableTemplateResolver launchVariableTemplateResolver,
+    IExternalTargetPathRegistry externalTargetPathRegistry)
 {
     private const string ProcessRunNodePrefix = "process-run:";
     private const string ProcessRunIdVariableName = "ProcessRunId";
@@ -1040,7 +1043,7 @@ public sealed class ProcessLaunchApplicationService(
     private static string NormalizeOptional(string? value, string defaultValue)
         => string.IsNullOrWhiteSpace(value) ? defaultValue : value.Trim();
 
-    private static IReadOnlyDictionary<string, string> NormalizeLaunchVariables(
+    private IReadOnlyDictionary<string, string> NormalizeLaunchVariables(
         IReadOnlyDictionary<string, string> variables)
     {
         if (variables.Count == 0)
@@ -1063,7 +1066,7 @@ public sealed class ProcessLaunchApplicationService(
         return normalized;
     }
 
-    private static void NormalizeProductRootSynonyms(IDictionary<string, string> variables)
+    private void NormalizeProductRootSynonyms(IDictionary<string, string> variables)
     {
         var productRoot = FirstNonEmpty(
             TryGetNonEmptyLaunchVariable(variables, ProductRootVariableName),
@@ -1095,42 +1098,36 @@ public sealed class ProcessLaunchApplicationService(
         SetCanonicalLaunchVariableIfMissing(variables, OutputRootAliasVariableName, externalTargetAlias);
         SetCanonicalLaunchVariableIfMissing(variables, ProductRootAliasVariableName, externalTargetAlias);
         SetCanonicalLaunchVariableIfMissing(variables, WorkspaceAliasVariableName, externalTargetAlias);
+        var bindings = externalTargetPathRegistry.ExportBindings([externalTargetAlias]);
+        if (bindings.Count > 0)
+        {
+            variables[ProcessRuntimeLaunchVariables.ExternalTargetRootBindings] =
+                JsonSerializer.Serialize(bindings);
+        }
     }
 
-    private static string NormalizeExternalTargetAlias(string? value)
+    private string NormalizeExternalTargetAlias(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        var alias = ExternalTargetAliasCodec.NormalizeVersionedAlias(value);
+        if (!string.IsNullOrWhiteSpace(alias))
         {
-            return string.Empty;
+            return alias;
         }
 
-        var normalized = value.Trim().Replace('\\', '/').TrimEnd('/', '.', ',', ';', ')', ']');
-        if (normalized.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        if (ExternalTargetAliasCodec.TryNormalizeLegacyAlias(value, out var legacyAlias))
         {
-            return normalized;
+            return externalTargetPathRegistry.MigrateLegacyAliasForWrite(legacyAlias);
         }
 
-        if (normalized.Length < 4 ||
-            normalized[1] != ':' ||
-            normalized[2] != '/' ||
-            !char.IsAsciiLetter(normalized[0]))
-        {
-            return string.Empty;
-        }
-
-        var suffix = normalized[3..].Trim('/');
-        if (string.IsNullOrWhiteSpace(suffix))
-        {
-            return string.Empty;
-        }
-
-        return $"external-target/{char.ToUpperInvariant(normalized[0])}/{suffix}";
+        return !string.IsNullOrWhiteSpace(value) &&
+               externalTargetPathRegistry.TryCreateAlias(value.Trim(), out alias)
+            ? alias
+            : string.Empty;
     }
 
     private static bool IsExternalTargetAlias(string? value)
     {
-        return !string.IsNullOrWhiteSpace(value) &&
-               value.Trim().Replace('\\', '/').StartsWith("external-target/", StringComparison.OrdinalIgnoreCase);
+        return ExternalTargetAliasCodec.IsAnyAlias(value);
     }
 
     private static IReadOnlyDictionary<string, string> EnrichLaunchScopeVariables(

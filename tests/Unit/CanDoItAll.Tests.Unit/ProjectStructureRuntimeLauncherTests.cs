@@ -497,9 +497,13 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
     private ProjectStructureRuntimeLauncher CreateSut()
         => new(
-            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(workspaceRoot)),
+            new WorkspacePathAccessGuard(
+                new TestWorkspacePathResolver(workspaceRoot),
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
             NullLogger<ProjectStructureRuntimeLauncher>.Instance,
-            new ExistingProjectTargetResolver());
+            new ExistingProjectTargetResolver(),
+            new ExternalTargetPathRegistryFactory(),
+            new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)));
 
     private string WorkspacePath(string relativePath)
         => Path.Combine(workspaceRoot, relativePath);

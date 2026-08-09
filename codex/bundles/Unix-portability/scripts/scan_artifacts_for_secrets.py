@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from collections import Counter
@@ -23,6 +24,7 @@ TEXT_SUFFIXES = {
     ".ps1",
     ".sh",
     ".txt",
+    ".trx",
     ".xml",
     ".yaml",
     ".yml",
@@ -60,8 +62,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--max-file-bytes", type=int, default=5 * 1024 * 1024)
+    parser.add_argument(
+        "--sentinel-file",
+        action="append",
+        default=[],
+        type=Path,
+        help="Private UTF-8 file containing one exact sentinel per line. Repeat for multiple inputs.",
+    )
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument("--include-placeholders", action="store_true")
+    parser.add_argument(
+        "--exclude-directory",
+        action="append",
+        default=[],
+        help="Directory name to exclude recursively. Repeat for multiple generated source snapshots.",
+    )
     return parser.parse_args()
 
 
@@ -86,19 +101,38 @@ def is_placeholder(value: str) -> bool:
     return any(marker in normalized for marker in PLACEHOLDER_MARKERS)
 
 
-def redact_line(line: str) -> str:
-    stripped = line.strip()
-    stripped = re.sub(
-        r"(?i)((?:password|pwd|api[_-]?key|access[_-]?token|client[_-]?secret|private[_-]?key)\s*[:=]\s*)[^,;\s]+",
-        r"\1<redacted>",
-        stripped,
-    )
-    stripped = re.sub(r"(?i)((?:Password|Pwd)=)[^;\s]+", r"\1<redacted>", stripped)
-    stripped = re.sub(r"\bgh[opusr]_[A-Za-z0-9]{20,}\b", "ghx_<redacted>", stripped)
-    stripped = re.sub(r"\bsk-[A-Za-z0-9_-]{16,}\b", "sk-<redacted>", stripped)
-    if len(stripped) > 300:
-        stripped = stripped[:297] + "..."
-    return stripped
+def load_sentinels(paths: list[Path]) -> list[str]:
+    values: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        try:
+            lines = path.expanduser().resolve().read_text(encoding="utf-8").splitlines()
+        except (UnicodeDecodeError, OSError) as exception:
+            raise ValueError("A private sentinel input could not be read as UTF-8.") from exception
+        for line in lines:
+            if not line or line in seen:
+                continue
+            seen.add(line)
+            values.append(line)
+    if paths and not values:
+        raise ValueError("Private sentinel inputs must contain at least one non-empty line.")
+    return values
+
+
+def iter_candidates(root: Path, excluded_directories: set[str]):
+    for current_root, directory_names, file_names in os.walk(
+        root,
+        topdown=True,
+        onerror=lambda _: None,
+    ):
+        directory_names[:] = sorted(
+            name
+            for name in directory_names
+            if name not in IGNORED_DIRECTORIES and name not in excluded_directories
+        )
+        current_path = Path(current_root)
+        for file_name in sorted(file_names):
+            yield current_path / file_name
 
 
 def main() -> int:
@@ -108,9 +142,21 @@ def main() -> int:
         print(f"ERROR: scan root does not exist: {root}", file=sys.stderr)
         return 2
 
+    excluded_directories = set(args.exclude_directory)
+    output = args.output.expanduser().resolve() if args.output else None
+    sentinel_paths = {path.expanduser().resolve() for path in args.sentinel_file}
+    try:
+        sentinels = load_sentinels(args.sentinel_file)
+    except ValueError as exception:
+        print(f"ERROR: {exception}", file=sys.stderr)
+        return 2
     findings: list[dict] = []
     scanned_files = 0
-    for path in sorted(root.rglob("*")):
+    for path in iter_candidates(root, excluded_directories):
+        if output is not None and path.resolve() == output:
+            continue
+        if path.resolve() in sentinel_paths:
+            continue
         if not should_scan(path, root, args.max_file_bytes):
             continue
         scanned_files += 1
@@ -133,23 +179,42 @@ def main() -> int:
                         "line": line_number,
                         "rule": rule_name,
                         "fingerprint": fingerprint(value),
-                        "redacted_excerpt": redact_line(line),
                     }
                 )
+            for sentinel in sentinels:
+                start = 0
+                while True:
+                    match_index = line.find(sentinel, start)
+                    if match_index < 0:
+                        break
+                    findings.append(
+                        {
+                            "id": f"SECRET-{len(findings) + 1:05d}",
+                            "path": path.relative_to(root).as_posix(),
+                            "line": line_number,
+                            "rule": "seeded-sentinel",
+                            "fingerprint": fingerprint(sentinel),
+                        }
+                    )
+                    start = match_index + len(sentinel)
 
     counts = Counter(item["rule"] for item in findings)
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "root": root.as_posix(),
+        "excluded_directories": sorted(excluded_directories),
+        "max_file_bytes": args.max_file_bytes,
         "scanned_files": scanned_files,
         "finding_count": len(findings),
+        "sentinel_input_file_count": len(sentinel_paths),
+        "sentinel_value_count": len(sentinels),
+        "sentinel_finding_count": counts.get("seeded-sentinel", 0),
         "by_rule": dict(sorted(counts.items())),
-        "value_disclosure": "Secret values are never stored in this report; fingerprints are truncated SHA-256 identifiers.",
+        "value_disclosure": "Findings contain metadata and truncated SHA-256 fingerprints only; source excerpts and secret values are never stored.",
         "findings": findings,
     }
-    if args.output:
-        output = args.output.expanduser().resolve()
+    if output is not None:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
         print(f"Report: {output}")

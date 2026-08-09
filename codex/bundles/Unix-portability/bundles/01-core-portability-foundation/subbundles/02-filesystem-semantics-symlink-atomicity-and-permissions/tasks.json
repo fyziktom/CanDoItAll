@@ -5,7 +5,7 @@
   "title": "Filesystem semantics, symlink safety, atomicity, and permissions",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by A01",
+  "status": "Completed — Gate C1 GO",
   "depends_on": [
     "A01"
   ],
@@ -48,7 +48,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -73,7 +73,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -98,7 +98,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -123,7 +123,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -148,7 +148,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -173,7 +173,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -198,7 +198,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -223,7 +223,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -248,7 +248,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -273,7 +273,7 @@
         "FS-009",
         "FS-010"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

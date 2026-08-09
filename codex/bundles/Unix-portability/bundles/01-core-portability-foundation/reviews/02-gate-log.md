@@ -2,10 +2,10 @@
 
 | Gate | Commit | Date | Reviewers | Evidence | Result | Conditions |
 |---|---|---|---|---|---|---|
-| C0 | | | | | Not started | |
-| C1a | | | | | Not started | |
-| C1 | | | | | Not started | |
-| C2a | | | | | Not started | |
-| C2 | | | | | Not started | |
+| C0 | `a2856070e7303de077088fc7f2f7e96a5bcf0e70` | 2026-08-08 | Primary executor + architecture/subbundle validation | A00 rebase/baseline reports; reviewed scan; path/persistence inventories; CodeAnalytics snapshot `snap-20260808192349-53bec4ab`; zero-secret scan | GO | A01 only. macOS remains unavailable and is mandatory before C4. |
+| C1a | `a2856070e7303de077088fc7f2f7e96a5bcf0e70` + reviewed working tree | 2026-08-08 | Primary executor + independent reviewer (Dalton) | `reviews/07-a01-evidence-report.md`; `reviews/08-a01-independent-review.md`; Windows/Linux contract, owned, broad, Hosting/lifetime, Components, build, scan, graph, and redaction artifacts | GO | A02 only. Actual macOS remains mandatory before C4; 14 classified Linux later-scope/harness failures remain owned work. |
+| C1 | `a2856070e7303de077088fc7f2f7e96a5bcf0e70` + reviewed working tree | 2026-08-09 | Primary executor + independent reviewer (Dalton) | `reviews/09-a02-evidence-report.md`; `reviews/10-a02-independent-review.md`; Windows 5,442/5,442 full Unit and 60/60 atomic slice; Linux 60/60 atomic slice; Windows/Linux zero-warning solution builds; graph, static audit, redaction, and portable validation | GO | A03 only. Actual macOS remains mandatory before C4; managed link-swap residual and existing intra-project cycles remain recorded inputs. |
+| C2a | `a2856070e7303de077088fc7f2f7e96a5bcf0e70` + reviewed working tree | 2026-08-09 | Primary executor + independent reviewer (Dalton) | `reviews/11-a03-evidence-report.md`; `reviews/12-a03-independent-review.md`; Windows 5,499/5,499 full Unit, 275/275 focus, and 3/3 migration integration; Linux 273/273 focus and 1/1 portable migration integration; both-host zero-warning Web builds; snapshot `snap-20260809161615-8b90a6ae`; 63-file zero-finding redaction scan | GO | A04 only. Actual macOS remains mandatory before C4; managed link-swap residual, B00/B02 Workbench metadata ownership, and existing intra-project cycles remain recorded inputs. |
+| C2 | `a2856070e7303de077088fc7f2f7e96a5bcf0e70` + A04 remediation working tree | 2026-08-09 | Primary executor + independent reviewer (Dalton) | `reviews/13-a04-evidence-report.md`; initial review plus bounded re-review in `reviews/14-a04-independent-review.md`; Windows 5,524/5,524 full Unit, 94/94 focused, 4/4 integration; Linux 94/94 focused, 4/4 portable integration, 1/1 actual Secret Service; both-host successful Web builds; snapshot `snap-20260809191620-b07bdd50`; metadata-only scan with 4/4 sentinels loaded and 0 sentinel findings | NO-GO | A05 blocked. Rollback and scanner findings are independently closed; genuine macOS Keychain execution is the sole remaining blocker. |
 | C3a | | | | | Not started | |
 | C4 | | | | | Not started | |

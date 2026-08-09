@@ -422,7 +422,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
     private static IReadOnlyList<WorkflowArtifactRecord> MergeArtifacts(
         params IEnumerable<WorkflowArtifactRecord>[] artifactGroups)
     {
-        var artifactsByPath = new Dictionary<string, WorkflowArtifactRecord>(StringComparer.OrdinalIgnoreCase);
+        var artifactsByPath = new Dictionary<string, WorkflowArtifactRecord>(StringComparer.Ordinal);
         foreach (var artifact in artifactGroups.SelectMany(group => group))
         {
             if (!artifactsByPath.ContainsKey(artifact.StoragePath))
@@ -433,6 +433,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
 
         return artifactsByPath.Values
             .OrderBy(artifact => artifact.CreatedAtUtc)
+            .ThenBy(artifact => artifact.StoragePath, StringComparer.Ordinal)
             .ToArray();
     }
 

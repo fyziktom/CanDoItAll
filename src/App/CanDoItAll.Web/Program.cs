@@ -301,12 +301,7 @@ if (app.Environment.IsDevelopment())
             return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
         }
 
-        var fileName = string.Concat(seedLabel.Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            fileName = "seed";
-        }
+        string fileName = PortablePhysicalFileNamePolicy.Encode(seedLabel).PhysicalName;
 
         var relativePath = managedArtifactStore.GetRelativePath("profile-seeds", $"{fileName}.txt");
         var content = $"seed:{seedLabel}";

@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -241,6 +242,7 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             new UnusedProviderCredentialService(),
             new UnusedProviderAgentFactory(),
             new UnusedRuntimeCapabilityComposer(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             services.GetRequiredService<ILoggerFactory>(),
             new AgentToolInvocationPolicyPipeline(new DefaultAgentToolInvocationPolicy()));
         var agentDefinition = CreateToolEnabledAgent();
@@ -256,7 +258,9 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             executionGovernance: null,
             scriptPolicyInspectionService: new MafScriptPolicyInspectionService(
                 temp.Path,
-                WorkspaceScopeDescriptor.Sandbox));
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory().Create([])));
         var session = await instrumentedAgent.CreateSessionAsync();
 
         var response = await instrumentedAgent.RunAsync(
@@ -317,6 +321,7 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             new UnusedProviderCredentialService(),
             new UnusedProviderAgentFactory(),
             new UnusedRuntimeCapabilityComposer(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             services.GetRequiredService<ILoggerFactory>(),
             new AgentToolInvocationPolicyPipeline(new DefaultAgentToolInvocationPolicy()));
         var instrumentedAgent = runtimeFactory.CreateInstrumentedAgent(
@@ -331,7 +336,9 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             executionGovernance: null,
             scriptPolicyInspectionService: new MafScriptPolicyInspectionService(
                 temp.Path,
-                WorkspaceScopeDescriptor.Sandbox));
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory().Create([])));
         var session = await instrumentedAgent.CreateSessionAsync();
 
         var response = await instrumentedAgent.RunAsync(
@@ -976,8 +983,10 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
         => new(
             spreadsheets ?? new ClosedXmlSpreadsheetDocumentService(),
             workspaceRoot,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
-            access);
+            access,
+            TestExternalTargetPathRegistry.Create());
 
     private static AgentDefinition CreateToolEnabledAgent()
         => new(

@@ -87,7 +87,7 @@ public sealed class SecretScanningTests
     private static IEnumerable<string> ScanRepositoryFiles()
     {
         var root = FindRepositoryRoot();
-        foreach (var filePath in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (var filePath in EnumerateRepositoryFiles(root))
         {
             if (ShouldSkipPath(root, filePath) || !IsTextFile(filePath))
             {
@@ -112,6 +112,46 @@ public sealed class SecretScanningTests
             if (matchingPattern is not null)
             {
                 yield return $"{Path.GetRelativePath(root, filePath)} ({matchingPattern.Provider})";
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRepositoryFiles(string root)
+    {
+        var pendingDirectories = new Stack<string>();
+        pendingDirectories.Push(root);
+        while (pendingDirectories.TryPop(out string? directory))
+        {
+            IEnumerable<string> files;
+            IEnumerable<string> childDirectories;
+            try
+            {
+                files = Directory.EnumerateFiles(directory).ToArray();
+                childDirectories = Directory.EnumerateDirectories(directory).ToArray();
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (string file in files)
+            {
+                yield return file;
+            }
+
+            foreach (string childDirectory in childDirectories)
+            {
+                if (ShouldSkipPath(root, childDirectory) ||
+                    new DirectoryInfo(childDirectory).Attributes.HasFlag(FileAttributes.ReparsePoint))
+                {
+                    continue;
+                }
+
+                pendingDirectories.Push(childDirectory);
             }
         }
     }

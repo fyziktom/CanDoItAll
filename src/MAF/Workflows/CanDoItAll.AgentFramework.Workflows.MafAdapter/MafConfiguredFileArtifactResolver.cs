@@ -10,7 +10,7 @@ internal static class MafConfiguredFileArtifactResolver
         WorkflowRunId runId,
         DateTimeOffset createdAtUtc)
     {
-        var artifactsByPath = new Dictionary<string, WorkflowArtifactRecord>(StringComparer.OrdinalIgnoreCase);
+        var artifactsByPath = new Dictionary<string, WorkflowArtifactRecord>(StringComparer.Ordinal);
         foreach (var node in definition.Graph.Nodes)
         {
             var artifact = TryCreateConfiguredFileArtifact(node, runId, createdAtUtc);

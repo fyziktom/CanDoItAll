@@ -6,7 +6,7 @@ Deliver a stable Windows/Linux/macOS headless core by fixing path and filesystem
 
 ## Status
 
-- `Prepared`
+- `Blocked — A04 Gate C2 NO-GO pending genuine macOS Keychain evidence`
 
 ## Source anchor
 
@@ -15,9 +15,9 @@ Deliver a stable Windows/Linux/macOS headless core by fixing path and filesystem
 - Prepared commit: `62ea8ee0cc42c1c06da934d126a5c18f8237a89f`
 - SDK: `.NET 10.0.302`
 
-## First eligible work
+## Active work
 
-`A00 — Anchor, baseline, and current portability inventory`
+`A04 — Secrets, vault drivers, Data Protection, and migration` is implemented and validated on Windows and Linux, including actual DPAPI and Linux Secret Service execution. Independent Gate C2 review and bounded re-review closed the rollback and scanner findings. C2 remains NO-GO solely because genuine macOS Keychain execution is unavailable and required by SEC-002/A04-T11. `A05` remains blocked.
 
 ## Runtime boundary
 

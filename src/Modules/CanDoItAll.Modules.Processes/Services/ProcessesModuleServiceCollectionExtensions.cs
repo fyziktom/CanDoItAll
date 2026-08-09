@@ -1,6 +1,7 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
@@ -22,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -31,7 +33,11 @@ public static class ProcessesModuleServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
+        services.AddDataProtection();
+        services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
+        services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
             ProcessesExecutionAuthorityProvider>());
@@ -61,10 +67,13 @@ public static class ProcessesModuleServiceCollectionExtensions
                 .GetService<IWorkspacePathResolver>();
             var databaseProfileRuntimeAccessor = serviceProvider
                 .GetService<IDatabaseProfileRuntimeAccessor>();
+            var physicalPathPolicyFactory = serviceProvider
+                .GetService<IPhysicalFileSystemPathPolicyFactory>();
             return executionRunStore is not null &&
                    cleanupScopeFactory is not null &&
                    workspacePathResolver is not null &&
-                   databaseProfileRuntimeAccessor is not null
+                   databaseProfileRuntimeAccessor is not null &&
+                   physicalPathPolicyFactory is not null
                 ? new WorkspaceExecutionRunProcessLeaseCleaner(
                     executionRunStore,
                     new WorkspaceExecutionScope(
@@ -73,7 +82,10 @@ public static class ProcessesModuleServiceCollectionExtensions
                             databaseProfileRuntimeAccessor
                                 .ResolveCurrentProfile()
                                 .Profile.Id
-                                .ToString("N"))),
+                                .ToString("N")),
+                        rootCaseSensitivity: physicalPathPolicyFactory
+                            .Create(workspacePathResolver.ResolveWorkspaceRoot())
+                            .CaseSensitivity),
                     cleanupScopeFactory)
                 : UnavailableWorkspaceExecutionRunProcessLeaseCleaner.Instance;
         });

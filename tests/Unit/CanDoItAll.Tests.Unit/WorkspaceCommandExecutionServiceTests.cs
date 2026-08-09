@@ -13,7 +13,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -51,7 +51,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "src"));
         await File.WriteAllTextAsync(Path.Combine(workspaceRoot, "src", "Feature.cs"), "namespace Sample;");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -94,7 +94,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -125,7 +125,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             "private",
             "command-provider-secret.py");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -152,7 +152,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var sentinel = new IOException(
             @"Provider I/O failed while reading C:\private\command-provider-secret.txt");
         var processHost = new FakeWorkspaceProcessHost(onExecute: _ => throw sentinel);
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -176,7 +176,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var scriptPath = Path.Combine(workspaceRoot, "scripts", "Import-PlaywrightEvidence.ps1");
         await File.WriteAllTextAsync(scriptPath, "Write-Output 'ok'");
 
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
 
         try
         {
@@ -222,7 +222,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Apply-Update.ps1"), "Write-Output 'ok'");
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
         var run = CreateProcessStepExecutionRun("{}");
 
         try
@@ -273,7 +273,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(deliveryDirectory);
         await File.WriteAllTextAsync(Path.Combine(deliveryDirectory, "SampleWeb.sln"), string.Empty);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -309,7 +309,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var scriptPath = Path.Combine(scriptDirectory, "Launch-WebApp.ps1");
         await File.WriteAllTextAsync(scriptPath, "Write-Output 'ok'");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -347,7 +347,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         await File.WriteAllTextAsync(solutionPath, string.Empty);
         await File.WriteAllTextAsync(appProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var productAlias = ToExternalTargetAlias(productRoot);
 
         try
@@ -385,7 +385,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
         await File.WriteAllTextAsync(Path.Combine(inputDirectory, "request.json"), "{}");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -423,7 +423,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(externalRoot);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -450,7 +450,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "read_input.py"), "print('ok')");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -476,7 +476,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -502,7 +502,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -530,7 +530,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(externalRoot);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "read_input.py"), "print('ok')");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -557,7 +557,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Validate.ps1"), "Write-Output 'ok'");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         string[] arguments =
         [
             "--content-type=application/json",
@@ -602,7 +602,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         await File.WriteAllTextAsync(
             Path.Combine(scriptDirectory, "Report-Location.ps1"),
             "Write-Output (Get-Location).Path");
-        var service = new WorkspaceCommandExecutionService(
+        var service = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             new LocalWorkspaceProcessHost());
         var productAlias = ToExternalTargetAlias(productRoot);
@@ -645,7 +645,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             }
             """);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -685,7 +685,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             onExecute: _ => File.WriteAllText(
                 Path.Combine(productRoot, "Program.cs"),
                 "Console.WriteLine(\"after\");"));
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var run = CreateProcessStepExecutionRun(
             JsonSerializer.Serialize(new Dictionary<string, object?>
             {
@@ -753,7 +753,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 FileMode.Open,
                 FileAccess.ReadWrite,
                 FileShare.None));
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var productAlias = ToExternalTargetAlias(productRoot);
         var run = CreateProcessStepExecutionRun(
             JsonSerializer.Serialize(new Dictionary<string, object?>
@@ -829,7 +829,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             "Write-Output 'inspected'");
         await File.WriteAllTextAsync(productFile, "Console.WriteLine(\"before\");");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var productAlias = ToExternalTargetAlias(productRoot);
         var run = CreateProcessStepExecutionRun(
             JsonSerializer.Serialize(new Dictionary<string, object?>
@@ -896,7 +896,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         }
 
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var productAlias = ToExternalTargetAlias(productRoot);
         var run = CreateProcessStepExecutionRun(
             JsonSerializer.Serialize(new Dictionary<string, object?>
@@ -942,7 +942,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1011,7 +1011,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var run = CreateProcessStepExecutionRun("{}");
 
         try
@@ -1055,7 +1055,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var run = CreateProcessStepExecutionRun("{}");
 
         try
@@ -1107,7 +1107,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             }
             """);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
         var run = CreateProcessStepExecutionRun("{}");
 
         try
@@ -1171,7 +1171,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             }
             """);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost, workspaceScope);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost, workspaceScope);
         var run = CreateProcessStepExecutionRun("{}");
 
         try
@@ -1210,7 +1210,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1243,7 +1243,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     {
         var workspaceRoot = CreateWorkspaceWithWebProject();
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1294,12 +1294,39 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public void Workspace_process_identity_keeps_case_distinct_logical_receipts_distinct()
+    {
+        var workspaceRoot = CreateWorkspaceWithWebProject();
+        var store = new WorkspaceExecutionRunProcessLeaseStore(
+            workspaceRoot,
+            WorkspaceScopeDescriptor.Sandbox);
+        var executionRunId = Guid.NewGuid();
+        const string upperPath = "artifacts/process-runs/Foo/startup.json";
+        const string lowerPath = "artifacts/process-runs/foo/startup.json";
+
+        try
+        {
+            Assert.NotEqual(
+                store.GetLeaseFilePath(executionRunId, upperPath),
+                store.GetLeaseFilePath(executionRunId, lowerPath));
+            Assert.Throws<InvalidOperationException>(() =>
+                store.ResolveSingleStartupReceiptPath(
+                    [upperPath, lowerPath],
+                    "Case-distinct test launch"));
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetRun_registers_normalized_durable_lease_for_cross_instance_cleanup()
     {
         var workspaceRoot = CreateWorkspaceWithWebProject();
         var run = CreateProcessStepExecutionRun("{}");
         var launchHost = new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest);
-        var launchService = new WorkspaceCommandExecutionService(workspaceRoot, launchHost);
+        var launchService = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, launchHost);
 
         try
         {
@@ -1337,7 +1364,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 ignoreCase: true);
 
             var cleanupHost = new FakeWorkspaceProcessHost();
-            var cleanupService = new WorkspaceCommandExecutionService(workspaceRoot, cleanupHost);
+            var cleanupService = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, cleanupHost);
             var cleanup = await GetCleanupExecutor(cleanupService).CleanupAsync(run.Id);
 
             Assert.Equal(run.Id, cleanup.ExecutionRunId);
@@ -1362,7 +1389,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             CreateProcessStepExecutionRun("{}"),
             CreateProcessStepExecutionRun("{}")
         };
-        var launchService = new WorkspaceCommandExecutionService(
+        var launchService = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest));
 
@@ -1424,21 +1451,21 @@ public sealed class WorkspaceCommandExecutionServiceTests
         {
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             {
-                var nonKeptAlive = await new WorkspaceCommandExecutionService(
+                var nonKeptAlive = await TestWorkspaceServices.CreateCommandExecutionService(
                         workspaceRoot,
                         new FakeWorkspaceProcessHost())
                     .DotnetRun(
                         "apps/SampleWeb/SampleWeb.csproj",
                         url: "http://127.0.0.1:5129/",
                         keepAlive: false);
-                var failed = await new WorkspaceCommandExecutionService(
+                var failed = await TestWorkspaceServices.CreateCommandExecutionService(
                         workspaceRoot,
                         new FakeWorkspaceProcessHost(exitCode: 1))
                     .DotnetRun(
                         "apps/SampleWeb/SampleWeb.csproj",
                         url: "http://127.0.0.1:5130/",
                         keepAlive: true);
-                var processRunLifetime = await new WorkspaceCommandExecutionService(
+                var processRunLifetime = await TestWorkspaceServices.CreateCommandExecutionService(
                         workspaceRoot,
                         new FakeWorkspaceProcessHost())
                     .DotnetRun(
@@ -1474,7 +1501,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(Path.GetDirectoryName(leaseDirectory)!);
         await File.WriteAllTextAsync(leaseDirectory, "blocks lease directory creation");
         var processHost = new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest);
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1509,7 +1536,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             WriteStartupReceiptForRunRequest(request);
             throw new InvalidOperationException("synthetic host termination");
         });
-        var launchService = new WorkspaceCommandExecutionService(
+        var launchService = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             launchHost);
         var store = new WorkspaceExecutionRunProcessLeaseStore(
@@ -1541,7 +1568,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 pendingLease.StartupReceiptDeadlineUtc >= pendingLease.RegisteredAtUtc);
 
             var recoveryHost = new FakeWorkspaceProcessHost();
-            var recoveryService = new WorkspaceCommandExecutionService(
+            var recoveryService = TestWorkspaceServices.CreateCommandExecutionService(
                 workspaceRoot,
                 recoveryHost);
             var recovery = await GetCleanupExecutor(recoveryService)
@@ -1580,7 +1607,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         store.Register(run.Id, canonicalStartupReceiptPath);
         var otherRunId = Guid.NewGuid();
         store.Register(otherRunId, canonicalStartupReceiptPath);
-        var service = new WorkspaceCommandExecutionService(
+        var service = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             new FakeWorkspaceProcessHost(),
             workspaceScope);
@@ -1628,7 +1655,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
                 throw new InvalidOperationException("synthetic stop failure");
             }
         });
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1667,7 +1694,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             registeredAtUtc,
             registeredAtUtc.AddSeconds(1));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1714,10 +1741,10 @@ public sealed class WorkspaceCommandExecutionServiceTests
             return CreateSuccessfulProcessExecutionResult();
         }
 
-        var firstService = new WorkspaceCommandExecutionService(
+        var firstService = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             new FakeWorkspaceProcessHost(executeAsync: ExecuteAsync));
-        var secondService = new WorkspaceCommandExecutionService(
+        var secondService = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             new FakeWorkspaceProcessHost(executeAsync: ExecuteAsync));
 
@@ -1761,7 +1788,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var misnamedLeaseFile = Path.Combine(Path.GetDirectoryName(leaseFile)!, "misnamed.json");
         File.Move(leaseFile, misnamedLeaseFile);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -1917,7 +1944,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         try
         {
             IWorkspaceCommandExecutionService commandService =
-                new WorkspaceCommandExecutionService(
+                TestWorkspaceServices.CreateCommandExecutionService(
                     workspaceRoot,
                     new FakeWorkspaceProcessHost());
 
@@ -1941,7 +1968,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             "{}",
             WorkspaceScopeDescriptor.Project("calculator"));
         var run = CreateProcessStepExecutionRun(metadata);
-        var service = new WorkspaceCommandExecutionService(
+        var service = TestWorkspaceServices.CreateCommandExecutionService(
             workspaceRoot,
             new FakeWorkspaceProcessHost(onExecute: WriteStartupReceiptForRunRequest),
             storageScope);
@@ -1978,7 +2005,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var testProjectPath = Path.Combine(testProjectDirectory, "SampleWeb.Tests.csproj");
         await File.WriteAllTextAsync(testProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2006,7 +2033,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2032,7 +2059,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2061,7 +2088,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Path.Combine(testProjectDirectory, "SampleWeb.Tests.csproj"),
             "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         var processHost = new FakeWorkspaceProcessHost(exitCode: 1, stdout: "CS0246 missing reference", stderr: "Build failed");
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2097,7 +2124,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Fail.ps1"), "Write-Error 'failed'");
         var processHost = new FakeWorkspaceProcessHost(exitCode: 1, stdout: "command stdout", stderr: "command stderr");
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost, workspaceScope);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost, workspaceScope);
         var processRunId = Guid.NewGuid().ToString("D");
         var run = CreateProcessStepExecutionRun("{}", processRunId);
 
@@ -2133,7 +2160,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2165,7 +2192,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(appDirectory);
         await File.WriteAllTextAsync(Path.Combine(appDirectory, "First.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         await File.WriteAllTextAsync(Path.Combine(appDirectory, "Second.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, new FakeWorkspaceProcessHost());
 
         try
         {
@@ -2189,7 +2216,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "WorkerApp.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2222,7 +2249,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Path.Combine(projectDirectory, "TetrisGame.csproj"),
             "<Project Sdk=\"Microsoft.NET.Sdk.BlazorWebAssembly\" />");
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2251,7 +2278,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2276,7 +2303,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2301,7 +2328,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2326,7 +2353,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2348,7 +2375,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2376,7 +2403,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2402,7 +2429,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2424,7 +2451,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2446,7 +2473,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2471,7 +2498,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {
@@ -2500,7 +2527,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         Directory.CreateDirectory(productRoot);
         await File.WriteAllTextAsync(Path.Combine(productRoot, "Calculator.slnx"), string.Empty);
         var processHost = new FakeWorkspaceProcessHost();
-        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
 
         try
         {

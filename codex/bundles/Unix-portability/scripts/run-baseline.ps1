@@ -34,11 +34,17 @@ function Invoke-BaselineStep {
     $exitCode = 1
     Write-Host "=== $Name ==="
     Push-Location $RepoRoot
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
+        # Native tools can write diagnostics to stderr even when their exit code is the
+        # authoritative result. Keep the step running so its exit code and full log are
+        # captured instead of terminating the baseline at the first stderr record.
+        $ErrorActionPreference = "Continue"
         & $FilePath @Arguments 2>&1 | Tee-Object -FilePath $logPath
         $exitCode = $LASTEXITCODE
     }
     finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Pop-Location
     }
 
@@ -77,7 +83,7 @@ $hostMetadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $O
 $steps = @(
     @{ Name = "dotnet-info"; File = "dotnet"; Arguments = @("--info") },
     @{ Name = "git-status"; File = "git"; Arguments = @("status", "--short", "--branch") },
-    @{ Name = "restore"; File = "dotnet"; Arguments = @("restore", "./CanDoItAll.slnx") },
+    @{ Name = "restore"; File = "dotnet"; Arguments = @("restore", "./CanDoItAll.slnx", "--configfile", "./NuGet.config") },
     @{ Name = "build"; File = "dotnet"; Arguments = @("build", "./CanDoItAll.slnx", "-c", $Configuration, "--no-restore", "/m:1") },
     @{ Name = "stable-tests"; File = "dotnet"; Arguments = @("test", "./CanDoItAll.slnx", "-c", $Configuration, "--no-build", "--filter", "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined", "/m:1") }
 )

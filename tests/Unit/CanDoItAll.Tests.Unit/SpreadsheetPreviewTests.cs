@@ -455,13 +455,15 @@ public sealed class SpreadsheetPreviewTests
         => new(
             documents,
             workspaceRoot,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
             new AgentWorkspaceToolAccessSettings
             {
                 CanReadFiles = canReadFiles,
                 CanWriteFiles = false,
                 CanTransformArtifacts = false
-            });
+            },
+            TestExternalTargetPathRegistry.Create());
 
     private static IReadOnlyList<ToolExecutionReceiptRecord> ReadReceipts(string workspaceRoot, Guid runId)
     {

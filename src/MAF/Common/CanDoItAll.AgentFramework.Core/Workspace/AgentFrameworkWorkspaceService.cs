@@ -1,6 +1,8 @@
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -37,6 +39,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         IAgentExecutionPreparationCache executionPreparationCache,
         IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
         IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner,
+        IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         IProviderProfileService? providerProfileService = null,
         IProviderProfileRegistry? providerProfileRegistry = null,
         IAgentProviderCredentialResolver? providerCredentialResolver = null,
@@ -66,6 +69,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         ArgumentNullException.ThrowIfNull(executionPreparationCache);
         ArgumentNullException.ThrowIfNull(executionProfileGenerationSource);
         ArgumentNullException.ThrowIfNull(workspaceProcessLeaseCleaner);
+        ArgumentNullException.ThrowIfNull(externalTargetPathRegistryFactory);
         this.store = store;
         this.logger = logger;
         this.activityCoordinator = activityCoordinator;
@@ -127,6 +131,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
             resolvedExecutionCheckpointBridge,
             resolvedProviderRuntimeProfileSource,
             resolvedProviderCredentialResolver,
+            externalTargetPathRegistryFactory,
             logger,
             activityWorkspaceIdentity,
             executionPreparationService,

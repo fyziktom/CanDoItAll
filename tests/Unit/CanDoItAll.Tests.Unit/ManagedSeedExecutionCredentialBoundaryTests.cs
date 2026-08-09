@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
@@ -138,6 +139,7 @@ public sealed class ManagedSeedExecutionCredentialBoundaryTests
             preparationCache,
             new FixedAgentExecutionProfileGenerationSource(default),
             SuccessfulWorkspaceExecutionRunProcessLeaseCleaner.Instance,
+            new ExternalTargetPathRegistryFactory(),
             providerCredentialResolver: credentialResolver);
     }
 

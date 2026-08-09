@@ -29,7 +29,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [new CapabilityBoundRuntimeToolProvider(
                 AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
                 capability.Id)],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty);
         var resolverCalls = 0;
 
@@ -74,7 +74,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             descriptor);
         var service = new ProcessRuntimeToolPreflightService(
             [runtimeProvider],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
@@ -105,7 +105,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
         var service = new ProcessRuntimeToolPreflightService(
             [],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
@@ -137,7 +137,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [new CapabilityBoundRuntimeToolProvider(
                 AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
                 capability.Id)],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
@@ -163,7 +163,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -191,7 +191,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
         var resolverCalls = 0;
 
         var result = await service.EvaluateAsync(
@@ -222,7 +222,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -246,7 +246,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -270,7 +270,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -437,7 +437,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 "template=sln",
                 "template=blazorwasm"
             ]));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var resolverCalls = 0;
         var result = await service.EvaluateAsync(
@@ -469,7 +469,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables(
                 scriptRef: "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.ps1"));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -499,7 +499,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var assignment = CreateDotNetCreateProjectAssignment(
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables(sideEffectManifest: manifest));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -525,7 +525,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 @"C:\temp\Other\Calculator.slnx",
                 @"C:\temp\CanDoItAll\Calculator\src\Calculator\Calculator.csproj"
             ]));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -549,7 +549,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var assignment = CreateDotNetCreateProjectAssignment(
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables());
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -583,7 +583,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                         "DotNetCreateProjectExecutionPlan"))
         };
         var assignment = CreateDotNetCreateProjectAssignment(agent.Id, launchVariables);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -619,7 +619,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                             "OtherExecutionPlan"))
             }
         };
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)], ProcessRuntimeToolPreflightContributionCatalog.Empty);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -636,7 +636,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
     {
         return new ProcessRuntimeToolPreflightService(
             [],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             new ProcessRuntimeToolPreflightContributionCatalog(
             [
                 new BrowserRuntimeToolPreflightContribution()

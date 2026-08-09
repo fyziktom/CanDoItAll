@@ -2,22 +2,34 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
+public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposable
 {
-    private const string WorkspaceRoot = @"C:\repositories\CanDoItAll";
-    private const string AuthorizedExternalRoot =
-        @"C:\programovani\dotnet\calculator-e2e-test";
+    private readonly string workspaceRoot = TestFileSystem.CreateTemporaryRoot("project-root-guard-workspace");
+    private readonly string authorizedExternalRoot = TestFileSystem.CreateTemporaryRoot("project-root-guard-external");
+    private readonly string authorizedExternalAlias;
+    private readonly string authorizedExternalChildAlias;
+
+    public ProjectStructureAgentRootAuthorityWriteGuardTests()
+    {
+        var registry = new ExternalTargetPathRegistry();
+        Assert.True(registry.TryCreateAlias(authorizedExternalRoot, out authorizedExternalAlias));
+        Assert.True(registry.TryCreateAlias(
+            Path.Combine(authorizedExternalRoot, "src"),
+            out authorizedExternalChildAlias));
+    }
 
     [Fact]
     public void Unaudited_agent_write_allows_a_managed_workspace_root()
     {
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             CreateProjectBlockMetadata(@"src\Calculator"),
-            WorkspaceRoot);
+            workspaceRoot);
     }
 
     [Fact]
@@ -26,8 +38,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 CreateProjectBlockMetadata(
-                    @"C:\operator\chosen\external-project"),
-                WorkspaceRoot));
+                    Path.Combine(authorizedExternalRoot, "unscoped")),
+                workspaceRoot));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -41,8 +53,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
     {
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
-                """{ "outputRoot": "C:\\operator\\chosen\\external-project" }""",
-                WorkspaceRoot));
+                JsonSerializer.Serialize(new { outputRoot = Path.Combine(authorizedExternalRoot, "legacy") }),
+                workspaceRoot));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -57,32 +69,32 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
 
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             CreateProjectBlockMetadata(@"src\Calculator"),
-            WorkspaceRoot);
+            workspaceRoot);
     }
 
     [Fact]
     public void Audited_agent_write_allows_an_external_root_already_in_the_run_scope()
     {
         using var audit = WorkspaceExecutionAuditContext.BeginScope(
-            CreateExecutionRun([AuthorizedExternalRoot]));
+            CreateExecutionRun([authorizedExternalAlias]));
 
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             CreateProjectBlockMetadata(
-                AuthorizedExternalRoot + @"\src"),
-            WorkspaceRoot);
+                authorizedExternalChildAlias),
+            workspaceRoot);
     }
 
     [Fact]
     public void Audited_agent_write_rejects_an_arbitrary_external_root_with_retryable_typed_failure()
     {
         using var audit = WorkspaceExecutionAuditContext.BeginScope(
-            CreateExecutionRun([AuthorizedExternalRoot]));
+            CreateExecutionRun([authorizedExternalAlias]));
 
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 CreateProjectBlockMetadata(
-                    @"C:\operator\private\unselected-project"),
-                WorkspaceRoot));
+                    Path.Combine(authorizedExternalRoot, "unselected-project")),
+                workspaceRoot));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -90,7 +102,7 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
         Assert.DoesNotContain(
-            @"C:\operator\private\unselected-project",
+            Path.Combine(authorizedExternalRoot, "unselected-project"),
             exception.SafeMessage,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -103,13 +115,13 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
             "custom:external-owner",
             projectRoot.Id,
             ProjectObjectType.ProjectBlock,
-            CreateProjectBlockMetadata(@"C:\operator\private\unselected-project"));
+            CreateProjectBlockMetadata(Path.Combine(authorizedExternalRoot, "unselected-project")));
 
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
                 [projectRoot, externalOwner],
                 externalOwner.Id,
-                WorkspaceRoot));
+                workspaceRoot));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -120,18 +132,55 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests
     public void Audited_agent_parent_mutation_allows_only_an_already_authorized_external_project_block()
     {
         using var audit = WorkspaceExecutionAuditContext.BeginScope(
-            CreateExecutionRun([AuthorizedExternalRoot]));
+            CreateExecutionRun([authorizedExternalAlias]));
         var projectRoot = CreateNode("project:root", parentId: null);
         var authorizedOwner = CreateNode(
             "custom:authorized-owner",
             projectRoot.Id,
             ProjectObjectType.ProjectBlock,
-            CreateProjectBlockMetadata(AuthorizedExternalRoot));
+            CreateProjectBlockMetadata(authorizedExternalAlias));
 
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
             [projectRoot, authorizedOwner],
             authorizedOwner.Id,
-            WorkspaceRoot);
+            workspaceRoot);
+    }
+
+    [Fact]
+    public void Managed_workspace_containment_is_case_sensitive_on_unix()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var differentlyCasedRoot = workspaceRoot.ToUpperInvariant();
+        var exception = Assert.Throws<ProjectStructureAgentException>(() =>
+            ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                CreateProjectBlockMetadata(Path.Combine(differentlyCasedRoot, "src")),
+                workspaceRoot));
+
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, exception.ErrorCode);
+    }
+
+    [Fact]
+    public void Foreign_host_workspace_root_is_rejected()
+    {
+        var foreignWorkspaceRoot = OperatingSystem.IsWindows()
+            ? "/tmp/project-root-guard"
+            : @"C:\project-root-guard";
+        var exception = Assert.Throws<ProjectStructureAgentException>(() =>
+            ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
+                CreateProjectBlockMetadata("src"),
+                foreignWorkspaceRoot));
+
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, exception.ErrorCode);
+    }
+
+    public void Dispose()
+    {
+        TestFileSystem.DeleteDirectoryWithRetry(authorizedExternalRoot);
+        TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
     }
 
     private static string CreateProjectBlockMetadata(string outputRoot)

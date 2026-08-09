@@ -16,6 +16,8 @@ public sealed class ManagerOptions
 
     public int TailwindWatchDebounceMilliseconds { get; set; } = 150;
 
+    public int TailwindWatchPollingMilliseconds { get; set; } = 2_000;
+
     public string WatchLaunchProfile { get; set; } = "https";
 
     public string[] WatchUrls { get; set; } = [];

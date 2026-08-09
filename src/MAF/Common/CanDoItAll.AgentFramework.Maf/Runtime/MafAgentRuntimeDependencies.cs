@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.Tools.Documents;
@@ -28,6 +29,7 @@ internal sealed record MafAgentRuntimeDependencies(
     IRuntimeToolProviderComposer RuntimeToolProviderComposer,
     IMafRuntimeCompositionMetrics CompositionMetrics,
     IWorkspaceRuntimeServicesFactory WorkspaceRuntimeServicesFactory,
+    IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory,
     ISpreadsheetDocumentService SpreadsheetDocumentService,
     IMafApprovalContinuationDriver ApprovalContinuationDriver,
     IMafRuntimeSessionPersistenceDriver SessionPersistenceDriver,
@@ -45,6 +47,7 @@ internal sealed record MafAgentRuntimeDependencies(
         var providerCredentialService = serviceProvider.GetService(typeof(IMafProviderCredentialService)) as IMafProviderCredentialService;
         var providerAgentFactory = serviceProvider.GetService(typeof(IMafProviderAgentFactory)) as IMafProviderAgentFactory;
         var workspaceRuntimeServicesFactory = serviceProvider.GetService(typeof(IWorkspaceRuntimeServicesFactory)) as IWorkspaceRuntimeServicesFactory;
+        var physicalPathPolicyFactory = serviceProvider.GetService(typeof(IPhysicalFileSystemPathPolicyFactory)) as IPhysicalFileSystemPathPolicyFactory;
         var missingServices = new[]
             {
                 (Service: nameof(IMafProviderRuntimeGateway), IsMissing: providerRuntimeGateway is null),
@@ -52,7 +55,8 @@ internal sealed record MafAgentRuntimeDependencies(
                 (Service: nameof(IAgentImageAnalysisService), IsMissing: imageAnalysisService is null),
                 (Service: nameof(IMafProviderCredentialService), IsMissing: providerCredentialService is null),
                 (Service: nameof(IMafProviderAgentFactory), IsMissing: providerAgentFactory is null),
-                (Service: nameof(IWorkspaceRuntimeServicesFactory), IsMissing: workspaceRuntimeServicesFactory is null)
+                (Service: nameof(IWorkspaceRuntimeServicesFactory), IsMissing: workspaceRuntimeServicesFactory is null),
+                (Service: nameof(IPhysicalFileSystemPathPolicyFactory), IsMissing: physicalPathPolicyFactory is null)
             }
             .Where(item => item.IsMissing)
             .Select(item => item.Service)
@@ -77,6 +81,7 @@ internal sealed record MafAgentRuntimeDependencies(
             serviceProvider.GetService(typeof(IMafRuntimeCompositionMetrics)) as IMafRuntimeCompositionMetrics
                 ?? NoOpMafRuntimeCompositionMetrics.Instance,
             workspaceRuntimeServicesFactory!,
+            physicalPathPolicyFactory!,
             serviceProvider.GetService(typeof(ISpreadsheetDocumentService)) as ISpreadsheetDocumentService
                 ?? new ClosedXmlSpreadsheetDocumentService(),
             // Internal single-implementation drivers are constructed directly:

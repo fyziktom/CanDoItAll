@@ -195,7 +195,7 @@ public static class WorkspaceRuntimeProcessTools
 
     private static IEnumerable<string> EnumerateRestoreInputFiles(string workspaceRoot, IReadOnlyList<string> projectPaths)
     {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var projectPath in projectPaths)
         {
             if (seen.Add(projectPath))
@@ -245,7 +245,7 @@ public static class WorkspaceRuntimeProcessTools
             yield return current;
 
             if (normalizedWorkspaceRoot is not null &&
-                string.Equals(current, normalizedWorkspaceRoot, StringComparison.OrdinalIgnoreCase))
+                string.Equals(current, normalizedWorkspaceRoot, StringComparison.Ordinal))
             {
                 yield break;
             }
@@ -253,7 +253,7 @@ public static class WorkspaceRuntimeProcessTools
             var parent = Directory.GetParent(current)?.FullName?
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (string.IsNullOrWhiteSpace(parent) ||
-                string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+                string.Equals(parent, current, StringComparison.Ordinal))
             {
                 yield break;
             }
@@ -265,7 +265,7 @@ public static class WorkspaceRuntimeProcessTools
     private static IEnumerable<string> EnumerateRestoreProjectPaths(string watchProjectPath)
     {
         var pending = new Stack<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         pending.Push(Path.GetFullPath(watchProjectPath));
 
         while (pending.Count > 0)

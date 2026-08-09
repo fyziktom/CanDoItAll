@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
 
@@ -6,6 +7,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class SkillCapabilityBuilder(
     string workspaceRoot,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     IRegisteredCapabilityServiceSource registeredServices,
     ILoggerFactory loggerFactory)
 {
@@ -22,7 +24,11 @@ internal sealed class SkillCapabilityBuilder(
                 continue;
             }
 
-            var fullPath = MafRuntimePathResolver.ResolvePathFromWorkspace(workspaceRoot, preferredSkillRoot, allowExternal: false);
+            var fullPath = MafRuntimePathResolver.ResolvePathFromWorkspace(
+                workspaceRoot,
+                preferredSkillRoot,
+                allowExternal: false,
+                physicalPathPolicyFactory: physicalPathPolicyFactory);
             if (Directory.Exists(fullPath))
             {
                 resolved.Add(fullPath);
@@ -32,6 +38,11 @@ internal sealed class SkillCapabilityBuilder(
         foreach (var capability in capabilities.Where(capability => capability.Kind == CapabilityKind.Skill))
         {
             var configuration = MafRuntimeJson.DeserializeConfiguration<SkillCapabilityConfiguration>(capability.ConfigurationJson);
+            if (ResolveSkillSource(capability, configuration) != SkillCapabilitySource.File)
+            {
+                continue;
+            }
+
             var skillRoot = configuration?.SkillRoot ?? capability.EndpointOrPath;
             if (string.IsNullOrWhiteSpace(skillRoot))
             {
@@ -39,7 +50,12 @@ internal sealed class SkillCapabilityBuilder(
             }
 
             var allowedExternalRoots = configuration?.AllowedExternalRoots ?? [];
-            var fullPath = MafRuntimePathResolver.ResolvePathFromWorkspace(workspaceRoot, skillRoot, allowExternal: allowedExternalRoots.Count > 0, allowedExternalRoots: allowedExternalRoots);
+            var fullPath = MafRuntimePathResolver.ResolvePathFromWorkspace(
+                workspaceRoot,
+                skillRoot,
+                allowExternal: allowedExternalRoots.Count > 0,
+                physicalPathPolicyFactory: physicalPathPolicyFactory,
+                allowedExternalRoots: allowedExternalRoots);
             if (File.Exists(fullPath) && Path.GetFileName(fullPath).Equals("SKILL.md", StringComparison.OrdinalIgnoreCase))
             {
                 fullPath = Path.GetDirectoryName(fullPath)!;
@@ -61,6 +77,11 @@ internal sealed class SkillCapabilityBuilder(
         foreach (var capability in capabilities.Where(capability => capability.Kind == CapabilityKind.Skill))
         {
             var configuration = MafRuntimeJson.DeserializeConfiguration<SkillCapabilityConfiguration>(capability.ConfigurationJson);
+            if (ResolveSkillSource(capability, configuration) != SkillCapabilitySource.File)
+            {
+                continue;
+            }
+
             var skillRoot = configuration?.SkillRoot ?? capability.EndpointOrPath;
             if (string.IsNullOrWhiteSpace(skillRoot))
             {
@@ -71,7 +92,12 @@ internal sealed class SkillCapabilityBuilder(
             string fullPath;
             try
             {
-                fullPath = MafRuntimePathResolver.ResolvePathFromWorkspace(workspaceRoot, skillRoot, allowExternal: allowedExternalRoots.Count > 0, allowedExternalRoots: allowedExternalRoots);
+                fullPath = MafRuntimePathResolver.ResolvePathFromWorkspace(
+                    workspaceRoot,
+                    skillRoot,
+                    allowExternal: allowedExternalRoots.Count > 0,
+                    physicalPathPolicyFactory: physicalPathPolicyFactory,
+                    allowedExternalRoots: allowedExternalRoots);
             }
             catch
             {
@@ -208,6 +234,38 @@ internal sealed class SkillCapabilityBuilder(
     {
         var configuration = MafRuntimeJson.DeserializeConfiguration<SkillCapabilityConfiguration>(capability.ConfigurationJson);
         return configuration?.ScriptExecution?.ApprovalRequired ?? configuration?.ScriptApproval == true;
+    }
+
+    private static SkillCapabilitySource ResolveSkillSource(
+        CapabilityCatalogItem capability,
+        SkillCapabilityConfiguration? configuration)
+    {
+        if (!string.IsNullOrWhiteSpace(configuration?.SkillSource))
+        {
+            if (Enum.TryParse<SkillCapabilitySource>(
+                    configuration.SkillSource.Trim(),
+                    ignoreCase: true,
+                    out var source))
+            {
+                return source;
+            }
+
+            throw new InvalidOperationException(
+                $"Skill capability '{capability.Name}' declares unsupported source '{configuration.SkillSource}'.");
+        }
+
+        if (configuration?.InlineSkill is not null ||
+            capability.EndpointOrPath.StartsWith("inline://", StringComparison.OrdinalIgnoreCase))
+        {
+            return SkillCapabilitySource.Inline;
+        }
+
+        if (!string.IsNullOrWhiteSpace(configuration?.RegisteredSkillServiceType))
+        {
+            return SkillCapabilitySource.Registered;
+        }
+
+        return SkillCapabilitySource.File;
     }
 }
 

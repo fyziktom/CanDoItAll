@@ -51,7 +51,9 @@ public sealed record ProjectStructureRuntimeLaunchResult(bool IsSuccess, string 
 public sealed class ProjectStructureRuntimeLauncher(
     IWorkspacePathAccessGuard workspacePathAccessGuard,
     ILogger<ProjectStructureRuntimeLauncher> logger,
-    IProjectStructureDotNetProjectTargetResolver dotNetProjectTargetResolver) : IProjectStructureRuntimeLauncher
+    IProjectStructureDotNetProjectTargetResolver dotNetProjectTargetResolver,
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
+    FileSystemStoragePathPolicy fileSystemStoragePathPolicy) : IProjectStructureRuntimeLauncher
 {
     public bool IsAvailable => OperatingSystem.IsWindows();
 
@@ -618,18 +620,21 @@ public sealed class ProjectStructureRuntimeLauncher(
         out string resolvedPath,
         string? basePath = null)
     {
-        var resolution = workspacePathAccessGuard.ResolveWorkspacePath(value, basePath);
-        if (resolution.IsSuccess)
+        if (!ExternalTargetAliasCodec.IsVersionedAlias(value))
         {
-            if (TryResolveReparseSafePath(
-                    resolution.FullPath,
-                    out resolvedPath,
-                    out var reparseFailureMessage))
+            var resolution = workspacePathAccessGuard.ResolveWorkspacePath(value, basePath);
+            if (resolution.IsSuccess)
             {
-                return null;
-            }
+                if (TryResolveReparseSafePath(
+                        resolution.FullPath,
+                        out resolvedPath,
+                        out var reparseFailureMessage))
+                {
+                    return null;
+                }
 
-            return Fail($"{description} {reparseFailureMessage}");
+                return Fail($"{description} {reparseFailureMessage}");
+            }
         }
 
         if (TryResolveExistingLocalDrivePath(
@@ -697,7 +702,40 @@ public sealed class ProjectStructureRuntimeLauncher(
         {
             var trimmedValue = value.Trim();
             string candidatePath;
-            if (Path.IsPathRooted(trimmedValue))
+            bool isAuthorizedExternalAlias = false;
+            if (ExternalTargetAliasCodec.IsVersionedAlias(trimmedValue))
+            {
+                if (WorkspaceExecutionAuditContext.Current is not { } auditScope)
+                {
+                    failureMessage = "is an external-target alias without an active execution authority scope.";
+                    return false;
+                }
+
+                var accessScope = new EffectiveExternalTargetAccessScope(
+                    auditScope.AllowedExternalTargetAliases,
+                    auditScope.ReadOnlyExternalTargetAliases);
+                if (!accessScope.CanRead(trimmedValue))
+                {
+                    failureMessage = "is not authorized for the current execution.";
+                    return false;
+                }
+
+                var externalTargets = externalTargetPathRegistryFactory.Create(
+                    auditScope.ExternalTargetRootBindings);
+                if (externalTargets.TryResolve(
+                        trimmedValue,
+                        out candidatePath,
+                        out var aliasValidationMessage) != ExternalTargetAliasResolutionKind.Resolved)
+                {
+                    failureMessage = string.IsNullOrWhiteSpace(aliasValidationMessage)
+                        ? "could not be resolved on this host."
+                        : aliasValidationMessage;
+                    return false;
+                }
+
+                isAuthorizedExternalAlias = true;
+            }
+            else if (Path.IsPathRooted(trimmedValue))
             {
                 candidatePath = Path.GetFullPath(trimmedValue);
             }
@@ -710,7 +748,8 @@ public sealed class ProjectStructureRuntimeLauncher(
                 return false;
             }
 
-            if (!CanCurrentExecutionReadPath(candidatePath, pathAuthorityMode))
+            if (!isAuthorizedExternalAlias &&
+                !CanCurrentExecutionReadPath(candidatePath, pathAuthorityMode))
             {
                 failureMessage = pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.AgentExecution
                     ? "is outside the active workspace and is not authorized for this agent execution."
@@ -743,14 +782,14 @@ public sealed class ProjectStructureRuntimeLauncher(
         }
     }
 
-    private static bool TryResolveReparseSafePath(
+    private bool TryResolveReparseSafePath(
         string path,
         out string resolvedPath,
         out string failureMessage)
     {
         try
         {
-            resolvedPath = FileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path);
+            resolvedPath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path);
             failureMessage = string.Empty;
             return true;
         }
@@ -789,10 +828,17 @@ public sealed class ProjectStructureRuntimeLauncher(
             return pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.OperatorSelected;
         }
 
+        var externalTargets = externalTargetPathRegistryFactory.Create(
+            auditScope.ExternalTargetRootBindings);
+        if (!externalTargets.TryCreateAlias(candidatePath, out var candidateAlias))
+        {
+            return false;
+        }
+
         return new EffectiveExternalTargetAccessScope(
                 auditScope.AllowedExternalTargetAliases,
                 auditScope.ReadOnlyExternalTargetAliases)
-            .CanRead(candidatePath);
+            .CanRead(candidateAlias);
     }
 
     private static bool TargetExists(ProjectStructureRuntimeLaunchTarget target)

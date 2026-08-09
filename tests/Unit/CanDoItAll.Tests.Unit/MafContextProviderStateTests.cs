@@ -121,7 +121,8 @@ public sealed class MafContextProviderStateTests
         var secondCapabilityId = Guid.NewGuid();
         var builder = new ContextCapabilityBuilder(
             Path.GetTempPath(),
-            WorkspaceScopeDescriptor.Sandbox);
+            WorkspaceScopeDescriptor.Sandbox,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         var state = new RuntimeCapabilityState();
 
         builder.AddRagProvider(
@@ -158,7 +159,8 @@ public sealed class MafContextProviderStateTests
         {
             var builder = new ContextCapabilityBuilder(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")));
+                WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory);
             var state = new RuntimeCapabilityState();
 
             var added = builder.AddRagProvider(

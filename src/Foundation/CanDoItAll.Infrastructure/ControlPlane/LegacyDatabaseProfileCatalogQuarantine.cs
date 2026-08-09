@@ -38,8 +38,10 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
     public static LegacyDatabaseProfileCatalogQuarantineResult QuarantineIfNeeded(
+        string controlPlaneRoot,
         string catalogPath,
         string activeProfileStatePath,
+        DurableFileWriter durableFileWriter,
         ILogger? logger)
     {
         if (!File.Exists(catalogPath))
@@ -93,11 +95,29 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
 
         var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", CultureInfo.InvariantCulture);
         var quarantinePath = Path.Combine(quarantineDirectory, $"legacy-database-profiles-{timestamp}.json");
-        File.WriteAllText(quarantinePath, json);
-        WriteOperatorNote(quarantineDirectory, timestamp, quarantinePath, quarantinedProfileCount);
-        WriteSanitizedCatalog(document.RootElement, retainedProfiles, catalogPath);
-
-        var activeProfileReset = ResetActiveProfileIfNeeded(activeProfileStatePath, quarantinedProfileIds);
+        durableFileWriter.WriteText(
+            controlPlaneRoot,
+            quarantinePath,
+            json,
+            DurableFileWriteOptions.Private);
+        WriteOperatorNote(
+            controlPlaneRoot,
+            quarantineDirectory,
+            timestamp,
+            quarantinePath,
+            quarantinedProfileCount,
+            durableFileWriter);
+        var activeProfileReset = ResetActiveProfileIfNeeded(
+            controlPlaneRoot,
+            activeProfileStatePath,
+            quarantinedProfileIds,
+            durableFileWriter);
+        WriteSanitizedCatalog(
+            controlPlaneRoot,
+            document.RootElement,
+            retainedProfiles,
+            catalogPath,
+            durableFileWriter);
         logger?.LogWarning(
             "Quarantined {ProfileCount} retired {ProviderName} database profile entries before control-plane catalog deserialization. BackupPath={BackupPath}. ActiveProfileReset={ActiveProfileReset}. Create or select a PostgreSQL profile before migrating data manually.",
             quarantinedProfileCount,
@@ -172,9 +192,11 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
     }
 
     private static void WriteSanitizedCatalog(
+        string controlPlaneRoot,
         JsonElement root,
         IReadOnlyList<JsonElement> retainedProfiles,
-        string catalogPath)
+        string catalogPath,
+        DurableFileWriter durableFileWriter)
     {
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
@@ -204,10 +226,18 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
             writer.WriteEndObject();
         }
 
-        WriteBytesAtomically(catalogPath, stream.ToArray());
+        durableFileWriter.WriteBytes(
+            controlPlaneRoot,
+            catalogPath,
+            stream.ToArray(),
+            DurableFileWriteOptions.Private);
     }
 
-    private static bool ResetActiveProfileIfNeeded(string activeProfileStatePath, IReadOnlySet<Guid> quarantinedProfileIds)
+    private static bool ResetActiveProfileIfNeeded(
+        string controlPlaneRoot,
+        string activeProfileStatePath,
+        IReadOnlySet<Guid> quarantinedProfileIds,
+        DurableFileWriter durableFileWriter)
     {
         if (quarantinedProfileIds.Count == 0 || !File.Exists(activeProfileStatePath))
         {
@@ -221,15 +251,21 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
         }
 
         activeState.ActiveProfileId = null;
-        WriteDocument(activeProfileStatePath, activeState);
+        durableFileWriter.WriteBytes(
+            controlPlaneRoot,
+            activeProfileStatePath,
+            JsonSerializer.SerializeToUtf8Bytes(activeState, SerializerOptions),
+            DurableFileWriteOptions.Private);
         return true;
     }
 
     private static void WriteOperatorNote(
+        string controlPlaneRoot,
         string quarantineDirectory,
         string timestamp,
         string quarantinePath,
-        int quarantinedProfileCount)
+        int quarantinedProfileCount,
+        DurableFileWriter durableFileWriter)
     {
         var notePath = Path.Combine(quarantineDirectory, $"legacy-database-profiles-{timestamp}.md");
         var content =
@@ -242,7 +278,11 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
 
             The quarantined entries used retired {RetiredProviderName} profile metadata. The main runtime now requires PostgreSQL profiles. Create or select a PostgreSQL profile, then migrate data manually from the backed-up catalog/database files when needed.
             """;
-        File.WriteAllText(notePath, content);
+        durableFileWriter.WriteText(
+            controlPlaneRoot,
+            notePath,
+            content,
+            DurableFileWriteOptions.Private);
     }
 
     private static bool TryGetProperty(JsonElement element, string propertyName, out JsonElement value)
@@ -274,22 +314,6 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
         }
 
         return JsonSerializer.Deserialize<T>(json, SerializerOptions) ?? createDefault();
-    }
-
-    private static void WriteDocument<T>(string path, T document)
-    {
-        WriteBytesAtomically(path, JsonSerializer.SerializeToUtf8Bytes(document, SerializerOptions));
-    }
-
-    private static void WriteBytesAtomically(string path, byte[] bytes)
-    {
-        var directory = Path.GetDirectoryName(path)
-            ?? throw new InvalidOperationException($"Unable to resolve a directory for '{path}'.");
-        Directory.CreateDirectory(directory);
-
-        var tempPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
-        File.WriteAllBytes(tempPath, bytes);
-        File.Move(tempPath, path, true);
     }
 
     private static JsonSerializerOptions CreateSerializerOptions()

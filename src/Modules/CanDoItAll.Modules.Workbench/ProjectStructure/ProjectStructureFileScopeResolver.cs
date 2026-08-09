@@ -235,10 +235,15 @@ internal sealed class ProjectStructureFileScopeResolver(
         ProjectStructureNodeFileScopeKey scopeKey,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(binding.StorageObjectReferenceJson))
+        {
+            throw ProviderError(FileBrowserErrorCode.Unsupported, "The node does not identify a supported stored file.");
+        }
+
         if (!StorageJson.TryParseReference(binding.StorageObjectReferenceJson, out StorageObjectReference? reference) ||
             reference is null)
         {
-            throw ProviderError(FileBrowserErrorCode.Unsupported, "The node does not identify a supported stored file.");
+            throw ProviderError(FileBrowserErrorCode.Forbidden, "The stored file locator is invalid.");
         }
 
         FileToolsKnownFileOccurrenceKind occurrenceKind = (reference.ProviderKind, reference.LocatorKind) switch
@@ -525,11 +530,24 @@ internal sealed class ProjectStructureFileScopeResolver(
             throw ProviderError(FileBrowserErrorCode.Forbidden, "The node file metadata must be storage-relative.");
         }
 
-        string normalized = candidate.Replace('\\', '/').Trim('/');
-        if (normalized.Length == 0 ||
-            normalized.Length > FileToolsKnownFileOccurrence.MaximumOccurrenceIdLength ||
-            normalized.Split('/', StringSplitOptions.RemoveEmptyEntries)
-                .Any(segment => segment is "." or ".."))
+        string normalized;
+        if (isPath)
+        {
+            try
+            {
+                normalized = LogicalPath.ParseLegacyWindowsLogicalPath(candidate).Value;
+            }
+            catch (ArgumentException)
+            {
+                throw ProviderError(FileBrowserErrorCode.Forbidden, "The node file metadata escapes its storage scope.");
+            }
+        }
+        else
+        {
+            normalized = candidate;
+        }
+
+        if (normalized.Length > FileToolsKnownFileOccurrence.MaximumOccurrenceIdLength)
         {
             throw ProviderError(FileBrowserErrorCode.Forbidden, "The node file metadata escapes its storage scope.");
         }

@@ -1,11 +1,14 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContributor(
-    IWorkspaceFileService workspaceFiles) : IProcessLaunchVariableContributor
+    IWorkspaceFileService workspaceFiles,
+    IExternalTargetPathRegistry externalTargetPathRegistry) : IProcessLaunchVariableContributor
 {
     internal const string VariableName = "ProductTargetFilesystemState";
 
@@ -22,14 +25,21 @@ internal sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContrib
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(variables);
 
-        var targetAlias = FirstNonEmpty(
+        var target = FirstNonEmpty(
             ResolveVariable(variables, ProductRootAliasVariableName),
             ResolveVariable(variables, ExternalTargetRootVariableName),
             ResolveVariable(variables, OutputRootAliasVariableName),
-            AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
-                FirstNonEmpty(
-                    ResolveVariable(variables, ProductRootVariableName),
-                    ResolveVariable(variables, OutputRootVariableName))) ?? string.Empty);
+            ResolveVariable(variables, ProductRootVariableName),
+            ResolveVariable(variables, OutputRootVariableName));
+        var targetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            target,
+            externalTargetPathRegistry);
+        if (!string.IsNullOrWhiteSpace(target) && string.IsNullOrWhiteSpace(targetAlias))
+        {
+            variables[VariableName] = "unavailable";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(targetAlias))
         {
             return;

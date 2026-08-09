@@ -2,6 +2,7 @@ using System.Reflection;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.BackgroundJobs;
 using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Logging;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Readiness;
@@ -76,6 +77,11 @@ public static class InfrastructureServiceCollectionExtensions
             .ValidateOnStart();
 
         services
+            .AddOptions<DataProtectionKeyProtectionOptions>()
+            .Bind(configuration.GetSection(DataProtectionKeyProtectionOptions.SectionName))
+            .ValidateOnStart();
+
+        services
             .AddOptions<CurrencyOptions>()
             .Bind(configuration.GetSection(CurrencyOptions.SectionName))
             .ValidateDataAnnotations()
@@ -87,11 +93,14 @@ public static class InfrastructureServiceCollectionExtensions
         var configuredControlPlaneOptions =
             configuration.GetSection("ControlPlane").Get<ControlPlaneOptions>() ?? new ControlPlaneOptions();
         var dataProtectionKeysPath =
-            ControlPlanePathDefaults.ResolveControlPlaneRootPath(environment, configuredControlPlaneOptions);
-
-        services.AddDataProtection()
-            .SetApplicationName("CanDoItAll")
-            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(dataProtectionKeysPath, "dataprotection-keys")));
+            ControlPlanePathDefaults.ResolveDataProtectionKeysPath(environment, configuredControlPlaneOptions);
+        var bootstrapFileWriter = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        DataProtectionKeyRingProtection.Configure(
+            services.AddDataProtection(),
+            configuration,
+            environment,
+            dataProtectionKeysPath,
+            bootstrapFileWriter);
 
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IActivityStream, NullActivityStream>();
@@ -101,6 +110,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IControlPlaneSecretProtector, ControlPlaneSecretProtector>();
         services.AddSingleton<DatabaseProfileControlPlaneService>();
         services.AddSingleton<IDatabaseProfileService>(serviceProvider => serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
+        services.AddSingleton<IControlPlaneSecretContinuityVerifier>(serviceProvider =>
+            serviceProvider.GetRequiredService<DatabaseProfileControlPlaneService>());
         services.AddScoped<IDatabaseTransferService, DatabaseTransferService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
@@ -124,7 +135,15 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddSingleton<IWorkspacePathResolver, WorkspacePathResolver>();
         services.AddSingleton<IWorkspacePathAccessGuard, WorkspacePathAccessGuard>();
-        services.AddSingleton<IStorageCatalogService, StorageCatalogService>();
+        services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
+        services.AddSingleton<DurableFileWriter>();
+        services.AddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
+        services.AddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
+        services.AddSingleton<StorageCatalogService>();
+        services.AddSingleton<IStorageCatalogService>(provider =>
+            provider.GetRequiredService<StorageCatalogService>());
+        services.AddSingleton<IStorageCatalogPathMigrationService>(provider =>
+            provider.GetRequiredService<StorageCatalogService>());
         services.AddSingleton<FileSystemStoragePathPolicy>();
         services.AddHttpClient<IIpfsStorageTransport, IpfsHttpStorageTransport>();
         services.AddSingleton<IFtpStorageTransport, FtpWebStorageTransport>();

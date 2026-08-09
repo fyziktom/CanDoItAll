@@ -17,6 +17,8 @@ using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -97,6 +99,13 @@ internal static class ProcessExecutionMetadataBuilder
             metadata[allowsProductMutation
                 ? ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey
                 : ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] = trustedAliases;
+            var bindings = ResolveExternalTargetRootBindings(
+                assignment.LaunchVariables,
+                trustedAliases);
+            if (bindings.Count > 0)
+            {
+                metadata[ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey] = bindings;
+            }
         }
 
         foreach (var item in metadataAdditions)
@@ -290,9 +299,70 @@ internal static class ProcessExecutionMetadataBuilder
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Cast<string>()
             .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(item => item, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static IReadOnlyList<ExternalTargetRootBinding> ResolveExternalTargetRootBindings(
+        IReadOnlyDictionary<string, string> launchVariables,
+        IReadOnlyList<string> trustedAliases)
+    {
+        var requiredRootIds = trustedAliases
+            .Select(alias => ExternalTargetAliasCodec.TryParseVersionedAlias(alias, out var rootId, out _, out _)
+                ? rootId
+                : null)
+            .Where(rootId => rootId is not null)
+            .Cast<string>()
+            .ToHashSet(StringComparer.Ordinal);
+        if (requiredRootIds.Count == 0)
+        {
+            return [];
+        }
+
+        if (!launchVariables.TryGetValue(
+                ProcessRuntimeLaunchVariables.ExternalTargetRootBindings,
+                out var bindingJson) ||
+            string.IsNullOrWhiteSpace(bindingJson))
+        {
+            throw new InvalidOperationException(
+                "A versioned external-target alias requires a protected root binding in process launch variables.");
+        }
+
+        ExternalTargetRootBinding[] bindings;
+        try
+        {
+            bindings = JsonSerializer.Deserialize<ExternalTargetRootBinding[]>(bindingJson) ?? [];
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                "The protected external-target root bindings in process launch variables are malformed.",
+                exception);
+        }
+
+        if (bindings.Any(binding =>
+                binding is null ||
+                binding.RootId.Length != ExternalTargetAliasCodec.RootIdLength ||
+                !binding.RootId.All(Uri.IsHexDigit) ||
+                string.IsNullOrWhiteSpace(binding.HostPlatform) ||
+                string.IsNullOrWhiteSpace(binding.ProtectedRootToken)))
+        {
+            throw new InvalidOperationException(
+                "The protected external-target root bindings in process launch variables are malformed.");
+        }
+
+        var selectedBindings = bindings
+            .Where(binding => requiredRootIds.Contains(binding.RootId))
+            .DistinctBy(binding => binding.RootId, StringComparer.Ordinal)
+            .ToArray();
+        if (selectedBindings.Length != requiredRootIds.Count)
+        {
+            throw new InvalidOperationException(
+                "A versioned external-target alias has no matching protected root binding in process launch variables.");
+        }
+
+        return selectedBindings;
     }
 
     internal static readonly HashSet<string> TrustedExternalTargetVariableNames = new(StringComparer.OrdinalIgnoreCase)

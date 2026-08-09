@@ -1,7 +1,9 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -65,7 +67,9 @@ public sealed class HrAgentProcessReviewServiceTests
             executionProfileGenerationSource: scope.ServiceProvider
                 .GetRequiredService<IAgentExecutionProfileGenerationSource>(),
             workspaceProcessLeaseCleaner: scope.ServiceProvider
-                .GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleaner>());
+                .GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleaner>(),
+            externalTargetPathRegistryFactory: scope.ServiceProvider
+                .GetRequiredService<IExternalTargetPathRegistryFactory>());
         var provider = Assert.Single(
             await workspace.ListProvidersAsync(),
             item => item.IsEnabled &&
@@ -73,6 +77,7 @@ public sealed class HrAgentProcessReviewServiceTests
                     string.Equals(item.Name, "OpenAI default", StringComparison.Ordinal));
         var administration = new HrAgentAdministrationService(
             workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
         var target = await CreateAgentAsync(
             administration,

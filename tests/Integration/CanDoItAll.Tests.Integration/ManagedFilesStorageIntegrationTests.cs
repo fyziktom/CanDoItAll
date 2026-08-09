@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class ManagedFilesStorageIntegrationTests
 {
     [Fact]
@@ -407,6 +408,8 @@ internal sealed class ManagedFilesTestHost : IAsyncDisposable
             ["Storage:ManagerArtifactsFolder"] = Path.Combine(testEnvironment.RootPath, "manager-artifacts"),
             ["SecretVault:Provider"] = "DataProtectionFile",
             ["SecretVault:VaultPath"] = Path.Combine(testEnvironment.ControlPlaneRootPath, "secrets"),
+            ["SecretVault:AllowInsecureDevelopmentProviders"] = "true",
+            ["DataProtection:KeyProtection:Provider"] = "UnprotectedDevelopment",
             ["Workbench:MaxWarmTabs"] = "3",
             ["Workbench:SleepAfterMinutes"] = "15",
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",

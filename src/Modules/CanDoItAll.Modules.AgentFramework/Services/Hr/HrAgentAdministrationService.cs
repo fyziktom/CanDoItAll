@@ -1,11 +1,14 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class HrAgentAdministrationService(
     IAgentFrameworkWorkspaceService workspaceService,
+    IExternalTargetPathRegistry externalTargetPathRegistry,
     ILogger<HrAgentAdministrationService> logger)
 {
     private const int MaximumSearchTake = 100;
@@ -274,12 +277,9 @@ public sealed class HrAgentAdministrationService(
                 input.ProjectStructureAccess);
         }
 
-        if (input.WorkspaceToolAccess is not null)
-        {
-            editor.WorkspaceToolAccess = ApplyWorkspaceToolAccessPatch(
-                editor.WorkspaceToolAccess,
-                input.WorkspaceToolAccess);
-        }
+        editor.WorkspaceToolAccess = ApplyWorkspaceToolAccessPatch(
+            editor.WorkspaceToolAccess,
+            input.WorkspaceToolAccess ?? new HrAgentWorkspaceToolAccessPatch());
 
         var warnings = await SaveAndInspectProjectionOutcomeAsync(
             actorAgentId,
@@ -762,7 +762,7 @@ public sealed class HrAgentAdministrationService(
             });
     }
 
-    private static AgentWorkspaceToolAccessSettings CreateWorkspaceToolAccess(
+    private AgentWorkspaceToolAccessSettings CreateWorkspaceToolAccess(
         HrAgentWorkspaceToolAccessInput input)
     {
         ValidateWorkspaceToolProfile(input.Profile, nameof(input.Profile));
@@ -785,6 +785,7 @@ public sealed class HrAgentAdministrationService(
                 CanManageWorkspacePaths = input.CanManageWorkspacePaths,
                 CanTransformArtifacts = input.CanTransformArtifacts,
                 AllowedExternalTargetAliases = aliases,
+                ExternalTargetRootBindings = externalTargetPathRegistry.ExportBindings(aliases).ToList(),
                 CanReadStorage = input.CanReadStorage,
                 CanWriteStorage = input.CanWriteStorage,
                 AllowAllStorageCatalogs = input.AllowAllStorageCatalogs,
@@ -792,7 +793,7 @@ public sealed class HrAgentAdministrationService(
             });
     }
 
-    private static AgentWorkspaceToolAccessSettings ApplyWorkspaceToolAccessPatch(
+    private AgentWorkspaceToolAccessSettings ApplyWorkspaceToolAccessPatch(
         AgentWorkspaceToolAccessSettings current,
         HrAgentWorkspaceToolAccessPatch patch)
     {
@@ -802,7 +803,7 @@ public sealed class HrAgentAdministrationService(
 
         var normalizedCurrent = AgentWorkspaceToolAccessMetadata.Normalize(current);
         var aliases = patch.AllowedExternalTargetAliases is null
-            ? normalizedCurrent.AllowedExternalTargetAliases.ToList()
+            ? NormalizeExternalTargetAliases(normalizedCurrent.AllowedExternalTargetAliases)
             : NormalizeExternalTargetAliases(patch.AllowedExternalTargetAliases);
         var storageIdsWereSupplied = patch.AllowedStorageCatalogIds is not null;
         var storageIds = storageIdsWereSupplied
@@ -837,6 +838,10 @@ public sealed class HrAgentAdministrationService(
                     patch.CanManageWorkspacePaths ?? normalizedCurrent.CanManageWorkspacePaths,
                 CanTransformArtifacts = patch.CanTransformArtifacts ?? normalizedCurrent.CanTransformArtifacts,
                 AllowedExternalTargetAliases = aliases,
+                ExternalTargetRootBindings = normalizedCurrent.ExternalTargetRootBindings
+                    .Concat(externalTargetPathRegistry.ExportBindings(aliases))
+                    .Distinct()
+                    .ToList(),
                 CanReadStorage = patch.CanReadStorage ?? normalizedCurrent.CanReadStorage,
                 CanWriteStorage = patch.CanWriteStorage ?? normalizedCurrent.CanWriteStorage,
                 AllowAllStorageCatalogs = allowAllStorageCatalogs,
@@ -844,12 +849,14 @@ public sealed class HrAgentAdministrationService(
             });
     }
 
-    private static List<string> NormalizeExternalTargetAliases(IReadOnlyList<string>? requestedAliases)
+    private List<string> NormalizeExternalTargetAliases(IReadOnlyList<string>? requestedAliases)
     {
         var normalized = new List<string>();
         foreach (var requestedAlias in requestedAliases ?? [])
         {
-            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(requestedAlias);
+            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                requestedAlias,
+                externalTargetPathRegistry);
             if (string.IsNullOrWhiteSpace(alias))
             {
                 throw new InvalidOperationException(
@@ -860,8 +867,8 @@ public sealed class HrAgentAdministrationService(
         }
 
         return normalized
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
             .ToList();
     }
 

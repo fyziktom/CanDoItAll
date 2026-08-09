@@ -119,7 +119,7 @@ public sealed class WorkflowExecutorTests
         var executor = new ImageGenerationWorkflowExecutor(
             new TestProviderProfileRegistry([provider]),
             imageService,
-            new WorkspacePathResolutionService(temp.Path));
+            TestWorkspaceServices.CreatePathResolutionService(temp.Path));
 
         var result = await ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
         {
@@ -156,7 +156,7 @@ public sealed class WorkflowExecutorTests
         var executor = new ImageGenerationWorkflowExecutor(
             new TestProviderProfileRegistry([provider]),
             new RecordingImageGenerationService([1, 2, 3]),
-            new WorkspacePathResolutionService(temp.Path));
+            TestWorkspaceServices.CreatePathResolutionService(temp.Path));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
         {
@@ -481,6 +481,54 @@ public sealed class WorkflowExecutorTests
         Assert.Equal(new WorkflowNodeId("write-summary"), artifact.NodeId);
         Assert.Equal(filePath, artifact.StoragePath);
         Assert.Equal("generated-summary.md", artifact.Name);
+    }
+
+    [Fact]
+    public void MafBackend_preserves_case_distinct_logical_artifact_paths()
+    {
+        var definition = CreateDefinition(
+        [
+            CreateExecutorNode("write-upper", WorkflowExecutorIds.StorageFile) with
+            {
+                Settings = CreateSettings(WorkflowExecutorIds.StorageFile) with
+                {
+                    ExecutorSettingsJson = System.Text.Json.JsonSerializer.Serialize(
+                        new WorkflowStorageFileExecutorSettings
+                        {
+                            Operation = WorkflowStorageFileOperation.WriteText,
+                            Path = "reports/Foo.txt",
+                            Content = "upper"
+                        })
+                }
+            },
+            CreateExecutorNode("write-lower", WorkflowExecutorIds.StorageFile) with
+            {
+                Settings = CreateSettings(WorkflowExecutorIds.StorageFile) with
+                {
+                    ExecutorSettingsJson = System.Text.Json.JsonSerializer.Serialize(
+                        new WorkflowStorageFileExecutorSettings
+                        {
+                            Operation = WorkflowStorageFileOperation.WriteText,
+                            Path = "reports/foo.txt",
+                            Content = "lower"
+                        })
+                }
+            },
+            CreateNode("end", WorkflowNodeKind.End)
+        ],
+        [
+            CreateEdge("upper-lower", "write-upper", "write-lower"),
+            CreateEdge("lower-end", "write-lower", "end")
+        ],
+        startNodeId: "write-upper");
+
+        string[] paths = MafConfiguredFileArtifactResolver
+            .BuildConfiguredFileArtifacts(definition, WorkflowRunId.New(), DateTimeOffset.UtcNow)
+            .Select(artifact => artifact.StoragePath)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(["reports/Foo.txt", "reports/foo.txt"], paths);
     }
 
     [Fact]
@@ -1429,7 +1477,7 @@ public sealed class WorkflowExecutorTests
     public async Task WorkspaceFileExecutorWritesAndReadsThroughStorageService()
     {
         using var temp = new TempDirectory();
-        var service = new WorkspaceFileService(temp.Path);
+        var service = TestWorkspaceServices.CreateFileService(temp.Path);
         var executor = new WorkspaceFileWorkflowExecutor(service);
         var writeContext = CreateExecutionContext(
             executor.Descriptor,
@@ -1458,7 +1506,7 @@ public sealed class WorkflowExecutorTests
     public async Task WorkspaceFileExecutorSupportsDirectoryHashZipAndDryRunDelete()
     {
         using var temp = new TempDirectory();
-        var service = new WorkspaceFileService(temp.Path);
+        var service = TestWorkspaceServices.CreateFileService(temp.Path);
         var executor = new WorkspaceFileWorkflowExecutor(service);
 
         await ExecuteDirectAsync(executor, new WorkflowStorageFileExecutorSettings
@@ -1546,7 +1594,7 @@ public sealed class WorkflowExecutorTests
     public async Task MarkdownRenderExecutorRendersTablesAndWritesOutputFile()
     {
         using var temp = new TempDirectory();
-        var files = new WorkspaceFileService(temp.Path);
+        var files = TestWorkspaceServices.CreateFileService(temp.Path);
         var executor = new MarkdownRenderWorkflowExecutor(files);
 
         var result = await ExecuteDirectAsync(
@@ -1619,7 +1667,7 @@ public sealed class WorkflowExecutorTests
     public async Task HttpFetchDownloadsToWorkspaceAndSourceIngestionReadsOutputPath()
     {
         using var temp = new TempDirectory();
-        var files = new WorkspaceFileService(temp.Path);
+        var files = TestWorkspaceServices.CreateFileService(temp.Path);
         await using var server = SingleResponseHttpServer.Html(200, "<html><body><h1>Download evidence</h1></body></html>");
         var httpResult = await ExecuteDirectAsync(new HttpFetchWorkflowExecutor(files: files), new WorkflowHttpExecutorSettings
         {
@@ -1632,10 +1680,15 @@ public sealed class WorkflowExecutorTests
         Assert.True(File.Exists(Path.Combine(temp.Path, "downloads", "source.html")));
         Assert.Contains("\"outputPath\":\"downloads/source.html\"", httpResult.PayloadJson, StringComparison.Ordinal);
 
+        var externalTargetPathRegistry = TestExternalTargetPathRegistry.Create();
         var ingestion = await ExecuteDirectAsync(
             new SourceIngestionWorkflowExecutor(
-                new WorkspacePathResolutionService(temp.Path),
-                new ManagedCodeMarkItDownDocumentMarkdownConverter()),
+                TestWorkspaceServices.CreatePathResolutionService(
+                    temp.Path,
+                    externalTargetRegistry: externalTargetPathRegistry),
+                new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+                externalTargetPathRegistry,
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
             new WorkflowSourceIngestionExecutorSettings
             {
                 IncludeAdditionalSources = true,
@@ -1649,6 +1702,28 @@ public sealed class WorkflowExecutorTests
 
         Assert.Contains("Download evidence", ingestion.PayloadJson, StringComparison.Ordinal);
         Assert.Contains("markitdown-html", ingestion.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HttpFetchDefaultDownloadNameUsesPortableCrossHostEncoding()
+    {
+        using var temp = new TempDirectory();
+        var files = TestWorkspaceServices.CreateFileService(temp.Path);
+        await using var server = SingleResponseHttpServer.Html(200, "portable");
+        string url = server.Url.Replace("/scenario", "/report%3Afinal.txt", StringComparison.Ordinal);
+
+        WorkflowNodeExecutionResult result = await ExecuteDirectAsync(
+            new HttpFetchWorkflowExecutor(files: files),
+            new WorkflowHttpExecutorSettings
+            {
+                Url = url,
+                AllowPrivateNetworkTargets = true,
+                DownloadToWorkspace = true
+            });
+
+        const string expectedRelativePath = "downloads/report-final.txt~126c002f1496";
+        Assert.True(File.Exists(Path.Combine(temp.Path, "downloads", "report-final.txt~126c002f1496")));
+        Assert.Contains($"\"outputPath\":\"{expectedRelativePath}\"", result.PayloadJson, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1694,13 +1769,15 @@ public sealed class WorkflowExecutorTests
         var plugin = new WorkspaceSpreadsheetRuntimePlugin(
             new ClosedXmlSpreadsheetDocumentService(),
             temp.Path,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
             new AgentWorkspaceToolAccessSettings
             {
                 CanReadFiles = true,
                 CanWriteFiles = true,
                 CanTransformArtifacts = true
-            });
+            },
+            TestExternalTargetPathRegistry.Create());
 
         IReadOnlyList<(string ToolName, object Result)> toolResults;
         using (WorkspaceExecutionAuditContext.BeginScope(run))
@@ -1767,11 +1844,11 @@ public sealed class WorkflowExecutorTests
     public async Task WorkflowExecutorScenarioMatrixCoversRealWorldExamples()
     {
         using var temp = new TempDirectory();
-        var workspaceFiles = new WorkspaceFileService(temp.Path);
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(temp.Path);
         var storageExecutor = new WorkspaceFileWorkflowExecutor(workspaceFiles);
         var spreadsheetExecutor = new SpreadsheetWorkflowExecutor(
             new ClosedXmlSpreadsheetDocumentService(),
-            new WorkspacePathResolutionService(temp.Path));
+            TestWorkspaceServices.CreatePathResolutionService(temp.Path));
         var completedScenarios = new List<string>();
 
         async Task RecordAsync(string name, Func<Task> scenario)
@@ -2114,7 +2191,7 @@ public sealed class WorkflowExecutorTests
             var executor = new ImageGenerationWorkflowExecutor(
                 new TestProviderProfileRegistry([provider]),
                 imageService,
-                new WorkspacePathResolutionService(temp.Path));
+                TestWorkspaceServices.CreatePathResolutionService(temp.Path));
 
             var result = await ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
             {
@@ -2150,7 +2227,7 @@ public sealed class WorkflowExecutorTests
             var executor = new ImageGenerationWorkflowExecutor(
                 new TestProviderProfileRegistry([provider]),
                 new RecordingImageGenerationService([1, 2, 3]),
-                new WorkspacePathResolutionService(temp.Path));
+                TestWorkspaceServices.CreatePathResolutionService(temp.Path));
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(executor, new WorkflowImageGenerationExecutorSettings
             {

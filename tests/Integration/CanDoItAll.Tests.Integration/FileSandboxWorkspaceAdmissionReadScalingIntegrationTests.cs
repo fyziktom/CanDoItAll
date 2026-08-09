@@ -6,6 +6,7 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
     ITestOutputHelper output)
 {

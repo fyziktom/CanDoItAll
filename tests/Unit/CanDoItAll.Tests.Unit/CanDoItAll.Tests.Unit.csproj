@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Support\CanDoItAll.DurableFileWriter.TestHost\CanDoItAll.DurableFileWriter.TestHost.csproj" />
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Access\CanDoItAll.AgentFramework.Capabilities.Access.csproj" />
@@ -90,4 +91,3 @@
   </ItemGroup>
 
 </Project>
-

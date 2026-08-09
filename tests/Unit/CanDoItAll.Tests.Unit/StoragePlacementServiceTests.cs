@@ -28,6 +28,7 @@ public sealed class StoragePlacementServiceTests
                 HealthStatus = StorageHealthStatus.Healthy,
                 IsEnabled = true
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, DateTimeOffset.UtcNow);
             var revisions = new ProcessLocalFileCatalogRevisionService();
             var sut = new RevisionPublishingStoragePlacementService(new StoragePlacementService(
                 new TestStorageCatalogService(storage),

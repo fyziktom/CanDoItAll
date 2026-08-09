@@ -1393,12 +1393,13 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeWorkspaceTools_authorized_external_target_attaches_discovery_context_with_discovery_tool()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        const string externalAlias = "external-target/v1/0123456789abcdef01234567/calculator";
         var access = new AgentWorkspaceToolAccessSettings
         {
             CanReadFiles = true,
             AllowedExternalTargetAliases =
             [
-                "external-target/C/products/calculator"
+                externalAlias
             ]
         };
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
@@ -1412,7 +1413,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             source.ItemCount == 1);
         var context = ReadEffectiveExternalTargetContext(state);
         Assert.Contains(
-            "\"external-target/C/products/calculator\" (read-only with currently attached tools)",
+            $"\"{externalAlias}\" (read-only with currently attached tools)",
             context,
             StringComparison.Ordinal);
         Assert.DoesNotContain("(read/write", context, StringComparison.Ordinal);

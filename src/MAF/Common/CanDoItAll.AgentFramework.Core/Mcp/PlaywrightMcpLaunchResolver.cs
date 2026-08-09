@@ -154,6 +154,8 @@ public static class PlaywrightMcpLaunchResolver
                 .Select(path => new FileInfo(path))
                 .Where(file => file.Exists)
                 .OrderByDescending(file => file.LastWriteTimeUtc)
+                .ThenBy(file => file.Name, StringComparer.Ordinal)
+                .ThenBy(file => file.FullName, StringComparer.Ordinal)
                 .FirstOrDefault();
             if (candidate is null)
             {
