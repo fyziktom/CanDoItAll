@@ -26,11 +26,19 @@
 
 ## ADR-C04 — Secure providers fail closed
 
-**Decision:** `Auto` selects only a proven operational provider. Production does not fall back to the current file-vault key-beside-ciphertext design.
+**Decision:** Explicitly selected strong providers fail closed. `Auto` selects only the platform baseline defined by ADR-C08; it never changes providers after selection.
 
 **Reason:** Capability truthfulness and confidentiality.
 
 **Rejected:** Silent InMemory/plaintext/insecure file fallback.
+
+## ADR-C08 — Local startup has an explicit platform protection baseline
+
+**Decision:** Windows `Auto` selects current-user DPAPI and reports `Strong`. Unix `Auto` selects `LocalUserFile`, which preserves the AES-256-GCM local file format, enforces `0700` directories and `0600` files, reports `BasicLocal`, and warns that code running as the same operating-system account can read its colocated key. `DataProtectionFile` remains a Development/migration-only provider name. Operators select Keychain, Secret Service, or an external wrapping key when the same-user threat is in scope.
+
+**Reason:** A local installation must start without requiring an interactive keyring or externally managed vault, while capability reporting must distinguish encrypted-at-rest local storage from an operating-system or externally protected vault.
+
+**Rejected:** Blocking all Unix startup without a stronger vault; silently downgrading an explicitly selected strong provider; describing the key-beside-ciphertext tier as strong or same-user isolated; using the basic tier on Windows where DPAPI is built in.
 
 ## ADR-C05 — Key bootstrap is acyclic
 

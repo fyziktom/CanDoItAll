@@ -214,6 +214,40 @@ public sealed class DataProtectionControlPlaneTests
 public sealed class DatabaseProfileOverrideTests
 {
     [Fact]
+    public async Task InMemory_override_ignores_inherited_postgres_connection_string()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-inmemory-inherited-postgres");
+        const string inheritedConnection =
+            "Host=localhost;Port=5432;Database=candoitall;Username=candoitall;Password=must-not-leak";
+
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false,
+            additionalValues: new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Database:Provider"] = "InMemory",
+                ["Database:ConnectionString"] = inheritedConnection
+            });
+
+        var configuration = provider.GetRequiredService<IConfiguration>();
+        var resolvedProfile = provider
+            .GetRequiredService<IActiveDatabaseProfileResolver>()
+            .ResolveCurrentProfile();
+        DatabaseStartupConnectionOptions? startup = DatabaseProfileStartupConnectionResolver.TryResolve(
+            configuration,
+            testEnvironment.RootPath,
+            "Development");
+
+        Assert.Equal("candoitall", resolvedProfile.Profile.InMemory?.DatabaseName);
+        Assert.StartsWith("inmemory:", resolvedProfile.Profile.Runtime.Fingerprint, StringComparison.Ordinal);
+        Assert.DoesNotContain("candoitall", resolvedProfile.Profile.Runtime.Fingerprint, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("must-not-leak", resolvedProfile.Profile.Storage.WorkspaceRoot, StringComparison.Ordinal);
+        Assert.NotNull(startup);
+        Assert.Equal(DatabaseProviderKind.InMemory, startup.ProviderKind);
+        Assert.Equal("candoitall", startup.ConnectionString);
+    }
+
+    [Fact]
     public async Task ResolveCurrentProfile_prefers_explicit_override_over_the_persisted_active_profile()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-override");

@@ -2,9 +2,10 @@
 
 ## Current state
 
-- A04 implementation and all obtainable Windows/Linux/headless evidence are complete.
+- A04 implementation and all obtainable Windows/Linux/headless evidence are complete, including the reopened SEC-014 platform-baseline correction.
 - Independent review and bounded remediation re-review are recorded in `reviews/14-a04-independent-review.md`.
 - SEC-008, SEC-011, and SEC-013 remediation findings are independently closed.
+- SEC-014 is independently GO: Windows `Auto` uses DPAPI/`Strong`; Unix `Auto` uses `LocalUserFile`/`BasicLocal` with `0700`/`0600` and a same-user warning.
 - Gate C2 remains NO-GO solely because genuine macOS Keychain evidence required by SEC-002 and A04-T11 is absent.
 - A05 and the runtime bundle remain ineligible.
 
@@ -17,6 +18,9 @@
 5. `artifacts/unix-portability/A04/A04-secret-scan-final.json`
 6. `artifacts/unix-portability/A04/A04-secret-scan-classification.md`
 7. CodeAnalytics snapshot `snap-20260809191620-b07bdd50`
+8. `artifacts/unix-portability/A04/remediation-2/`
+
+The remediation-2 proof includes Windows 5,529/5,529 full Unit, both-host 99/99 focus, Windows 4/4 integration, Linux 3/3 plus 1/1 integration, both-host zero-warning Web builds, both-host HTTP 200 startup, and a schema-3 scan of all 36 source evidence files with no oversized/non-text/unreadable gaps and zero private-sentinel matches.
 
 ## Required macOS continuation
 
@@ -38,4 +42,4 @@ The final macOS proof must cover probe/access-control state, create/read/update/
 
 ## Next action
 
-Resume only A04 macOS validation. Do not enter A05 or either runtime-bundle implementation phase until the independent reviewer records C2 GO.
+Resume only A04 macOS validation. Do not enter A05 or either runtime-bundle implementation phase until genuine macOS proof allows the independent reviewer to record C2 GO.

@@ -367,6 +367,16 @@
       "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
+      "id": "SEC-014",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "A user-reported first launch failed because the authorized local file provider was rejected by its own capability probe.",
+      "execution_observation": "Windows Auto selects current-user DPAPI and reports Strong. Unix Auto selects LocalUserFile, preserves the encrypted legacy format, enforces 0700/0600, reports BasicLocal with a same-user warning, and starts without an interactive/external vault. Stronger explicit providers remain fail-closed; legacy DataProtectionFile compatibility reports DevelopmentOnly.",
+      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
       "id": "MAF-001",
       "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
       "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",

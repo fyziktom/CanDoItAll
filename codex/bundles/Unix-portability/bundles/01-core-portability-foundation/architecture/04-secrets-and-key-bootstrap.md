@@ -5,12 +5,12 @@
 A04 implements explicit provider profiles and makes provider capability a startup contract:
 
 - Windows Auto selects DPAPI.
-- macOS Auto selects Keychain and requires an interactive session.
-- Linux Auto selects Secret Service and requires an available, unlocked D-Bus session keyring.
-- Unix headless/service profiles explicitly select an external wrapping-key vault. The AES-256-GCM key is supplied by a protected environment source, is never written to the vault directory, and supports current plus retained previous key identifiers for rotation.
-- The legacy Data Protection file vault and in-memory vault are rejected outside Development and require explicit insecure-development opt-in. The legacy file vault may otherwise be opened only through the read/delete migration-source boundary.
+- Non-Windows Auto selects `LocalUserFile`, a guaranteed basic local profile that does not require an interactive or external vault. It preserves the legacy AES-256-GCM file format, enforces `0700` on vault directories and `0600` on vault files, and truthfully reports `BasicLocal` because its local key is accessible to that same account.
+- macOS Keychain and Linux Secret Service remain explicit stronger profiles. They require their real platform/session services and fail closed when unavailable; neither silently falls back after selection.
+- Headless/service deployments can explicitly select the external wrapping-key vault. Its AES-256-GCM key is supplied by a protected environment source, is never written to the vault directory, and supports current plus retained previous key identifiers for rotation.
+- The legacy `DataProtectionFile` provider name and in-memory vault remain rejected outside Development and require explicit insecure-development opt-in. Authorized Development use reports `DevelopmentOnly`; migration opens the raw legacy implementation only through the read/delete boundary.
 
-Every selected vault implements a capability probe. A hosted startup validator publishes only provider kind, availability state, and remediation; it prevents the application from serving when the configured provider is unsupported, unavailable, locked, dependency-missing, or incompatible with the current session/profile.
+Every selected vault implements a capability probe. A hosted startup validator publishes provider kind, availability, protection level, and non-secret remediation/security notice. It prevents the application from serving when the configured provider is unsupported, unavailable, locked, dependency-missing, or incompatible with the current session/profile, and emits a structured warning for every available non-`Strong` profile.
 
 ASP.NET Data Protection uses a separate bootstrap policy. Windows Auto uses DPAPI. Unix production requires explicit certificate protection, with current and previous PFX certificates loaded directly from configured files and passwords supplied by named environment inputs. Unprotected persistence exists only as an explicit Development choice. The private XML repository uses the A02 durable writer, atomic create-new commits, and restrictive directory/file modes. No Data Protection bootstrap path resolves a secret encrypted by the same ring.
 
@@ -30,24 +30,24 @@ Actual Windows DPAPI and Linux Secret Service/headless restart proof is recorded
 
 ### Windows interactive/service
 
-- DPAPI remains a valid local provider when its scope matches the profile.
+- Auto selects current-user DPAPI and reports `Strong`; `LocalUserFile` is rejected because Windows already has this built-in stronger baseline.
 - Migration to another provider is explicit; do not break old DPAPI payloads.
 - Data Protection ring may use DPAPI or another configured protector.
 
 ### macOS interactive
 
-- Keychain-backed provider or approved secure alternative.
+- `LocalUserFile` is the no-dependency Auto baseline; select Keychain for stronger OS-vault isolation.
 - Define whether access requires an unlocked user session.
 - Headless/launchd must not pretend this profile is available.
 
 ### Linux interactive
 
-- Secret Service with D-Bus/session/locked-state semantics.
-- No silent file fallback when unavailable.
+- `LocalUserFile` is the no-dependency Auto baseline; select Secret Service for stronger session-vault isolation.
+- Explicit Secret Service selection retains D-Bus/session/locked-state semantics and does not silently fall back when unavailable.
 
 ### Headless/service
 
-Use an explicit provider independent of an interactive session, for example:
+The Unix basic local provider works without an interactive session. Higher-security services should explicitly use a provider independent of an interactive keyring, for example:
 
 - certificate-protected local ring/vault;
 - remote vault;
@@ -66,13 +66,9 @@ The Data Protection key ring must be available to decrypt existing records befor
 
 ## File vault disposition
 
-The current Base64 key beside ciphertext is not production protection. Choose one:
+The local AES key beside ciphertext provides encrypted-at-rest handling against casual file disclosure, not isolation from code running as the same OS account. The Unix-only `LocalUserFile` profile keeps this behavior as an explicit basic protection tier with enforced `0700` directory and `0600` file modes, a typed `BasicLocal` capability, and a startup warning. It must never be described as equivalent to DPAPI, Keychain, Secret Service, or an externally protected wrapping key.
 
-- migrate to an OS/remote vault;
-- keep a file envelope whose wrapping key is external and protected;
-- retain only an explicit test/development provider with loud configuration and no production Auto selection.
-
-Do not rename the current implementation and keep the same threat model.
+The `DataProtectionFile` name is retained only for Development compatibility and migration. New writers use `LocalUserFile`; existing payloads remain readable without a bulk rewrite because both names share the exact file format.
 
 ## Migration
 
@@ -96,4 +92,4 @@ Use sentinel secrets in tests. Scan:
 - screenshots/browser traces;
 - generated portability scan excerpts.
 
-A04's schema-2 scanner reports only metadata and fingerprints for reviewed synthetic secret-scanner/redaction fixtures embedded in TRX parameterized test names. It accepts private sentinel-file inputs without echoing or scanning them; all four seeded runtime/migration sentinels produced zero findings. See `artifacts/unix-portability/A04/A04-secret-scan-classification.md`.
+A04's schema-3 scanner reports only metadata and fingerprints for reviewed synthetic secret-scanner/redaction fixtures embedded in TRX parameterized test names. It accepts private sentinel-file inputs without echoing or scanning them and explicitly accounts for scanned, oversized, non-text, unreadable, and control-input files. The SEC-014 scan loaded two private sentinels, found zero sentinel matches, and skipped no source evidence. See `artifacts/unix-portability/A04/remediation-2/A04-remediation-2-secret-scan-classification.md`.

@@ -318,8 +318,8 @@
       "id": "SEC-007",
       "priority": "P0",
       "owner": "A04",
-      "requirement": "The current plaintext Base64 file-vault master key is removed from production paths and cannot be selected by Auto.",
-      "acceptance": "Legacy development data has a named migration or explicit discard path; production startup rejects insecure configuration.",
+      "requirement": "The legacy DataProtectionFile provider remains Development/migration-only; Unix may use its encrypted file format only through the explicitly named and honestly classified LocalUserFile basic tier.",
+      "acceptance": "Windows Auto selects DPAPI; Unix Auto selects LocalUserFile with 0700 directories, 0600 files, a typed BasicLocal capability, and a same-user threat-model warning; explicit strong providers fail closed and the legacy provider name is rejected in production.",
       "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {
@@ -368,6 +368,14 @@
       "owner": "A04",
       "requirement": "Secret migration and deletion are auditable without exposing values and have explicit orphan cleanup semantics.",
       "acceptance": "Staged reference cleanup and old-payload deletion are idempotent and tested.",
+      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+    },
+    {
+      "id": "SEC-014",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "A local installation can start without an interactive or externally managed vault by using an honestly classified basic local provider.",
+      "acceptance": "Windows startup/restart uses DPAPI with typed Strong protection; Unix startup/restart uses LocalUserFile with enforced 0700/0600 modes, typed BasicLocal protection, and a same-user warning; explicit strong-provider selection, legacy Development compatibility, and non-disclosure remain proven.",
       "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
     },
     {

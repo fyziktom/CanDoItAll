@@ -17,7 +17,7 @@
   "status": "Prepared",
   "first_eligible_subbundle": "A00",
   "final_gate": "C4",
-  "requirements_count": 64,
+  "requirements_count": 65,
   "subbundles": [
     {
       "id": "A00",

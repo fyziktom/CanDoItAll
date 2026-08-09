@@ -152,7 +152,7 @@ public sealed class SecretVaultTests
     }
 
     [Fact]
-    public void SecretVaultFactory_auto_uses_dpapi_on_windows()
+    public void SecretVaultFactory_auto_uses_dpapi_on_windows_and_basic_local_elsewhere()
     {
         var vault = SecretVaultFactory.CreateDefault(
             new SecretVaultOptions
@@ -166,17 +166,9 @@ public sealed class SecretVaultTests
         {
             Assert.IsType<DpapiSecretVault>(vault);
         }
-        else if (OperatingSystem.IsMacOS())
-        {
-            Assert.IsType<MacOsKeychainSecretVault>(vault);
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            Assert.IsType<LinuxSecretServiceVault>(vault);
-        }
         else
         {
-            Assert.Fail("The test host operating system must have an explicitly supported automatic provider.");
+            Assert.IsType<LocalUserFileVault>(vault);
         }
     }
 

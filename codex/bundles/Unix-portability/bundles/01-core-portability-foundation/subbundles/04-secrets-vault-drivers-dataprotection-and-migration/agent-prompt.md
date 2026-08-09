@@ -54,6 +54,6 @@ Provide truthful secure secret persistence on Windows, Linux, and macOS while pr
 ## Exit
 
 - Gate C2 is GO from architect, security reviewer, and runtime validator.
-- Auto never selects unsupported or insecure persistence.
+- Auto selects only the declared platform tier; any weaker tier is explicitly typed and warned.
 - Production key material is protected at rest and permission-hardened.
 - Legacy Windows secret/control-plane data has a tested migration and rollback path.

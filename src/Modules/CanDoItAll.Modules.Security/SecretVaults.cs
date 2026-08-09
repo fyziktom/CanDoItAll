@@ -35,15 +35,33 @@ public enum SecretVaultAvailability
     Unavailable
 }
 
+public enum SecretVaultProtectionLevel
+{
+    Unknown,
+    DevelopmentOnly,
+    BasicLocal,
+    Strong
+}
+
 public sealed record SecretVaultProbeResult(
     SecretVaultProviderKind Provider,
     SecretVaultAvailability Availability,
-    string Remediation)
+    string Remediation,
+    SecretVaultProtectionLevel ProtectionLevel = SecretVaultProtectionLevel.Unknown,
+    string SecurityNotice = "")
 {
     public bool IsAvailable => Availability == SecretVaultAvailability.Available;
 
-    public static SecretVaultProbeResult Available(SecretVaultProviderKind provider)
-        => new(provider, SecretVaultAvailability.Available, string.Empty);
+    public static SecretVaultProbeResult Available(
+        SecretVaultProviderKind provider,
+        SecretVaultProtectionLevel protectionLevel = SecretVaultProtectionLevel.Strong,
+        string securityNotice = "")
+        => new(
+            provider,
+            SecretVaultAvailability.Available,
+            string.Empty,
+            protectionLevel,
+            securityNotice);
 }
 
 public sealed class SecretVaultUnavailableException(SecretVaultProbeResult result)
@@ -61,6 +79,7 @@ public enum SecretVaultProviderKind
     MacOsKeychain,
     LinuxSecretService,
     ExternalWrappingKeyFile,
+    LocalUserFile,
     DataProtectionFile,
     AzureKeyVault,
     HashiCorp,
@@ -141,11 +160,19 @@ public static class SecretVaultFactory
         Func<string, string?>? environmentVariableResolver)
     {
         var provider = options.Provider == SecretVaultProviderKind.Auto
-            ? ResolveAutoProvider(options.UsageProfile)
+            ? ResolveAutoProvider()
             : options.Provider;
 
         bool legacyFileMigrationSource =
             allowLegacyFileMigrationSource && provider == SecretVaultProviderKind.DataProtectionFile;
+        if (provider == SecretVaultProviderKind.LocalUserFile && OperatingSystem.IsWindows())
+        {
+            throw new SecretVaultUnavailableException(new SecretVaultProbeResult(
+                provider,
+                SecretVaultAvailability.UnsupportedPlatform,
+                "Use Auto or DPAPI on Windows. LocalUserFile is the Unix basic-local profile."));
+        }
+
         if (provider is (SecretVaultProviderKind.DataProtectionFile or SecretVaultProviderKind.InMemory) &&
             !legacyFileMigrationSource &&
             (!isDevelopment || !options.AllowInsecureDevelopmentProviders))
@@ -166,7 +193,13 @@ public static class SecretVaultFactory
                 options,
                 durableFileWriter,
                 environmentVariableResolver ?? Environment.GetEnvironmentVariable),
-            SecretVaultProviderKind.DataProtectionFile => new DataProtectionFileVault(options, durableFileWriter),
+            SecretVaultProviderKind.LocalUserFile => new LocalUserFileVault(options, durableFileWriter),
+            SecretVaultProviderKind.DataProtectionFile => legacyFileMigrationSource
+                ? new DataProtectionFileVault(options, durableFileWriter)
+                : new LocalUserFileVault(
+                    options,
+                    durableFileWriter,
+                    SecretVaultProviderKind.DataProtectionFile),
             SecretVaultProviderKind.AzureKeyVault => new AzureKeyVaultSecretVault(options),
             SecretVaultProviderKind.HashiCorp => new HashiCorpSecretVault(options),
             SecretVaultProviderKind.InMemory => new InMemorySecretVault(),
@@ -174,32 +207,14 @@ public static class SecretVaultFactory
         };
     }
 
-    private static SecretVaultProviderKind ResolveAutoProvider(SecretVaultUsageProfile usageProfile)
+    private static SecretVaultProviderKind ResolveAutoProvider()
     {
-        if (usageProfile == SecretVaultUsageProfile.Headless && !OperatingSystem.IsWindows())
-        {
-            throw new SecretVaultUnavailableException(new SecretVaultProbeResult(
-                SecretVaultProviderKind.Auto,
-                SecretVaultAvailability.InvalidConfiguration,
-                "Configure ExternalWrappingKeyFile or a supported remote vault for a Unix headless profile."));
-        }
-
         if (OperatingSystem.IsWindows())
         {
             return SecretVaultProviderKind.Dpapi;
         }
 
-        if (OperatingSystem.IsMacOS())
-        {
-            return SecretVaultProviderKind.MacOsKeychain;
-        }
-
-        if (OperatingSystem.IsLinux())
-        {
-            return SecretVaultProviderKind.LinuxSecretService;
-        }
-
-        throw new PlatformNotSupportedException("No automatic secret vault provider is defined for this operating system.");
+        return SecretVaultProviderKind.LocalUserFile;
     }
 
     private sealed class MigrationSourceSecretVault(ISecretVault inner) : ISecretVault
@@ -388,6 +403,70 @@ public sealed class DataProtectionFileVault : FileBackedSecretVault, ISecretVaul
         => SHA256.HashData(Encoding.UTF8.GetBytes(key));
 }
 
+public sealed class LocalUserFileVault : ISecretVault, ISecretVaultCapability
+{
+    private const string BasicLocalSecurityNotice =
+        "Secrets are encrypted in a permission-restricted local file, but the local key is accessible to the same operating-system account. Select Keychain, Secret Service, or an external-key provider for stronger protection.";
+    private const string LegacyDevelopmentSecurityNotice =
+        "This Development-only legacy file vault stores its local key beside encrypted payloads and does not provide an operating-system vault boundary.";
+    private readonly DataProtectionFileVault inner;
+
+    public LocalUserFileVault(SecretVaultOptions options, DurableFileWriter durableFileWriter)
+        : this(options, durableFileWriter, SecretVaultProviderKind.LocalUserFile)
+    {
+    }
+
+    internal LocalUserFileVault(
+        SecretVaultOptions options,
+        DurableFileWriter durableFileWriter,
+        SecretVaultProviderKind provider)
+    {
+        if (provider is not (SecretVaultProviderKind.LocalUserFile or SecretVaultProviderKind.DataProtectionFile))
+        {
+            throw new ArgumentOutOfRangeException(nameof(provider), provider, "Unsupported basic local provider.");
+        }
+
+        Provider = provider;
+        inner = new DataProtectionFileVault(options, durableFileWriter);
+    }
+
+    public SecretVaultProviderKind Provider { get; }
+
+    public ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (Provider == SecretVaultProviderKind.LocalUserFile && OperatingSystem.IsWindows())
+        {
+            return ValueTask.FromResult(new SecretVaultProbeResult(
+                Provider,
+                SecretVaultAvailability.UnsupportedPlatform,
+                "Use Auto or DPAPI on Windows. LocalUserFile is the Unix basic-local profile."));
+        }
+
+        if (Provider == SecretVaultProviderKind.DataProtectionFile)
+        {
+            return ValueTask.FromResult(SecretVaultProbeResult.Available(
+                Provider,
+                SecretVaultProtectionLevel.DevelopmentOnly,
+                LegacyDevelopmentSecurityNotice));
+        }
+
+        return ValueTask.FromResult(SecretVaultProbeResult.Available(
+            Provider,
+            SecretVaultProtectionLevel.BasicLocal,
+            BasicLocalSecurityNotice));
+    }
+
+    public Task SetAsync(string key, string value, CancellationToken ct = default)
+        => inner.SetAsync(key, value, ct);
+
+    public Task<string?> GetAsync(string key, CancellationToken ct = default)
+        => inner.GetAsync(key, ct);
+
+    public Task DeleteAsync(string key, CancellationToken ct = default)
+        => inner.DeleteAsync(key, ct);
+}
+
 public sealed class MauiSecureStorageVault : UnsupportedSecretVault
 {
     public MauiSecureStorageVault(SecretVaultOptions options)
@@ -414,6 +493,8 @@ public sealed class HashiCorpSecretVault : UnsupportedSecretVault
 
 public sealed class InMemorySecretVault : ISecretVault, ISecretVaultCapability
 {
+    private const string DevelopmentSecurityNotice =
+        "This Development-only provider keeps secrets in process memory and loses them when the process stops.";
     private readonly ConcurrentDictionary<string, string> values = new(StringComparer.Ordinal);
 
     public SecretVaultProviderKind Provider => SecretVaultProviderKind.InMemory;
@@ -421,7 +502,10 @@ public sealed class InMemorySecretVault : ISecretVault, ISecretVaultCapability
     public ValueTask<SecretVaultProbeResult> ProbeAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return ValueTask.FromResult(SecretVaultProbeResult.Available(Provider));
+        return ValueTask.FromResult(SecretVaultProbeResult.Available(
+            Provider,
+            SecretVaultProtectionLevel.DevelopmentOnly,
+            DevelopmentSecurityNotice));
     }
 
     public Task SetAsync(string key, string value, CancellationToken ct = default)

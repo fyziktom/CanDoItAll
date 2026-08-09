@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Security;
 
@@ -18,7 +19,8 @@ public sealed class SecretVaultCapabilityState : ISecretVaultCapabilityState
 
 public sealed class SecretVaultStartupValidator(
     ISecretVault secretVault,
-    SecretVaultCapabilityState capabilityState) : IHostedService
+    SecretVaultCapabilityState capabilityState,
+    ILogger<SecretVaultStartupValidator> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -37,6 +39,15 @@ public sealed class SecretVaultStartupValidator(
         if (!probe.IsAvailable)
         {
             throw new SecretVaultUnavailableException(probe);
+        }
+
+        if (probe.ProtectionLevel != SecretVaultProtectionLevel.Strong)
+        {
+            logger.LogWarning(
+                "Secret vault provider {Provider} is running with {ProtectionLevel} protection. {SecurityNotice}",
+                probe.Provider,
+                probe.ProtectionLevel,
+                probe.SecurityNotice);
         }
     }
 

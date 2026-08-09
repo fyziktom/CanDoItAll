@@ -21,6 +21,7 @@ TEXT_SUFFIXES = {
     ".json",
     ".log",
     ".md",
+    ".patch",
     ".ps1",
     ".sh",
     ".txt",
@@ -80,16 +81,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def should_scan(path: Path, root: Path, max_file_bytes: int) -> bool:
-    try:
-        relative = path.relative_to(root)
-        if any(part in IGNORED_DIRECTORIES for part in relative.parts):
-            return False
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > max_file_bytes:
-            return False
-    except OSError:
-        return False
+def is_text_candidate(path: Path) -> bool:
     return path.suffix.casefold() in TEXT_SUFFIXES or path.name.casefold() in {"dockerfile", "nuget.config"}
+
+
+def coverage_entry(path: Path, root: Path, size: int | None = None) -> dict:
+    entry = {"path": path.relative_to(root).as_posix()}
+    if size is not None:
+        entry["bytes"] = size
+    return entry
 
 
 def fingerprint(value: str) -> str:
@@ -151,19 +151,38 @@ def main() -> int:
         print(f"ERROR: {exception}", file=sys.stderr)
         return 2
     findings: list[dict] = []
+    oversized_text_files: list[dict] = []
+    non_text_files: list[dict] = []
+    unreadable_text_files: list[dict] = []
+    control_input_files: list[dict] = []
+    candidate_files = 0
     scanned_files = 0
     for path in iter_candidates(root, excluded_directories):
-        if output is not None and path.resolve() == output:
+        candidate_files += 1
+        try:
+            resolved_path = path.resolve()
+            size = path.stat().st_size
+        except OSError:
+            unreadable_text_files.append(coverage_entry(path, root))
             continue
-        if path.resolve() in sentinel_paths:
+        if (output is not None and resolved_path == output) or resolved_path in sentinel_paths:
+            control_input_files.append(coverage_entry(path, root, size))
             continue
-        if not should_scan(path, root, args.max_file_bytes):
+        if path.is_symlink() or not path.is_file():
+            unreadable_text_files.append(coverage_entry(path, root, size))
             continue
-        scanned_files += 1
+        if not is_text_candidate(path):
+            non_text_files.append(coverage_entry(path, root, size))
+            continue
+        if size > args.max_file_bytes:
+            oversized_text_files.append(coverage_entry(path, root, size))
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
+            unreadable_text_files.append(coverage_entry(path, root, size))
             continue
+        scanned_files += 1
         for line_number, line in enumerate(text.splitlines(), start=1):
             for rule_name, pattern, value_group in RULES:
                 match = pattern.search(line)
@@ -200,12 +219,32 @@ def main() -> int:
 
     counts = Counter(item["rule"] for item in findings)
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "root": root.as_posix(),
         "excluded_directories": sorted(excluded_directories),
         "max_file_bytes": args.max_file_bytes,
         "scanned_files": scanned_files,
+        "coverage": {
+            "candidate_files": candidate_files,
+            "scanned_text_files": scanned_files,
+            "oversized_text_files": {
+                "count": len(oversized_text_files),
+                "files": oversized_text_files,
+            },
+            "excluded_non_text_files": {
+                "count": len(non_text_files),
+                "files": non_text_files,
+            },
+            "unreadable_text_files": {
+                "count": len(unreadable_text_files),
+                "files": unreadable_text_files,
+            },
+            "excluded_control_input_files": {
+                "count": len(control_input_files),
+                "files": control_input_files,
+            },
+        },
         "finding_count": len(findings),
         "sentinel_input_file_count": len(sentinel_paths),
         "sentinel_value_count": len(sentinels),
@@ -220,6 +259,9 @@ def main() -> int:
         print(f"Report: {output}")
 
     print(f"Scanned files: {scanned_files}")
+    print(f"Oversized text files skipped: {len(oversized_text_files)}")
+    print(f"Non-text files excluded: {len(non_text_files)}")
+    print(f"Unreadable text files skipped: {len(unreadable_text_files)}")
     print(f"Findings: {len(findings)}")
     for item in findings[:20]:
         print(f"FOUND: {item['path']}:{item['line']} [{item['rule']}] fingerprint={item['fingerprint']}")

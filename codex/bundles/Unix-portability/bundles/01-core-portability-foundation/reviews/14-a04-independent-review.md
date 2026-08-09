@@ -180,3 +180,251 @@ access-control tests to run on macOS. A04-T11 requires actual Windows, Linux, ma
 headless evidence before platform composition continues. No genuine macOS TRX or
 equivalent retained host evidence exists. Therefore C2 remains **NO-GO solely for
 SEC-002/A04-T11**, and A05 remains ineligible.
+
+## SEC-014 bounded remediation re-review
+
+### Decision
+
+**NO-GO for SEC-014. Security Gate C2 remains NO-GO.**
+
+The reported Development startup contradiction is corrected, and the database
+InMemory fingerprint disclosure is fixed. However, three product/security findings and
+one evidence gap prevent SEC-014 closure. Independently rerun focused tests passed
+`4/4`; this does not override the contract conflicts below. No genuine macOS evidence
+has appeared, so SEC-002/A04-T11 remains an additional independent C2 blocker and A05
+must stay blocked.
+
+### Blocking findings
+
+1. **P0 — `LocalUserFile` violates the still-binding SEC-007 production/Auto
+   boundary.** `SecretVaultFactory` guards only `DataProtectionFile` and `InMemory` by
+   environment/opt-in, while `LocalUserFile` is accepted in every environment and
+   non-Windows `Auto` selects it (`SecretVaults.cs:161-208`). `LocalUserFileVault` then
+   delegates unchanged to `DataProtectionFileVault`, whose `vault.key` is the Base64
+   encoding of the raw AES key stored beside the ciphertext
+   (`SecretVaults.cs:295-298,362-383,397-439`). SEC-007 still requires that exact
+   Base64-key design to be absent from production paths and never selected by Auto
+   (`requirements/requirements.json:318-324`). Adding a truthful warning does not
+   satisfy that requirement. Resolve the contract deliberately: the smallest coherent
+   implementation is Development-only basic-local Auto/explicit use, with production
+   non-Windows Auto retaining the strong-provider/fail-fast policy; alternatively, a
+   security-authorized requirement/ADR change and a different production threat model
+   are needed. Renaming the same mechanism is not a valid closure.
+
+2. **P0 — Windows “user-private, permission-hardened” availability is neither enforced
+   nor proved.** `DurableFileWriteOptions.Private` requests only
+   `RequirePrivateUnixMode`; both directory and file hardening are explicit no-ops on
+   Windows (`DurableFileWriter.cs:23-35,538-568`). The vault accepts any absolute
+   configured `VaultPath`, and `LocalUserFileVault.ProbeAsync` unconditionally reports
+   `Available/BasicLocal` without checking that the directory is writable or restricted
+   to the current user (`SecretVaults.cs:424-430,632-650`). The only local-vault mode
+   assertions are Unix-only (`SecretPortabilityTests.cs:129-139`). Thus the startup
+   warning's “user-private” statement and SEC-014's Windows permission-hardening
+   acceptance are not established. Restrict the Windows store to a demonstrably
+   per-user root or apply and verify owner-only ACLs, make the capability probe fail
+   with non-secret remediation when the store cannot meet that policy, and retain an
+   actual-Windows ACL/startup/restart regression.
+
+3. **P1 security correctness — the new protection taxonomy falsely marks the
+   development-only in-memory secret vault as `Strong`.** The helper defaults every
+   available result to `Strong` (`SecretVaults.cs:54-63`), and
+   `InMemorySecretVault.ProbeAsync` accepts that default (`SecretVaults.cs:467-476`),
+   even though the factory classifies that provider with the insecure-development
+   policy (`SecretVaults.cs:167-174`). The startup validator consequently emits no
+   weaker-provider warning. Give ephemeral/insecure development storage an explicit
+   truthful level (or at minimum non-Strong state and notice) and cover it through the
+   factory/startup validator.
+
+4. **P1 evidence gap — the retained remediation artifact set was not completely
+   scanned.** `A04-remediation-2-secret-scan-authoritative.json` reports a 5,242,880-byte
+   limit and 16 scanned files. The scanner silently skips larger inputs
+   (`scan_artifacts_for_secrets.py:83-92,154-166`), including both 766–839 MB final and
+   authoritative build logs and both 8.3 MB full Windows TRXs; the source tar and patch
+   are also outside its text candidate set. The classification nevertheless says the
+   build logs have zero findings, and the report generalizes this to retained evidence.
+   My bounded exact-pattern stream check found no `must-not-leak`, `Password=`, seeded
+   vault sentinel, or PEM private-key marker in the two authoritative build logs, but
+   the private sentinel inputs are intentionally unavailable and this is not equivalent
+   to the required scanner proof. Use a streaming/chunked scanner or retain compact
+   build summaries; report scanned, skipped, and excluded files explicitly, then rerun
+   with private sentinels over every retained text artifact.
+
+### Confirmed remediation behavior and evidence
+
+- The checked-in Development profile now selects `LocalUserFile` directly without the
+  legacy opt-in. Both authoritative startup logs contain the typed `LocalUserFile /
+  BasicLocal` warning, reach `Application started`, and have empty stderr. The logs do
+  not themselves retain the claimed HTTP 200 response, so that detail remains an
+  executor observation rather than independently reconstructable evidence.
+- The provider preserves the legacy directory, key, payload naming, and AES-GCM format.
+  The cross-platform regression reads legacy-written content, writes new content,
+  recreates the provider, rereads it, excludes plaintext values, and proves `0700/0600`
+  on Unix. Raw `DataProtectionFile` remains production-rejected and read/delete-only
+  through the migration-source boundary; authorized Development compatibility exposes
+  the `DataProtectionFile` name with a `BasicLocal` warning.
+- Windows Auto still selects DPAPI. Explicit DPAPI, Keychain, Secret Service, and
+  external-wrapping-key constructors/probes remain fail-closed; no runtime downgrade
+  from an explicitly selected strong provider was introduced. Non-Windows Auto's new
+  basic-local production behavior is the SEC-007 conflict above, not an explicit
+  provider fallback.
+- `InMemoryDatabaseIdentity` now rejects inherited external-connection syntax as an
+  in-memory database name and uses an opaque truncated SHA-256 identity. The regression
+  proves that the seeded PostgreSQL connection does not enter the resolved name,
+  workspace identity, startup connection, or fingerprint. The scanner finding that
+  motivated this correction is closed at product level.
+- Parsed authoritative counters are Windows focused Unit `97/97`, full Unit
+  `5,527/5,527`, and integration `4/4`; Linux focused Unit `97/97`, secret portability
+  `3/3`, and migration `1/1`, all with zero failed/unexecuted results. The four exact
+  SEC-014/fingerprint tests independently passed `4/4` with `--no-build --no-restore`.
+- `git diff --check` produced no whitespace error and one recorded line-ending notice.
+  Portable validation with deferred checksums passed at 290 files, zero errors, zero
+  warnings.
+
+### Evidence consistency and required bookkeeping
+
+The main evidence report is internally stale: its opening design/result text still says
+Auto selects macOS Keychain/Linux Secret Service and that Auto/production reject the
+file vault (`reviews/13-a04-evidence-report.md:15,19,34`), while its SEC-014 section and
+current source say non-Windows Auto selects `LocalUserFile`
+(`reviews/13-a04-evidence-report.md:93-128`). This mismatch is material because it hides
+the SEC-007 conflict; it is not mere post-review checkbox bookkeeping.
+
+After product policy, Windows privacy, taxonomy, and complete redaction proof are fixed,
+the executor should refresh both-host focused/full/startup/build evidence and append a
+bounded independent re-review. Only after GO should canonical bookkeeping mark SEC-014
+and A04-T12 review complete and synchronize the evidence report, requirement
+traceability/source manifest, A04 README/tasks/validation/exit criteria, execution
+report, gate log, root status, and A04 handoff. C2 and A05 must still remain blocked for
+the genuine macOS SEC-002/A04-T11 proof. Finally regenerate the bundle index/checksums
+and run checksum-enforcing portable validation after all review and bookkeeping text is
+final.
+
+## SEC-014 second bounded remediation re-review
+
+### Decision
+
+**GO for SEC-014. Security Gate C2 remains NO-GO solely for genuine macOS
+SEC-002/A04-T11 proof.**
+
+All four SEC-014 blockers from the preceding review are closed. The amended policy is
+explicit and internally coherent, actual Windows and Linux evidence matches it, and
+the schema-3 redaction proof completely accounts for the retained remediation
+artifacts. No new blocker was found in the bounded scope. A05 remains blocked because
+no genuine macOS Keychain execution evidence exists; Docker and early-return/injected
+tests do not satisfy that independent condition.
+
+### Closed — SEC-007 and platform baseline policy
+
+- SEC-007 now distinguishes the legacy provider *name* from the deliberately supported
+  Unix storage tier. `DataProtectionFile` remains Development/migration-only, while
+  Unix `LocalUserFile` is expressly authorized as `BasicLocal` under its documented
+  same-user threat model (`requirements/requirements.json:318-324`). This removes the
+  earlier direct contract violation rather than merely relabeling it.
+- ADR-C08 records the security decision and rejected alternatives: Windows Auto uses
+  current-user DPAPI/`Strong`; Unix Auto uses AES-256-GCM `LocalUserFile` with enforced
+  `0700/0600`, `BasicLocal`, and an explicit warning that same-account code can read the
+  colocated key; operators use Keychain, Secret Service, or an external wrapping key
+  when same-user isolation is required (`architecture/07-adrs.md:35-41`). ADR-C04 still
+  forbids fallback after an explicit strong provider is selected.
+- The policy is a defensible local-install baseline, not a claim of OS-vault-equivalent
+  protection. `LocalUserFile` protects against casual/offline disclosure subject to
+  owner-only Unix permissions, but deliberately does not protect against compromise of
+  the owning account. The typed capability and warning expose that distinction.
+- Factory selection matches the policy: Windows Auto returns DPAPI; non-Windows Auto
+  returns `LocalUserFile`; explicit DPAPI, Keychain, Secret Service, and external-key
+  providers retain their existing probes and fail closed without switching provider
+  (`SecretVaults.cs:155-217`). The Unix roundtrip/restart regression proves legacy and
+  new payload continuity, absence of plaintext values, vault-root `0700`, and every
+  retained vault file `0600` (`SecretPortabilityTests.cs:152-202`).
+
+### Closed — Windows privacy claim and provider selection
+
+- `SecretVaultFactory` now rejects explicit `LocalUserFile` on Windows with typed
+  `UnsupportedPlatform` remediation directing the operator to Auto/DPAPI
+  (`SecretVaults.cs:168-174`). The capability itself also reports unsupported on
+  Windows, so a directly composed instance cannot pass startup validation
+  (`SecretVaults.cs:435-444`).
+- The Development configuration now selects `Auto`, not `LocalUserFile`, and has no
+  insecure-provider opt-in (`appsettings.Development.json:7-9`). On Windows, Auto
+  resolves to current-user DPAPI and its capability reports `Strong`; no Windows
+  owner-only file-ACL claim remains for the Unix-only basic tier.
+- The Windows v2 startup artifact reaches `Application started`, retains HTTP 200, has
+  empty stderr, and emits no weaker-vault warning. The focused suite exercises Windows
+  Auto-to-DPAPI, explicit LocalUserFile rejection, and DPAPI CRUD; the actual-Windows
+  integration retains the DPAPI export/re-encryption/restart test. This is sufficient
+  evidence for the Windows half of SEC-014 without relying on Unix-mode semantics.
+
+### Closed — truthful Development-only capability
+
+- `SecretVaultProtectionLevel` now has an explicit `DevelopmentOnly` member
+  (`SecretVaults.cs:38-44`). An authorized legacy `DataProtectionFile` compatibility
+  instance reports `DevelopmentOnly` with a legacy key-beside-ciphertext notice, while
+  the raw migration implementation remains unavailable as a startup provider
+  (`SecretVaults.cs:297-319,406-457`). Production factory use is still rejected.
+- `InMemorySecretVault` reports `DevelopmentOnly` and warns that values are process-only
+  and lost on restart (`SecretVaults.cs:494-508`). The startup validator warns for every
+  available level other than `Strong`, so neither Development-only provider can be
+  presented silently as strong (`SecretVaultStartupValidation.cs:37-50`).
+- The new regression resolves InMemory through the guarded factory, checks the typed
+  capability/notice, runs startup validation, observes a warning containing
+  `DevelopmentOnly`, and proves the seeded sentinel is absent. The authorized legacy
+  regression also proves existing payload readability and its distinct typed level.
+
+### Closed — complete remediation artifact scan
+
+- Scanner schema 3 records every candidate as scanned text, oversized text, excluded
+  non-text, unreadable text, or control input. `.patch` is now a text candidate, and the
+  report includes file names and sizes for every gap category
+  (`scan_artifacts_for_secrets.py:17-32,84-92,138-185,220-254`). The Python regressions
+  cover metadata-only output, private sentinel handling/non-disclosure, and explicit
+  scanned/oversized/non-text accounting; my independent rerun passed `3/3`.
+- Parsed `A04-remediation-2-secret-scan-sec014-v2.json`: schema 3; 37 candidates; 36
+  scanned text files; the regenerating output JSON is the sole control exclusion; zero
+  oversized, non-text, or unreadable files; one private sentinel input containing two
+  values; zero sentinel findings. Finding records remain limited to id/path/line/rule/
+  fingerprint metadata.
+- All 72 generic occurrences are confined to Unit TRXs and collapse to six known
+  synthetic negative-test fingerprints: 18 GitHub-token, 18 OpenAI-token, and 36
+  secret-assignment occurrences. Independent grouping found no finding outside a TRX.
+  Startup, HTTP, environment, integration, and compact build proof is therefore covered
+  without the prior silent-size omission. The removed diagnostic logs, source archives,
+  and source patch are not part of the current retained proof set.
+
+### Independent evidence checks and residuals
+
+- Parsed current counters: Windows focused Unit `99/99`, full Unit `5,529/5,529`, and
+  integration `4/4`; Linux focused Unit `99/99`, portability `3/3`, and migration `1/1`.
+  Every current TRX has zero failed and zero unexecuted results.
+- Independently reran the five exact Windows provider/taxonomy tests with
+  `--no-build --no-restore`: `5/5`. The scanner unit suite independently passed `3/3`.
+- Both compact Web build logs contain the final Web assembly output and no warning,
+  error, or failed-build hit. Both current startup stderr artifacts are empty; retained
+  HTTP summaries report 200. The Linux environment summary proves Auto with no D-Bus
+  session or external wrapping-key input and identifies the resolved
+  `LocalUserFile/BasicLocal` profile.
+- `git diff --check` produced no whitespace error and only the recorded traceability
+  line-ending notice. Portable validation with deferred checksums passed at 290 files,
+  zero errors, zero warnings.
+- Accepted residual: Unix `LocalUserFile` cannot protect secrets from code running as
+  the same OS account. That is the explicit ADR-C08 threat boundary, is surfaced at
+  startup, and does not weaken explicitly selected strong profiles.
+- Evidence-report bookkeeping remains: the opening design summary and SEC-007/SEC-011
+  rows in `reviews/13-a04-evidence-report.md:15,34,38` still describe the pre-SEC-014
+  Auto policy and schema-2 proof, while its later SEC-014 section contains the current
+  policy/schema-3 evidence. Because the amended requirements, ADR-C08, implementation,
+  current artifacts, and later report section agree, this stale summary is not a
+  product/evidence blocker; it must be synchronized before index/checksum freeze.
+
+### Exact remaining gate blocker and bookkeeping
+
+SEC-002 acceptance and A04-T11 still require Keychain
+create/read/update/delete/restart/concurrency and access-control proof on genuine macOS.
+No macOS artifact is retained. Therefore overall C2 remains **NO-GO solely for
+SEC-002/A04-T11**, and A05 remains ineligible.
+
+Post-review bookkeeping should mark SEC-007/SEC-014 and A04-T12 independently verified,
+update the stale evidence-report summary/table, and synchronize requirement
+traceability/source manifest, A04 README/tasks/validation/exit criteria, execution
+report, gate log, root status, and A04 handoff while preserving C2 NO-GO/A05 blocked for
+macOS. Regenerate the bundle index/checksums and run checksum-enforcing portable
+validation only after those edits and this review text are final.

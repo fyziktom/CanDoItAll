@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Modules.Security;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -28,23 +30,175 @@ public sealed class SecretPortabilityTests
 
     [Fact]
     [Trait("Category", "SecretPortability")]
-    public void Factory_requires_explicit_headless_provider_on_unix()
+    public async Task Factory_authorized_development_file_provider_is_startable()
+    {
+        string root = CreateTempPath();
+        try
+        {
+            var options = new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.DataProtectionFile,
+                VaultPath = root,
+                AllowInsecureDevelopmentProviders = true
+            };
+            var legacyVault = new DataProtectionFileVault(options, CreateWriter());
+            await legacyVault.SetAsync("legacy/development", Sentinel);
+
+            ISecretVault vault = SecretVaultFactory.CreateDefault(
+                options,
+                CreateWriter(),
+                isDevelopment: true);
+            ISecretVaultCapability capability = Assert.IsAssignableFrom<ISecretVaultCapability>(vault);
+
+            SecretVaultProbeResult probe = await capability.ProbeAsync();
+
+            Assert.True(probe.IsAvailable);
+            Assert.Equal(SecretVaultProviderKind.DataProtectionFile, probe.Provider);
+            Assert.Equal(SecretVaultProtectionLevel.DevelopmentOnly, probe.ProtectionLevel);
+            Assert.NotEmpty(probe.SecurityNotice);
+            Assert.DoesNotContain(Sentinel, probe.SecurityNotice, StringComparison.Ordinal);
+            Assert.Equal(Sentinel, await vault.GetAsync("legacy/development"));
+        }
+        finally
+        {
+            DeleteIfExists(root);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "SecretPortability")]
+    public async Task Factory_auto_uses_basic_local_provider_on_unix_without_a_session_vault()
     {
         if (OperatingSystem.IsWindows())
         {
             return;
         }
 
+        string root = CreateTempPath();
         var options = new SecretVaultOptions
         {
             Provider = SecretVaultProviderKind.Auto,
-            UsageProfile = SecretVaultUsageProfile.Headless
+            UsageProfile = SecretVaultUsageProfile.Headless,
+            VaultPath = root
         };
+        try
+        {
+            ISecretVault vault = SecretVaultFactory.CreateDefault(options, CreateWriter());
+            var localVault = Assert.IsType<LocalUserFileVault>(vault);
+
+            SecretVaultProbeResult probe = await localVault.ProbeAsync();
+
+            Assert.True(probe.IsAvailable);
+            Assert.Equal(SecretVaultProtectionLevel.BasicLocal, probe.ProtectionLevel);
+        }
+        finally
+        {
+            DeleteIfExists(root);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "SecretPortability")]
+    public void Factory_rejects_local_user_file_on_windows_in_favor_of_dpapi()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
 
         SecretVaultUnavailableException exception = Assert.Throws<SecretVaultUnavailableException>(() =>
-            SecretVaultFactory.CreateDefault(options, CreateWriter()));
+            SecretVaultFactory.CreateDefault(
+                new SecretVaultOptions
+                {
+                    Provider = SecretVaultProviderKind.LocalUserFile,
+                    VaultPath = CreateTempPath()
+                },
+                CreateWriter()));
 
-        Assert.Equal(SecretVaultAvailability.InvalidConfiguration, exception.Result.Availability);
+        Assert.Equal(SecretVaultAvailability.UnsupportedPlatform, exception.Result.Availability);
+        Assert.Contains("DPAPI", exception.Result.Remediation, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "SecretPortability")]
+    public async Task InMemory_provider_reports_development_only_and_startup_warns()
+    {
+        ISecretVault vault = SecretVaultFactory.CreateDefault(
+            new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.InMemory,
+                AllowInsecureDevelopmentProviders = true
+            },
+            CreateWriter(),
+            isDevelopment: true);
+        var state = new SecretVaultCapabilityState();
+        var logger = new RecordingLogger<SecretVaultStartupValidator>();
+        var validator = new SecretVaultStartupValidator(vault, state, logger);
+
+        await validator.StartAsync(CancellationToken.None);
+
+        Assert.NotNull(state.Current);
+        Assert.Equal(SecretVaultProtectionLevel.DevelopmentOnly, state.Current.ProtectionLevel);
+        Assert.NotEmpty(state.Current.SecurityNotice);
+        Assert.Contains(
+            logger.Entries,
+            entry => entry.Level == LogLevel.Warning &&
+                     entry.Message.Contains(nameof(SecretVaultProtectionLevel.DevelopmentOnly), StringComparison.Ordinal));
+        Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains(Sentinel, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [Trait("Category", "SecretPortability")]
+    public async Task Local_user_file_preserves_legacy_payloads_and_restart_continuity()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string root = CreateTempPath();
+        try
+        {
+            var legacyOptions = new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.DataProtectionFile,
+                VaultPath = root
+            };
+            var legacyVault = new DataProtectionFileVault(legacyOptions, CreateWriter());
+            await legacyVault.SetAsync("legacy/provider", Sentinel);
+
+            var localOptions = new SecretVaultOptions
+            {
+                Provider = SecretVaultProviderKind.LocalUserFile,
+                VaultPath = root
+            };
+            ISecretVault first = SecretVaultFactory.CreateDefault(localOptions, CreateWriter());
+            Assert.Equal(Sentinel, await first.GetAsync("legacy/provider"));
+            await first.SetAsync("local/restart", "restart-value");
+
+            ISecretVault restarted = SecretVaultFactory.CreateDefault(localOptions, CreateWriter());
+            Assert.Equal("restart-value", await restarted.GetAsync("local/restart"));
+
+            string persisted = string.Join(
+                '\n',
+                Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                    .Select(File.ReadAllText));
+            Assert.DoesNotContain(Sentinel, persisted, StringComparison.Ordinal);
+            Assert.DoesNotContain("restart-value", persisted, StringComparison.Ordinal);
+            Assert.Equal(
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+                File.GetUnixFileMode(root));
+            foreach (string path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                Assert.Equal(
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite,
+                    File.GetUnixFileMode(path));
+            }
+        }
+        finally
+        {
+            DeleteIfExists(root);
+        }
     }
 
     [Fact]
@@ -124,6 +278,7 @@ public sealed class SecretPortabilityTests
         {
             var legacyVault = new DataProtectionFileVault(options, CreateWriter());
             await legacyVault.SetAsync("legacy/provider", Sentinel);
+            Assert.False((await legacyVault.ProbeAsync()).IsAvailable);
 
             Assert.Throws<SecretVaultUnavailableException>(() =>
                 SecretVaultFactory.CreateDefault(options, CreateWriter(), isDevelopment: false));
@@ -237,7 +392,8 @@ public sealed class SecretPortabilityTests
         var state = new SecretVaultCapabilityState();
         var validator = new SecretVaultStartupValidator(
             new UnavailableVault(),
-            state);
+            state,
+            NullLogger<SecretVaultStartupValidator>.Instance);
 
         SecretVaultUnavailableException exception = await Assert.ThrowsAsync<SecretVaultUnavailableException>(() =>
             validator.StartAsync(CancellationToken.None));
@@ -300,6 +456,25 @@ public sealed class SecretPortabilityTests
             values.Remove($"{service}\0{account}");
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+            => Entries.Add((logLevel, formatter(state, exception)));
     }
 
     private sealed class FakeLinuxCommandRunner(LinuxSecretServiceCommandResult result)

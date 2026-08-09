@@ -6,7 +6,7 @@ Provide truthful secure secret persistence on Windows, Linux, and macOS while pr
 
 ## Why now
 
-Auto currently selects unsupported macOS/Linux vaults, the file-vault master key is stored beside ciphertext, and three key/payload systems must migrate together.
+The original provider correction made strong vaults explicit but left a real first-launch contradiction: an authorized development file vault was rejected by its own startup probe. A supported, truthfully classified basic local tier is required alongside the stronger providers.
 
 ## Scope
 
@@ -31,7 +31,7 @@ Auto currently selects unsupported macOS/Linux vaults, the file-vault master key
 
 ## Requirements
 
-`SEC-001`, `SEC-002`, `SEC-003`, `SEC-004`, `SEC-005`, `SEC-006`, `SEC-007`, `SEC-008`, `SEC-009`, `SEC-010`, `SEC-011`, `SEC-012`, `SEC-013`
+`SEC-001`, `SEC-002`, `SEC-003`, `SEC-004`, `SEC-005`, `SEC-006`, `SEC-007`, `SEC-008`, `SEC-009`, `SEC-010`, `SEC-011`, `SEC-012`, `SEC-013`, `SEC-014`
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ Auto currently selects unsupported macOS/Linux vaults, the file-vault master key
 
 ## Architecture constraints
 
-- No broad platform service, duplicate process/path/secret stack, insecure fallback, automatic Unix elevation, or name-only process kill.
+- No broad platform service, duplicate process/path/secret stack, silent or misrepresented security fallback, automatic Unix elevation, or name-only process kill. A basic local vault must expose its weaker protection level and a non-secret security notice.
 - Use logical versus physical path contracts correctly.
 - Keep MAF generic and process semantics in `Processes`.
 - Use typed process arguments; shell only for explicitly modeled scripts.
@@ -63,13 +63,13 @@ Auto currently selects unsupported macOS/Linux vaults, the file-vault master key
 ## Exit gate
 
 - Gate C2 is GO from architect, security reviewer, and runtime validator.
-- Auto never selects unsupported or insecure persistence.
+- Auto never selects an unsupported or undeclared persistence tier.
 - Production key material is protected at rest and permission-hardened.
 - Legacy Windows secret/control-plane data has a tested migration and rollback path.
 
 ## Status
 
-- `Blocked — Gate C2 NO-GO; local remediation complete, actual macOS Keychain evidence unavailable`
+- `SEC-014 Windows DPAPI/Strong and Unix LocalUserFile/BasicLocal correction independently GO; Gate C2 remains blocked solely by genuine macOS proof`
 
 ## Handoff
 

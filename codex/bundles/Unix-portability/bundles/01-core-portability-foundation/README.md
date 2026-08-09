@@ -6,7 +6,7 @@ Deliver a stable Windows/Linux/macOS headless core by fixing path and filesystem
 
 ## Status
 
-- `Blocked — A04 Gate C2 NO-GO pending genuine macOS Keychain evidence`
+- `In progress — A04 SEC-014 independently GO; Gate C2 remains blocked solely by genuine macOS proof`
 
 ## Source anchor
 
@@ -17,7 +17,7 @@ Deliver a stable Windows/Linux/macOS headless core by fixing path and filesystem
 
 ## Active work
 
-`A04 — Secrets, vault drivers, Data Protection, and migration` is implemented and validated on Windows and Linux, including actual DPAPI and Linux Secret Service execution. Independent Gate C2 review and bounded re-review closed the rollback and scanner findings. C2 remains NO-GO solely because genuine macOS Keychain execution is unavailable and required by SEC-002/A04-T11. `A05` remains blocked.
+`A04 — Secrets, vault drivers, Data Protection, and migration` now has the SEC-014 correction independently verified on Windows/Linux. Windows `Auto` uses current-user DPAPI with `Strong` protection; Unix `Auto` uses `LocalUserFile` with enforced `0700`/`0600` modes, typed `BasicLocal` protection, and a same-user warning. Explicit Keychain, Secret Service, DPAPI, and external-key profiles retain fail-closed behavior. The user-reported Windows command and a Linux container without a session vault both served HTTP 200. Gate C2 and `A05` remain blocked solely by the outstanding genuine macOS SEC-002 proof.
 
 ## Runtime boundary
 

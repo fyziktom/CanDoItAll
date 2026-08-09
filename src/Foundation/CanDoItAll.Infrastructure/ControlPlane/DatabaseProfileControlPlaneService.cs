@@ -570,9 +570,7 @@ public sealed class DatabaseProfileControlPlaneService(
 
     private ResolvedDatabaseProfile BuildInMemoryOverrideProfile(string? configuredConnection, string workspaceRoot, DateTimeOffset now)
     {
-        var databaseName = string.IsNullOrWhiteSpace(configuredConnection)
-            ? "candoitall"
-            : configuredConnection.Trim();
+        string databaseName = InMemoryDatabaseIdentity.ResolveOverrideName(configuredConnection);
 
         var profile = new DatabaseProfileRecord
         {
@@ -844,7 +842,8 @@ public sealed class DatabaseProfileControlPlaneService(
         return providerKind switch
         {
             DatabaseProviderKind.PostgreSql => BuildPostgreSqlOverrideWorkspaceFingerprint(configuredConnection),
-            DatabaseProviderKind.InMemory => $"inmemory:{(string.IsNullOrWhiteSpace(configuredConnection) ? "candoitall" : configuredConnection.Trim().ToLowerInvariant())}",
+            DatabaseProviderKind.InMemory => InMemoryDatabaseIdentity.CreateFingerprint(
+                InMemoryDatabaseIdentity.ResolveOverrideName(configuredConnection)),
             _ => providerKind.ToString()
         };
     }
@@ -930,7 +929,7 @@ public sealed class DatabaseProfileControlPlaneService(
             DatabaseProviderKind.PostgreSql
                 => $"postgres:{profile.PostgreSql?.Host.Trim().ToLowerInvariant()}:{profile.PostgreSql?.Port}:{profile.PostgreSql?.DatabaseName.Trim().ToLowerInvariant()}:{profile.PostgreSql?.Username.Trim().ToLowerInvariant()}",
             DatabaseProviderKind.InMemory
-                => $"inmemory:{profile.InMemory?.DatabaseName.Trim().ToLowerInvariant()}",
+                => InMemoryDatabaseIdentity.CreateFingerprint(profile.InMemory?.DatabaseName),
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
         };
     }

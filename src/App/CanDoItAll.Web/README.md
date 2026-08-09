@@ -31,6 +31,15 @@ development-runtime root matrix for exact defaults and service/container overrid
 Use `tools/dev/Ensure-DevelopmentPostgres.ps1` to prepare native development PostgreSQL,
 or `docker compose up -d --wait db` for the repository-managed development database.
 
+Development uses `Auto`, so a first launch does not require an interactive or external
+vault. Windows selects current-user DPAPI and reports `Strong`. Unix selects
+`LocalUserFile`, enforces `0700` vault directories and `0600` files, and reports
+`BasicLocal` with a warning that the same operating-system account can access its key.
+Deployments that need stronger Unix isolation should explicitly select Keychain,
+Secret Service, or the external-wrapping-key provider; explicit strong providers fail
+closed when unavailable. See
+[`docs/secure-configuration.md`](../../../docs/secure-configuration.md).
+
 The installed Windows web app does not use that Compose service. Its canonical
 `tools/install/Install-CanDoItAllWebApp.ps1` entry point prepares an isolated database,
 using either one installer-managed Docker container/volume set or a per-user native

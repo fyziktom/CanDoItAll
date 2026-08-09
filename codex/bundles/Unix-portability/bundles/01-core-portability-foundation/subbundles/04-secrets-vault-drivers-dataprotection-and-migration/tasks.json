@@ -5,7 +5,7 @@
   "title": "Secrets, vault drivers, Data Protection, and migration",
   "critical": true,
   "conditional": false,
-  "status": "Blocked — Gate C2 NO-GO pending actual macOS Keychain evidence",
+  "status": "SEC-014 independently GO; Gate C2 NO-GO solely pending actual macOS Keychain evidence",
   "depends_on": [
     "A03"
   ],
@@ -26,14 +26,17 @@
     "SEC-010",
     "SEC-011",
     "SEC-012",
-    "SEC-013"
+    "SEC-013",
+    "SEC-014"
   ],
   "source_hotspots": [
     "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
     "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
     "src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs",
     "src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs",
-    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs"
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileStartupConnectionResolver.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/InMemoryDatabaseIdentity.cs"
   ],
   "tasks": [
     {
@@ -342,6 +345,25 @@
         "actual-host proof where applicable",
         "redaction result",
         "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A04-T12",
+      "title": "Restore truthful basic local first-launch behavior",
+      "description": "Use built-in DPAPI/Strong for Windows Auto and provide a supported Unix no-dependency local vault with enforced 0700/0600, typed BasicLocal protection, and a same-user warning; preserve stronger explicit providers and legacy Development compatibility, and prove first launch plus complete non-disclosure coverage on Windows and Linux.",
+      "requirements": [
+        "SEC-011",
+        "SEC-012",
+        "SEC-014"
+      ],
+      "status": "Implemented and independently verified — SEC-014 GO; Gate C2 remains blocked by macOS",
+      "evidence_required": [
+        "failing-first startup regression",
+        "Windows and Linux focused tests",
+        "Windows and Linux HTTP startup proof",
+        "restart and Unix 0700/0600 proof",
+        "artifact redaction scan with explicit coverage accounting",
+        "independent remediation review"
       ]
     }
   ]

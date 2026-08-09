@@ -32,9 +32,12 @@ public static class DatabaseProfileStartupConnectionResolver
         if (!string.IsNullOrWhiteSpace(configuredProvider) ||
             !string.IsNullOrWhiteSpace(configuredConnection))
         {
+            DatabaseProviderKind providerKind = ParseProviderKind(configuredProvider, configuredConnection);
             return new DatabaseStartupConnectionOptions(
-                ParseProviderKind(configuredProvider, configuredConnection),
-                configuredConnection,
+                providerKind,
+                providerKind == DatabaseProviderKind.InMemory
+                    ? InMemoryDatabaseIdentity.ResolveOverrideName(configuredConnection)
+                    : configuredConnection,
                 DatabaseProfileResolutionSource.ExplicitOverride,
                 ProfileId: null);
         }
