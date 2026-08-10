@@ -1,0 +1,32 @@
+[Unit]
+Description=CanDoItAll headless Web host
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_GROUP@@
+WorkingDirectory=@@INSTALL_ROOT@@
+Environment=ASPNETCORE_ENVIRONMENT=Production
+EnvironmentFile=@@ENVIRONMENT_FILE@@
+ExecStart=@@INSTALL_ROOT@@/bin/run-candoitall-web.sh @@INSTALL_ROOT@@ --urls http://127.0.0.1:@@PORT@@
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+KillSignal=SIGINT
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+ReadWritePaths=@@DATA_ROOT@@ @@CONFIG_ROOT@@ @@STATE_ROOT@@ @@LOGS_ROOT@@ @@RUNTIME_ROOT@@
+
+[Install]
+WantedBy=multi-user.target

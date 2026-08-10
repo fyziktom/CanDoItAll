@@ -6,8 +6,8 @@
 - Independent review and bounded remediation re-review are recorded in `reviews/14-a04-independent-review.md`.
 - SEC-008, SEC-011, and SEC-013 remediation findings are independently closed.
 - SEC-014 is independently GO: Windows `Auto` uses DPAPI/`Strong`; Unix `Auto` uses `LocalUserFile`/`BasicLocal` with `0700`/`0600` and a same-user warning.
-- Gate C2 remains NO-GO solely because genuine macOS Keychain evidence required by SEC-002 and A04-T11 is absent.
-- A05 and the runtime bundle remain ineligible.
+- Gate C2 is GO after the operator explicitly deferred genuine macOS Keychain execution to `MACOS-KEYCHAIN-VALIDATION-001`.
+- A05 is eligible. The runtime bundle remains dependent on later core gates.
 
 ## Review entry points
 
@@ -22,7 +22,7 @@
 
 The remediation-2 proof includes Windows 5,529/5,529 full Unit, both-host 99/99 focus, Windows 4/4 integration, Linux 3/3 plus 1/1 integration, both-host zero-warning Web builds, both-host HTTP 200 startup, and a schema-3 scan of all 36 source evidence files with no oversized/non-text/unreadable gaps and zero private-sentinel matches.
 
-## Required macOS continuation
+## Deferred macOS continuation
 
 Use a genuine macOS interactive user session or an isolated macOS CI user with an available login Keychain. Docker, Linux virtualization, and injected-native tests do not satisfy this condition.
 
@@ -42,4 +42,4 @@ The final macOS proof must cover probe/access-control state, create/read/update/
 
 ## Next action
 
-Resume only A04 macOS validation. Do not enter A05 or either runtime-bundle implementation phase until genuine macOS proof allows the independent reviewer to record C2 GO.
+Enter A05. Run the deferred Keychain validation later on genuine macOS before changing the provider from actual-host unverified to verified.

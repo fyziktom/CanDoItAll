@@ -89,7 +89,7 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
 
         foreach (var relativePath in navigationOwnedSources)
         {
-            var text = File.ReadAllText(Path.Combine(root, relativePath));
+            var text = File.ReadAllText(TestRepositoryPath.Resolve(root, relativePath));
             Assert.DoesNotContain("IAgentRuntime", text, StringComparison.Ordinal);
             Assert.DoesNotContain(".RunAsync(", text, StringComparison.Ordinal);
             Assert.DoesNotContain("RespondToPendingApprovalsAsync", text, StringComparison.Ordinal);
@@ -100,7 +100,7 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
     public void Approval_continuation_path_does_not_recapture_current_ui_context()
     {
         var root = FindRepoRoot();
-        var orchestratorSource = File.ReadAllText(Path.Combine(
+        var orchestratorSource = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentChatExecutionOrchestrator.cs"));
 
@@ -130,7 +130,7 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
         Assert.DoesNotContain("turnContextCaptureService", continuationSection, StringComparison.Ordinal);
 
         // The capture service itself performs exactly one strict registry capture.
-        var captureServiceSource = File.ReadAllText(Path.Combine(
+        var captureServiceSource = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\MAF\Common\CanDoItAll.AgentFramework.Core\Context\AgentTurnContextCaptureService.cs"));
         Assert.Equal(1, CountOccurrences(captureServiceSource, ".CaptureAsync(cancellationToken)"));
@@ -155,7 +155,7 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
 
         var contributesObservationFacts = panelSources.Any(relativePath =>
         {
-            var fullPath = Path.Combine(root, relativePath);
+            var fullPath = TestRepositoryPath.Resolve(root, relativePath);
             if (!File.Exists(fullPath))
             {
                 return false;
@@ -166,12 +166,12 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
                    text.Contains("GanttObservationContributor", StringComparison.Ordinal);
         });
 
-        var builderSource = File.ReadAllText(Path.Combine(
+        var builderSource = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAgentChatContextBuilder.cs"));
         var ganttObservationContributorExists = Directory
             .EnumerateFiles(
-                Path.Combine(root, @"src\Modules\CanDoItAll.Modules.Workbench"),
+                TestRepositoryPath.Resolve(root, @"src\Modules\CanDoItAll.Modules.Workbench"),
                 "*GanttObservation*",
                 SearchOption.AllDirectories)
             .Any();

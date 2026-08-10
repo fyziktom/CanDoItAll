@@ -1172,34 +1172,44 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     [Fact]
     public async Task Organization_workspace_seeds_openai_image_generation_provider()
     {
-        await using var application = await TestApplication.CreateAsync();
-        await using var scope = application.Services.CreateAsyncScope();
-        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
-        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        const string apiKeyEnvironmentVariable = "OPENAI_API_KEY";
+        var originalApiKey = Environment.GetEnvironmentVariable(apiKeyEnvironmentVariable);
+        Environment.SetEnvironmentVariable(apiKeyEnvironmentVariable, "integration-test-openai-key");
+        try
+        {
+            await using var application = await TestApplication.CreateAsync();
+            await using var scope = application.Services.CreateAsyncScope();
+            var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
 
-        var providers = await workspaceService.ListProvidersAsync();
-        var imageProvider = Assert.Single(
-            providers,
-            item => item.Kind == ProviderKind.OpenAi &&
-                    item.Purpose == ProviderProfilePurpose.ImageGeneration &&
-                    string.Equals(item.Name, "OpenAI image generation", StringComparison.Ordinal));
-        var service = new ProviderProfileService();
-        var matrix = service.ResolveFeatureMatrix(imageProvider);
+            var providers = await workspaceService.ListProvidersAsync();
+            var imageProvider = Assert.Single(
+                providers,
+                item => item.Kind == ProviderKind.OpenAi &&
+                        item.Purpose == ProviderProfilePurpose.ImageGeneration &&
+                        string.Equals(item.Name, "OpenAI image generation", StringComparison.Ordinal));
+            var service = new ProviderProfileService();
+            var matrix = service.ResolveFeatureMatrix(imageProvider);
 
-        Assert.Equal("https://api.openai.com/v1", imageProvider.BaseUrl);
-        Assert.StartsWith(
-            "secret:",
-            imageProvider.ApiKeyEnvironmentVariable,
-            StringComparison.Ordinal);
-        Assert.True(
-            Guid.TryParse(
-                imageProvider.ApiKeyEnvironmentVariable["secret:".Length..],
-                out _));
-        Assert.Equal(OpenAiModelIds.GptImage2, imageProvider.DefaultModel);
-        Assert.False(imageProvider.SupportsTools);
-        Assert.Contains(OpenAiModelIds.GptImage2, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
-        Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
-        Assert.True(matrix.SupportsImageGeneration);
+            Assert.Equal("https://api.openai.com/v1", imageProvider.BaseUrl);
+            Assert.StartsWith(
+                "secret:",
+                imageProvider.ApiKeyEnvironmentVariable,
+                StringComparison.Ordinal);
+            Assert.True(
+                Guid.TryParse(
+                    imageProvider.ApiKeyEnvironmentVariable["secret:".Length..],
+                    out _));
+            Assert.Equal(OpenAiModelIds.GptImage2, imageProvider.DefaultModel);
+            Assert.False(imageProvider.SupportsTools);
+            Assert.Contains(OpenAiModelIds.GptImage2, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain(OpenAiModelIds.GptImage1Mini, imageProvider.SuggestedModels, StringComparer.OrdinalIgnoreCase);
+            Assert.True(matrix.SupportsImageGeneration);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(apiKeyEnvironmentVariable, originalApiKey);
+        }
     }
 
     [Fact]

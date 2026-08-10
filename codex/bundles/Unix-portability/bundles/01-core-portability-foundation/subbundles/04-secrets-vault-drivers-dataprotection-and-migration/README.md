@@ -69,7 +69,7 @@ The original provider correction made strong vaults explicit but left a real fir
 
 ## Status
 
-- `SEC-014 Windows DPAPI/Strong and Unix LocalUserFile/BasicLocal correction independently GO; Gate C2 remains blocked solely by genuine macOS proof`
+- `Completed — Gate C2 GO; genuine macOS Keychain execution deferred as MACOS-KEYCHAIN-VALIDATION-001`
 
 ## Handoff
 

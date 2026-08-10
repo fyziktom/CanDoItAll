@@ -542,6 +542,8 @@ internal sealed class ProjectPackageStorageImporter(
             }
 
             var now = clock.GetUtcNow();
+            var workspaceRoot = Path.GetFullPath(
+                targetProfile.Profile.Storage.WorkspaceRoot);
             pendingStorage = new StorageCatalogRecord
             {
                 Id = Guid.NewGuid(),
@@ -550,8 +552,7 @@ internal sealed class ProjectPackageStorageImporter(
                 IsEnabled = true,
                 IsSystemDefault = true,
                 ConnectionMode = StorageConnectionMode.Local,
-                EndpointOrRoot = Path.GetFullPath(
-                    targetProfile.Profile.Storage.WorkspaceRoot),
+                EndpointOrRoot = workspaceRoot,
                 CapabilityMask =
                     StorageCapability.Read |
                     StorageCapability.Write |
@@ -568,6 +569,10 @@ internal sealed class ProjectPackageStorageImporter(
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(
+                pendingStorage,
+                workspaceRoot,
+                now);
             pendingRule = new StorageRoutingRule
             {
                 Id = Guid.NewGuid(),

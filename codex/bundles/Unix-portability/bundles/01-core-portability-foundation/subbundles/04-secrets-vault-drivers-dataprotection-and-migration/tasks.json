@@ -5,7 +5,7 @@
   "title": "Secrets, vault drivers, Data Protection, and migration",
   "critical": true,
   "conditional": false,
-  "status": "SEC-014 independently GO; Gate C2 NO-GO solely pending actual macOS Keychain evidence",
+  "status": "Completed — Gate C2 GO; actual macOS Keychain execution deferred",
   "depends_on": [
     "A03"
   ],
@@ -86,7 +86,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Completed — actual macOS gate proof pending",
+      "status": "Completed — actual macOS validation deferred to MACOS-KEYCHAIN-VALIDATION-001",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -338,7 +338,7 @@
         "SEC-012",
         "SEC-013"
       ],
-      "status": "Blocked — independent NO-GO pending actual macOS Keychain proof",
+      "status": "Completed — Gate C2 GO under explicit macOS evidence-timing deferral",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

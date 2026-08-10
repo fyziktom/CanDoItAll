@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Tests.Integration;
 
 [Trait("Category", "FileSystemPortability")]
+[Trait("Category", "UnixPortabilityCore")]
+[Trait("RequiresHostDocker", "true")]
 public sealed class ManagedFilesStorageIntegrationTests
 {
     [Fact]

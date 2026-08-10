@@ -56,7 +56,7 @@ The repository needs OS-dependent selection, but a broad platform service or pro
 
 ## Entry gate
 
-- Status before execution: `Blocked by Gate C2`
+- Status before execution: `Eligible — Gate C2 GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -69,8 +69,8 @@ The repository needs OS-dependent selection, but a broad platform service or pro
 
 ## Status
 
-- `Blocked by Gate C2`
+- `Completed — Gate C3a GO`
 
 ## Handoff
 
-Record changed files, commands/results, evidence paths, design decisions, residual risks, and the next eligible subbundle. Stop on NO-GO.
+Implementation and remediation evidence is recorded in `reviews/16-a05-evidence-report.md`; the initial NO-GO and bounded GO re-review are recorded in `reviews/17-a05-independent-review.md`. The closure handoff is `reviews/A05-HANDOFF.md`. A06 is eligible.

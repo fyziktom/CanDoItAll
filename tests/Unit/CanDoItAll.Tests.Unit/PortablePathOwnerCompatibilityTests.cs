@@ -9,6 +9,7 @@ using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class PortablePathOwnerCompatibilityTests
 {
     [Fact]

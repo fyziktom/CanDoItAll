@@ -3,6 +3,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class ApplicationStoragePortabilityContractTests
 {
     [Theory]

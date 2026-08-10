@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -77,11 +79,20 @@ internal sealed class ApiTestHost : IAsyncDisposable
             ["Api:Authorization:DefaultTokenLifetimeMinutes"] = "30",
             ["Api:Authorization:MaxTokenLifetimeMinutes"] = "120"
         };
+        string resolvedEnvironmentName = environmentName ?? Environments.Development;
+        if (!string.Equals(resolvedEnvironmentName, Environments.Development, StringComparison.OrdinalIgnoreCase))
+        {
+            string certificatePath = CreateDataProtectionCertificate(testEnvironment.RootPath);
+            configurationOverrides["SecretVault:Provider"] = "Auto";
+            configurationOverrides["SecretVault:AllowInsecureDevelopmentProviders"] = "false";
+            configurationOverrides["DataProtection:KeyProtection:Provider"] = "Certificate";
+            configurationOverrides["DataProtection:KeyProtection:CertificatePath"] = certificatePath;
+        }
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             ContentRootPath = testEnvironment.RootPath,
-            EnvironmentName = environmentName ?? Environments.Development,
+            EnvironmentName = resolvedEnvironmentName,
             ApplicationName = "CanDoItAll.Tests.Integration"
         });
         builder.Configuration.AddInMemoryCollection(activeProfile.CreateConfigurationValues(configurationOverrides));
@@ -131,6 +142,29 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
         var client = CreateClient(app);
         return new ApiTestHost(testEnvironment, activeProfile, app, client);
+    }
+
+    private static string CreateDataProtectionCertificate(string rootPath)
+    {
+        string certificatePath = Path.Combine(rootPath, "data-protection-test.pfx");
+        using RSA key = RSA.Create(2048);
+        var request = new CertificateRequest(
+            "CN=CanDoItAll API integration test",
+            key,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
+        using X509Certificate2 certificate = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.AddMinutes(-5),
+            DateTimeOffset.UtcNow.AddHours(1));
+        File.WriteAllBytes(certificatePath, certificate.Export(X509ContentType.Pfx));
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(
+                certificatePath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+
+        return certificatePath;
     }
 
     private static void ConfigureAgentRuntimeOverride(

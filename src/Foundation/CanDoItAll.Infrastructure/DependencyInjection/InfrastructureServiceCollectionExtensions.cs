@@ -166,6 +166,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IManagedArtifactStore, ManagedArtifactStore>();
         services.AddSingleton<IBackgroundJobQueue, InMemoryBackgroundJobQueue>();
         services.AddSingleton<IRuntimeReadinessService, RuntimeReadinessService>();
+        services.AddSingleton<IPathFoundationReadinessProbe, PathFoundationReadinessProbe>();
         services.AddScoped<IBackgroundJobTracker, BackgroundJobTracker>();
         services.AddScoped<ISearchIndexService, SearchIndexService>();
 

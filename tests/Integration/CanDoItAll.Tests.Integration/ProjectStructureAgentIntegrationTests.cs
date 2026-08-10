@@ -384,9 +384,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
         var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
         var workspaceFiles = scope.ServiceProvider.GetRequiredService<IWorkspaceFileService>();
+        var externalTargetRegistryFactory = scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>();
 
         var projectId = await CreateProjectAsync(projects, "Process launch target context");
-        const string outputRoot = @"C:\temp\CanDoItAll\TetrisGame";
+        var outputRoot = Path.Combine(application.RootPath, "external-tetris-game");
+        Directory.CreateDirectory(outputRoot);
         var deliveryNode = await workbench.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -464,7 +466,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         var assignment = Assert.Single(assignments, item => item.StepKey == "feature-intake");
         var currentRunNodeId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(result.RunId.Value);
         var currentArtifactRoot = ProcessLaunchApplicationService.BuildManagedProcessArtifactRoot(new ProcessRunId(result.RunId.Value));
-        var outputRootAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputRoot);
+        var outputRootAlias = AssertExternalTargetAliasResolves(
+            assignment,
+            "ExternalTargetRoot",
+            outputRoot,
+            externalTargetRegistryFactory);
         Assert.Equal(deliveryNode.Id, assignment.LaunchVariables["ProjectNodeId"]);
         Assert.Equal(deliveryNode.Title, assignment.LaunchVariables["ProjectNodeTitle"]);
         Assert.Equal(outputRoot, assignment.LaunchVariables["OutputRoot"]);
@@ -551,9 +557,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var launchService = scope.ServiceProvider.GetRequiredService<ProcessLaunchApplicationService>();
         var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
+        var externalTargetRegistry = scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
 
         var projectId = await CreateProjectAsync(projects, "Direct output folder launch");
-        const string outputFolder = @"C:\temp\CanDoItAll\OutputFolderOnly";
+        var outputFolder = Path.Combine(application.RootPath, "external-output");
+        Directory.CreateDirectory(outputFolder);
 
         var result = await launchService.LaunchAsync(
             new ProcessLaunchRequest(
@@ -573,7 +581,9 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.True(result.RunId.HasValue);
         var assignments = await assignmentStore.LoadByRunAsync(result.RunId.Value);
         Assert.NotEmpty(assignments);
-        var outputFolderAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(outputFolder);
+        var outputFolderAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            outputFolder,
+            externalTargetRegistry);
         Assert.All(assignments, assignment =>
         {
             Assert.Equal(outputFolder, assignment.LaunchVariables["OutputFolder"]);
@@ -1853,9 +1863,11 @@ public sealed class ProjectStructureAgentIntegrationTests
         var assignmentStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStepAssignmentStore>();
         var stateStore = scope.ServiceProvider.GetRequiredService<IProcessRuntimeStateStore>();
         var workspaceFiles = scope.ServiceProvider.GetRequiredService<IWorkspaceFileService>();
+        var externalTargetRegistryFactory = scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>();
 
         var projectId = await CreateProjectAsync(projects, "TetrisGame");
-        const string outputRoot = @"C:\temp\CanDoItAll\TetrisGame";
+        var outputRoot = Path.Combine(application.RootPath, "external-tetris-game");
+        Directory.CreateDirectory(outputRoot);
         var deliveryNode = await workbench.CreateObjectAsync(
             projectId,
             new ProjectObjectCreateRequest(
@@ -2030,16 +2042,33 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains(ProcessOperationContractNames.RunValidation, revalidateFirstBuildAssignment.AllowedOperations);
         Assert.Equal("TetrisGame", scaffoldAssignment.LaunchVariables["DotNetSolutionName"]);
         Assert.Equal("TetrisGame", scaffoldAssignment.LaunchVariables["DotNetAppProjectName"]);
-        Assert.Equal(@"C:\temp\CanDoItAll\TetrisGame\src\TetrisGame", scaffoldAssignment.LaunchVariables["DotNetAppProjectDirectory"]);
+        Assert.Equal(Path.Combine(outputRoot, "src", "TetrisGame"), scaffoldAssignment.LaunchVariables["DotNetAppProjectDirectory"]);
         Assert.Equal("Blazor WebAssembly PWA", scaffoldAssignment.LaunchVariables["DotNetAppArchetype"]);
         Assert.Equal("blazorwasm", scaffoldAssignment.LaunchVariables["DotNetAppTemplate"]);
         Assert.Equal("--pwa", scaffoldAssignment.LaunchVariables["DotNetAllowedTemplateSwitches"]);
         Assert.Equal("TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetTestProjectName"]);
-        Assert.Equal(@"C:\temp\CanDoItAll\TetrisGame\tests\TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetTestProjectDirectory"]);
+        var solutionPath = Path.Combine(outputRoot, "TetrisGame.slnx");
+        var appProjectPath = Path.Combine(outputRoot, "src", "TetrisGame", "TetrisGame.csproj");
+        var testProjectDirectory = Path.Combine(outputRoot, "tests", "TetrisGame.Tests");
+        var testProjectPath = Path.Combine(testProjectDirectory, "TetrisGame.Tests.csproj");
+        var canonicalSolutionPath = OperatingSystem.IsWindows()
+            ? solutionPath.Replace('\\', '/')
+            : solutionPath;
+        var canonicalAppProjectPath = OperatingSystem.IsWindows()
+            ? appProjectPath.Replace('\\', '/')
+            : appProjectPath;
+        var canonicalTestProjectPath = OperatingSystem.IsWindows()
+            ? testProjectPath.Replace('\\', '/')
+            : testProjectPath;
+        Assert.Equal(testProjectDirectory, scaffoldAssignment.LaunchVariables["DotNetTestProjectDirectory"]);
         Assert.Equal("xunit", scaffoldAssignment.LaunchVariables["DotNetTestTemplate"]);
         Assert.Equal("xUnit", scaffoldAssignment.LaunchVariables["DotNetTestFrameworkPreference"]);
         Assert.Equal("net10.0", scaffoldAssignment.LaunchVariables["DotNetTargetFramework"]);
-        Assert.Equal("external-target/C/temp/CanDoItAll/TetrisGame", scaffoldAssignment.LaunchVariables["DotNetWorkspaceAlias"]);
+        AssertExternalTargetAliasResolves(
+            scaffoldAssignment,
+            "DotNetWorkspaceAlias",
+            outputRoot,
+            externalTargetRegistryFactory);
         Assert.DoesNotContain("ScopeSummary", scaffoldAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("ChildScopeMvp", scaffoldAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("SourceCitations", scaffoldAssignment.LaunchVariables.Keys, StringComparer.OrdinalIgnoreCase);
@@ -2071,7 +2100,10 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("Invoke-Dotnet @('sln', $SolutionFile, 'add', $AppProjectFile)", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
         Assert.Contains("Verified solution membership and ProjectReference", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectScript"], StringComparison.Ordinal);
         Assert.Contains("\"mode\":\"ProductMutation\"", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectSideEffectManifest"], StringComparison.Ordinal);
-        Assert.Contains(@"C:\\temp\\CanDoItAll\\TetrisGame\\tests\\TetrisGame.Tests", scaffoldAssignment.LaunchVariables["DotNetAddTestProjectSideEffectManifest"], StringComparison.Ordinal);
+        Assert.Contains(
+            JsonSerializer.Serialize(testProjectDirectory)[1..^1],
+            scaffoldAssignment.LaunchVariables["DotNetAddTestProjectSideEffectManifest"],
+            StringComparison.Ordinal);
         Assert.Contains("DotNetCreateProjectExecutionPlan", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Contains("DotNetCreateProjectScriptRef", createProjectAssignment.LaunchVariables.Keys, StringComparer.Ordinal);
         Assert.Equal(expectedCreateProjectScriptRef, createProjectAssignment.LaunchVariables["DotNetCreateProjectScriptRef"]);
@@ -2097,23 +2129,23 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.DoesNotContain("dotnet.create-project", addTestProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.False(scaffoldAssignment.LaunchVariables.ContainsKey("DotNetScaffoldContract"));
         Assert.DoesNotContain(
-            "C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx",
+            canonicalSolutionPath,
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            "C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj",
+            canonicalAppProjectPath,
             createProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx",
+            canonicalSolutionPath,
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            "C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj",
+            canonicalAppProjectPath,
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
-            "C:/temp/CanDoItAll/TetrisGame/tests/TetrisGame.Tests/TetrisGame.Tests.csproj",
+            canonicalTestProjectPath,
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths],
             StringComparison.Ordinal);
         Assert.Contains(
@@ -2176,7 +2208,7 @@ public sealed class ProjectStructureAgentIntegrationTests
             "../../src/TetrisGame/TetrisGame.csproj",
             addTestProjectAssignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks],
             StringComparison.Ordinal);
-        const string expectedTestProjectFile = "C:/temp/CanDoItAll/TetrisGame/tests/TetrisGame.Tests/TetrisGame.Tests.csproj";
+        var expectedTestProjectFile = canonicalTestProjectPath;
         const string expectedAppReferencePath = "../../src/TetrisGame/TetrisGame.csproj";
         var expectedAppReferencePaths = new[]
         {
@@ -2204,10 +2236,10 @@ public sealed class ProjectStructureAgentIntegrationTests
             directCreateProjectChecks,
             check =>
                 check.PathCandidates.Contains(
-                    @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.slnx",
+                    solutionPath,
                     StringComparer.Ordinal) &&
                 check.PathCandidates.Contains(
-                    @"C:\temp\CanDoItAll\TetrisGame\TetrisGame.sln",
+                    Path.Combine(outputRoot, "TetrisGame.sln"),
                     StringComparer.Ordinal));
         Assert.Contains(
             solutionMembershipCheck.RequiredTextAnyGroups,
@@ -2227,8 +2259,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Contains("ProductCompletionRequiredPaths", createProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredToolReceipts", createProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredFileContentChecks", createProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("C:/temp/CanDoItAll/TetrisGame/TetrisGame.slnx", createProjectAssignment.Prompt, StringComparison.Ordinal);
-        Assert.Contains("C:/temp/CanDoItAll/TetrisGame/src/TetrisGame/TetrisGame.csproj", createProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains(canonicalSolutionPath, createProjectAssignment.Prompt, StringComparison.Ordinal);
+        Assert.Contains(canonicalAppProjectPath, createProjectAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("ProductCompletionRequiredToolReceipts", validateFirstBuildAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_restore", validateFirstBuildAssignment.Prompt, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_build", validateFirstBuildAssignment.Prompt, StringComparison.Ordinal);
@@ -4285,6 +4317,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var externalTargetRegistry = scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
         var externalRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.AgentRuntime.Audited.{Guid.NewGuid():N}");
@@ -4295,10 +4328,12 @@ public sealed class ProjectStructureAgentIntegrationTests
         try
         {
             var projectId = await CreateProjectAsync(projects, "Audited external runtime authority");
-            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot);
+            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                externalRoot,
+                externalTargetRegistry);
             Assert.False(string.IsNullOrWhiteSpace(externalAlias));
             using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
-                CreateAuditedExecutionRun([externalAlias!]));
+                CreateAuditedExecutionRun([externalAlias!], externalTargetRegistry));
 
             var created = await agentService.CreateNodeAsync(
                 projectId,
@@ -4332,6 +4367,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var runtimeLauncher = scope.ServiceProvider.GetRequiredService<IProjectStructureRuntimeLauncher>();
+        var externalTargetRegistry = scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
         var externalRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.AgentRuntime.ReadAuthority.{Guid.NewGuid():N}");
@@ -4369,19 +4406,36 @@ public sealed class ProjectStructureAgentIntegrationTests
                     "not authorized for this agent execution",
                     StringComparison.Ordinal));
 
-            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot);
+            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                externalRoot,
+                externalTargetRegistry);
             Assert.False(string.IsNullOrWhiteSpace(externalAlias));
             using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
-                CreateAuditedExecutionRun([externalAlias!]));
+                CreateAuditedExecutionRun([externalAlias!], externalTargetRegistry));
             var audited = await agentService.GetStructureAsync(
                 projectId,
                 new ProjectStructureReadRequest(IncludeMetadata: true));
             var auditedNode = Assert.Single(audited.Nodes, node => node.Id == created.Id);
             Assert.NotNull(auditedNode.ActionCapabilities);
-            Assert.True(auditedNode.ActionCapabilities!.CanRunNormally);
-            Assert.True(auditedNode.ActionCapabilities.CanRunAsAdministrator);
-            Assert.Equal(externalRoot, auditedNode.ActionCapabilities.RuntimeWorkingDirectory);
-            Assert.Contains(projectPath, auditedNode.ActionCapabilities.RuntimeDisplayCommand, StringComparison.Ordinal);
+            Assert.Equal(runtimeLauncher.IsAvailable, auditedNode.ActionCapabilities!.CanRunNormally);
+            Assert.Equal(runtimeLauncher.IsAvailable, auditedNode.ActionCapabilities.CanRunAsAdministrator);
+
+            var authorizedResolution = runtimeLauncher.Resolve(
+                created.ObjectType,
+                created.ObjectSubtype,
+                created.Notes,
+                created.MetadataJson,
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution);
+            Assert.True(authorizedResolution.IsSuccess, authorizedResolution.Message);
+            Assert.NotNull(authorizedResolution.Plan);
+            Assert.Equal(externalRoot, authorizedResolution.Plan!.WorkingDirectory);
+            Assert.Contains(projectPath, authorizedResolution.Plan.DisplayCommand, StringComparison.Ordinal);
+
+            if (runtimeLauncher.IsAvailable)
+            {
+                Assert.Equal(externalRoot, auditedNode.ActionCapabilities.RuntimeWorkingDirectory);
+                Assert.Contains(projectPath, auditedNode.ActionCapabilities.RuntimeDisplayCommand, StringComparison.Ordinal);
+            }
         }
         finally
         {
@@ -4795,7 +4849,8 @@ public sealed class ProjectStructureAgentIntegrationTests
         });
 
     private static ExecutionRunRecord CreateAuditedExecutionRun(
-        IReadOnlyList<string> readOnlyExternalTargetAliases)
+        IReadOnlyList<string> readOnlyExternalTargetAliases,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
     {
         var now = DateTimeOffset.UtcNow;
         var metadataJson = JsonSerializer.Serialize(
@@ -4804,6 +4859,13 @@ public sealed class ProjectStructureAgentIntegrationTests
                 [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
                     readOnlyExternalTargetAliases
             });
+        if (externalTargetRegistry is not null)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+                metadataJson,
+                externalTargetRegistry.ExportBindings(readOnlyExternalTargetAliases));
+        }
+
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),
             AgentId: Guid.NewGuid(),
@@ -4829,6 +4891,34 @@ public sealed class ProjectStructureAgentIntegrationTests
             RuntimeSessionKey: string.Empty,
             SerializedSessionStateJson: null,
             PendingApprovals: []);
+    }
+
+    private static string AssertExternalTargetAliasResolves(
+        ProcessRuntimeStepAssignment assignment,
+        string variableName,
+        string expectedPhysicalPath,
+        IExternalTargetPathRegistryFactory externalTargetRegistryFactory)
+    {
+        var alias = Assert.Contains(variableName, assignment.LaunchVariables);
+        Assert.True(
+            ExternalTargetAliasCodec.TryParseVersionedAlias(alias, out _, out _, out var aliasValidationMessage),
+            aliasValidationMessage);
+        var bindingJson = Assert.Contains(
+            ProcessRuntimeLaunchVariables.ExternalTargetRootBindings,
+            assignment.LaunchVariables);
+        var bindings = Assert.IsType<ExternalTargetRootBinding[]>(
+            JsonSerializer.Deserialize<ExternalTargetRootBinding[]>(bindingJson));
+        var externalTargetRegistry = externalTargetRegistryFactory.Create(bindings);
+        Assert.Equal(
+            ExternalTargetAliasResolutionKind.Resolved,
+            externalTargetRegistry.TryResolve(alias, out var resolvedPath, out var resolutionMessage));
+        Assert.Empty(resolutionMessage);
+        Assert.Equal(
+            Path.GetFullPath(expectedPhysicalPath),
+            resolvedPath,
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        Assert.DoesNotContain(expectedPhysicalPath, alias, StringComparison.OrdinalIgnoreCase);
+        return alias;
     }
 
     private static async Task<string> CreatePersistedAssetReferencingPathAsync(

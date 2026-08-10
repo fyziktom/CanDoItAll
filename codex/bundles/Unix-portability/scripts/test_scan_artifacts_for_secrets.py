@@ -105,6 +105,22 @@ class SecretArtifactScannerTests(unittest.TestCase):
             self.assertEqual("source.tar", coverage["excluded_non_text_files"]["files"][0]["path"])
             self.assertEqual(0, coverage["unreadable_text_files"]["count"])
 
+    def test_html_capture_is_scanned_as_text(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "runtime-capabilities.html").write_text(
+                "<html><body>safe capability output</body></html>\n",
+                encoding="utf-8",
+            )
+            report_path = root / "report.json"
+
+            result = self.run_scanner(root, report_path, "--report-only")
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            coverage = json.loads(report_path.read_text(encoding="utf-8"))["coverage"]
+            self.assertEqual(1, coverage["scanned_text_files"])
+            self.assertEqual(0, coverage["excluded_non_text_files"]["count"])
+
     def run_scanner(self, root: Path, report_path: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [

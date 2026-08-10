@@ -51,12 +51,13 @@
     },
     {
       "id": "ROOT-004",
-      "relative_path": ".github/workflows-disabled/ci.yml",
-      "portable_reference": "{{REPO_ROOT}}/.github/workflows-disabled/ci.yml",
+      "relative_path": ".github/workflows/ci.yml",
+      "portable_reference": "{{REPO_ROOT}}/.github/workflows/ci.yml",
       "owner_bundle": "core",
       "area": "CI",
       "prepared_observation": "Former CI is disabled; application build/test is Windows-only while Ubuntu only exercises container policy.",
-      "evidence_status": "Verified"
+      "execution_observation": "A07 restores an active Windows/Ubuntu/macOS package-mode matrix with PostgreSQL 16, stable and UnixPortabilityCore tests, outside-checkout publish/restart smoke, Windows browser smoke, artifact upload, static classification, bundle validation, and container-policy jobs.",
+      "evidence_status": "Implemented and locally verified; exact-commit hosted evidence pending"
     },
     {
       "id": "APP-001",
@@ -65,7 +66,8 @@
       "owner_bundle": "core",
       "area": "Composition",
       "prepared_observation": "Composition root and host startup surface.",
-      "evidence_status": "Verified"
+      "execution_observation": "The Web host supplies its explicit environment to composition and projects the shared capability snapshot through development/runtime, API, health, and startup surfaces.",
+      "evidence_status": "Implemented and verified — Gate C3a GO"
     },
     {
       "id": "APP-002",
@@ -244,7 +246,7 @@
       "area": "Security",
       "prepared_observation": "Provider names and actual capability were not separated.",
       "execution_observation": "Hosted startup validation probes the selected vault and fails closed with typed non-secret state/remediation.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-002",
@@ -254,7 +256,7 @@
       "area": "Security",
       "prepared_observation": "The macOS provider was selected but unsupported.",
       "execution_observation": "Security.framework Keychain CRUD is implemented with session/locked/headless semantics and injected-native contracts.",
-      "evidence_status": "Blocked — actual macOS validation required for Gate C2"
+      "evidence_status": "Implemented — actual macOS validation explicitly deferred; Gate C2 GO"
     },
     {
       "id": "SEC-003",
@@ -264,7 +266,7 @@
       "area": "Security",
       "prepared_observation": "The Linux provider was selected but unsupported.",
       "execution_observation": "Secret Service is implemented through typed secret-tool invocation and actual D-Bus/GNOME Keyring restart proof.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-004",
@@ -274,7 +276,7 @@
       "area": "Security",
       "prepared_observation": "No supported Unix headless provider existed.",
       "execution_observation": "Versioned AES-256-GCM envelopes use externally supplied current/previous wrapping keys without persisting key bytes.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-005",
@@ -284,7 +286,7 @@
       "area": "Security",
       "prepared_observation": "Unix Data Protection keys lacked an explicit protected-at-rest production profile.",
       "execution_observation": "Private durable XML repository supports Windows DPAPI and explicit Unix certificate protection with previous-key retention.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-006",
@@ -294,7 +296,7 @@
       "area": "Security",
       "prepared_observation": "Key-ring bootstrap dependencies required an explicit cycle review.",
       "execution_observation": "Protectors load only from OS/profile startup input; no vault or ring-protected secret participates in bootstrap.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-007",
@@ -304,7 +306,7 @@
       "area": "Security",
       "prepared_observation": "The file vault stored a Base64 master key beside ciphertext and was reachable by production selection.",
       "execution_observation": "File/in-memory providers require explicit Development opt-in; legacy file data is available only as a read/delete migration source.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-008",
@@ -314,7 +316,7 @@
       "area": "Security",
       "prepared_observation": "Legacy DPAPI data had no transactional portable export path.",
       "execution_observation": "Windows-only DPAPI source migration supports dry-run, interruption, retry, verification, restart cleanup, and rollback.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-009",
@@ -324,7 +326,7 @@
       "area": "Security",
       "prepared_observation": "Legacy Data Protection payload and database-password continuity required restart verification.",
       "execution_observation": "The control-plane continuity verifier decrypt-checks every encrypted password without exposing values; legacy payload migration is restart-tested.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-010",
@@ -334,7 +336,7 @@
       "area": "Security",
       "prepared_observation": "Vault payload versioning, atomicity, locking, permissions, and rotation required one contract.",
       "execution_observation": "Versioned authenticated envelopes plus A02 durable writes, private modes, prior generations, and the locked migration journal provide the contract.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-011",
@@ -344,7 +346,7 @@
       "area": "Security",
       "prepared_observation": "Secret success/failure artifacts required sentinel proof.",
       "execution_observation": "Redaction contracts and final artifact scans show no seeded runtime/migration sentinel; synthetic scanner fixtures are independently classified.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-012",
@@ -354,7 +356,7 @@
       "area": "Security",
       "prepared_observation": "Capability diagnostics needed a non-secret projection.",
       "execution_observation": "Readiness state exposes only provider kind, typed availability, and remediation.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-013",
@@ -364,7 +366,7 @@
       "area": "Security",
       "prepared_observation": "Migration/deletion audit and orphan cleanup required explicit semantics.",
       "execution_observation": "Redacted audit events, restart checkpoint cleanup, rollback, and orphan cleanup are idempotent and tested.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-014",
@@ -374,7 +376,117 @@
       "area": "Security",
       "prepared_observation": "A user-reported first launch failed because the authorized local file provider was rejected by its own capability probe.",
       "execution_observation": "Windows Auto selects current-user DPAPI and reports Strong. Unix Auto selects LocalUserFile, preserves the encrypted legacy format, enforces 0700/0600, reports BasicLocal with a same-user warning, and starts without an interactive/external vault. Stronger explicit providers remain fail-closed; legacy DataProtectionFile compatibility reports DevelopmentOnly.",
-      "evidence_status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "evidence_status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "PLAT-001",
+      "relative_path": "src/App/CanDoItAll.Composition/RuntimeHostProfiles.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Composition/RuntimeHostProfiles.cs",
+      "owner_bundle": "core",
+      "area": "Composition",
+      "prepared_observation": "Host profile selection required an explicit narrow composition boundary.",
+      "execution_observation": "Typed profile resolution owns the only new OS selector and rejects foreign-host, usage-profile, and non-Development test combinations.",
+      "evidence_status": "Implemented and verified — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-002",
+      "relative_path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+      "owner_bundle": "core",
+      "area": "Composition",
+      "prepared_observation": "Mandatory and optional platform implementations required truthful cardinality at the composition root.",
+      "execution_observation": "Composition registers one resolved host profile and one snapshot provider after the existing purpose-owned path, filesystem, secret, and FileTools registrations.",
+      "evidence_status": "Implemented and verified — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-003",
+      "relative_path": "src/App/CanDoItAll.Composition/HostCapabilities.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Composition/HostCapabilities.cs",
+      "owner_bundle": "core",
+      "area": "Readiness",
+      "prepared_observation": "Runtime support needed one typed, non-sensitive descriptor rather than OS-name inference.",
+      "execution_observation": "Immutable descriptors carry typed availability, reason, support level, dependency identity/version, execution boundary, profile, remediation, and observation time.",
+      "evidence_status": "Implemented and verified — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-004",
+      "relative_path": "src/App/CanDoItAll.Composition/HostCapabilitySnapshotProjector.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Composition/HostCapabilitySnapshotProjector.cs",
+      "owner_bundle": "core",
+      "area": "Readiness",
+      "prepared_observation": "Optional FileTools/native capabilities needed independent degradation semantics.",
+      "execution_observation": "The pure projector maps mandatory and optional facts independently; missing desktop, terminal, or native process-discovery capability does not block ready headless/core startup.",
+      "evidence_status": "Implemented and verified — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-005",
+      "relative_path": "tests/Unit/CanDoItAll.Tests.Unit/RuntimeHostPlatformCapabilityTests.cs",
+      "portable_reference": "{{REPO_ROOT}}/tests/Unit/CanDoItAll.Tests.Unit/RuntimeHostPlatformCapabilityTests.cs",
+      "owner_bundle": "core",
+      "area": "Architecture",
+      "prepared_observation": "MAF/Processes ownership and dependency direction required enforcement after composition changes.",
+      "execution_observation": "Tests cover the profile/provider matrix, redaction, registration cardinality, mandatory failure, optional degradation, and reject broad platform services or process-domain OS branches.",
+      "evidence_status": "Implemented and verified — Gate C3a GO"
+    },
+    {
+      "id": "HOST-001",
+      "relative_path": "src/App/CanDoItAll.Composition/RuntimeDeploymentSupport.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Composition/RuntimeDeploymentSupport.cs",
+      "owner_bundle": "core",
+      "area": "Hosting",
+      "prepared_observation": "Headless support required bounded profile claims and actual-host evidence rather than OS-name inference.",
+      "execution_observation": "Typed Windows/Linux/macOS profiles separate headless core from desktop capabilities. Windows and Linux have actual-host restart proof; macOS remains explicitly ActualHostUnverified until A07.",
+      "evidence_status": "Implemented and verified — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-002",
+      "relative_path": "src/App/CanDoItAll.Composition/RuntimeDeploymentSupport.json",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Composition/RuntimeDeploymentSupport.json",
+      "owner_bundle": "core",
+      "area": "Publishing",
+      "prepared_observation": "Framework-dependent artifact claims needed a machine-readable support boundary.",
+      "execution_observation": "All four required RIDs publish outside the repository with identical embedded/copied manifests, Web DLL, Templates, and static assets; no additional RID is claimed.",
+      "evidence_status": "Implemented and verified — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-003",
+      "relative_path": "tools/install/unix/candoitall-web.service.in",
+      "portable_reference": "{{REPO_ROOT}}/tools/install/unix/candoitall-web.service.in",
+      "owner_bundle": "core",
+      "area": "Operations",
+      "prepared_observation": "Linux/macOS services needed explicit users, roots, permission, lifecycle, and rollback contracts.",
+      "execution_observation": "Hardened systemd and launchd templates, the headless runbook, and actual/synthetic installer lifecycle proof cover the declared service boundaries without automatic elevation.",
+      "evidence_status": "Implemented and verified — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-004",
+      "relative_path": "tools/install/unix/install-candoitall-web.sh",
+      "portable_reference": "{{REPO_ROOT}}/tools/install/unix/install-candoitall-web.sh",
+      "owner_bundle": "core",
+      "area": "Installation",
+      "prepared_observation": "The Windows installer could not be treated as a universal deployment boundary.",
+      "execution_observation": "Unix scripts own only immutable artifact installation and active-release state; application path/security policy remains in product owners and the Windows PowerShell installer is preserved.",
+      "evidence_status": "Implemented and verified — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-005",
+      "relative_path": "src/App/CanDoItAll.Web/Program.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Web/Program.cs",
+      "owner_bundle": "core",
+      "area": "Diagnostics",
+      "prepared_observation": "Operators needed bounded platform/readiness/support diagnostics without secret or physical-root disclosure.",
+      "execution_observation": "The operations endpoint returns typed support, readiness, provider, and capability projections. Windows/Linux runtime captures and the complete artifact scan show no sensitive root or secret value disclosure.",
+      "evidence_status": "Implemented and verified — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "DOC-001",
+      "relative_path": "docs/operations/headless-web-host.md",
+      "portable_reference": "{{REPO_ROOT}}/docs/operations/headless-web-host.md",
+      "owner_bundle": "core",
+      "area": "Documentation",
+      "prepared_observation": "Existing deployment guidance treated Windows paths and PowerShell as universal.",
+      "execution_observation": "The headless runbook documents scoped Windows/Linux/macOS roots, PostgreSQL, vault/Data Protection prerequisites, service lifecycle, rollback, unsupported desktop features, and actual-host limitations.",
+      "evidence_status": "Implemented and verified — Gate C3b/Hosting GO"
     },
     {
       "id": "MAF-001",

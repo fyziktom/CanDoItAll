@@ -315,7 +315,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     public void Chat_discovery_accepts_the_bounded_calculator_root()
     {
         var projectId = Guid.NewGuid();
-        var expectedRoot = ToNativeFixturePath(@"C:\programovani\dotnet\calculator-e2e-test");
+        using var fixture = new TemporaryFixtureDirectory(@"C:\programovani\dotnet\calculator-e2e-test");
+        var expectedRoot = fixture.Path;
         var focus = CreateNode(
             "focus",
             null,
@@ -361,13 +362,15 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     public void Chat_discovery_uses_the_nearest_canonical_typed_owner()
     {
         var projectId = Guid.NewGuid();
-        var expectedRoot = ToNativeFixturePath(@"C:\programovani\dotnet\calculator-e2e-test");
+        using var expectedFixture = new TemporaryFixtureDirectory(@"C:\programovani\dotnet\calculator-e2e-test");
+        using var outerFixture = new TemporaryFixtureDirectory(@"C:\programovani\dotnet\outer-app");
+        var expectedRoot = expectedFixture.Path;
         var outer = CreateNode(
             "outer",
             null,
             "Outer",
             metadataJson: CreateProjectBlockMetadata(
-                outputRoot: ToNativeFixturePath(@"C:\programovani\dotnet\outer-app")));
+                outputRoot: outerFixture.Path));
         var owner = CreateNode(
             "owner",
             outer.Id,
@@ -418,7 +421,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     public void Chat_discovery_ignores_generic_hierarchy_links_for_authority()
     {
         var projectId = Guid.NewGuid();
-        var expectedRoot = ToNativeFixturePath(@"C:\programovani\dotnet\calculator-e2e-test");
+        using var fixture = new TemporaryFixtureDirectory(@"C:\programovani\dotnet\calculator-e2e-test");
+        var expectedRoot = fixture.Path;
         var focus = CreateNode(
             "focus",
             null,
@@ -484,7 +488,8 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
     [InlineData(@"D:\repos\App")]
     public void Chat_discovery_accepts_bounded_non_protected_project_roots(string fixturePath)
     {
-        var root = ToNativeFixturePath(fixturePath);
+        using var fixture = new TemporaryFixtureDirectory(fixturePath);
+        var root = fixture.Path;
         var projectId = Guid.NewGuid();
         var focus = CreateNode(
             "focus",
@@ -759,10 +764,32 @@ public sealed class ProjectStructureProcessLaunchContextBuilderTests
             ignoreCase: OperatingSystem.IsWindows());
     }
 
-    private static string ToNativeFixturePath(string windowsPath)
-        => OperatingSystem.IsWindows()
-            ? windowsPath
-            : "/" + windowsPath[3..].Replace('\\', '/');
+    private sealed class TemporaryFixtureDirectory : IDisposable
+    {
+        private readonly string rootPath;
+
+        public TemporaryFixtureDirectory(string fixturePath)
+        {
+            rootPath = System.IO.Path.Combine(
+                AppContext.BaseDirectory,
+                $"candoitall-launch-context-{Guid.NewGuid():N}");
+            var relativeFixturePath = fixturePath.Length >= 2 && fixturePath[1] == ':'
+                ? fixturePath[2..]
+                : fixturePath;
+            var segments = relativeFixturePath.Split(
+                ['\\', '/'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            Path = System.IO.Path.Combine([rootPath, .. segments]);
+            Directory.CreateDirectory(Path);
+        }
+
+        public string Path { get; }
+
+        public void Dispose()
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
 
     public enum ProjectBlockRootField
     {

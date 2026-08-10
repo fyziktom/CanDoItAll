@@ -232,7 +232,13 @@ public sealed class DurableFileWriter
             policy.EnsureSafePath(temporaryPath);
             stageObserver?.Invoke(DurableFileWriteStage.BeforeCommit);
 
-            Commit(temporaryPath, fullPath, options.CommitMode, options.CreateBackup);
+            await CommitWithRetryAsync(
+                temporaryPath,
+                fullPath,
+                options.CommitMode,
+                options.CreateBackup,
+                options.LockTimeout,
+                cancellationToken).ConfigureAwait(false);
             ApplyPrivateFileMode(fullPath, options.RequirePrivateUnixMode);
             VerifyPrivateFileMode(fullPath, options.RequirePrivateUnixMode);
             if (options.CreateBackup)
@@ -479,6 +485,52 @@ public sealed class DurableFileWriter
         }
 
         File.Move(temporaryPath, fullPath, overwrite: true);
+    }
+
+    private static async Task CommitWithRetryAsync(
+        string temporaryPath,
+        string fullPath,
+        DurableFileCommitMode commitMode,
+        bool createBackup,
+        TimeSpan lockTimeout,
+        CancellationToken cancellationToken)
+    {
+        if (commitMode == DurableFileCommitMode.CreateNew)
+        {
+            Commit(temporaryPath, fullPath, commitMode, createBackup);
+            return;
+        }
+
+        TimeSpan retryWindow = lockTimeout < TimeSpan.FromSeconds(2)
+            ? lockTimeout
+            : TimeSpan.FromSeconds(2);
+        var stopwatch = Stopwatch.StartNew();
+        var delay = TimeSpan.FromMilliseconds(25);
+        while (true)
+        {
+            try
+            {
+                Commit(temporaryPath, fullPath, commitMode, createBackup);
+                return;
+            }
+            catch (Exception exception) when (
+                (exception is IOException or UnauthorizedAccessException) &&
+                stopwatch.Elapsed < retryWindow)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                TimeSpan remaining = retryWindow - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    throw;
+                }
+
+                await Task.Delay(delay < remaining ? delay : remaining, cancellationToken)
+                    .ConfigureAwait(false);
+                delay = delay < TimeSpan.FromMilliseconds(200)
+                    ? delay + delay
+                    : delay;
+            }
+        }
     }
 
     private static string GetBackupPath(string fullPath)

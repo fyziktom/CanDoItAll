@@ -56,20 +56,20 @@ The current installed-web-app path is Windows/PowerShell oriented and no macOS/L
 
 ## Entry gate
 
-- Status before execution: `Blocked by A05`
+- Status before execution: `Eligible — Gate C3a GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
 ## Exit gate
 
-- Clean headless startup/restart succeeds on Windows, Ubuntu, and macOS.
+- Clean headless startup/restart succeeds on Windows and Ubuntu. macOS publish and launchd/install contracts are proven, remain labeled `ActualHostUnverified`, and are carried to A07 as `A07-MACOS-HEADLESS-ACTUALHOST-001`.
 - Publish/support claims are bounded to proven RIDs and profiles.
 - Linux/macOS service and rollback runbooks are complete and rehearsed where required.
 - Documentation no longer treats Windows behavior as universal.
 
 ## Status
 
-- `Blocked by A05`
+- `Completed — Gate C3b/Hosting GO`
 
 ## Handoff
 

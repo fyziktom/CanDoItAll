@@ -59,7 +59,9 @@ public sealed class HostCompositionDependencyRemovalTests
     public void CP003_Zero_provider_runtime_registration_has_no_implicit_provider_drivers()
     {
         var services = new ServiceCollection();
-        services.AddCanDoItAllRuntimeModules(CreateConfiguration(new Dictionary<string, string?>()));
+        services.AddCanDoItAllRuntimeModules(
+            CreateConfiguration(new Dictionary<string, string?>()),
+            MemoryTestHostEnvironment.Instance);
 
         Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IMemoryProviderDriver));
         Assert.DoesNotContain(services, descriptor => DescriptorContainsType(descriptor, typeof(DeterministicMockMemoryProviderDriver)));
@@ -82,7 +84,7 @@ public sealed class HostCompositionDependencyRemovalTests
             ["Memory:Providers:NativeRemote:Enabled"] = "true",
             ["Memory:Providers:Http:ClientName"] = "test-memory-http",
             ["Memory:Providers:NativeRemote:ClientName"] = "test-memory-native-remote"
-        }));
+        }), MemoryTestHostEnvironment.Instance);
 
         using var provider = services.BuildServiceProvider(validateScopes: false);
         var driverKinds = provider.GetServices<IMemoryProviderDriver>()

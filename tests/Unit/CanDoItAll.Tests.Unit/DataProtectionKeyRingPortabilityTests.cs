@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class DataProtectionKeyRingPortabilityTests
 {
     private const string Sentinel = "dataprotection-sentinel-a04-188b2a";

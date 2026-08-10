@@ -23,7 +23,7 @@ Portable source changes are not support until active actual-host CI proves build
 
 ## Source hotspots
 
-- `{{REPO_ROOT}}/.github/workflows-disabled/ci.yml`
+- `{{REPO_ROOT}}/.github/workflows/ci.yml`
 - `{{REPO_ROOT}}/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj`
 - `{{REPO_ROOT}}/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj`
 - `{{REPO_ROOT}}/tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj`
@@ -55,7 +55,7 @@ Portable source changes are not support until active actual-host CI proves build
 
 ## Entry gate
 
-- Status before execution: `Blocked by A06`
+- Status before execution: `Eligible — Gate C3b/Hosting GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -68,7 +68,7 @@ Portable source changes are not support until active actual-host CI proves build
 
 ## Status
 
-- `Blocked by A06`
+- `Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence`
 
 ## Handoff
 

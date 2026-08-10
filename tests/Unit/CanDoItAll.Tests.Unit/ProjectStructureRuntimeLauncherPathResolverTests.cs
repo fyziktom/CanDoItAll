@@ -17,7 +17,10 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"C:\outside\CanDoItAll.Web.csproj"
+                ProjectPath = Path.Combine(
+                    Path.GetTempPath(),
+                    $"CanDoItAll.RuntimeLauncher.Missing.{Guid.NewGuid():N}",
+                    "CanDoItAll.Web.csproj")
             });
 
         var result = sut.Resolve(node);

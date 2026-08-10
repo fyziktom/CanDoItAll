@@ -1,0 +1,239 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  stable:
+    name: stable-${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            rid: win-x64
+            profile: WindowsHeadless
+          - name: ubuntu-x64
+            os: ubuntu-24.04
+            rid: linux-x64
+            profile: LinuxHeadless
+          - name: macos-arm64
+            os: macos-15
+            rid: osx-arm64
+            profile: MacOsHeadless
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Start PostgreSQL for the stable integration gate
+        id: postgres
+        uses: ikalnytskyi/action-setup-postgres@v8
+        with:
+          username: candoitall
+          password: candoitall
+          database: candoitall_development
+          postgres-version: "16"
+
+      - name: Capture host provenance
+        shell: pwsh
+        run: |
+          dotnet --info
+          Write-Host "OS: $([System.Runtime.InteropServices.RuntimeInformation]::OSDescription)"
+          Write-Host "Architecture: $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)"
+
+      - name: Restore with package dependencies
+        shell: pwsh
+        run: dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=false /m:1
+
+      - name: Run stable test gate
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          dotnet test ./CanDoItAll.slnx --configuration Release --no-build
+          --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&RequiresHostDocker!=true"
+          --logger "trx;LogFilePrefix=stable-${{ matrix.name }}"
+          --results-directory "${{ runner.temp }}/test-results"
+          -p:UseLocalCanDoItAllLibraries=false /m:1
+
+      - name: Run actual-host core portability unit gate
+        shell: pwsh
+        run: >-
+          dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj
+          --configuration Release --no-build
+          --filter "(Category=UnixPortabilityCore)&(RequiresHostDocker!=true)"
+          --logger "trx;LogFileName=portability-unit-${{ matrix.name }}.trx"
+          --results-directory "${{ runner.temp }}/test-results"
+          -p:UseLocalCanDoItAllLibraries=false
+
+      - name: Run actual-host core portability integration gate
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          --configuration Release --no-build
+          --filter "(Category=UnixPortabilityCore)&(RequiresHostDocker!=true)"
+          --logger "trx;LogFileName=portability-integration-${{ matrix.name }}.trx"
+          --results-directory "${{ runner.temp }}/test-results"
+          -p:UseLocalCanDoItAllLibraries=false
+
+      - name: Run PostgreSQL-backed core migration and restart gate
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+          --configuration Release --no-build
+          --filter "(Category=UnixPortabilityCore)&(RequiresHostDocker=true)"
+          --logger "trx;LogFileName=portability-postgres-${{ matrix.name }}.trx"
+          --results-directory "${{ runner.temp }}/test-results"
+          -p:UseLocalCanDoItAllLibraries=false
+
+      - name: Install Chromium for core UI smoke
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/playwright.ps1 install chromium
+
+      - name: Publish, start, restart, and inspect headless host
+        shell: pwsh
+        run: >-
+          ./tools/Validation/Test-CorePortabilityHeadless.ps1
+          -RuntimeIdentifier "${{ matrix.rid }}"
+          -RuntimeProfile "${{ matrix.profile }}"
+          -OutputRoot "${{ runner.temp }}/candoitall-a07-${{ matrix.name }}"
+
+      - name: Validate documentation and repository structure
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/Validation/Test-Documentation.ps1
+
+      - name: Validate installed web app setup scripts
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1
+
+      - name: Upload host evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-portability-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/test-results
+            ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/headless-summary.json
+            ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/publish.log
+            ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/startup-*.log
+            ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/browser-smoke.*
+          if-no-files-found: warn
+          retention-days: 14
+
+  portability-static:
+    name: portability-static
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Test portability and redaction tooling
+        shell: pwsh
+        run: |
+          python ./codex/bundles/Unix-portability/scripts/test_enforce_portability_baseline.py
+          python ./codex/bundles/Unix-portability/scripts/test_scan_artifacts_for_secrets.py
+
+      - name: Scan portability-sensitive sources
+        shell: pwsh
+        run: >-
+          python ./codex/bundles/Unix-portability/scripts/scan_portability.py
+          --repo-root .
+          --output "${{ runner.temp }}/portability-scan.json"
+          --tracked-only
+
+      - name: Require complete portability classification
+        shell: pwsh
+        run: >-
+          python ./codex/bundles/Unix-portability/scripts/classify_portability_scan.py
+          --input "${{ runner.temp }}/portability-scan.json"
+          --json-output "${{ runner.temp }}/portability-reviewed.json"
+          --csv-output "${{ runner.temp }}/portability-reviewed.csv"
+          --summary-output "${{ runner.temp }}/portability-reviewed.md"
+
+      - name: Enforce reviewed executable-source baseline
+        shell: pwsh
+        run: >-
+          python ./codex/bundles/Unix-portability/scripts/enforce_portability_baseline.py
+          --scan "${{ runner.temp }}/portability-scan.json"
+          --baseline ./codex/bundles/Unix-portability/shared/portability-risk-baseline.json
+
+      - name: Validate portable bundle integrity
+        shell: pwsh
+        run: >-
+          python ./codex/bundles/Unix-portability/scripts/validate_bundle.py
+          --bundle-root ./codex/bundles/Unix-portability
+          --repo-root .
+          --stage portable
+
+      - name: Upload static portability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-portability-static
+          path: ${{ runner.temp }}/portability-*
+          if-no-files-found: warn
+          retention-days: 14
+
+  containers:
+    name: containers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate Compose policy
+        shell: pwsh
+        run: ./tools/Validation/Test-Docker.ps1
+
+      - name: Start PostgreSQL and wait for health
+        run: docker compose --env-file .env.example -p "candoitall-app-ci-${{ github.run_id }}" up -d --wait --wait-timeout 120 db
+
+      - name: Show service state
+        if: always()
+        run: docker compose --env-file .env.example -p "candoitall-app-ci-${{ github.run_id }}" ps --all
+
+      - name: Remove disposable CI resources
+        if: always()
+        run: docker compose --env-file .env.example -p "candoitall-app-ci-${{ github.run_id }}" down --volumes --remove-orphans

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -1081,7 +1082,7 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         RuntimeExecutorWorkspace workspace,
         IWorkspaceProcessHost processHost)
     {
-        var externalTargets = TestExternalTargetPathRegistry.Create();
+        var externalTargets = workspace.ExternalTargets;
         var workspaceFiles = TestWorkspaceServices.CreateFileService(
             workspace.WorkspaceRoot,
             externalTargetRegistry: externalTargets);
@@ -1399,35 +1400,33 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
 
     private static string ToExternalTargetAlias(string path)
     {
-        var fullPath = Path.GetFullPath(path);
-        var rootPath = Path.GetPathRoot(fullPath)
-            ?? throw new InvalidOperationException($"Path '{path}' has no root.");
-        var trimmedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmedRoot.Length != 2 ||
-            trimmedRoot[1] != ':' ||
-            !char.IsLetter(trimmedRoot[0]))
+        if (!RuntimeExecutorWorkspace.CurrentExternalTargets.TryCreateAlias(path, out var alias))
         {
-            return fullPath;
+            throw new InvalidOperationException($"Path '{path}' could not be represented as an external-target alias.");
         }
 
-        var relativePath = fullPath.Length <= rootPath.Length
-            ? string.Empty
-            : fullPath[rootPath.Length..]
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .TrimStart(Path.DirectorySeparatorChar);
-        return string.IsNullOrWhiteSpace(relativePath)
-            ? $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}"
-            : $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
+        return alias;
     }
 
     private sealed class RuntimeExecutorWorkspace : IDisposable
     {
+        private static readonly AsyncLocal<IExternalTargetPathRegistry?> AmbientExternalTargets = new();
         private readonly List<string> roots = [];
+        private readonly IExternalTargetPathRegistry? previousExternalTargets;
 
         public RuntimeExecutorWorkspace()
         {
+            previousExternalTargets = AmbientExternalTargets.Value;
+            ExternalTargets = TestExternalTargetPathRegistry.Create();
+            AmbientExternalTargets.Value = ExternalTargets;
             WorkspaceRoot = CreateRoot("Workspace");
         }
+
+        public static IExternalTargetPathRegistry CurrentExternalTargets
+            => AmbientExternalTargets.Value
+               ?? throw new InvalidOperationException("A runtime executor workspace scope is required.");
+
+        public IExternalTargetPathRegistry ExternalTargets { get; }
 
         public string WorkspaceRoot { get; }
 
@@ -1436,6 +1435,11 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
 
         public void Dispose()
         {
+            if (ReferenceEquals(AmbientExternalTargets.Value, ExternalTargets))
+            {
+                AmbientExternalTargets.Value = previousExternalTargets;
+            }
+
             foreach (var root in roots)
             {
                 try

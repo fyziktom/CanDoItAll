@@ -3,6 +3,7 @@ using CanDoItAll.FileTools.Integration;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class LogicalPathTests
 {
     [Fact]
@@ -78,6 +79,7 @@ public sealed class FileToolsStorageRootTests
     }
 }
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class PortablePathTemplateTests
 {
     [Fact]

@@ -36,6 +36,17 @@ project. Neither installed-database path uses the repository's development `comp
 `tools/Install-CanDoItAllWebApp.ps1` is retained only as a compatibility wrapper for the
 former script location.
 
+Framework-dependent Unix artifacts use `tools/install/unix/install-candoitall-web.sh`.
+It installs immutable releases and switches a validated release-id state file without
+elevation, database mutation, provider selection, or root-policy duplication. The same
+folder contains the stable launcher, idempotent rollback entry point, and systemd/launchd
+templates. See `docs/operations/headless-web-host.md` before using them.
+
+When sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` source repositories are
+present beside this repository, development builds replace matching packages with direct
+project references. Set `UseLocalCanDoItAllLibraries=false` to reproduce package-only CI
+or release restore behavior.
+
 Validate both installer entry points, the generated launcher, and non-mutating previews
 with:
 

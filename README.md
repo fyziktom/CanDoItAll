@@ -1,5 +1,6 @@
 # CanDoItAll
 
+[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml?query=branch%3Amain)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 

@@ -359,7 +359,7 @@ public sealed class CanonicalContextContractTests
 
         foreach (var relativePath in contractFiles)
         {
-            var fullPath = Path.Combine(root, relativePath);
+            var fullPath = TestRepositoryPath.Resolve(root, relativePath);
             Assert.True(File.Exists(fullPath), $"Missing contract file: {relativePath}");
             var text = File.ReadAllText(fullPath);
             foreach (var token in forbiddenTokens)

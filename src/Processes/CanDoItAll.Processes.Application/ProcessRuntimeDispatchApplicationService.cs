@@ -1170,7 +1170,6 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         CancellationToken cancellationToken)
     {
         using var stepExecution = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        stepExecution.CancelAfter(stepExecutionTimeout);
         var invocationTask = Task.Run(
             async () => await dispatcher
                 .InvokeAsync(workItem, plan, strategyFactory, stepExecution.Token)

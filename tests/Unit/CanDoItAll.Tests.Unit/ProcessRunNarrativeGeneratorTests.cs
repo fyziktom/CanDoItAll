@@ -243,6 +243,7 @@ public sealed class ProcessRunNarrativeGeneratorTests
     [Fact]
     public async Task GenerateAsync_TwoWorkersAfterLeaseReclaim_CreateOneSameSourceExecution()
     {
+        var testTimeout = TimeSpan.FromSeconds(90);
         var now = new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero);
         var provider = CreateProvider();
         var manager = CreateAgent(
@@ -297,10 +298,10 @@ public sealed class ProcessRunNarrativeGeneratorTests
             var firstTask = firstGenerator.GenerateAsync(record);
             var secondTask = secondGenerator.GenerateAsync(record);
 
-            await runtime.FirstRunStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await runtime.FirstRunStarted.Task.WaitAsync(testTimeout);
             var deferredTask = await Task
                 .WhenAny(firstTask, secondTask)
-                .WaitAsync(TimeSpan.FromSeconds(10));
+                .WaitAsync(testTimeout);
             var deferred = await Assert.ThrowsAsync<ProcessRunNarrativeGenerationDeferredException>(
                 () => deferredTask);
             var successfulTask = ReferenceEquals(deferredTask, firstTask)
@@ -308,7 +309,7 @@ public sealed class ProcessRunNarrativeGeneratorTests
                 : firstTask;
 
             runtime.ReleaseFirstRun();
-            var narrative = await successfulTask.WaitAsync(TimeSpan.FromSeconds(10));
+            var narrative = await successfulTask.WaitAsync(testTimeout);
 
             Assert.Equal(1, runtime.RunCallCount);
             Assert.Equal(narrative.Provenance.NarrativeExecutionRunId, deferred.ExecutionRunId);

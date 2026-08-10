@@ -6,7 +6,7 @@ Deliver a stable Windows/Linux/macOS headless core by fixing path and filesystem
 
 ## Status
 
-- `In progress — A04 SEC-014 independently GO; Gate C2 remains blocked solely by genuine macOS proof`
+- `In progress — A07 local readiness GO; C4 pending exact-commit hosted evidence`
 
 ## Source anchor
 
@@ -17,7 +17,7 @@ Deliver a stable Windows/Linux/macOS headless core by fixing path and filesystem
 
 ## Active work
 
-`A04 — Secrets, vault drivers, Data Protection, and migration` now has the SEC-014 correction independently verified on Windows/Linux. Windows `Auto` uses current-user DPAPI with `Strong` protection; Unix `Auto` uses `LocalUserFile` with enforced `0700`/`0600` modes, typed `BasicLocal` protection, and a same-user warning. Explicit Keychain, Secret Service, DPAPI, and external-key profiles retain fail-closed behavior. The user-reported Windows command and a Linux container without a session vault both served HTTP 200. Gate C2 and `A05` remain blocked solely by the outstanding genuine macOS SEC-002 proof.
+`A05 — Platform composition, capabilities, and readiness` is complete with independent Gate C3a GO. `A06 — Headless hosting, publish, installation, and operations` is complete with independent Gate C3b/Hosting GO after remediation of its three bounded review findings. It owns framework-dependent RID artifacts, clean headless publish execution, Unix service/install boundaries, redacted per-purpose diagnostics, durable host provenance, and cross-platform operator guidance. `A07 — Three-platform CI, integration, restart, and Core Gate C4` has a locally validated candidate with current Windows/Ubuntu stable and headless evidence plus local static enforcement. C4 remains pending an exact committed/pushed anchor and hosted Windows/Ubuntu/macOS evidence. Genuine macOS Keychain execution remains separately deferred as `MACOS-KEYCHAIN-VALIDATION-001` and is not required for this bundle progression.
 
 ## Runtime boundary
 

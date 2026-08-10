@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
@@ -611,6 +612,43 @@ public sealed class ProjectPackageHardeningTests
                     CancellationToken.None));
 
             Assert.Contains("write and verify", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Empty_target_plan_binds_bootstrap_storage_to_the_current_host()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var driver = new TestStorageDriver(
+                StorageProviderKind.FileSystem,
+                StorageCapability.Read | StorageCapability.Write | StorageCapability.Delete,
+                []);
+            var importer = CreateImporter(root, driver);
+            var options = AppDbContextTestOptionsBuilder.Create()
+                .UseInMemoryDatabase($"package-bootstrap-binding-{Guid.NewGuid():N}")
+                .Options;
+            await using var dbContext = new AppDbContext(options);
+            await dbContext.Database.EnsureCreatedAsync();
+
+            var plan = await importer.BuildTargetStoragePlanAsync(
+                dbContext,
+                TestProfile(root),
+                CancellationToken.None);
+
+            Assert.NotNull(plan.PendingStorage);
+            var storage = plan.PendingStorage;
+            Assert.Equal(HostBoundPathState.Active, storage.RootPathState);
+            Assert.Equal(HostPathContext.CaptureCurrent().HostBindingId, storage.RootHostBindingId);
+            Assert.Equal(
+                Path.GetFullPath(root),
+                StorageCatalogHostBindingPolicy.ResolveRequired(storage, root),
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         }
         finally
         {

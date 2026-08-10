@@ -4,6 +4,10 @@ This guide covers the self-contained Windows web app and its dedicated PostgreSQ
 runtime. The repository-root `compose.yaml` is only for source-tree development and must
 not be used to prepare the installed app.
 
+For framework-dependent Windows/Linux/macOS headless deployments, use the separate
+[Headless Web Host Operations](headless-web-host.md) runbook. The Windows installer in
+this guide remains the owner of desktop shortcuts and its dedicated managed database.
+
 ## Install
 
 Run the canonical installer from the repository root:

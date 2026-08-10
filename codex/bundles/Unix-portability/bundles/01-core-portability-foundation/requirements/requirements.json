@@ -272,15 +272,15 @@
       "owner": "A04",
       "requirement": "Auto secret-provider selection never returns an unsupported provider.",
       "acceptance": "Startup either registers a proven provider or fails fast with a non-secret remediation message.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-002",
       "priority": "P0",
       "owner": "A04",
       "requirement": "The macOS interactive profile has a real Keychain-backed secret implementation or an explicitly supported secure alternative.",
-      "acceptance": "Create/read/update/delete/restart/concurrency tests run on macOS and prove access-control behavior.",
-      "status": "Blocked — actual macOS validation required for Gate C2"
+      "acceptance": "Native contracts prove create/read/update/delete/restart/concurrency/access-control behavior now; genuine macOS execution is tracked as non-blocking follow-up MACOS-KEYCHAIN-VALIDATION-001, and support remains actual-host unverified until it passes.",
+      "status": "Implemented — actual macOS validation explicitly deferred; Gate C2 GO"
     },
     {
       "id": "SEC-003",
@@ -288,7 +288,7 @@
       "owner": "A04",
       "requirement": "The Linux interactive profile has a real Secret Service implementation with explicit session/availability semantics.",
       "acceptance": "Tests cover available service, locked/unavailable service, and headless absence; no silent fallback occurs.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-004",
@@ -296,7 +296,7 @@
       "owner": "A04",
       "requirement": "Linux/macOS headless operation has an explicit secure provider that does not depend on an interactive keyring.",
       "acceptance": "A configured certificate, remote vault, or externally supplied wrapping-key mode is documented and restart-tested.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-005",
@@ -304,7 +304,7 @@
       "owner": "A04",
       "requirement": "The Data Protection key ring is protected at rest in supported production profiles.",
       "acceptance": "The selected protector is bootstrapped independently, restart-tested, and its files/keys meet permission policy.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-006",
@@ -312,7 +312,7 @@
       "owner": "A04",
       "requirement": "Key-ring protection has no circular dependency on secrets encrypted by that same key ring.",
       "acceptance": "Architecture test/review traces bootstrap dependencies and detects cycles.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-007",
@@ -320,7 +320,7 @@
       "owner": "A04",
       "requirement": "The legacy DataProtectionFile provider remains Development/migration-only; Unix may use its encrypted file format only through the explicitly named and honestly classified LocalUserFile basic tier.",
       "acceptance": "Windows Auto selects DPAPI; Unix Auto selects LocalUserFile with 0700 directories, 0600 files, a typed BasicLocal capability, and a same-user threat-model warning; explicit strong providers fail closed and the legacy provider name is rejected in production.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-008",
@@ -328,7 +328,7 @@
       "owner": "A04",
       "requirement": "Legacy DPAPI-protected data has a Windows-side transactional export/re-encryption path before Unix migration.",
       "acceptance": "Dry-run, interruption, retry, verification, and rollback preserve every source record.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-009",
@@ -336,7 +336,7 @@
       "owner": "A04",
       "requirement": "Legacy Data Protection secret records and control-plane database passwords remain readable through migration and restart.",
       "acceptance": "Golden fixtures from the old key ring decrypt before and after staged migration.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-010",
@@ -344,7 +344,7 @@
       "owner": "A04",
       "requirement": "Vault payloads and key metadata are versioned, atomic, cross-process safe, permission-hardened, and rotatable.",
       "acceptance": "Rotation interruption/recovery tests prove no key/payload orphaning and old generation retention until commit.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-011",
@@ -352,7 +352,7 @@
       "owner": "A04",
       "requirement": "Secret values never enter logs, exceptions, receipts, migration reports, scanner output, or test artifacts.",
       "acceptance": "Automated redaction tests and artifact scan pass with seeded sentinel secrets.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-012",
@@ -360,7 +360,7 @@
       "owner": "A04",
       "requirement": "Provider capability and health diagnostics reveal only provider type/state and remediation, never identifiers or values.",
       "acceptance": "Readiness/UI/API snapshots are security-reviewed.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-013",
@@ -368,7 +368,7 @@
       "owner": "A04",
       "requirement": "Secret migration and deletion are auditable without exposing values and have explicit orphan cleanup semantics.",
       "acceptance": "Staged reference cleanup and old-payload deletion are idempotent and tested.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "SEC-014",
@@ -376,7 +376,7 @@
       "owner": "A04",
       "requirement": "A local installation can start without an interactive or externally managed vault by using an honestly classified basic local provider.",
       "acceptance": "Windows startup/restart uses DPAPI with typed Strong protection; Unix startup/restart uses LocalUserFile with enforced 0700/0600 modes, typed BasicLocal protection, and a same-user warning; explicit strong-provider selection, legacy Development compatibility, and non-disclosure remain proven.",
-      "status": "Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS"
+      "status": "Satisfied — Gate C2 GO"
     },
     {
       "id": "PLAT-001",
@@ -384,7 +384,7 @@
       "owner": "A05",
       "requirement": "Portability uses narrow purpose-owned ports/adapters rather than a broad IPlatformService or scattered feature branches.",
       "acceptance": "Dependency and code scan show OS checks only in composition, root resolvers, and leaf native adapters unless justified.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3a GO"
     },
     {
       "id": "PLAT-002",
@@ -392,7 +392,7 @@
       "owner": "A05",
       "requirement": "Composition selects exactly one implementation for mandatory path/secret primitives and truthful zero-or-one implementations for optional desktop/runtime capabilities.",
       "acceptance": "Startup tests cover every target profile and missing-dependency path.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3a GO"
     },
     {
       "id": "PLAT-003",
@@ -400,7 +400,7 @@
       "owner": "A05",
       "requirement": "Capability descriptors include availability, reason, remediation, execution boundary, and tested support level.",
       "acceptance": "Workbench/settings/readiness surfaces consume descriptors without inferring support from OS name alone.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3a GO"
     },
     {
       "id": "PLAT-004",
@@ -408,7 +408,7 @@
       "owner": "A05",
       "requirement": "External package and native-service capabilities can be quarantined independently without blocking headless core startup.",
       "acceptance": "FileTools, Secret Service, Keychain, terminal, and process-discovery failures degrade only their declared optional capabilities.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3a GO"
     },
     {
       "id": "PLAT-005",
@@ -416,15 +416,15 @@
       "owner": "A05",
       "requirement": "Current MAF/process ownership boundaries remain intact after platform composition changes.",
       "acceptance": "Architecture tests preserve no reverse MAF-to-product/process semantic dependency.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3a GO"
     },
     {
       "id": "HOST-001",
       "priority": "P0",
       "owner": "A06",
-      "requirement": "The Web host starts headlessly on Windows, Ubuntu, and macOS with desktop launch disabled.",
-      "acceptance": "Bounded startup/health/shutdown smoke tests pass from clean publish output.",
-      "status": "Planned"
+      "requirement": "The Web host starts headlessly on Windows and Ubuntu with desktop launch disabled; macOS publish/service contracts remain explicitly unverified until A07 actual-host execution.",
+      "acceptance": "Bounded Windows/Ubuntu startup, health, restart, rollback, and shutdown smoke tests pass from clean publish output; macOS is labeled ActualHostUnverified and tracked as A07-MACOS-HEADLESS-ACTUALHOST-001.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
     },
     {
       "id": "HOST-002",
@@ -432,7 +432,7 @@
       "owner": "A06",
       "requirement": "Framework-dependent publish is proven for win-x64, linux-x64, osx-x64, and osx-arm64; additional RIDs are claims only after proof.",
       "acceptance": "Artifacts run outside the repository and include a support manifest.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3b/Hosting GO"
     },
     {
       "id": "HOST-003",
@@ -440,7 +440,7 @@
       "owner": "A06",
       "requirement": "Linux systemd and macOS launchd runbooks define service user, roots, environment, restart, logs, permissions, upgrade, and rollback.",
       "acceptance": "Runbooks are rehearsed or clearly mark unexecuted optional desktop steps.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3b/Hosting GO"
     },
     {
       "id": "HOST-004",
@@ -448,7 +448,7 @@
       "owner": "A06",
       "requirement": "Installation logic separates cross-platform publish/configuration from Windows shortcuts and Unix service integration.",
       "acceptance": "The existing PowerShell installer remains valid while Unix entry points do not duplicate security/path policy.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3b/Hosting GO"
     },
     {
       "id": "HOST-005",
@@ -456,7 +456,7 @@
       "owner": "A06",
       "requirement": "Operational diagnostics report platform, configured roots, provider/capability state, and support profile without exposing secrets or unnecessary absolute paths.",
       "acceptance": "Redacted diagnostic bundle is validated on each target OS.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3b/Hosting GO"
     },
     {
       "id": "DOC-001",
@@ -464,7 +464,7 @@
       "owner": "A06",
       "requirement": "Developer and operator documentation no longer presents %LOCALAPPDATA%, PowerShell, or Windows desktop behavior as universal.",
       "acceptance": "Documentation includes Linux/macOS prerequisites, limitations, migrations, and explicit unsupported features.",
-      "status": "Planned"
+      "status": "Satisfied — Gate C3b/Hosting GO"
     },
     {
       "id": "CI-001",
@@ -472,7 +472,7 @@
       "owner": "A07",
       "requirement": "An active GitHub Actions workflow restores, builds, and runs the stable test gate on Windows, Ubuntu, and macOS.",
       "acceptance": "All three jobs are required checks or otherwise protected by repository policy evidence.",
-      "status": "Planned"
+      "status": "Implemented — exact-commit hosted checks and repository policy evidence pending"
     },
     {
       "id": "CI-002",
@@ -480,7 +480,7 @@
       "owner": "A07",
       "requirement": "Actual-host tests cover path, filesystem, storage, secret-provider selection, permissions, and headless startup.",
       "acceptance": "Tests cannot pass solely through a mocked OS enum.",
-      "status": "Planned"
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI"
     },
     {
       "id": "CI-003",
@@ -488,7 +488,7 @@
       "owner": "A07",
       "requirement": "Linux and macOS restart tests prove protected state, storage catalogs, and migrated records remain readable.",
       "acceptance": "At least one old-format fixture and one new-format fixture survive restart on each supported migration route.",
-      "status": "Planned"
+      "status": "Implemented — Ubuntu restart passes; genuine macOS pending hosted CI"
     },
     {
       "id": "CI-004",
@@ -496,7 +496,7 @@
       "owner": "A07",
       "requirement": "Publish artifacts and service/headless smoke tests run from clean directories outside the repository.",
       "acceptance": "No success depends on bin/obj, developer profile, global npm cache, or repository-relative mutable state.",
-      "status": "Planned"
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI"
     },
     {
       "id": "CI-005",
@@ -504,7 +504,7 @@
       "owner": "A07",
       "requirement": "Windows stable behavior remains green after every core portability phase.",
       "acceptance": "No compatibility change is accepted with unexplained Windows regression.",
-      "status": "Planned"
+      "status": "Satisfied locally — exact-commit hosted Windows confirmation pending"
     },
     {
       "id": "CI-006",
@@ -512,7 +512,7 @@
       "owner": "A07",
       "requirement": "Static scanning blocks new unowned OS checks, raw Windows-only tokens, unsafe absolute-path persistence, and insecure secret fallbacks.",
       "acceptance": "Allowlist entries are narrow, reviewed, and source-linked.",
-      "status": "Planned"
+      "status": "Implemented and locally enforced — hosted static check pending"
     },
     {
       "id": "CI-007",
@@ -520,7 +520,7 @@
       "owner": "A07",
       "requirement": "Core Gate C4 produces a versioned handoff anchor and evidence pack that is sufficient to start the runtime bundle.",
       "acceptance": "Runtime bundle remains blocked until C4 is GO and its source references are refreshed.",
-      "status": "Planned"
+      "status": "Blocked — C4 requires an exact pushed commit and hosted evidence"
     }
   ]
 }

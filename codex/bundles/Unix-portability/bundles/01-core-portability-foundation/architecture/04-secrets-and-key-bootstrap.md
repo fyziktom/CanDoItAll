@@ -16,7 +16,7 @@ ASP.NET Data Protection uses a separate bootstrap policy. Windows Auto uses DPAP
 
 One migration coordinator handles legacy Data Protection payloads, DPAPI/file-vault sources, control-plane database-password continuity, and vault-reference destinations. It uses a private journal, cross-process lock, deterministic selection, destination read-back, optimistic source checks, restart verification, source cleanup after checkpoint, rollback, and redacted audit events. Rollback verifies a source before restoring its reference and treats an already-restored verified reference as an idempotent resume state. Malformed, tampered, source-changed, or selection-changed journals fail closed.
 
-Actual Windows DPAPI and Linux Secret Service/headless restart proof is recorded in `reviews/13-a04-evidence-report.md`. The Keychain adapter has contract/fake-native coverage, but genuine macOS execution is not available in the current environment and remains an explicit gate input.
+Actual Windows DPAPI and Linux Secret Service/headless restart proof is recorded in `reviews/13-a04-evidence-report.md`. The Keychain adapter has contract/fake-native coverage; genuine macOS execution is deferred under `reviews/15-a04-macos-keychain-validation-deferral.md` and the provider remains actual-host unverified until that follow-up passes.
 
 ## Current mechanisms to preserve
 

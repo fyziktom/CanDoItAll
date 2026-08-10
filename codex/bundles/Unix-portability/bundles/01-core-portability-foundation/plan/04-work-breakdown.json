@@ -8,7 +8,7 @@
       "directory": "subbundles/00-anchor-baseline-and-current-inventory",
       "critical": true,
       "conditional": false,
-      "status": "Eligible — first executable subbundle",
+      "status": "Completed — Gate C0 GO",
       "depends_on": [],
       "unlocks": [
         "A01"
@@ -36,7 +36,7 @@
       "directory": "subbundles/01-logical-path-contract-and-configuration-cleanup",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate C0",
+      "status": "Completed — Gate C1a GO",
       "depends_on": [
         "A00"
       ],
@@ -73,7 +73,7 @@
       "directory": "subbundles/02-filesystem-semantics-symlink-atomicity-and-permissions",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by A01",
+      "status": "Completed — Gate C1 GO",
       "depends_on": [
         "A01"
       ],
@@ -112,7 +112,7 @@
       "directory": "subbundles/03-storage-control-plane-and-host-bound-path-migration",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate C1",
+      "status": "Completed — Gate C2a GO",
       "depends_on": [
         "A02",
         "Gate C1"
@@ -150,7 +150,7 @@
       "directory": "subbundles/04-secrets-vault-drivers-dataprotection-and-migration",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by A03",
+      "status": "Completed — Gate C2 GO",
       "depends_on": [
         "A03"
       ],
@@ -193,7 +193,7 @@
       "directory": "subbundles/05-platform-composition-capabilities-and-readiness",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate C2",
+      "status": "Completed — Gate C3a GO",
       "depends_on": [
         "A04",
         "Gate C2"
@@ -225,7 +225,7 @@
       "directory": "subbundles/06-headless-hosting-publish-installation-and-operations",
       "critical": false,
       "conditional": false,
-      "status": "Blocked by A05",
+      "status": "Completed — Gate C3b/Hosting GO",
       "depends_on": [
         "A05"
       ],
@@ -257,7 +257,7 @@
       "directory": "subbundles/07-three-platform-ci-integration-restart-and-core-closure",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by A06",
+      "status": "Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence",
       "depends_on": [
         "A06"
       ],

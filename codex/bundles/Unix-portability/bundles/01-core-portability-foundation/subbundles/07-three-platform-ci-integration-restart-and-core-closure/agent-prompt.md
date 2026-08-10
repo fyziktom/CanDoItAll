@@ -31,7 +31,7 @@ Create durable Windows/Linux/macOS evidence and a versioned handoff anchor for t
 
 ## Source hotspots
 
-- `{{REPO_ROOT}}/.github/workflows-disabled/ci.yml`
+- `{{REPO_ROOT}}/.github/workflows/ci.yml`
 - `{{REPO_ROOT}}/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj`
 - `{{REPO_ROOT}}/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj`
 - `{{REPO_ROOT}}/tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj`

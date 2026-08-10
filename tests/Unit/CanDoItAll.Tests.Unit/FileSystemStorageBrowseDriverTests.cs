@@ -6,6 +6,7 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 {
     [Fact]

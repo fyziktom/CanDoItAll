@@ -32,35 +32,35 @@ STO-006,P1,A03,Satisfied — Gate C2a GO
 STO-007,P0,A03,Satisfied — Gate C2a GO
 STO-008,P1,A03,Satisfied — Gate C2a GO
 STO-009,P0,A03,Satisfied — Gate C2a GO
-SEC-001,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-002,P0,A04,Blocked — actual macOS validation required for Gate C2
-SEC-003,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-004,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-005,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-006,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-007,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-008,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-009,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-010,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-011,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-012,P1,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-013,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-SEC-014,P0,A04,Implemented and independently verified — Gate C2 NO-GO solely pending actual macOS
-PLAT-001,P0,A05,Planned
-PLAT-002,P0,A05,Planned
-PLAT-003,P1,A05,Planned
-PLAT-004,P1,A05,Planned
-PLAT-005,P0,A05,Planned
-HOST-001,P0,A06,Planned
-HOST-002,P1,A06,Planned
-HOST-003,P1,A06,Planned
-HOST-004,P1,A06,Planned
-HOST-005,P1,A06,Planned
-DOC-001,P1,A06,Planned
-CI-001,P0,A07,Planned
-CI-002,P0,A07,Planned
-CI-003,P0,A07,Planned
-CI-004,P1,A07,Planned
-CI-005,P0,A07,Planned
-CI-006,P1,A07,Planned
-CI-007,P0,A07,Planned
+SEC-001,P0,A04,Satisfied — Gate C2 GO
+SEC-002,P0,A04,Implemented — actual macOS validation explicitly deferred; Gate C2 GO
+SEC-003,P0,A04,Satisfied — Gate C2 GO
+SEC-004,P0,A04,Satisfied — Gate C2 GO
+SEC-005,P0,A04,Satisfied — Gate C2 GO
+SEC-006,P0,A04,Satisfied — Gate C2 GO
+SEC-007,P0,A04,Satisfied — Gate C2 GO
+SEC-008,P0,A04,Satisfied — Gate C2 GO
+SEC-009,P0,A04,Satisfied — Gate C2 GO
+SEC-010,P0,A04,Satisfied — Gate C2 GO
+SEC-011,P0,A04,Satisfied — Gate C2 GO
+SEC-012,P1,A04,Satisfied — Gate C2 GO
+SEC-013,P0,A04,Satisfied — Gate C2 GO
+SEC-014,P0,A04,Satisfied — Gate C2 GO
+PLAT-001,P0,A05,Satisfied — Gate C3a GO
+PLAT-002,P0,A05,Satisfied — Gate C3a GO
+PLAT-003,P1,A05,Satisfied — Gate C3a GO
+PLAT-004,P1,A05,Satisfied — Gate C3a GO
+PLAT-005,P0,A05,Satisfied — Gate C3a GO
+HOST-001,P0,A06,Satisfied — Gate C3b/Hosting GO
+HOST-002,P1,A06,Satisfied — Gate C3b/Hosting GO
+HOST-003,P1,A06,Satisfied — Gate C3b/Hosting GO
+HOST-004,P1,A06,Satisfied — Gate C3b/Hosting GO
+HOST-005,P1,A06,Satisfied — Gate C3b/Hosting GO
+DOC-001,P1,A06,Satisfied — Gate C3b/Hosting GO
+CI-001,P0,A07,Implemented — exact-commit hosted checks and repository policy evidence pending
+CI-002,P0,A07,Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI
+CI-003,P0,A07,Implemented — Ubuntu restart passes; genuine macOS pending hosted CI
+CI-004,P1,A07,Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI
+CI-005,P0,A07,Satisfied locally — exact-commit hosted Windows confirmation pending
+CI-006,P1,A07,Implemented and locally enforced — hosted static check pending
+CI-007,P0,A07,Blocked — C4 requires an exact pushed commit and hosted evidence

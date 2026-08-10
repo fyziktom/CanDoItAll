@@ -13,7 +13,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+                <ProjectReference Include="../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
               </ItemGroup>
             </Project>
             """,
@@ -114,7 +114,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+              <ProjectReference Include="../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
               </ItemGroup>
             </Project>
             """,
@@ -251,9 +251,16 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     [Fact]
     public void ResolveTailwindCliPath_points_to_workspace_local_binary()
     {
-        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(@"C:\repos\CanDoItAll\Tailwind");
+        var tailwindWorkspacePath = Path.Combine(Path.GetTempPath(), "CanDoItAll", "Tailwind");
+        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(tailwindWorkspacePath);
 
-        Assert.EndsWith(@"Tailwind\node_modules\.bin\tailwindcss.cmd", path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            Path.Combine(
+                tailwindWorkspacePath,
+                "node_modules",
+                ".bin",
+                OperatingSystem.IsWindows() ? "tailwindcss.cmd" : "tailwindcss"),
+            path);
     }
 
     [Theory]
@@ -268,30 +275,42 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     [Fact]
     public void IsWorkspaceOwnedProcess_matches_watch_host_and_child_processes()
     {
-        const string projectPath = @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj";
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll");
+        var projectPath = Path.Combine(
+            workspaceRoot,
+            "src",
+            "App",
+            "CanDoItAll.Web",
+            "CanDoItAll.Web.csproj");
 
         var watchHost = new WorkspaceProcessSnapshot(
             101,
-            "dotnet.exe",
-            @"""C:\Program Files\dotnet\dotnet.exe"" watch --project ""C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"" run --no-launch-profile",
+            "dotnet",
+            $"dotnet watch --project \"{projectPath}\" run --no-launch-profile",
             null);
 
         var watchChild = new WorkspaceProcessSnapshot(
             102,
-            "dotnet.exe",
-            @"""C:\Program Files\dotnet\dotnet.exe"" run --no-build -e DOTNET_WATCH=1 --project C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            "dotnet",
+            $"dotnet run --no-build -e DOTNET_WATCH=1 --project \"{projectPath}\"",
             null);
 
+        var webExecutablePath = Path.Combine(
+            Path.GetDirectoryName(projectPath)!,
+            "bin",
+            "Debug",
+            "net10.0",
+            "CanDoItAll.Web");
         var webProcess = new WorkspaceProcessSnapshot(
             103,
-            "CanDoItAll.Web.exe",
-            @"""C:\repos\CanDoItAll\src\App\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.exe""",
-            @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.exe");
+            "CanDoItAll.Web",
+            $"\"{webExecutablePath}\"",
+            webExecutablePath);
 
         var unrelated = new WorkspaceProcessSnapshot(
             104,
-            "dotnet.exe",
-            @"""C:\Program Files\dotnet\dotnet.exe"" build C:\repos\Other\Other.csproj",
+            "dotnet",
+            $"dotnet build \"{Path.Combine(Path.GetTempPath(), "Other", "Other.csproj")}\"",
             null);
 
         Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(watchHost, projectPath));
@@ -318,7 +337,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
 
         public string CreateFile(string relativePath, string content, DateTime modifiedAtUtc)
         {
-            var fullPath = Path.Combine(RootPath, relativePath);
+            var fullPath = TestRepositoryPath.Resolve(RootPath, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
             File.WriteAllText(fullPath, content);
             File.SetLastWriteTimeUtc(fullPath, modifiedAtUtc);

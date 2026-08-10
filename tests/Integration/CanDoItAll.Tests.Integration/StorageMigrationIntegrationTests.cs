@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class StorageMigrationIntegrationTests
 {
     [Fact]

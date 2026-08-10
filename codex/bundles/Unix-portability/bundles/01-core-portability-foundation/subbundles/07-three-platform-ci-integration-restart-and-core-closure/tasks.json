@@ -5,7 +5,7 @@
   "title": "Three-platform CI, integration, restart, and Core Gate C4",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by A06",
+  "status": "Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence",
   "depends_on": [
     "A06"
   ],
@@ -23,7 +23,7 @@
     "CI-007"
   ],
   "source_hotspots": [
-    ".github/workflows-disabled/ci.yml",
+    ".github/workflows/ci.yml",
     "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
     "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
     "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj"
@@ -42,7 +42,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented — hosted checks and repository policy evidence pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -64,7 +64,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -86,7 +86,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented — Ubuntu restart passes; genuine macOS pending hosted CI",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -108,7 +108,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -130,7 +130,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Completed — local static enforcement passes",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -152,7 +152,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Completed — Windows stable and browser/headless smoke pass",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -174,7 +174,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Completed locally — independent readiness GO; final hosted C4 review pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -196,7 +196,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Planned",
+      "status": "Blocked — exact pushed commit and hosted evidence required",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

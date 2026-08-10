@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "product": "CanDoItAll.Web",
+  "publishMode": "FrameworkDependent",
+  "headlessCoreRequiresDesktopCapabilities": false,
+  "targets": [
+    {
+      "runtimeIdentifier": "win-x64",
+      "operatingSystem": "Windows",
+      "architecture": "X64",
+      "runtimeEvidence": "ActualHostValidated"
+    },
+    {
+      "runtimeIdentifier": "linux-x64",
+      "operatingSystem": "Linux",
+      "architecture": "X64",
+      "runtimeEvidence": "ActualHostValidated"
+    },
+    {
+      "runtimeIdentifier": "osx-x64",
+      "operatingSystem": "MacOs",
+      "architecture": "X64",
+      "runtimeEvidence": "ActualHostUnverified"
+    },
+    {
+      "runtimeIdentifier": "osx-arm64",
+      "operatingSystem": "MacOs",
+      "architecture": "Arm64",
+      "runtimeEvidence": "ActualHostUnverified"
+    }
+  ],
+  "profiles": [
+    {
+      "profile": "WindowsHeadless",
+      "baselineSecretProvider": "Dpapi",
+      "baselineProtectionLevel": "Strong",
+      "runtimeEvidence": "ActualHostValidated"
+    },
+    {
+      "profile": "LinuxHeadless",
+      "baselineSecretProvider": "LocalUserFile",
+      "baselineProtectionLevel": "BasicLocal",
+      "runtimeEvidence": "ActualHostValidated"
+    },
+    {
+      "profile": "MacOsHeadless",
+      "baselineSecretProvider": "LocalUserFile",
+      "baselineProtectionLevel": "BasicLocal",
+      "runtimeEvidence": "ActualHostUnverified"
+    }
+  ],
+  "prerequisites": [
+    ".NET 10 ASP.NET Core runtime matching the artifact architecture",
+    "PostgreSQL 16 with a dedicated non-superuser application role",
+    "certificate-backed ASP.NET Core Data Protection key-ring protection on Unix Production hosts",
+    "owned writable workspace and control-plane purpose roots",
+    "a stable CANDOITALL_HOST_BINDING_ID for service and container profiles"
+  ],
+  "deferredValidationIds": [
+    "MACOS-KEYCHAIN-VALIDATION-001",
+    "A07-MACOS-HEADLESS-ACTUALHOST-001"
+  ]
+}

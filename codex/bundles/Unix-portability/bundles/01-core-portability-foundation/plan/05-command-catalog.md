@@ -2,6 +2,16 @@
 
 Commands are templates. Record exact tool versions, OS/profile, exit code, duration, and evidence path.
 
+## Validation cadence
+
+Use the smallest test scope that can disprove the current change:
+
+1. During implementation, build the affected project and run the named regression tests with `--no-build`.
+2. Before a subbundle review, run the focused filters from that subbundle's `validation.md`.
+3. Run the stable solution suite once per gate and actual host, not after documentation, evidence, checksum, or static-analysis-only edits.
+
+A stable-suite result may be reused only while production code, shared build configuration, test infrastructure, and its host/runtime inputs remain unchanged. A change in one of those surfaces invalidates the affected project or host result, but does not automatically invalidate unrelated suites. Record reused evidence explicitly rather than copying or regenerating it.
+
 ## Checkout
 
 ```text
@@ -11,7 +21,7 @@ git log -1 --oneline --decorate
 dotnet --info
 ```
 
-## Stable gate
+## Stable gate (final boundary only)
 
 ```text
 dotnet restore ./CanDoItAll.slnx
@@ -19,12 +29,14 @@ dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
 dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
 ```
 
-## Focused projects
+## Fast implementation loop
 
 ```text
-dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release
-dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release
-dotnet build ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release
+dotnet build ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-restore
+dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-build --filter "FullyQualifiedName~<changed-contract-or-regression>"
+dotnet build ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --no-restore
+dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --no-build --filter "FullyQualifiedName~<changed-contract-or-regression>"
+dotnet build ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release --no-restore
 ```
 
 ## Publish

@@ -39,6 +39,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\CanDoItAll.Composition\RuntimeDeploymentSupport.json"
+             Link="runtime-support.json"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\..\Templates\**\*"
              Exclude="..\..\..\Templates\**\*.razor"
              Link="Templates\%(RecursiveDir)%(Filename)%(Extension)"
@@ -61,4 +65,3 @@
   </ItemGroup>
 
 </Project>
-

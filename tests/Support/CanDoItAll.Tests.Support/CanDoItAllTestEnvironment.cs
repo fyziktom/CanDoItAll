@@ -33,6 +33,19 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
         return new CanDoItAllTestEnvironment(rootPath);
     }
 
+    public static CanDoItAllTestEnvironment CreateUnder(string parentPath, string prefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var rootPath = Path.Combine(
+            Path.GetFullPath(parentPath),
+            prefix,
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(rootPath);
+        return new CanDoItAllTestEnvironment(rootPath);
+    }
+
     public IHostEnvironment CreateHostEnvironment(string applicationName) => new TestHostEnvironment(RootPath, applicationName);
 
     public TestDatabaseProfile CreateInMemoryProfile(string profileKey, string? databaseName = null)
@@ -235,6 +248,20 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     private static string FindRepositoryRoot()
     {
+        const string repositoryRootEnvironmentVariable = "CANDOITALL_TEST_REPOSITORY_ROOT";
+        string? configuredRoot = Environment.GetEnvironmentVariable(repositoryRootEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(configuredRoot))
+        {
+            string resolvedRoot = Path.GetFullPath(configuredRoot);
+            if (!File.Exists(Path.Combine(resolvedRoot, "CanDoItAll.slnx")))
+            {
+                throw new InvalidOperationException(
+                    $"{repositoryRootEnvironmentVariable} does not identify the CanDoItAll repository root.");
+            }
+
+            return resolvedRoot;
+        }
+
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {

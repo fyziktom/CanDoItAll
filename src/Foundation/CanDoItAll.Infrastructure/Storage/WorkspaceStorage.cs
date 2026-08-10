@@ -57,7 +57,9 @@ public interface IManagedArtifactStore
 public sealed class WorkspacePathResolver(
     IOptions<StorageOptions> options,
     IHostEnvironment hostEnvironment,
-    IActiveDatabaseProfileResolver activeDatabaseProfileResolver) : IWorkspacePathResolver
+    IActiveDatabaseProfileResolver activeDatabaseProfileResolver) :
+    IWorkspacePathResolver,
+    IApplicationPurposeRootConfigurationSource
 {
     private readonly StorageOptions _options = options.Value;
 
@@ -88,6 +90,25 @@ public sealed class WorkspacePathResolver(
                 _options.ManagerArtifactsFolder);
         Directory.CreateDirectory(root);
         return root;
+    }
+
+    public ApplicationPurposeRootConfigurationSource GetConfigurationSource(
+        ApplicationPurposeRootKind purpose)
+    {
+        if (purpose != ApplicationPurposeRootKind.Workspace)
+        {
+            throw new ArgumentOutOfRangeException(nameof(purpose), purpose, "The purpose root is not owned by the workspace resolver.");
+        }
+
+        var activeProfile = activeDatabaseProfileResolver.ResolveCurrentProfile();
+        if (!string.IsNullOrWhiteSpace(activeProfile.Profile.Storage.WorkspaceRoot))
+        {
+            return ApplicationPurposeRootConfigurationSource.ActiveDatabaseProfile;
+        }
+
+        return string.IsNullOrWhiteSpace(_options.WorkspaceRoot)
+            ? ApplicationPurposeRootConfigurationSource.PlatformDefault
+            : ApplicationPurposeRootConfigurationSource.ExplicitConfiguration;
     }
 
     private string ResolveConfiguredWorkspaceRoot()

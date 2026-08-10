@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class SecretPortabilityTests
 {
     private const string Sentinel = "secret-sentinel-a04-7ff954";

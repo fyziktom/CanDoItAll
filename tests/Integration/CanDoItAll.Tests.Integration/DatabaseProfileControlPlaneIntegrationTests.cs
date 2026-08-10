@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
@@ -25,7 +26,11 @@ public sealed class ControlPlaneDatabaseProfileIntegrationTests
         Assert.Equal(DatabaseProviderKind.PostgreSql, resolvedProfile.Profile.ProviderKind);
         Assert.Equal(DatabaseProfileSourceKind.PostgresConnection, resolvedProfile.Profile.SourceKind);
         Assert.NotNull(resolvedProfile.Profile.PostgreSql);
-        Assert.StartsWith(Path.Combine(testEnvironment.RootPath, ".artifacts", "workspace"), resolvedProfile.Profile.Storage.WorkspaceRoot, StringComparison.OrdinalIgnoreCase);
+        string expectedWorkspaceRoot = ApplicationPurposeRootPolicy.ResolveCurrent().WorkspaceRoot;
+        Assert.Equal(
+            expectedWorkspaceRoot,
+            resolvedProfile.Profile.Storage.WorkspaceRoot,
+            ignoreCase: OperatingSystem.IsWindows());
         Assert.Equal(resolvedProfile.Profile.Storage.WorkspaceRoot, workspaceResolver.ResolveWorkspaceRoot());
         Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, selection.ResolutionSource);
 

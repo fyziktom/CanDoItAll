@@ -8,5 +8,5 @@ These are decision gates, not reasons to delay A00.
 4. How will ASP.NET Data Protection key-ring at-rest protection integrate with each profile without circular bootstrap?
 5. Do real existing users have DataProtectionFileVault data requiring migration, or can that mode be explicitly discarded as alpha/development data?
 6. Resolved by A03/C2a: Windows uses LocalApplicationData purpose children; Linux uses XDG data/config/state/runtime with documented service overrides; macOS uses Application Support plus Library Logs. Installer/service owners may override each typed root without changing logical locators.
-7. Gate C2 input: the Keychain adapter and injected-native contracts are complete, but no genuine macOS host is available in this execution environment. The independent reviewer must decide whether A05 remains blocked or whether actual macOS proof may remain mandatory at final Gate C4.
-7. Is PostgreSQL actual-host CI on macOS installed locally, provided remotely, or separated into a database-independent startup plus scheduled integration?
+7. Resolved by operator evidence-timing decision at C2: the Keychain adapter and injected-native contracts are complete; genuine macOS execution is tracked by `MACOS-KEYCHAIN-VALIDATION-001` and does not block later bundle work. Support remains actual-host unverified until that run passes.
+8. Is PostgreSQL actual-host CI on macOS installed locally, provided remotely, or separated into a database-independent startup plus scheduled integration?

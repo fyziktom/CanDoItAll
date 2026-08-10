@@ -5,7 +5,7 @@
   "title": "Headless hosting, publish, installation, and operations",
   "critical": false,
   "conditional": false,
-  "status": "Blocked by A05",
+  "status": "Completed — Gate C3b/Hosting GO",
   "depends_on": [
     "A05"
   ],
@@ -40,7 +40,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -61,7 +61,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -82,7 +82,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -94,7 +94,7 @@
     {
       "id": "A06-T04",
       "title": "Create macOS service/runbook",
-      "description": "Define interactive and launchd/headless profiles, Application Support/state/log roots, Keychain or headless provider requirements, restart, upgrade, backup, and rollback.",
+      "description": "Define interactive and launchd/headless profiles, Application Support/state/log roots, Keychain or headless provider requirements, restart, upgrade, backup, and rollback; preserve ActualHostUnverified until A07 genuine macOS execution.",
       "requirements": [
         "HOST-001",
         "HOST-002",
@@ -103,7 +103,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -124,7 +124,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -145,7 +145,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -166,7 +166,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -187,7 +187,7 @@
         "HOST-005",
         "DOC-001"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

@@ -7,11 +7,13 @@ internal sealed class FileSandboxWorkspaceCrossProcessLock(
     string lockPath,
     DurableFileWriter durableFileWriter)
 {
+    private static readonly TimeSpan AcquisitionTimeout = TimeSpan.FromMinutes(1);
+
     public ValueTask<IAsyncDisposable> AcquireAsync(CancellationToken cancellationToken)
         => durableFileWriter.AcquireCoordinationAsync(
             managedRoot,
             lockPath,
-            TimeSpan.FromSeconds(15),
+            AcquisitionTimeout,
             requirePrivateUnixMode: false,
             cancellationToken);
 }

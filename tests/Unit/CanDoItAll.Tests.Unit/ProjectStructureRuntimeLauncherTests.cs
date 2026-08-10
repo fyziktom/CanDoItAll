@@ -12,11 +12,11 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
     public ProjectStructureRuntimeLauncherTests()
     {
-        CreateProjectFile(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj");
-        CreateProjectFile(@"repos\TetrisGame\src\TetrisGame\TetrisGame.csproj");
-        CreateFile(@"scripts\task.ps1", "Write-Output 'ready'");
-        CreateFile(@"repos\python-app\.venv\Scripts\Activate.ps1", "Write-Output 'activated'");
-        Directory.CreateDirectory(WorkspacePath(@"repos\compose-app"));
+        CreateProjectFile("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj");
+        CreateProjectFile("repos/TetrisGame/src/TetrisGame/TetrisGame.csproj");
+        CreateFile("scripts/task.ps1", "Write-Output 'ready'");
+        CreateFile("repos/python-app/.venv/Scripts/Activate.ps1", "Write-Output 'activated'");
+        Directory.CreateDirectory(WorkspacePath("repos/compose-app"));
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj",
+                ProjectPath = "repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
                 LaunchProfileName = "https"
             });
 
@@ -35,7 +35,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        var projectPath = WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj");
+        var projectPath = WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj");
         Assert.Equal(Path.GetDirectoryName(projectPath), result.Plan!.WorkingDirectory);
         Assert.Equal("dotnet watch", result.Plan.DisplayName);
         Assert.Equal(
@@ -51,7 +51,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"),
+                ProjectPath = WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"),
                 LocalhostUrl = "https://localhost:7271"
             });
 
@@ -61,7 +61,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         Assert.NotNull(result.Plan);
         Assert.Contains("$env:ASPNETCORE_URLS = 'https://localhost:7271'", result.Plan!.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
-            $"dotnet watch --project '{WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj")}' run --no-launch-profile",
+            $"dotnet watch --project '{WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj")}' run --no-launch-profile",
             result.Plan.DisplayCommand);
     }
 
@@ -73,8 +73,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.DotNetRuntime,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"src\TetrisGame\TetrisGame.csproj",
-                WorkingDirectory = @"repos\TetrisGame",
+                ProjectPath = "src/TetrisGame/TetrisGame.csproj",
+                WorkingDirectory = "repos/TetrisGame",
                 LocalhostUrl = "http://127.0.0.1:55963/"
             });
 
@@ -82,8 +82,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        var workingDirectory = WorkspacePath(@"repos\TetrisGame");
-        var projectPath = WorkspacePath(@"repos\TetrisGame\src\TetrisGame\TetrisGame.csproj");
+        var workingDirectory = WorkspacePath("repos/TetrisGame");
+        var projectPath = WorkspacePath("repos/TetrisGame/src/TetrisGame/TetrisGame.csproj");
         Assert.Equal(workingDirectory, result.Plan!.WorkingDirectory);
         Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
@@ -98,15 +98,15 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         var node = CreateEnvironmentNode(
             ProjectEnvironmentKind.DotNetRuntime,
             new ProjectEnvironmentMetadata(),
-            $"Launch the client-only TetrisGame app from {WorkspacePath(@"repos\TetrisGame")} using `dotnet run --project src/TetrisGame/TetrisGame.csproj`. Observed QA launch returned `http://127.0.0.1:55963/`.");
+            $"Launch the client-only TetrisGame app from {WorkspacePath("repos/TetrisGame")} using `dotnet run --project src/TetrisGame/TetrisGame.csproj`. Observed QA launch returned `http://127.0.0.1:55963/`.");
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
         Assert.Equal(".NET runtime", result.Plan!.DisplayName);
-        var workingDirectory = WorkspacePath(@"repos\TetrisGame");
-        var projectPath = WorkspacePath(@"repos\TetrisGame\src\TetrisGame\TetrisGame.csproj");
+        var workingDirectory = WorkspacePath("repos/TetrisGame");
+        var projectPath = WorkspacePath("repos/TetrisGame/src/TetrisGame/TetrisGame.csproj");
         Assert.Equal(workingDirectory, result.Plan.WorkingDirectory);
         Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
         Assert.Equal(
@@ -123,14 +123,14 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ScriptKind = ProjectScriptKind.Console,
             Command = "python",
             Arguments = "app.py --watch",
-            WorkingDirectory = @"repos\python-app"
+            WorkingDirectory = "repos/python-app"
         });
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(WorkspacePath(@"repos\python-app"), result.Plan!.WorkingDirectory);
+        Assert.Equal(WorkspacePath("repos/python-app"), result.Plan!.WorkingDirectory);
         Assert.Equal("python app.py --watch", result.Plan.DisplayCommand);
         Assert.Equal("script command", result.Plan.DisplayName);
     }
@@ -165,14 +165,14 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             "powershell",
             new ProjectScriptMetadata
             {
-                ScriptPath = @"scripts\task.ps1"
+                ScriptPath = "scripts/task.ps1"
             });
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        var scriptPath = WorkspacePath(@"scripts\task.ps1");
+        var scriptPath = WorkspacePath("scripts/task.ps1");
         Assert.Equal(Path.GetDirectoryName(scriptPath), result.Plan!.WorkingDirectory);
         Assert.Equal("PowerShell script", result.Plan.DisplayName);
         Assert.Equal($"& '{scriptPath}'", result.Plan.DisplayCommand);
@@ -216,7 +216,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.PythonEnvironment,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"repos\python-app",
+                ProjectPath = "repos/python-app",
                 PythonProvider = ProjectPythonProvider.Python,
                 EnvironmentName = ".venv"
             });
@@ -226,8 +226,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
         Assert.Equal("Python environment", result.Plan!.DisplayName);
-        var projectPath = WorkspacePath(@"repos\python-app");
-        var activationPath = WorkspacePath(@"repos\python-app\.venv\Scripts\Activate.ps1");
+        var projectPath = WorkspacePath("repos/python-app");
+        var activationPath = WorkspacePath("repos/python-app/.venv/Scripts/Activate.ps1");
         Assert.Equal(projectPath, result.Plan.WorkingDirectory);
         Assert.Equal(
             $"& '{activationPath}'",
@@ -244,14 +244,14 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             "dotnet-watch",
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"
+                ProjectPath = "repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"
             }) with
         {
             MetadataJson =
                 """
                 {
                   "environment": {
-                    "projectPath": "repos\\CanDoItAll\\src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj"
+                    "projectPath": "repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"
                   }
                 }
                 """
@@ -263,7 +263,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         Assert.NotNull(result.Plan);
         Assert.Equal("dotnet watch", result.Plan!.DisplayName);
         Assert.Equal(
-            $"dotnet watch --project '{WorkspacePath(@"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj")}' run",
+            $"dotnet watch --project '{WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj")}' run",
             result.Plan.DisplayCommand);
     }
 
@@ -276,7 +276,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             "dotnet-watch",
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"
+                ProjectPath = "repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"
             });
 
         var result = sut.Resolve(node);
@@ -336,17 +336,17 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
                 InfrastructureKind = ProjectInfrastructureKind.DockerMode,
                 RuntimeCommand = "docker compose up",
                 RuntimeArguments = "--build",
-                WorkingDirectory = @"repos\compose-app"
+                WorkingDirectory = "repos/compose-app"
             });
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(WorkspacePath(@"repos\compose-app"), result.Plan!.WorkingDirectory);
+        Assert.Equal(WorkspacePath("repos/compose-app"), result.Plan!.WorkingDirectory);
         Assert.Equal("Docker runtime", result.Plan.DisplayName);
         Assert.Equal("docker compose up --build", result.Plan.DisplayCommand);
-        Assert.Equal(WorkspacePath(@"repos\compose-app"), result.Plan.Target!.Path);
+        Assert.Equal(WorkspacePath("repos/compose-app"), result.Plan.Target!.Path);
         Assert.True(result.Plan.Target.IsDirectory);
     }
 
@@ -361,14 +361,14 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
                 InfrastructureKind = ProjectInfrastructureKind.DockerMode,
                 RuntimeCommand = "docker compose",
                 RuntimeArguments = "up",
-                FolderPath = @"repos\compose-app"
+                FolderPath = "repos/compose-app"
             });
 
         var result = sut.Resolve(node);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
-        Assert.Equal(WorkspacePath(@"repos\compose-app"), result.Plan!.WorkingDirectory);
+        Assert.Equal(WorkspacePath("repos/compose-app"), result.Plan!.WorkingDirectory);
         Assert.Equal("docker compose up", result.Plan.DisplayCommand);
     }
 
@@ -380,7 +380,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ScriptKind = ProjectScriptKind.Console,
             Command = "python",
             Arguments = "app.py",
-            WorkingDirectory = @"repos\missing-script-app"
+            WorkingDirectory = "repos/missing-script-app"
         }));
 
         Assert.False(result.IsSuccess);
@@ -396,7 +396,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.DotNetRuntime,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"src\Calculator.csproj",
+                ProjectPath = "src/Calculator.csproj",
                 WorkingDirectory = workingDirectoryFile
             }));
 
@@ -413,7 +413,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             "powershell",
             new ProjectScriptMetadata
             {
-                ScriptPath = @"scripts\missing.ps1"
+                ScriptPath = "scripts/missing.ps1"
             }));
 
         Assert.False(result.IsSuccess);
@@ -431,7 +431,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             {
                 InfrastructureKind = ProjectInfrastructureKind.DockerMode,
                 RuntimeCommand = "docker compose up",
-                WorkingDirectory = @"repos\missing-compose-app"
+                WorkingDirectory = "repos/missing-compose-app"
             }));
 
         Assert.False(result.IsSuccess);
@@ -445,7 +445,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.PythonEnvironment,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"repos\missing-python-app",
+                ProjectPath = "repos/missing-python-app",
                 PythonProvider = ProjectPythonProvider.Conda,
                 EnvironmentName = "calculator"
             }));
@@ -461,7 +461,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         var node = CreateScriptNode(new ProjectScriptMetadata
         {
             ScriptKind = ProjectScriptKind.Console,
-            WorkingDirectory = @"repos\python-app"
+            WorkingDirectory = "repos/python-app"
         });
 
         var result = sut.Resolve(node);
@@ -478,7 +478,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"repos\Calculator\Calculator.csproj"
+                ProjectPath = "repos/Calculator/Calculator.csproj"
             }) with
         {
             MetadataJson = "{"
@@ -506,7 +506,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)));
 
     private string WorkspacePath(string relativePath)
-        => Path.Combine(workspaceRoot, relativePath);
+        => TestRepositoryPath.Resolve(workspaceRoot, relativePath);
 
     private void CreateProjectFile(string relativePath)
         => CreateFile(relativePath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");

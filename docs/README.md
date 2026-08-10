@@ -17,6 +17,7 @@ authoritative.
 ## Development And Operations
 
 - [Development runtime](development-runtime.md)
+- [Headless Web host operations](operations/headless-web-host.md)
 - [Installed Windows web app](operations/installed-web-app.md)
 - [Testing](testing.md)
 - [Secure configuration](secure-configuration.md)

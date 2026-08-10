@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CanDoItAll.Infrastructure;
 
 public sealed record ApplicationRootEnvironment(
@@ -31,6 +33,34 @@ public sealed record ApplicationPurposeRoots(
     string StateRoot,
     string LogsRoot,
     string RuntimeTemporaryRoot);
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ApplicationPurposeRootKind
+{
+    Workspace,
+    ControlPlane,
+    DatabaseProfiles,
+    DataProtectionKeys,
+    State,
+    Logs,
+    RuntimeTemporary
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ApplicationPurposeRootConfigurationSource
+{
+    PlatformDefault,
+    ExplicitConfiguration,
+    ActiveDatabaseProfile,
+    DerivedFromControlPlaneRoot,
+    OwnerResolved
+}
+
+public interface IApplicationPurposeRootConfigurationSource
+{
+    ApplicationPurposeRootConfigurationSource GetConfigurationSource(
+        ApplicationPurposeRootKind purpose);
+}
 
 public static class ApplicationPurposeRootPolicy
 {

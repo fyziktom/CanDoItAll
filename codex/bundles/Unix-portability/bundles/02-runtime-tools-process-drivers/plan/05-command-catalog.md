@@ -1,5 +1,15 @@
 # Runtime command catalog
 
+## Validation cadence
+
+Use a layered loop so runtime work stays fast without weakening its gates:
+
+1. Build the affected project and run the named regression tests with `--no-build` after each implementation edit.
+2. Run only the active subbundle's focused unit, integration, or Playwright filters before its review.
+3. Run the stable solution suite once per gate and actual host. Documentation, evidence, checksum, and static-analysis-only edits do not trigger it again.
+
+A stable result remains reusable only when production code, shared build configuration, test infrastructure, and host/runtime inputs relevant to that result have not changed. Invalidate only the affected result, record the reuse, and leave unrelated green evidence intact.
+
 ## Entry verification
 
 ```text
@@ -11,7 +21,7 @@ python ./scripts/validate_bundle.py --bundle-root . --repo-root <repo> --stage p
 
 Confirm the commit equals the completed Core C4 handoff before B00.
 
-## Stable regression
+## Stable regression (final boundary only)
 
 ```text
 dotnet restore ./CanDoItAll.slnx
@@ -22,9 +32,9 @@ dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Categ
 ## Focused runtime tests
 
 ```text
-dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~Process|FullyQualifiedName~Runtime|FullyQualifiedName~Mcp|FullyQualifiedName~Manager|FullyQualifiedName~Plugin|FullyQualifiedName~ProcessDriver"
-dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --filter "Category=UnixRuntimePortability"
-dotnet test ./tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj -c Release --filter "Category=UnixRuntimePortability"
+dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-build --filter "FullyQualifiedName~Process|FullyQualifiedName~Runtime|FullyQualifiedName~Mcp|FullyQualifiedName~Manager|FullyQualifiedName~Plugin|FullyQualifiedName~ProcessDriver"
+dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --no-build --filter "Category=UnixRuntimePortability"
+dotnet test ./tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj -c Release --no-build --filter "Category=UnixRuntimePortability"
 ```
 
 ## Process characterization

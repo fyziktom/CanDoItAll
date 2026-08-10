@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import platform
@@ -225,6 +226,11 @@ def redact_excerpt(line: str) -> str:
     return value
 
 
+def source_fingerprint(relative_path: str, category: str, expression: str, line: str) -> str:
+    payload = "\0".join((relative_path, category, expression, redact_excerpt(line)))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def scan_file(
     path: Path,
     repo_root: Path,
@@ -252,6 +258,7 @@ def scan_file(
                     "severity": SEVERITY_BY_CATEGORY.get(category, "medium"),
                     "owner_domain": owner_domain(relative_path),
                     "pattern": expression,
+                    "source_fingerprint": source_fingerprint(relative_path, category, expression, line),
                     "evidence_excerpt": redact_excerpt(line),
                     "review_status": "Unreviewed",
                     "disposition": "",
@@ -330,6 +337,7 @@ def write_csv(path: Path, findings: list[dict]) -> None:
         "review_status",
         "disposition",
         "requirement_id",
+        "source_fingerprint",
         "evidence_excerpt",
         "pattern",
     ]
@@ -429,7 +437,7 @@ def main() -> int:
     category_counts = Counter(finding["category"] for finding in findings)
     owner_counts = Counter(finding["owner_domain"] for finding in findings)
     document = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "generator": "scripts/scan_portability.py",
         "host": {
@@ -446,6 +454,8 @@ def main() -> int:
         },
         "scan": {
             "patterns_file": patterns_path.as_posix(),
+            "patterns_sha256": hashlib.sha256(patterns_path.read_bytes()).hexdigest(),
+            "pattern_categories": sorted({category for category, _, _ in patterns}),
             "pattern_count": len(patterns),
             "tracked_only": tracked_only,
             "max_file_bytes": args.max_file_bytes,

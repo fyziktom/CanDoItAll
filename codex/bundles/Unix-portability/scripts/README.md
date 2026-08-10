@@ -32,6 +32,25 @@ python ./scripts/scan_portability.py \
 
 The scanner writes JSON, CSV, and Markdown summaries. Pattern matches are review leads, not automatic defects.
 
+## Portability baseline enforcement
+
+The executable-source baseline is exact and non-disclosing: each allowance is bound to a source path, category, SHA-256 identity of the scanner-redacted line, and occurrence count. CI rejects additions, removals, copied occurrences, truncated scans, and scanner-pattern drift.
+
+```text
+python ./scripts/enforce_portability_baseline.py \
+  --scan <artifact-root>/portability-scan.json \
+  --baseline ./shared/portability-risk-baseline.json
+```
+
+Refresh the baseline only after reviewing the complete source delta and a non-truncated scan:
+
+```text
+python ./scripts/enforce_portability_baseline.py \
+  --scan <artifact-root>/portability-scan.json \
+  --baseline ./shared/portability-risk-baseline.json \
+  --write-baseline
+```
+
 ## Baseline evidence
 
 Linux/macOS:

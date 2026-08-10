@@ -88,7 +88,9 @@ public static class ControlPlanePathDefaults
 public sealed class ControlPlanePathResolver(
     IOptions<ControlPlaneOptions> options,
     IHostEnvironment hostEnvironment,
-    DurableFileWriter durableFileWriter) : IControlPlanePathResolver
+    DurableFileWriter durableFileWriter) :
+    IControlPlanePathResolver,
+    IApplicationPurposeRootConfigurationSource
 {
     private readonly ControlPlaneOptions _options = options.Value;
 
@@ -129,6 +131,26 @@ public sealed class ControlPlanePathResolver(
     public string ResolveRuntimeTemporaryRootPath()
         => EnsurePurposeRoot(_options.RuntimeTemporaryRootPath, static roots => roots.RuntimeTemporaryRoot);
 
+    public ApplicationPurposeRootConfigurationSource GetConfigurationSource(
+        ApplicationPurposeRootKind purpose)
+        => purpose switch
+        {
+            ApplicationPurposeRootKind.ControlPlane => IsConfigured(_options.RootPath)
+                ? ApplicationPurposeRootConfigurationSource.ExplicitConfiguration
+                : ApplicationPurposeRootConfigurationSource.PlatformDefault,
+            ApplicationPurposeRootKind.DatabaseProfiles =>
+                ApplicationPurposeRootConfigurationSource.DerivedFromControlPlaneRoot,
+            ApplicationPurposeRootKind.DataProtectionKeys => IsConfigured(_options.DataProtectionKeysPath)
+                ? ApplicationPurposeRootConfigurationSource.ExplicitConfiguration
+                : IsConfigured(_options.RootPath)
+                    ? ApplicationPurposeRootConfigurationSource.DerivedFromControlPlaneRoot
+                    : ApplicationPurposeRootConfigurationSource.PlatformDefault,
+            ApplicationPurposeRootKind.State => ResolveConfiguredSource(_options.StateRootPath),
+            ApplicationPurposeRootKind.Logs => ResolveConfiguredSource(_options.LogsRootPath),
+            ApplicationPurposeRootKind.RuntimeTemporary => ResolveConfiguredSource(_options.RuntimeTemporaryRootPath),
+            _ => throw new ArgumentOutOfRangeException(nameof(purpose), purpose, "The purpose root is not owned by the control-plane resolver.")
+        };
+
     private string EnsurePurposeRoot(
         string? configuredPath,
         Func<ApplicationPurposeRoots, string> defaultSelector)
@@ -146,5 +168,12 @@ public sealed class ControlPlanePathResolver(
             ? defaultSelector(ApplicationPurposeRootPolicy.ResolveCurrent())
             : ControlPlanePathDefaults.ResolveConfiguredPath(hostEnvironment.ContentRootPath, configuredPath);
     }
+
+    private static ApplicationPurposeRootConfigurationSource ResolveConfiguredSource(string? configuredPath)
+        => IsConfigured(configuredPath)
+            ? ApplicationPurposeRootConfigurationSource.ExplicitConfiguration
+            : ApplicationPurposeRootConfigurationSource.PlatformDefault;
+
+    private static bool IsConfigured(string? path) => !string.IsNullOrWhiteSpace(path);
 
 }

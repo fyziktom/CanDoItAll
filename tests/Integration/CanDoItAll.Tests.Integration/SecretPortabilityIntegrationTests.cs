@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class SecretPortabilityIntegrationTests
 {
     private const string Sentinel = "integration-secret-a04-f3014c";

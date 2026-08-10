@@ -18,6 +18,7 @@ TEXT_SUFFIXES = {
     ".config",
     ".csv",
     ".env",
+    ".html",
     ".json",
     ".log",
     ".md",

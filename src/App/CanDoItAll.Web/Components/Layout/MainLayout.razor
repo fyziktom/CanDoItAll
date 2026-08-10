@@ -85,6 +85,22 @@
                 </ChildContent>
             </TooltipTarget>
 
+            <TooltipTarget Position="TooltipPosition.Right"
+                           Delay="@ShellMenuTooltipDelay"
+                           TriggerClass="w-full"
+                           Text="Inspect runtime capabilities and readiness"
+                           TestId="shell-runtime-capabilities-tooltip">
+                <ChildContent>
+                    <button type="button"
+                            class="cda-shell-utility-button"
+                            data-testid="shell-runtime-capabilities-action"
+                            @onclick="OpenRuntimeCapabilitiesFromShellAsync">
+                        <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="health_and_safety" /></span>
+                        <span class="cda-shell-utility-label">Runtime capabilities</span>
+                    </button>
+                </ChildContent>
+            </TooltipTarget>
+
             @{
                 var safeDatabaseDetails = BuildSafeDatabaseDetails(databaseSelection, currentDatabaseEditor);
                 var recentDatabaseProfiles = RecentDatabaseProfiles;

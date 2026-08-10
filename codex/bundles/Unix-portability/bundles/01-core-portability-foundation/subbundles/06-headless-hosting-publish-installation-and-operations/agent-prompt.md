@@ -50,7 +50,7 @@ Turn code-level portability into repeatable Linux/macOS headless deployment and 
 
 ## Exit
 
-- Clean headless startup/restart succeeds on Windows, Ubuntu, and macOS.
+- Clean headless startup/restart succeeds on Windows and Ubuntu; macOS publish/service contracts remain `ActualHostUnverified` pending `A07-MACOS-HEADLESS-ACTUALHOST-001`.
 - Publish/support claims are bounded to proven RIDs and profiles.
 - Linux/macOS service and rollback runbooks are complete and rehearsed where required.
 - Documentation no longer treats Windows behavior as universal.

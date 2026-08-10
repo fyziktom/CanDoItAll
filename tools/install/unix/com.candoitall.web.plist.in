@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.candoitall.web</string>
+  <key>UserName</key>
+  <string>@@SERVICE_USER@@</string>
+  <key>GroupName</key>
+  <string>@@SERVICE_GROUP@@</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@@INSTALL_ROOT@@/bin/run-candoitall-web.sh</string>
+    <string>@@INSTALL_ROOT@@</string>
+    <string>--urls</string>
+    <string>http://127.0.0.1:@@PORT@@</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>@@INSTALL_ROOT@@</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>ASPNETCORE_ENVIRONMENT</key>
+    <string>Production</string>
+    <key>RuntimeHost__Profile</key>
+    <string>MacOsHeadless</string>
+    <key>SecretVault__UsageProfile</key>
+    <string>Headless</string>
+    <key>CANDOITALL_HOST_BINDING_ID</key>
+    <string>@@HOST_BINDING_ID@@</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+  <key>ExitTimeOut</key>
+  <integer>30</integer>
+  <key>Umask</key>
+  <integer>23</integer>
+  <key>StandardOutPath</key>
+  <string>@@LOGS_ROOT@@/candoitall-web.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>@@LOGS_ROOT@@/candoitall-web.err.log</string>
+</dict>
+</plist>

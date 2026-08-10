@@ -166,7 +166,7 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain("disabled", cut.Find("[data-testid='workflows-create-starter']").OuterHtml, StringComparison.OrdinalIgnoreCase);
         });
 
-        cut.Find("[data-testid='workflows-create-starter']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-create-starter']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -186,15 +186,15 @@ public sealed class WorkflowsPageTests
 
         var workflowsTab = cut.Find("[data-testid='workflows-tab-workflows']");
         Assert.Contains("Workflows", workflowsTab.TextContent);
-        workflowsTab.Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForAssertion(() =>
         {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
 
-        cut.Find("[data-testid='workflows-tab-history']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-history']").Click());
         cut.WaitForElement("[data-testid='workflows-run-test']");
-        cut.Find("[data-testid='workflows-run-test']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-run-test']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -1541,6 +1541,7 @@ public sealed class WorkflowsPageTests
     public async Task Workflow_example_seed_creates_production_examples_when_enabled()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
         var store = new InMemoryWorkflowCatalogStore();
         var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
         var templatePack = new WorkflowTemplatePackLoader().Load();

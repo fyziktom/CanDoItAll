@@ -3,6 +3,7 @@ using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class PhysicalFileSystemPathPolicyTests
 {
     [Fact]

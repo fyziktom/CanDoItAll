@@ -175,6 +175,7 @@ def write_csv(path: Path, findings: list[dict]) -> None:
         "review_rule",
         "disposition",
         "pattern",
+        "source_fingerprint",
         "evidence_excerpt",
     ]
     with path.open("w", encoding="utf-8", newline="") as stream:

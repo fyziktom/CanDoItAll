@@ -40,6 +40,14 @@
 
 **Rejected:** Blocking all Unix startup without a stronger vault; silently downgrading an explicitly selected strong provider; describing the key-beside-ciphertext tier as strong or same-user isolated; using the basic tier on Windows where DPAPI is built in.
 
+## ADR-C09 — Native Keychain execution is a post-bundle validation obligation
+
+**Decision:** Keep the real macOS Keychain adapter and its native-client contracts, but defer genuine macOS execution to `MACOS-KEYCHAIN-VALIDATION-001`. The missing actual-host run does not block C2, C4, or later bundle execution, and the provider remains explicitly actual-host unverified until the follow-up passes.
+
+**Reason:** The operator does not currently have an authorized macOS execution environment and explicitly chose to continue implementation while preserving the validation debt and bounded support claim.
+
+**Rejected:** Claiming the Keychain profile was actually tested; deleting the adapter or its contracts; weakening explicit-provider fail-closed behavior; continuing to block unrelated Windows/Linux/platform work on unavailable hardware.
+
 ## ADR-C05 — Key bootstrap is acyclic
 
 **Decision:** Data Protection key-ring protection is configured before secrets that depend on that ring.

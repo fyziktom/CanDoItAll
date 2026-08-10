@@ -70,8 +70,9 @@ public sealed class ProcessModuleBoundaryTests
             var document = XDocument.Load(projectFile);
             var actualReferences = document.Descendants("ProjectReference")
                 .Select(element => element.Attribute("Include")?.Value)
+                .OfType<string>()
                 .Where(include => !string.IsNullOrWhiteSpace(include))
-                .Select(include => Path.GetFileNameWithoutExtension(include))
+                .Select(include => Path.GetFileNameWithoutExtension(include.Replace('\\', '/')))
                 .Where(reference => reference is not null && knownProjects.Contains(reference))
                 .Cast<string>()
                 .Order(StringComparer.Ordinal)

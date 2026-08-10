@@ -253,7 +253,9 @@ internal static class ProjectStructureOutputRootAuthorityResolver
         var roots = new List<ProtectedRoot>();
         AddFolder(Environment.SpecialFolder.UserProfile, protectDescendants: false);
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (!string.IsNullOrWhiteSpace(userProfile) && Directory.GetParent(userProfile) is { } userContainer)
+        if (!string.IsNullOrWhiteSpace(userProfile) &&
+            Directory.GetParent(userProfile) is { } userContainer &&
+            !IsFileSystemRoot(userContainer.FullName))
         {
             AddPath(userContainer.FullName, protectDescendants: true);
         }
@@ -279,6 +281,19 @@ internal static class ProjectStructureOutputRootAuthorityResolver
             {
                 roots.Add(new ProtectedRoot(Path.GetFullPath(path), protectDescendants));
             }
+        }
+
+        static bool IsFileSystemRoot(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var root = Path.GetPathRoot(fullPath);
+            return !string.IsNullOrWhiteSpace(root) &&
+                   string.Equals(
+                       Path.TrimEndingDirectorySeparator(fullPath),
+                       Path.TrimEndingDirectorySeparator(root),
+                       OperatingSystem.IsWindows()
+                           ? StringComparison.OrdinalIgnoreCase
+                           : StringComparison.Ordinal);
         }
     }
 

@@ -31,4 +31,4 @@
 
 ## Next action
 
-Enter only A04. Preserve the C2a residuals above and keep A05 blocked until Gate C2 is independently approved.
+Historical handoff: enter only A04 and preserve the C2a residuals above. A04 later reached Gate C2 GO under the explicit macOS Keychain evidence-timing deferral, so A05 is now eligible.

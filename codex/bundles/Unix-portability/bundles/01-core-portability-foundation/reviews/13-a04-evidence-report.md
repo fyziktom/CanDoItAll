@@ -4,7 +4,7 @@
 
 - Implementation: complete for A04 source scope.
 - Evidence: complete on actual Windows, actual Linux Secret Service, and Windows/Linux headless external-key profiles; actual macOS remains unavailable.
-- Gate result: C2 NO-GO after independent review and bounded re-review. Rollback and scanner findings are closed; genuine macOS evidence is the sole remaining blocker. A05 remains blocked.
+- Gate result: C2 GO after independent implementation review and the explicit operator evidence-timing override in `reviews/15-a04-macos-keychain-validation-deferral.md`. Genuine macOS Keychain execution remains a non-blocking follow-up and verified-support claims remain prohibited until it passes.
 - Source anchor: `a2856070e7303de077088fc7f2f7e96a5bcf0e70` on `unix-adoption`, plus the reviewed A01-A04 working tree.
 
 ## Design result
@@ -126,4 +126,4 @@ The remediation schema-3 scan covered all 36 retained source evidence files, loa
 
 ### Current gate state
 
-SEC-014 is independently GO after Windows/Linux validation. This does not waive the pre-existing SEC-002/A04-T11 condition: genuine macOS Keychain execution is still absent, so C2 remains NO-GO solely for macOS and A05 remains blocked.
+SEC-014 is independently GO after Windows/Linux validation. Genuine macOS Keychain execution remains absent but is explicitly deferred as `MACOS-KEYCHAIN-VALIDATION-001`; Gate C2 is GO and A05 may proceed without claiming actual-host verified Keychain support.

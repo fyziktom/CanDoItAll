@@ -87,5 +87,5 @@
 - [x] Focused validation and required stable regression pass for reopened SEC-014.
 - [x] Source references/findings/ADRs/traceability are current.
 - [x] Artifacts are redacted.
-- [ ] Required independent reviewers record GO. Current decision: NO-GO pending actual macOS Keychain proof.
+- [x] Required implementation reviews are complete; actual Keychain execution is explicitly deferred without a verified-support claim.
 - [x] Handoff reflects SEC-014 closure and the remaining genuine macOS Keychain condition. A05 remains ineligible until C2 GO.

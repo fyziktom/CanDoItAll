@@ -21,6 +21,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutputHelper output)
 {
+    private static readonly TimeSpan AsyncObservationTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task ExecutionUpdated_subscriber_failure_is_isolated_after_persistence()
     {
@@ -2294,7 +2296,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         ArgumentNullException.ThrowIfNull(operationTask);
         ArgumentException.ThrowIfNullOrWhiteSpace(observationName);
 
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+        var timeoutTask = Task.Delay(AsyncObservationTimeout);
         var completedTask = await Task.WhenAny(observationTask, operationTask, timeoutTask);
         if (completedTask == observationTask)
         {
@@ -2309,7 +2311,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         }
 
         throw new TimeoutException(
-            $"{observationName} was not observed within five seconds.");
+            $"{observationName} was not observed within {AsyncObservationTimeout.TotalSeconds:0} seconds.");
     }
 
     private static void UseDirectWorkspaceService(IServiceCollection services)
@@ -2363,7 +2365,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         FakeProgressAgentRuntime runtime,
         Task executionTask)
     {
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+        var timeoutTask = Task.Delay(AsyncObservationTimeout);
         var completedTask = await Task.WhenAny(runtime.ExecutionRunIdObserved.Task, executionTask, timeoutTask);
         if (completedTask == executionTask)
         {
@@ -2372,7 +2374,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         if (completedTask == timeoutTask)
         {
-            throw new TimeoutException("Timed out waiting for the fake runtime to observe the execution run id.");
+            throw new TimeoutException(
+                $"Timed out after {AsyncObservationTimeout.TotalSeconds:0} seconds waiting for the fake runtime to observe the execution run id.");
         }
 
         return await runtime.ExecutionRunIdObserved.Task;

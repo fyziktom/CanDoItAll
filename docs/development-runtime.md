@@ -4,10 +4,17 @@ The application runs as a .NET 10 Blazor Web App backed by PostgreSQL.
 
 ## Database
 
-The canonical Compose file starts a loopback-only PostgreSQL 16 service:
+The canonical Compose file starts a loopback-only PostgreSQL 16 service. In PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
+docker compose up -d --wait db
+```
+
+In a POSIX shell:
+
+```sh
+cp .env.example .env
 docker compose up -d --wait db
 ```
 
@@ -26,8 +33,8 @@ using a shared host. Native PostgreSQL users can prepare the local role and data
 
 ## Run The Application
 
-```powershell
-dotnet run --project .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
+```text
+dotnet run --project ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj
 ```
 
 The default endpoints are:
@@ -92,4 +99,5 @@ docker compose down
 ```
 
 See [container operations](operations/containers.md) for health checks and lifecycle
-details.
+details. See [headless Web host operations](operations/headless-web-host.md) for clean
+framework-dependent publish, systemd, launchd, restart, and rollback guidance.

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Tests.Unit;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class StorageCatalogServiceTests
 {
     [Fact]

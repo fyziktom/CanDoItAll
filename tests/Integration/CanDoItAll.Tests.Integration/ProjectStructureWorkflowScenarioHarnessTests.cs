@@ -15,7 +15,6 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProjectStructureWorkflowScenarioHarnessTests
 {
-    private const string TestDataRoot = @"C:\programovani\testdata\testworkflows";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -676,16 +675,16 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
 
     private static IReadOnlyList<WorkflowScenario> BuildScenarios(string syntheticRoot)
     {
-        var mouserFolder = Path.Combine(TestDataRoot, "mouser-order");
-        var mouserCart = Path.Combine(mouserFolder, "Cart_Mar30_1059AM.xls");
-        var mouserReceipt = Path.Combine(mouserFolder, "MOUSER_Receipt_89566550.pdf");
-        var seamarkFolder = Path.Combine(TestDataRoot, "SEAMARK");
-        var seamarkCatalogue = Path.Combine(seamarkFolder, "2018-7 Seamark ZM catalogue.pdf");
-        var seamarkQuotation = Path.Combine(seamarkFolder, "X Ray Machine Agent Quotation List2018.pdf");
-        var seamarkX5600 = Path.Combine(seamarkFolder, "X-5600 Xray Inspection system Specification.pdf");
-        var seamarkX6600 = Path.Combine(seamarkFolder, "X-6600 X ray Inspection system Specification201809.pdf");
-        var seamarkX6600A = Path.Combine(seamarkFolder, "X-6600A Xray Inspection system Specification.pdf");
-        var iotFactoryWorkbook = Path.Combine(TestDataRoot, "IoTFactory rozpo\u010det-v1.xlsx");
+        var mouserFolder = Path.Combine(syntheticRoot, "mouser-order");
+        var mouserCart = Path.Combine(mouserFolder, "cart-extract.md");
+        var mouserReceipt = Path.Combine(mouserFolder, "receipt-extract.md");
+        var seamarkFolder = Path.Combine(syntheticRoot, "seamark");
+        var seamarkCatalogue = Path.Combine(seamarkFolder, "catalogue-extract.md");
+        var seamarkQuotation = Path.Combine(seamarkFolder, "quotation-extract.md");
+        var seamarkX5600 = Path.Combine(seamarkFolder, "x-5600-specification.md");
+        var seamarkX6600 = Path.Combine(seamarkFolder, "x-6600-specification.md");
+        var seamarkX6600A = Path.Combine(seamarkFolder, "x-6600a-specification.md");
+        var iotFactoryWorkbook = Path.Combine(syntheticRoot, "iotfactory-financial-workbook-extract.md");
         var businessPlan = Path.Combine(syntheticRoot, "business-plan.md");
         var customerEmail = Path.Combine(syntheticRoot, "customer-email.eml");
         var vendorRenewal = Path.Combine(syntheticRoot, "vendor-renewal.md");
@@ -1024,6 +1023,30 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
     private static async Task PrepareSyntheticInputsAsync(string syntheticRoot)
     {
         Directory.CreateDirectory(syntheticRoot);
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "mouser-order", "cart-extract.md"),
+            "Mouser cart 89566550 includes Adafruit 485-4754 and MEAN WELL components. Order total: 378.16.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "mouser-order", "receipt-extract.md"),
+            "Receipt 89566550 confirms FEDEX delivery for the Mouser order.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "seamark", "catalogue-extract.md"),
+            "SEAMARK catalogue lists ZM-x5600, X-6600A, 90kV, and a $35,000 reference price.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "seamark", "quotation-extract.md"),
+            "Quotation Date: 2018.10.15. Listed ranges include USD73000-78000 and $41,500.00.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "seamark", "x-5600-specification.md"),
+            "X-5600 inspection area: 640mm*540mm.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "seamark", "x-6600-specification.md"),
+            "X-6600 detector resolution: 1176*1104.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "seamark", "x-6600a-specification.md"),
+            "X-6600A is the enhanced model in the comparison set.");
+        await WriteTextAsync(
+            Path.Combine(syntheticRoot, "iotfactory-financial-workbook-extract.md"),
+            "Summary Rozpočet includes Příjmy z modulů and Výdaje assumptions.");
         await WriteTextAsync(
             Path.Combine(syntheticRoot, "business-plan.md"),
             """

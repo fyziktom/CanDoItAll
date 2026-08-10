@@ -54,7 +54,10 @@ builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllCharts();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddCanDoItAllRuntimeModules(
+    builder.Configuration,
+    builder.Environment,
+    builder.Environment.ContentRootPath);
 builder.Services.AddCanDoItAllDashboard();
 builder.Services.AddCanDoItAllFileToolsStoragePlacementRevision();
 builder.Services.AddCanDoItAllApi(builder.Configuration);
@@ -106,7 +109,9 @@ app.MapCanDoItAllApiDocumentation();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapGet("/_dev/runtime", (IRuntimeReadinessService readiness) =>
+    app.MapGet("/_dev/runtime", (
+        IRuntimeReadinessService readiness,
+        IHostCapabilitySnapshotProvider hostCapabilities) =>
     {
         var iteration = int.TryParse(Environment.GetEnvironmentVariable("DOTNET_WATCH_ITERATION"), out var parsed)
             ? parsed
@@ -127,7 +132,8 @@ if (app.Environment.IsDevelopment())
             ServerInstanceId = app.Configuration["CanDoItAllMcpServerInstanceId"],
             snapshot.StartedAtUtc,
             snapshot.LastChangedAtUtc,
-            snapshot.ActiveUrls
+            snapshot.ActiveUrls,
+            HostCapabilities = hostCapabilities.GetSnapshot()
         });
     }).RequireLocalOrAuthorizedDevelopmentAccess();
 
@@ -866,6 +872,17 @@ if (app.Environment.IsDevelopment())
 
 app.MapProjectStructureAgentApi();
 app.MapCanDoItAllApi();
+app.MapGet("/api/runtime/capabilities", (
+    IHostCapabilitySnapshotProvider hostCapabilities) =>
+        Results.Ok(hostCapabilities.GetSnapshot()));
+app.MapGet("/api/runtime/operations", (
+    IRuntimeDeploymentSupportProvider deploymentSupport,
+    IRuntimeReadinessService readiness,
+    IHostCapabilitySnapshotProvider hostCapabilities) =>
+        Results.Ok(RuntimeOperationsSnapshotProjector.Create(
+            deploymentSupport.GetManifest(),
+            readiness.GetSnapshot(),
+            hostCapabilities.GetSnapshot())));
 app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(CanDoItAll.Web.Composition.ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();

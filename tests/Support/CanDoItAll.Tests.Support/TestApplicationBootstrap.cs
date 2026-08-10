@@ -68,7 +68,7 @@ public static class TestApplicationBootstrap
         services.AddCanDoItAllBaseLib();
         services.AddCanDoItAllInfrastructure(configuration, environment, ModuleAssemblies);
         services.AddCanDoItAllRuntimeDatabaseSwitching();
-        services.AddCanDoItAllRuntimeModules(configuration, environment.ContentRootPath);
+        services.AddCanDoItAllRuntimeModules(configuration, environment, environment.ContentRootPath);
         services.AddCanDoItAllFileToolsStoragePlacementRevision();
         services.AddCanDoItAllMermaid();
         services.AddScoped<IWorkbenchStateStore, InMemoryWorkbenchStateStore>();
