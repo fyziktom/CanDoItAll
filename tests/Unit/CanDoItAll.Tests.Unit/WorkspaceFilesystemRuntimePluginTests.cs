@@ -471,13 +471,22 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
         public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
+        public WorkspaceFileListResult ListFiles(string path, string searchPattern, int maxResults, string authorityRootPath)
+            => throw new UnauthorizedAccessException(SensitiveFailureMessage);
+
         public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
         public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
+        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters, string authorityRootPath)
+            => throw new UnauthorizedAccessException(SensitiveFailureMessage);
+
         public WorkspacePathStatResult StatPath(string path)
+            => throw new UnauthorizedAccessException(SensitiveFailureMessage);
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
@@ -582,6 +591,13 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
                 IsTruncated: false);
         }
 
+        public WorkspaceFileListResult ListFiles(
+            string path,
+            string searchPattern,
+            int maxResults,
+            string authorityRootPath)
+            => ListFiles(path, searchPattern, maxResults);
+
         public WorkspaceTextFileReadResult ReadTextFile(
             string path,
             int maxCharacters = 12000)
@@ -603,6 +619,12 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
                 IsTruncated: false);
         }
 
+        public WorkspaceTextFileReadResult ReadTextFile(
+            string path,
+            int maxCharacters,
+            string authorityRootPath)
+            => ReadTextFile(path, maxCharacters);
+
         public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
             => throw new NotSupportedException();
 
@@ -611,6 +633,9 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
 
         public WorkspacePathStatResult StatPath(string path)
             => throw new NotSupportedException();
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
+            => StatPath(path);
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
             => throw new NotSupportedException();

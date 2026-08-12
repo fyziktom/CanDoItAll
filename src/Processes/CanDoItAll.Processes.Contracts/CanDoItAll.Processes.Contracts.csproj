@@ -5,5 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+  </ItemGroup>
 
 </Project>

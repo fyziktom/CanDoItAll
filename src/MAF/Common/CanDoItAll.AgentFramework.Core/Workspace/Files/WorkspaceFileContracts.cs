@@ -14,11 +14,24 @@ public interface IWorkspaceFileService
 
     WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100);
 
+    WorkspaceFileListResult ListFiles(
+        string path,
+        string searchPattern,
+        int maxResults,
+        string authorityRootPath);
+
     WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20);
 
     WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000);
 
+    WorkspaceTextFileReadResult ReadTextFile(
+        string path,
+        int maxCharacters,
+        string authorityRootPath);
+
     WorkspacePathStatResult StatPath(string path);
+
+    WorkspacePathStatResult StatPath(string path, string authorityRootPath);
 
     WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760);
 

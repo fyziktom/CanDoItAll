@@ -19,6 +19,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -26,6 +27,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -52,7 +54,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddWorkspaceModule();
         services.AddProjectsModule();
         services.AddCanDoItAllMemory(configuration);
-        services.AddWorkbenchModule();
+        services.AddWorkbenchModule(configuration);
         services.AddResourcesModule();
         services.AddPromptsModule();
         services.AddPluginsModule(configuration, contentRootPath);
@@ -96,8 +98,16 @@ public static class RuntimeHostServiceCollectionExtensions
             .Validate(options => Enum.IsDefined(options.Profile), "Runtime host profile is invalid.")
             .ValidateOnStart();
         services.AddSingleton(profile);
+        services.PostConfigure<FileToolsDesktopLaunchOptions>(options =>
+            options.HostProfileAllowsDesktop = profile.IsInteractive);
         services.AddSingleton<IRuntimeDeploymentSupportProvider, EmbeddedRuntimeDeploymentSupportProvider>();
         services.AddSingleton<IHostCapabilitySnapshotProvider, HostCapabilitySnapshotService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IProcessHostCapabilitySource,
+            ApplicationProcessHostCapabilitySource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IProcessHostProfileSource,
+            ApplicationProcessHostProfileSource>());
         services.AddHostedService<HostCapabilityStartupValidator>();
         services.AddHealthChecks()
             .AddCheck<HostCapabilityHealthCheck>("host-capabilities");

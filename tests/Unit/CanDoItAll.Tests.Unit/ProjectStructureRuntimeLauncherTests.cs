@@ -16,6 +16,11 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         CreateProjectFile("repos/TetrisGame/src/TetrisGame/TetrisGame.csproj");
         CreateFile("scripts/task.ps1", "Write-Output 'ready'");
         CreateFile("repos/python-app/.venv/Scripts/Activate.ps1", "Write-Output 'activated'");
+        CreateFile(
+            OperatingSystem.IsWindows()
+                ? "repos/python-app/.venv/Scripts/python.exe"
+                : "repos/python-app/.venv/bin/python",
+            string.Empty);
         Directory.CreateDirectory(WorkspacePath("repos/compose-app"));
     }
 
@@ -33,14 +38,15 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         var result = sut.Resolve(node);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(result.Plan);
         var projectPath = WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj");
         Assert.Equal(Path.GetDirectoryName(projectPath), result.Plan!.WorkingDirectory);
         Assert.Equal("dotnet watch", result.Plan.DisplayName);
+        Assert.Equal(["dotnet"], result.Plan.ExecutableCandidates);
         Assert.Equal(
-            $"dotnet watch --project '{projectPath}' run --launch-profile 'https'",
-            result.Plan.DisplayCommand);
+            ["watch", "--project", projectPath, "run", "--launch-profile", "https"],
+            result.Plan.Arguments);
     }
 
     [Fact]
@@ -57,12 +63,10 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         var result = sut.Resolve(node);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(result.Plan);
-        Assert.Contains("$env:ASPNETCORE_URLS = 'https://localhost:7271'", result.Plan!.StartupScript, StringComparison.Ordinal);
-        Assert.Equal(
-            $"dotnet watch --project '{WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj")}' run --no-launch-profile",
-            result.Plan.DisplayCommand);
+        Assert.Equal("https://localhost:7271", result.Plan!.EnvironmentVariables["ASPNETCORE_URLS"]);
+        Assert.Equal("--no-launch-profile", result.Plan.Arguments[^1]);
     }
 
     [Fact]
@@ -85,10 +89,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         var workingDirectory = WorkspacePath("repos/TetrisGame");
         var projectPath = WorkspacePath("repos/TetrisGame/src/TetrisGame/TetrisGame.csproj");
         Assert.Equal(workingDirectory, result.Plan!.WorkingDirectory);
-        Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
-        Assert.Equal(
-            $"dotnet run --project '{projectPath}' --no-launch-profile",
-            result.Plan.DisplayCommand);
+        Assert.Equal("http://127.0.0.1:55963/", result.Plan.EnvironmentVariables["ASPNETCORE_URLS"]);
+        Assert.Equal(["run", "--project", projectPath, "--no-launch-profile"], result.Plan.Arguments);
     }
 
     [Fact]
@@ -108,10 +110,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         var workingDirectory = WorkspacePath("repos/TetrisGame");
         var projectPath = WorkspacePath("repos/TetrisGame/src/TetrisGame/TetrisGame.csproj");
         Assert.Equal(workingDirectory, result.Plan.WorkingDirectory);
-        Assert.Contains("$env:ASPNETCORE_URLS = 'http://127.0.0.1:55963/'", result.Plan.StartupScript, StringComparison.Ordinal);
-        Assert.Equal(
-            $"dotnet run --project '{projectPath}' --no-launch-profile",
-            result.Plan.DisplayCommand);
+        Assert.Equal("http://127.0.0.1:55963/", result.Plan.EnvironmentVariables["ASPNETCORE_URLS"]);
+        Assert.Equal(["run", "--project", projectPath, "--no-launch-profile"], result.Plan.Arguments);
     }
 
     [Fact]
@@ -131,6 +131,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Plan);
         Assert.Equal(WorkspacePath("repos/python-app"), result.Plan!.WorkingDirectory);
+        Assert.Equal(["python"], result.Plan.ExecutableCandidates);
+        Assert.Equal(["app.py", "--watch"], result.Plan.Arguments);
         Assert.Equal("python app.py --watch", result.Plan.DisplayCommand);
         Assert.Equal("script command", result.Plan.DisplayName);
     }
@@ -153,8 +155,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         Assert.NotNull(result.Plan);
         Assert.Equal(workspaceRoot, result.Plan!.WorkingDirectory);
         Assert.Equal("PowerShell script", result.Plan.DisplayName);
-        Assert.Equal("pwsh ./scripts/task.ps1 -Verbose", result.Plan.DisplayCommand);
-        Assert.Contains($"Set-Location -LiteralPath '{workspaceRoot}'", result.Plan.StartupScript, StringComparison.Ordinal);
+        Assert.Equal("pwsh ./scripts/task.ps1 -Verbose", result.Plan.Arguments[^1]);
+        Assert.Equal(ProjectStructureRuntimePlanKind.PowerShellScript, result.Plan.Kind);
     }
 
     [Fact]
@@ -170,12 +172,70 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         var result = sut.Resolve(node);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(result.Plan);
         var scriptPath = WorkspacePath("scripts/task.ps1");
         Assert.Equal(Path.GetDirectoryName(scriptPath), result.Plan!.WorkingDirectory);
         Assert.Equal("PowerShell script", result.Plan.DisplayName);
-        Assert.Equal($"& '{scriptPath}'", result.Plan.DisplayCommand);
+        Assert.Contains(scriptPath, result.Plan.DisplayCommand, StringComparison.Ordinal);
+        Assert.Equal(scriptPath, result.Plan.Target!.Path);
+    }
+
+    [Fact]
+    public async Task Launch_rejects_an_explicit_script_without_per_launch_operator_approval()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptPath = "scripts/task.ps1"
+            });
+
+        var result = await sut.LaunchAsync(node, ProjectStructureRuntimeLaunchMode.Direct);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("requires operator confirmation", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Launch_accepts_explicit_operator_approval_for_one_script_launch()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptPath = "scripts/task.ps1"
+            });
+
+        var result = await sut.LaunchAsync(
+            node,
+            ProjectStructureRuntimeLaunchMode.Direct,
+            ProjectStructureRuntimeLaunchApproval.OperatorConfirmed);
+
+        Assert.True(result.IsSuccess, result.Message);
+    }
+
+    [Fact]
+    public void Resolve_returns_direct_script_path_plan_when_working_directory_is_omitted()
+    {
+        var sut = CreateSut();
+        var node = CreateScriptNode(
+            "console",
+            new ProjectScriptMetadata
+            {
+                ScriptKind = ProjectScriptKind.Console,
+                ScriptPath = "scripts/task.ps1"
+            });
+
+        var result = sut.Resolve(node);
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.NotNull(result.Plan);
+        var scriptPath = WorkspacePath("scripts/task.ps1");
+        Assert.Equal(Path.GetDirectoryName(scriptPath), result.Plan!.WorkingDirectory);
+        Assert.Equal(scriptPath, result.Plan.ExecutableCandidates.Single());
         Assert.Equal(scriptPath, result.Plan.Target!.Path);
     }
 
@@ -209,7 +269,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
     }
 
     [Fact]
-    public void Resolve_returns_python_activation_plan_for_virtual_environment_nodes()
+    public void Resolve_returns_host_specific_python_interpreter_plan_for_virtual_environment_nodes()
     {
         var sut = CreateSut();
         var node = CreateEnvironmentNode(
@@ -223,16 +283,19 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         var result = sut.Resolve(node);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsSuccess, result.Message);
         Assert.NotNull(result.Plan);
         Assert.Equal("Python environment", result.Plan!.DisplayName);
         var projectPath = WorkspacePath("repos/python-app");
-        var activationPath = WorkspacePath("repos/python-app/.venv/Scripts/Activate.ps1");
+        var interpreterPath = WorkspacePath(
+            OperatingSystem.IsWindows()
+                ? "repos/python-app/.venv/Scripts/python.exe"
+                : "repos/python-app/.venv/bin/python");
         Assert.Equal(projectPath, result.Plan.WorkingDirectory);
-        Assert.Equal(
-            $"& '{activationPath}'",
-            result.Plan.DisplayCommand);
-        Assert.Equal(activationPath, result.Plan.Target!.Path);
+        Assert.Equal([interpreterPath], result.Plan.ExecutableCandidates);
+        Assert.Empty(result.Plan.Arguments);
+        Assert.True(result.Plan.TerminalOnly);
+        Assert.Contains(result.Plan.Targets, target => target.Path == interpreterPath);
     }
 
     [Fact]
@@ -263,8 +326,8 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         Assert.NotNull(result.Plan);
         Assert.Equal("dotnet watch", result.Plan!.DisplayName);
         Assert.Equal(
-            $"dotnet watch --project '{WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj")}' run",
-            result.Plan.DisplayCommand);
+            ["watch", "--project", WorkspacePath("repos/CanDoItAll/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"), "run"],
+            result.Plan.Arguments);
     }
 
     [Fact]
@@ -323,6 +386,41 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         Assert.False(result.IsSuccess);
         Assert.Contains("typed Environment node", result.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("pwsh -e ZABvAHQAbgBlAHQA")]
+    [InlineData("powershell -EncodedCommand ZABvAHQAbgBlAHQA")]
+    public void Resolve_rejects_encoded_content_in_an_explicit_powershell_command(string command)
+    {
+        var result = CreateSut().Resolve(CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptKind = ProjectScriptKind.PowerShell,
+                Command = command
+            }));
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Encoded shell content", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Resolve_preserves_script_arguments_that_resemble_host_options_after_file_boundary()
+    {
+        var result = CreateSut().Resolve(CreateScriptNode(
+            "powershell",
+            new ProjectScriptMetadata
+            {
+                ScriptKind = ProjectScriptKind.PowerShell,
+                ScriptPath = "scripts/task.ps1",
+                Arguments = "-e production"
+            }));
+
+        Assert.True(result.IsSuccess, result.Message);
+        Assert.NotNull(result.Plan);
+        Assert.Equal("-File", result.Plan!.Arguments[2]);
+        Assert.Equal(["-e", "production"], result.Plan.Arguments.Skip(result.Plan.Arguments.Count - 2));
     }
 
     [Fact]
@@ -418,7 +516,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
 
         Assert.False(result.IsSuccess);
         Assert.Equal(
-            "The configured script path does not exist, has the wrong path type, or is not accessible.",
+            "Script path does not exist or is not accessible.",
             result.Message);
     }
 
@@ -467,7 +565,7 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         var result = sut.Resolve(node);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("Script launch requires a command or PowerShell script path.", result.Message);
+        Assert.Equal("Script launch requires a typed command or explicit script path.", result.Message);
     }
 
     [Fact]
@@ -496,14 +594,9 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
         => TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
 
     private ProjectStructureRuntimeLauncher CreateSut()
-        => new(
-            new WorkspacePathAccessGuard(
-                new TestWorkspacePathResolver(workspaceRoot),
-                TestWorkspaceServices.PhysicalPathPolicyFactory),
-            NullLogger<ProjectStructureRuntimeLauncher>.Instance,
-            new ExistingProjectTargetResolver(),
-            new ExternalTargetPathRegistryFactory(),
-            new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)));
+        => ProjectStructureRuntimeTestFactory.CreateLauncher(
+            workspaceRoot,
+            new ExistingProjectTargetResolver());
 
     private string WorkspacePath(string relativePath)
         => TestRepositoryPath.Resolve(workspaceRoot, relativePath);
@@ -584,19 +677,6 @@ public sealed class ProjectStructureRuntimeLauncherTests : IDisposable
             null,
             null,
             ProjectObjectMetadataSerializer.Serialize(metadata));
-
-    private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
-    {
-        public string ResolveWorkspaceRoot() => workspaceRoot;
-
-        public string ResolveManagedFilesRoot() => Path.Combine(workspaceRoot, "managed-files");
-
-        public string ResolveExportsRoot() => Path.Combine(workspaceRoot, "exports");
-
-        public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
-
-        public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
-    }
 
     private sealed class ExistingProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver
     {

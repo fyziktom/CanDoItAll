@@ -71,3 +71,13 @@
 **Reason:** Data migration and runtime ownership have different risk and evidence requirements.
 
 **Rejected:** One long implementation stream through paths, keys, Workbench, MCP, and Processes.
+
+## ADR-C10 — Hosted validation may be deferred without becoming support proof
+
+**Decision:** The exact pushed core and sibling commits recorded in `reviews/22-a07-hosted-validation-deferral.md`, together with independent A07 local-readiness GO and current Windows/Ubuntu proof, may be used as a provisional B00 entry anchor. Default-branch merge, hosted Actions, repository-policy evidence, and genuine macOS execution are deferred as `HOSTED-PORTABILITY-VALIDATION-001` while implementation continues on `unix-adoption`.
+
+**Reason:** The operator explicitly requires both bundles to remain on the feature branch until implementation and local testing finish. The active workflow is not visible on the default branch, so it cannot be manually dispatched there without a merge or pull request that the operator rejected.
+
+**Constraint:** C4 remains deferred rather than GO. macOS and hosted validation remain unverified, local product/security/architecture failures still block, and final support closure must not claim the deferred evidence passed.
+
+**Rejected:** Merging an incomplete feature branch only to expose the workflow; silently calling local readiness C4 GO; removing the three-platform workflow or weakening its future gate.

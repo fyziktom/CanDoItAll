@@ -246,7 +246,7 @@ public sealed class ProjectStructureLocalFileOpener(
 
         try
         {
-            var resolution = pathAccessGuard.ResolveWorkspacePath(value.Trim());
+            var resolution = pathAccessGuard.ResolveWorkspacePath(value);
             if (!resolution.IsSuccess)
             {
                 return false;
@@ -348,9 +348,9 @@ public sealed class ProjectStructureLocalFileOpener(
     }
 
     private static string CombinePath(string rootPath, string relativePath)
-        => Path.IsPathRooted(relativePath.Trim())
-            ? relativePath.Trim()
-            : Path.Combine(rootPath.Trim(), relativePath.Trim());
+        => Path.IsPathRooted(relativePath)
+            ? relativePath
+            : Path.Combine(rootPath, relativePath);
 
     private static bool LooksLikeUrl(string value)
     {
@@ -417,5 +417,4 @@ public sealed class ProjectStructureLocalFileOpener(
             .Replace('/', Path.DirectorySeparatorChar);
     }
 }
-
 

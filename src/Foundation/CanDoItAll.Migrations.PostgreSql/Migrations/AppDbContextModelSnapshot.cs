@@ -6191,6 +6191,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("RequiredHostCapabilitiesJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasDefaultValue("[]");
+
                     b.Property<string>("RequiredRuntimeToolNamesJson")
                         .IsRequired()
                         .HasColumnType("text");

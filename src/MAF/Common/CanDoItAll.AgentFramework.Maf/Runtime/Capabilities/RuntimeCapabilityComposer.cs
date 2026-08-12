@@ -193,6 +193,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var totalStopwatch = Stopwatch.StartNew();
+        RuntimeCapabilityState? pendingState = null;
         try
         {
             if (contextIntent.WorkspaceScope is not null &&
@@ -238,6 +239,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     agentConfiguration,
                     workspaceToolAccess,
                     capabilityAccessPlan));
+            pendingState = composition.State;
 
             TrackAction(
                 "capability.initial-access-state",
@@ -309,7 +311,23 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             TrackAction(
                 "capability.effective-external-target-context",
                 () => AttachEffectiveExternalTargetContext(composition.State, workspaceToolAccess));
+            pendingState = null;
             return composition.State;
+        }
+        catch (Exception compositionException)
+        {
+            if (pendingState is not null)
+            {
+                var cleanupExceptions = await pendingState.DisposeAcquiredResourcesAsync().ConfigureAwait(false);
+                if (cleanupExceptions.Count > 0)
+                {
+                    throw new AggregateException(
+                        "Runtime capability composition failed and one or more acquired resources also failed cleanup.",
+                        [compositionException, .. cleanupExceptions]);
+                }
+            }
+
+            throw;
         }
         finally
         {

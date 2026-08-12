@@ -1,6 +1,6 @@
 # Shrnutí runtime bundle
 
-Tento bundle je připravený, ale záměrně blokovaný Core Gate C4.
+Tento bundle je připravený a B00 je způsobilý přes výslovně schválený provizorní core handoff. Core Gate C4, hosted CI a skutečné macOS ověření zůstávají odložené a nejsou prohlášeny za splněné.
 
 Aktuální runtime situace není „všechno je Windows-only“. Centrální `LocalWorkspaceProcessHost` už používá typed arguments a je dobrým základem. Windows-first problémy jsou hlavně kolem:
 

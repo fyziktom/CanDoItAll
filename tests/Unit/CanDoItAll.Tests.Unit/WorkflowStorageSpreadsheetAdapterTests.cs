@@ -261,13 +261,22 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
             throw new InvalidOperationException("ListDirectory must not delegate to ListFiles.");
         }
 
+        public WorkspaceFileListResult ListFiles(string path, string searchPattern, int maxResults, string authorityRootPath)
+            => inner.ListFiles(path, searchPattern, maxResults, authorityRootPath);
+
         public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
             => throw new NotSupportedException();
 
         public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
             => throw new NotSupportedException();
 
+        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters, string authorityRootPath)
+            => throw new NotSupportedException();
+
         public WorkspacePathStatResult StatPath(string path)
+            => throw new NotSupportedException();
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
             => throw new NotSupportedException();
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)

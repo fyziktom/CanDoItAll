@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
   </ItemGroup>
 
 </Project>

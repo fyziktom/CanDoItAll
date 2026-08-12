@@ -1,14 +1,14 @@
-using System.Diagnostics;
-using System.Management;
-using System.Runtime.Versioning;
 using System.Xml.Linq;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Manager;
 
-public sealed record WorkspaceProcessSnapshot(int ProcessId, string Name, string? CommandLine, string? ExecutablePath);
-
 public static class WorkspaceRuntimeProcessTools
 {
+    private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
+        new PhysicalFileSystemPathPolicyFactory();
+
     private static readonly string[] RestoreInputFileNames =
     [
         "Directory.Build.props",
@@ -107,24 +107,27 @@ public static class WorkspaceRuntimeProcessTools
         return variables;
     }
 
-    public static string ResolveTailwindCliPath(string tailwindWorkspacePath)
+    public static string ResolveTailwindCliScriptPath(string tailwindWorkspacePath)
         => Path.Combine(
             tailwindWorkspacePath,
             "node_modules",
-            ".bin",
-            OperatingSystem.IsWindows() ? "tailwindcss.cmd" : "tailwindcss");
+            "@tailwindcss",
+            "cli",
+            "dist",
+            "index.mjs");
+
+    public static ManagerExecutablePlan BuildNpmInstallPlan()
+        => OperatingSystem.IsWindows()
+            ? new ManagerExecutablePlan(
+                "cmd.exe",
+                ["/d", "/s", "/c", "\"npm.cmd\" install"])
+            : new ManagerExecutablePlan("npm", ["install"]);
 
     public static IReadOnlyList<string> BuildTailwindBuildArgumentList(string inputPath, string outputPath)
         => ["-i", inputPath, "-o", outputPath];
 
     public static IReadOnlyList<string> BuildTailwindWatchArgumentList(string inputPath, string outputPath)
         => ["-i", inputPath, "-o", outputPath, "--watch=always"];
-
-    public static string ResolveNpmCommand()
-        => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
-
-    public static string ResolvePowerShellCommand()
-        => OperatingSystem.IsWindows() ? "powershell" : "pwsh";
 
     public static IReadOnlyList<string> GetExplicitWatchUrls(ManagerOptions options)
         => options.WatchUrls
@@ -158,13 +161,14 @@ public static class WorkspaceRuntimeProcessTools
 
         try
         {
-            var projectPaths = EnumerateRestoreProjectPaths(watchProjectPath).ToArray();
+            var workspacePolicy = PhysicalPathPolicyFactory.Create(workspaceRoot);
+            var projectPaths = EnumerateRestoreProjectPaths(watchProjectPath, workspacePolicy).ToArray();
             if (projectPaths.Length == 0)
             {
                 return false;
             }
 
-            var latestRestoreInputUtc = EnumerateRestoreInputFiles(workspaceRoot, projectPaths)
+            var latestRestoreInputUtc = EnumerateRestoreInputFiles(workspacePolicy, projectPaths)
                 .Select(File.GetLastWriteTimeUtc)
                 .DefaultIfEmpty(DateTime.MinValue)
                 .Max();
@@ -193,9 +197,11 @@ public static class WorkspaceRuntimeProcessTools
         }
     }
 
-    private static IEnumerable<string> EnumerateRestoreInputFiles(string workspaceRoot, IReadOnlyList<string> projectPaths)
+    private static IEnumerable<string> EnumerateRestoreInputFiles(
+        IPhysicalFileSystemPathPolicy workspacePolicy,
+        IReadOnlyList<string> projectPaths)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<string>(workspacePolicy.PathComparer);
         foreach (var projectPath in projectPaths)
         {
             if (seen.Add(projectPath))
@@ -209,7 +215,7 @@ public static class WorkspaceRuntimeProcessTools
                 continue;
             }
 
-            foreach (var directory in EnumerateDirectoriesUpToWorkspaceRoot(projectDirectory, workspaceRoot))
+            foreach (var directory in EnumerateDirectoriesUpToWorkspaceRoot(projectDirectory, workspacePolicy))
             {
                 foreach (var fileName in RestoreInputFileNames)
                 {
@@ -222,9 +228,9 @@ public static class WorkspaceRuntimeProcessTools
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(workspaceRoot))
+        if (!string.IsNullOrWhiteSpace(workspacePolicy.RootPath))
         {
-            var globalJsonPath = Path.Combine(workspaceRoot, "global.json");
+            var globalJsonPath = Path.Combine(workspacePolicy.RootPath, "global.json");
             if (File.Exists(globalJsonPath) && seen.Add(globalJsonPath))
             {
                 yield return globalJsonPath;
@@ -232,20 +238,22 @@ public static class WorkspaceRuntimeProcessTools
         }
     }
 
-    private static IEnumerable<string> EnumerateDirectoriesUpToWorkspaceRoot(string startDirectory, string workspaceRoot)
+    private static IEnumerable<string> EnumerateDirectoriesUpToWorkspaceRoot(
+        string startDirectory,
+        IPhysicalFileSystemPathPolicy workspacePolicy)
     {
         var current = Path.GetFullPath(startDirectory)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var normalizedWorkspaceRoot = string.IsNullOrWhiteSpace(workspaceRoot)
-            ? null
-            : Path.GetFullPath(workspaceRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (!workspacePolicy.IsWithinRoot(current))
+        {
+            yield break;
+        }
 
         while (!string.IsNullOrWhiteSpace(current))
         {
             yield return current;
 
-            if (normalizedWorkspaceRoot is not null &&
-                string.Equals(current, normalizedWorkspaceRoot, StringComparison.Ordinal))
+            if (workspacePolicy.PathComparer.Equals(current, workspacePolicy.RootPath))
             {
                 yield break;
             }
@@ -253,7 +261,7 @@ public static class WorkspaceRuntimeProcessTools
             var parent = Directory.GetParent(current)?.FullName?
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (string.IsNullOrWhiteSpace(parent) ||
-                string.Equals(parent, current, StringComparison.Ordinal))
+                workspacePolicy.PathComparer.Equals(parent, current))
             {
                 yield break;
             }
@@ -262,16 +270,20 @@ public static class WorkspaceRuntimeProcessTools
         }
     }
 
-    private static IEnumerable<string> EnumerateRestoreProjectPaths(string watchProjectPath)
+    private static IEnumerable<string> EnumerateRestoreProjectPaths(
+        string watchProjectPath,
+        IPhysicalFileSystemPathPolicy workspacePolicy)
     {
         var pending = new Stack<string>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<string>(workspacePolicy.PathComparer);
         pending.Push(Path.GetFullPath(watchProjectPath));
 
         while (pending.Count > 0)
         {
             var projectPath = pending.Pop();
-            if (!seen.Add(projectPath) || !File.Exists(projectPath))
+            if (!workspacePolicy.IsWithinRoot(projectPath) ||
+                !seen.Add(projectPath) ||
+                !File.Exists(projectPath))
             {
                 continue;
             }
@@ -309,99 +321,8 @@ public static class WorkspaceRuntimeProcessTools
         }
     }
 
-    public static bool IsWorkspaceOwnedProcess(WorkspaceProcessSnapshot process, string watchProjectPath)
-    {
-        if (process.ProcessId <= 0)
-        {
-            return false;
-        }
-
-        var projectName = Path.GetFileNameWithoutExtension(watchProjectPath);
-        var projectDirectory = Path.GetDirectoryName(watchProjectPath) ?? string.Empty;
-
-        if (string.Equals(process.Name, projectName, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(process.Name, $"{projectName}.exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return string.IsNullOrWhiteSpace(process.ExecutablePath) ||
-                   process.ExecutablePath.Contains(projectDirectory, StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (!string.Equals(process.Name, "dotnet", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(process.Name, "dotnet.exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var commandLine = process.CommandLine ?? string.Empty;
-        if (!commandLine.Contains(watchProjectPath, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return commandLine.Contains("dotnet-watch.dll", StringComparison.OrdinalIgnoreCase) ||
-               commandLine.Contains("watch --project", StringComparison.OrdinalIgnoreCase) ||
-               commandLine.Contains("DOTNET_WATCH=1", StringComparison.OrdinalIgnoreCase);
-    }
-
-    public static IReadOnlyList<WorkspaceProcessSnapshot> EnumerateWorkspaceOwnedProcesses(string watchProjectPath, int currentProcessId)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            try
-            {
-                using var searcher = new ManagementObjectSearcher("SELECT ProcessId, Name, CommandLine, ExecutablePath FROM Win32_Process");
-                return searcher.Get()
-                    .OfType<ManagementObject>()
-                    .Select(ToSnapshot)
-                    .Where(snapshot => snapshot is not null)
-                    .Select(snapshot => snapshot!)
-                    .Where(snapshot => snapshot.ProcessId != currentProcessId)
-                    .Where(snapshot => IsWorkspaceOwnedProcess(snapshot, watchProjectPath))
-                    .ToArray();
-            }
-            catch
-            {
-                return [];
-            }
-        }
-
-        var projectName = Path.GetFileNameWithoutExtension(watchProjectPath);
-        return Process.GetProcessesByName(projectName)
-            .Where(process => process.Id != currentProcessId)
-            .Select(ToSnapshot)
-            .Where(snapshot => snapshot is not null)
-            .Select(snapshot => snapshot!)
-            .Where(snapshot => IsWorkspaceOwnedProcess(snapshot, watchProjectPath))
-            .ToArray();
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static WorkspaceProcessSnapshot? ToSnapshot(ManagementObject managementObject)
-    {
-        try
-        {
-            return new WorkspaceProcessSnapshot(
-                Convert.ToInt32(managementObject["ProcessId"]),
-                Convert.ToString(managementObject["Name"]) ?? string.Empty,
-                Convert.ToString(managementObject["CommandLine"]),
-                Convert.ToString(managementObject["ExecutablePath"]));
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static WorkspaceProcessSnapshot? ToSnapshot(Process process)
-    {
-        try
-        {
-            var executablePath = process.MainModule?.FileName;
-            return new WorkspaceProcessSnapshot(process.Id, process.ProcessName, null, executablePath);
-        }
-        catch
-        {
-            return null;
-        }
-    }
 }
+
+public sealed record ManagerExecutablePlan(
+    string ExecutablePath,
+    IReadOnlyList<string> Arguments);

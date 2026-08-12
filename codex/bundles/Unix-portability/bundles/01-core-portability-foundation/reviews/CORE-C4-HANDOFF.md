@@ -2,26 +2,26 @@
 
 ## Status
 
-- `Pending exact-commit hosted evidence — A07 local readiness GO`
+- `Provisional implementation handoff approved — C4 remains deferred`
 
 ## Exact anchor
 
 - Repository: `fyziktom/CanDoItAll`
 - Branch: `unix-adoption`
-- Commit: pending operator-authorized commit/push; current base `27527039dd05299b3ed54ed2c3bc129cec2aeecf`
-- Commit message: pending
+- Commit: `dd78ffa9769ba1d125b8be81a4b303df37c32505` (pushed)
+- Commit message: `phase2`
 - SDK: `.NET 10.0.302`
-- Dirty state: reviewed A00-A07 working tree; must be committed before C4
-- Components source dependency: `f5c477980316f4f7c8363945eb9624db1ab6e867` plus an uncommitted `Directory.Build.props` configuration-propagation edit
-- FileTools source dependency: `47ea01b61a174c435775504724e2922ae54769e5` plus an uncommitted `Directory.Build.props` configuration-propagation edit
+- Dirty state: all three repositories were clean when the pushed anchors were verified; later bundle bookkeeping is intentionally uncommitted
+- Components source dependency: `8372c1d55f21b349f8e859470b02eeb4421e96ca` (`development`, pushed)
+- FileTools source dependency: `f31e20d054003348c7557b9634e0838fc5996ae0` (`development`, pushed)
 
 ## Proven support profiles
 
 | Profile | OS/architecture | Database | Secret/key profile | Publish artifact | CI/evidence |
 |---|---|---|---|---|---|
-| Windows headless | Windows x64 | PostgreSQL 16 | DPAPI/Strong Auto | win-x64 framework-dependent | Local 7,459/7,459, PostgreSQL 10/10, two Healthy/Ready cycles and browser smoke; exact hosted evidence pending |
-| Ubuntu headless | Ubuntu 24.04 x64 | PostgreSQL 16 | LocalUserFile/BasicLocal Auto plus certificate-backed Data Protection profile | linux-x64 framework-dependent | Local 7,459/7,459, PostgreSQL 10/10, two Healthy/Ready SIGTERM-exit-0 cycles; exact hosted evidence pending |
-| macOS headless | macOS 15 arm64 | PostgreSQL 16 | LocalUserFile/BasicLocal Auto; Keychain is a separate deferred interactive proof | osx-arm64 framework-dependent | `ActualHostUnverified`; exact hosted evidence pending |
+| Windows headless | Windows x64 | PostgreSQL 16 | DPAPI/Strong Auto | win-x64 framework-dependent | Local 7,459/7,459, PostgreSQL 10/10, two Healthy/Ready cycles and browser smoke; hosted evidence deferred |
+| Ubuntu headless | Ubuntu 24.04 x64 | PostgreSQL 16 | LocalUserFile/BasicLocal Auto plus certificate-backed Data Protection profile | linux-x64 framework-dependent | Local 7,459/7,459, PostgreSQL 10/10, two Healthy/Ready SIGTERM-exit-0 cycles; hosted evidence deferred |
+| macOS headless | macOS 15 arm64 | PostgreSQL 16 | LocalUserFile/BasicLocal Auto; Keychain is a separate deferred interactive proof | osx-arm64 framework-dependent | `ActualHostUnverified`; hosted evidence deferred |
 
 ## Core invariants
 
@@ -31,8 +31,8 @@
 - [x] storage/control-plane migration and rollback on Windows/Ubuntu; macOS hosted execution pending
 - [x] secret provider/key-ring migration/restart/redaction on Windows/Ubuntu; Keychain actual-host proof separately deferred
 - [x] headless startup and capability degradation on Windows/Ubuntu; macOS hosted execution pending
-- [ ] active Windows/Ubuntu/macOS CI
-- [x] Windows local regression; exact hosted confirmation pending
+- [ ] active Windows/Ubuntu/macOS hosted execution (`HOSTED-PORTABILITY-VALIDATION-001`)
+- [x] Windows local regression; hosted confirmation deferred
 
 ## Runtime-impacting changed contracts/files
 
@@ -47,15 +47,15 @@
 
 ## Open limitations
 
-- General macOS actual-host build/test/PostgreSQL migration/publish/headless restart is pending the hosted matrix.
+- General macOS actual-host build/test/PostgreSQL migration/publish/headless restart is deferred under `HOSTED-PORTABILITY-VALIDATION-001`.
 - `MACOS-KEYCHAIN-VALIDATION-001` remains non-blocking and `ActualHostUnverified`; no verified Keychain support claim is permitted yet.
 - Windows local headless validation records forced process termination, not graceful Windows service stop.
-- Sibling Components/FileTools configuration-propagation edits require committed anchors or removal of their necessity before final provenance is complete.
+- Sibling Components/FileTools configuration-propagation edits are committed and pushed at the anchors above.
 - Workflow actions currently use mutable major tags; full SHA pinning is a non-blocking supply-chain hardening follow-up unless repository policy requires it.
 
 ## Gate decision
 
-- Result: `PENDING — local readiness GO`
-- Reviewers: primary executor; Dalton independent local-readiness review
-- Evidence: `reviews/20-a07-evidence-report.md`; `reviews/21-a07-independent-review.md`; exact hosted run links/artifact checksums pending
-- Runtime bundle first eligible subbundle after GO: `B00`
+- Result: `PROVISIONAL IMPLEMENTATION HANDOFF — C4 DEFERRED`
+- Reviewers: primary executor; Dalton independent local-readiness review; explicit operator progression override
+- Evidence: `reviews/20-a07-evidence-report.md`; `reviews/21-a07-independent-review.md`; `reviews/22-a07-hosted-validation-deferral.md`
+- Runtime bundle first eligible subbundle: `B00`, against the exact anchors above

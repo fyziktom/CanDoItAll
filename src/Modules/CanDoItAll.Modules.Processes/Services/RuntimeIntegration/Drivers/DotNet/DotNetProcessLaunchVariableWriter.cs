@@ -6,27 +6,29 @@ internal static class DotNetProcessLaunchVariableWriter
 {
     public static void ApplyCore(
         DotNetProcessLaunchContract contract,
-        IDictionary<string, string> variables)
+        IDictionary<string, string> variables,
+        StringComparer? pathComparer = null)
     {
         ArgumentNullException.ThrowIfNull(contract);
         ArgumentNullException.ThrowIfNull(variables);
 
         SetAuthoritative(variables, "DotNetProvisioningMode", "initialize");
         SetAuthoritative(variables, "DotNetSolutionName", contract.SolutionName);
-        SetAuthoritative(variables, "DotNetSolutionFile", contract.SolutionFile);
+        pathComparer ??= StringComparer.Ordinal;
+        SetAuthoritativePath(variables, "DotNetSolutionFile", contract.SolutionFile, pathComparer);
         SetAuthoritative(variables, "DotNetSolutionFileAlias", contract.SolutionFileAlias);
-        SetAuthoritative(variables, "DotNetSolutionFileCandidates", string.Join("; ", contract.SolutionCandidatePaths));
+        SetAuthoritativePath(variables, "DotNetSolutionFileCandidates", string.Join("; ", contract.SolutionCandidatePaths), pathComparer);
         SetAuthoritative(variables, "DotNetAppProjectName", contract.AppProjectName);
-        SetAuthoritative(variables, "DotNetAppProjectDirectory", contract.AppProjectDirectory);
-        SetAuthoritative(variables, "DotNetAppProjectFile", contract.AppProjectFile);
+        SetAuthoritativePath(variables, "DotNetAppProjectDirectory", contract.AppProjectDirectory, pathComparer);
+        SetAuthoritativePath(variables, "DotNetAppProjectFile", contract.AppProjectFile, pathComparer);
         SetAuthoritative(variables, "DotNetAppProjectFileAlias", contract.AppProjectFileAlias);
         SetAuthoritative(variables, "DotNetAppArchetype", contract.AppArchetype.Archetype);
         SetAuthoritative(variables, "DotNetAppTemplate", contract.AppArchetype.Template);
         SetAuthoritative(variables, "DotNetAppTemplateOptions", contract.AppArchetype.TemplateOptionsText);
         SetAuthoritative(variables, "DotNetAllowedTemplateSwitches", contract.AppArchetype.TemplateOptionsText);
         SetAuthoritative(variables, "DotNetTestProjectName", contract.TestProjectName);
-        SetAuthoritative(variables, "DotNetTestProjectDirectory", contract.TestProjectDirectory);
-        SetAuthoritative(variables, "DotNetTestProjectFile", contract.TestProjectFile);
+        SetAuthoritativePath(variables, "DotNetTestProjectDirectory", contract.TestProjectDirectory, pathComparer);
+        SetAuthoritativePath(variables, "DotNetTestProjectFile", contract.TestProjectFile, pathComparer);
         SetAuthoritative(variables, "DotNetTestProjectFileAlias", contract.TestProjectFileAlias);
         SetAuthoritative(variables, "DotNetTestTemplate", contract.TestTemplate);
         SetAuthoritative(variables, "DotNetTestFrameworkPreference", contract.TestFrameworkPreference);
@@ -57,17 +59,19 @@ internal static class DotNetProcessLaunchVariableWriter
 
     public static void ApplyExistingSolution(
         DotNetExistingSolutionVerificationContract contract,
-        IDictionary<string, string> variables)
+        IDictionary<string, string> variables,
+        StringComparer? pathComparer = null)
     {
         ArgumentNullException.ThrowIfNull(contract);
         ArgumentNullException.ThrowIfNull(variables);
 
         SetAuthoritative(variables, "DotNetProvisioningMode", "verify-existing");
-        SetAuthoritative(variables, "DotNetSolutionFile", contract.SolutionFile);
+        pathComparer ??= StringComparer.Ordinal;
+        SetAuthoritativePath(variables, "DotNetSolutionFile", contract.SolutionFile, pathComparer);
         SetAuthoritative(variables, "DotNetSolutionFileAlias", contract.SolutionFileAlias);
-        SetAuthoritative(variables, "DotNetSolutionFileCandidates", string.Join("; ", contract.SolutionCandidatePaths));
-        SetAuthoritative(variables, "DotNetRequiredProjectFiles", JsonSerializer.Serialize(contract.RequiredProjectFiles));
-        SetAuthoritative(variables, "DotNetTestProjectFiles", JsonSerializer.Serialize(contract.TestProjectFiles));
+        SetAuthoritativePath(variables, "DotNetSolutionFileCandidates", string.Join("; ", contract.SolutionCandidatePaths), pathComparer);
+        SetAuthoritativePath(variables, "DotNetRequiredProjectFiles", JsonSerializer.Serialize(contract.RequiredProjectFiles), pathComparer);
+        SetAuthoritativePath(variables, "DotNetTestProjectFiles", JsonSerializer.Serialize(contract.TestProjectFiles), pathComparer);
         SetAuthoritative(variables, "DotNetWorkspaceAlias", contract.WorkspaceAlias);
     }
 
@@ -95,6 +99,28 @@ internal static class DotNetProcessLaunchVariableWriter
         if (variables.TryGetValue(key, out var existing) &&
             !string.IsNullOrWhiteSpace(existing) &&
             !string.Equals(existing.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Authoritative .NET bootstrap value '{key}' conflicts with an existing launch variable value.");
+        }
+
+        variables[key] = value;
+    }
+
+    private static void SetAuthoritativePath(
+        IDictionary<string, string> variables,
+        string key,
+        string value,
+        StringComparer pathComparer)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (variables.TryGetValue(key, out var existing) &&
+            !string.IsNullOrWhiteSpace(existing) &&
+            !pathComparer.Equals(existing.Trim(), value.Trim()))
         {
             throw new InvalidOperationException(
                 $"Authoritative .NET bootstrap value '{key}' conflicts with an existing launch variable value.");

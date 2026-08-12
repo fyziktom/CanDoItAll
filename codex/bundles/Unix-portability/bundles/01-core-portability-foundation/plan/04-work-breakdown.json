@@ -257,7 +257,7 @@
       "directory": "subbundles/07-three-platform-ci-integration-restart-and-core-closure",
       "critical": true,
       "conditional": false,
-      "status": "Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence",
+      "status": "Implementation progression approved — C4 deferred under HOSTED-PORTABILITY-VALIDATION-001",
       "depends_on": [
         "A06"
       ],

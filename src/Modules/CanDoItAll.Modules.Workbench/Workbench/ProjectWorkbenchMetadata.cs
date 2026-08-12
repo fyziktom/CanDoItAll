@@ -88,7 +88,8 @@ public enum ProjectScriptKind
     PowerShell,
     Console,
     EfMigration,
-    TailwindWatch
+    TailwindWatch,
+    PosixShell
 }
 
 public enum ProjectEnvironmentKind
@@ -496,6 +497,13 @@ public sealed class ProjectEnvironmentMetadata
 
     [ProjectStructurePreviewField("Localhost URL", 80)]
     public string LocalhostUrl { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Entry point", 90)]
+    public string EntryPoint { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Arguments", 100)]
+    [JsonConverter(typeof(ProjectCommandLineArgumentsJsonConverter))]
+    public string Arguments { get; set; } = string.Empty;
 }
 
 public sealed class ProjectInfrastructureMetadata

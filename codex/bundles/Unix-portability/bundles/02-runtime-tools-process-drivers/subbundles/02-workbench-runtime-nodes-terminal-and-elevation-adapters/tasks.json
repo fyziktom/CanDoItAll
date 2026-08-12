@@ -5,7 +5,7 @@
   "title": "Workbench runtime nodes, terminal presentation, and elevation adapters",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by B01",
+  "status": "Completed — Workbench gate GO",
   "depends_on": [
     "B01"
   ],
@@ -25,7 +25,12 @@
   "source_hotspots": [
     "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
     "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDirectDotNetCommandPolicy.cs",
-    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs"
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimePlan.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimePathResolver.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLegacyRuntimeCommandMigrator.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeSessionRegistry.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureRuntimeLaunchApprovalDialog.razor"
   ],
   "tasks": [
     {
@@ -42,7 +47,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -65,7 +70,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -88,7 +93,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -111,7 +116,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -134,7 +139,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -157,7 +162,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -180,7 +185,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -203,7 +208,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -226,7 +231,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -249,7 +254,7 @@
         "NODE-007",
         "NODE-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

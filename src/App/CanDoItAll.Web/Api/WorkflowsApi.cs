@@ -89,9 +89,10 @@ internal static class WorkflowsApi
             Results.Ok(backendCatalog.ListBackends()))
             .WithName("ListWorkflowRuntimeBackends");
 
-        workflows.MapGet("/executor-catalog", (
-                IWorkflowExecutorCatalog executorCatalog) =>
-            Results.Ok(executorCatalog.ListExecutors()))
+        workflows.MapGet("/executor-catalog", async (
+                IWorkflowExecutorRuntimeAvailabilityCatalog executorCatalog,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await executorCatalog.ListExecutorsAsync(cancellationToken)))
             .WithName("ListWorkflowExecutorCatalog");
 
         workflows.MapGet("/definitions/{workflowId:guid}", async (

@@ -123,7 +123,10 @@ internal sealed class ProcessRuntimeOwnedStepCoordinator(
                 ComputeHash(runtimeResult.Evidence),
                 new ProcessCompletionIssue(
                     failure.Code.Value,
-                    BuildFailureSummary(runtimeResult),
+                    ProcessReceiptNarrativeSanitizer.SanitizeText(
+                        assignment,
+                        BuildFailureSummary(runtimeResult),
+                        ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength),
                     runtimeResult.Evidence,
                     assignment.ProducedArtifactSlotIds,
                     failure.RetrySafety,

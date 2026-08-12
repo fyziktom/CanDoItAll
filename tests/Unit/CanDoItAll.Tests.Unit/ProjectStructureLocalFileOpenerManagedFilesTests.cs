@@ -325,6 +325,41 @@ public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
         }
     }
 
+    [Fact]
+    public void Unix_metadata_path_preserves_a_significant_trailing_space()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+        try
+        {
+            string folderPath = Directory.CreateDirectory(
+                Path.Combine(workspaceRoot, "deployment folder ")).FullName;
+            var sut = CreateSut(workspaceRoot);
+            var node = CreateNode(
+                mediaRelativePath: string.Empty,
+                objectType: ProjectObjectType.Infrastructure,
+                objectSubtype: "deployment-folder",
+                metadata: new ProjectObjectMetadataEnvelope
+                {
+                    Infrastructure = new ProjectInfrastructureMetadata
+                    {
+                        InfrastructureKind = ProjectInfrastructureKind.DeploymentFolder,
+                        FolderPath = folderPath
+                    }
+                });
+
+            Assert.True(sut.CanOpen(node));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     private static ProjectStructureLocalFileOpener CreateSut(
         string workspaceRoot,
         IDesktopFileLauncher? desktopFileLauncher = null)

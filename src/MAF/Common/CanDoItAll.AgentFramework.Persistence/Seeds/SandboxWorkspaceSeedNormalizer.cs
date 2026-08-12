@@ -946,6 +946,13 @@ internal static class SandboxWorkspaceSeedNormalizer
             return true;
         }
 
+        if (string.Equals(seededCapability.Key, "playwright-local-mcp", StringComparison.OrdinalIgnoreCase))
+        {
+            return !existingCapability.ConfigurationJson.Contains(
+                "@playwright/mcp@0.0.78",
+                StringComparison.Ordinal);
+        }
+
         if (string.Equals(seededCapability.Key, "architecture-map-inline-skill", StringComparison.OrdinalIgnoreCase))
         {
             return !existingCapability.ConfigurationJson.Contains("Use this skill only when the user explicitly asks for a Mermaid or class-diagram output.", StringComparison.OrdinalIgnoreCase);

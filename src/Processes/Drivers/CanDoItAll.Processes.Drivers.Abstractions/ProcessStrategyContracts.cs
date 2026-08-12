@@ -26,7 +26,12 @@ public sealed record ProcessStrategyBindingSnapshot(
     string MinRuntimeSchema,
     string MaxRuntimeSchema,
     string BindingInputsHash,
-    IReadOnlyList<StrategyBindingInput> Inputs);
+    IReadOnlyList<StrategyBindingInput> Inputs)
+{
+    public ProcessHostProfileId HostProfileId { get; init; } = new("unknown");
+
+    public IReadOnlyList<ProcessHostCapabilityFact> HostCapabilities { get; init; } = [];
+}
 
 public sealed record StrategyBindingInput(
     StrategyBindingInputKey Key,
@@ -59,6 +64,8 @@ public sealed record ProcessStrategyExecutionContext
     public ProcessStepExecutionContract StepContract { get; init; }
 
     public required ProcessDispatchClaimIdentity DispatchClaimIdentity { get; init; }
+
+    public ProcessHostCapabilityEvaluationEvidence? DispatchHostCapabilityEvidence { get; init; }
 }
 
 public readonly record struct ProcessDispatchClaimIdentity
@@ -89,6 +96,9 @@ public sealed record ProcessStepExecutionContract(
     public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
 
     public IReadOnlyList<BranchOutcomeId> ConfiguredBranchOutcomeIds { get; init; } = [];
+
+    public IReadOnlySet<ProcessHostCapabilityId> RequiredHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
 }
 
 public sealed record RequiredArtifactInputRef(
@@ -157,6 +167,132 @@ public sealed record StrategyResultEnvelope(
     public string UserSafeSummary { get; init; } = string.Empty;
 
     public ProcessExecutionRunId? ExecutionRunId { get; init; }
+
+    public ProcessHostCapabilityEvaluationEvidence? HostCapabilityEvidence { get; init; }
+}
+
+public static class ProcessStrategyResultLimits
+{
+    public const int MaximumArtifacts = 128;
+    public const int MaximumDiagnostics = 32;
+    public const int MaximumManagerSignals = 32;
+    public const int MaximumIdentifierLength = 128;
+    public const int MaximumHashLength = 71;
+    public const int MaximumUserSafeSummaryLength = 4096;
+    public const int MaximumDiagnosticSummaryLength = 2048;
+    public const int MaximumRestrictedEvidenceReferenceLength = 1024;
+    public const int MaximumManagerSignalSummaryLength = 2048;
+}
+
+public static class ProcessStrategyReceiptValuePolicy
+{
+    private const string Sha256Prefix = "sha256:";
+    private const string RestrictedReferencePrefix = "restricted://";
+    private const int Sha256HexLength = 64;
+    private const int RestrictedReferenceKindMaximumLength = 64;
+
+    public static bool IsSha256Digest(string? value)
+        => IsLowerHexSha256(value);
+
+    public static bool IsStableIdentifier(string? value)
+        => IsStableToken(value, allowColon: true, allowPlus: false);
+
+    public static bool IsStableVersion(string? value)
+        => IsStableToken(value, allowColon: false, allowPlus: true);
+
+    public static bool IsRestrictedEvidenceReference(string? value)
+    {
+        if (value is null)
+        {
+            return true;
+        }
+
+        if (!value.StartsWith(RestrictedReferencePrefix, StringComparison.Ordinal) ||
+            value.Length > ProcessStrategyResultLimits.MaximumRestrictedEvidenceReferenceLength)
+        {
+            return false;
+        }
+
+        var payload = value.AsSpan(RestrictedReferencePrefix.Length);
+        var separatorIndex = payload.IndexOf('/');
+        if (separatorIndex <= 0 || separatorIndex > RestrictedReferenceKindMaximumLength)
+        {
+            return false;
+        }
+
+        var kind = payload[..separatorIndex];
+        var identity = payload[(separatorIndex + 1)..];
+        return IsLowerToken(kind) &&
+               (IsLowerHex(identity, 32) || IsSha256Digest(identity.ToString()));
+    }
+
+    private static bool IsLowerHexSha256(string? value)
+        => value is not null &&
+           value.Length == Sha256Prefix.Length + Sha256HexLength &&
+           value.StartsWith(Sha256Prefix, StringComparison.Ordinal) &&
+           IsLowerHex(value.AsSpan(Sha256Prefix.Length), Sha256HexLength);
+
+    private static bool IsLowerHex(ReadOnlySpan<char> value, int requiredLength)
+    {
+        if (value.Length != requiredLength)
+        {
+            return false;
+        }
+
+        foreach (var character in value)
+        {
+            if (character is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsLowerToken(ReadOnlySpan<char> value)
+    {
+        if (value.IsEmpty || value[0] is not (>= 'a' and <= 'z'))
+        {
+            return false;
+        }
+
+        foreach (var character in value)
+        {
+            if ((character < 'a' || character > 'z') &&
+                (character < '0' || character > '9') &&
+                character != '-')
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsStableToken(string? value, bool allowColon, bool allowPlus)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            value.Length > ProcessStrategyResultLimits.MaximumIdentifierLength ||
+            !string.Equals(value, value.Trim(), StringComparison.Ordinal) ||
+            !char.IsAsciiLetterOrDigit(value[0]))
+        {
+            return false;
+        }
+
+        foreach (var character in value)
+        {
+            if (!char.IsAsciiLetterOrDigit(character) &&
+                character is not '.' and not '_' and not '-' &&
+                (!allowColon || character != ':') &&
+                (!allowPlus || character != '+'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 public sealed record ProducedArtifactRef(

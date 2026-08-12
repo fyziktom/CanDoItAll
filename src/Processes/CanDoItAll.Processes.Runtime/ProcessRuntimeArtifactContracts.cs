@@ -174,6 +174,7 @@ public static class ProcessRuntimeArtifactContracts
             requiredArtifacts,
             expectedProducedArtifacts,
             requiredToolNames,
+            step.RequiredHostCapabilities,
             artifactDescriptors,
             subprocessArtifactMappings,
             configuredBranchOutcomeIds);
@@ -186,7 +187,8 @@ public static class ProcessRuntimeArtifactContracts
         {
             ArtifactDescriptors = artifactDescriptors,
             SubprocessArtifactMappings = subprocessArtifactMappings,
-            ConfiguredBranchOutcomeIds = configuredBranchOutcomeIds
+            ConfiguredBranchOutcomeIds = configuredBranchOutcomeIds,
+            RequiredHostCapabilities = step.RequiredHostCapabilities
         };
     }
 
@@ -365,6 +367,7 @@ public static class ProcessRuntimeArtifactContracts
         IReadOnlyList<RequiredArtifactInputRef> requiredArtifacts,
         IReadOnlyList<ExpectedProducedArtifactRef> expectedProducedArtifacts,
         IReadOnlyList<string> requiredToolNames,
+        IReadOnlySet<ProcessHostCapabilityId> requiredHostCapabilities,
         IReadOnlyList<ProcessArtifactSlotDescriptor> artifactDescriptors,
         IReadOnlyList<SubprocessArtifactMappingDescriptor> subprocessArtifactMappings,
         IReadOnlyList<BranchOutcomeId> configuredBranchOutcomeIds)
@@ -399,6 +402,13 @@ public static class ProcessRuntimeArtifactContracts
             builder
                 .Append("|tool:")
                 .Append(toolName);
+        }
+
+        foreach (var capabilityId in requiredHostCapabilities.OrderBy(item => item.Value, StringComparer.Ordinal))
+        {
+            builder
+                .Append("|host-capability:")
+                .Append(capabilityId.Value);
         }
 
         foreach (var outcomeId in configuredBranchOutcomeIds)

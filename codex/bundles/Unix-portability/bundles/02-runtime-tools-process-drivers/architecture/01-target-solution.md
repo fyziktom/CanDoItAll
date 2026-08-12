@@ -55,3 +55,19 @@ Process strategies declare required stable capability IDs. Processes decides:
 - how receipts/evidence/recovery/escalation are interpreted.
 
 Host adapters report facts and execute authorized plans; they do not decide process meaning.
+
+## Authoritative boundary map
+
+| Responsibility | Authoritative owner | Consumers | Forbidden drift |
+|---|---|---|---|
+| Typed local execution facts | AgentFramework execution primitive | Workspace commands, MCP adapters, tools, plugins, Manager adapters | Domain eligibility or process meaning in the host |
+| Executable and environment policy | Capability-owning compiler plus shared host-correct primitives | All local launch surfaces | Universal case-insensitive or Windows-suffix policy |
+| Runtime-node intent and terminal presentation | Workbench | UI and project-structure tools | Shell text used as a generic process protocol |
+| Supervision and host-process recovery | Manager | Watch and tuning operations | Name-only ownership or foreign-process termination |
+| MCP stdio session semantics | MCP runtime | MCP capabilities | A second generic process policy stack |
+| Plugin host recipes | Plugin capability owner | Approved plugins | Plugin-local process-host lifetime and generic OS policy |
+| Process eligibility, evidence, recovery meaning, and escalation | Processes | Process strategies and projections | MAF or Infrastructure deciding domain outcomes |
+| Native secret helper execution | Security | Vault providers | Migration into the generic runtime host without a security gate |
+| Desktop file launch | FileTools integration | Workbench operator actions | Support claims without tested external profiles |
+
+MAF may report execution facts and enforce generic invocation policy. It must not interpret those facts as process-domain success, recovery eligibility, escalation, or evidence sufficiency. Infrastructure remains an inward technical boundary and does not acquire process semantics.

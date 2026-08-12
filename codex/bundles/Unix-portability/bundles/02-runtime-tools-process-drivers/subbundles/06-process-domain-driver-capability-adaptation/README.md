@@ -56,7 +56,7 @@ The current ProcessDriverLayer.Platform can support platform-aware strategy comp
 
 ## Entry gate
 
-- Status before execution: `Blocked by B05`
+- Status before execution: `Eligible — Gate R3b GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -69,7 +69,9 @@ The current ProcessDriverLayer.Platform can support platform-aware strategy comp
 
 ## Status
 
-- `Blocked by B05`
+- `Completed — Gate R3 GO`
+
+The governed Windows/Linux evidence package is frozen under `artifacts/unix-portability/B06`, and independent review 25 records Gate R3 GO. Actual macOS and hosted CI remain explicit B07 boundaries under the operator's deferral instruction.
 
 ## Handoff
 

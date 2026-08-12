@@ -16,8 +16,10 @@ public sealed class ProcessProductRootResolverPortabilityTests
             ["ProductRoot"] = foreignRoot
         };
 
-        Assert.False(ProcessProductRootResolver.TryResolveInspectableProductRoot(variables, out var resolved));
-        Assert.Equal(string.Empty, resolved);
+        var resolution = ProcessProductRootResolver.ResolveInspectableProductRoot(variables);
+
+        Assert.Equal(ProcessProductRootResolutionKind.Invalid, resolution.Kind);
+        Assert.Equal(string.Empty, resolution.ProductRoot);
     }
 
     [Fact]
@@ -39,20 +41,20 @@ public sealed class ProcessProductRootResolverPortabilityTests
     }
 
     [Fact]
-    public void Required_product_path_rejects_unresolved_versioned_alias_explicitly()
+    public void Required_product_path_preserves_versioned_alias_for_owner_resolution()
     {
         var root = TestFileSystem.CreateTemporaryRoot("process-product-alias");
         try
         {
             var alias = "external-target/v1/0123456789abcdef01234567/child";
 
-            Assert.False(ProcessProductRootResolver.TryResolveRequiredProductPath(
+            Assert.True(ProcessProductRootResolver.TryResolveRequiredProductPath(
                 root,
                 alias,
                 out var resolved,
-                out var invalidReason));
-            Assert.Equal(string.Empty, resolved);
-            Assert.Contains("external-target alias", invalidReason, StringComparison.Ordinal);
+                out var invalidReason),
+                invalidReason);
+            Assert.Equal(alias, resolved);
         }
         finally
         {

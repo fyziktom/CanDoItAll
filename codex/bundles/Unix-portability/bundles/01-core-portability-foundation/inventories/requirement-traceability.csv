@@ -63,4 +63,4 @@ CI-003,P0,A07,Implemented — Ubuntu restart passes; genuine macOS pending hoste
 CI-004,P1,A07,Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI
 CI-005,P0,A07,Satisfied locally — exact-commit hosted Windows confirmation pending
 CI-006,P1,A07,Implemented and locally enforced — hosted static check pending
-CI-007,P0,A07,Blocked — C4 requires an exact pushed commit and hosted evidence
+CI-007,P0,A07,Satisfied for implementation progression only — exact pushed anchors recorded; C4 remains deferred

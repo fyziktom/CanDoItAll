@@ -76,6 +76,38 @@ public sealed class WorkspacePathResolverGuardTests
         }
     }
 
+    [Fact]
+    public void Unix_absolute_paths_preserve_significant_trailing_spaces()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("workspace-path-space");
+
+        try
+        {
+            string workspaceDirectory = Directory.CreateDirectory(
+                Path.Combine(workspaceRoot, "workspace folder ")).FullName;
+            string managedDirectory = Directory.CreateDirectory(
+                Path.Combine(workspaceRoot, "managed-files", "managed folder ")).FullName;
+            var sut = CreateSut(workspaceRoot);
+
+            WorkspacePathAccessResult workspaceResult = sut.ResolveWorkspacePath(workspaceDirectory);
+            WorkspacePathAccessResult managedResult = sut.ResolveManagedFilePath(managedDirectory);
+
+            Assert.True(workspaceResult.IsSuccess);
+            Assert.Equal(workspaceDirectory, workspaceResult.FullPath);
+            Assert.True(managedResult.IsSuccess);
+            Assert.Equal(managedDirectory, managedResult.FullPath);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     private static IWorkspacePathAccessGuard CreateSut(string workspaceRoot)
         => new WorkspacePathAccessGuard(
             new TestWorkspacePathResolver(workspaceRoot),

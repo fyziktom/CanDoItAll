@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
@@ -41,7 +42,14 @@ public sealed class ProcessPersistenceStoreTests
         Assert.Contains(loaded.AvailableArtifactSlots, slot => slot == RequiredArtifactSlotId);
         var loadedStep = Assert.Single(loaded.Steps);
         Assert.Contains(loadedStep.ProducedArtifactSlots, slot => slot == RequiredArtifactSlotId);
-        Assert.Contains(loadedStep.RequiredRuntimeToolNames, toolName => toolName == "runtime-tool");
+        Assert.Contains(loadedStep.RequiredRuntimeToolNames, toolName => toolName == "runtime_tool");
+        Assert.Contains(
+            loadedStep.RequiredHostCapabilities,
+            capability => capability == ProcessHostCapabilityIds.ManagedProcessAdapter);
+        var reloadedDispatchContract = ProcessRuntimeArtifactContracts.BuildStepContract(loaded, loadedStep);
+        Assert.Contains(
+            ProcessHostCapabilityIds.ManagedProcessAdapter,
+            reloadedDispatchContract.RequiredHostCapabilities);
         var loadedInputArtifact = Assert.Single(loaded.ConnectedInputArtifacts);
         Assert.Equal(ProcessArtifactInputAvailability.Available, loadedInputArtifact.Availability);
         Assert.Equal(RequiredArtifactSlotId, loadedInputArtifact.RequiredSlotId);
@@ -69,6 +77,231 @@ public sealed class ProcessPersistenceStoreTests
         var persistedPlan = await new EfProcessInstancePlanStore(dbContext).LoadAsync(plan.Header.PlanId);
         Assert.NotNull(persistedPlan);
         Assert.Equal(plan.PlanHash, persistedPlan.PlanHash);
+    }
+
+    [Fact]
+    public async Task Plan_store_rejects_payload_tampering_even_when_persisted_hash_fields_are_unchanged()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessInstancePlanStore(dbContext);
+        var plan = NewInitialPlan();
+        await store.PersistAsync(plan);
+        var entity = await dbContext.InstancePlans.SingleAsync();
+        var payload = JsonNode.Parse(entity.PayloadJson)?.AsObject()
+            ?? throw new InvalidOperationException("The persisted plan payload must be a JSON object.");
+        payload["steps"]!.AsArray()[0]!["requiredHostCapabilities"] = new JsonArray(
+            JsonValue.Create(ProcessHostCapabilityIds.PythonRuntime.Value));
+        entity.PayloadJson = payload.ToJsonString();
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.LoadAsync(plan.Header.PlanId).AsTask());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Plan_store_rejects_null_or_duplicate_set_payload(bool useNull)
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessInstancePlanStore(dbContext);
+        var plan = NewInitialPlan();
+        await store.PersistAsync(plan);
+        var entity = await dbContext.InstancePlans.SingleAsync();
+        var payload = JsonNode.Parse(entity.PayloadJson)?.AsObject()
+            ?? throw new InvalidOperationException("The persisted plan payload must be a JSON object.");
+        payload["steps"]!.AsArray()[0]!["requiredHostCapabilities"] = useNull
+            ? null
+            : new JsonArray(
+                JsonValue.Create(ProcessHostCapabilityIds.PythonRuntime.Value),
+                JsonValue.Create(ProcessHostCapabilityIds.PythonRuntime.Value));
+        entity.PayloadJson = payload.ToJsonString();
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAnyAsync<Exception>(() => store.LoadAsync(plan.Header.PlanId).AsTask());
+    }
+
+    [Fact]
+    public async Task Commit_rejects_oversized_step_host_capability_contract_before_database_write()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var step = Assert.Single(request.Mutation.State.Steps) with
+        {
+            RequiredHostCapabilities = Enumerable.Range(0, 33)
+                .Select(index => new ProcessHostCapabilityId($"host.test.capability-{index:D2}"))
+                .ToHashSet()
+        };
+        var state = request.Mutation.State with { Steps = [step] };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with { State = state }
+        }));
+
+        Assert.Equal(0, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.RuntimeSteps.CountAsync());
+    }
+
+    [Fact]
+    public async Task Commit_rejects_oversized_step_runtime_tool_contract_before_database_write()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var step = Assert.Single(request.Mutation.State.Steps) with
+        {
+            RequiredRuntimeToolNames = Enumerable.Range(0, 65)
+                .Select(index => $"runtime_tool_{index:D2}")
+                .ToArray()
+        };
+        var state = request.Mutation.State with { Steps = [step] };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with { State = state }
+        }));
+
+        Assert.Equal(0, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.RuntimeSteps.CountAsync());
+    }
+
+    [Fact]
+    public async Task Commit_rejects_noncanonical_step_runtime_tool_contract_before_database_write()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var step = Assert.Single(request.Mutation.State.Steps) with
+        {
+            RequiredRuntimeToolNames = [@"secret: C:\private\raw-tool-token"]
+        };
+        var state = request.Mutation.State with { Steps = [step] };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with { State = state }
+        }));
+
+        Assert.Equal(0, await dbContext.RuntimeStates.CountAsync());
+        Assert.Equal(0, await dbContext.RuntimeSteps.CountAsync());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Load_rejects_ambiguous_or_oversized_persisted_step_host_capability_contract(
+        bool duplicate)
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        await unitOfWork.CommitAsync(request);
+        var persistedStep = await dbContext.RuntimeSteps.SingleAsync();
+        persistedStep.RequiredHostCapabilitiesJson = duplicate
+            ? JsonSerializer.Serialize(new[] { "host.runtime.python", "HOST.RUNTIME.PYTHON" })
+            : JsonSerializer.Serialize(
+                Enumerable.Range(0, 33).Select(index => $"host.test.capability-{index:D2}").ToArray());
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    public async Task Load_rejects_blank_persisted_host_capabilities_instead_of_removing_required_gate(
+        string persistedValue)
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var step = Assert.Single(request.Mutation.State.Steps) with
+        {
+            RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+            {
+                ProcessHostCapabilityIds.PythonRuntime
+            }
+        };
+        request = request with
+        {
+            Mutation = request.Mutation with
+            {
+                State = request.Mutation.State with { Steps = [step] }
+            }
+        };
+        await unitOfWork.CommitAsync(request);
+        var persistedStep = await dbContext.RuntimeSteps.SingleAsync();
+        persistedStep.RequiredHostCapabilitiesJson = persistedValue;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+    }
+
+    [Fact]
+    public async Task Load_rejects_overlength_persisted_step_runtime_tool_contract()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        await unitOfWork.CommitAsync(request);
+        var persistedStep = await dbContext.RuntimeSteps.SingleAsync();
+        persistedStep.RequiredRuntimeToolNamesJson = JsonSerializer.Serialize(new[] { new string('x', 129) });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+    }
+
+    [Fact]
+    public async Task Load_rejects_noncanonical_persisted_step_runtime_tool_contract()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        await unitOfWork.CommitAsync(request);
+        var persistedStep = await dbContext.RuntimeSteps.SingleAsync();
+        persistedStep.RequiredRuntimeToolNamesJson = JsonSerializer.Serialize(
+            new[] { @"secret: C:\private\raw-persisted-tool-token" });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Load_rejects_null_json_step_requirement_contract(bool runtimeTools)
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        await unitOfWork.CommitAsync(request);
+        var persistedStep = await dbContext.RuntimeSteps.SingleAsync();
+        if (runtimeTools)
+        {
+            persistedStep.RequiredRuntimeToolNamesJson = "null";
+        }
+        else
+        {
+            persistedStep.RequiredHostCapabilitiesJson = "null";
+        }
+
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
     }
 
     [Fact]
@@ -177,12 +410,12 @@ public sealed class ProcessPersistenceStoreTests
             idempotencyKey,
             StrategyOutcome.NeedsManager,
             ProcessRuntimeStepStatus.Blocked,
-            "hash:blocked-result",
+            ReceiptHash("blocked-result"),
             [
                 new StrategyResultDiagnosticReceipt(
                     "process.runtime.test_blocked",
                     StrategyDiagnosticSensitivity.Normal,
-                    "hash:diagnostic",
+                    ReceiptHash("diagnostic"),
                     "Unit test blocked.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -196,7 +429,7 @@ public sealed class ProcessPersistenceStoreTests
                 new StrategyResultArtifactReceipt(
                     RequiredArtifactSlotId,
                     new ArtifactInstanceId(new Guid("9facff93-8f8b-4736-921e-916de95df35f")),
-                    "hash:artifact")
+                    ReceiptHash("artifact"))
             ],
             new ProcessRecoveryDecisionReceipt(
                 ProcessFailureCategory.MissingArtifact,
@@ -206,12 +439,20 @@ public sealed class ProcessPersistenceStoreTests
                 "Unit test recovery decision.")
             {
                 RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
-                ResponsibleStepInstanceId = stepId,
-                RelatedChildRunId = relatedChildRunId
+                ResponsibleStepInstanceId = stepId
             })
         {
             UserSafeSummary = "Persisted runtime recovery summary.",
-            ExecutionRunId = executionSafetyAttestation.ExecutionRunId
+            ExecutionRunId = executionSafetyAttestation.ExecutionRunId,
+            HostCapabilityEvidence = new ProcessHostCapabilityEvaluationEvidence(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.ManagedProcessAdapter,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.NotRegistered,
+                        ProcessHostExecutionPort.None)
+                ])
         };
         var state = request.Mutation.State with
         {
@@ -227,14 +468,15 @@ public sealed class ProcessPersistenceStoreTests
         var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
         Assert.Equal("Persisted runtime recovery summary.", persistedReceipt.UserSafeSummary);
         using var diagnosticsDocument = JsonDocument.Parse(persistedReceipt.DiagnosticsJson);
-        Assert.Equal(JsonValueKind.Array, diagnosticsDocument.RootElement.ValueKind);
+        Assert.Equal(JsonValueKind.Object, diagnosticsDocument.RootElement.ValueKind);
+        var persistedDiagnostics = diagnosticsDocument.RootElement.GetProperty("diagnostics");
         Assert.Equal(
             relatedChildRunId.Value,
-            diagnosticsDocument.RootElement[0].GetProperty("relatedChildRunId").GetGuid());
+            persistedDiagnostics[0].GetProperty("relatedChildRunId").GetGuid());
         Assert.Equal(
             executionSafetyAttestation.ExecutionRunId.Value,
-            diagnosticsDocument.RootElement[0].GetProperty("resultExecutionRunId").GetGuid());
-        var persistedAttestation = diagnosticsDocument.RootElement[0]
+            persistedDiagnostics[0].GetProperty("resultExecutionRunId").GetGuid());
+        var persistedAttestation = persistedDiagnostics[0]
             .GetProperty("executionSafetyAttestation");
         Assert.Equal(
             ProcessExecutionSafetyAttestor.AgentFrameworkExecutionLedger.ToString(),
@@ -245,10 +487,13 @@ public sealed class ProcessPersistenceStoreTests
         Assert.Equal(
             executionSafetyAttestation.EvidenceHash,
             persistedAttestation.GetProperty("evidenceHash").GetString());
-        using var recoveryDecisionDocument = JsonDocument.Parse(persistedReceipt.RecoveryDecisionJson!);
+        var persistedHostEvidence = diagnosticsDocument.RootElement.GetProperty("hostCapabilityEvidence");
+        Assert.Equal("linux", persistedHostEvidence.GetProperty("profileId").GetString());
         Assert.Equal(
-            relatedChildRunId.Value,
-            recoveryDecisionDocument.RootElement.GetProperty("relatedChildRunId").GetGuid());
+            ProcessHostCapabilityIds.ManagedProcessAdapter.Value,
+            persistedHostEvidence.GetProperty("capabilities")[0].GetProperty("id").GetString());
+        using var recoveryDecisionDocument = JsonDocument.Parse(persistedReceipt.RecoveryDecisionJson!);
+        Assert.False(recoveryDecisionDocument.RootElement.TryGetProperty("relatedChildRunId", out _));
 
         var loaded = await unitOfWork.LoadAsync(state.RunId);
         Assert.NotNull(loaded);
@@ -259,12 +504,19 @@ public sealed class ProcessPersistenceStoreTests
         Assert.Equal(relatedChildRunId, loadedDiagnostic.RelatedChildRunId);
         Assert.Equal(executionSafetyAttestation, loadedDiagnostic.ExecutionSafetyAttestation);
         Assert.Equal(executionSafetyAttestation.ExecutionRunId, loadedReceipt.ExecutionRunId);
+        Assert.NotNull(loadedReceipt.HostCapabilityEvidence);
+        Assert.Equal(
+            receipt.HostCapabilityEvidence!.ProfileId,
+            loadedReceipt.HostCapabilityEvidence.ProfileId);
+        Assert.Equal(
+            receipt.HostCapabilityEvidence.Capabilities,
+            loadedReceipt.HostCapabilityEvidence.Capabilities);
         Assert.Equal(RequiredArtifactSlotId, Assert.Single(loadedReceipt.ProducedArtifacts).SlotId);
         Assert.NotNull(loadedReceipt.RecoveryDecision);
         Assert.Equal(ProcessFailureCategory.MissingArtifact, loadedReceipt.RecoveryDecision.FailureCategory);
         Assert.Equal(ProcessRecoveryRouteKind.UpstreamStepRework, loadedReceipt.RecoveryDecision.RouteKind);
         Assert.Equal(stepId, loadedReceipt.RecoveryDecision.ResponsibleStepInstanceId);
-        Assert.Equal(relatedChildRunId, loadedReceipt.RecoveryDecision.RelatedChildRunId);
+        Assert.Null(loadedReceipt.RecoveryDecision.RelatedChildRunId);
     }
 
     [Fact]
@@ -284,7 +536,7 @@ public sealed class ProcessPersistenceStoreTests
             sourceReceipt.IdempotencyKey,
             sourceStepId,
             sourceStepId,
-            "sha256:missing-summary",
+            ReceiptHash("missing-summary"),
             ProcessRecoveryRouteKind.ChildRunPropagation,
             ProcessRuntimeBlockedRecoveryPhase.CompletedChildConsumer,
             Now)
@@ -357,6 +609,119 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
+    public async Task Commit_rejects_oversized_blocked_recovery_action_ledger_before_writing_state()
+    {
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var sourceReceipt = Assert.Single(request.Mutation.State.AppliedResults);
+        var actions = Enumerable.Range(0, 1025)
+            .Select(index => new ProcessRuntimeBlockedRecoveryActionReceipt(
+                StrategyResultIdempotencyKey.New(),
+                sourceReceipt.StepInstanceId,
+                sourceReceipt.StepInstanceId,
+                ReceiptHash($"blocked-action-{index:D4}"),
+                ProcessRecoveryRouteKind.ManagerAction,
+                ProcessRuntimeBlockedRecoveryPhase.CurrentStep,
+                Now))
+            .ToArray();
+        var state = request.Mutation.State with { BlockedRecoveryActions = actions };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with { State = state }
+        }));
+
+        Assert.Empty(dbContext.RuntimeStates);
+    }
+
+    [Fact]
+    public async Task Commit_rejects_secret_bearing_recovery_decision_before_writing_state()
+    {
+        const string secretSentinel = "password=raw-recovery-decision-token";
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        var sourceReceipt = Assert.Single(request.Mutation.State.AppliedResults);
+        var decision = new ProcessRecoveryDecisionReceipt(
+            ProcessFailureCategory.MissingCapability,
+            ProcessRecoveryDecisionKind.ManagerRequired,
+            "process.runtime.missing_capability",
+            "process.manager-review-required",
+            secretSentinel)
+        {
+            RouteKind = ProcessRecoveryRouteKind.ManagerAction,
+            ResponsibleStepInstanceId = sourceReceipt.StepInstanceId,
+            DiagnosticFingerprint = ReceiptHash("recovery-decision"),
+            AutomaticRetryAttempt = 1,
+            MaximumAutomaticRetryAttempts = 4,
+            SameDiagnosticFingerprintAttempt = 1,
+            MaximumSameDiagnosticFingerprintAttempts = 1
+        };
+        var state = request.Mutation.State with
+        {
+            AppliedResults = [sourceReceipt with { RecoveryDecision = decision }]
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.CommitAsync(request with
+        {
+            Mutation = request.Mutation with { State = state }
+        }));
+
+        Assert.DoesNotContain(secretSentinel, exception.Message, StringComparison.Ordinal);
+        Assert.Empty(dbContext.RuntimeStates);
+    }
+
+    [Fact]
+    public async Task Load_rejects_tampered_recovery_authority_without_disclosing_persisted_detail()
+    {
+        const string secretSentinel = "secret=raw-recovery-authority-token";
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+        await unitOfWork.CommitAsync(request);
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        var persistedStep = await dbContext.RuntimeSteps.SingleAsync();
+        persistedReceipt.RecoveryDecisionJson = JsonSerializer.Serialize(new
+        {
+            failureCategory = "MissingCapability",
+            decisionKind = "ManagerRequired",
+            sourceDiagnosticCode = "process.runtime.missing_capability",
+            policy = "process.manager-review-required",
+            safeReason = secretSentinel,
+            routeKind = "ManagerAction",
+            responsibleStepInstanceId = persistedStep.StepInstanceId,
+            diagnosticFingerprint = ReceiptHash("tampered-recovery-decision"),
+            automaticRetryAttempt = 1,
+            maximumAutomaticRetryAttempts = 4,
+            sameDiagnosticFingerprintAttempt = 1,
+            maximumSameDiagnosticFingerprintAttempts = 1
+        });
+        var persistedState = await dbContext.RuntimeStates.SingleAsync();
+        persistedState.BlockedRecoveryActionsJson = JsonSerializer.Serialize(new[]
+        {
+            new
+            {
+                sourceResultIdempotencyKey = persistedReceipt.IdempotencyKey,
+                sourceBlockedStepInstanceId = persistedStep.StepInstanceId,
+                targetStepInstanceId = persistedStep.StepInstanceId,
+                diagnosticFingerprint = secretSentinel,
+                recoveryRouteKind = "ManagerAction",
+                phase = "CurrentStep",
+                appliedAtUtc = Now
+            }
+        });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.DoesNotContain(secretSentinel, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("invalid", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Load_orders_receipts_by_applied_sequence_despite_reversed_persisted_order_and_nonchronological_keys()
     {
         var databaseName = $"process-persistence-restart-{Guid.NewGuid():N}";
@@ -392,7 +757,7 @@ public sealed class ProcessPersistenceStoreTests
                 IdempotencyKey = earlierReceiptKey.Value,
                 Outcome = StrategyOutcome.Succeeded.ToString(),
                 AppliedStepStatus = ProcessRuntimeStepStatus.Completed,
-                ResultHash = "hash:result-1",
+                ResultHash = ReceiptHash("result-1"),
                 AppliedSequence = 1,
                 DiagnosticsJson = "[]",
                 ProducedArtifactsJson = "[]"
@@ -478,12 +843,12 @@ public sealed class ProcessPersistenceStoreTests
         var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
         Assert.Null(persistedReceipt.UserSafeSummary);
         persistedReceipt.DiagnosticsJson =
-            """
+            $$"""
             [
               {
                 "code": "process.runtime.legacy_diagnostic",
                 "sensitivity": "Normal",
-                "evidenceHash": "hash:legacy-diagnostic",
+                "evidenceHash": "{{ReceiptHash("legacy-diagnostic")}}",
                 "safeSummary": "Legacy diagnostic summary.",
                 "retrySafety": "UnsafeToRetry",
                 "idempotency": "Idempotent"
@@ -512,12 +877,12 @@ public sealed class ProcessPersistenceStoreTests
 
         var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
         persistedReceipt.DiagnosticsJson =
-            """
+            $$"""
             [
               {
                 "code": "process.adapter.agent_transient_execution_before_side_effects",
                 "sensitivity": "Normal",
-                "evidenceHash": "sha256:stable-diagnostic",
+                "evidenceHash": "{{ReceiptHash("stable-diagnostic")}}",
                 "safeSummary": "Durable execution detail proved no recorded side effects.",
                 "retrySafety": "SafeToRetry",
                 "idempotency": "Idempotent",
@@ -538,6 +903,62 @@ public sealed class ProcessPersistenceStoreTests
         Assert.NotNull(loaded);
         var diagnostic = Assert.Single(Assert.Single(loaded.AppliedResults).Diagnostics);
         Assert.Null(diagnostic.ExecutionSafetyAttestation);
+    }
+
+    [Fact]
+    public async Task Load_rejects_tampered_strategy_receipt_before_exposing_persisted_detail()
+    {
+        const string secretSentinel = "password=raw-persisted-receipt-token";
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        persistedReceipt.UserSafeSummary = secretSentinel;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.DoesNotContain(secretSentinel, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("invalid", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Load_rejects_path_bearing_persisted_diagnostic_code_without_disclosure()
+    {
+        const string unsafeCode = @"C:\private\persisted-diagnostic";
+        await using var dbContext = CreateDbContext();
+        var unitOfWork = new EfProcessRuntimeUnitOfWork(dbContext);
+        var request = NewCommitRequest(includeArtifactLedger: false);
+
+        await unitOfWork.CommitAsync(request);
+
+        var persistedReceipt = await dbContext.StrategyResultReceipts.SingleAsync();
+        persistedReceipt.DiagnosticsJson =
+            $$"""
+            [
+              {
+                "code": "{{unsafeCode.Replace("\\", "\\\\", StringComparison.Ordinal)}}",
+                "sensitivity": "Normal",
+                "evidenceHash": "{{ReceiptHash("tampered-diagnostic")}}",
+                "safeSummary": "Bounded diagnostic summary.",
+                "retrySafety": "UnsafeToRetry",
+                "idempotency": "Idempotent"
+              }
+            ]
+            """;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => unitOfWork.LoadAsync(request.Mutation.State.RunId));
+
+        Assert.DoesNotContain(unsafeCode, exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("invalid", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1121,6 +1542,15 @@ public sealed class ProcessPersistenceStoreTests
         var store = new EfProcessInstancePlanStore(dbContext);
         var stepId = ProcessStepInstanceId.New();
         var stepDefinitionId = ProcessStepDefinitionId.New();
+        var profileId = new ProcessHostProfileId("linux-ci");
+        var hostCapabilities = new[]
+        {
+            new ProcessHostCapabilityFact(
+                ProcessHostCapabilityIds.ManagedProcessAdapter,
+                ProcessHostCapabilityAvailability.Available,
+                ProcessHostCapabilityReason.Ready,
+                ProcessHostExecutionPort.ManagedProcessAdapter)
+        };
         var binding = new ProcessStrategyBindingSnapshot(
             new DriverId("driver.persistence-test"),
             new StrategyId("strategy.persistence-test.execute"),
@@ -1129,7 +1559,11 @@ public sealed class ProcessPersistenceStoreTests
             RuntimeSchemaVersion,
             RuntimeSchemaVersion,
             "sha256:binding",
-            [new StrategyBindingInput(new StrategyBindingInputKey("operation"), "sha256:operation")]);
+            [new StrategyBindingInput(new StrategyBindingInputKey("operation"), "sha256:operation")])
+        {
+            HostProfileId = profileId,
+            HostCapabilities = hostCapabilities
+        };
         var plan = NewDispatchablePlan(stepId, stepDefinitionId, binding);
 
         await store.PersistAsync(plan);
@@ -1140,6 +1574,10 @@ public sealed class ProcessPersistenceStoreTests
         Assert.Equal(stepId, loadedStep.StepInstanceId);
         Assert.NotNull(loadedStep.ExecutionStrategyBinding);
         Assert.Equal(binding.StrategyId, loadedStep.ExecutionStrategyBinding.StrategyId);
+        Assert.Equal(profileId, loaded.DriverStack.HostProfileId);
+        Assert.Equal(hostCapabilities, loaded.DriverStack.HostCapabilities);
+        Assert.Equal(profileId, loadedStep.ExecutionStrategyBinding.HostProfileId);
+        Assert.Equal(hostCapabilities, loadedStep.ExecutionStrategyBinding.HostCapabilities);
         var state = new ProcessRuntimeStateSnapshot(
             ProcessRunId.New(),
             ProcessRunId.New(),
@@ -1261,6 +1699,45 @@ public sealed class ProcessPersistenceStoreTests
         Assert.Equal(ProcessCapabilityScopeTargetKind.RuntimeToolProviderKey, directive.Target.Kind);
         Assert.Equal("management.provider", directive.Target.Value);
         Assert.Equal("Do not implement product changes.", Assert.Single(loaded.CapabilityScope.InstructionFragments).Content);
+    }
+
+    [Fact]
+    public async Task Runtime_step_assignment_store_does_not_persist_malformed_allow_only_as_empty_scope()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessRuntimeStepAssignmentStore(dbContext);
+        var runId = ProcessRunId.New();
+        var assignment = NewAssignment(runId, new Dictionary<string, string>()) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                Directives =
+                [
+                    new ProcessCapabilityScopeDirective
+                    {
+                        Kind = ProcessCapabilityScopeDirectiveKind.AllowOnly,
+                        Target = new ProcessCapabilityScopeTarget
+                        {
+                            Kind = ProcessCapabilityScopeTargetKind.Unspecified
+                        }
+                    }
+                ]
+            }
+        };
+
+        await SeedAssignmentsAsync(dbContext, assignment);
+        var persisted = await dbContext.RuntimeStepAssignments.SingleAsync(entity => entity.RunId == runId.Value);
+        var loaded = await store.LoadAsync(runId, assignment.StepInstanceId);
+
+        Assert.NotEqual("{}", persisted.CapabilityScopeJson);
+        Assert.Contains(
+            ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker,
+            persisted.CapabilityScopeJson,
+            StringComparison.Ordinal);
+        Assert.NotNull(loaded);
+        Assert.Equal(
+            ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker,
+            Assert.Single(loaded!.CapabilityScope.RequiredReceipts).ToolName);
     }
 
     [Fact]
@@ -1842,7 +2319,11 @@ public sealed class ProcessPersistenceStoreTests
                     StrategyResultIdempotencyKey.New())
                 {
                     ProducedArtifactSlots = new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
-                    RequiredRuntimeToolNames = ["runtime-tool"]
+                    RequiredRuntimeToolNames = ["runtime_tool"],
+                    RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+                    {
+                        ProcessHostCapabilityIds.ManagedProcessAdapter
+                    }
                 }
             ],
             [],
@@ -1853,7 +2334,7 @@ public sealed class ProcessPersistenceStoreTests
                     StrategyResultIdempotencyKey.New(),
                     StrategyOutcome.Succeeded,
                     ProcessRuntimeStepStatus.Completed,
-                    "hash:result")
+                    ReceiptHash("result"))
             ],
             new HashSet<ArtifactSlotId> { RequiredArtifactSlotId },
             updatedAtUtc)
@@ -1901,11 +2382,14 @@ public sealed class ProcessPersistenceStoreTests
             idempotencyKey,
             StrategyOutcome.Succeeded,
             ProcessRuntimeStepStatus.Completed,
-            $"hash:result-{appliedSequence}")
+            ReceiptHash($"result-{appliedSequence}"))
         {
             AppliedSequence = appliedSequence
         };
     }
+
+    private static string ReceiptHash(string value)
+        => ProcessPlanHasher.ComputeContentHash(value);
 
     private static ProcessRuntimeStateSnapshot NewParentState(
         ProcessRunId runId,
@@ -2023,7 +2507,7 @@ public sealed class ProcessPersistenceStoreTests
         string planHash = "sha256:plan")
     {
         var actualPlanId = planId ?? ProcessInstancePlanId.New();
-        return new ProcessInstancePlan(
+        var plan = new ProcessInstancePlan(
             new ProcessInstancePlanHeader(
                 actualPlanId,
                 actualPlanId,
@@ -2050,7 +2534,11 @@ public sealed class ProcessPersistenceStoreTests
                         RuntimeSchemaVersion,
                         RuntimeSchemaVersion,
                         new HashSet<CapabilityTag> { new("test") })
-                ]),
+                ])
+            {
+                HostProfileId = binding.HostProfileId,
+                HostCapabilities = binding.HostCapabilities
+            },
             new StrategyBindingSet([binding], [], [], []),
             [
                 new StepInstancePlan(
@@ -2070,6 +2558,7 @@ public sealed class ProcessPersistenceStoreTests
             new MonitoringPlan(false, "sha256:projection"),
             new SecurityPlan("sha256:governance", []),
             planHash);
+        return plan with { PlanHash = ProcessPlanHasher.Compute(plan) };
     }
 
     private static ProcessInstancePlan NewInitialPlan()

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
 {
     [Fact]
@@ -622,7 +623,7 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
     }
 
     private sealed class LeaseProcessHost(string workspaceRoot) :
-        IWorkspaceProcessHost,
+        IWorkspaceLongRunningProcessHost,
         IAsyncDisposable
     {
         private readonly ConcurrentQueue<WorkspaceProcessExecutionRequest> requests = new();
@@ -678,10 +679,106 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
                 FailureMessage: string.Empty));
         }
 
+        public Task<IWorkspaceProcessSession> StartSessionAsync(
+            WorkspaceProcessSessionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            requests.Enqueue(new WorkspaceProcessExecutionRequest(
+                request.ToolName,
+                request.RecipeId,
+                request.ExecutablePath,
+                request.Arguments,
+                request.WorkingDirectory,
+                request.EnvironmentVariables,
+                TimeoutSeconds: 0,
+                StdoutLimitCharacters: request.StdoutLimitCharacters,
+                StderrLimitCharacters: request.StderrLimitCharacters,
+                StandardInput: request.StandardInput));
+            return Task.FromResult<IWorkspaceProcessSession>(new LeaseProcessSession(DescribeBoundary()));
+        }
+
+        public Task<WorkspaceProcessTerminationResult> TerminateOwnedProcessAsync(
+            WorkspaceOwnedProcessIdentity identity,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            requests.Enqueue(new WorkspaceProcessExecutionRequest(
+                "workspace_dotnet_stop",
+                "dotnet_stop",
+                "dotnet",
+                [],
+                workspaceRoot,
+                new Dictionary<string, string?>(),
+                TimeoutSeconds: 0,
+                StdoutLimitCharacters: 0,
+                StderrLimitCharacters: 0));
+            return Task.FromResult(new WorkspaceProcessTerminationResult(
+                WorkspaceProcessTerminationStatus.Terminated,
+                ResidualProcessPossible: false,
+                "Owned process terminated."));
+        }
+
         public ValueTask DisposeAsync()
         {
             IsDisposed = true;
             return ValueTask.CompletedTask;
+        }
+
+        private sealed class LeaseProcessSession(ExecutionBoundaryDescriptor boundary) : IWorkspaceProcessSession
+        {
+            private readonly DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
+
+            public WorkspaceOwnedProcessIdentity Identity { get; } = new(
+                12345,
+                DateTimeOffset.UtcNow,
+                new string('a', 64));
+
+            public bool HasExited => false;
+
+            public WorkspaceProcessOutputSnapshot CaptureOutput()
+                => new(
+                    "Now listening on: http://127.0.0.1",
+                    string.Empty,
+                    StdoutTruncated: false,
+                    StderrTruncated: false);
+
+            public Task<WorkspaceProcessExecutionResult> WaitForExitAsync(
+                CancellationToken cancellationToken = default)
+                => Task.FromResult(CreateResult(WorkspaceProcessTerminationReason.Completed));
+
+            public Task<WorkspaceProcessExecutionResult> TerminateAsync(
+                WorkspaceProcessTerminationReason reason,
+                string failureMessage,
+                CancellationToken cancellationToken = default)
+                => Task.FromResult(CreateResult(reason, failureMessage));
+
+            public WorkspaceOwnedProcessIdentity Detach()
+                => Identity;
+
+            public ValueTask DisposeAsync()
+                => ValueTask.CompletedTask;
+
+            private WorkspaceProcessExecutionResult CreateResult(
+                WorkspaceProcessTerminationReason reason,
+                string failureMessage = "")
+            {
+                var output = CaptureOutput();
+                return new WorkspaceProcessExecutionResult(
+                    Started: true,
+                    ExitCode: 0,
+                    output.Stdout,
+                    output.Stderr,
+                    output.StdoutTruncated,
+                    output.StderrTruncated,
+                    startedAtUtc,
+                    DateTimeOffset.UtcNow,
+                    TimedOut: false,
+                    boundary,
+                    failureMessage,
+                    reason,
+                    ResidualProcessPossible: false);
+            }
         }
     }
 

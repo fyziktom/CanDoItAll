@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -54,7 +55,16 @@ internal static class ProcessProductCompletionRuleParser
     internal static IReadOnlyList<string> ResolveUnconditionalProductCompletionRequiredToolReceipts(
         IReadOnlyDictionary<string, string> launchVariables,
         string stepKey)
-        => ResolveProductCompletionRequiredToolReceiptRules(launchVariables, stepKey)
+    {
+        var rules = ResolveProductCompletionRequiredToolReceiptRules(launchVariables, stepKey);
+        if (rules.Any(rule => ProcessRequiredRuntimeToolNames
+                .FromProductCompletionRequiredToolReceipts([rule.ToolReceipt])
+                .Contains(ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker, StringComparer.Ordinal)))
+        {
+            return [ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker];
+        }
+
+        return rules
             .Where(rule =>
                 rule.ApplicableBranchOutcomeKeys.Count == 0 &&
                 rule.SkippedBranchOutcomeKeys.Count == 0)
@@ -62,6 +72,7 @@ internal static class ProcessProductCompletionRuleParser
             .Where(receipt => !string.IsNullOrWhiteSpace(receipt))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
 
     internal static IReadOnlyList<string> ResolveProductMutationRequiredBranchOutcomeKeys(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -103,7 +114,7 @@ internal static class ProcessProductCompletionRuleParser
             using var document = JsonDocument.Parse(byStep);
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
-                return [];
+                return InvalidProductCompletionRequiredToolReceiptRules();
             }
 
             foreach (var property in document.RootElement.EnumerateObject())
@@ -118,7 +129,7 @@ internal static class ProcessProductCompletionRuleParser
         }
         catch (JsonException)
         {
-            return [];
+            return InvalidProductCompletionRequiredToolReceiptRules();
         }
 
         return [];
@@ -203,6 +214,11 @@ internal static class ProcessProductCompletionRuleParser
         }
         catch (JsonException)
         {
+            if (LooksLikeJsonContainer(value))
+            {
+                return InvalidProductCompletionRequiredToolReceiptRules();
+            }
+
             return value
                 .Split(['\r', '\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -222,28 +238,70 @@ internal static class ProcessProductCompletionRuleParser
     {
         if (element.ValueKind == JsonValueKind.String)
         {
-            return ParseProductCompletionRequiredToolReceiptRules(element.GetString() ?? string.Empty);
+            var value = element.GetString();
+            return string.IsNullOrWhiteSpace(value)
+                ? InvalidProductCompletionRequiredToolReceiptRules()
+                : ParseProductCompletionRequiredToolReceiptRules(value);
         }
 
         if (element.ValueKind == JsonValueKind.Object)
         {
             return TryReadProductCompletionRequiredToolReceiptRule(element, out var rule)
                 ? [rule]
-                : [];
+                : InvalidProductCompletionRequiredToolReceiptRules();
         }
 
         if (element.ValueKind != JsonValueKind.Array)
         {
-            return [];
+            return InvalidProductCompletionRequiredToolReceiptRules();
         }
 
-        return element
-            .EnumerateArray()
-            .SelectMany(ParseProductCompletionRequiredToolReceiptRuleElement)
+        var rules = new List<ProductCompletionRequiredToolReceiptRule>();
+        foreach (var item in element.EnumerateArray())
+        {
+            var parsed = ParseProductCompletionRequiredToolReceiptRuleElement(item);
+            if (parsed.Any(IsInvalidProductCompletionRequiredToolReceiptRule))
+            {
+                return InvalidProductCompletionRequiredToolReceiptRules();
+            }
+
+            rules.AddRange(parsed);
+        }
+
+        return rules
             .Where(rule => !string.IsNullOrWhiteSpace(rule.ToolReceipt))
             .GroupBy(BuildProductCompletionRequiredToolReceiptRuleIdentity, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToArray();
+    }
+
+    private static IReadOnlyList<ProductCompletionRequiredToolReceiptRule> InvalidProductCompletionRequiredToolReceiptRules()
+    {
+        return
+        [
+            new ProductCompletionRequiredToolReceiptRule(
+                ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker,
+                [],
+                [],
+                string.Empty,
+                "invalid-runtime-tool-contract",
+                string.Empty)
+        ];
+    }
+
+    private static bool IsInvalidProductCompletionRequiredToolReceiptRule(
+        ProductCompletionRequiredToolReceiptRule rule)
+        => string.Equals(
+            rule.ToolReceipt,
+            ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker,
+            StringComparison.Ordinal);
+
+    private static bool LooksLikeJsonContainer(string value)
+    {
+        var trimmed = value.TrimStart();
+        return trimmed.StartsWith('{') ||
+               trimmed.StartsWith('[') ||
+               trimmed.StartsWith('"');
     }
 
     private static string BuildProductCompletionRequiredToolReceiptRuleIdentity(

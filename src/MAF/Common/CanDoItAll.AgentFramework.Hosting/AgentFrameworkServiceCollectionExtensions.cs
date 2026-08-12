@@ -50,6 +50,7 @@ public static class AgentFrameworkServiceCollectionExtensions
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddSingleton<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<WorkspaceExecutableLocator>();
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider => new WorkspaceFileService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
@@ -62,6 +63,10 @@ public static class AgentFrameworkServiceCollectionExtensions
             resolvedScope,
             serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()));
         services.TryAddSingleton<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
+        services.TryAddSingleton<IWorkspaceLongRunningProcessHost>(serviceProvider =>
+            serviceProvider.GetRequiredService<IWorkspaceProcessHost>() as IWorkspaceLongRunningProcessHost
+            ?? throw new InvalidOperationException(
+                "The configured workspace process host does not implement managed process sessions."));
         services.TryAddScoped<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),

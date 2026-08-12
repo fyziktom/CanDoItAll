@@ -120,7 +120,12 @@ public enum CapabilityDiagnosticCategory
     ResourceCleanup,
     AccessPolicy,
     CapabilityUnavailable,
-    RequiredCapabilityDenied
+    RequiredCapabilityDenied,
+    RuntimeDependency,
+    PackageSetup,
+    WorkingDirectory,
+    UnsupportedPlatform,
+    PermissionDenied
 }
 
 public enum CapabilityValidationSeverity

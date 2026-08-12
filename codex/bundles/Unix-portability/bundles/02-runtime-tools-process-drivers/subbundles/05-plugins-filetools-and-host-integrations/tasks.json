@@ -5,7 +5,7 @@
   "title": "Plugins, FileTools, and host integrations",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by B04",
+  "status": "Completed — Gate R3b GO",
   "depends_on": [
     "B04"
   ],
@@ -38,7 +38,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -50,7 +50,7 @@
     {
       "id": "B05-T02",
       "title": "Separate Docker executable and daemon capability",
-      "description": "Probe executable, context/config, daemon/socket/remote endpoint, authorization, and recipe-specific capability without passing arbitrary Docker environment.",
+      "description": "Probe executable, context/config, daemon/socket/remote endpoint, authorization, and recipe-specific capability without passing arbitrary Docker environment; project the typed result through the asynchronous runtime executor catalog and execution gate.",
       "requirements": [
         "PLUG-001",
         "PLUG-002",
@@ -58,7 +58,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -70,7 +70,7 @@
     {
       "id": "B05-T03",
       "title": "Harden Docker environment and paths",
-      "description": "Use OS/tool-specific environment names with host case semantics; validate Docker config/root paths through Core C4 contracts and redact endpoint credentials.",
+      "description": "Use OS/tool-specific environment names with host case semantics; validate Docker config/root paths and scheme-specific local/remote endpoints through Core C4 contracts; reject endpoint credentials and redact normalized protected values.",
       "requirements": [
         "PLUG-001",
         "PLUG-002",
@@ -78,7 +78,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -90,7 +90,7 @@
     {
       "id": "B05-T04",
       "title": "Produce FileTools compatibility report",
-      "description": "Test package 0.1.18 on Windows, Ubuntu desktop/headless, macOS interactive/headless for open, reveal, preferred application, cancellation, unsupported state, and path safety.",
+      "description": "Test the exact direct-source FileTools development identity on Windows and Ubuntu headless for open, reveal, preferred application, cancellation, unsupported state, and path safety; keep actual macOS deferred and keep unvalidated package-mode desktop launching fail-closed until publication proof exists.",
       "requirements": [
         "PLUG-001",
         "PLUG-002",
@@ -98,7 +98,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -110,7 +110,7 @@
     {
       "id": "B05-T05",
       "title": "Quarantine or upgrade unsupported FileTools behavior",
-      "description": "If package support is missing or unsafe, disable the capability truthfully or create a separate package issue/change; do not reimplement its internals opportunistically in this bundle.",
+      "description": "Compile FileTools desktop launching as unavailable outside the validated direct-source mode until the package is published and separately proven; do not reimplement its internals opportunistically in this bundle.",
       "requirements": [
         "PLUG-001",
         "PLUG-002",
@@ -118,7 +118,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -138,7 +138,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -158,7 +158,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -170,7 +170,7 @@
     {
       "id": "B05-T08",
       "title": "Run plugin/desktop failure matrix",
-      "description": "Cover missing Docker, denied socket, remote host, missing desktop session, foreign executable preference, unsupported package, timeout, cancellation, and link-safe path open.",
+      "description": "Cover missing Docker, denied/socket/link endpoint, remote host, indeterminate Docker inventory, missing desktop session, foreign executable preference, unvalidated package mode, timeout, cancellation immediately before delegation, and link-safe path open.",
       "requirements": [
         "PLUG-001",
         "PLUG-002",
@@ -178,7 +178,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -198,7 +198,7 @@
         "PLUG-004",
         "PLUG-005"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3b GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

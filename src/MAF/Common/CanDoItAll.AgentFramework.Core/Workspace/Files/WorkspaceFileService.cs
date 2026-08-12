@@ -41,14 +41,30 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
     public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
         => queryService.ListFiles(relativePath, searchPattern, maxResults);
 
+    public WorkspaceFileListResult ListFiles(
+        string path,
+        string searchPattern,
+        int maxResults,
+        string authorityRootPath)
+        => queryService.ListFiles(path, searchPattern, maxResults, [authorityRootPath]);
+
     public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
         => queryService.SearchText(query, relativePath, maxResults);
 
     public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
         => queryService.ReadTextFile(path, maxCharacters);
 
+    public WorkspaceTextFileReadResult ReadTextFile(
+        string path,
+        int maxCharacters,
+        string authorityRootPath)
+        => queryService.ReadTextFile(path, maxCharacters, [authorityRootPath]);
+
     public WorkspacePathStatResult StatPath(string path)
         => queryService.StatPath(path);
+
+    public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
+        => queryService.StatPath(path, [authorityRootPath]);
 
     public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
     {

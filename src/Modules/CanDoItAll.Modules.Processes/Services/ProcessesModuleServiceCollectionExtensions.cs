@@ -123,6 +123,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<ProcessExecutionMetadataComposer>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRuntimeToolPreflightContribution, BrowserRuntimeToolPreflightContribution>());
         services.TryAddSingleton<ProcessRuntimeToolPreflightContributionCatalog>();
+        services.AddProcessHostCapabilityRuntime();
         services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceCommandReceiptLifecycleFactExtractor, DotNetWorkspaceCommandReceiptLifecycleFactExtractor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, WorkspaceProductTargetAliasLaunchVariableContributor>());
@@ -138,8 +139,10 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, BrowserInteractionToolReceiptPolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, DotNetToolReceiptPolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRuntimeToolPlanGuard, DotNetSolutionSetupRuntimeToolPlanGuard>());
+        services.TryAddScoped<ProcessProductFilesystemInspector>();
+        services.TryAddScoped<ProcessProductCompletionPathGate>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, WorkspaceProductSourceInspectionCompletionGateContribution>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, WorkspaceProductFilesystemCompletionGateContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessCompletionGateContribution, WorkspaceProductFilesystemCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessCompletionGateContribution, DotNetSolutionContextCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, BrowserRuntimeLifecycleCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, BrowserInteractiveAcceptanceCompletionGateContribution>());
@@ -168,6 +171,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessStepExecutionDriver>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
+        services.TryAddSingleton(new StandardProcessAdapterCompositionRegistration(
+            AgentFrameworkProcessExecutionAdapter.DriverDescriptor));
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
         services.TryAddScoped<AgentFrameworkProcessRuntimeUsageTelemetryReader>();
         services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, WorkflowAwareProcessRuntimeUsageTelemetryReader>();
@@ -251,6 +256,24 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<ProcessWorkspaceMockProjectionFactory>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
         services.AddSingleton<ProcessModuleRewriteState>(ProcessModuleRewriteState.Enabled);
+        return services;
+    }
+
+    public static IServiceCollection AddProcessHostCapabilityRuntime(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProcessHostCapabilitySource,
+            ManagedRuntimeProcessHostCapabilitySource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProcessHostCapabilitySource,
+            StandardProcessAdapterHostCapabilitySource>());
+        services.TryAddScoped<
+            IProcessHostCapabilitySnapshotProvider,
+            ProcessHostCapabilitySnapshotProvider>();
+
         return services;
     }
 

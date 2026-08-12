@@ -2,6 +2,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
@@ -77,6 +78,73 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
         Assert.Contains("dispatch lease", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("step execution timeout", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExecuteReady_reports_only_typed_not_found_for_an_absent_run()
+    {
+        var existingStepId = ProcessStepInstanceId.New();
+        var existingState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(existingStepId, ProcessRuntimeStepStatus.Pending)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(existingState);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            new RecordingRuntimeUnitOfWork(stateStore),
+            new InMemoryPlanStore(NewSingleStepPlan(existingStepId, "implementation")),
+            new InMemoryAssignmentStore([]),
+            new RecordingStrategyFactoryResolver("implementation"),
+            NewNoOpCatchupService());
+        var missingRunId = ProcessRunId.New();
+
+        var exception = await Assert.ThrowsAsync<ProcessRuntimeDispatchRunNotFoundException>(
+            () => service.ExecuteReadyAsync(missingRunId, "unit-test"));
+
+        Assert.Equal(missingRunId, exception.RunId);
+    }
+
+    [Fact]
+    public async Task ExecuteReady_rejects_state_plan_hash_drift_before_runtime_mutation_or_strategy_resolution()
+    {
+        var stepId = ProcessStepInstanceId.New();
+        var state = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:state-plan-drift",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Ready)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            Now);
+        var stateStore = new InMemoryRuntimeStateStore(state);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RecordingStrategyFactoryResolver("implementation");
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(Now),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(NewSingleStepPlan(stepId, "implementation")),
+            new InMemoryAssignmentStore([]),
+            strategyResolver,
+            NewNoOpCatchupService());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ExecuteReadyAsync(RunId, "unit-test"));
+
+        Assert.Contains("immutable plan", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(unitOfWork.Requests);
+        Assert.Empty(strategyResolver.ExecutionContexts);
     }
 
     [Fact]
@@ -347,10 +415,10 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             [
                 new ManagerSignal(
                     ProcessBranchSignalCodes.Outcome("feature-accepted"),
-                    "sha256:feature-accepted",
+                    ReceiptHash("feature-accepted"),
                     "Branch outcome selected: feature-accepted")
             ],
-            "sha256:recovered-feature-accepted");
+            ReceiptHash("recovered-feature-accepted"));
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -447,10 +515,10 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             [
                 new ManagerSignal(
                     ProcessBranchSignalCodes.Outcome(branchOutcomeKey),
-                    $"sha256:{branchOutcomeKey.ToLowerInvariant()}",
+                    ReceiptHash(branchOutcomeKey.ToLowerInvariant()),
                     $"Branch outcome selected: {branchOutcomeKey}")
             ],
-            "sha256:invalid-branch-outcome");
+            ReceiptHash("invalid-branch-outcome"));
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -614,6 +682,72 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     }
 
     [Fact]
+    public async Task ExecuteReady_blocks_custom_strategy_on_current_host_capability_loss_and_persists_evidence()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var requiredCapabilities = new HashSet<ProcessHostCapabilityId>
+        {
+            ProcessHostCapabilityIds.PythonRuntime
+        };
+        var plan = NewSingleStepPlan(stepId, "implementation");
+        plan = plan with
+        {
+            Steps =
+            [
+                plan.Steps.Single() with
+                {
+                    RequiredHostCapabilities = requiredCapabilities
+                }
+            ]
+        };
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            plan.PlanHash,
+            ProcessRuntimeStatus.Active,
+            [
+                NewStep(stepId, ProcessRuntimeStepStatus.Ready) with
+                {
+                    RequiredHostCapabilities = requiredCapabilities
+                }
+            ],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var unitOfWork = new RecordingRuntimeUnitOfWork(stateStore);
+        var strategyResolver = new RecordingStrategyFactoryResolver("must-not-run");
+        var unavailableFact = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Unavailable,
+            ProcessHostCapabilityReason.DependencyMissing,
+            ProcessHostExecutionPort.None);
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            unitOfWork,
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([]),
+            strategyResolver,
+            NewNoOpCatchupService(),
+            hostCapabilitySnapshotProvider: new StaticHostCapabilitySnapshotProvider(
+                new ProcessHostCapabilitySnapshot(
+                    new ProcessHostProfileId("linux-dispatch"),
+                    [unavailableFact])));
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.Equal(ProcessRuntimeStatus.Blocked, result.Status);
+        Assert.Empty(strategyResolver.ExecutionContexts);
+        var receipt = Assert.Single(stateStore.State.AppliedResults);
+        Assert.Equal(new ProcessHostProfileId("linux-dispatch"), receipt.HostCapabilityEvidence?.ProfileId);
+        Assert.Equal([unavailableFact], receipt.HostCapabilityEvidence?.Capabilities);
+    }
+
+    [Fact]
     public async Task ExecuteReady_releases_stale_pre_running_claim_before_dispatching_again()
     {
         var observedAtUtc = DateTimeOffset.UtcNow;
@@ -685,7 +819,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         var producedArtifact = new ProducedArtifactRef(
             ArtifactInstanceId.New(),
             producedArtifactSlotId,
-            "sha256:producer-artifact");
+            ReceiptHash("producer-artifact"));
         var plan = NewPlan(
         [
             (producerStepId, "feature-intake"),
@@ -866,6 +1000,46 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         Assert.Equal(1, FindStep(stateStore.State, stepId).AttemptNumber);
         Assert.Contains(stateStore.State.Claims, claim => claim.StepInstanceId == stepId && claim.Status == DispatchClaimStatus.Released);
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains("deferral failed", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ExecuteReady_sanitizes_and_bounds_deferred_strategy_diagnostics()
+    {
+        var observedAtUtc = DateTimeOffset.UtcNow;
+        var stepId = ProcessStepInstanceId.New();
+        var childRunId = ProcessRunId.New();
+        var plan = NewSingleStepPlan(stepId, "architecture-review");
+        var initialState = new ProcessRuntimeStateSnapshot(
+            RunId,
+            RunId,
+            PlanId,
+            "sha256:plan",
+            ProcessRuntimeStatus.Active,
+            [NewStep(stepId, ProcessRuntimeStepStatus.Pending)],
+            [],
+            [],
+            new HashSet<ArtifactSlotId>(),
+            observedAtUtc);
+        var stateStore = new InMemoryRuntimeStateStore(initialState);
+        var sensitiveMessage = $"password=raw-secret at C:\\private\\dispatch\\receipt.txt {new string('x', 3_000)}";
+        var service = new ProcessRuntimeDispatchApplicationService(
+            new TestProcessProjectionClock(observedAtUtc),
+            stateStore,
+            new RecordingRuntimeUnitOfWork(stateStore),
+            new InMemoryPlanStore(plan),
+            new InMemoryAssignmentStore([]),
+            new DeferredStrategyFactoryResolver(childRunId, sensitiveMessage),
+            NewNoOpCatchupService());
+
+        var result = await service.ExecuteReadyAsync(RunId, "unit-test");
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.All(result.Diagnostics, diagnostic => Assert.True(
+            ProcessPublicReceiptTextPolicy.IsSafe(
+                diagnostic,
+                ProcessPublicReceiptTextPolicy.MaximumPublicMessageLength)));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains("raw-secret", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains(@"C:\private\dispatch", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -1291,7 +1465,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
         var plan = NewSingleStepPlan(stepId, "targeted-validation");
-        var retryHash = "sha256:retryable-provider-timeout";
+        var retryHash = ReceiptHash("retryable-provider-timeout");
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -1356,7 +1530,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
         var plan = NewSingleStepPlan(stepId, "targeted-validation");
-        var retryHash = "sha256:retryable-provider-timeout-new-hash";
+        var retryHash = ReceiptHash("retryable-provider-timeout-new-hash");
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -1421,7 +1595,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
         var plan = NewSingleStepPlan(stepId, "capture-runtime-proof");
-        var retryHash = "sha256:transient-execution-timeout";
+        var retryHash = ReceiptHash("transient-execution-timeout");
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -1471,7 +1645,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         var observedAtUtc = DateTimeOffset.UtcNow;
         var stepId = ProcessStepInstanceId.New();
         var plan = NewSingleStepPlan(stepId, "capture-runtime-proof");
-        var retryHash = "sha256:transient-execution-loop";
+        var retryHash = ReceiptHash("transient-execution-loop");
         var initialState = new ProcessRuntimeStateSnapshot(
             RunId,
             RunId,
@@ -1653,7 +1827,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     {
         return new ProcessRuntimeStepState(
             stepId,
-            ProcessStepDefinitionId.New(),
+            new ProcessStepDefinitionId(stepId.Value),
             status,
             true,
             attemptNumber,
@@ -1693,7 +1867,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 StrategyResultIdempotencyKey.New(),
                 outcome,
                 appliedStepStatus,
-                resultHash ?? $"sha256:previous-{index}"));
+                ReceiptHash(resultHash ?? $"previous-{index}")));
         }
 
         return receipts;
@@ -1711,7 +1885,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 StrategyResultIdempotencyKey.New(),
                 StrategyOutcome.NeedsManager,
                 ProcessRuntimeStepStatus.Ready,
-                resultHash ?? $"sha256:previous-{index}",
+                ReceiptHash(resultHash ?? $"previous-{index}"),
                 recoveryDecision: new ProcessRecoveryDecisionReceipt(
                     ProcessFailureCategory.ProductCompletionGate,
                     ProcessRecoveryDecisionKind.SafeRetry,
@@ -1729,6 +1903,11 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         ProcessRuntimeStateSnapshot state,
         ProcessStepInstanceId stepId)
         => state.Steps.Single(step => step.StepInstanceId == stepId);
+
+    private static string ReceiptHash(string value)
+        => ProcessStrategyReceiptValuePolicy.IsSha256Digest(value)
+            ? value
+            : ProcessPlanHasher.ComputeContentHash(value);
 
     private static ProcessInstancePlan NewPlan()
         => NewPlan(
@@ -1820,7 +1999,14 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     private static StepInstancePlan NewPlanStep(
         ProcessStepInstanceId stepId,
         string stepKey)
-        => new(stepId, ProcessStepDefinitionId.New(), stepKey, ProcessStepKind.Activity, true, false, Binding);
+        => new(
+            stepId,
+            new ProcessStepDefinitionId(stepId.Value),
+            stepKey,
+            ProcessStepKind.Activity,
+            true,
+            false,
+            Binding);
 
     private static ProcessRuntimeStepAssignment NewAssignment(
         ProcessStepInstanceId stepId,
@@ -1896,6 +2082,14 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     private sealed class TestProcessProjectionClock(DateTimeOffset now) : IProcessProjectionClock
     {
         public DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class StaticHostCapabilitySnapshotProvider(
+        ProcessHostCapabilitySnapshot snapshot) : IProcessHostCapabilitySnapshotProvider
+    {
+        public ValueTask<ProcessHostCapabilitySnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(snapshot);
     }
 
     private sealed class InMemoryRuntimeStateStore : IProcessRuntimeStateStore
@@ -2094,14 +2288,19 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         }
     }
 
-    private sealed class DeferredStrategyFactoryResolver(ProcessRunId childRunId) : IProcessRuntimeStrategyFactoryResolver
+    private sealed class DeferredStrategyFactoryResolver(
+        ProcessRunId childRunId,
+        string? deferredMessage = null) : IProcessRuntimeStrategyFactoryResolver
     {
         public ValueTask<IProcessStrategyFactory> ResolveAsync(
             ProcessStrategyBindingSnapshot binding,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<IProcessStrategyFactory>(new DeferredStrategyFactory(binding, childRunId));
+            return ValueTask.FromResult<IProcessStrategyFactory>(new DeferredStrategyFactory(
+                binding,
+                childRunId,
+                deferredMessage));
         }
     }
 
@@ -2138,7 +2337,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
     private sealed class RetryableAdapterViolationThenSuccessStrategyFactoryResolver(
         string diagnosticCode = AdapterContractRetryDiagnosticCode,
         string diagnosticSummary = AdapterContractRetryDiagnosticSummary,
-        string resultHash = "sha256:retryable-missing-evidence") : IProcessRuntimeStrategyFactoryResolver
+        string resultHash = "retryable-missing-evidence") : IProcessRuntimeStrategyFactoryResolver
     {
         public int ExecutionCount { get; private set; }
 
@@ -2152,7 +2351,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 () => ++ExecutionCount,
                 diagnosticCode,
                 diagnosticSummary,
-                resultHash));
+                ReceiptHash(resultHash)));
         }
     }
 
@@ -2223,7 +2422,8 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
 
     private sealed class DeferredStrategyFactory(
         ProcessStrategyBindingSnapshot binding,
-        ProcessRunId childRunId) : IProcessStrategyFactory
+        ProcessRunId childRunId,
+        string? deferredMessage) : IProcessStrategyFactory
     {
         public ProcessStrategyDescriptor Descriptor { get; } = new(
             binding.StrategyId,
@@ -2236,7 +2436,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return ValueTask.FromResult<IProcessStrategy>(new DeferredStrategy(childRunId));
+            return ValueTask.FromResult<IProcessStrategy>(new DeferredStrategy(childRunId, deferredMessage));
         }
     }
 
@@ -2340,7 +2540,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [
                     new ManagerSignal(
                         ProcessBranchSignalCodes.Outcome(branchOutcomeKey),
-                        $"sha256:{branchOutcomeKey}",
+                        ReceiptHash(branchOutcomeKey),
                         $"Branch outcome selected: {branchOutcomeKey}")
                 ];
             return ValueTask.FromResult(new StrategyResultEnvelope(
@@ -2352,11 +2552,13 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [],
                 [],
                 managerSignals,
-                $"sha256:{resultKey}"));
+                ReceiptHash(resultKey)));
         }
     }
 
-    private sealed class DeferredStrategy(ProcessRunId childRunId) : IProcessStrategy
+    private sealed class DeferredStrategy(
+        ProcessRunId childRunId,
+        string? deferredMessage) : IProcessStrategy
     {
         public ValueTask<StrategyResultEnvelope> ExecuteAsync(
             ProcessStrategyExecutionContext context,
@@ -2364,7 +2566,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             throw new ProcessRuntimeDispatchDeferredException(
-                $"Step '{context.StepId}' is waiting for active child process run '{childRunId}'.",
+                deferredMessage ?? $"Step '{context.StepId}' is waiting for active child process run '{childRunId}'.",
                 childRunId);
         }
     }
@@ -2394,7 +2596,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [],
                 [],
                 [],
-                "sha256:ignored-cancellation");
+                ReceiptHash("ignored-cancellation"));
         }
     }
 
@@ -2447,7 +2649,7 @@ public sealed class ProcessRuntimeDispatchApplicationServiceTests
                 [],
                 [],
                 [],
-                "sha256:retryable-success"));
+                ReceiptHash("retryable-success")));
         }
     }
 

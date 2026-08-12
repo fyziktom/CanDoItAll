@@ -1,53 +1,53 @@
 requirement_id,priority,owner_subbundle,status
-RPREP-001,P0,B00,Planned
-RPREP-002,P0,B00,Planned
-RPREP-003,P0,B00,Planned
-RPREP-004,P1,B00,Planned
-EXEC-001,P0,B01,Planned
-EXEC-002,P0,B01,Planned
-EXEC-003,P0,B01,Planned
-EXEC-004,P0,B01,Planned
-EXEC-005,P0,B01,Planned
-EXEC-006,P0,B01,Planned
-EXEC-007,P1,B01,Planned
-EXEC-008,P1,B01,Planned
-NODE-001,P0,B02,Planned
-NODE-002,P0,B02,Planned
-NODE-003,P0,B02,Planned
-NODE-004,P1,B02,Planned
-NODE-005,P0,B02,Planned
-NODE-006,P1,B02,Planned
-NODE-007,P1,B02,Planned
-NODE-008,P0,B02,Planned
-MGR-001,P0,B03,Planned
-MGR-002,P1,B03,Planned
-MGR-003,P0,B03,Planned
-MGR-004,P0,B03,Planned
-MGR-005,P0,B03,Planned
-MGR-006,P1,B03,Planned
-MGR-007,P1,B03,Planned
-MCP-001,P0,B04,Planned
-MCP-002,P0,B04,Planned
-MCP-003,P1,B04,Planned
-MCP-004,P0,B04,Planned
-MCP-005,P1,B04,Planned
-TOOL-001,P0,B04,Planned
-TOOL-002,P0,B04,Planned
-PLUG-001,P0,B05,Planned
-PLUG-002,P1,B05,Planned
-PLUG-003,P0,B05,Planned
-PLUG-004,P1,B05,Planned
-PLUG-005,P1,B05,Planned
-PROC-001,P0,B06,Planned
-PROC-002,P0,B06,Planned
-PROC-003,P1,B06,Planned
-PROC-004,P0,B06,Planned
-PROC-005,P1,B06,Planned
-PROC-006,P1,B06,Planned
-RCI-001,P0,B07,Planned
-RCI-002,P1,B07,Planned
-RCI-003,P0,B07,Planned
-RCI-004,P0,B07,Planned
-RCI-005,P0,B07,Planned
-RCI-006,P0,B07,Planned
-RCI-007,P0,B07,Planned
+RPREP-001,P0,B00,Solved — Gate R0 GO
+RPREP-002,P0,B00,Solved — Gate R0 GO
+RPREP-003,P0,B00,Solved — Gate R0 GO
+RPREP-004,P1,B00,Solved — Gate R0 GO
+EXEC-001,P0,B01,Completed — Gate R1a GO
+EXEC-002,P0,B01,Completed — Gate R1a GO
+EXEC-003,P0,B01,Completed — Gate R1a GO
+EXEC-004,P0,B01,Completed — Gate R1a GO
+EXEC-005,P0,B01,Completed — Gate R1a GO
+EXEC-006,P0,B01,Completed — Gate R1a GO
+EXEC-007,P1,B01,Completed — Gate R1a GO
+EXEC-008,P1,B01,Completed — Gate R1a GO
+NODE-001,P0,B02,Completed — Workbench gate GO
+NODE-002,P0,B02,Completed — Workbench gate GO
+NODE-003,P0,B02,Completed — Workbench gate GO
+NODE-004,P1,B02,Completed — Workbench gate GO
+NODE-005,P0,B02,Completed — Workbench gate GO
+NODE-006,P1,B02,Completed — Workbench gate GO
+NODE-007,P1,B02,Completed — Workbench gate GO
+NODE-008,P0,B02,Completed — Workbench gate GO
+MGR-001,P0,B03,Completed — Gate R2 GO
+MGR-002,P1,B03,Completed — Gate R2 GO
+MGR-003,P0,B03,Completed — Gate R2 GO
+MGR-004,P0,B03,Completed — Gate R2 GO; actual macOS deferred
+MGR-005,P0,B03,Completed — Gate R2 GO
+MGR-006,P1,B03,Completed — Gate R2 GO
+MGR-007,P1,B03,Completed — Gate R2 GO
+MCP-001,P0,B04,Completed — Gate R3a GO; actual macOS deferred
+MCP-002,P0,B04,Completed — Gate R3a GO; actual macOS deferred
+MCP-003,P1,B04,Completed — Gate R3a GO; actual macOS deferred
+MCP-004,P0,B04,Completed — Gate R3a GO; actual macOS deferred
+MCP-005,P1,B04,Completed — Gate R3a GO; actual macOS deferred
+TOOL-001,P0,B04,Completed — Gate R3a GO; actual macOS deferred
+TOOL-002,P0,B04,Completed — Gate R3a GO; actual macOS deferred
+PLUG-001,P0,B05,Completed-Gate-R3b-GO
+PLUG-002,P1,B05,Completed-Gate-R3b-GO
+PLUG-003,P0,B05,Completed-Gate-R3b-GO
+PLUG-004,P1,B05,Completed-Gate-R3b-GO
+PLUG-005,P1,B05,Completed-Gate-R3b-GO
+PROC-001,P0,B06,Completed — Gate R3 GO
+PROC-002,P0,B06,Completed — Gate R3 GO
+PROC-003,P1,B06,Completed — Gate R3 GO
+PROC-004,P0,B06,Completed — Gate R3 GO
+PROC-005,P1,B06,Completed — Gate R3 GO
+PROC-006,P1,B06,Completed — Gate R3 GO
+RCI-001,P0,B07,In progress — active three-host CI configured; hosted aggregate deferred
+RCI-002,P1,B07,In progress — Windows browser proof green; hosted Unix browser proof deferred
+RCI-003,P0,B07,In progress — focused local-host proof retained; hosted aggregate deferred
+RCI-004,P0,B07,In progress — focused lifecycle and recovery proof retained; hosted aggregate deferred
+RCI-005,P0,B07,In progress — focused Process capability proof retained; hosted aggregate deferred
+RCI-006,P0,B07,Solved — focused Windows runtime regression and Core C4 preservation green
+RCI-007,P0,B07,In progress — local matrix published; Final Gate R4 deferred

@@ -19,7 +19,7 @@
         "command": "npx",
         "arguments": [
           "--yes",
-          "@playwright/mcp@latest",
+          "@playwright/mcp@0.0.78",
           "--headless",
           "--caps",
           "vision",
@@ -50,7 +50,7 @@
         "command": "npx",
         "arguments": [
           "--yes",
-          "@playwright/mcp@latest",
+          "@playwright/mcp@0.0.78",
           "--headless",
           "--caps",
           "vision",

@@ -8,7 +8,8 @@ namespace CanDoItAll.Processes.Runtime;
 public sealed partial class ProcessRuntimeEngine
 {
     private const string MissingBlockedDiagnosticCode = "process.runtime.blocked_without_diagnostics";
-    private const string MissingBlockedDiagnosticEvidenceHash = "sha256:missing-strategy-diagnostics";
+    private static readonly string MissingBlockedDiagnosticEvidenceHash =
+        ComputePayloadHash("missing-strategy-diagnostics");
     private const string MissingBlockedDiagnosticSummary =
         "Step blocked without strategy diagnostics. Inspect the result receipt, assignment, and execution observation for the missing cause.";
 

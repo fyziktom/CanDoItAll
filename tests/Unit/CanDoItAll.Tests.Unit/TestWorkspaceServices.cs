@@ -46,14 +46,16 @@ internal static class TestWorkspaceServices
         IWorkspaceProcessHost processHost,
         WorkspaceScopeDescriptor? workspaceScope = null,
         IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null,
-        IExternalTargetPathRegistry? externalTargetRegistry = null)
+        IExternalTargetPathRegistry? externalTargetRegistry = null,
+        Func<Uri, CancellationToken, Task<bool>>? dotnetReadinessProbe = null)
         => new(
             workspaceRoot,
             processHost,
             PhysicalPathPolicyFactory,
             workspaceScope,
             lifecycleFactExtractors,
-            externalTargetRegistry);
+            externalTargetRegistry,
+            dotnetReadinessProbe ?? (static (_, _) => Task.FromResult(true)));
 
     internal static WorkspaceImageOperationService CreateImageOperationService(
         string workspaceRoot,

@@ -1,6 +1,7 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
@@ -56,6 +57,47 @@ public sealed class ProcessLaunchAtomicCommitTests
     }
 
     [Fact]
+    public async Task Launch_seals_effective_step_capabilities_into_driver_stack_evidence()
+    {
+        var availablePython = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Available,
+            ProcessHostCapabilityReason.Ready,
+            ProcessHostExecutionPort.ManagedProcessHost);
+        var executorResolver = new AllStepsExecutorResolver(
+            ProcessHostCapabilityIds.PythonRuntime,
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux-launch"),
+                [availablePython]));
+        var unitOfWork = new RejectingUnitOfWork();
+        var service = new ProcessLaunchApplicationService(
+            new ProcessTemplatePackLoader(),
+            new TestClock(),
+            new TestDriverCatalogProvider(),
+            executorResolver,
+            new TrackingPlanStore(),
+            unitOfWork,
+            stateStore: null!,
+            assignmentStore: null!,
+            artifactInitializer: null!,
+            new GenericProcessStepBriefBuilder(),
+            dispatchQueue: null!,
+            projectionCatchupService: null!,
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
+
+        await service.LaunchAsync(NewLaunchRequest(execute: false));
+
+        var plan = Assert.IsType<ProcessInstancePlan>(unitOfWork.Request?.InitialPlan);
+        Assert.All(
+            plan.Steps.Where(step => step.IsExecutable),
+            step => Assert.Contains(ProcessHostCapabilityIds.PythonRuntime, step.RequiredHostCapabilities));
+        Assert.Equal(new ProcessHostProfileId("linux-launch"), plan.DriverStack.HostProfileId);
+        Assert.Equal([availablePython], plan.DriverStack.HostCapabilities);
+        Assert.Equal(ProcessPlanHasher.Compute(plan with { PlanHash = string.Empty }), plan.PlanHash);
+    }
+
+    [Fact]
     public async Task Launch_cancels_durable_run_when_artifact_initialization_fails()
     {
         var runtimeStore = new StatefulRuntimeStore();
@@ -78,6 +120,12 @@ public sealed class ProcessLaunchAtomicCommitTests
         Assert.Contains(
             result.Warnings,
             diagnostic => diagnostic.Contains("artifact root", StringComparison.OrdinalIgnoreCase));
+        Assert.All(result.Warnings, warning => Assert.True(
+            ProcessPublicReceiptTextPolicy.IsSafe(
+                warning,
+                ProcessPublicReceiptTextPolicy.MaximumPublicMessageLength)));
+        Assert.DoesNotContain(result.Warnings, warning => warning.Contains("launch-secret", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Warnings, warning => warning.Contains(@"C:\private\launch", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -157,6 +205,57 @@ public sealed class ProcessLaunchAtomicCommitTests
             resolutionRequest.Definition.Key);
     }
 
+    [Fact]
+    public async Task Launch_preview_materializes_current_template_completion_receipts_before_resolution()
+    {
+        var executorResolver = new AllStepsExecutorResolver();
+        var service = new ProcessLaunchApplicationService(
+            new ProcessTemplatePackLoader(),
+            new TestClock(),
+            new TestDriverCatalogProvider(),
+            executorResolver,
+            new TrackingPlanStore(),
+            new RejectingUnitOfWork(),
+            stateStore: null!,
+            assignmentStore: null!,
+            artifactInitializer: null!,
+            new GenericProcessStepBriefBuilder(),
+            dispatchQueue: null!,
+            projectionCatchupService: null!,
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
+
+        await service.LaunchAsync(new ProcessLaunchRequest(
+            DefinitionKey: "blazor-app-delivery",
+            ProcessDefinitionId: null,
+            LiveRunProfileKey: null,
+            ProjectId: null,
+            ProjectNodeId: null,
+            RequestedBy: "unit-test",
+            Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+            RunReadiness: false,
+            Execute: false));
+
+        var request = Assert.IsType<ProcessLaunchExecutorResolutionRequest>(executorResolver.LastRequest);
+        var completionReceiptValues = request.StepVariablesByKey.Values
+            .Where(variables => variables.ContainsKey(
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts))
+            .Select(variables => variables[
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts])
+            .ToArray();
+        Assert.NotEmpty(completionReceiptValues);
+        Assert.Contains(
+            completionReceiptValues,
+            value => value.Contains(
+                ProcessProductToolReceiptRequirements.BrowserInteractionProof,
+                StringComparison.OrdinalIgnoreCase));
+        Assert.All(
+            completionReceiptValues,
+            value => Assert.DoesNotContain(
+                ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker,
+                ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(value)));
+    }
+
     private static ProcessLaunchApplicationService NewOperationalService(
         StatefulRuntimeStore runtimeStore,
         IProcessLaunchArtifactInitializer artifactInitializer,
@@ -218,7 +317,7 @@ public sealed class ProcessLaunchAtomicCommitTests
                 "1.0.0",
                 "runtime/1.0",
                 "runtime/1.0",
-                ProcessDriverLayer.Platform,
+                ProcessDriverLayer.Framework,
                 Capabilities,
                 [],
                 [],
@@ -239,7 +338,9 @@ public sealed class ProcessLaunchAtomicCommitTests
         }
     }
 
-    private sealed class AllStepsExecutorResolver : IProcessLaunchExecutorResolver
+    private sealed class AllStepsExecutorResolver(
+        ProcessHostCapabilityId? effectiveHostCapability = null,
+        ProcessHostCapabilitySnapshot? hostCapabilities = null) : IProcessLaunchExecutorResolver
     {
         public ProcessLaunchExecutorResolutionRequest? LastRequest { get; private set; }
 
@@ -272,7 +373,19 @@ public sealed class ProcessLaunchAtomicCommitTests
                         "Resolved by the focused launch test.");
                 })
                 .ToArray();
-            return ValueTask.FromResult(new ProcessLaunchExecutorResolution(bindings, []));
+            var effectiveHostCapabilitiesByStep = effectiveHostCapability is { } capability
+                ? request.Plan.Steps
+                    .Where(step => step.IsExecutable)
+                    .ToDictionary(
+                        step => step.StepKey,
+                        _ => (IReadOnlySet<ProcessHostCapabilityId>)new HashSet<ProcessHostCapabilityId> { capability },
+                        StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, IReadOnlySet<ProcessHostCapabilityId>>(StringComparer.OrdinalIgnoreCase);
+            return ValueTask.FromResult(new ProcessLaunchExecutorResolution(bindings, [])
+            {
+                EffectiveHostCapabilitiesByStep = effectiveHostCapabilitiesByStep,
+                HostCapabilities = hostCapabilities
+            });
         }
     }
 
@@ -373,7 +486,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             ProcessLaunchArtifactInitializationRequest request,
             CancellationToken cancellationToken = default)
         {
-            throw new IOException("Focused artifact initialization failure.");
+            throw new IOException(
+                $"password=launch-secret at C:\\private\\launch\\artifact-root.txt {new string('x', 3_000)}");
         }
     }
 

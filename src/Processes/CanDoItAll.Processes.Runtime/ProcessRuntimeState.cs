@@ -85,6 +85,9 @@ public sealed record ProcessRuntimeStepState(
 
     public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
 
+    public IReadOnlySet<ProcessHostCapabilityId> RequiredHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
+
     public IReadOnlyList<ProcessArtifactSlotDescriptor> ArtifactDescriptors { get; init; } = [];
 
     public IReadOnlyList<SubprocessArtifactMappingDescriptor> SubprocessArtifactMappings { get; init; } = [];
@@ -157,6 +160,8 @@ public sealed record StrategyResultReceipt
     public ProcessRecoveryDecisionReceipt? RecoveryDecision { get; init; }
 
     public ProcessExecutionRunId? ExecutionRunId { get; init; }
+
+    public ProcessHostCapabilityEvaluationEvidence? HostCapabilityEvidence { get; init; }
 }
 
 public sealed record StrategyResultDiagnosticReceipt(

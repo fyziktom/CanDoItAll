@@ -132,6 +132,8 @@ public sealed class ProcessRuntimeStepEntity
 
     public string RequiredRuntimeToolNamesJson { get; set; } = "[]";
 
+    public string RequiredHostCapabilitiesJson { get; set; } = "[]";
+
     public string ArtifactDescriptorsJson { get; set; } = "[]";
 
     public string SubprocessArtifactMappingsJson { get; set; } = "[]";

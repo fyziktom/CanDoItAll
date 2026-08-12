@@ -114,14 +114,48 @@ public partial class ProjectStructurePage
         }
 
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
-        if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
+        if (ProjectStructureNodeActionCapabilityResolver.IsRuntimeCapable(node))
         {
-            return BuildInspectorQuickAction(
-                "Run normally",
-                "Launch the resolved workspace command in PowerShell.",
-                "powershell",
-                "accent",
-                "runtime:open");
+            if (!RuntimeLauncher.IsAvailable || !runtimeLaunch.IsSuccess)
+            {
+                return BuildUnavailableRuntimeQuickAction(runtimeLaunch.Message);
+            }
+
+            if (RuntimeLauncher.IsRunning(node.Id))
+            {
+                return BuildInspectorQuickAction(
+                    "Stop",
+                    "Stop the process identity owned by this Workbench runtime node.",
+                    "stop_circle",
+                    "warn",
+                    "runtime:stop");
+            }
+
+            var capabilities = runtimeLaunch.EffectiveCapabilities;
+            if (capabilities.Direct.IsAvailable)
+            {
+                return BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Direct);
+            }
+
+            if (capabilities.Terminal.IsAvailable)
+            {
+                return BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Terminal);
+            }
+
+            if (capabilities.Elevation.IsAvailable)
+            {
+                return BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Elevated);
+            }
+
+            return BuildUnavailableRuntimeQuickAction(
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                        capabilities.Direct.Message,
+                        capabilities.Terminal.Message,
+                        capabilities.Elevation.Message
+                    }.Distinct(StringComparer.Ordinal)));
         }
 
         if (CanShowLocalOpen(node))
@@ -205,15 +239,25 @@ public partial class ProjectStructurePage
             return [];
         }
 
-        return
-        [
-            BuildInspectorQuickAction(
-                "Run as administrator",
-                "Launch the resolved workspace command in an elevated PowerShell window.",
-                "admin_panel_settings",
-                "warn",
-                "runtime:admin")
-        ];
+        var capabilities = runtimeLaunch.EffectiveCapabilities;
+        var actions = new List<ProjectStructureQuickActionButton>();
+        var primaryMode = ResolvePreferredRuntimeMode(capabilities);
+        if (capabilities.Direct.IsAvailable && primaryMode != ProjectStructureRuntimeLaunchMode.Direct)
+        {
+            actions.Add(BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Direct));
+        }
+
+        if (capabilities.Terminal.IsAvailable && primaryMode != ProjectStructureRuntimeLaunchMode.Terminal)
+        {
+            actions.Add(BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Terminal));
+        }
+
+        if (capabilities.Elevation.IsAvailable && primaryMode != ProjectStructureRuntimeLaunchMode.Elevated)
+        {
+            actions.Add(BuildRuntimeQuickAction(ProjectStructureRuntimeLaunchMode.Elevated));
+        }
+
+        return actions;
     }
 
     private static bool CanOpenRelatedProjectStructure(ProjectStructureNode node)
@@ -250,14 +294,62 @@ public partial class ProjectStructurePage
         string description,
         string icon,
         string tone,
-        string actionId)
+        string actionId,
+        bool isDisabled = false)
         => new(
             ProjectStructureQuickActionExecutionKind.InspectorAction,
             label,
             description,
             icon,
             tone,
-            ActionId: actionId);
+            ActionId: actionId,
+            IsDisabled: isDisabled);
+
+    private static ProjectStructureQuickActionButton BuildRuntimeQuickAction(
+        ProjectStructureRuntimeLaunchMode mode)
+        => mode switch
+        {
+            ProjectStructureRuntimeLaunchMode.Direct => BuildInspectorQuickAction(
+                "Run",
+                "Execute the typed runtime plan directly through the owned process host.",
+                "play_arrow",
+                "accent",
+                "runtime:open"),
+            ProjectStructureRuntimeLaunchMode.Terminal => BuildInspectorQuickAction(
+                "Open terminal",
+                "Present the typed runtime plan in the configured terminal.",
+                "terminal",
+                "sky",
+                "runtime:terminal"),
+            ProjectStructureRuntimeLaunchMode.Elevated => BuildInspectorQuickAction(
+                "Elevated launch",
+                "Start the typed runtime plan through the supported elevation capability.",
+                "admin_panel_settings",
+                "warn",
+                "runtime:admin"),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+        };
+
+    private static ProjectStructureQuickActionButton BuildUnavailableRuntimeQuickAction(string message)
+        => BuildInspectorQuickAction(
+            "Runtime unavailable",
+            string.IsNullOrWhiteSpace(message)
+                ? "No runtime launch capability is available on this host."
+                : message,
+            "block",
+            "warn",
+            string.Empty,
+            isDisabled: true);
+
+    private static ProjectStructureRuntimeLaunchMode? ResolvePreferredRuntimeMode(
+        ProjectStructureRuntimeLaunchCapabilities capabilities)
+        => capabilities.Direct.IsAvailable
+            ? ProjectStructureRuntimeLaunchMode.Direct
+            : capabilities.Terminal.IsAvailable
+                ? ProjectStructureRuntimeLaunchMode.Terminal
+                : capabilities.Elevation.IsAvailable
+                    ? ProjectStructureRuntimeLaunchMode.Elevated
+                    : null;
 
     private static ProjectStructureQuickActionButton BuildCommandQuickAction(
         string label,

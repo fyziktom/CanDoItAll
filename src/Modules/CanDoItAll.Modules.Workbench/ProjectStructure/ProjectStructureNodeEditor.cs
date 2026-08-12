@@ -179,6 +179,8 @@ internal static class ProjectStructureNodeEditor
                 metadata.Environment.EnvironmentName = ResolveString(inputValues, submittedKeys, "environmentName", metadata.Environment.EnvironmentName);
                 metadata.Environment.ProjectPath = ResolveString(inputValues, submittedKeys, "projectPath", metadata.Environment.ProjectPath);
                 metadata.Environment.WorkingDirectory = ResolveString(inputValues, submittedKeys, "workingDirectory", metadata.Environment.WorkingDirectory);
+                metadata.Environment.EntryPoint = ResolveString(inputValues, submittedKeys, "entryPoint", metadata.Environment.EntryPoint);
+                metadata.Environment.Arguments = ResolveString(inputValues, submittedKeys, "environmentArguments", metadata.Environment.Arguments);
                 metadata.Environment.LaunchProfileName = ResolveString(inputValues, submittedKeys, "launchProfileName", metadata.Environment.LaunchProfileName);
                 metadata.Environment.RuntimeProtocol = ResolveEnum(inputValues, submittedKeys, "runtimeProtocol", metadata.Environment.RuntimeProtocol);
                 metadata.Environment.LocalhostUrl = ResolveString(inputValues, submittedKeys, "localhostUrl", metadata.Environment.LocalhostUrl);
@@ -300,6 +302,8 @@ internal static class ProjectStructureNodeEditor
             "environmentName" => metadata.Environment?.EnvironmentName ?? string.Empty,
             "projectPath" => metadata.Environment?.ProjectPath ?? string.Empty,
             "workingDirectory" => metadata.Environment?.WorkingDirectory ?? string.Empty,
+            "entryPoint" => metadata.Environment?.EntryPoint ?? string.Empty,
+            "environmentArguments" => metadata.Environment?.Arguments ?? string.Empty,
             "launchProfileName" => metadata.Environment?.LaunchProfileName ?? string.Empty,
             "runtimeProtocol" => ToCamelCaseToken(metadata.Environment?.RuntimeProtocol),
             "localhostUrl" => metadata.Environment?.LocalhostUrl ?? string.Empty,

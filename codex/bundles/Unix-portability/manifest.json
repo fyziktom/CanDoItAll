@@ -35,7 +35,7 @@
       "core-portability-foundation",
       "runtime-tools-process-drivers"
     ],
-    "runtime_entry_dependency": "Core Gate C4 GO on an exact commit, followed by B00 rebase and ownership review"
+    "runtime_entry_dependency": "Core Gate C4 GO or an explicit immutable provisional handoff with deferred support claims, followed by B00 rebase and ownership review"
   },
   "support_targets": {
     "regression": [
@@ -79,8 +79,8 @@
     {
       "id": "runtime",
       "directory": "bundles/02-runtime-tools-process-drivers",
-      "status": "Prepared — blocked",
-      "first_eligible_subbundle": "B00 after C4",
+      "status": "In progress — Gate R3a GO; B05 eligible under provisional core and macOS-validation deferrals",
+      "first_eligible_subbundle": "B05 against the current working tree and independent Gate R3a review",
       "mandatory_subbundles": [
         "B00",
         "B01",
@@ -95,7 +95,7 @@
         "B90",
         "B91"
       ],
-      "entry_gate": "C4",
+      "entry_gate": "C4 or operator-authorized provisional core handoff",
       "final_gate": "R4"
     }
   ],

@@ -3,19 +3,16 @@
 ## Focused commands
 
 ```text
-dotnet restore ./CanDoItAll.slnx
+./tools/Validation/Test-RuntimePortability.ps1 -Configuration Release -ResultsDirectory ./artifacts/unix-portability/B07/windows -UseLocalCanDoItAllLibraries $true
 ```
 ```text
-dotnet build ./CanDoItAll.slnx -c Release --no-restore /m:1
+./tools/Validation/Test-RuntimePortability.ps1 -Configuration Release -ResultsDirectory ./artifacts/unix-portability/B07/windows -UseLocalCanDoItAllLibraries $true -Scope Unit
 ```
 ```text
-dotnet test ./CanDoItAll.slnx -c Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+./tools/Validation/Test-RuntimePortability.ps1 -Configuration Release -ResultsDirectory ./artifacts/unix-portability/B07/windows -UseLocalCanDoItAllLibraries $true -Scope Integration
 ```
 ```text
-dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --filter 'Category=UnixRuntimePortability'
-```
-```text
-dotnet test ./tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj -c Release --filter 'Category=UnixRuntimePortability'
+./tools/Validation/Test-RuntimePortability.ps1 -Configuration Release -ResultsDirectory ./artifacts/unix-portability/B07/windows -UseLocalCanDoItAllLibraries $true -Scope Browser
 ```
 ```text
 python ./scripts/validate_bundle.py --bundle-root . --repo-root <repo> --stage completed --bundle runtime
@@ -31,6 +28,8 @@ python ./scripts/validate_bundle.py --bundle-root . --repo-root <repo> --stage c
 - Redaction scan.
 - Source/reference/requirement update.
 - Independent review required by the active gate.
+
+The runner always uses `--no-build --no-restore`, validates the exact governed class set and expected case totals, and supports `Unit`, `Integration`, `Browser`, or `All`. Build once after source edits; rerun only the affected scope while iterating, then run `All` once for the final host artifact.
 
 ## Failure handling
 

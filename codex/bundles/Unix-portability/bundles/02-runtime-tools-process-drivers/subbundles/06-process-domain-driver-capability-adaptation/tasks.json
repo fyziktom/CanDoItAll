@@ -5,7 +5,7 @@
   "title": "Process-domain driver and special-tool capability adaptation",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by B05",
+  "status": "Completed — Gate R3 GO",
   "depends_on": [
     "B05"
   ],
@@ -40,7 +40,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -61,7 +61,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -82,7 +82,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -103,7 +103,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -124,7 +124,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -145,7 +145,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -166,7 +166,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -187,7 +187,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Implemented",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -208,7 +208,7 @@
         "PROC-005",
         "PROC-006"
       ],
-      "status": "Planned",
+      "status": "Completed — Gate R3 GO",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

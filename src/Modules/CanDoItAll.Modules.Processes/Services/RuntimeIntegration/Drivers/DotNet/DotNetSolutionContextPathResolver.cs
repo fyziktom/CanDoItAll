@@ -201,7 +201,7 @@ internal sealed class DotNetSolutionContextPathResolver(
         return TryCreateProductRootPolicy(productRoot, out productRootPolicy, out issue);
     }
 
-    private bool TryCreateProductRootPolicy(
+    internal bool TryCreateProductRootPolicy(
         string productRoot,
         out IPhysicalFileSystemPathPolicy productRootPolicy,
         out string issue)

@@ -61,14 +61,14 @@ Portable source changes are not support until active actual-host CI proves build
 
 ## Exit gate
 
-- Core Gate C4 is GO on an exact commit with active Windows/Ubuntu/macOS evidence.
+- Core Gate C4 is GO on an exact commit with active Windows/Ubuntu/macOS evidence, or remains explicitly deferred without a support claim while the operator-authorized implementation handoff is active.
 - All core P0 requirements are Solved and no critical finding remains open.
 - Rollback and recovery have been rehearsed.
-- Runtime bundle B00 is unblocked only against the C4 handoff anchor.
+- Runtime bundle B00 is unblocked only against the exact C4 or operator-authorized provisional handoff anchor.
 
 ## Status
 
-- `Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence`
+- `Implementation progression approved — C4 deferred under HOSTED-PORTABILITY-VALIDATION-001`
 
 ## Handoff
 

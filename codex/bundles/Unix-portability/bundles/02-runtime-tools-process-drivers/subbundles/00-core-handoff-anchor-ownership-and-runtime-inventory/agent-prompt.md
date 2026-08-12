@@ -4,7 +4,7 @@ You are the senior C# architect and implementation agent for **CanDoItAll Runtim
 
 ## Objective
 
-Rebase the runtime plan to the exact core-portability commit and reapprove ownership before touching process/runtime code.
+Rebase the runtime plan to the exact accepted core and sibling implementation anchors and reapprove ownership before touching process/runtime production code.
 
 ## Required reading
 
@@ -40,7 +40,7 @@ Rebase the runtime plan to the exact core-portability commit and reapprove owner
 
 ## Tasks
 
-- **B00-T01 — Verify Core C4 handoff:** Confirm exact passing commit, active CI, support matrix, migrations, open limitations, and no uncommitted operator work. Stop if the handoff is incomplete.
+- **B00-T01 — Verify accepted core handoff:** Confirm exact immutable anchors, local gate evidence, deferred hosted/macOS proof, support matrix, migrations, open limitations, and workspace state. Stop if the provisional handoff is incomplete or overclaims support.
 - **B00-T02 — Rebase all runtime source references:** Compare prepared commit and Core C4 HEAD; update renamed files/projects, new process/tool surfaces, and requirement ownership.
 - **B00-T03 — Generate full runtime execution inventory:** Find every ProcessStartInfo, Process, shell/script, terminal, executable resolver, environment binder, watcher, WMI/proc, MCP stdio, external tool, Docker/FileTools, and process-driver call path.
 - **B00-T04 — Map authoritative ownership:** For each surface record plan compiler, execution primitive, lifecycle owner, process registry, cancellation/kill, capability probe, receipt/evidence, UI presentation, recovery, and domain failure owner.
@@ -51,7 +51,7 @@ Rebase the runtime plan to the exact core-portability commit and reapprove owner
 
 ## Exit
 
-- Gate R0 is GO against the exact Core C4 commit.
+- Gate R0 is GO against the exact accepted core implementation anchors.
 - One owner exists for every runtime responsibility and no process-semantic rule is assigned to MAF/Infrastructure.
 - Split triggers were evaluated and recorded.
 - B01 is the only eligible implementation subbundle.

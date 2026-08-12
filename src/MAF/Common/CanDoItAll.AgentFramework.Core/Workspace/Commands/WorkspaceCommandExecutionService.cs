@@ -14,6 +14,7 @@ public sealed class WorkspaceCommandExecutionService :
     private readonly WorkspaceCommandProcessRunner processRunner;
     private readonly WorkspaceCommandReceiptWriter receiptWriter;
     private readonly WorkspaceExecutionRunProcessLeaseStore processLeaseStore;
+    private readonly WorkspaceDotnetProcessLifecycle? dotnetProcessLifecycle;
 
     public WorkspaceCommandExecutionService(
         string workspaceRoot,
@@ -21,7 +22,8 @@ public sealed class WorkspaceCommandExecutionService :
         IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         WorkspaceScopeDescriptor? workspaceScope = null,
         IEnumerable<IWorkspaceCommandReceiptLifecycleFactExtractor>? lifecycleFactExtractors = null,
-        IExternalTargetPathRegistry? externalTargetRegistry = null)
+        IExternalTargetPathRegistry? externalTargetRegistry = null,
+        Func<Uri, CancellationToken, Task<bool>>? dotnetReadinessProbe = null)
     {
         var pathPolicy = new WorkspacePathPolicy(
             workspaceRoot,
@@ -43,6 +45,13 @@ public sealed class WorkspaceCommandExecutionService :
             new WorkspaceExecutableLocator(),
             receiptWriter,
             pathPolicy);
+        dotnetProcessLifecycle = processHost is IWorkspaceLongRunningProcessHost longRunningProcessHost
+            ? new WorkspaceDotnetProcessLifecycle(
+                longRunningProcessHost,
+                processRunner,
+                pathPolicy,
+                dotnetReadinessProbe)
+            : null;
     }
 
     public ExecutionBoundaryDescriptor DescribeBoundary() => processRunner.DescribeBoundary();
@@ -187,8 +196,7 @@ public sealed class WorkspaceCommandExecutionService :
                 GetSafeFailureMessage(exception));
         }
 
-        if (!keepAlive ||
-            lifetimeScope != WorkspaceProcessLifetimeScope.ExecutionRun)
+        if (plan.DotnetRunLifecycle is null)
         {
             return await ExecutePlanAsync(
                 () => plan,
@@ -196,6 +204,24 @@ public sealed class WorkspaceCommandExecutionService :
                 recipeId,
                 "LocalExecution",
                 approvalRequired: false);
+        }
+
+        if (dotnetProcessLifecycle is null)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_run",
+                recipeId,
+                "LocalExecution",
+                approvalRequired: false,
+                "The configured workspace process host does not support managed long-running process sessions.");
+        }
+
+        if (!keepAlive ||
+            lifetimeScope != WorkspaceProcessLifetimeScope.ExecutionRun)
+        {
+            return await dotnetProcessLifecycle
+                .RunAsync(plan)
+                .ConfigureAwait(false);
         }
 
         WorkspaceExecutionRunProcessLeaseStore.ValidateAuditIdentity(auditScope!);
@@ -223,8 +249,8 @@ public sealed class WorkspaceCommandExecutionService :
         WorkspaceCommandExecutionResult result;
         try
         {
-            result = await processRunner
-                .ExecuteAsync(plan)
+            result = await dotnetProcessLifecycle
+                .RunAsync(plan)
                 .ConfigureAwait(false);
         }
         catch (Exception exception)
@@ -292,12 +318,35 @@ public sealed class WorkspaceCommandExecutionService :
         int timeoutSeconds,
         Guid? ownerExecutionRunId)
     {
-        var result = await ExecutePlanAsync(
-            () => planBuilder.BuildDotnetStop(startupReceiptPath, timeoutSeconds),
-            "workspace_dotnet_stop",
-            "dotnet_stop",
-            "LocalExecution",
-            approvalRequired: false);
+        WorkspaceCommandPlan plan;
+        try
+        {
+            plan = planBuilder.BuildDotnetStop(startupReceiptPath, timeoutSeconds);
+        }
+        catch (Exception exception) when (
+            WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_stop",
+                "dotnet_stop",
+                "LocalExecution",
+                approvalRequired: false,
+                GetSafeFailureMessage(exception));
+        }
+
+        if (dotnetProcessLifecycle is null)
+        {
+            return processRunner.CreateDeniedResult(
+                "workspace_dotnet_stop",
+                "dotnet_stop",
+                "LocalExecution",
+                approvalRequired: false,
+                "The configured workspace process host does not support owned-process termination.");
+        }
+
+        var result = await dotnetProcessLifecycle
+            .StopAsync(plan)
+            .ConfigureAwait(false);
         if (!result.Succeeded)
         {
             return result;
@@ -502,10 +551,11 @@ public sealed class WorkspaceCommandExecutionService :
             $"LocalExecution:{trustLevel}",
             approvalRequired);
 
-    public WorkspaceLocalMcpLaunchDescriptor PrepareLocalMcpServerLaunch(string capabilityName, string command, string[]? arguments = null, string? workingDirectory = null, IReadOnlyDictionary<string, string?>? environmentVariables = null, bool approvalRequired = true)
+    public WorkspaceLocalMcpLaunchDescriptor PrepareLocalMcpServerLaunch(string capabilityName, string command, string[]? arguments = null, string? workingDirectory = null, IReadOnlyDictionary<string, string?>? environmentVariables = null, bool approvalRequired = true, string? workingDirectoryDisplayPath = null, IReadOnlyCollection<string>? environmentVariableNames = null)
     {
         var normalizedArguments = NormalizeStructuredArguments(arguments);
         var mergedEnvironmentVariables = environmentPolicy.MergeEnvironmentVariables(environmentVariables);
+        var receiptWorkingDirectory = workingDirectoryDisplayPath ?? workingDirectory ?? ".";
 
         try
         {
@@ -527,7 +577,7 @@ public sealed class WorkspaceCommandExecutionService :
             if (!LocalMcpCommandPolicy.IsAllowed(normalizedCommand))
             {
                 throw WorkspaceCommandInputException.Create(
-                    $"Local MCP capability '{capabilityName}' uses command '{normalizedCommand}', which is outside the approved interpreter policy.",
+                    $"Local MCP capability '{capabilityName}' uses a command outside the approved interpreter policy.",
                     $"The local MCP command is outside the approved interpreter policy. Allowed commands: {LocalMcpCommandPolicy.DescribeAllowedCommands()}.");
             }
 
@@ -538,7 +588,7 @@ public sealed class WorkspaceCommandExecutionService :
                 recipeId: "local_mcp_launch",
                 riskClass: "LocalExecution:Mcp",
                 approvalRequired: approvalRequired,
-                workingDirectory: string.IsNullOrWhiteSpace(workingDirectory) ? "." : workingDirectory,
+                workingDirectory: receiptWorkingDirectory,
                 arguments: normalizedArguments,
                 targetPaths: [],
                 message: $"Prepared local MCP launch descriptor for '{capabilityName}'.",
@@ -548,8 +598,8 @@ public sealed class WorkspaceCommandExecutionService :
                 extraPayload: new
                 {
                     capabilityName,
-                    command = normalizedCommand,
-                    environmentVariableNames = mergedEnvironmentVariables.Keys
+                    command = Path.GetFileName(normalizedCommand),
+                    environmentVariableNames = (environmentVariableNames ?? mergedEnvironmentVariables.Keys)
                         .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                         .ToArray()
                 });
@@ -564,7 +614,8 @@ public sealed class WorkspaceCommandExecutionService :
                 RiskClass: "LocalExecution:Mcp",
                 Boundary: boundary,
                 Receipt: receipt,
-                Message: $"Prepared local MCP launch descriptor for '{capabilityName}'.");
+                Message: $"Prepared local MCP launch descriptor for '{capabilityName}'.",
+                IsAllowed: true);
         }
         catch (Exception exception) when (
             WorkspaceCommandFailureBoundary.TryGetSafeMessage(exception, out _))
@@ -576,6 +627,7 @@ public sealed class WorkspaceCommandExecutionService :
                 workingDirectory,
                 mergedEnvironmentVariables,
                 approvalRequired,
+                receiptWorkingDirectory,
                 GetSafeFailureMessage(exception));
         }
     }
@@ -655,6 +707,7 @@ public sealed class WorkspaceCommandExecutionService :
         string? workingDirectory,
         IReadOnlyDictionary<string, string?> environmentVariables,
         bool approvalRequired,
+        string receiptWorkingDirectory,
         string message)
     {
         var boundary = DescribeBoundary();
@@ -675,7 +728,7 @@ public sealed class WorkspaceCommandExecutionService :
             approvalMode: approvalRequired ? "Required" : "NotRequired",
             isolationGuarantee: WorkspaceCommandReceiptWriter.BuildBoundarySummary(boundary),
             requestSummary: WorkspaceCommandReceiptWriter.BuildArgumentsSummary(arguments),
-            workingDirectory: string.IsNullOrWhiteSpace(workingDirectory) ? "." : workingDirectory,
+            workingDirectory: receiptWorkingDirectory,
             exitSummary: "Denied");
 
         return new WorkspaceLocalMcpLaunchDescriptor(
@@ -688,15 +741,12 @@ public sealed class WorkspaceCommandExecutionService :
             RiskClass: "LocalExecution:Mcp",
             Boundary: boundary,
             Receipt: receipt,
-            Message: message);
+            Message: message,
+            IsAllowed: false);
     }
 
     private static IReadOnlyList<string> NormalizeStructuredArguments(string[]? arguments)
     {
-        return arguments?
-            .Where(argument => !string.IsNullOrWhiteSpace(argument))
-            .Select(argument => argument.Trim())
-            .ToArray()
-            ?? [];
+        return arguments?.ToArray() ?? [];
     }
 }

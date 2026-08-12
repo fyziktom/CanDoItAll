@@ -5,9 +5,9 @@
   "title": "Core handoff anchor, ownership review, and runtime inventory",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by Core Gate C4",
+  "status": "Completed — Gate R0 GO",
   "depends_on": [
-    "Core Gate C4"
+    "Core Gate C4 or operator-authorized provisional core handoff"
   ],
   "unlocks": [
     "B01"
@@ -29,15 +29,15 @@
   "tasks": [
     {
       "id": "B00-T01",
-      "title": "Verify Core C4 handoff",
-      "description": "Confirm exact passing commit, active CI, support matrix, migrations, open limitations, and no uncommitted operator work. Stop if the handoff is incomplete.",
+      "title": "Verify accepted core handoff",
+      "description": "Confirm exact immutable anchors, local gate evidence, deferred hosted/macOS proof, support matrix, migrations, open limitations, and workspace state. Stop if the provisional handoff is incomplete or overclaims support.",
       "requirements": [
         "RPREP-001",
         "RPREP-002",
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -56,7 +56,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -75,7 +75,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -94,7 +94,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -113,7 +113,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -132,7 +132,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -151,7 +151,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -170,7 +170,7 @@
         "RPREP-003",
         "RPREP-004"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

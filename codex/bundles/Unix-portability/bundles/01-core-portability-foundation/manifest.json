@@ -14,7 +14,7 @@
     "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
     "local_build_reproduction": false
   },
-  "status": "In progress — A07 local readiness GO; C4 pending exact-commit hosted evidence",
+  "status": "Implementation handoff approved — C4 hosted/macOS validation deferred",
   "first_eligible_subbundle": "A00",
   "final_gate": "C4",
   "requirements_count": 65,
@@ -73,7 +73,7 @@
       "directory": "subbundles/07-three-platform-ci-integration-restart-and-core-closure",
       "critical": true,
       "conditional": false,
-      "status": "Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence"
+      "status": "Implementation progression approved — C4 deferred under HOSTED-PORTABILITY-VALIDATION-001"
     },
     {
       "id": "A90",

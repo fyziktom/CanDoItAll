@@ -10,7 +10,7 @@ public sealed class ProjectStructureGraphAdapter
         CanvasWorkbenchUiState uiState,
         CanvasWorkbenchChrome chrome,
         ProjectStructureActionCatalogAdapter actionCatalog,
-        Func<ProjectStructureNode, bool>? canLaunchRuntime = null,
+        Func<ProjectStructureNode, ProjectStructureRuntimeLaunchCapabilities?>? resolveRuntimeCapabilities = null,
         Func<ProjectStructureNode, bool>? canOpenInFileExplorer = null,
         Func<ProjectStructureNode, bool>? canOpenInNewTab = null)
     {
@@ -39,7 +39,7 @@ public sealed class ProjectStructureGraphAdapter
                     selectedNodeIds,
                     selectedContextTargetCount,
                     actionCatalog,
-                    canLaunchRuntime,
+                    resolveRuntimeCapabilities,
                     canOpenInFileExplorer,
                     canOpenInNewTab))
                 .ToList(),
@@ -139,7 +139,7 @@ public sealed class ProjectStructureGraphAdapter
         IReadOnlySet<string> selectedNodeIds,
         int selectedContextTargetCount,
         ProjectStructureActionCatalogAdapter actionCatalog,
-        Func<ProjectStructureNode, bool>? canLaunchRuntime,
+        Func<ProjectStructureNode, ProjectStructureRuntimeLaunchCapabilities?>? resolveRuntimeCapabilities,
         Func<ProjectStructureNode, bool>? canOpenInFileExplorer,
         Func<ProjectStructureNode, bool>? canOpenInNewTab)
     {
@@ -203,7 +203,7 @@ public sealed class ProjectStructureGraphAdapter
             Annotations = ProjectStructureNodeAnnotationBuilder.Build(node).ToList(),
             ContextActions = actionCatalog.BuildNodeContextActions(
                 node,
-                canLaunchRuntime?.Invoke(node) == true,
+                resolveRuntimeCapabilities?.Invoke(node),
                 canOpenInFileExplorer?.Invoke(node) == true,
                 canOpenInNewTab?.Invoke(node) == true,
                 CountSelectedContextTargets(node.Id, selectedNodeIds, selectedContextTargetCount)).ToList()
@@ -402,5 +402,4 @@ public sealed class ProjectStructureGraphAdapter
         return expanded;
     }
 }
-
 

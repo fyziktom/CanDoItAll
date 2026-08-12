@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
@@ -10,6 +12,20 @@ internal interface IProcessRuntimeToolPreflightService
 {
     ValueTask<ProcessRuntimeToolPreflightResult> EvaluateAsync(
         ProcessRuntimeToolPreflightRequest request,
+        CancellationToken cancellationToken);
+
+    ValueTask<ProcessRuntimeToolPreflightResult> EvaluateHostCapabilitiesAsync(
+        IReadOnlyList<string> requiredRuntimeToolNames,
+        CancellationToken cancellationToken);
+
+    ValueTask<ProcessRuntimeToolPreflightResult> EvaluateRequiredHostCapabilitiesAsync(
+        IReadOnlyCollection<ProcessHostCapabilityId> requiredHostCapabilities,
+        CancellationToken cancellationToken);
+
+    ValueTask<ProcessRuntimeToolPreflightResult> EvaluateStepHostCapabilitiesAsync(
+        IReadOnlyList<string> declaredRuntimeToolNames,
+        IReadOnlyList<string> effectiveRuntimeToolNames,
+        IReadOnlyCollection<ProcessHostCapabilityId> requiredHostCapabilities,
         CancellationToken cancellationToken);
 }
 
@@ -30,7 +46,18 @@ internal sealed record ProcessRuntimeToolPreflightResult(
     public IReadOnlyList<ProcessRuntimeToolPlanGuardIssue> PlanIssues { get; init; } = [];
 
     public IReadOnlyList<AgentCapabilityDiagnostic> CapabilityDiagnostics { get; init; } = [];
+
+    public IReadOnlyList<ProcessRuntimeToolHostCapabilityFinding> HostCapabilityFindings { get; init; } = [];
+
+    public ProcessHostCapabilityEvaluationEvidence? HostCapabilityEvidence { get; init; }
 }
+
+internal sealed record ProcessRuntimeToolHostCapabilityFinding(
+    string RuntimeToolName,
+    ProcessHostCapabilityId CapabilityId,
+    ProcessHostCapabilityAvailability Availability,
+    ProcessHostCapabilityReason? Reason,
+    ProcessHostProfileId ProfileId);
 
 internal sealed record ProcessRuntimeToolPlanGuardEvaluation(
     string PolicyName,
@@ -46,6 +73,10 @@ internal interface IProcessRuntimeToolPlanGuard
 
 internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPreflightService
 {
+    private const int MaximumRequiredRuntimeTools = 64;
+    private const int MaximumRuntimeToolNameLength = 128;
+    private const int MaximumRequiredHostCapabilities = 32;
+
     private static readonly ProviderProfile PreflightProvider = new(
         Guid.Empty,
         "Runtime tool preflight",
@@ -68,11 +99,13 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
     private readonly IReadOnlyList<IAgentRuntimeToolProvider> runtimeToolProviders;
     private readonly IReadOnlyList<IProcessRuntimeToolPlanGuard> toolPlanGuards;
     private readonly ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions;
+    private readonly IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider;
 
     public ProcessRuntimeToolPreflightService(
         IEnumerable<IAgentRuntimeToolProvider> runtimeToolProviders,
         IEnumerable<IProcessRuntimeToolPlanGuard>? toolPlanGuards,
-        ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions)
+        ProcessRuntimeToolPreflightContributionCatalog toolPreflightContributions,
+        IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider = null)
     {
         ArgumentNullException.ThrowIfNull(runtimeToolProviders);
         ArgumentNullException.ThrowIfNull(toolPreflightContributions);
@@ -82,6 +115,7 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             .ToArray();
         this.toolPlanGuards = (toolPlanGuards ?? []).ToArray();
         this.toolPreflightContributions = toolPreflightContributions;
+        this.hostCapabilitySnapshotProvider = hostCapabilitySnapshotProvider;
     }
 
     public async ValueTask<ProcessRuntimeToolPreflightResult> EvaluateAsync(
@@ -89,6 +123,11 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        if (!IsBoundedRuntimeToolContract(request.RequiredRuntimeToolNames))
+        {
+            return InvalidRequirementContract("runtime-tool");
+        }
 
         var requiredToolNames = request.RequiredRuntimeToolNames
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
@@ -105,6 +144,47 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
         {
             return ProcessRuntimeToolPreflightResult.Satisfied;
         }
+
+        IReadOnlyCollection<ProcessHostCapabilityId> additionalHostCapabilities = [];
+        if (BrowserRuntimeToolPreflightContribution.RequiresCapabilityCatalog(
+                request.Agent,
+                requiredToolNames))
+        {
+            request = await ResolveCapabilityCatalogAsync(request, cancellationToken).ConfigureAwait(false);
+            var transportRequirement = BrowserRuntimeToolPreflightContribution.ResolveMcpTransportRequirement(
+                request.Agent,
+                requiredToolNames,
+                request.CapabilityCatalog ?? []);
+            if (transportRequirement == BrowserMcpTransportRequirement.Invalid)
+            {
+                return InvalidRequirementContract("browser-mcp-transport");
+            }
+
+            if (transportRequirement is BrowserMcpTransportRequirement.LocalStdio or
+                BrowserMcpTransportRequirement.LocalStdioNode)
+            {
+                additionalHostCapabilities =
+                    transportRequirement == BrowserMcpTransportRequirement.LocalStdioNode
+                        ?
+                        [
+                            ProcessHostCapabilityIds.LocalStdioMcp,
+                            ProcessHostCapabilityIds.NodeRuntime,
+                            ProcessHostCapabilityIds.NodePackageManager
+                        ]
+                        : [ProcessHostCapabilityIds.LocalStdioMcp];
+            }
+        }
+
+        var hostCapabilityResult = await EvaluateStepHostCapabilitiesAsync(
+            requiredToolNames,
+            requiredToolNames,
+            additionalHostCapabilities,
+            cancellationToken).ConfigureAwait(false);
+        if (!hostCapabilityResult.IsSatisfied)
+        {
+            return hostCapabilityResult;
+        }
+        var hostCapabilityEvidence = hostCapabilityResult.HostCapabilityEvidence;
 
         var contributionContext = new ProcessRuntimeToolPreflightContributionContext(
             request,
@@ -127,7 +207,10 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             .ToArray();
         if (capabilityDiagnostics.Length > 0)
         {
-            return CreateCapabilityFailure(capabilityDiagnostics);
+            return CreateCapabilityFailure(capabilityDiagnostics) with
+            {
+                HostCapabilityEvidence = hostCapabilityEvidence
+            };
         }
 
         var contextIntent = contributionContext.ContextIntent;
@@ -136,7 +219,7 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
         composedToolNames.UnionWith(contributionContext.ComposedToolNames);
         if (requiredToolNames.All(composedToolNames.Contains))
         {
-            return ProcessRuntimeToolPreflightResult.Satisfied;
+            return SatisfiedWithEvidence(hostCapabilityEvidence);
         }
 
         request = await ResolveCapabilityCatalogAsync(request, cancellationToken).ConfigureAwait(false);
@@ -144,7 +227,7 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             request.Agent,
             request.CapabilityCatalog ?? [],
             contextIntent);
-        var providerErrors = new List<string>();
+        var providerFailureCount = 0;
         foreach (var provider in runtimeToolProviders)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -168,8 +251,7 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                var providerKey = provider.Descriptor?.ProviderKey ?? provider.GetType().Name;
-                providerErrors.Add($"{providerKey}: {exception.Message}");
+                providerFailureCount++;
             }
         }
 
@@ -178,16 +260,181 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
             .ToArray();
         if (missingToolNames.Length == 0)
         {
-            return ProcessRuntimeToolPreflightResult.Satisfied;
+            return SatisfiedWithEvidence(hostCapabilityEvidence);
         }
 
-        var providerErrorSummary = providerErrors.Count == 0
+        var providerErrorSummary = providerFailureCount == 0
             ? string.Empty
-            : $" Provider errors: {string.Join("; ", providerErrors)}.";
+            : $" {providerFailureCount} runtime tool provider(s) failed during preflight; provider details were omitted from persisted diagnostics.";
         return new ProcessRuntimeToolPreflightResult(
             false,
             missingToolNames,
-            $"Required runtime tool(s) are not composed for this process step: {string.Join(", ", missingToolNames)}.{providerErrorSummary}");
+            $"Required runtime tool(s) are not composed for this process step: {string.Join(", ", missingToolNames)}.{providerErrorSummary}")
+        {
+            HostCapabilityEvidence = hostCapabilityEvidence
+        };
+    }
+
+    private static ProcessRuntimeToolPreflightResult SatisfiedWithEvidence(
+        ProcessHostCapabilityEvaluationEvidence? evidence)
+        => evidence is null
+            ? ProcessRuntimeToolPreflightResult.Satisfied
+            : new ProcessRuntimeToolPreflightResult(true, [], string.Empty)
+            {
+                HostCapabilityEvidence = evidence
+            };
+
+    public async ValueTask<ProcessRuntimeToolPreflightResult> EvaluateHostCapabilitiesAsync(
+        IReadOnlyList<string> requiredToolNames,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(requiredToolNames);
+        if (!IsBoundedRuntimeToolContract(requiredToolNames))
+        {
+            return InvalidRequirementContract("runtime-tool");
+        }
+
+        var requirements = requiredToolNames
+            .Select(toolName => (
+                ToolName: toolName,
+                CapabilityId: ProcessRuntimeToolHostCapabilityPolicy.Resolve(toolName)))
+            .Where(requirement => requirement.CapabilityId is not null)
+            .Select(requirement => (requirement.ToolName, CapabilityId: requirement.CapabilityId!.Value))
+            .ToArray();
+        return await EvaluateHostCapabilityRequirementsAsync(requirements, cancellationToken).ConfigureAwait(false);
+    }
+
+    public ValueTask<ProcessRuntimeToolPreflightResult> EvaluateRequiredHostCapabilitiesAsync(
+        IReadOnlyCollection<ProcessHostCapabilityId> requiredHostCapabilities,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(requiredHostCapabilities);
+        if (requiredHostCapabilities.Count > MaximumRequiredHostCapabilities ||
+            requiredHostCapabilities.Any(capabilityId => string.IsNullOrWhiteSpace(capabilityId.Value)))
+        {
+            return ValueTask.FromResult(InvalidRequirementContract("host-capability"));
+        }
+
+        var requirements = requiredHostCapabilities
+            .Distinct()
+            .OrderBy(capabilityId => capabilityId.Value, StringComparer.Ordinal)
+            .Select(capabilityId => (ToolName: capabilityId.Value, CapabilityId: capabilityId))
+            .ToArray();
+        return EvaluateHostCapabilityRequirementsAsync(requirements, cancellationToken);
+    }
+
+    public ValueTask<ProcessRuntimeToolPreflightResult> EvaluateStepHostCapabilitiesAsync(
+        IReadOnlyList<string> declaredRuntimeToolNames,
+        IReadOnlyList<string> effectiveRuntimeToolNames,
+        IReadOnlyCollection<ProcessHostCapabilityId> requiredHostCapabilities,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(declaredRuntimeToolNames);
+        ArgumentNullException.ThrowIfNull(effectiveRuntimeToolNames);
+        ArgumentNullException.ThrowIfNull(requiredHostCapabilities);
+        if (!IsBoundedRuntimeToolContract(declaredRuntimeToolNames) ||
+            !IsBoundedRuntimeToolContract(effectiveRuntimeToolNames))
+        {
+            return ValueTask.FromResult(InvalidRequirementContract("runtime-tool"));
+        }
+
+        if (requiredHostCapabilities.Count > MaximumRequiredHostCapabilities ||
+            requiredHostCapabilities.Any(capabilityId => string.IsNullOrWhiteSpace(capabilityId.Value)))
+        {
+            return ValueTask.FromResult(InvalidRequirementContract("host-capability"));
+        }
+
+        var requirements = effectiveRuntimeToolNames
+            .Select(toolName => (
+                ToolName: toolName,
+                CapabilityId: ProcessRuntimeToolHostCapabilityPolicy.Resolve(toolName)))
+            .Where(requirement => requirement.CapabilityId is not null)
+            .Select(requirement => (requirement.ToolName, CapabilityId: requirement.CapabilityId!.Value))
+            .Concat(requiredHostCapabilities.Select(capabilityId => (
+                ToolName: capabilityId.Value,
+                CapabilityId: capabilityId)))
+            .GroupBy(requirement => requirement.CapabilityId)
+            .Select(group => group.First())
+            .OrderBy(requirement => requirement.CapabilityId.Value, StringComparer.Ordinal)
+            .ToArray();
+        if (requirements.Length > MaximumRequiredHostCapabilities)
+        {
+            return ValueTask.FromResult(InvalidRequirementContract("host-capability"));
+        }
+
+        return EvaluateHostCapabilityRequirementsAsync(requirements, cancellationToken);
+    }
+
+    private static bool IsBoundedRuntimeToolContract(IReadOnlyList<string> requiredToolNames)
+        => requiredToolNames.Count <= MaximumRequiredRuntimeTools &&
+            requiredToolNames.All(toolName =>
+                toolName is not null &&
+                toolName.Length <= MaximumRuntimeToolNameLength &&
+                ProcessRequiredRuntimeToolNames.IsCanonicalRuntimeToolName(toolName));
+
+    private static ProcessRuntimeToolPreflightResult InvalidRequirementContract(string contractKind)
+        => new(
+            false,
+            [$"invalid-{contractKind}-contract"],
+            "The process step requirement contract exceeds the supported bounded shape and was rejected before side effects.");
+
+    private async ValueTask<ProcessRuntimeToolPreflightResult> EvaluateHostCapabilityRequirementsAsync(
+        IReadOnlyList<(string ToolName, ProcessHostCapabilityId CapabilityId)> requirements,
+        CancellationToken cancellationToken)
+    {
+        if (requirements.Count == 0)
+        {
+            return ProcessRuntimeToolPreflightResult.Satisfied;
+        }
+
+        var snapshot = hostCapabilitySnapshotProvider is null
+            ? ProcessHostCapabilitySnapshot.Unknown
+            : await hostCapabilitySnapshotProvider.GetAsync(cancellationToken).ConfigureAwait(false);
+        var evaluatedFacts = requirements
+            .Select(requirement => requirement.CapabilityId)
+            .Distinct()
+            .Select(capabilityId =>
+            {
+                snapshot.TryGet(capabilityId, out var fact);
+                return fact ?? new ProcessHostCapabilityFact(
+                    capabilityId,
+                    ProcessHostCapabilityAvailability.Unavailable,
+                    ProcessHostCapabilityReason.NotRegistered,
+                    ProcessHostExecutionPort.None);
+            })
+            .OrderBy(fact => fact.Id.Value, StringComparer.Ordinal)
+            .ToArray();
+        var evaluatedFactsById = evaluatedFacts.ToDictionary(fact => fact.Id);
+        var findings = requirements
+            .Where(requirement => !evaluatedFactsById[requirement.CapabilityId].IsAvailable)
+            .Select(requirement =>
+            {
+                var fact = evaluatedFactsById[requirement.CapabilityId];
+                return new ProcessRuntimeToolHostCapabilityFinding(
+                    requirement.ToolName,
+                    requirement.CapabilityId,
+                    fact.Availability,
+                    fact.Reason,
+                    snapshot.ProfileId);
+            })
+            .ToArray();
+        var evidence = new ProcessHostCapabilityEvaluationEvidence(snapshot.ProfileId, evaluatedFacts);
+        if (findings.Length == 0)
+        {
+            return new ProcessRuntimeToolPreflightResult(true, [], string.Empty)
+            {
+                HostCapabilityEvidence = evidence
+            };
+        }
+
+        return new ProcessRuntimeToolPreflightResult(
+            false,
+            findings.Select(finding => finding.RuntimeToolName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            $"Required process host capability is unavailable on profile '{snapshot.ProfileId}': {string.Join(", ", findings.Select(finding => $"{finding.RuntimeToolName}=>{finding.CapabilityId} ({finding.Reason?.ToString() ?? "NotReported"})"))}. Configure the required host adapter or choose a compatible process strategy.")
+        {
+            HostCapabilityFindings = findings,
+            HostCapabilityEvidence = evidence
+        };
     }
 
     private static bool RequiresCapabilityCatalogForDiagnostics(
@@ -466,5 +713,49 @@ internal sealed class ProcessRuntimeToolPreflightService : IProcessRuntimeToolPr
                workspaceToolAccess.CanScaffoldProjects ||
                workspaceToolAccess.CanManageWorkspacePaths ||
                workspaceToolAccess.CanTransformArtifacts;
+    }
+}
+
+internal static class ProcessRuntimeToolHostCapabilityPolicy
+{
+    public static IReadOnlySet<ProcessHostCapabilityId> ResolveAll(
+        IEnumerable<string> runtimeToolNames)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeToolNames);
+        return runtimeToolNames
+            .Select(Resolve)
+            .Where(capabilityId => capabilityId is not null)
+            .Select(capabilityId => capabilityId!.Value)
+            .ToHashSet();
+    }
+
+    public static ProcessHostCapabilityId? Resolve(string runtimeToolName)
+    {
+        var normalized = ToolContractCatalog.NormalizeToolName(runtimeToolName);
+        return normalized switch
+        {
+            ToolContractCatalog.WorkspacePowerShellRunScript => ProcessHostCapabilityIds.PowerShellScript,
+            ToolContractCatalog.WorkspacePythonRunFile or
+            ToolContractCatalog.WorkspaceInspectSpreadsheet => ProcessHostCapabilityIds.PythonRuntime,
+            ToolContractCatalog.WorkspaceDotNetNew or
+            ToolContractCatalog.WorkspaceDotNetRestore or
+            ToolContractCatalog.WorkspaceDotNetBuild or
+            ToolContractCatalog.WorkspaceDotNetTest or
+            ToolContractCatalog.WorkspaceDotNetRun => ProcessHostCapabilityIds.DotNetRuntime,
+            ToolContractCatalog.WorkspaceDotNetStop => ProcessHostCapabilityIds.DirectExecution,
+            ToolContractCatalog.LocalMcpLaunch => ProcessHostCapabilityIds.LocalStdioMcp,
+            ToolContractCatalog.WorkspaceCommandRun or
+            ToolContractCatalog.WorkspaceGitDiff or
+            ToolContractCatalog.WorkspaceGitStatus or
+            ToolContractCatalog.WorkspaceGitLog or
+            ToolContractCatalog.WorkspaceGitShow or
+            ToolContractCatalog.WorkspaceGitAdd or
+            ToolContractCatalog.WorkspaceGitUnstage or
+            ToolContractCatalog.WorkspaceGitCommit or
+            ToolContractCatalog.WorkspaceGitBranchCreate or
+            ToolContractCatalog.WorkspaceGitSwitch or
+            AgentToolInvocationPolicyMetadata.RunSkillScript => ProcessHostCapabilityIds.DirectExecution,
+            _ => null
+        };
     }
 }

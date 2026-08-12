@@ -6,7 +6,7 @@ Make runtime-node execution, Manager supervision, local MCP/external tools, plug
 
 ## Status
 
-- `Prepared — blocked by Core Gate C4`
+- `B07 implemented and locally proven — Gate R3 remains GO; hosted Windows/Ubuntu/macOS aggregate and Final Gate R4 deferred`
 
 ## Source anchor
 
@@ -17,11 +17,13 @@ Make runtime-node execution, Manager supervision, local MCP/external tools, plug
 
 ## First eligible work
 
-`B00 after a completed Core C4 handoff`
+`Hosted execution of the configured B07 Windows/Ubuntu/macOS matrix, followed by independent Final Gate R4 review`
 
 ## Entry blocker
 
-Do not execute any implementation task in this bundle against the prepared development anchor. First complete the sibling core bundle and fill `../01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md`. B00 then re-anchors this bundle to the exact C4 commit.
+Do not execute any implementation task in this bundle against the prepared development anchor. B00 must re-anchor to the exact commits in `../01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md`. The current entry is an operator-authorized provisional implementation handoff; C4, hosted evidence, and macOS support remain deferred and must not be described as passed.
+
+Actual macOS validation is additionally governed by `reviews/07-runtime-macos-validation-deferral.md`. B01–B06 may advance on complete Windows/Linux actual-host proof plus deterministic macOS contract fixtures, but unproved capabilities remain unavailable and final R4 stays deferred until actual macOS evidence exists.
 
 ## Split policy
 

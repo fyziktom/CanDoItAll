@@ -5,7 +5,7 @@
   "title": "MCP local stdio and external tool runtime",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by Gate R2",
+  "status": "Completed — Gate R3a GO",
   "depends_on": [
     "B03",
     "Gate R2"
@@ -24,7 +24,7 @@
   ],
   "source_hotspots": [
     "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs",
-    "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableAuthorizationPolicy.cs",
     "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpProcessLauncher.cs",
     "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs",
     "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
@@ -44,7 +44,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -66,7 +66,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -88,7 +88,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -110,7 +110,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -132,7 +132,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -154,7 +154,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -176,7 +176,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -188,7 +188,7 @@
     {
       "id": "B04-T08",
       "title": "Prove governed end-to-end paths",
-      "description": "Run a deterministic local stdio MCP and an external JSON tool on Windows/Linux/macOS with approval, workspace containment, secret binding, timeout, cancellation, invalid output, and cleanup.",
+      "description": "Run deterministic local stdio MCP and external JSON tool proof on Windows/Linux with compositional approval, workspace containment, secret binding, timeout, caller cancellation, invalid output, and cleanup. Actual macOS remains operator-deferred.",
       "requirements": [
         "MCP-001",
         "MCP-002",
@@ -198,7 +198,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -220,7 +220,7 @@
         "TOOL-001",
         "TOOL-002"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

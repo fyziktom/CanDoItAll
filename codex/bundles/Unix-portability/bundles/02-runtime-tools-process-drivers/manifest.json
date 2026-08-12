@@ -14,9 +14,9 @@
     "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
     "local_build_reproduction": false
   },
-  "status": "Prepared — blocked by Core Gate C4",
-  "entry_gate": "C4",
-  "first_eligible_subbundle": "B00 after C4",
+  "status": "In progress under provisional handoff — Gate R3 GO; B07 locally eligible with actual macOS and hosted R4 evidence deferred",
+  "entry_gate": "C4 or operator-authorized provisional core handoff",
+  "first_eligible_subbundle": "B07",
   "final_gate": "R4",
   "requirements_count": 52,
   "subbundles": [
@@ -25,49 +25,49 @@
       "directory": "subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Core Gate C4"
+      "status": "Completed — Gate R0 GO"
     },
     {
       "id": "B01",
       "directory": "subbundles/01-execution-primitives-environment-and-executable-resolution",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate R0"
+      "status": "Completed — Gate R1a GO"
     },
     {
       "id": "B02",
       "directory": "subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B01"
+      "status": "Completed — Workbench gate GO"
     },
     {
       "id": "B03",
       "directory": "subbundles/03-manager-process-ownership-supervision-and-watchers",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B02"
+      "status": "Completed — Gate R2 GO"
     },
     {
       "id": "B04",
       "directory": "subbundles/04-mcp-local-stdio-and-external-tool-runtime",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate R2"
+      "status": "Completed — Gate R3a GO"
     },
     {
       "id": "B05",
       "directory": "subbundles/05-plugins-filetools-and-host-integrations",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B04"
+      "status": "Completed — Gate R3b GO"
     },
     {
       "id": "B06",
       "directory": "subbundles/06-process-domain-driver-capability-adaptation",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B05"
+      "status": "Eligible — Gate R3b GO"
     },
     {
       "id": "B07",

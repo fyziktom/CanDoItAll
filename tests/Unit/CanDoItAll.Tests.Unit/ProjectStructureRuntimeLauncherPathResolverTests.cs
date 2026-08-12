@@ -9,6 +9,8 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectStructureRuntimeLauncherPathResolverTests
 {
+    private static readonly string WorkspaceRoot = CreateWorkspaceRoot();
+
     [Fact]
     public void Resolve_reports_a_missing_external_project_path()
     {
@@ -192,14 +194,10 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
     private static ProjectStructureRuntimeLauncher CreateSut(
         IProjectStructureDotNetProjectTargetResolver? projectTargetResolver = null,
         IExternalTargetPathRegistryFactory? externalTargetPathRegistryFactory = null)
-        => new(
-            new WorkspacePathAccessGuard(
-                new TestWorkspacePathResolver(@"C:\workspace"),
-                TestWorkspaceServices.PhysicalPathPolicyFactory),
-            NullLogger<ProjectStructureRuntimeLauncher>.Instance,
+        => ProjectStructureRuntimeTestFactory.CreateLauncher(
+            WorkspaceRoot,
             projectTargetResolver ?? new ExistingProjectTargetResolver(),
-            externalTargetPathRegistryFactory ?? new ExternalTargetPathRegistryFactory(),
-            new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(Path.GetTempPath())));
+            externalTargetPathRegistryFactory ?? new ExternalTargetPathRegistryFactory());
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
     {
@@ -238,17 +236,11 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
             }));
     }
 
-    private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
+    private static string CreateWorkspaceRoot()
     {
-        public string ResolveWorkspaceRoot() => workspaceRoot;
-
-        public string ResolveManagedFilesRoot() => Path.Combine(workspaceRoot, "managed-files");
-
-        public string ResolveExportsRoot() => Path.Combine(workspaceRoot, "exports");
-
-        public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
-
-        public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
+        var path = Path.Combine(Path.GetTempPath(), "CanDoItAll.RuntimeLauncher.ManagedWorkspace");
+        Directory.CreateDirectory(path);
+        return path;
     }
 
     private sealed class ExistingProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver

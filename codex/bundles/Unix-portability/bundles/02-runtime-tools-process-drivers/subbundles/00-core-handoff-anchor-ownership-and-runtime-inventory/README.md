@@ -36,7 +36,7 @@ The runtime source is broad and likely to change while the core bundle lands. Th
 
 ## Prerequisites
 
-- `Core Gate C4`
+- `Core Gate C4 or operator-authorized provisional core handoff`
 
 ## Deliverables
 
@@ -55,22 +55,26 @@ The runtime source is broad and likely to change while the core bundle lands. Th
 - Use typed process arguments; shell only for explicitly modeled scripts.
 - Keep source-code comments in English.
 
+## Proof tier
+
+`Behavioral` for B00. This subbundle changes inventory and gate artifacts only, but it must characterize the current process/runtime boundaries on Windows and Linux with named tests. It does not require another full solution run because the exact accepted anchors already have unchanged 7,459/7,459 Windows and Linux aggregate evidence.
+
 ## Entry gate
 
-- Status before execution: `Blocked by Core Gate C4`
+- Status before execution: `Eligible — provisional core handoff accepted for implementation`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
 ## Exit gate
 
-- Gate R0 is GO against the exact Core C4 commit.
+- Gate R0 is GO against the exact accepted core implementation anchors.
 - One owner exists for every runtime responsibility and no process-semantic rule is assigned to MAF/Infrastructure.
 - Split triggers were evaluated and recorded.
 - B01 is the only eligible implementation subbundle.
 
 ## Status
 
-- `Blocked by Core Gate C4`
+- `Completed — Gate R0 GO`
 
 ## Handoff
 

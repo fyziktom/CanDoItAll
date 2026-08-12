@@ -4,7 +4,7 @@
 
 - Execution: `In progress`
 - Active subbundle: `A07 three-platform CI, integration, restart, and Core Gate C4`
-- Final gate: `C4 pending exact-commit hosted evidence`
+- Final gate: `C4 deferred under HOSTED-PORTABILITY-VALIDATION-001; provisional B00 handoff approved`
 
 ## Subbundle progression
 
@@ -17,7 +17,7 @@
 | A04 | C2a | C2 | C2a GO | Completed — GO | Windows DPAPI/Strong Auto and Unix LocalUserFile/BasicLocal Auto have both-host HTTP startup, restart/mode tests, stable regression, complete redaction coverage, and independent implementation GO. Operator-deferred genuine Keychain execution remains `MACOS-KEYCHAIN-VALIDATION-001` with no verified-support claim. |
 | A05 | C2 | C3a | C2 GO | Completed — GO | The initial NO-GO and bounded independent GO are in `reviews/17-a05-independent-review.md`; refreshed Windows/Linux UI, owner-readiness, implementation-metadata, startup, regression, static, and architecture proof is in `reviews/16-a05-evidence-report.md`. |
 | A06 | C3a | Hosting gate | C3a GO | Completed — GO | The initial NO-GO and bounded independent GO after remediation are in `reviews/19-a06-independent-review.md`; refreshed proof is in `reviews/18-a06-evidence-report.md`. |
-| A07 | Hosting gate | C4 | C3b/Hosting GO | Local readiness GO | Independent review 21 accepted the active workflow, package/direct-local builds, Windows/Ubuntu 7,459/7,459 stable results, both-host PostgreSQL 10/10, two-cycle headless proof, browser smoke, and static enforcement. C4 remains pending an exact committed/pushed anchor, hosted Windows/Ubuntu/macOS evidence, repository check policy, and final independent review; macOS Keychain execution is separately deferred. |
+| A07 | Hosting gate | C4 | C3b/Hosting GO | Provisional implementation handoff | Independent review 21 accepted the local candidate. Exact pushed main/sibling anchors are recorded in `CORE-C4-HANDOFF.md`; review 22 records the operator decision to defer hosted/default-branch/macOS evidence while allowing B00. C4 remains deferred rather than GO. |
 
 ## Requirement status
 
@@ -34,8 +34,8 @@
 | SEC-002 | Implemented; actual macOS validation deferred without verified-support claim — C2 GO | Keychain Security-framework adapter and injected-native contracts are complete. `reviews/15-a04-macos-keychain-validation-deferral.md` tracks actual execution as `MACOS-KEYCHAIN-VALIDATION-001`. |
 | PLAT-001..PLAT-005 | Satisfied — C3a GO | `reviews/16-a05-evidence-report.md`, `reviews/17-a05-independent-review.md`, Windows/Linux 488/488 focused and 3/3 UI tests, Windows 5,557/5,557 full Unit, both-host HTTP health/API/UI captures, zero-warning builds, and snapshot `snap-20260810005847-cefe425c`. |
 | HOST-001..HOST-005, DOC-001 | Satisfied — C3b/Hosting GO | `reviews/18-a06-evidence-report.md` and `reviews/19-a06-independent-review.md`; durable Windows/Ubuntu provenance, seven redacted purpose roots, explicit launchd service identity, four-RID publish matrix, 5,561/5,561 regression, 32/32 both-host focus, snapshot `snap-20260810044522-a1246e1e`, and complete portability/redaction scans. macOS remains `ActualHostUnverified` pending `A07-MACOS-HEADLESS-ACTUALHOST-001`. |
-| CI-001..CI-006 | Implemented/local candidate ready; hosted closure pending | `reviews/20-a07-evidence-report.md`; active workflow, Windows/Ubuntu 7,459/7,459 stable results, outside-checkout two-cycle headless evidence, current 2/2 CI/headless regression, local static enforcement, and complete schema-3 artifact scan. Genuine macOS and exact-commit required-check evidence remain pending. |
-| CI-007 | Blocked pending C4 exact-commit evidence | Runtime bundle B00 remains blocked until hosted Windows/Ubuntu/macOS jobs and final independent review complete `reviews/CORE-C4-HANDOFF.md`. |
+| CI-001..CI-006 | Implemented/local candidate ready; hosted/macOS closure deferred | `reviews/20-a07-evidence-report.md`; active workflow, Windows/Ubuntu 7,459/7,459 stable results, outside-checkout two-cycle headless evidence, current 2/2 CI/headless regression, local static enforcement, and complete schema-3 artifact scan. `HOSTED-PORTABILITY-VALIDATION-001` preserves the missing hosted/macOS proof. |
+| CI-007 | Satisfied for implementation progression only | `reviews/22-a07-hosted-validation-deferral.md` and `reviews/CORE-C4-HANDOFF.md` record immutable pushed anchors and keep C4/support closure deferred. |
 
 ## Migration evidence
 

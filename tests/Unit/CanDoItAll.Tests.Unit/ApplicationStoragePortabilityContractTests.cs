@@ -4,6 +4,7 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Tests.Unit;
 
 [Trait("Category", "UnixPortabilityCore")]
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class ApplicationStoragePortabilityContractTests
 {
     [Theory]

@@ -19,7 +19,7 @@
 - [x] Add failing-first test or named characterization evidence.
 - [x] Record changed files, design decision, commands, results, evidence, and residual risk.
 
-Windows and Ubuntu are complete; genuine macOS is pending the exact-commit hosted job.
+Windows and Ubuntu are complete; genuine macOS is operator-deferred under `HOSTED-PORTABILITY-VALIDATION-001`.
 
 ## A07-T03 — Prove migrations and restart
 
@@ -27,7 +27,7 @@ Windows and Ubuntu are complete; genuine macOS is pending the exact-commit hoste
 - [x] Add failing-first test or named characterization evidence.
 - [x] Record changed files, design decision, commands, results, evidence, and residual risk.
 
-Windows/Ubuntu migration and restart coverage is complete; genuine macOS restart remains pending hosted CI. Keychain actual-host proof is separately deferred.
+Windows/Ubuntu migration and restart coverage is complete; genuine macOS restart is operator-deferred. Keychain actual-host proof is separately deferred.
 
 ## A07-T04 — Publish and run outside the checkout
 
@@ -35,7 +35,7 @@ Windows/Ubuntu migration and restart coverage is complete; genuine macOS restart
 - [x] Add failing-first test or named characterization evidence.
 - [x] Record changed files, design decision, commands, results, evidence, and residual risk.
 
-Windows and Ubuntu outside-checkout runs pass; genuine macOS remains pending hosted CI.
+Windows and Ubuntu outside-checkout runs pass; genuine macOS is operator-deferred.
 
 ## A07-T05 — Add static portability/security guards
 
@@ -55,13 +55,13 @@ Windows and Ubuntu outside-checkout runs pass; genuine macOS remains pending hos
 - [x] Add failing-first test or named characterization evidence.
 - [x] Record changed files, design decision, commands, results, evidence, and residual risk.
 
-Independent local-readiness review is GO in `reviews/21-a07-independent-review.md`. Final C4 review remains pending the exact hosted candidate.
+Independent local-readiness review is GO in `reviews/21-a07-independent-review.md`. Final C4 review is deferred until merge/release validation.
 
 ## A07-T08 — Issue Core Gate C4 and handoff
 
-- [ ] Record the exact passing commit, CI run links, artifact checksums, support matrix, open limitations, and source delta that B00 must revalidate.
-- [ ] Add failing-first test or named characterization evidence.
-- [ ] Record changed files, design decision, commands, results, evidence, and residual risk.
+- [x] Record the exact pushed implementation anchors, local evidence, support matrix, open limitations, and source delta that B00 must revalidate.
+- [x] Record the operator-deferred hosted/macOS validation boundary without claiming C4 GO.
+- [x] Record changed files, design decision, commands, results, evidence, and residual risk.
 
 ## Closure checklist
 

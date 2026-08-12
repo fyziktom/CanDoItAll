@@ -19,6 +19,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Git;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
@@ -67,6 +68,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.TryAddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
+        services.TryAddScoped<IExternalProcessRunner, WorkspaceExternalProcessRunner>();
+        services.TryAddScoped<IGitCommandExecutor, WorkspaceGitCommandExecutor>();
         services.TryAddScoped<IExternalProcessToolInvoker, ExternalProcessToolInvoker>();
         services.TryAddScoped<IExternalHttpToolInvoker, ExternalHttpToolInvoker>();
         services.TryAddScoped<IToolSetupTestService, ToolSetupTestService>();
@@ -100,6 +103,10 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.TryAddScoped<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
+        services.TryAddScoped<IWorkspaceLongRunningProcessHost>(serviceProvider =>
+            serviceProvider.GetRequiredService<IWorkspaceProcessHost>() as IWorkspaceLongRunningProcessHost
+            ?? throw new InvalidOperationException(
+                "The configured workspace process host does not implement managed process sessions."));
         services.TryAddScoped<IWorkspaceCommandExecutionService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);

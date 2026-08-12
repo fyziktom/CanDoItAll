@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-10T22:18:52.576455+00:00",
+  "generated_utc": "2026-08-12T04:57:36.764952+00:00",
   "root_name": "Unix-portability",
-  "payload_file_count": 302,
-  "payload_total_bytes": 4358038,
+  "payload_file_count": 339,
+  "payload_total_bytes": 4765262,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -46,13 +46,13 @@
     },
     {
       "path": "README.md",
-      "size_bytes": 5139,
-      "sha256": "afa95d7540944ca0e35e0cfd14dd0015cc2730328da72ec0ea847014b107e598"
+      "size_bytes": 5729,
+      "sha256": "81047891bb20045d733339524a4f65484f58472b486d95d0ea4eae5f4ff449dd"
     },
     {
       "path": "bundles/01-core-portability-foundation/README.md",
-      "size_bytes": 2721,
-      "sha256": "250e5ea4be6352dc1eefd549641aaf684f25cf07b592c750be902e308152f455"
+      "size_bytes": 2714,
+      "sha256": "f2637551811f3747ff035de35b04774889f4d235c56689a24f08c90b4c2ef46a"
     },
     {
       "path": "bundles/01-core-portability-foundation/analysis/00-executive-summary-cs.md",
@@ -146,8 +146,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/architecture/07-adrs.md",
-      "size_bytes": 4333,
-      "sha256": "9073801e343b45f4a2a06903d3b12c483d3f4ede92a527be38dcc7eed56e5e1d"
+      "size_bytes": 5573,
+      "sha256": "aa3a5221a222aa7b0d7099125a5aca753152835d3ab1cf33327617f95a5bab1c"
     },
     {
       "path": "bundles/01-core-portability-foundation/architecture/08-a02-filesystem-semantics.md",
@@ -211,8 +211,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/requirement-traceability.csv",
-      "size_bytes": 2719,
-      "sha256": "bbbcfb260545ed81356ab26b5d49e29c273130cc9fcaf707dfe588248ccac4c7"
+      "size_bytes": 2753,
+      "sha256": "3afab719aa414fa3de2219686ed198f51b589c1d91f188caede4e4a847b24abd"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/source-reference-manifest.json",
@@ -222,7 +222,7 @@
     {
       "path": "bundles/01-core-portability-foundation/manifest.json",
       "size_bytes": 3285,
-      "sha256": "8e279ca66ca09f37bd28ef664b460c618e5cf250f1a1120ae8fedac0d0f4872b"
+      "sha256": "f06821b7b575d68a6927f7e79470b9e811c12f5908bcd116993d99c97cca9c20"
     },
     {
       "path": "bundles/01-core-portability-foundation/plan/01-phase-plan.md",
@@ -241,8 +241,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/plan/04-work-breakdown.json",
-      "size_bytes": 7923,
-      "sha256": "b6fac9da9fcc83c49d8b4c60df54b4238a0cc103d3eae61452945d7b6ec6d0f7"
+      "size_bytes": 7931,
+      "sha256": "a0dbb4d4602665e0cced188ab66a144b94789b80fe9f67a642c0923b51b45884"
     },
     {
       "path": "bundles/01-core-portability-foundation/plan/05-command-catalog.md",
@@ -256,8 +256,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/requirements/01-normalized-requirements.md",
-      "size_bytes": 16580,
-      "sha256": "ec0ee89ebd370978c62285b14d15164a34cedb0ffd7a60edcb24c792deb7dbd7"
+      "size_bytes": 16705,
+      "sha256": "852c8e3967ca79eaaa411ca5360c06a7a266e6f43458d13b3efd6cd34df47373"
     },
     {
       "path": "bundles/01-core-portability-foundation/requirements/02-nonfunctional-constraints.md",
@@ -271,8 +271,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/requirements/requirements.json",
-      "size_bytes": 25739,
-      "sha256": "6cd1735a50fead7f083b83bb6b952f387a5d27542c969639263ea5c81de42194"
+      "size_bytes": 25933,
+      "sha256": "4aa5e44fd5263109d827c4671b5053c76dec8e219799dc0d0aca81b4c4ba3115"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/00-preparation-review.md",
@@ -281,13 +281,13 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/01-execution-report.md",
-      "size_bytes": 9424,
-      "sha256": "f8e6c7c6733ac4f0649bbb86b3d342c157c98505bebd079f4848407bce70063a"
+      "size_bytes": 9367,
+      "sha256": "e44150fa89db04ea7b0e40f21dcec798418d963c467366b1d19ad4e6ea6ecb7d"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/02-gate-log.md",
-      "size_bytes": 4957,
-      "sha256": "296fcd053407f46f99e078537ce1b4b1aad57dc69c6723a6ba19c858394f6a8d"
+      "size_bytes": 5171,
+      "sha256": "f5ba8b2af738c07726de4ea2276a36d483789be7356e077c8a50b8c6e52a05d1"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/03-open-questions.md",
@@ -385,6 +385,16 @@
       "sha256": "3fd6b16aeb829d30d3b8e84c8c82444b03866878827cb2a9609c37e15f17e722"
     },
     {
+      "path": "bundles/01-core-portability-foundation/reviews/22-a07-hosted-validation-deferral.md",
+      "size_bytes": 2931,
+      "sha256": "8165bea8118af7ba963c23e13f2b04d6af41b12a8e05f24b00e76c16dbf7b887"
+    },
+    {
+      "path": "bundles/01-core-portability-foundation/reviews/23-a07-provisional-handoff-independent-review.md",
+      "size_bytes": 5990,
+      "sha256": "98512a42dc3a01924af12dba6e5eea7a6ef3acca210faff8aaa51bb493073465"
+    },
+    {
       "path": "bundles/01-core-portability-foundation/reviews/A00-HANDOFF.md",
       "size_bytes": 3225,
       "sha256": "36821f03dd09bb90be8ec54f0a5733be1e959db952c97ee6a6e59aa7efcd9f04"
@@ -421,8 +431,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md",
-      "size_bytes": 4377,
-      "sha256": "e480f7a118fc31345a3a45c19f7a25ebdedf938790568ba1396441fd097803d1"
+      "size_bytes": 4395,
+      "sha256": "2cb9a42f9328b6e8873616b1811007e31808d35514b63b16432a7d44adff9872"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/csharp-architecture-gate.md",
@@ -641,8 +651,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/07-three-platform-ci-integration-restart-and-core-closure/README.md",
-      "size_bytes": 2698,
-      "sha256": "8c56d2ef58b6e5256703a67733ef1aca2e5ee3085959fb7068cb9864816b132a"
+      "size_bytes": 2866,
+      "sha256": "081f12ce5cdee1c48383277e07dbdbadd4293bf6b9b6c1e349714ac7f53e2a86"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/07-three-platform-ci-integration-restart-and-core-closure/agent-prompt.md",
@@ -651,18 +661,18 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/07-three-platform-ci-integration-restart-and-core-closure/exit-criteria.md",
-      "size_bytes": 418,
-      "sha256": "0b6dcde9027f78fc74d95360dc841db966be508f121552304f7159207d2c17f1"
+      "size_bytes": 485,
+      "sha256": "facb435090d982f85eb6383805a8bbd10776ff4452272d843ca7bb114e33c043"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/07-three-platform-ci-integration-restart-and-core-closure/tasks.json",
-      "size_bytes": 6625,
-      "sha256": "28e0c8d76ecde45b90961f9496f073c17e27123bd11bc1ce72cac3a18e60be39"
+      "size_bytes": 6698,
+      "sha256": "9a9a39bf2cffe5997e46973396caac1d22b5a58a76dfb19af9c57a55d1db61f1"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/07-three-platform-ci-integration-restart-and-core-closure/tasks.md",
-      "size_bytes": 3972,
-      "sha256": "a7c7c7379e4dbef82692d915c2dee766023cbc2910f6e9800f0d6df172a8d883"
+      "size_bytes": 4010,
+      "sha256": "598d6fba01000dee5b5d810fd0627830cdaba05427afdd87bdef509101856fb7"
     },
     {
       "path": "bundles/01-core-portability-foundation/subbundles/07-three-platform-ci-integration-restart-and-core-closure/validation.md",
@@ -791,13 +801,13 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/README.md",
-      "size_bytes": 1998,
-      "sha256": "6d639976d747b4f837704f7d640f5571d374987758683a7a1cf8a13f2012c1f4"
+      "size_bytes": 2594,
+      "sha256": "f432b5d1f861871e4c064a05a6333d197098f29aaa607cfc38ab117cf2a16cfa"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/analysis/00-executive-summary-cs.md",
-      "size_bytes": 1276,
-      "sha256": "1c8685d971e672dbc303ec109e8604c9bc8b306079788d95d000e334a637ff4d"
+      "size_bytes": 1425,
+      "sha256": "c01129830ec728330ca4a141fb08b440f2dcc94cf553b0e768bc3e4a94f20e67"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/analysis/01-prepared-findings.md",
@@ -806,8 +816,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/analysis/02-current-state-and-delta.md",
-      "size_bytes": 1651,
-      "sha256": "3635280f131a2df1a202510a19cd478558de920e180830423849aefa8102e128"
+      "size_bytes": 4107,
+      "sha256": "7c4d86ee1238ffeea0696c1d3199cd5af230debd901b86fc068e4fce3b49a40e"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/analysis/03-assumptions-and-risks.md",
@@ -831,23 +841,23 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/01-target-solution.md",
-      "size_bytes": 2118,
-      "sha256": "2f0938e360f395f8cf27a6e2f05a34b0e2c8b19e4b5768b68ab850886866fa50"
+      "size_bytes": 3831,
+      "sha256": "cddcc8ca848fe2d2af099cfca71cd26838756b2eb4daef01ac69ee8e4bad2d14"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/02-execution-plan-and-process-lifecycle.md",
-      "size_bytes": 2263,
-      "sha256": "e5933fa6a56cc55a43a8aa0ea94b2e1ff9c27628c3d697a83a9aad509ef908d2"
+      "size_bytes": 3238,
+      "sha256": "f02590740d681ee5973702f46e8263a726ebd5cdd3a726ec64a6af76309fb173"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/03-workbench-runtime-and-terminal.md",
-      "size_bytes": 1919,
-      "sha256": "ebaf09a9971a7996a6e82b1ec0f701fc62dd6818946e0619a331fd34787c93da"
+      "size_bytes": 7152,
+      "sha256": "94ee6fb8ee97907032f84b5e84bae5e90b86843cf0e61277f170f84c72079fb9"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/04-manager-supervision-and-discovery.md",
-      "size_bytes": 1554,
-      "sha256": "b0272d141f60c907a8dd70367e114e3588d80d7e6e77db6b4cdaaee2a68c07bb"
+      "size_bytes": 7067,
+      "sha256": "f8ee3972027c0617052a4c8ddfe4b013176253b924cc4c11a4ff41133c4b8f96"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/05-mcp-tools-plugins-and-dependencies.md",
@@ -856,18 +866,23 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/06-process-domain-capability-model.md",
-      "size_bytes": 1399,
-      "sha256": "4e32856e7f88e595d52e6a54cf9edaa407291250193eea94f1a782dc9eafc8de"
+      "size_bytes": 5936,
+      "sha256": "5522c5374740d43ff2fa5b8c72f96846ab874f57608e0a9c5ad157a6032335c7"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/architecture/07-adrs.md",
-      "size_bytes": 1985,
-      "sha256": "bf0bc69a908f2e9b5a05597031f06b44b64054d1df4227a834141c5b5b635fa4"
+      "size_bytes": 14873,
+      "sha256": "a1d6e97fa35aa1e239f9866e38fdd93868497fdff180a7e0b06ab79a44329ed0"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/evidence/README.md",
       "size_bytes": 610,
       "sha256": "5be27e4d6cbe0a21fe437b15447c3cd9b7d9c33540f4dfd54ecf0a4ea44c2a15"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/evidence/b05-filetools-compatibility.md",
+      "size_bytes": 6805,
+      "sha256": "bd08053604ccc09b9736746a050a2f746ab58ba381434f3a276c55856117bc01"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/evidence/expected-artifacts.md",
@@ -876,8 +891,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/00-preparation-inventory.md",
-      "size_bytes": 454,
-      "sha256": "3a5c8bb32ca3ce4e1f8deacce8b8505988a080410eb6ca4b096c2a2e0d604765"
+      "size_bytes": 542,
+      "sha256": "a41c5f3c9e3f75af58b8fbd640735868eb446551d4d412a2931bdad3f04e07a8"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/capability-profile-template.json",
@@ -885,14 +900,24 @@
       "sha256": "17439b136fca3f2b46d8fed6ac2cab2fad40020e0714feb70757ef3e0f7ae291"
     },
     {
+      "path": "bundles/02-runtime-tools-process-drivers/inventories/executable-capability-inventory.csv",
+      "size_bytes": 4143,
+      "sha256": "7ce6f946a45d72efc6c8dbaa275df3f8b6e4d1211cd1155c3d704e6b0ba59a87"
+    },
+    {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/executable-capability-template.csv",
       "size_bytes": 188,
       "sha256": "a543b520fcfb21168cb9714b313919bb427f99af8d8539f84d9db90451a761d6"
     },
     {
+      "path": "bundles/02-runtime-tools-process-drivers/inventories/external-dependency-ledger.csv",
+      "size_bytes": 4833,
+      "sha256": "025f2c0614b976221a440e9f2c28dc70ae8b131e4b42f1b1447cb903d37957d2"
+    },
+    {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/finding-to-subbundle.csv",
-      "size_bytes": 2963,
-      "sha256": "8a6a443f484393f852b8a2dcab0e2677fdbbdbe906a6c980830c6a04fc02ea7f"
+      "size_bytes": 4673,
+      "sha256": "d34751477e0f2ff7448661366059b5205a647142dca8fcab27af670c5e12e419"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/platform-sensitive-patterns.txt",
@@ -905,9 +930,14 @@
       "sha256": "a34b629feba963bfa66ee8ad896b0bd24af8fa840f552a19f6b1f7f3d2a93705"
     },
     {
+      "path": "bundles/02-runtime-tools-process-drivers/inventories/process-ownership-inventory.csv",
+      "size_bytes": 5135,
+      "sha256": "0036bb767c41feb598a1ee245cefab25092407492696fc8ee5b107df35697c5c"
+    },
+    {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/requirement-traceability.csv",
-      "size_bytes": 1333,
-      "sha256": "fbce271a2886a554038cd8604c3a0305b57b22aee6dc245a79a7db0d1b1712c2"
+      "size_bytes": 2764,
+      "sha256": "07afda3a378b80ad031ded90d887532a401a148a453843d01f52fe7bfa70481c"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/runtime-surface-inventory-template.csv",
@@ -915,24 +945,29 @@
       "sha256": "2b40d14186ed5cf55a2f23ad497e7b57da50c3e6be2214a77d3db16556c3ef30"
     },
     {
+      "path": "bundles/02-runtime-tools-process-drivers/inventories/runtime-surface-inventory.csv",
+      "size_bytes": 8095,
+      "sha256": "39cef6c7e26e3042bf9b93fcf40a263d050b0561834099ef9b51ffb11621826f"
+    },
+    {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/source-reference-manifest.json",
-      "size_bytes": 15682,
-      "sha256": "50a90ca1f5d675cad11ef10899a80a0628b04fff02530e896d09a30e64153ff7"
+      "size_bytes": 108226,
+      "sha256": "d6090fa294dd9d0add067104e804c33b60a49df6b7f41c9731aff09bd54b62c7"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/manifest.json",
-      "size_bytes": 3075,
-      "sha256": "abbfbe58c3ade0fc7a116e9add5f12bca08476aaf8fdc91500600219cf50e88c"
+      "size_bytes": 3265,
+      "sha256": "8182f5fca60aa8e7d3dca6f7bbf7eadeab15052b02ef9f1aca4f883989195100"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/plan/01-phase-plan.md",
-      "size_bytes": 3948,
-      "sha256": "bb2cd335fc5f093a213994285be44abe6cbc2e1957960d8b111c0e07d6fb9f55"
+      "size_bytes": 4073,
+      "sha256": "b88831106a0581c9bc98a3473ffd146b4c771f145b95ed293f86c0d5b92883e8"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/plan/02-validation-matrix.md",
-      "size_bytes": 4305,
-      "sha256": "df3b0fca87f63fec317fa97b28006b913ce0255bc13ed2d592b0a2be4e0b24cb"
+      "size_bytes": 4419,
+      "sha256": "7d51671766eff9b3c4dccbe65536d277ff100b3ad01c32c113a88afb7a8e499b"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/plan/03-rollout-and-rollback.md",
@@ -941,18 +976,23 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/plan/04-work-breakdown.json",
-      "size_bytes": 7198,
-      "sha256": "25d80825f20c7c8319a10f8f559eeca5cb9b0f09bdf0c1fd2bf6ee0da8a01fea"
+      "size_bytes": 7309,
+      "sha256": "9aeadba6947dee696d9efd7a0dd72eb0692973f0597f166527ecfa330a926809"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/plan/05-command-catalog.md",
-      "size_bytes": 2744,
-      "sha256": "3506cb42e7d11a2049457607a33fc1aa970da06bb42da7c37ce94b6e85255a61"
+      "size_bytes": 2874,
+      "sha256": "91bd4d60e1481732d893c1a29cbc5252447ef513e331f62eeab8bedf53654341"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/plan/architecture-checkpoints.md",
+      "size_bytes": 4091,
+      "sha256": "71158f409b922b7258a1b2c791a2dfa87c9d60310fa3d248d46cc4ae370c37a2"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/requirements/01-normalized-requirements.md",
-      "size_bytes": 12725,
-      "sha256": "cefd9987b145872822a5bc7b6ab701d5e64e924f3995c8e540a8cd14f6eae50c"
+      "size_bytes": 12861,
+      "sha256": "74f93878dfc5ad87eaaaba4d69d555426b00bab6f2fc4f1c1d4b7d8fbaf12076"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/requirements/02-nonfunctional-constraints.md",
@@ -966,8 +1006,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/requirements/requirements.json",
-      "size_bytes": 19069,
-      "sha256": "e40bafeab0dfaf812d2fd12353f1a00894a8425f764437f332a64533c4c27aea"
+      "size_bytes": 20296,
+      "sha256": "523a3ee30c63bc193286bce392e5032cdfac492b4952c71be9036aa1835f77be"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/00-preparation-review.md",
@@ -976,18 +1016,138 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/01-execution-report.md",
-      "size_bytes": 2046,
-      "sha256": "d4d199d4385d086571fcd2ba59afa5a25e14a59cbd3992f10990d98fc8b627cf"
+      "size_bytes": 8854,
+      "sha256": "a8362c232af32d5f5d42b832e335bf3bf03ce631f24d19dcbdb26303ef52c5fc"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/02-gate-log.md",
-      "size_bytes": 388,
-      "sha256": "c5ded2d5be843f5259f94b068b189aae4d3b3a49c2c64b58e7622319acb081d4"
+      "size_bytes": 4912,
+      "sha256": "9343b3dfdbb6f5bfcc0cc5a7eb731726efdc20fe568d614e268ac1dc9fd0a115"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/03-open-questions.md",
       "size_bytes": 1177,
       "sha256": "ee8ad0e429d29260d0e44f831446ca764421cd2de028ede82b001d10fa154032"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/04-b00-evidence-report.md",
+      "size_bytes": 6238,
+      "sha256": "bc3292c986019f25d087036507e4b9f4680dffc5f90bb78c419ea57e21691f50"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/05-b00-r0-primary-review.md",
+      "size_bytes": 1306,
+      "sha256": "40756f9912f0a4c00ca5b89cc5dd63147f8aeb8ce1d949661cdab0b8836c041b"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/06-b00-independent-r0-review.md",
+      "size_bytes": 6251,
+      "sha256": "115f784cfa800e2371ddb8e130668e743489572b00a66840b29ed75eb40090be"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/07-runtime-macos-validation-deferral.md",
+      "size_bytes": 1955,
+      "sha256": "2d1d8af6114834e54cb7b2042551022b0ed9ffadc8ae2ee3d2678b133d27c021"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/08-b01-evidence-report.md",
+      "size_bytes": 9685,
+      "sha256": "9b0440293319f6a5417fa6d96789135f7a3e0e8a8b69fdd6d546c33b86a413d9"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/09-b01-r1a-primary-review.md",
+      "size_bytes": 2875,
+      "sha256": "bbaa8890cb816030efd9092c103d225506f69b989e0c851a1b750db4affdf70c"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/10-b01-independent-r1a-review.md",
+      "size_bytes": 8639,
+      "sha256": "6e162b2b0443e09c861a84bccd461d032ca418a11cde8018fc2e97407feefff6"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/11-b02-evidence-report.md",
+      "size_bytes": 9771,
+      "sha256": "167e26f82fc2d172ef3610c2e2dd665fd4dd5070757b32b13098a0373c424058"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/12-b02-primary-workbench-review.md",
+      "size_bytes": 4323,
+      "sha256": "91345ddd3ea9fa3c484289a8e02281fdfd26920ea1b32570f5aa9fc40f73e0f4"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/13-b02-independent-workbench-review.md",
+      "size_bytes": 14244,
+      "sha256": "d9af0705491f7f5242a33418510653e083f99d46417b1be496f8b3fe571e1455"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/14-b03-evidence-report.md",
+      "size_bytes": 9009,
+      "sha256": "4b2943c6eec30d077bb136d6bd6f626511d1d7ae0121d5eaa26939abee0539b1"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/15-b03-primary-r2-review.md",
+      "size_bytes": 3862,
+      "sha256": "d6f3daf93601fc94ab4e9695a9de319d6f2d1a6a156d72eb335ff7e1664a9f49"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/16-b03-independent-r2-review.md",
+      "size_bytes": 7048,
+      "sha256": "612a8a75081fb4459e42699ec3e80f0b9f703b4a0d1aca42f6f8d02f490666f6"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/17-b04-evidence-report.md",
+      "size_bytes": 8820,
+      "sha256": "39acdd887859aff349388d425f3fa8e1e81781a8aa12a40e1d1379a904cfdf5f"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/18-b04-primary-r3a-review.md",
+      "size_bytes": 4634,
+      "sha256": "a056e3bdcab7bd4f7b5dfe70370863479d4ba196013480c9d443ace4f180439e"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/19-b04-independent-r3a-review.md",
+      "size_bytes": 8689,
+      "sha256": "2b749b72295f3f18fad91302920891212b80f270d309e20a4f647e2373ce884a"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/20-b05-evidence-report.md",
+      "size_bytes": 9413,
+      "sha256": "5a6717270b9a9daaccb179f6b390a9407a96adc7ff5d20c5818b64708dd403c9"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/21-b05-primary-r3b-review.md",
+      "size_bytes": 4939,
+      "sha256": "4d6dab8bec91fbf98850d319331ac53bcfac98e62fa8c02dd5489f884526e319"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/22-b05-independent-r3b-review.md",
+      "size_bytes": 17015,
+      "sha256": "d215a02e87ba25126c4136e782133d1ce45fd9e529a2df40afdbe56e5f9db6fc"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/23-b06-evidence-report.md",
+      "size_bytes": 7994,
+      "sha256": "964250c8cf7f1b2a1ff248206c54b33f42ebddd0138447192c1b65966832af95"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/24-b06-primary-r3-review.md",
+      "size_bytes": 5397,
+      "sha256": "e2a819c4679ba9bb08eb765b7812205af9d15647002352ef6258ce7cc64158f9"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/25-b06-independent-r3-review.md",
+      "size_bytes": 6628,
+      "sha256": "0a9306582008beab8d420319c81c8e6f082a0bfa354cbcbaad65d17a6f0fec20"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/26-b07-local-evidence-and-hosted-deferral.md",
+      "size_bytes": 5502,
+      "sha256": "00c7d8e66ca491cf43f990d05521f0684efccbdb32aeb649886031af89f7d892"
+    },
+    {
+      "path": "bundles/02-runtime-tools-process-drivers/reviews/B00-HANDOFF.md",
+      "size_bytes": 2945,
+      "sha256": "638b53c7363eee7857c0b117c3fb43d03297fd8f40bff9e6132ed5f7f6568dcb"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/RUNTIME-R4-CLOSURE.md",
@@ -996,68 +1156,68 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/README.md",
-      "size_bytes": 2943,
-      "sha256": "df9080c535097943bbc86ad5f653eb1e9e86c1e0b1be87c84c0c4b1aa3fd6e3a"
+      "size_bytes": 3409,
+      "sha256": "a6d7dd788dbff9f99ea0b05acf2fdfe8aa4ce059556146932ddaa211744d4060"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/agent-prompt.md",
-      "size_bytes": 3982,
-      "sha256": "430f84bdaf56993045af0c48338a935c769a2c2cfb75a876896d6174a1d30a0a"
+      "size_bytes": 4109,
+      "sha256": "7726b9ea08e1b31de824ecbda2a32f3d2bd6f1bbeb92fc9709dcf429986d7cd6"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/exit-criteria.md",
-      "size_bytes": 409,
-      "sha256": "74ce5048445e4d0fddb21eefba5beb72e6e156c1ac7794d84f699ce8384aba33"
+      "size_bytes": 431,
+      "sha256": "68dcbd1c29775bede9ce85f5aff2c2f784d11750fe6f1961aeacd6eb64999ee0"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/tasks.json",
-      "size_bytes": 6175,
-      "sha256": "2591d33585da0b2c3d592a9a33b9cde4207996084bebc7fbff35f14762584988"
+      "size_bytes": 6309,
+      "sha256": "0b9177a256ce42b8b0823ec994b4d03df67884f792bd3888a1223eac2bdceccc"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/tasks.md",
-      "size_bytes": 3682,
-      "sha256": "0f1d08c8901d7dc381205336386f0342778882fecf1aa7cb6d8806e74996b97e"
+      "size_bytes": 3784,
+      "sha256": "355e248ccee04e7cdec04b0cd1356d57d4e09fd42f5fb1306f11e677573520fa"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/validation.md",
-      "size_bytes": 1116,
-      "sha256": "30fc9cbd08476a02e5b9fcbd724295e139cb6883dac4bac4a761ef5f55a59a13"
+      "size_bytes": 1871,
+      "sha256": "6814cfbef3e56c9bf848e01425d75956406ade4cff659e40c41655e4a36fe752"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/01-execution-primitives-environment-and-executable-resolution/README.md",
-      "size_bytes": 2942,
-      "sha256": "f69bc84041cef10dccafae99ed80034699133c18a27686707f75352063eb8d01"
+      "size_bytes": 3894,
+      "sha256": "14b3d3bc11183490edd17e8179c85f4e6b1ac0af4ac3d822b628814ad7980c2f"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/01-execution-primitives-environment-and-executable-resolution/agent-prompt.md",
-      "size_bytes": 4040,
-      "sha256": "de6d926ac5742bd55fa66d7de52be7af0941d928fbd7b46768c94e6c9770f427"
+      "size_bytes": 4170,
+      "sha256": "4ecebf14588d29242771c3354fc026c57c3922cd7ad53d53f0c8fddc25d3acd6"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/01-execution-primitives-environment-and-executable-resolution/exit-criteria.md",
-      "size_bytes": 424,
-      "sha256": "ac4fd14a9bc09e023a1127d3734f29a0c9c4b28afc19637534bff0945a6870e1"
+      "size_bytes": 586,
+      "sha256": "1192e6881b7d2d74ade468fd71bc5cd8c203ea033727f2de6416b6ff357594f0"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/01-execution-primitives-environment-and-executable-resolution/tasks.json",
-      "size_bytes": 7394,
-      "sha256": "022c0483510d61b7fbdaa32bd19f7414cfc6528fa6a53b704c4c931b35558192"
+      "size_bytes": 7618,
+      "sha256": "c0aa8c4dcb050df290723d7b41273e80cd7e96016e4062a01b0a179e90414356"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/01-execution-primitives-environment-and-executable-resolution/tasks.md",
-      "size_bytes": 3915,
-      "sha256": "ca692b34f0becf0423efde0e91080eada2775cd07f91930f7570ea2cf2478b05"
+      "size_bytes": 3902,
+      "sha256": "53262dd0ca89360509c380c13c3d0e46310ae60830bd5d67db730e47af81bab7"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/01-execution-primitives-environment-and-executable-resolution/validation.md",
-      "size_bytes": 1096,
-      "sha256": "51296fbc056702000ede88b3986838a91ae0c4f4be63ce56140a63c6f9052d13"
+      "size_bytes": 1628,
+      "sha256": "8d804135afa5fd3f2d8a08301ab2b17416ecb3f744510d77cfff28a67b82699a"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters/README.md",
-      "size_bytes": 2632,
-      "sha256": "c269b38192f21ad6cb9a5f82797a2d845f1812a045aa5398251527d44c351dd4"
+      "size_bytes": 3565,
+      "sha256": "374b412200d088ca8e8243e7d65a82147ac0b80457ba3219cbab3fe6ddf3776d"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters/agent-prompt.md",
@@ -1066,18 +1226,18 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters/exit-criteria.md",
-      "size_bytes": 381,
-      "sha256": "24d28b22c6fb86a56282c5345d733f4953557a6981f8d1ddf8338b55f753a99a"
+      "size_bytes": 568,
+      "sha256": "223c5704029bdb84e76d92674a1d3f6617a3f769e1d5dbe59e2da967e0d29e8a"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters/tasks.json",
-      "size_bytes": 7860,
-      "sha256": "b06c6567181323e69b7a79642274f65ca1f03eb4d76d16c40918ca9e3eef69b6"
+      "size_bytes": 8449,
+      "sha256": "6c141711cf3ca9a39f68fb5843e23b3e522cad29bb35b5f668fe399f424e9721"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters/tasks.md",
-      "size_bytes": 4261,
-      "sha256": "8ec1a277ee579c7364e6a804e41fb269a57eea0fbc30ac77f91d65b86585c3ff"
+      "size_bytes": 4248,
+      "sha256": "cdfc9dd2b7217c303fe33873ade0bd5d7748b3a6271d7c0fd6067b4f9d85c45c"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters/validation.md",
@@ -1086,8 +1246,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/03-manager-process-ownership-supervision-and-watchers/README.md",
-      "size_bytes": 2648,
-      "sha256": "d68c05d7c7536557fd2162547edf355bd61a9129eb30b240a5eee5561a93d957"
+      "size_bytes": 2745,
+      "sha256": "a38ad2488ac37e7c2be2b2629bcb648084a186eab73ed24f71d67497391ad4a5"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/03-manager-process-ownership-supervision-and-watchers/agent-prompt.md",
@@ -1096,18 +1256,18 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/03-manager-process-ownership-supervision-and-watchers/exit-criteria.md",
-      "size_bytes": 380,
-      "sha256": "db19a9da764e0f3b637313c6870f1c1e6bb6470dc9d246513358dbe2eae0b809"
+      "size_bytes": 458,
+      "sha256": "89c56df3b2f5749d6af416c5f8ad4dc80234fb4d78a3a0b08ab4e8bb8fab5f0b"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/03-manager-process-ownership-supervision-and-watchers/tasks.json",
-      "size_bytes": 7609,
-      "sha256": "2fa5f1abdc6520f6aeac62cb0eff15304c2391ab356854712e61fd2e0d521088"
+      "size_bytes": 7639,
+      "sha256": "1c19a5891f6a0384836a67368134ad2251de1858be4a0525af55cb9e0e311e6b"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/03-manager-process-ownership-supervision-and-watchers/tasks.md",
       "size_bytes": 4292,
-      "sha256": "e88843500825041a5157f4c68223d4e226ecb6633c4a76eb8a4b5d61dc49c1d0"
+      "sha256": "80878db04de189e992c946134b403af851a7b8f7d9edf91a968f8e5dc3c05e6d"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/03-manager-process-ownership-supervision-and-watchers/validation.md",
@@ -1116,8 +1276,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/04-mcp-local-stdio-and-external-tool-runtime/README.md",
-      "size_bytes": 2874,
-      "sha256": "7c587d8bdbcf315bf8bb72af9cf16a470ed16091db6e08a51e54bdd768ba1617"
+      "size_bytes": 2918,
+      "sha256": "dabe391dfe8b5abcb97a7f0176ff8705abb9bbd51e09c30693a514e37f3c2ab4"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/04-mcp-local-stdio-and-external-tool-runtime/agent-prompt.md",
@@ -1126,28 +1286,28 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/04-mcp-local-stdio-and-external-tool-runtime/exit-criteria.md",
-      "size_bytes": 373,
-      "sha256": "622285027886d134b171463e54d8a7f3598be6d48f03a2c85277800b3346d497"
+      "size_bytes": 457,
+      "sha256": "5d1f2bb65f821d777b021e3b6a76118302b04edac35318b4dd38c8932f8f1689"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/04-mcp-local-stdio-and-external-tool-runtime/tasks.json",
-      "size_bytes": 7129,
-      "sha256": "3bb0977393002783a3e040dde2e3f2531acaac6fba810cdbb6680f53d81076a8"
+      "size_bytes": 7242,
+      "sha256": "db966209cda88dc56084a492530aa59cf5b6ead7f3c773f8ef0f71407f155ad8"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/04-mcp-local-stdio-and-external-tool-runtime/tasks.md",
-      "size_bytes": 3909,
-      "sha256": "109651d4586f0b122879fee2ebb14e51189d674268b3828ef3ade37d3d67db4c"
+      "size_bytes": 3952,
+      "sha256": "0a7d2986b8e0677811c0530e4021f02902bdcdd92bb1b0fa3bf186284d759ec8"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/04-mcp-local-stdio-and-external-tool-runtime/validation.md",
-      "size_bytes": 1064,
-      "sha256": "c1861cb86af935c7d3ead09e65fce255c7584db25f6c3bb2f1eb97de4f107a3c"
+      "size_bytes": 1768,
+      "sha256": "11fe07a3427e5a51520a46628d6c064c7a69e167f46862e6278b406c04f26b60"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/05-plugins-filetools-and-host-integrations/README.md",
-      "size_bytes": 2780,
-      "sha256": "fc8a52d0e96fb7bf4a92c952eee6c11aaafce43eca9fed99d570c95d2642e52c"
+      "size_bytes": 2802,
+      "sha256": "05c4e71411d9a23b4770498bf38c3d0d2ffdda8672cb2e693ae287712cb81233"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/05-plugins-filetools-and-host-integrations/agent-prompt.md",
@@ -1157,17 +1317,17 @@
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/05-plugins-filetools-and-host-integrations/exit-criteria.md",
       "size_bytes": 408,
-      "sha256": "b86af0ec78ef7f5e28314cd8fae65b9993ae5dde2d45e26b29666912307e40c8"
+      "sha256": "b5a1cfdf23daf43f8f7817b7743d625fb5f7f08961dff27f06071c18a7cc13a3"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/05-plugins-filetools-and-host-integrations/tasks.json",
-      "size_bytes": 6842,
-      "sha256": "9b39392b956ba68071115fe98fe94c25beb49bd3862814e2d03b9574a06e814c"
+      "size_bytes": 7428,
+      "sha256": "d66ac037b5cec4525898806a9ea776b42e58ce99443775ab086c114b49a35610"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/05-plugins-filetools-and-host-integrations/tasks.md",
-      "size_bytes": 4046,
-      "sha256": "a73414a4e21e32e5f75d09b3fe8120542cbd5e05b0788958a73d979e36002f28"
+      "size_bytes": 4333,
+      "sha256": "835450532191487f8bb35224d4858a2f20ef3aa397a1adc68b87c151d8776b38"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/05-plugins-filetools-and-host-integrations/validation.md",
@@ -1176,8 +1336,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/06-process-domain-driver-capability-adaptation/README.md",
-      "size_bytes": 2820,
-      "sha256": "927f36f9e6001481cdf81b82a0ffe7b6703326133c585a23b35e51c751b5bbdd"
+      "size_bytes": 3082,
+      "sha256": "f90172d563fe5558fa7a07888f5b4f77f3c9cb7de66cdff27b34faa9c7fa19b0"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/06-process-domain-driver-capability-adaptation/agent-prompt.md",
@@ -1186,28 +1346,28 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/06-process-domain-driver-capability-adaptation/exit-criteria.md",
-      "size_bytes": 441,
-      "sha256": "61d82fa5c25b848ba81e5630653f16cddd65d83f3588d255420a2af151afeb43"
+      "size_bytes": 437,
+      "sha256": "a645f0c59fd17764ce085ace91f0f7945b9643d980bf8ebd438b93931cbce39b"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/06-process-domain-driver-capability-adaptation/tasks.json",
-      "size_bytes": 6891,
-      "sha256": "0e491f77d66f91097c5b73bdb9b75d8b566fb08cb49f0676ac4427c95c9e03fa"
+      "size_bytes": 6950,
+      "sha256": "64451ce11911a95b0c35e216d4b2a0bc4d56ae2322bf9c9d859676ccae2819e4"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/06-process-domain-driver-capability-adaptation/tasks.md",
-      "size_bytes": 3926,
-      "sha256": "e7b070309a64a8af901a534ee45baeeeaf5d02539a6d067a3713b85ed3c91742"
+      "size_bytes": 3957,
+      "sha256": "823fc2d328de82e471b5eaa5bba5e8601909664efe1ca881efe643bdf8919e12"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/06-process-domain-driver-capability-adaptation/validation.md",
-      "size_bytes": 1112,
-      "sha256": "b01f56e13d294d8d0c43144658b947f09a67bb242191d632ae33f59ebf436516"
+      "size_bytes": 1816,
+      "sha256": "c040da81f201a2e8e95bb4f720dd2b1fb5a167b36ead615e4071737517336830"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/07-runtime-three-platform-ci-e2e-and-final-closure/README.md",
-      "size_bytes": 2714,
-      "sha256": "d66e287d744c2977ac23a6e8dd248edead5c1eb1260bdabeabd274174b3bc768"
+      "size_bytes": 3362,
+      "sha256": "9e8459d95c14509c89dd0d94732721034f276c98e35c488b277fceb0527890b5"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/07-runtime-three-platform-ci-e2e-and-final-closure/agent-prompt.md",
@@ -1216,23 +1376,23 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/07-runtime-three-platform-ci-e2e-and-final-closure/exit-criteria.md",
-      "size_bytes": 445,
-      "sha256": "bc70aaf1081de127e9e64cc5e30c70403979dbed274663360b7733200f52ae75"
+      "size_bytes": 709,
+      "sha256": "43ee36cdb6bd8b13b051bbbb670c54a722c8a6b5b20339807556585615558048"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/07-runtime-three-platform-ci-e2e-and-final-closure/tasks.json",
-      "size_bytes": 7625,
-      "sha256": "341afb63e61567a725e14176a2c12831f301c0d20d1ffc8b2a646e94429ebef0"
+      "size_bytes": 8318,
+      "sha256": "c41787ceede234162cd52cbbcabdb244e1e22154cf60f401e609848f66362626"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/07-runtime-three-platform-ci-e2e-and-final-closure/tasks.md",
-      "size_bytes": 4358,
-      "sha256": "eee1853d426cca51ed56bb76d236726e52d6e18a521bcbe6eb228420d1aa3c13"
+      "size_bytes": 4172,
+      "sha256": "e3278854294074e21f7d4f5fd11a8f00676d02a99e786e4889fd754376eb283d"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/07-runtime-three-platform-ci-e2e-and-final-closure/validation.md",
-      "size_bytes": 1396,
-      "sha256": "3b558d7bf5cd8e88f744058f3951395cab031ab0d0dd6349d8a5ebf0f0b4550e"
+      "size_bytes": 1839,
+      "sha256": "a0736c00ee37989dcaa5ac6237088ccf7f8c3dc3acaa8ac8406c173e953b0cc9"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/90-conditional-runtime-architecture-correction/README.md",
@@ -1336,8 +1496,8 @@
     },
     {
       "path": "manifest.json",
-      "size_bytes": 3389,
-      "sha256": "95e9ce471b1bb137a7814c2a5d3f1c0ef572bc015bd1e570ebe44fb7f23f22f0"
+      "size_bytes": 3623,
+      "sha256": "5929cd2b25fbd2bef393c083b8eb4a7770fdef57828893753d5c9b7b091c43d6"
     },
     {
       "path": "reviews/PACKAGE-SHAPE-DECISION.md",
@@ -1380,6 +1540,11 @@
       "sha256": "1ab885c534df88c9224a88d2e034e5e2c746ec4cff7d3cd2e8c603f577818874"
     },
     {
+      "path": "scripts/b06_focused_test_selection.ps1",
+      "size_bytes": 2917,
+      "sha256": "f91643faac203a28ca3f117400690c230915bea9bcfd1baf4496004a0f4fc5d7"
+    },
+    {
       "path": "scripts/calculate_checksums.py",
       "size_bytes": 6016,
       "sha256": "74a59508934779c119c9b8060be282cd74d7525c5c1aa1b3cb7bc0fbe39726dc"
@@ -1393,6 +1558,16 @@
       "path": "scripts/enforce_portability_baseline.py",
       "size_bytes": 7513,
       "sha256": "dc1d5754240a1dc1347155de340e6d9a8ca716e780132c1e327c0ecd9d65375b"
+    },
+    {
+      "path": "scripts/generate_b06_governed_proof.ps1",
+      "size_bytes": 23062,
+      "sha256": "855a718050b1aeca0cfd15c1db181e85355a59988f9c88acceb3fb28a3945183"
+    },
+    {
+      "path": "scripts/generate_b07_governed_proof.ps1",
+      "size_bytes": 9817,
+      "sha256": "c1077c44cfaa442ae44bb4895738abbe6f97eeb7a93020e17ec90212a51b3431"
     },
     {
       "path": "scripts/materialize_bundle.py",
@@ -1413,6 +1588,11 @@
       "path": "scripts/run_a06_linux_host_validation.ps1",
       "size_bytes": 18429,
       "sha256": "7076c2ff5e1ced8fcd8d1d98b546ea60bc79972973572fe51b7ff3f89fd4d64d"
+    },
+    {
+      "path": "scripts/run_b06_focused_tests.ps1",
+      "size_bytes": 1363,
+      "sha256": "066a467753f94b395a4ee3727f1a38faa755159066181ea539f327b635e027ff"
     },
     {
       "path": "scripts/scan_artifacts_for_secrets.py",
@@ -1436,8 +1616,13 @@
     },
     {
       "path": "scripts/validate_bundle.py",
-      "size_bytes": 30386,
-      "sha256": "010ec198086d1b4a50c399442ea7d44d559ce7542e1dab08b22a9a72b11791a7"
+      "size_bytes": 31019,
+      "sha256": "7709bba19c567aa674b2cdf21b8cdd998bda88f8c11ee0128a1ad31f64ed14ad"
+    },
+    {
+      "path": "scripts/verify_project_graph.ps1",
+      "size_bytes": 3799,
+      "sha256": "020054d3dd4b82fcd88ea381fba522ab65985b64f525cd3f841bb547cb5128e8"
     },
     {
       "path": "shared/architecture-invariants.md",

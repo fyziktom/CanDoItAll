@@ -56,7 +56,7 @@ Docker constructs its own process host and FileTools behavior comes from a pinne
 
 ## Entry gate
 
-- Status before execution: `Blocked by B04`
+- Status before execution: `Completed — Gate R3b GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -69,7 +69,7 @@ Docker constructs its own process host and FileTools behavior comes from a pinne
 
 ## Status
 
-- `Blocked by B04`
+- `Completed — Gate R3b GO`
 
 ## Handoff
 

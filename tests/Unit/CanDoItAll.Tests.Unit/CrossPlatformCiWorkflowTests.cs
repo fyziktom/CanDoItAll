@@ -25,6 +25,7 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("CANDOITALL_TESTS_POSTGRES_CONNECTION", workflow, StringComparison.Ordinal);
         Assert.Contains("postgres-version: \"16\"", workflow, StringComparison.Ordinal);
         Assert.Contains("Category=UnixPortabilityCore", workflow, StringComparison.Ordinal);
+        Assert.Contains("Category!=UnixRuntimePortability", workflow, StringComparison.Ordinal);
         Assert.Contains("RequiresHostDocker!=true", workflow, StringComparison.Ordinal);
         Assert.Contains("Run PostgreSQL-backed core migration and restart gate", workflow, StringComparison.Ordinal);
         Assert.Contains(
@@ -49,7 +50,34 @@ public sealed class CrossPlatformCiWorkflowTests
             "CanDoItAll.Tests.Playwright",
             "CorePortabilityBrowserSmokeTests.cs")), StringComparison.Ordinal);
         Assert.Contains("playwright.ps1 install chromium", workflow, StringComparison.Ordinal);
+        Assert.Contains("Test-RuntimePortability.ps1", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "if: runner.os == 'Windows'\n        shell: pwsh\n        run: ./tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/playwright.ps1 install chromium",
+            workflow.Replace("\r\n", "\n", StringComparison.Ordinal),
+            StringComparison.Ordinal);
         Assert.Contains("actions/upload-artifact@v4", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    [Trait("Category", "UnixPortabilityCore")]
+    public void Runtime_portability_runner_enforces_exact_cross_project_selection()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string script = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "tools",
+            "Validation",
+            "Test-RuntimePortability.ps1"));
+
+        Assert.Contains("Category=UnixRuntimePortability", script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedCaseCount 422", script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedCaseCount 33", script, StringComparison.Ordinal);
+        Assert.Contains("ExpectedCaseCount 1", script, StringComparison.Ordinal);
+        Assert.Contains("class selection drifted", script, StringComparison.Ordinal);
+        Assert.Contains("method selection drifted", script, StringComparison.Ordinal);
+        Assert.Contains("ValidateSet('All', 'Unit', 'Integration', 'Browser')", script, StringComparison.Ordinal);
+        Assert.Contains("--no-build", script, StringComparison.Ordinal);
+        Assert.Contains("--no-restore", script, StringComparison.Ordinal);
     }
 
     [Fact]

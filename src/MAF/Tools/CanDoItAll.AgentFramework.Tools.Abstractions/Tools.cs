@@ -154,7 +154,17 @@ public sealed record ExternalProcessRunRequest(
     TimeSpan Timeout,
     string StandardInput,
     int MaxOutputBytes,
-    string CorrelationId);
+    string CorrelationId,
+    IReadOnlySet<string>? AllowedExecutableNames = null);
+
+public sealed class ExternalProcessCommandPolicyException(string message)
+    : InvalidOperationException(message);
+
+public sealed class ExternalProcessAccessPolicyException(string message)
+    : InvalidOperationException(message);
+
+public sealed class ExternalProcessResidualProcessException(string message)
+    : InvalidOperationException(message);
 
 public sealed record ExternalProcessRunResult(
     bool Started,

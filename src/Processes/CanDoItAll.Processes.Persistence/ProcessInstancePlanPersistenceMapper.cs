@@ -13,6 +13,7 @@ internal static class ProcessInstancePlanPersistenceMapper
     public static ProcessInstancePlanEntity ToEntity(ProcessInstancePlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        EnsureCanonicalPlanHash(plan);
 
         return new ProcessInstancePlanEntity
         {
@@ -38,7 +39,8 @@ internal static class ProcessInstancePlanPersistenceMapper
         var plan = JsonSerializer.Deserialize<ProcessInstancePlan>(entity.PayloadJson, SerializerOptions)
             ?? throw new InvalidOperationException($"Process instance plan '{planId}' payload deserialized to null.");
         if (plan.Header.PlanId != planId ||
-            !string.Equals(plan.PlanHash, entity.PlanHash, StringComparison.Ordinal))
+            !string.Equals(plan.PlanHash, entity.PlanHash, StringComparison.Ordinal) ||
+            !string.Equals(ProcessPlanHasher.Compute(plan), entity.PlanHash, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Process instance plan '{planId}' payload identity or hash does not match the persisted metadata.");
@@ -55,10 +57,20 @@ internal static class ProcessInstancePlanPersistenceMapper
         ArgumentNullException.ThrowIfNull(plan);
 
         if (entity.PlanId != plan.Header.PlanId.Value ||
-            !string.Equals(entity.PlanHash, plan.PlanHash, StringComparison.Ordinal))
+            !string.Equals(entity.PlanHash, plan.PlanHash, StringComparison.Ordinal) ||
+            !string.Equals(ProcessPlanHasher.Compute(plan), plan.PlanHash, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Process instance plan '{plan.Header.PlanId}' already exists with a different identity or hash.");
+        }
+    }
+
+    private static void EnsureCanonicalPlanHash(ProcessInstancePlan plan)
+    {
+        if (!string.Equals(ProcessPlanHasher.Compute(plan), plan.PlanHash, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Process instance plan '{plan.Header.PlanId}' does not carry its canonical content hash.");
         }
     }
 
@@ -221,8 +233,23 @@ internal static class ProcessInstancePlanPersistenceMapper
             Type typeToConvert,
             JsonSerializerOptions options)
         {
-            var values = JsonSerializer.Deserialize<List<T>>(ref reader, options) ?? [];
-            return values.ToHashSet();
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                throw new JsonException("Process plan set payload cannot be null.");
+            }
+
+            var values = JsonSerializer.Deserialize<List<T>>(ref reader, options)
+                ?? throw new JsonException("Process plan set payload must be an array.");
+            var result = new HashSet<T>();
+            foreach (var value in values)
+            {
+                if (!result.Add(value))
+                {
+                    throw new JsonException("Process plan set payload cannot contain duplicate values.");
+                }
+            }
+
+            return result;
         }
 
         public override void Write(

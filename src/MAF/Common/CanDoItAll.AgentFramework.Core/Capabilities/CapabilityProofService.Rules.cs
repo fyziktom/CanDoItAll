@@ -310,7 +310,6 @@ public sealed partial class CapabilityProofService
                 var normalizedAllowedWorkingDirectories = allowedWorkingDirectories
                     .Select(ExpandPortablePath)
                     .Select(root => Path.GetFullPath(Path.IsPathRooted(root) ? root : Path.Combine(Environment.CurrentDirectory, root)))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
                 if (isExternalWorkingDirectory && normalizedAllowedWorkingDirectories.Count == 0)

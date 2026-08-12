@@ -139,10 +139,10 @@ public sealed class WorkspacePathAccessGuard(
 
         try
         {
-            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path.Trim(), "workspace path");
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "workspace path");
             if (!string.IsNullOrWhiteSpace(basePath))
             {
-                PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(basePath.Trim(), "workspace base path");
+                PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(basePath, "workspace base path");
             }
 
             var resolvedWorkspaceRoot = resolver.ResolveWorkspaceRoot();
@@ -181,8 +181,7 @@ public sealed class WorkspacePathAccessGuard(
 
         try
         {
-            var trimmedPath = path.Trim();
-            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(trimmedPath, "managed file path");
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "managed file path");
             var resolvedWorkspaceRoot = resolver.ResolveWorkspaceRoot();
             var resolvedManagedFilesRoot = resolver.ResolveManagedFilesRoot();
             PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(resolvedWorkspaceRoot, "workspace root");
@@ -192,9 +191,9 @@ public sealed class WorkspacePathAccessGuard(
             var workspaceRoot = workspacePathPolicy.RootPath;
             var managedFilesRoot = managedFilesPathPolicy.RootPath;
             var managedFilesRelativeRoot = NormalizeRelativePath(Path.GetRelativePath(workspaceRoot, managedFilesRoot));
-            var candidate = Path.IsPathRooted(trimmedPath)
-                ? Path.GetFullPath(trimmedPath)
-                : ResolveRelativeManagedFilePath(trimmedPath, workspaceRoot, managedFilesRoot, managedFilesRelativeRoot);
+            var candidate = Path.IsPathRooted(path)
+                ? Path.GetFullPath(path)
+                : ResolveRelativeManagedFilePath(path, workspaceRoot, managedFilesRoot, managedFilesRelativeRoot);
 
             return managedFilesPathPolicy.IsWithinRoot(candidate)
                 ? WorkspacePathAccessResult.Success(candidate)
@@ -229,10 +228,9 @@ public sealed class WorkspacePathAccessGuard(
 
     private static string ResolveCandidatePath(string path, string resolutionBase)
     {
-        var trimmedPath = path.Trim();
-        return Path.IsPathRooted(trimmedPath)
-            ? Path.GetFullPath(trimmedPath)
-            : Path.GetFullPath(Path.Combine(resolutionBase, NormalizeRelativePath(trimmedPath)));
+        return Path.IsPathRooted(path)
+            ? Path.GetFullPath(path)
+            : Path.GetFullPath(Path.Combine(resolutionBase, NormalizeRelativePath(path)));
     }
 
     private static string NormalizeRelativePath(string path)

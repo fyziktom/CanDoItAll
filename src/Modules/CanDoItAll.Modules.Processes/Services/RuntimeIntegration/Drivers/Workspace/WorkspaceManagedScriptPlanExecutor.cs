@@ -393,9 +393,7 @@ internal sealed class WorkspaceManagedScriptPlanExecutor(
             ? Path.GetFullPath(candidate)
             : Path.GetFullPath(Path.Combine(productRoot, candidate));
         var relativePath = Path.GetRelativePath(productRoot, resolvedPath);
-        return OperatingSystem.IsWindows()
-            ? relativePath.Replace('\\', '/')
-            : relativePath;
+        return relativePath.Replace('\\', '/');
     }
 
     private bool TryResolveReadbackAlias(

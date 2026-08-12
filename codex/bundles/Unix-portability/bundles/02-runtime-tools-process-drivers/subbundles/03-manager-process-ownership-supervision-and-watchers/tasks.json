@@ -5,7 +5,7 @@
   "title": "Manager process ownership, supervision, and watchers",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by B02",
+  "status": "Completed — Gate R2 GO",
   "depends_on": [
     "B02"
   ],
@@ -43,7 +43,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -65,7 +65,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -87,7 +87,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -109,7 +109,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -131,7 +131,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -153,7 +153,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -175,7 +175,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -197,7 +197,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -219,7 +219,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -241,7 +241,7 @@
         "MGR-006",
         "MGR-007"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

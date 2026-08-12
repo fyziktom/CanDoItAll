@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Storage;
 
@@ -51,9 +52,14 @@ internal sealed class DotNetProcessLaunchContractFactory(
                 "initialization.tests.file",
                 out var testProjectFile,
                 out issue) ||
+            !pathResolver.TryCreateProductRootPolicy(
+                resolved.ProductRoot,
+                out var productRootPolicy,
+                out issue) ||
             !TryValidateInitialization(
                 initialization,
                 resolved,
+                productRootPolicy,
                 appDirectory,
                 appProjectFile,
                 testDirectory,
@@ -98,6 +104,7 @@ internal sealed class DotNetProcessLaunchContractFactory(
     private static bool TryValidateInitialization(
         DotNetInitializationPlan initialization,
         DotNetResolvedSolutionContext resolved,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         string appDirectory,
         string appProjectFile,
         string testDirectory,
@@ -124,25 +131,25 @@ internal sealed class DotNetProcessLaunchContractFactory(
             return false;
         }
 
-        if (!resolved.RequiredProjectFiles.Contains(appProjectFile, StringComparer.OrdinalIgnoreCase) ||
-            !resolved.RequiredProjectFiles.Contains(testProjectFile, StringComparer.OrdinalIgnoreCase))
+        if (!resolved.RequiredProjectFiles.Contains(appProjectFile, productRootPolicy.PathComparer) ||
+            !resolved.RequiredProjectFiles.Contains(testProjectFile, productRootPolicy.PathComparer))
         {
             issue = "An initialize .NET solution context must declare its application and test project files in requiredProjectFiles.";
             return false;
         }
 
-        if (!IsWithinDirectory(appProjectFile, appDirectory) ||
-            !IsWithinDirectory(testProjectFile, testDirectory))
+        if (!IsWithinDirectory(appProjectFile, appDirectory, productRootPolicy.PathComparison) ||
+            !IsWithinDirectory(testProjectFile, testDirectory, productRootPolicy.PathComparison))
         {
             issue = "The .NET initialization plan project files must remain inside their declared directories.";
             return false;
         }
 
-        if (!HasExactFileName(resolved.SolutionFile, solutionName, ".sln", ".slnx") ||
-            resolved.SolutionCandidatePaths.Any(candidate => !HasExactFileName(candidate, solutionName, ".sln", ".slnx")) ||
-            !HasExactProjectFile(appProjectFile, appDirectory, applicationName) ||
-            !string.Equals(Path.GetFileName(Path.TrimEndingDirectorySeparator(appDirectory)), applicationName, StringComparison.OrdinalIgnoreCase) ||
-            !HasExactProjectFile(testProjectFile, testDirectory, testProjectName))
+        if (!HasExactFileName(resolved.SolutionFile, solutionName, productRootPolicy.PathComparer, ".sln", ".slnx") ||
+            resolved.SolutionCandidatePaths.Any(candidate => !HasExactFileName(candidate, solutionName, productRootPolicy.PathComparer, ".sln", ".slnx")) ||
+            !HasExactProjectFile(appProjectFile, appDirectory, applicationName, productRootPolicy.PathComparer) ||
+            !productRootPolicy.PathComparer.Equals(Path.GetFileName(Path.TrimEndingDirectorySeparator(appDirectory)), applicationName) ||
+            !HasExactProjectFile(testProjectFile, testDirectory, testProjectName, productRootPolicy.PathComparer))
         {
             issue = "The initialization plan does not describe a topology that the runtime-owned .NET initializer can create safely.";
             return false;
@@ -268,17 +275,28 @@ internal sealed class DotNetProcessLaunchContractFactory(
         return true;
     }
 
-    private static bool IsWithinDirectory(string filePath, string directory)
-        => filePath.StartsWith(EnsureTrailingSeparator(directory), StringComparison.OrdinalIgnoreCase);
+    private static bool IsWithinDirectory(
+        string filePath,
+        string directory,
+        StringComparison pathComparison)
+        => filePath.StartsWith(EnsureTrailingSeparator(directory), pathComparison);
 
-    private static bool HasExactFileName(string path, string expectedName, params string[] allowedExtensions)
+    private static bool HasExactFileName(
+        string path,
+        string expectedName,
+        StringComparer pathComparer,
+        params string[] allowedExtensions)
         => allowedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) &&
-           string.Equals(Path.GetFileNameWithoutExtension(path), expectedName, StringComparison.OrdinalIgnoreCase);
+           pathComparer.Equals(Path.GetFileNameWithoutExtension(path), expectedName);
 
-    private static bool HasExactProjectFile(string file, string directory, string expectedName)
+    private static bool HasExactProjectFile(
+        string file,
+        string directory,
+        string expectedName,
+        StringComparer pathComparer)
         => string.Equals(Path.GetExtension(file), ".csproj", StringComparison.OrdinalIgnoreCase) &&
-           string.Equals(Path.GetDirectoryName(file), directory, StringComparison.OrdinalIgnoreCase) &&
-           string.Equals(Path.GetFileNameWithoutExtension(file), expectedName, StringComparison.OrdinalIgnoreCase);
+           pathComparer.Equals(Path.GetDirectoryName(file), directory) &&
+           pathComparer.Equals(Path.GetFileNameWithoutExtension(file), expectedName);
 
     private static string EnsureTrailingSeparator(string path)
         => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)

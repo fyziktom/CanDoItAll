@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\..\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
     <ProjectReference Include="..\..\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />

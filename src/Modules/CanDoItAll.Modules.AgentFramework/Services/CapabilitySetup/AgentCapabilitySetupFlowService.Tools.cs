@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
+using CanDoItAll.SharedKernel;
 using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 
 namespace CanDoItAll.Modules.AgentFramework;
@@ -82,13 +83,25 @@ public sealed partial class AgentCapabilitySetupFlowService
                 transport: CapabilityTransportKind.ExternalProcess));
         }
 
+        if (SensitiveTextRedactor.ContainsSecretBearingArguments(process.Arguments ?? []))
+        {
+            errors.Add(Diagnostic(
+                CapabilityDiagnosticCategory.SecretBinding,
+                identity,
+                "$.externalProcess.arguments",
+                "External process setup cannot launch a persisted secret-bearing argument.",
+                "Use a runtime secret binding instead of a command-line secret.",
+                correlationId,
+                implementationKey: implementationKey,
+                transport: CapabilityTransportKind.ExternalProcess));
+        }
+
         var command = process.Command?.Trim() ?? "missing-command";
         var allowedExecutableNames = (process.AllowedExecutableNames is { Count: > 0 }
                 ? process.AllowedExecutableNames
                 : [Path.GetFileName(command)])
             .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSet(StringComparer.Ordinal);
 
         return new ExternalProcessToolDescriptor(
             identity,
@@ -99,11 +112,11 @@ public sealed partial class AgentCapabilitySetupFlowService
             new CapabilitySideEffectProfile(CapabilitySideEffectKind.ExternalAction, true, true),
             command,
             process.Arguments ?? [],
-            string.IsNullOrWhiteSpace(process.WorkingDirectory) ? "." : process.WorkingDirectory.Trim(),
+            string.IsNullOrWhiteSpace(process.WorkingDirectory) ? "." : process.WorkingDirectory,
             TimeSpan.FromSeconds(process.TimeoutSeconds is > 0 ? process.TimeoutSeconds.Value : DefaultTimeoutSeconds),
             Math.Max(64, process.MaxOutputBytes ?? DefaultMaxPayloadBytes),
             allowedExecutableNames,
-            NormalizeStringSet(process.RequiredOutputProperties));
+            NormalizeAuthoritySet(process.RequiredOutputProperties));
     }
 
     private static ExternalHttpToolDescriptor BuildHttpToolDescriptor(
@@ -159,7 +172,7 @@ public sealed partial class AgentCapabilitySetupFlowService
             http.Headers ?? new Dictionary<string, string>(),
             TimeSpan.FromSeconds(http.TimeoutSeconds is > 0 ? http.TimeoutSeconds.Value : DefaultTimeoutSeconds),
             Math.Max(64, http.MaxResponseBytes ?? DefaultMaxPayloadBytes),
-            NormalizeStringSet(http.RequiredOutputProperties));
+            NormalizeAuthoritySet(http.RequiredOutputProperties));
     }
 
     private static CapabilityToolConfigurationModel ReadToolConfiguration(

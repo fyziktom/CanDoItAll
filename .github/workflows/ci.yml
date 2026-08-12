@@ -82,7 +82,7 @@ jobs:
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
           dotnet test ./CanDoItAll.slnx --configuration Release --no-build
-          --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&RequiresHostDocker!=true"
+          --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           --logger "trx;LogFilePrefix=stable-${{ matrix.name }}"
           --results-directory "${{ runner.temp }}/test-results"
           -p:UseLocalCanDoItAllLibraries=false /m:1
@@ -92,7 +92,7 @@ jobs:
         run: >-
           dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj
           --configuration Release --no-build
-          --filter "(Category=UnixPortabilityCore)&(RequiresHostDocker!=true)"
+          --filter "(Category=UnixPortabilityCore)&(Category!=UnixRuntimePortability)&(RequiresHostDocker!=true)"
           --logger "trx;LogFileName=portability-unit-${{ matrix.name }}.trx"
           --results-directory "${{ runner.temp }}/test-results"
           -p:UseLocalCanDoItAllLibraries=false
@@ -104,7 +104,7 @@ jobs:
         run: >-
           dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
           --configuration Release --no-build
-          --filter "(Category=UnixPortabilityCore)&(RequiresHostDocker!=true)"
+          --filter "(Category=UnixPortabilityCore)&(Category!=UnixRuntimePortability)&(RequiresHostDocker!=true)"
           --logger "trx;LogFileName=portability-integration-${{ matrix.name }}.trx"
           --results-directory "${{ runner.temp }}/test-results"
           -p:UseLocalCanDoItAllLibraries=false
@@ -121,10 +121,19 @@ jobs:
           --results-directory "${{ runner.temp }}/test-results"
           -p:UseLocalCanDoItAllLibraries=false
 
-      - name: Install Chromium for core UI smoke
-        if: runner.os == 'Windows'
+      - name: Install Chromium for portability browser gates
         shell: pwsh
         run: ./tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/playwright.ps1 install chromium
+
+      - name: Run focused actual-host runtime portability gate
+        shell: pwsh
+        env:
+          CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
+        run: >-
+          ./tools/Validation/Test-RuntimePortability.ps1
+          -Configuration Release
+          -ResultsDirectory "${{ runner.temp }}/test-results"
+          -UseLocalCanDoItAllLibraries $false
 
       - name: Publish, start, restart, and inspect headless host
         shell: pwsh
@@ -155,6 +164,7 @@ jobs:
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/publish.log
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/startup-*.log
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/browser-smoke.*
+            output/playwright/b07-runtime-capabilities-*.png
           if-no-files-found: warn
           retention-days: 14
 

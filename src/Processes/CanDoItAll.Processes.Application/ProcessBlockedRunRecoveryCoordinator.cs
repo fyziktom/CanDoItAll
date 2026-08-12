@@ -532,11 +532,7 @@ public sealed class ProcessBlockedRunRecoveryCoordinator(
     }
 
     private static string NormalizeRequestedBy(string requestedBy)
-    {
-        return string.IsNullOrWhiteSpace(requestedBy)
-            ? "process-blocked-run-recovery"
-            : requestedBy.Trim();
-    }
+        => ProcessActorIdentityPolicy.Normalize(requestedBy, "process-blocked-run-recovery");
 
     private readonly record struct RecoveryCandidate(
         ProcessRuntimeStepState Step,

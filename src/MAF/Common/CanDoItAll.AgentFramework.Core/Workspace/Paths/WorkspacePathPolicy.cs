@@ -120,6 +120,14 @@ internal sealed class WorkspacePathPolicy
         var externalAliasResolution = TryResolveExternalTargetAlias(path, out var externalResolution, out var externalValidationMessage);
         if (externalAliasResolution == ExternalTargetAliasResolution.Resolved)
         {
+            if (allowedExternalRoots is not null &&
+                !NormalizeAllowedExternalRoots(allowedExternalRoots)
+                    .Any(root => IsPathWithinRoot(externalResolution.FullPath, root)))
+            {
+                throw WorkspacePathResolutionException.OutsideWorkspace(
+                    "The external-target alias is not covered by the explicit external-root allowlist.");
+            }
+
             EnsureNoReparseTraversal(externalResolution.FullPath);
             return externalResolution;
         }
@@ -165,6 +173,32 @@ internal sealed class WorkspacePathPolicy
 
         throw WorkspacePathResolutionException.OutsideWorkspace(
             $"Path '{ToSafeExternalPathReference(fullPath)}' resolves outside the workspace root and is not covered by an explicit external-root allowlist.");
+    }
+
+    public bool TryResolveAccessiblePath(
+        string path,
+        IReadOnlyList<string> allowedExternalRoots,
+        out WorkspacePathResolution resolution,
+        out string validationMessage)
+    {
+        try
+        {
+            resolution = ResolveAccessiblePath(path, allowedExternalRoots);
+            validationMessage = string.Empty;
+            return true;
+        }
+        catch (WorkspacePathResolutionException exception)
+        {
+            resolution = default;
+            validationMessage = exception.SafeMessage;
+            return false;
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            resolution = default;
+            validationMessage = "The requested path could not be resolved within the allowed external roots.";
+            return false;
+        }
     }
 
     public WorkspacePathResolution ResolveExistingPath(string path, bool allowFiles, bool allowDirectories, IReadOnlyList<string>? allowedExternalRoots = null)
@@ -266,7 +300,6 @@ internal sealed class WorkspacePathPolicy
         return allowedExternalRoots?
             .Where(root => !string.IsNullOrWhiteSpace(root))
             .Select(root => ResolveWorkspaceFullPath(root!))
-            .Distinct(StringComparer.Ordinal)
             .ToList()
             ?? [];
     }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -10,15 +11,14 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
 {
-    private static readonly WorkspaceProductFilesystemCompletionGateContribution Gate = new();
-
     [Fact]
     public void Validate_CompletedMutationWithEvidenceAndEmptyNativeRoot_ReturnsMissingOutput()
     {
         var productRoot = CreateTemporaryProductRoot();
         try
         {
-            var issue = Gate.Validate(CreateContext(productRoot, evidenceRefs: ["evidence/implementation.md"]));
+            var issue = CreateGate(productRoot).Validate(
+                CreateContext(productRoot, evidenceRefs: ["evidence/implementation.md"]));
 
             Assert.NotNull(issue);
             Assert.Equal("process.adapter.product_output_missing", issue.Code);
@@ -44,7 +44,7 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
                         JsonSerializer.Serialize(new[] { "required-output.txt" })
                 });
 
-            var issue = Gate.Validate(context);
+            var issue = CreateGate(productRoot).Validate(context);
 
             Assert.NotNull(issue);
             Assert.Equal("process.adapter.product_required_output_missing", issue.Code);
@@ -79,7 +79,7 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
                         })
                 });
 
-            var issue = Gate.Validate(context);
+            var issue = CreateGate(productRoot).Validate(context);
 
             Assert.NotNull(issue);
             Assert.Equal("process.adapter.product_required_file_content_missing", issue.Code);
@@ -117,7 +117,7 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
                         })
                 });
 
-            var issue = Gate.Validate(context);
+            var issue = CreateGate(productRoot).Validate(context);
 
             Assert.Null(issue);
         }
@@ -158,7 +158,7 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
                         })
                 });
 
-            var issue = Gate.Validate(context);
+            var issue = CreateGate(productRoot).Validate(context);
 
             Assert.NotNull(issue);
             Assert.Equal(
@@ -202,7 +202,7 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
                 FileMode.Open,
                 FileAccess.ReadWrite,
                 FileShare.None);
-            var issue = Gate.Validate(context);
+            var issue = CreateGate(productRoot).Validate(context);
 
             Assert.NotNull(issue);
             Assert.Equal("process.adapter.product_required_file_content_check_unavailable", issue.Code);
@@ -215,18 +215,106 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
     }
 
     [Fact]
-    public void Validate_AliasOnlyProductRoot_DoesNotPerformNativeFilesystemInspection()
+    public void Validate_AliasOnlyProductRoot_UsesBoundWorkspaceAuthority()
     {
-        var context = CreateContext(
-            productRoot: null,
-            extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [ProcessRuntimeLaunchVariables.ProductRootAlias] = "external-target/C/work/product"
-            });
+        var workspaceRoot = CreateTemporaryProductRoot();
+        var productRoot = CreateTemporaryProductRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(productRoot, "product.txt"), "product");
+            var registry = new ExternalTargetPathRegistry();
+            Assert.True(registry.TryCreateAlias(productRoot, out var alias));
+            var context = CreateContext(
+                productRoot: null,
+                extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProductRootAlias] = alias
+                });
 
-        var issue = Gate.Validate(context);
+            var issue = CreateGate(workspaceRoot, registry).Validate(context);
 
-        Assert.Null(issue);
+            Assert.Null(issue);
+        }
+        finally
+        {
+            DeleteDirectory(productRoot);
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public void Validate_UnboundAliasProductRoot_ReturnsInspectionUnavailable()
+    {
+        var workspaceRoot = CreateTemporaryProductRoot();
+        try
+        {
+            var context = CreateContext(
+                productRoot: null,
+                extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProductRootAlias] =
+                        "external-target/v1/0123456789abcdef01234567/product"
+                });
+
+            var issue = CreateGate(workspaceRoot, new ExternalTargetPathRegistry()).Validate(context);
+
+            Assert.NotNull(issue);
+            Assert.Equal("process.adapter.product_output_inspection_unavailable", issue.Code);
+            Assert.DoesNotContain("0123456789abcdef01234567", issue.Summary, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public void Validate_RequiredPathUnderBoundAlias_UsesOwnerResolution()
+    {
+        var workspaceRoot = CreateTemporaryProductRoot();
+        var productRoot = CreateTemporaryProductRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(productRoot, "required-output.txt"), "product");
+            var registry = new ExternalTargetPathRegistry();
+            Assert.True(registry.TryCreateAlias(productRoot, out var alias));
+            var context = CreateContext(
+                productRoot: null,
+                extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProductRootAlias] = alias,
+                    [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] =
+                        JsonSerializer.Serialize(new[] { "required-output.txt" })
+                });
+
+            var issue = CreateGate(workspaceRoot, registry).Validate(context);
+
+            Assert.Null(issue);
+        }
+        finally
+        {
+            DeleteDirectory(productRoot);
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    private static WorkspaceProductFilesystemCompletionGateContribution CreateGate(
+        string workspaceRoot,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
+    {
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(
+            workspaceRoot,
+            externalTargetRegistry: externalTargetRegistry);
+        return new WorkspaceProductFilesystemCompletionGateContribution(
+            new ProcessProductCompletionPathGate(
+                new ProcessProductFilesystemInspector(workspaceFiles)));
+    }
+
+    private static void AssertGenericEvidenceGateOwnsMissingEvidence(ProcessCompletionGateContext context)
+    {
+        var issue = ProcessProductMutationEvidenceGate.Validate(context.Assignment, context.Output);
+        Assert.NotNull(issue);
+        Assert.Equal("process.adapter.product_output_evidence_missing", issue.Code);
     }
 
     [Fact]
@@ -237,10 +325,8 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
         {
             var context = CreateContext(productRoot, evidenceRefs: []);
 
-            Assert.Null(Gate.Validate(context));
-            var issue = ProcessProductMutationEvidenceGate.Validate(context.Assignment, context.Output);
-            Assert.NotNull(issue);
-            Assert.Equal("process.adapter.product_output_evidence_missing", issue.Code);
+            Assert.Null(CreateGate(productRoot).Validate(context));
+            AssertGenericEvidenceGateOwnsMissingEvidence(context);
         }
         finally
         {

@@ -8,9 +8,9 @@
       "directory": "subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Core Gate C4",
+      "status": "Completed — Gate R0 GO",
       "depends_on": [
-        "Core Gate C4"
+        "Core Gate C4 or operator-authorized provisional core handoff"
       ],
       "unlocks": [
         "B01"
@@ -38,7 +38,7 @@
       "directory": "subbundles/01-execution-primitives-environment-and-executable-resolution",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate R0",
+      "status": "Completed — Gate R1a GO",
       "depends_on": [
         "B00",
         "Gate R0"
@@ -74,7 +74,7 @@
       "directory": "subbundles/02-workbench-runtime-nodes-terminal-and-elevation-adapters",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B01",
+      "status": "Completed — Workbench gate GO",
       "depends_on": [
         "B01"
       ],
@@ -110,7 +110,7 @@
       "directory": "subbundles/03-manager-process-ownership-supervision-and-watchers",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B02",
+      "status": "Completed — Gate R2 GO",
       "depends_on": [
         "B02"
       ],
@@ -146,7 +146,7 @@
       "directory": "subbundles/04-mcp-local-stdio-and-external-tool-runtime",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by Gate R2",
+      "status": "Completed — Gate R3a GO",
       "depends_on": [
         "B03",
         "Gate R2"
@@ -181,7 +181,7 @@
       "directory": "subbundles/05-plugins-filetools-and-host-integrations",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B04",
+      "status": "Completed — Gate R3b GO",
       "depends_on": [
         "B04"
       ],
@@ -213,7 +213,7 @@
       "directory": "subbundles/06-process-domain-driver-capability-adaptation",
       "critical": true,
       "conditional": false,
-      "status": "Blocked by B05",
+      "status": "Eligible — Gate R3b GO",
       "depends_on": [
         "B05"
       ],

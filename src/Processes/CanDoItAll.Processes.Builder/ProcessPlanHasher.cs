@@ -28,6 +28,12 @@ public static class ProcessPlanHasher
         }
 
         AppendValues(builder, "override", plan.Definition.AppliedLocalOverridePointers);
+        Append(builder, "host.profile", plan.DriverStack.HostProfileId);
+        foreach (var capability in plan.DriverStack.HostCapabilities.OrderBy(capability => capability.Id.Value, StringComparer.Ordinal))
+        {
+            AppendHostCapability(builder, "driver.host", capability);
+        }
+
         foreach (var driver in plan.DriverStack.Drivers.OrderBy(driver => driver.DriverId.Value, StringComparer.Ordinal))
         {
             Append(builder, "driver.id", driver.DriverId);
@@ -36,6 +42,7 @@ public static class ProcessPlanHasher
             Append(builder, "driver.minRuntime", driver.MinRuntimeSchema);
             Append(builder, "driver.maxRuntime", driver.MaxRuntimeSchema);
             AppendValues(builder, "driver.capability", driver.CapabilityTags.Select(tag => tag.Value).Order(StringComparer.Ordinal));
+            AppendValues(builder, "driver.hostRequirement", driver.RequiredHostCapabilities.Select(capability => capability.Value).Order(StringComparer.Ordinal));
         }
 
         foreach (var step in plan.Steps.OrderBy(step => step.StepKey, StringComparer.Ordinal))
@@ -45,6 +52,14 @@ public static class ProcessPlanHasher
             Append(builder, "step.kind", step.Kind);
             Append(builder, "step.executable", step.IsExecutable);
             Append(builder, "step.subprocess", step.StartsSubprocess);
+            AppendValues(
+                builder,
+                "step.hostRequirement",
+                step.RequiredHostCapabilities.Select(capability => capability.Value).Order(StringComparer.Ordinal));
+            AppendValues(
+                builder,
+                "step.runtimeToolRequirement",
+                step.RequiredRuntimeToolNames.Order(StringComparer.OrdinalIgnoreCase));
             AppendBinding(builder, "step.binding", step.ExecutionStrategyBinding);
         }
 
@@ -156,11 +171,28 @@ public static class ProcessPlanHasher
         Append(builder, prefix + ".minRuntime", binding.MinRuntimeSchema);
         Append(builder, prefix + ".maxRuntime", binding.MaxRuntimeSchema);
         Append(builder, prefix + ".hash", binding.BindingInputsHash);
+        Append(builder, prefix + ".hostProfile", binding.HostProfileId);
+        foreach (var capability in binding.HostCapabilities.OrderBy(capability => capability.Id.Value, StringComparer.Ordinal))
+        {
+            AppendHostCapability(builder, prefix + ".host", capability);
+        }
+
         foreach (var input in binding.Inputs.OrderBy(input => input.Key.Value, StringComparer.Ordinal))
         {
             Append(builder, prefix + ".input.key", input.Key);
             Append(builder, prefix + ".input.hash", input.ValueHash);
         }
+    }
+
+    private static void AppendHostCapability(
+        StringBuilder builder,
+        string prefix,
+        ProcessHostCapabilityFact capability)
+    {
+        Append(builder, prefix + ".id", capability.Id);
+        Append(builder, prefix + ".availability", capability.Availability);
+        Append(builder, prefix + ".reason", capability.Reason);
+        Append(builder, prefix + ".port", capability.ExecutionPort);
     }
 
     private static void AppendLoopBudget(

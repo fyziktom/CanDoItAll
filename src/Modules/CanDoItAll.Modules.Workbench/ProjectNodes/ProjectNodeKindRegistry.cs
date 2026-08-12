@@ -543,6 +543,7 @@ internal static class ProjectNodeKindRegistry
             FileObject(ProjectObjectType.VideoAsset, "Video", Profile("rect", "#7c3aed", "VD", "Video", ProjectObjectPaletteKeys.Secondary), ProjectFileSubtype.Video),
 
             Script("powershell", "PowerShell", Profile("diamond", "#2563eb", "PS", "PowerShell", ProjectObjectPaletteKeys.Info), ProjectScriptKind.PowerShell),
+            Script("posix-shell", "POSIX shell", Profile("diamond", "#334155", "SH", "POSIX shell", ProjectObjectPaletteKeys.Neutral), ProjectScriptKind.PosixShell),
             Script("console", "Console script", Profile("diamond", "#0f766e", "CS", "Console", ProjectObjectPaletteKeys.Success), ProjectScriptKind.Console),
             Script("ef-migration", "EF migration", Profile("diamond", "#d97706", "EF", "Migration", ProjectObjectPaletteKeys.Warning), ProjectScriptKind.EfMigration),
             Script("tailwind-watch", "Tailwind watch", Profile("diamond", "#0ea5e9", "TW", "Tailwind", ProjectObjectPaletteKeys.Info), ProjectScriptKind.TailwindWatch),

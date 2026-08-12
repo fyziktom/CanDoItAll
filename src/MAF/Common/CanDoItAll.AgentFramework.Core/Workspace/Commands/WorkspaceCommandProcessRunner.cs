@@ -114,19 +114,26 @@ internal sealed class WorkspaceCommandProcessRunner
 
     public async Task<WorkspaceCommandExecutionResult> ExecuteAsync(WorkspaceCommandPlan plan, CancellationToken cancellationToken = default)
     {
-        var executablePath = executableLocator.ResolveExecutablePath(plan.ExecutableCandidates);
+        var executablePath = executableLocator.ResolveExecutablePath(
+            plan.ExecutableCandidates,
+            plan.WorkingDirectoryPath);
+        var environmentVariables = environmentPolicy.MergeEnvironmentVariables(
+            plan.EnvironmentVariables,
+            plan.Decision.ToolName);
         var productTargetAudit = ProductTargetMutationAudit.CaptureBefore(
             plan,
             WorkspaceExecutionAuditContext.Current,
             pathPolicy);
-        using var pathAliasSession = WorkspacePathAliasSession.TryCreate(
+        await using var pathAliasSession = await WorkspacePathAliasSession.TryCreateAsync(
             plan.WorkspaceRootPath,
             plan.WorkingDirectoryPath,
             plan.Arguments,
-            pathPolicy);
+            pathPolicy,
+            processHost,
+            environmentVariables,
+            cancellationToken).ConfigureAwait(false);
         var effectiveWorkingDirectoryPath = pathAliasSession?.RewritePath(plan.WorkingDirectoryPath) ?? plan.WorkingDirectoryPath;
         var effectiveArguments = pathAliasSession?.RewriteArguments(plan.Arguments) ?? plan.Arguments;
-        var environmentVariables = environmentPolicy.MergeEnvironmentVariables(plan.EnvironmentVariables);
         pathPolicy.ValidatePathForUse(plan.WorkingDirectoryPath);
         var processResult = await processHost.ExecuteAsync(
             new WorkspaceProcessExecutionRequest(
@@ -141,8 +148,29 @@ internal sealed class WorkspaceCommandProcessRunner
                 StderrLimitCharacters: plan.StderrLimitCharacters),
             cancellationToken).ConfigureAwait(false);
 
-        var effectiveProcessResult = NormalizeProcessResult(plan.Decision.ToolName, processResult);
-        effectiveProcessResult = productTargetAudit.Apply(effectiveProcessResult);
+        return CreateExecutionResult(
+            plan,
+            productTargetAudit.Apply(processResult),
+            environmentVariables.Keys);
+    }
+
+    internal string ResolveExecutablePath(WorkspaceCommandPlan plan)
+        => executableLocator.ResolveExecutablePath(
+            plan.ExecutableCandidates,
+            plan.WorkingDirectoryPath);
+
+    internal IReadOnlyDictionary<string, string?> BuildEnvironmentVariables(WorkspaceCommandPlan plan)
+        => environmentPolicy.MergeEnvironmentVariables(
+            plan.EnvironmentVariables,
+            plan.Decision.ToolName);
+
+    internal WorkspaceCommandExecutionResult CreateExecutionResult(
+        WorkspaceCommandPlan plan,
+        WorkspaceProcessExecutionResult processResult,
+        IEnumerable<string> environmentVariableNames)
+    {
+        var effectiveProcessResult = RedactProcessOutput(
+            NormalizeProcessResult(plan.Decision.ToolName, processResult));
         var succeeded = effectiveProcessResult.Started && !effectiveProcessResult.TimedOut && effectiveProcessResult.ExitCode == 0;
         if (effectiveProcessResult.TimedOut)
         {
@@ -169,8 +197,8 @@ internal sealed class WorkspaceCommandProcessRunner
             message,
             effectiveProcessResult,
             plan.DeclaredSideEffectMode,
-            environmentVariables.Keys
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            environmentVariableNames
+                .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray());
         var resultMessage = AppendFailureDiagnosticHint(message, receipt, effectiveProcessResult, succeeded);
 
@@ -274,6 +302,15 @@ internal sealed class WorkspaceCommandProcessRunner
             FailureMessage = failureMessage
         };
     }
+
+    private static WorkspaceProcessExecutionResult RedactProcessOutput(
+        WorkspaceProcessExecutionResult processResult)
+        => processResult with
+        {
+            Stdout = SensitiveTextRedactor.Redact(processResult.Stdout),
+            Stderr = SensitiveTextRedactor.Redact(processResult.Stderr),
+            FailureMessage = SensitiveTextRedactor.Redact(processResult.FailureMessage)
+        };
 
     private static bool ContainsPowerShellErrorRecord(string? stderr)
     {

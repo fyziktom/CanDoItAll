@@ -5,7 +5,7 @@
   "title": "Runtime three-platform CI, E2E, and final closure",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by Gate R3",
+  "status": "Implemented locally — hosted Windows/Ubuntu/macOS aggregate and Final Gate R4 deferred",
   "depends_on": [
     "B06",
     "Gate R3"
@@ -23,7 +23,8 @@
     "RCI-007"
   ],
   "source_hotspots": [
-    ".github/workflows-disabled/ci.yml",
+    ".github/workflows/ci.yml",
+    "tools/Validation/Test-RuntimePortability.ps1",
     "tests/Unit/CanDoItAll.Tests.Unit",
     "tests/Integration/CanDoItAll.Tests.Integration",
     "tests/Playwright/CanDoItAll.Tests.Playwright",
@@ -43,7 +44,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented locally; hosted execution pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -65,7 +66,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented and proven on local Windows; hosted matrix pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -87,7 +88,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -109,7 +110,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -131,7 +132,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -153,7 +154,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -175,7 +176,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Local focused regression complete; hosted aggregate pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -197,7 +198,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Local failure-injection and scan complete; hosted aggregate pending",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -219,7 +220,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Completed for local and configured hosted profiles",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -241,7 +242,7 @@
         "RCI-006",
         "RCI-007"
       ],
-      "status": "Planned",
+      "status": "Deferred by operator instruction pending hosted artifacts and independent R4 review",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

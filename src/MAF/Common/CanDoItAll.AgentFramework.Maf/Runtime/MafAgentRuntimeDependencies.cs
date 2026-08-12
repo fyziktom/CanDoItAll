@@ -132,7 +132,8 @@ internal sealed record MafRuntimeCapabilityDependencies(
             serviceProvider.GetService(typeof(CapabilityAccessPolicyEvaluatorContract)) as CapabilityAccessPolicyEvaluatorContract
                 ?? new CanDoItAll.AgentFramework.Capabilities.Access.CapabilityAccessPolicyEvaluator(),
             serviceProvider.GetService(typeof(IMcpClientFactory)) as IMcpClientFactory
-                ?? new LocalStdioMcpClientFactory(),
+                ?? throw new InvalidOperationException(
+                    "IMcpClientFactory must be registered before composing MCP runtime capabilities."),
             serviceProvider.GetService(typeof(ISecretRuntimeResolver)) as ISecretRuntimeResolver,
             new ServiceProviderRegisteredCapabilityServiceSource(
                 serviceProvider,

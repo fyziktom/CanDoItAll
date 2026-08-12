@@ -11,11 +11,28 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Application;
 
-public sealed record ProcessRuntimeDispatchResult(
-    ProcessRunId RunId,
-    ProcessLaunchStage Stage,
-    ProcessRuntimeStatus Status,
-    IReadOnlyList<string> Diagnostics);
+public sealed record ProcessRuntimeDispatchResult
+{
+    public ProcessRuntimeDispatchResult(
+        ProcessRunId runId,
+        ProcessLaunchStage stage,
+        ProcessRuntimeStatus status,
+        IReadOnlyList<string> diagnostics)
+    {
+        RunId = runId;
+        Stage = stage;
+        Status = status;
+        Diagnostics = ProcessPublicReceiptTextPolicy.NormalizePublicMessages(diagnostics);
+    }
+
+    public ProcessRunId RunId { get; }
+
+    public ProcessLaunchStage Stage { get; }
+
+    public ProcessRuntimeStatus Status { get; }
+
+    public IReadOnlyList<string> Diagnostics { get; }
+}
 
 public sealed class ProcessRuntimeDispatchOptions
 {
@@ -51,7 +68,8 @@ public sealed class ProcessRuntimeDispatchApplicationService(
     IProcessRuntimeDispatchQueue? dispatchQueue = null,
     IProcessRuntimeBranchSignalRouter? branchSignalRouterOverride = null,
     IProcessStepRecoveryInstructionBuilder? recoveryInstructionBuilder = null,
-    IProcessBlockedRunRecoveryCoordinator? blockedRunRecoveryCoordinator = null)
+    IProcessBlockedRunRecoveryCoordinator? blockedRunRecoveryCoordinator = null,
+    IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider = null)
 {
     private const int MaximumDispatchIterations = 200;
     private const int MaximumStepDispatchAttempts = 20;
@@ -83,12 +101,12 @@ public sealed class ProcessRuntimeDispatchApplicationService(
         var diagnostics = new List<string>();
         var scheduler = new ProcessRuntimeScheduler();
         var engine = new ProcessRuntimeEngine(unitOfWork);
-        var dispatcher = new ProcessStrategyDispatcher();
+        var dispatcher = new ProcessStrategyDispatcher(hostCapabilitySnapshotProvider);
 
         for (var iteration = 0; iteration < MaximumDispatchIterations; iteration++)
         {
             var state = await stateStore.LoadAsync(runId, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Process run '{runId}' was not found.");
+                ?? throw new ProcessRuntimeDispatchRunNotFoundException(runId);
             if (ProcessRuntimeTerminalStates.IsRunTerminal(state.Status))
             {
                 return await CompleteDispatchAsync(
@@ -115,6 +133,15 @@ public sealed class ProcessRuntimeDispatchApplicationService(
 
             var plan = await planStore.LoadAsync(state.PlanId, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Process run '{runId}' references missing plan '{state.PlanId}'.");
+            if (!string.Equals(state.PlanHash, plan.PlanHash, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Process runtime state does not match its immutable plan.");
+            }
+            if (!HasMatchingStepRequirementContracts(state, plan))
+            {
+                throw new InvalidOperationException(
+                    "Process runtime step requirements do not match the immutable plan.");
+            }
             if (state.Status == ProcessRuntimeStatus.Created)
             {
                 var activateCommit = await ExecuteLifecycleTransitionWithConcurrencyRetryAsync(
@@ -532,12 +559,11 @@ public sealed class ProcessRuntimeDispatchApplicationService(
                 $"'{recovery.TargetStepInstanceId}'.");
         }
 
-        return result with
-        {
-            Stage = ToStage(recovery.Status),
-            Status = recovery.Status,
-            Diagnostics = diagnostics
-        };
+        return new ProcessRuntimeDispatchResult(
+            result.RunId,
+            ToStage(recovery.Status),
+            recovery.Status,
+            diagnostics);
     }
 
     private async Task EnqueueBlockedParentsForCompletedChildAsync(
@@ -1368,6 +1394,50 @@ public sealed class ProcessRuntimeDispatchApplicationService(
 
         return options;
     }
+
+    private static bool HasMatchingStepRequirementContracts(
+        ProcessRuntimeStateSnapshot state,
+        ProcessInstancePlan plan)
+    {
+        if (state.Steps.Count != plan.Steps.Count)
+        {
+            return false;
+        }
+
+        foreach (var planStep in plan.Steps)
+        {
+            var matches = state.Steps
+                .Where(step => step.StepInstanceId == planStep.StepInstanceId)
+                .Take(2)
+                .ToArray();
+            if (matches.Length != 1)
+            {
+                return false;
+            }
+
+            var runtimeStep = matches[0];
+            if (runtimeStep.StepDefinitionId != planStep.StepDefinitionId ||
+                !HasMatchingRuntimeToolContract(
+                    planStep.RequiredRuntimeToolNames,
+                    runtimeStep.RequiredRuntimeToolNames) ||
+                runtimeStep.RequiredHostCapabilities is null ||
+                planStep.RequiredHostCapabilities is null ||
+                !runtimeStep.RequiredHostCapabilities.SetEquals(planStep.RequiredHostCapabilities))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool HasMatchingRuntimeToolContract(
+        IReadOnlyList<string> plannedToolNames,
+        IReadOnlyList<string> runtimeToolNames)
+        => ProcessRequiredRuntimeToolNames.IsValidBoundedContract(plannedToolNames) &&
+           ProcessRequiredRuntimeToolNames.IsValidBoundedContract(runtimeToolNames) &&
+           plannedToolNames.Count == runtimeToolNames.Count &&
+           plannedToolNames.SequenceEqual(runtimeToolNames, StringComparer.OrdinalIgnoreCase);
 
     private static RuntimeCommandContext CreateContext(
         string requestedBy,

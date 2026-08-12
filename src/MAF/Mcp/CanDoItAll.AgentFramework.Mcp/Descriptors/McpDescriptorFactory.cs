@@ -63,12 +63,12 @@ public static class McpDescriptorFactory
             approvalMode,
             timeout,
             RequireText(command, nameof(command)),
-            NormalizeStrings(arguments),
-            RequireText(workingDirectory, nameof(workingDirectory)),
+            PreserveSequence(arguments),
+            RequireDataValue(workingDirectory, nameof(workingDirectory)),
             messageFraming,
-            NormalizeStringSet(allowedWorkingDirectories),
-            NormalizeDictionary(environmentVariableBindings),
-            NormalizeDictionary(rawEnvironmentVariables));
+            NormalizeAuthoritySet(allowedWorkingDirectories),
+            NormalizeDictionary(environmentVariableBindings, StringComparer.Ordinal),
+            NormalizeDictionary(rawEnvironmentVariables, StringComparer.Ordinal));
     }
 
     public static RemoteHttpMcpServerDescriptor RemoteHttp(
@@ -98,8 +98,8 @@ public static class McpDescriptorFactory
             approvalMode,
             timeout,
             endpoint,
-            NormalizeDictionary(headerBindings),
-            NormalizeDictionary(rawHeaders));
+            NormalizeDictionary(headerBindings, StringComparer.OrdinalIgnoreCase),
+            NormalizeDictionary(rawHeaders, StringComparer.OrdinalIgnoreCase));
     }
 
     private static CapabilityIdentity Identity(CapabilityKey key)
@@ -125,25 +125,26 @@ public static class McpDescriptorFactory
     private static IReadOnlySet<McpToolName> NormalizeTools(IEnumerable<McpToolName> toolNames)
         => toolNames.ToHashSet();
 
-    private static IReadOnlyList<string> NormalizeStrings(IEnumerable<string> values)
+    private static IReadOnlyList<string> PreserveSequence(IEnumerable<string> values)
+        => values.ToArray();
+
+    private static IReadOnlySet<string> NormalizeAuthoritySet(IEnumerable<string> values)
         => values
             .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .ToArray();
+            .ToHashSet(StringComparer.Ordinal);
 
-    private static IReadOnlySet<string> NormalizeStringSet(IEnumerable<string> values)
-        => values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    private static IReadOnlyDictionary<string, string> NormalizeDictionary(IReadOnlyDictionary<string, string> values)
-        => values
-            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
-            .ToDictionary(pair => pair.Key.Trim(), pair => pair.Value.Trim(), StringComparer.OrdinalIgnoreCase);
+    private static IReadOnlyDictionary<string, string> NormalizeDictionary(
+        IReadOnlyDictionary<string, string> values,
+        StringComparer comparer)
+        => new Dictionary<string, string>(values, comparer);
 
     private static string RequireText(string value, string parameterName)
         => string.IsNullOrWhiteSpace(value)
             ? throw new ArgumentException("Value is required.", parameterName)
             : value.Trim();
+
+    private static string RequireDataValue(string value, string parameterName)
+        => string.IsNullOrWhiteSpace(value)
+            ? throw new ArgumentException("Value is required.", parameterName)
+            : value;
 }

@@ -5,7 +5,7 @@
   "title": "Execution primitives, environment semantics, and executable resolution",
   "critical": true,
   "conditional": false,
-  "status": "Blocked by Gate R0",
+  "status": "Completed — Gate R1a GO",
   "depends_on": [
     "B00",
     "Gate R0"
@@ -28,7 +28,9 @@
     "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs",
     "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs",
     "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs",
-    "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs"
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceGitCommandExecutor.cs",
+    "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/WorkspaceExternalProcessRunner.cs"
   ],
   "tasks": [
     {
@@ -45,7 +47,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -68,7 +70,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -91,7 +93,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -114,7 +116,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -137,7 +139,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -160,7 +162,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -183,7 +185,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -206,7 +208,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -229,7 +231,7 @@
         "EXEC-007",
         "EXEC-008"
       ],
-      "status": "Planned",
+      "status": "Completed",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

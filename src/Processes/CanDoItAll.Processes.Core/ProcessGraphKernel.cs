@@ -15,7 +15,12 @@ public sealed record ProcessGraphNode(
     ProcessStepDefinitionId Id,
     string Key,
     ProcessStepKind Kind,
-    StrategyId? StrategyId = null);
+    StrategyId? StrategyId = null)
+{
+    public IReadOnlyList<string> RequiredHostCapabilities { get; init; } = [];
+
+    public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
+}
 
 public sealed record ProcessGraphEdge(
     ProcessStepDefinitionId SourceId,

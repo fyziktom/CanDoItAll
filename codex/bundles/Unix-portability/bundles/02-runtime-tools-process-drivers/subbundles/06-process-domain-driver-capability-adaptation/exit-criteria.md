@@ -1,9 +1,9 @@
 # Exit criteria
 
-- [ ] Gate R3 is GO.
-- [ ] Processes remains the semantic owner and MAF remains a generic execution adapter.
-- [ ] Every special/domain driver declares and consumes host capabilities through approved boundaries.
-- [ ] Unsupported profiles fail or choose alternatives deterministically before unsafe side effects.
+- [x] Gate R3 is GO.
+- [x] Processes remains the semantic owner and MAF remains a generic execution adapter.
+- [x] Every special/domain driver declares and consumes host capabilities through approved boundaries.
+- [x] Unsupported profiles fail or choose alternatives deterministically before unsafe side effects.
 
-- [ ] Execution report and session handoff are complete.
-- [ ] No secret-bearing content exists in artifacts.
+- [x] Execution report and B07 handoff are complete.
+- [x] No secret-bearing content exists in artifacts.

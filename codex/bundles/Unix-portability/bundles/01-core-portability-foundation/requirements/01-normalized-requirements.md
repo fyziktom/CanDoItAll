@@ -68,7 +68,7 @@
 | CI-004 | P1 | A07 | Publish artifacts and service/headless smoke tests run from clean directories outside the repository. | No success depends on bin/obj, developer profile, global npm cache, or repository-relative mutable state. |
 | CI-005 | P0 | A07 | Windows stable behavior remains green after every core portability phase. | No compatibility change is accepted with unexplained Windows regression. |
 | CI-006 | P1 | A07 | Static scanning blocks new unowned OS checks, raw Windows-only tokens, unsafe absolute-path persistence, and insecure secret fallbacks. | Allowlist entries are narrow, reviewed, and source-linked. |
-| CI-007 | P0 | A07 | Core Gate C4 produces a versioned handoff anchor and evidence pack that is sufficient to start the runtime bundle. | Runtime bundle remains blocked until C4 is GO and its source references are refreshed. |
+| CI-007 | P0 | A07 | Core Gate C4 produces a versioned handoff anchor and evidence pack that is sufficient to start the runtime bundle. | Runtime bundle remains blocked until C4 is GO, or an explicit operator deferral identifies immutable provisional anchors and preserves all unverified support limitations, and B00 refreshes its source references. |
 
 ## Status rules
 

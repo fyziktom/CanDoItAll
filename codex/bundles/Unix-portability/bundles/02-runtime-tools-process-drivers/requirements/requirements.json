@@ -6,9 +6,9 @@
       "id": "RPREP-001",
       "priority": "P0",
       "owner": "B00",
-      "requirement": "The runtime bundle is rebased to the exact commit that passed Core Gate C4 before any runtime edit.",
-      "acceptance": "Handoff report records core evidence, current HEAD/delta, dirty state, and invalidated source references.",
-      "status": "Planned"
+      "requirement": "The runtime bundle is rebased to an exact accepted core handoff anchor before any runtime production edit.",
+      "acceptance": "Handoff report records either C4 GO or the explicit operator-authorized provisional exception, immutable core/sibling anchors, local evidence, deferred support proof, current HEAD/delta, dirty state, and invalidated source references.",
+      "status": "Solved — Gate R0 GO"
     },
     {
       "id": "RPREP-002",
@@ -16,7 +16,7 @@
       "owner": "B00",
       "requirement": "Every process launch, terminal, runtime node, Manager supervisor, MCP, external tool, plugin host tool, and process-driver surface is inventoried.",
       "acceptance": "No unclassified P0/P1 runtime surface remains at gate R0.",
-      "status": "Planned"
+      "status": "Solved — Gate R0 GO"
     },
     {
       "id": "RPREP-003",
@@ -24,7 +24,7 @@
       "owner": "B00",
       "requirement": "Ownership between MAF execution primitives, Workbench presentation, Manager supervision, Plugins, and Processes domain semantics is approved before refactoring.",
       "acceptance": "Architecture map has one authoritative owner for plan, execution, lifecycle, recovery, capability, receipt, and domain failure semantics.",
-      "status": "Planned"
+      "status": "Solved — Gate R0 GO"
     },
     {
       "id": "RPREP-004",
@@ -32,7 +32,7 @@
       "owner": "B00",
       "requirement": "The bundle split decision is revisited using measured file/project/dependency scope.",
       "acceptance": "If split triggers are met, child bundles are generated before implementation; no miscellaneous overflow is accepted.",
-      "status": "Planned"
+      "status": "Solved — Gate R0 GO"
     },
     {
       "id": "EXEC-001",
@@ -40,7 +40,7 @@
       "owner": "B01",
       "requirement": "Direct execution uses a typed immutable plan containing executable identity, argv, working directory, environment names/values, timeout, output limits, side effects, and boundary metadata.",
       "acceptance": "No ordinary .NET/Docker/Python/Node command is reconstructed from display text or passed through a shell.",
-      "status": "Planned"
+      "status": "Completed — Gate R1a GO"
     },
     {
       "id": "EXEC-002",
@@ -48,7 +48,7 @@
       "owner": "B01",
       "requirement": "One tested low-level process execution primitive is authoritative for workspace commands, external tools, and injected plugin runtimes unless a documented boundary requires a wrapper.",
       "acceptance": "Duplicate local runners do not diverge in cancellation, kill, output, environment, or receipt behavior.",
-      "status": "Planned"
+      "status": "Completed — Gate R1a GO"
     },
     {
       "id": "EXEC-003",
@@ -56,7 +56,7 @@
       "owner": "B01",
       "requirement": "Executable resolution is deterministic, capability-owned, and OS-correct.",
       "acceptance": "Windows PATHEXT behavior, Unix execute bits/shebang, explicit paths, PATH order, case rules, and missing/ambiguous candidates have tests.",
-      "status": "Planned"
+      "status": "Completed — Gate R1a GO"
     },
     {
       "id": "EXEC-004",
@@ -163,60 +163,60 @@
       "status": "Planned"
     },
     {
-      "id": "MGR-001",
+    "id": "MGR-001",
       "priority": "P0",
       "owner": "B03",
       "requirement": "Manager persists identity for processes it launches and uses that registry as primary ownership truth.",
       "acceptance": "PID, start identity, executable, argv hash, workspace, user/owner, parent/lease, and lifecycle state are captured without secrets.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO"
     },
     {
-      "id": "MGR-002",
+    "id": "MGR-002",
       "priority": "P1",
       "owner": "B03",
       "requirement": "Windows WMI recovery discovery is isolated behind a Windows leaf adapter.",
       "acceptance": "Neutral Manager code compiles/runs without directly calling System.Management.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO"
     },
     {
-      "id": "MGR-003",
+    "id": "MGR-003",
       "priority": "P0",
       "owner": "B03",
       "requirement": "Linux recovery discovery uses a bounded /proc or equivalent adapter and validates ownership before action.",
       "acceptance": "Missing permissions, exited processes, PID reuse, and unreadable command lines fail safely.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO"
     },
     {
-      "id": "MGR-004",
+    "id": "MGR-004",
       "priority": "P0",
       "owner": "B03",
       "requirement": "macOS recovery discovery uses a proven bounded adapter and validates ownership before action.",
       "acceptance": "The implementation does not parse locale-dependent human output without strict fixtures and fallback behavior.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO; actual macOS deferred"
     },
     {
-      "id": "MGR-005",
+    "id": "MGR-005",
       "priority": "P0",
       "owner": "B03",
       "requirement": "Manager never terminates a process using name-only or path-substring evidence.",
       "acceptance": "Ambiguous or incomplete identity produces a diagnostic/manual cleanup state.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO"
     },
     {
-      "id": "MGR-006",
+    "id": "MGR-006",
       "priority": "P1",
       "owner": "B03",
       "requirement": "Watch/Tailwind supervisors share tested process lifecycle and watcher-rescan primitives without merging domain responsibilities.",
       "acceptance": "Restart/backoff, duplicate start, cancellation, and output-file convergence are tested on all target OSes.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO"
     },
     {
-      "id": "MGR-007",
+    "id": "MGR-007",
       "priority": "P1",
       "owner": "B03",
       "requirement": "Manager path collections and comparisons use core logical/physical semantics rather than global OrdinalIgnoreCase.",
       "acceptance": "Case-collision fixtures pass on Linux and configured macOS filesystems.",
-      "status": "Planned"
+    "status": "Completed — Gate R2 GO"
     },
     {
       "id": "MCP-001",
@@ -224,7 +224,7 @@
       "owner": "B04",
       "requirement": "Local MCP command authorization validates the resolved executable identity using one capability-owned policy.",
       "acceptance": "Suffix, PATH, explicit path, symlink, and case tests pass on Windows/Linux/macOS.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "MCP-002",
@@ -232,7 +232,7 @@
       "owner": "B04",
       "requirement": "Local stdio MCP launch reuses authoritative process/environment semantics and has bounded startup/shutdown ownership.",
       "acceptance": "Cancellation leaves no server process and diagnostics expose no secret values.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "MCP-003",
@@ -240,7 +240,7 @@
       "owner": "B04",
       "requirement": "Playwright MCP is installed/resolved from a controlled versioned application tool root.",
       "acceptance": "Global npx cache scanning is removed from production selection or explicitly limited to a non-authoritative diagnostic path.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "MCP-004",
@@ -248,7 +248,7 @@
       "owner": "B04",
       "requirement": "MCP environment secret bindings resolve at invocation time through the secret runtime boundary.",
       "acceptance": "Persisted descriptors contain references/names, not secret values; receipts contain approved names only.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "MCP-005",
@@ -256,7 +256,7 @@
       "owner": "B04",
       "requirement": "MCP setup validation reports command, runtime, package, working-directory, secret-binding, and platform capability failures separately.",
       "acceptance": "Repair hints are deterministic and tested.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "TOOL-001",
@@ -264,7 +264,7 @@
       "owner": "B04",
       "requirement": "External process tools share or wrap the authoritative process primitive and do not implement a divergent local runner.",
       "acceptance": "Timeout, output limit, cancellation, and tree-kill tests are common.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "TOOL-002",
@@ -272,7 +272,7 @@
       "owner": "B04",
       "requirement": "External tool stdout/stderr diagnostics are bounded and redacted before entering exceptions, receipts, agent context, or CI logs.",
       "acceptance": "Sentinel-secret tests cover JSON parse and non-zero-exit paths.",
-      "status": "Planned"
+      "status": "Completed — Gate R3a GO; actual macOS deferred"
     },
     {
       "id": "PLUG-001",
@@ -280,7 +280,7 @@
       "owner": "B05",
       "requirement": "Docker host tools receive the authoritative process host, executable resolver, environment policy, and workspace scope through composition.",
       "acceptance": "No direct new LocalWorkspaceProcessHost remains in plugin code.",
-      "status": "Planned"
+      "status": "Completed — Gate R3b GO"
     },
     {
       "id": "PLUG-002",
@@ -288,7 +288,7 @@
       "owner": "B05",
       "requirement": "Docker capability reports daemon/socket/context availability separately from executable presence.",
       "acceptance": "Linux socket permission, macOS desktop absence, remote DOCKER_HOST, and timeout states are tested without weakening policy.",
-      "status": "Planned"
+      "status": "Completed — Gate R3b GO"
     },
     {
       "id": "PLUG-003",
@@ -296,7 +296,7 @@
       "owner": "B05",
       "requirement": "The pinned FileTools desktop package has an explicit Windows/Linux/macOS compatibility report and test evidence.",
       "acceptance": "Unsupported or unverified OS capabilities are disabled truthfully; package upgrade/change is isolated.",
-      "status": "Planned"
+      "status": "Completed — Gate R3b GO"
     },
     {
       "id": "PLUG-004",
@@ -304,7 +304,7 @@
       "owner": "B05",
       "requirement": "Desktop open/reveal/preferred-application behavior is modeled as optional capabilities with host-bound executable preferences.",
       "acceptance": "Headless and service profiles never attempt desktop launch.",
-      "status": "Planned"
+      "status": "Completed — Gate R3b GO"
     },
     {
       "id": "PLUG-005",
@@ -312,7 +312,7 @@
       "owner": "B05",
       "requirement": "Every native/external plugin dependency has a version, probe, tested OS matrix, failure mode, and remediation entry.",
       "acceptance": "Unknown dependencies block support claims but not unrelated core startup.",
-      "status": "Planned"
+      "status": "Completed — Gate R3b GO"
     },
     {
       "id": "PROC-001",
@@ -368,7 +368,7 @@
       "owner": "B07",
       "requirement": "Windows, Ubuntu, and macOS run focused process-host, executable, environment, runtime-node, Manager, MCP, plugin, and process-driver tests.",
       "acceptance": "Actual-host gates are active and not replaced by mocked platform tests.",
-      "status": "Planned"
+      "status": "In progress — active three-host CI configured; hosted aggregate deferred"
     },
     {
       "id": "RCI-002",
@@ -376,7 +376,7 @@
       "owner": "B07",
       "requirement": "Workbench Playwright tests prove capability-aware actions and no PowerShell-only language on Unix/headless profiles.",
       "acceptance": "Evidence includes route, viewport, capability fixture, screenshots, and result.",
-      "status": "Planned"
+      "status": "In progress — Windows browser proof green; hosted Unix browser proof deferred"
     },
     {
       "id": "RCI-003",
@@ -384,7 +384,7 @@
       "owner": "B07",
       "requirement": "Local stdio MCP and at least one governed external tool execute end-to-end on each claimed OS profile.",
       "acceptance": "Approval, secret binding, workspace containment, timeout, output, and cleanup invariants remain intact.",
-      "status": "Planned"
+      "status": "In progress — focused local-host proof retained; hosted aggregate deferred"
     },
     {
       "id": "RCI-004",
@@ -392,7 +392,7 @@
       "owner": "B07",
       "requirement": "Manager launch/restart/recovery/termination tests prove no unrelated process is killed and no owned child is leaked.",
       "acceptance": "PID reuse, process exit race, unreadable metadata, watcher overflow, and shutdown interruption are injected.",
-      "status": "Planned"
+      "status": "In progress — focused lifecycle and recovery proof retained; hosted aggregate deferred"
     },
     {
       "id": "RCI-005",
@@ -400,7 +400,7 @@
       "owner": "B07",
       "requirement": "A representative process using special tools completes or fails with the planned capability diagnostic on every target profile.",
       "acceptance": "Processes ownership, receipts, recovery, and host capability selection are reviewed independently.",
-      "status": "Planned"
+      "status": "In progress — focused Process capability proof retained; hosted aggregate deferred"
     },
     {
       "id": "RCI-006",
@@ -408,7 +408,7 @@
       "owner": "B07",
       "requirement": "Windows regression remains green and all runtime features can be disabled without blocking the core host.",
       "acceptance": "Runtime bundle closure cannot weaken the Core C4 evidence.",
-      "status": "Planned"
+      "status": "Solved — focused Windows runtime regression and Core C4 preservation green"
     },
     {
       "id": "RCI-007",
@@ -416,7 +416,7 @@
       "owner": "B07",
       "requirement": "Final Gate R4 records supported profiles, known limitations, external dependency versions, rollback, and evidence paths.",
       "acceptance": "Only R4 may mark Unix portability implementation complete.",
-      "status": "Planned"
+      "status": "In progress — local matrix published; Final Gate R4 deferred"
     }
   ]
 }

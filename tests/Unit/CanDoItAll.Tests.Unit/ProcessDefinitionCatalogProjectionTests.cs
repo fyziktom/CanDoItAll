@@ -3731,7 +3731,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 "1.0.0",
                 "runtime/1.0",
                 "runtime/1.0",
-                ProcessDriverLayer.Platform,
+                ProcessDriverLayer.Framework,
                 Capabilities,
                 [],
                 [],

@@ -33,25 +33,57 @@ using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 
 namespace CanDoItAll.Modules.Processes;
 
+internal enum ProcessProductRootResolutionKind
+{
+    NotConfigured,
+    Resolved,
+    Invalid
+}
+
+internal readonly record struct ProcessProductRootResolution(
+    ProcessProductRootResolutionKind Kind,
+    string ProductRoot,
+    string InvalidReason);
+
 internal static class ProcessProductRootResolver
 {
     private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
         new PhysicalFileSystemPathPolicyFactory();
 
-    internal static bool TryResolveInspectableProductRoot(
-        IReadOnlyDictionary<string, string> launchVariables,
-        out string productRoot)
+    internal static ProcessProductRootResolution ResolveInspectableProductRoot(
+        IReadOnlyDictionary<string, string> launchVariables)
     {
-        productRoot = FirstNonEmpty(
+        var productRoot = FirstNonEmpty(
+            ResolveLaunchVariable(launchVariables, "ProductRootAlias"),
+            ResolveLaunchVariable(launchVariables, "OutputRootAlias"),
             ResolveLaunchVariable(launchVariables, "OutputFolder"),
             ResolveLaunchVariable(launchVariables, "OutputRoot"),
             ResolveLaunchVariable(launchVariables, "ProductRoot"),
             ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"));
-        if (string.IsNullOrWhiteSpace(productRoot) ||
-            ExternalTargetAliasCodec.IsAnyAlias(productRoot))
+        if (string.IsNullOrWhiteSpace(productRoot))
         {
-            productRoot = string.Empty;
-            return false;
+            return new ProcessProductRootResolution(
+                ProcessProductRootResolutionKind.NotConfigured,
+                string.Empty,
+                string.Empty);
+        }
+
+        if (ExternalTargetAliasCodec.IsAnyAlias(productRoot))
+        {
+            var normalizedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(productRoot);
+            if (normalizedAlias is null &&
+                !ExternalTargetAliasCodec.TryNormalizeLegacyAlias(productRoot, out normalizedAlias))
+            {
+                return new ProcessProductRootResolution(
+                    ProcessProductRootResolutionKind.Invalid,
+                    string.Empty,
+                    "invalid external-target alias");
+            }
+
+            return new ProcessProductRootResolution(
+                ProcessProductRootResolutionKind.Resolved,
+                normalizedAlias,
+                string.Empty);
         }
 
         try
@@ -59,20 +91,27 @@ internal static class ProcessProductRootResolver
             PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(productRoot, "process product root");
             if (!Path.IsPathFullyQualified(productRoot))
             {
-                productRoot = string.Empty;
-                return false;
+                return new ProcessProductRootResolution(
+                    ProcessProductRootResolutionKind.Invalid,
+                    string.Empty,
+                    "product root is not fully qualified");
             }
 
             productRoot = Path.GetFullPath(productRoot);
             PhysicalPathPolicyFactory.Create(productRoot).EnsureSafePath(
                 productRoot,
                 allowMissingLeaf: true);
-            return true;
+            return new ProcessProductRootResolution(
+                ProcessProductRootResolutionKind.Resolved,
+                productRoot,
+                string.Empty);
         }
         catch (Exception exception) when (exception is PhysicalPathValidationException or ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
-            productRoot = string.Empty;
-            return false;
+            return new ProcessProductRootResolution(
+                ProcessProductRootResolutionKind.Invalid,
+                string.Empty,
+                "product root could not be validated safely");
         }
     }
 
@@ -91,15 +130,27 @@ internal static class ProcessProductRootResolver
             return false;
         }
 
+        if (ExternalTargetAliasCodec.IsAnyAlias(productRoot))
+        {
+            return TryResolveAliasProductPath(
+                productRoot,
+                candidate,
+                out resolvedPath,
+                out invalidReason);
+        }
+
         if (ExternalTargetAliasCodec.IsAnyAlias(candidate))
         {
-            if (!TryConvertExternalTargetAliasToNativePath(candidate, out var nativePath))
+            var normalizedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(candidate);
+            if (normalizedAlias is null &&
+                !ExternalTargetAliasCodec.TryNormalizeLegacyAlias(candidate, out normalizedAlias))
             {
-                invalidReason = "external-target alias is not a host-resolvable legacy alias";
+                invalidReason = "external-target alias is invalid";
                 return false;
             }
 
-            candidate = nativePath;
+            resolvedPath = normalizedAlias;
+            return true;
         }
 
         try
@@ -124,26 +175,91 @@ internal static class ProcessProductRootResolver
         return true;
     }
 
-    internal static bool TryConvertExternalTargetAliasToNativePath(string value, out string nativePath)
+    private static bool TryResolveAliasProductPath(
+        string productRoot,
+        string candidate,
+        out string resolvedPath,
+        out string invalidReason)
     {
-        nativePath = string.Empty;
-        if (!ExternalTargetAliasCodec.TryNormalizeLegacyAlias(value, out var normalized))
+        resolvedPath = string.Empty;
+        invalidReason = string.Empty;
+        var normalizedRoot = ExternalTargetAliasCodec.NormalizeVersionedAlias(productRoot);
+        var isVersionedRoot = normalizedRoot is not null;
+        if (normalizedRoot is null)
         {
+            if (!ExternalTargetAliasCodec.TryNormalizeLegacyAlias(productRoot, out var legacyRoot))
+            {
+                invalidReason = "product root external-target alias is invalid";
+                return false;
+            }
+
+            normalizedRoot = legacyRoot;
+        }
+
+        if (ExternalTargetAliasCodec.IsAnyAlias(candidate))
+        {
+            var normalizedCandidate = ExternalTargetAliasCodec.NormalizeVersionedAlias(candidate);
+            if (normalizedCandidate is null)
+            {
+                if (!ExternalTargetAliasCodec.TryNormalizeLegacyAlias(candidate, out var legacyCandidate))
+                {
+                    invalidReason = "required external-target alias is invalid";
+                    return false;
+                }
+
+                normalizedCandidate = legacyCandidate;
+            }
+
+            if (!ExternalTargetAliasCodec.IsAliasWithinRoot(normalizedCandidate, normalizedRoot))
+            {
+                invalidReason = "outside product root";
+                return false;
+            }
+
+            resolvedPath = normalizedCandidate;
+            return true;
+        }
+
+        try
+        {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(candidate, "required process product path");
+        }
+        catch (Exception exception) when (exception is PhysicalPathValidationException or ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
+        {
+            invalidReason = "required product path has invalid syntax";
             return false;
         }
 
-        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length < 2 ||
-            segments[1].Length != 1 ||
-            !char.IsLetter(segments[1][0]))
+        if (Path.IsPathFullyQualified(candidate))
         {
+            invalidReason = "outside product root";
             return false;
         }
 
-        var driveRoot = $"{char.ToUpperInvariant(segments[1][0])}:{Path.DirectorySeparatorChar}";
-        nativePath = segments.Length == 2
-            ? driveRoot
-            : Path.Combine(new[] { driveRoot }.Concat(segments.Skip(2)).ToArray());
+        var candidateSegments = candidate
+            .Replace('\\', '/')
+            .Split('/', StringSplitOptions.None);
+        if (candidateSegments.Length == 0 ||
+            candidateSegments.Any(segment => string.IsNullOrEmpty(segment) || segment is "." or ".."))
+        {
+            invalidReason = "required product path contains invalid traversal segments";
+            return false;
+        }
+
+        if (isVersionedRoot)
+        {
+            ExternalTargetAliasCodec.TryParseVersionedAlias(
+                normalizedRoot,
+                out var rootId,
+                out var rootSegments,
+                out _);
+            resolvedPath = ExternalTargetAliasCodec.BuildAlias(
+                rootId,
+                rootSegments.Concat(candidateSegments).ToArray());
+            return true;
+        }
+
+        resolvedPath = $"{normalizedRoot}/{string.Join('/', candidateSegments)}";
         return true;
     }
 
@@ -154,58 +270,17 @@ internal static class ProcessProductRootResolver
         return PhysicalPathPolicyFactory.Create(root).IsWithinRoot(candidate);
     }
 
-    internal static ProductRootInspection InspectProductRoot(string productRoot)
+    internal static bool IsProductFileReference(string path)
     {
-        try
-        {
-            if (!Directory.Exists(productRoot))
-            {
-                return new ProductRootInspection(false, "the directory does not exist");
-            }
-
-            var rootPathPolicy = PhysicalPathPolicyFactory.Create(productRoot);
-            rootPathPolicy.EnsureSafePath(productRoot);
-            return Directory
-                .EnumerateFiles(
-                    productRoot,
-                    "*",
-                    new EnumerationOptions
-                    {
-                        RecurseSubdirectories = true,
-                        IgnoreInaccessible = false,
-                        AttributesToSkip = FileAttributes.ReparsePoint
-                    })
-                .OrderBy(
-                    file => NormalizeEnumerationKey(Path.GetRelativePath(productRoot, file)),
-                    StringComparer.Ordinal)
-                .ThenBy(file => file, StringComparer.Ordinal)
-                .Select(file =>
-                {
-                    rootPathPolicy.EnsureSafePath(file);
-                    return file;
-                })
-                .Any(file => IsProductFile(productRoot, file))
-                ? new ProductRootInspection(true, string.Empty)
-                : new ProductRootInspection(false, "no product files were found");
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DirectoryNotFoundException or ArgumentException or NotSupportedException)
-        {
-            return new ProductRootInspection(false, exception.Message);
-        }
-    }
-
-    internal static bool IsProductFile(string productRoot, string file)
-    {
-        var relativePath = Path.GetRelativePath(productRoot, file);
-        var segments = relativePath.Split(
-            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+        var segments = path.Split(
+            ['/', '\\'],
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (segments.Any(IsIgnoredProductPathSegment))
         {
             return false;
         }
 
-        var fileName = Path.GetFileName(file);
+        var fileName = segments.LastOrDefault() ?? string.Empty;
         return !string.Equals(fileName, ".gitkeep", StringComparison.OrdinalIgnoreCase) &&
                !string.Equals(fileName, ".DS_Store", StringComparison.OrdinalIgnoreCase) &&
                !string.Equals(fileName, "Thumbs.db", StringComparison.OrdinalIgnoreCase);
@@ -219,8 +294,4 @@ internal static class ProcessProductRootResolver
            string.Equals(segment, "node_modules", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(segment, "packages", StringComparison.OrdinalIgnoreCase);
 
-    private static string NormalizeEnumerationKey(string path)
-        => path
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .Replace(Path.AltDirectorySeparatorChar, '/');
 }

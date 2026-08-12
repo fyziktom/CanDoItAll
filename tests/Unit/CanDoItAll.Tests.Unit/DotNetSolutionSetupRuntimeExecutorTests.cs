@@ -10,8 +10,11 @@ using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class DotNetSolutionSetupRuntimeExecutorTests
 {
+    private const string WorkspacePathAliasToolName = "workspace_path_alias";
+
     [Fact]
     public void ExecutorKey_is_the_stable_dotnet_solution_setup_driver_key()
     {
@@ -117,7 +120,10 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.True(result!.Succeeded, result.Summary);
         Assert.True(File.Exists(generatedSolutionFile));
-        Assert.Null(ProcessProductCompletionPathGate.ValidateRequiredProductFilesystemState(
+        var completionPathGate = new ProcessProductCompletionPathGate(
+            new ProcessProductFilesystemInspector(
+                TestWorkspaceServices.CreateFileService(productRoot)));
+        Assert.Null(completionPathGate.ValidateRequiredProductFilesystemState(
             assignment,
             result.Output!));
         Assert.Contains(
@@ -1091,6 +1097,7 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             processHost,
             externalTargetRegistry: externalTargets);
         return new DotNetSolutionSetupRuntimeExecutor(
+            workspaceFiles,
             workspaceCommands,
             new WorkspaceManagedScriptPlanExecutor(
                 workspaceFiles,
@@ -1496,10 +1503,20 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             WorkspaceProcessExecutionRequest request,
             CancellationToken cancellationToken = default)
         {
-            Requests.Add(request);
-            onExecute?.Invoke(request);
+            var isPathAliasOperation = string.Equals(
+                request.ToolName,
+                WorkspacePathAliasToolName,
+                StringComparison.Ordinal);
+            if (!isPathAliasOperation)
+            {
+                Requests.Add(request);
+                onExecute?.Invoke(request);
+            }
+
             var now = DateTimeOffset.UtcNow;
-            var exitCode = ExitCodeResolver?.Invoke(request) ?? ExitCode;
+            var exitCode = isPathAliasOperation
+                ? 0
+                : ExitCodeResolver?.Invoke(request) ?? ExitCode;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,
                 ExitCode: exitCode,

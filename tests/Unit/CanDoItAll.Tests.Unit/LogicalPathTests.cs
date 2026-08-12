@@ -83,6 +83,20 @@ public sealed class FileToolsStorageRootTests
 public sealed class PortablePathTemplateTests
 {
     [Fact]
+    public void Expand_preserves_significant_whitespace_in_a_physical_path()
+    {
+        const string path = "/tmp/ folder ";
+
+        var result = PortablePathTemplate.Expand(
+            path,
+            "/home/test",
+            _ => null,
+            PortablePathTemplateCompatibility.Canonical);
+
+        Assert.Equal(path, result);
+    }
+
+    [Fact]
     public void Expand_resolves_home_and_explicit_environment_tokens()
     {
         var result = PortablePathTemplate.Expand(

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
 using CanDoItAll.Infrastructure.Storage;
@@ -194,10 +195,10 @@ public sealed class BundledPluginWorkflowExecutorTests
         };
         IWorkflowExecutor[] executors =
         [
-            new DockerListContainersWorkflowExecutor(grants, host),
-            new DockerPullImageWorkflowExecutor(grants, host),
-            new DockerStartContainerWorkflowExecutor(grants, host),
-            new DockerReadLogsWorkflowExecutor(grants, host)
+            new DockerListContainersWorkflowExecutor(grants, host, ReadyDockerCapabilityProvider.Instance),
+            new DockerPullImageWorkflowExecutor(grants, host, ReadyDockerCapabilityProvider.Instance),
+            new DockerStartContainerWorkflowExecutor(grants, host, ReadyDockerCapabilityProvider.Instance),
+            new DockerReadLogsWorkflowExecutor(grants, host, ReadyDockerCapabilityProvider.Instance)
         ];
 
         foreach (var executor in executors)
@@ -235,7 +236,7 @@ public sealed class BundledPluginWorkflowExecutorTests
         var host = new FakePluginHostToolService();
         var gmail = new GmailMarkProcessedWorkflowExecutor(deniedGrants, oauth, gmailClient);
         var office = new Office365DownloadByAddressWorkflowExecutor(deniedGrants, oauth, officeClient);
-        var docker = new DockerPullImageWorkflowExecutor(deniedGrants, host);
+        var docker = new DockerPullImageWorkflowExecutor(deniedGrants, host, ReadyDockerCapabilityProvider.Instance);
 
         Assert.False(gmail.Descriptor.Availability.IsRunnable);
         Assert.False(office.Descriptor.Availability.IsRunnable);
@@ -290,14 +291,15 @@ public sealed class BundledPluginWorkflowExecutorTests
                 BoundaryEnforced: true,
                 EnvironmentVariableNames: [])
         };
-        var failingDocker = new DockerListContainersWorkflowExecutor(FakeGrantEvaluator.AllowAll(), failingHost);
+        var failingDocker = new DockerListContainersWorkflowExecutor(
+            FakeGrantEvaluator.AllowAll(),
+            failingHost,
+            ReadyDockerCapabilityProvider.Instance);
         var operationException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             ExecuteAsync(failingDocker, new DockerWorkflowExecutorSettings(), "{}").AsTask());
         Assert.Equal("Masked fake host failure.", operationException.Message);
 
-        var realGuardedHost = new DockerHostToolService(
-            new StaticWorkspacePathResolver(),
-            NullLogger<DockerHostToolService>.Instance);
+        var realGuardedHost = CreateDockerHostToolServiceForInputValidation();
         var unsafeInputException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             realGuardedHost.ExecuteAsync(
                 DockerPluginConstants.PluginId,
@@ -315,7 +317,10 @@ public sealed class BundledPluginWorkflowExecutorTests
     public async Task PluginExecutorCancellationPropagatesBeforeFakeOperation()
     {
         var host = new FakePluginHostToolService();
-        var executor = new DockerListContainersWorkflowExecutor(FakeGrantEvaluator.AllowAll(), host);
+        var executor = new DockerListContainersWorkflowExecutor(
+            FakeGrantEvaluator.AllowAll(),
+            host,
+            ReadyDockerCapabilityProvider.Instance);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -338,6 +343,15 @@ public sealed class BundledPluginWorkflowExecutorTests
         services.AddSingleton<IPluginHostToolService>(new FakePluginHostToolService());
         return services;
     }
+
+    private static DockerHostToolService CreateDockerHostToolServiceForInputValidation()
+        => new(
+            new StaticWorkspacePathResolver(),
+            new LocalWorkspaceProcessHost(),
+            new WorkspaceExecutableLocator(),
+            new WorkspaceCommandEnvironmentPolicy(),
+            new PhysicalFileSystemPathPolicyFactory(),
+            NullLogger<DockerHostToolService>.Instance);
 
     private static async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync<TSettings>(
         IWorkflowExecutor executor,
@@ -600,6 +614,22 @@ public sealed class BundledPluginWorkflowExecutorTests
             cancellationToken.ThrowIfCancellationRequested();
             Calls.Add(new HostToolCall(pluginId, recipeId, arguments, timeoutSeconds, maxOutputCharacters));
             return Task.FromResult(ResultFactory(recipeId));
+        }
+    }
+
+    private sealed class ReadyDockerCapabilityProvider : IDockerHostCapabilitySnapshotProvider
+    {
+        public static ReadyDockerCapabilityProvider Instance { get; } = new();
+
+        public Task<DockerHostCapabilitySnapshot> GetAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new DockerHostCapabilitySnapshot(
+                DockerHostDependencyState.Available,
+                DockerHostDependencyState.Available,
+                DockerHostDependencyState.Available,
+                DockerEndpointKind.Default,
+                "Docker host is ready."));
         }
     }
 

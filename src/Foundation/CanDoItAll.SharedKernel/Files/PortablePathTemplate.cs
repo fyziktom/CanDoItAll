@@ -54,7 +54,7 @@ public static class PortablePathTemplate
                 "The configured path contains reserved template characters.");
         }
 
-        var expanded = ExpandHome(template.Trim(), homeDirectory, compatibility);
+        var expanded = ExpandHome(template, homeDirectory, compatibility);
         for (var pass = 0; pass < MaximumExpansionPasses; pass++)
         {
             expanded = ExpandVariables(expanded, variableResolver, compatibility, out var expandedAny);

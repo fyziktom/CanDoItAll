@@ -23,12 +23,13 @@ public sealed class WorkspaceCommandEnvironmentPolicyTests
     [InlineData("MSBUILD_EXE_PATH")]
     public void Inherited_environment_excludes_observed_host_owned_variable(string variableName)
     {
-        var policy = new WorkspaceCommandEnvironmentPolicy();
+        var policy = new WorkspaceCommandEnvironmentPolicy(LocalHostPlatform.Windows);
         var environment = policy.BuildEnvironmentVariables(
             new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
             {
                 [variableName] = "host-owned-value"
-            });
+            },
+            "workspace_dotnet_build");
 
         Assert.DoesNotContain(variableName, environment.Keys, StringComparer.OrdinalIgnoreCase);
     }
@@ -36,7 +37,7 @@ public sealed class WorkspaceCommandEnvironmentPolicyTests
     [Fact]
     public void Inherited_environment_excludes_host_instrumentation_and_ambient_credentials()
     {
-        var policy = new WorkspaceCommandEnvironmentPolicy();
+        var policy = new WorkspaceCommandEnvironmentPolicy(LocalHostPlatform.Windows);
         var environment = policy.BuildEnvironmentVariables(
             new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
             {
@@ -52,12 +53,13 @@ public sealed class WorkspaceCommandEnvironmentPolicyTests
                 ["DOTNET_WATCH_HOTRELOAD_NAMEDPIPE_NAME"] = "watch-pipe",
                 ["OPENAI_API_KEY"] = "ambient-secret",
                 ["PIP_INDEX_URL"] = "https://credential@example.invalid/simple"
-            });
+            },
+            "workspace_dotnet_build");
 
         Assert.Equal(@"C:\Program Files\dotnet", environment["PATH"]);
         Assert.Equal("en-US", environment["DOTNET_CLI_UI_LANGUAGE"]);
         Assert.Equal(@"C:\packages", environment["NUGET_PACKAGES"]);
-        Assert.Equal("1", environment["PYTHONUTF8"]);
+        Assert.DoesNotContain("PYTHONUTF8", environment.Keys);
         Assert.DoesNotContain("MSBUILD_EXE_PATH", environment.Keys);
         Assert.DoesNotContain("MSBuildSDKsPath", environment.Keys);
         Assert.DoesNotContain("DOTNET_STARTUP_HOOKS", environment.Keys);
@@ -81,5 +83,93 @@ public sealed class WorkspaceCommandEnvironmentPolicyTests
 
         Assert.Equal("explicit-value", merged["RECIPE_TOKEN"]);
         Assert.Equal(@"C:\explicit\MSBuild.dll", merged["MSBUILD_EXE_PATH"]);
+    }
+
+    [Fact]
+    public void Unix_environment_preserves_case_distinct_explicit_names()
+    {
+        var policy = new WorkspaceCommandEnvironmentPolicy(LocalHostPlatform.Linux);
+
+        var merged = policy.MergeEnvironmentVariables(
+            new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["TOKEN"] = "upper",
+                ["token"] = "lower"
+            },
+            "workspace_python_run_file");
+
+        Assert.Equal("upper", merged["TOKEN"]);
+        Assert.Equal("lower", merged["token"]);
+        Assert.Equal(2, merged.Keys.Count(name => name is "TOKEN" or "token"));
+    }
+
+    [Fact]
+    public void Windows_environment_collapses_case_distinct_explicit_names()
+    {
+        var policy = new WorkspaceCommandEnvironmentPolicy(LocalHostPlatform.Windows);
+
+        var merged = policy.MergeEnvironmentVariables(
+            new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["TOKEN"] = "upper",
+                ["token"] = "lower"
+            },
+            "workspace_pwsh_run_script");
+
+        Assert.Single(merged.Keys, name => name.Equals("TOKEN", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("lower", merged["TOKEN"]);
+    }
+
+    [Fact]
+    public void Tool_specific_environment_is_not_inherited_by_unrelated_tools()
+    {
+        var policy = new WorkspaceCommandEnvironmentPolicy(LocalHostPlatform.Linux);
+        var source = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = "/usr/bin",
+            ["NUGET_PACKAGES"] = "/tmp/nuget",
+            ["PYTHONUTF8"] = "1",
+            ["OPENAI_API_KEY"] = "ambient-secret"
+        };
+
+        var dotnet = policy.BuildEnvironmentVariables(source, "workspace_dotnet_test");
+        var python = policy.BuildEnvironmentVariables(source, "workspace_python_run_file");
+
+        Assert.Contains("NUGET_PACKAGES", dotnet.Keys);
+        Assert.DoesNotContain("PYTHONUTF8", dotnet.Keys);
+        Assert.Contains("PYTHONUTF8", python.Keys);
+        Assert.DoesNotContain("NUGET_PACKAGES", python.Keys);
+        Assert.DoesNotContain("OPENAI_API_KEY", dotnet.Keys);
+        Assert.DoesNotContain("OPENAI_API_KEY", python.Keys);
+    }
+
+    [Fact]
+    public void Docker_environment_inherits_only_named_docker_configuration_with_host_case_semantics()
+    {
+        var source = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = "/usr/bin",
+            ["DOCKER_HOST"] = "unix:///run/docker.sock",
+            ["DOCKER_CONTEXT"] = "rootless",
+            ["DOCKER_CONFIG"] = "/home/operator/.docker",
+            ["DOCKER_CERT_PATH"] = "/secret/certificates",
+            ["DOCKER_TLS_VERIFY"] = "1",
+            ["DOCKER_UNSUPPORTED_SETTING"] = "must-not-flow",
+            ["OPENAI_API_KEY"] = "ambient-secret"
+        };
+        var policy = new WorkspaceCommandEnvironmentPolicy(LocalHostPlatform.Linux, source);
+
+        IReadOnlyDictionary<string, string?> environment = policy.MergeEnvironmentVariables(
+            environmentVariables: null,
+            toolName: "docker");
+
+        Assert.Equal("unix:///run/docker.sock", environment["DOCKER_HOST"]);
+        Assert.Equal("rootless", environment["DOCKER_CONTEXT"]);
+        Assert.Equal("/home/operator/.docker", environment["DOCKER_CONFIG"]);
+        Assert.Equal("/secret/certificates", environment["DOCKER_CERT_PATH"]);
+        Assert.Equal("1", environment["DOCKER_TLS_VERIFY"]);
+        Assert.DoesNotContain("DOCKER_UNSUPPORTED_SETTING", environment.Keys);
+        Assert.DoesNotContain("OPENAI_API_KEY", environment.Keys);
+        Assert.Equal(StringComparer.Ordinal, policy.EnvironmentNameComparer);
     }
 }

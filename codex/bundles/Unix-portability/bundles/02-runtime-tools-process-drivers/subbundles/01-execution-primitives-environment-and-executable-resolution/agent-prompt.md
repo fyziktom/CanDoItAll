@@ -51,7 +51,7 @@ Make one typed, OS-correct, lifecycle-owned process execution foundation before 
 
 ## Exit
 
-- Gate R1a is GO on Windows/Linux/macOS actual-host tests.
+- Gate R1a is GO for implementation on Windows/Linux actual-host tests plus deterministic macOS contract fixtures under `RUNTIME-MACOS-VALIDATION-001`; actual macOS proof remains deferred.
 - One low-level process primitive and lifecycle owner are authoritative.
 - Executable/environment semantics are OS-correct and security reviewed.
 - No child process leak or secret-bearing receipt remains in tested paths.

@@ -6,7 +6,8 @@ using CanDoItAll.AgentFramework.Mcp.Abstractions;
 namespace CanDoItAll.AgentFramework.Mcp;
 
 internal sealed class LocalStdioMcpJsonRpcConnection(
-    LocalStdioMcpServerDescriptor descriptor,
+    McpServerKey serverKey,
+    McpStdioMessageFraming messageFraming,
     LocalStdioMcpProcessSession session)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(
@@ -25,7 +26,7 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
         await requestGate.WaitAsync(cancellationToken);
         try
         {
-            var process = session.RequireRunningProcess(
+            var processSession = session.RequireRunningSession(
                 failureCategory,
                 failureFieldPath);
             var requestId = Interlocked.Increment(ref nextRequestId);
@@ -39,23 +40,45 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
                     SerializerOptions)
             };
             await McpJsonRpcFraming.WriteMessageAsync(
-                process.StandardInput.BaseStream,
+                processSession.StandardInput,
                 payload,
-                descriptor.MessageFraming,
+                messageFraming,
                 cancellationToken);
 
             while (true)
             {
                 var message = await session.ReadNextMessageAsync(
-                    process,
+                    processSession,
+                    messageFraming,
                     failureCategory,
                     failureFieldPath,
                     cancellationToken);
                 var document = LocalStdioMcpResponseParser.ParseMessage(
                     message,
-                    descriptor.ServerKey,
+                    serverKey,
                     failureCategory,
                     failureFieldPath);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    document.Dispose();
+                    throw new McpSetupException(
+                        failureCategory,
+                        failureFieldPath,
+                        $"MCP method '{method}' returned a non-object JSON-RPC response.",
+                        "Repair the MCP server JSON-RPC response shape.");
+                }
+
+                if (!LocalStdioMcpResponseParser.HasSupportedJsonRpcVersion(
+                        document.RootElement))
+                {
+                    document.Dispose();
+                    throw new McpSetupException(
+                        failureCategory,
+                        failureFieldPath,
+                        $"MCP method '{method}' returned an invalid JSON-RPC protocol version.",
+                        "Repair the MCP server JSON-RPC response to use version '2.0'.");
+                }
+
                 if (!LocalStdioMcpResponseParser.IsResponseForRequest(
                         document.RootElement,
                         requestId))
@@ -65,6 +88,16 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
                 }
 
                 ThrowIfError(document, method, failureCategory, failureFieldPath);
+                if (!document.RootElement.TryGetProperty("result", out _))
+                {
+                    document.Dispose();
+                    throw new McpSetupException(
+                        failureCategory,
+                        failureFieldPath,
+                        $"MCP method '{method}' returned neither a result nor an error.",
+                        $"Repair the MCP server response for '{method}'.");
+                }
+
                 return document;
             }
         }
@@ -97,7 +130,7 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
         await requestGate.WaitAsync(cancellationToken);
         try
         {
-            var process = session.RequireRunningProcess(
+            var processSession = session.RequireRunningSession(
                 failureCategory,
                 failureFieldPath);
             var payload = new JsonObject
@@ -113,9 +146,9 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
             }
 
             await McpJsonRpcFraming.WriteMessageAsync(
-                process.StandardInput.BaseStream,
+                processSession.StandardInput,
                 payload,
-                descriptor.MessageFraming,
+                messageFraming,
                 cancellationToken);
         }
         catch (McpSetupException)
@@ -142,19 +175,23 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
         CapabilityDiagnosticCategory category,
         string fieldPath)
     {
-        if (!document.RootElement.TryGetProperty("error", out var error))
+        if (document.RootElement.ValueKind != JsonValueKind.Object ||
+            !document.RootElement.TryGetProperty("error", out var error))
         {
             return;
         }
 
-        var detail = error.TryGetProperty("message", out var messageElement)
-            ? messageElement.GetString() ?? error.GetRawText()
-            : error.GetRawText();
+        var code = error.ValueKind == JsonValueKind.Object &&
+            error.TryGetProperty("code", out var codeElement) &&
+            codeElement.ValueKind == JsonValueKind.Number &&
+            codeElement.TryGetInt32(out var numericCode)
+                ? $" Error code: {numericCode}."
+                : string.Empty;
         document.Dispose();
         throw new McpSetupException(
             category,
             fieldPath,
-            $"MCP method '{method}' failed. {detail}",
+            $"MCP method '{method}' failed.{code}",
             $"Inspect the MCP server implementation for '{method}'.");
     }
 
@@ -167,7 +204,7 @@ internal sealed class LocalStdioMcpJsonRpcConnection(
         return new McpSetupException(
             category,
             fieldPath,
-            $"MCP method '{method}' failed for '{descriptor.ServerKey}'. {exception.Message}{session.BuildStandardErrorSuffix()}",
+            $"MCP method '{method}' failed for '{serverKey}'. {exception.GetType().Name}.{session.BuildStandardErrorSuffix()}",
             "Inspect the MCP process stderr and protocol framing.");
     }
 }

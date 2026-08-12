@@ -18,7 +18,8 @@ internal interface IProcessWorkflowStepExecutor
     ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepExecutionContract stepContract,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null);
 }
 
 internal sealed class WorkflowProcessStepExecutor(
@@ -34,7 +35,8 @@ internal sealed class WorkflowProcessStepExecutor(
     public async ValueTask<ProcessExecutionAdapterResult> ExecuteAsync(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepExecutionContract stepContract,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask<ProcessExecutionAdapterResult?>>? beforeLaunch = null)
     {
         ArgumentNullException.ThrowIfNull(assignment);
         ArgumentNullException.ThrowIfNull(stepContract);
@@ -90,6 +92,12 @@ internal sealed class WorkflowProcessStepExecutor(
             return await MapRunAsync(assignment, stepContract, childRuns[0], cancellationToken).ConfigureAwait(false);
         }
 
+        if (beforeLaunch is not null &&
+            await beforeLaunch(cancellationToken).ConfigureAwait(false) is { } blocked)
+        {
+            return blocked;
+        }
+
         var intent = new WorkflowLaunchIntent(
             CreateSelection(binding),
             WorkflowLaunchMode.Production,
@@ -129,7 +137,7 @@ internal sealed class WorkflowProcessStepExecutor(
                 cancellationToken).ConfigureAwait(false),
             WorkflowRunState.Failed => Failed(
                 "process.adapter.workflow_child_failed",
-                $"Workflow run '{run.RunId.Value:D}' failed for step '{assignment.StepKey}': {run.Summary}",
+                $"Workflow run '{run.RunId.Value:D}' failed for step '{assignment.StepKey}'. Inspect restricted workflow evidence for backend details.",
                 $"{assignment.RunId}:{assignment.StepInstanceId}:{run.RunId}:failed:{run.Summary}"),
             WorkflowRunState.Cancelled => Canceled(
                 "process.adapter.workflow_child_cancelled",
@@ -201,7 +209,7 @@ internal sealed class WorkflowProcessStepExecutor(
             return Failed(
                 "process.adapter.workflow_output_invalid",
                 FormatValidationErrors(validation.Validation.Errors),
-                validation.RawOutputHash);
+                BuildValidationEvidence(validation.RawOutputHash, validation.Validation.Errors));
         }
 
         return resultConverter.ToAdapterResult(

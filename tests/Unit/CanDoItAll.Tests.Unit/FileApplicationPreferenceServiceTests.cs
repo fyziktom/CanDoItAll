@@ -29,6 +29,18 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Assert.Throws<ArgumentException>(() => new FileApplicationExtension(".tar.gz"));
     }
 
+    [Fact]
+    public void File_application_preference_preserves_significant_path_whitespace()
+    {
+        string executablePath = Path.Combine(rootPath, " viewer ");
+
+        var preference = new FileApplicationPreference(
+            new FileApplicationExtension(".xlsx"),
+            executablePath);
+
+        Assert.Equal(executablePath, preference.ExecutablePath);
+    }
+
     [Theory]
     [InlineData("forecast.xlsx", true)]
     [InlineData("proposal.docx", true)]
@@ -110,6 +122,22 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         FileApplicationPreference? resolved = CreateService().ResolveForFile("presentation.pptx");
         Assert.NotNull(resolved);
         Assert.Equal(Path.GetFullPath(existingExecutablePath), resolved.ExecutablePath);
+    }
+
+    [Fact]
+    public async Task SaveAsync_rejects_foreign_executable_syntax_before_filesystem_lookup()
+    {
+        string foreignExecutable = OperatingSystem.IsWindows()
+            ? "/Applications/ForeignViewer.app/Contents/MacOS/ForeignViewer"
+            : @"C:\Program Files\ForeignViewer\viewer.exe";
+        var sut = CreateService();
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.SaveAsync(new FileApplicationPreference(
+                new FileApplicationExtension(".xlsx"),
+                foreignExecutable)));
+
+        Assert.Contains("syntax", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

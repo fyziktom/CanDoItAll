@@ -1,6 +1,8 @@
 using CanDoItAll.Memory.SourceGateway;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -25,7 +27,9 @@ namespace CanDoItAll.Modules.Workbench;
 
 public static class WorkbenchModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
+    public static IServiceCollection AddWorkbenchModule(
+        this IServiceCollection services,
+        IConfiguration? configuration = null)
     {
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
@@ -163,6 +167,23 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectMemoryIngestionService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureDotNetProjectTargetResolver, ProjectStructureDotNetProjectTargetResolver>();
+        services.TryAddSingleton(ProjectStructureRuntimeHostContext.CaptureCurrent());
+        services.TryAddSingleton(
+            configuration?.GetSection(ProjectStructureRuntimePresentationOptions.SectionName)
+                .Get<ProjectStructureRuntimePresentationOptions>() ??
+            ProjectStructureRuntimePresentationOptions.Default);
+        services.TryAddSingleton<ProjectStructureRuntimePlanCompiler>();
+        services.TryAddSingleton<WorkspaceExecutableLocator>();
+        services.AddScoped<IProjectStructureExecutableResolver, ProjectStructureExecutableResolver>();
+        services.AddScoped<ProjectStructureRuntimePathResolver>();
+        services.TryAddSingleton<ProjectStructureRuntimeSessionRegistry>();
+        services.TryAddSingleton<IProjectStructureRuntimeSessionRegistry>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureRuntimeSessionRegistry>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, ProjectStructureRuntimeSessionRegistryHostedService>());
+        services.AddScoped<IProjectStructureRuntimeExecutionAdapter, ProjectStructureRuntimeExecutionAdapter>();
+        services.AddScoped<IProjectStructureTerminalPresenter, ProjectStructureTerminalPresenter>();
+        services.AddScoped<IProjectStructureRuntimeElevationAdapter, ProjectStructureRuntimeElevationAdapter>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddScoped<ProjectStructureRuntimeNodeMetadataBoundary>();
         services.AddScoped<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();

@@ -1149,7 +1149,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             .Select(item => item.GetString())
             .ToList();
         Assert.Contains(arguments, item => string.Equals(item, "--yes", StringComparison.Ordinal));
-        Assert.Contains(arguments, item => string.Equals(item, "@playwright/mcp@latest", StringComparison.Ordinal));
+        Assert.Contains(arguments, item => string.Equals(item, "@playwright/mcp@0.0.78", StringComparison.Ordinal));
         var allowedTools = root.GetProperty("allowedTools")
             .EnumerateArray()
             .Select(item => item.GetString())

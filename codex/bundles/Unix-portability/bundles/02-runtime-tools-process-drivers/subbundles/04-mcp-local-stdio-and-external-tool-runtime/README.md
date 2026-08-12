@@ -24,7 +24,7 @@ MCP resolution is partly OS-aware but diverges from workspace policy; Playwright
 ## Source hotspots
 
 - `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs`
-- `{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs`
+- `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableAuthorizationPolicy.cs`
 - `{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpProcessLauncher.cs`
 - `{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs`
 - `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs`
@@ -58,7 +58,7 @@ MCP resolution is partly OS-aware but diverges from workspace policy; Playwright
 
 ## Entry gate
 
-- Status before execution: `Blocked by Gate R2`
+- Status before execution: `Eligible — Gate R2 GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -71,7 +71,7 @@ MCP resolution is partly OS-aware but diverges from workspace policy; Playwright
 
 ## Status
 
-- `Blocked by Gate R2`
+- `Completed — Gate R3a GO`
 
 ## Handoff
 

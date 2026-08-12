@@ -5,7 +5,7 @@
   "title": "Three-platform CI, integration, restart, and Core Gate C4",
   "critical": true,
   "conditional": false,
-  "status": "Local readiness GO — C4 pending exact-commit hosted Windows/Ubuntu/macOS evidence",
+  "status": "Implementation progression approved — C4 deferred under HOSTED-PORTABILITY-VALIDATION-001",
   "depends_on": [
     "A06"
   ],
@@ -42,7 +42,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Implemented — hosted checks and repository policy evidence pending",
+      "status": "Implemented — hosted checks and repository policy evidence operator-deferred",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -64,7 +64,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI",
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS operator-deferred",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -86,7 +86,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Implemented — Ubuntu restart passes; genuine macOS pending hosted CI",
+      "status": "Implemented — Ubuntu restart passes; genuine macOS operator-deferred",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -108,7 +108,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI",
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS operator-deferred",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -174,7 +174,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Completed locally — independent readiness GO; final hosted C4 review pending",
+      "status": "Completed locally — independent readiness GO; final hosted C4 review operator-deferred",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",
@@ -196,7 +196,7 @@
         "CI-006",
         "CI-007"
       ],
-      "status": "Blocked — exact pushed commit and hosted evidence required",
+      "status": "Completed for implementation handoff — exact pushed anchors recorded; C4 hosted/macOS evidence deferred",
       "evidence_required": [
         "failing-first or characterization",
         "focused tests",

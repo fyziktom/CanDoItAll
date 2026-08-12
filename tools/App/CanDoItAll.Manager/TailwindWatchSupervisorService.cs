@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Manager;
@@ -59,12 +60,14 @@ outputs: TailwindWatchStatusSnapshot, TailwindLogEntry stream
 public sealed class TailwindWatchSupervisorService(
     ILogger<TailwindWatchSupervisorService> logger,
     IConfiguration configuration,
-    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory) : BackgroundService
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+    IManagerProcessCoordinator processCoordinator) : BackgroundService
 {
+    private static readonly TimeSpan ShutdownPhaseTimeout = TimeSpan.FromSeconds(15);
     private readonly ManagerOptions _options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new();
     private readonly object _gate = new();
     private readonly List<TailwindLogEntry> _logs = [];
-    private Process? _activeProcess;
+    private IManagerProcessLease? _activeProcess;
     private long _lastLogId;
     private TailwindWatchStatusSnapshot _status = new(TailwindWatchState.Idle, "Idle", 0, DateTimeOffset.UtcNow, false, null);
 
@@ -86,8 +89,28 @@ public sealed class TailwindWatchSupervisorService(
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await StopActiveProcessAsync("Manager shutdown requested.", cancellationToken);
-        await base.StopAsync(cancellationToken);
+        using (var stopTimeout = new CancellationTokenSource(ShutdownPhaseTimeout))
+        {
+            try
+            {
+                await base.StopAsync(stopTimeout.Token);
+            }
+            catch (OperationCanceledException) when (stopTimeout.IsCancellationRequested)
+            {
+                logger.LogWarning("Timed out while stopping the Manager Tailwind background loop; mandatory process cleanup will continue.");
+            }
+        }
+
+        await StopActiveProcessAsync("Manager shutdown requested.", CancellationToken.None);
+        using var cleanupTimeout = new CancellationTokenSource(ShutdownPhaseTimeout);
+        try
+        {
+            await CleanupRegisteredProcessesAsync(cleanupTimeout.Token);
+        }
+        catch (OperationCanceledException) when (cleanupTimeout.IsCancellationRequested)
+        {
+            logger.LogError("Timed out while reconciling registered Manager Tailwind processes during shutdown.");
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -109,7 +132,16 @@ public sealed class TailwindWatchSupervisorService(
         var inputPath = ManagerStatusResponseFactory.ResolveTailwindInputPath(workspaceRoot, _options);
         var outputPath = ManagerStatusResponseFactory.ResolveTailwindOutputPath(workspaceRoot, _options);
 
-        await EnsureTailwindDependenciesAsync(tailwindWorkspacePath, outputPath, stoppingToken);
+        try
+        {
+            await EnsureTailwindDependenciesAsync(tailwindWorkspacePath, outputPath, stoppingToken);
+        }
+        catch (InvalidOperationException)
+        {
+            logger.LogError("Tailwind supervision stopped because dependency process ownership or launch evidence was unavailable.");
+            Transition(TailwindWatchState.Faulted, "Tailwind dependency process could not be started safely.", outputPath);
+            return;
+        }
 
         var watchRoots = ResolveWatchRoots(workspaceRoot, tailwindWorkspacePath);
         var signals = new TailwindWatchSignalQueue();
@@ -120,13 +152,16 @@ public sealed class TailwindWatchSupervisorService(
 
         try
         {
-            await RunTailwindBuildAsync(
+            var initialBuildSucceeded = await RunTailwindBuildAsync(
                 "Initial Tailwind build completed.",
                 tailwindWorkspacePath,
                 inputPath,
                 outputPath,
                 stoppingToken);
-            lastFingerprint = TryComputeFingerprint(watchRoots, outputPath);
+            if (initialBuildSucceeded)
+            {
+                lastFingerprint = TryComputeFingerprint(watchRoots, outputPath);
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -150,22 +185,29 @@ public sealed class TailwindWatchSupervisorService(
                     continue;
                 }
 
-                lastFingerprint = fingerprint;
                 string changeSummary = BuildChangeSummary(workspaceRoot, batch);
 
                 AppendLog(changeSummary, isError: false);
                 EchoTailwindLineToConsole(changeSummary, LogLevel.Information);
 
-                await RunTailwindBuildAsync(
+                if (await RunTailwindBuildAsync(
                     changeSummary,
                     tailwindWorkspacePath,
                     inputPath,
                     outputPath,
-                    stoppingToken);
+                    stoppingToken))
+                {
+                    lastFingerprint = fingerprint;
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
+        }
+        catch (InvalidOperationException)
+        {
+            logger.LogError("Tailwind supervision stopped because process ownership or launch evidence was unavailable.");
+            Transition(TailwindWatchState.Faulted, "Tailwind process could not be started safely.", outputPath);
         }
         finally
         {
@@ -308,7 +350,7 @@ public sealed class TailwindWatchSupervisorService(
         }
     }
 
-    private async Task RunTailwindBuildAsync(
+    private async Task<bool> RunTailwindBuildAsync(
         string reason,
         string tailwindWorkspacePath,
         string inputPath,
@@ -317,59 +359,91 @@ public sealed class TailwindWatchSupervisorService(
     {
         Transition(TailwindWatchState.Starting, $"{reason} Rebuilding Tailwind output.", outputPath);
 
-        var startInfo = new ProcessStartInfo(WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(tailwindWorkspacePath))
-        {
-            WorkingDirectory = tailwindWorkspacePath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
         var inputArgument = Path.GetRelativePath(tailwindWorkspacePath, inputPath);
         var outputArgument = Path.GetRelativePath(tailwindWorkspacePath, outputPath);
-        foreach (var argument in WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(inputArgument, outputArgument))
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+        var arguments = new[] { WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath) }
+            .Concat(WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(inputArgument, outputArgument))
+            .ToArray();
         var stopwatch = Stopwatch.StartNew();
-
-        process.Start();
+        var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, _options);
+        var process = await processCoordinator.StartAsync(
+            new ManagerProcessLaunchRequest(
+                ManagerProcessPurpose.TailwindBuild,
+                "manager_tailwind_build",
+                "manager.tailwind-build.v1",
+                "node",
+                arguments,
+                tailwindWorkspacePath,
+                new Dictionary<string, string?>(),
+                workspaceRoot,
+                "TailwindWatchSupervisorService"),
+            cancellationToken);
         Interlocked.Exchange(ref _activeProcess, process);
 
+        WorkspaceProcessExecutionResult result;
         try
         {
-            var stdoutTask = ReadStreamAsync(process.StandardOutput, false, outputPath, cancellationToken);
-            var stderrTask = ReadStreamAsync(process.StandardError, true, outputPath, cancellationToken);
-            await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(cancellationToken));
+            var outputTask = ManagerProcessOutputPump.PumpAsync(
+                process,
+                (line, isError, _) =>
+                {
+                    HandleOutputLine(line, isError, outputPath);
+                    return Task.CompletedTask;
+                },
+                cancellationToken);
+            result = await process.WaitForExitAsync(cancellationToken);
+            await outputTask;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await TerminateProcessAsync(process, "Tailwind build cancellation requested.", cancellationToken);
+            await process.TerminateAsync("tailwind-build-cancelled", CancellationToken.None);
             throw;
         }
         finally
         {
             Interlocked.CompareExchange(ref _activeProcess, null, process);
+            await process.DisposeAsync();
         }
 
         stopwatch.Stop();
         RefreshOutputSnapshot(outputPath);
 
-        if (process.ExitCode != 0)
+        if (result.ExitCode != 0)
         {
-            Transition(TailwindWatchState.Faulted, $"Tailwind build failed with code {process.ExitCode}.", outputPath);
-            return;
+            Transition(TailwindWatchState.Faulted, $"Tailwind build failed with code {result.ExitCode}.", outputPath);
+            return false;
         }
 
         var outputLastWriteUtc = GetOutputSnapshot(outputPath).OutputLastWriteUtc;
-        var completedSummary = outputLastWriteUtc.HasValue
-            ? $"{reason} Tailwind output propagated in {stopwatch.ElapsedMilliseconds} ms at {outputLastWriteUtc:O}."
-            : $"{reason} Tailwind build completed in {stopwatch.ElapsedMilliseconds} ms, but the output file was not found.";
+        if (!outputLastWriteUtc.HasValue)
+        {
+            Transition(
+                TailwindWatchState.Faulted,
+                $"{reason} Tailwind build completed, but the output file was not published.",
+                outputPath);
+            return false;
+        }
 
-        Transition(TailwindWatchState.Ready, completedSummary, outputPath);
+        Transition(
+            TailwindWatchState.Ready,
+            $"{reason} Tailwind output propagated in {stopwatch.ElapsedMilliseconds} ms at {outputLastWriteUtc:O}.",
+            outputPath);
+        return true;
+    }
+
+    private async Task CleanupRegisteredProcessesAsync(CancellationToken cancellationToken)
+    {
+        foreach (var purpose in new[]
+                 {
+                     ManagerProcessPurpose.TailwindBuild,
+                     ManagerProcessPurpose.TailwindDependencyInstall
+                 })
+        {
+            await processCoordinator.ReclaimRegisteredAsync(
+                purpose,
+                "tailwind-shutdown-recovery",
+                cancellationToken);
+        }
     }
 
     private async Task EnsureTailwindDependenciesAsync(string tailwindWorkspacePath, string outputPath, CancellationToken cancellationToken)
@@ -379,7 +453,7 @@ public sealed class TailwindWatchSupervisorService(
             return;
         }
 
-        var tailwindCliPath = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(tailwindWorkspacePath);
+        var tailwindCliPath = WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath);
         if (File.Exists(tailwindCliPath))
         {
             return;
@@ -387,61 +461,34 @@ public sealed class TailwindWatchSupervisorService(
 
         Transition(TailwindWatchState.Starting, "Installing Tailwind workspace dependencies.", outputPath);
 
-        ProcessStartInfo startInfo;
-        if (OperatingSystem.IsWindows())
-        {
-            startInfo = new ProcessStartInfo(WorkspaceRuntimeProcessTools.ResolvePowerShellCommand())
+        var plan = WorkspaceRuntimeProcessTools.BuildNpmInstallPlan();
+        var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, _options);
+        await using var process = await processCoordinator.StartAsync(
+            new ManagerProcessLaunchRequest(
+                ManagerProcessPurpose.TailwindDependencyInstall,
+                "manager_npm_install",
+                "manager.tailwind-dependencies.v1",
+                plan.ExecutablePath,
+                plan.Arguments,
+                tailwindWorkspacePath,
+                new Dictionary<string, string?>(),
+                workspaceRoot,
+                "TailwindWatchSupervisorService"),
+            cancellationToken);
+        var outputTask = ManagerProcessOutputPump.PumpAsync(
+            process,
+            (line, isError, _) =>
             {
-                WorkingDirectory = tailwindWorkspacePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            startInfo.ArgumentList.Add("-NoProfile");
-            startInfo.ArgumentList.Add("-ExecutionPolicy");
-            startInfo.ArgumentList.Add("Bypass");
-            startInfo.ArgumentList.Add("-Command");
-            startInfo.ArgumentList.Add("npm install");
-        }
-        else
+                HandleOutputLine(line, isError, outputPath);
+                return Task.CompletedTask;
+            },
+            cancellationToken);
+        var result = await process.WaitForExitAsync(cancellationToken);
+        await outputTask;
+        if (result.ExitCode != 0)
         {
-            startInfo = new ProcessStartInfo(WorkspaceRuntimeProcessTools.ResolveNpmCommand())
-            {
-                WorkingDirectory = tailwindWorkspacePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            startInfo.ArgumentList.Add("install");
-        }
-
-        using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        process.Start();
-
-        var stdoutTask = ReadStreamAsync(process.StandardOutput, false, outputPath, cancellationToken);
-        var stderrTask = ReadStreamAsync(process.StandardError, true, outputPath, cancellationToken);
-
-        await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(cancellationToken));
-        if (process.ExitCode != 0)
-        {
-            Transition(TailwindWatchState.Faulted, $"Tailwind dependency install failed with code {process.ExitCode}.", outputPath);
-            throw new InvalidOperationException($"Tailwind dependency install failed with code {process.ExitCode}.");
-        }
-    }
-
-    private async Task ReadStreamAsync(StreamReader reader, bool isError, string outputPath, CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var line = await reader.ReadLineAsync(cancellationToken);
-            if (line is null)
-            {
-                break;
-            }
-
-            HandleOutputLine(line, isError, outputPath);
+            Transition(TailwindWatchState.Faulted, $"Tailwind dependency install failed with code {result.ExitCode}.", outputPath);
+            throw new InvalidOperationException($"Tailwind dependency install failed with code {result.ExitCode}.");
         }
     }
 
@@ -546,27 +593,17 @@ public sealed class TailwindWatchSupervisorService(
             return;
         }
 
-        await TerminateProcessAsync(activeProcess, reason, cancellationToken);
-    }
-
-    private async Task TerminateProcessAsync(Process process, string reason, CancellationToken cancellationToken)
-    {
+        logger.LogInformation(
+            "Stopping registered Manager Tailwind process. LeaseId={LeaseId}. Reason={Reason}",
+            activeProcess.Record.LeaseId,
+            reason);
         try
         {
-            if (process.HasExited)
-            {
-                return;
-            }
-
-            logger.LogInformation("Stopping Tailwind process {ProcessId}. Reason: {Reason}", process.Id, reason);
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync(CancellationToken.None);
+            await activeProcess.TerminateAsync("tailwind-stop", CancellationToken.None);
         }
-        catch (InvalidOperationException)
+        finally
         {
-        }
-        catch (ArgumentException)
-        {
+            await activeProcess.DisposeAsync();
         }
     }
 

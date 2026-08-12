@@ -5,14 +5,21 @@ namespace CanDoItAll.Processes.Drivers.Abstractions;
 public sealed record ProcessCapabilityRequest(
     IReadOnlySet<CapabilityTag> RequiredCapabilityTags,
     IReadOnlySet<CapabilityTag> OptionalCapabilityTags,
-    IReadOnlySet<CapabilityTag> ExclusiveCapabilityTags);
+    IReadOnlySet<CapabilityTag> ExclusiveCapabilityTags)
+{
+    public ProcessHostCapabilitySnapshot HostCapabilities { get; init; } = ProcessHostCapabilitySnapshot.Unknown;
+}
 
 public sealed record ProcessCapabilityMatchResult(
     bool Succeeded,
     IReadOnlyList<ProcessDriverDescriptor> OrderedDrivers,
     IReadOnlySet<CapabilityTag> MissingCapabilityTags,
     IReadOnlyList<ProcessDriverConflict> Conflicts,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics)
+{
+    public IReadOnlySet<ProcessHostCapabilityId> MissingHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
+}
 
 public sealed class ProcessDriverCatalog
 {
@@ -27,6 +34,29 @@ public sealed class ProcessDriverCatalog
         packagesById = new Dictionary<DriverId, ProcessDriverPackage>();
         foreach (var package in packages)
         {
+            if (!IsValidHostCapabilitySet(package.Descriptor.RequiredHostCapabilities))
+            {
+                throw new ArgumentException(
+                    "Driver host capability requirements must contain at most 32 valid capability identifiers.",
+                    nameof(packages));
+            }
+
+            if (package.Descriptor.Layer == ProcessDriverLayer.Platform &&
+                package.Descriptor.RequiredHostCapabilities is not { Count: > 0 })
+            {
+                throw new ArgumentException(
+                    $"Platform driver '{package.Descriptor.DriverId}' must declare at least one host capability requirement.",
+                    nameof(packages));
+            }
+
+            if (package.Descriptor.Strategies.Any(strategy =>
+                    !IsValidHostCapabilitySet(strategy.RequiredHostCapabilities)))
+            {
+                throw new ArgumentException(
+                    "Strategy host capability requirements must contain at most 32 valid capability identifiers.",
+                    nameof(packages));
+            }
+
             if (!packagesById.TryAdd(package.Descriptor.DriverId, package))
             {
                 throw new ArgumentException(
@@ -36,9 +66,25 @@ public sealed class ProcessDriverCatalog
         }
     }
 
+    private static bool IsValidHostCapabilitySet(
+        IReadOnlySet<ProcessHostCapabilityId>? capabilities)
+        => capabilities is not null &&
+           capabilities.Count <= ProcessHostCapabilitySnapshot.MaximumCapabilities &&
+           capabilities.All(capability => !string.IsNullOrWhiteSpace(capability.Value));
+
     public ProcessCapabilityMatchResult Match(ProcessCapabilityRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        if (request.HostCapabilities is null || !request.HostCapabilities.IsStructurallyValid())
+        {
+            return new ProcessCapabilityMatchResult(
+                false,
+                [],
+                new HashSet<CapabilityTag>(),
+                [],
+                ["Host capability snapshot is invalid."]);
+        }
 
         var selected = new Dictionary<DriverId, ProcessDriverPackage>();
         var requestedTags = request.RequiredCapabilityTags
@@ -65,6 +111,10 @@ public sealed class ProcessDriverCatalog
         var orderedDrivers = OrderDrivers(selected.Values, conflicts)
             .Select(package => package.Descriptor)
             .ToArray();
+        var missingHostCapabilities = orderedDrivers
+            .SelectMany(driver => driver.RequiredHostCapabilities)
+            .Where(capability => !request.HostCapabilities.IsAvailable(capability))
+            .ToHashSet();
 
         var diagnostics = new List<string>();
         if (missing.Count > 0)
@@ -77,12 +127,20 @@ public sealed class ProcessDriverCatalog
             diagnostics.Add("Driver conflicts were detected.");
         }
 
+        if (missingHostCapabilities.Count > 0)
+        {
+            diagnostics.Add("Required host capabilities are unavailable.");
+        }
+
         return new ProcessCapabilityMatchResult(
-            missing.Count == 0 && conflicts.Count == 0,
+            missing.Count == 0 && conflicts.Count == 0 && missingHostCapabilities.Count == 0,
             orderedDrivers,
             missing,
             conflicts,
-            diagnostics);
+            diagnostics)
+        {
+            MissingHostCapabilities = missingHostCapabilities
+        };
     }
 
     private void AddDependencyDrivers(

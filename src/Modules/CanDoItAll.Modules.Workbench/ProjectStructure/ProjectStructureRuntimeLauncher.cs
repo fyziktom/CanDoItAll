@@ -1,10 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.Versioning;
-using System.Text;
-using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +6,8 @@ namespace CanDoItAll.Modules.Workbench;
 public interface IProjectStructureRuntimeLauncher
 {
     bool IsAvailable { get; }
+
+    bool IsRunning(string nodeId) => false;
 
     ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node);
 
@@ -23,7 +18,46 @@ public interface IProjectStructureRuntimeLauncher
         string metadataJson,
         ProjectStructureRuntimePathAuthorityMode pathAuthorityMode);
 
-    Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(ProjectStructureNode node, bool runAsAdministrator, CancellationToken cancellationToken = default);
+    Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+        ProjectStructureNode node,
+        bool runAsAdministrator,
+        CancellationToken cancellationToken = default)
+        => LaunchAsync(
+            node,
+            runAsAdministrator
+                ? ProjectStructureRuntimeLaunchMode.Elevated
+                : ProjectStructureRuntimeLaunchMode.Direct,
+            ProjectStructureRuntimeLaunchApproval.NotGranted,
+            cancellationToken);
+
+    Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+        ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchMode mode,
+        CancellationToken cancellationToken = default)
+        => LaunchAsync(
+            node,
+            mode,
+            ProjectStructureRuntimeLaunchApproval.NotGranted,
+            cancellationToken);
+
+    Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+        ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchMode mode,
+        ProjectStructureRuntimeLaunchApproval approval,
+        CancellationToken cancellationToken = default);
+
+    Task<ProjectStructureRuntimeLaunchResult> StopAsync(
+        ProjectStructureNode node,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new ProjectStructureRuntimeLaunchResult(
+            false,
+            "This runtime launcher does not own a stoppable Workbench session."));
+}
+
+public enum ProjectStructureRuntimeLaunchApproval
+{
+    NotGranted,
+    OperatorConfirmed
 }
 
 public enum ProjectStructureRuntimePathAuthorityMode
@@ -32,30 +66,32 @@ public enum ProjectStructureRuntimePathAuthorityMode
     AgentExecution
 }
 
-public sealed record ProjectStructureRuntimeLaunchTarget(string Description, string Path, bool IsDirectory);
-
-public sealed record ProjectStructureRuntimeLaunchPlan(
-    string WorkingDirectory,
-    string StartupScript,
-    string DisplayCommand,
-    string DisplayName,
-    ProjectStructureRuntimeLaunchTarget? Target);
-
-public sealed record ProjectStructureRuntimeLaunchResolution(ProjectStructureRuntimeLaunchPlan? Plan, string Message)
+public sealed record ProjectStructureRuntimeLaunchResolution(
+    ProjectStructureRuntimeLaunchPlan? Plan,
+    string Message,
+    ProjectStructureRuntimeLaunchCapabilities? Capabilities = null)
 {
     public bool IsSuccess => Plan is not null;
+
+    public ProjectStructureRuntimeLaunchCapabilities EffectiveCapabilities =>
+        Capabilities ?? ProjectStructureRuntimeLaunchCapabilities.Unavailable(Message);
 }
 
 public sealed record ProjectStructureRuntimeLaunchResult(bool IsSuccess, string Message);
 
-public sealed class ProjectStructureRuntimeLauncher(
-    IWorkspacePathAccessGuard workspacePathAccessGuard,
+internal sealed class ProjectStructureRuntimeLauncher(
+    ProjectStructureRuntimePathResolver pathResolver,
     ILogger<ProjectStructureRuntimeLauncher> logger,
     IProjectStructureDotNetProjectTargetResolver dotNetProjectTargetResolver,
-    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
-    FileSystemStoragePathPolicy fileSystemStoragePathPolicy) : IProjectStructureRuntimeLauncher
+    ProjectStructureRuntimePlanCompiler planCompiler,
+    ProjectStructureRuntimeHostContext hostContext,
+    IProjectStructureRuntimeExecutionAdapter executionAdapter,
+    IProjectStructureTerminalPresenter terminalPresenter,
+    IProjectStructureRuntimeElevationAdapter elevationAdapter) : IProjectStructureRuntimeLauncher
 {
-    public bool IsAvailable => OperatingSystem.IsWindows();
+    public bool IsAvailable => true;
+
+    public bool IsRunning(string nodeId) => executionAdapter.IsRunning(nodeId);
 
     public ProjectStructureRuntimeLaunchResolution Resolve(ProjectStructureNode? node)
     {
@@ -114,73 +150,91 @@ public sealed class ProjectStructureRuntimeLauncher(
                 objectSubtype ?? string.Empty,
                 metadata.Infrastructure,
                 pathAuthorityMode),
-            _ => Fail("PowerShell launch is only available for runtime-capable nodes.")
+            _ => Fail("Runtime launch is only available for runtime-capable nodes.")
         };
     }
 
-    public Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(ProjectStructureNode node, bool runAsAdministrator, CancellationToken cancellationToken = default)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "PowerShell launch is not available on this host."));
-        }
+    public Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+        ProjectStructureNode node,
+        bool runAsAdministrator,
+        CancellationToken cancellationToken = default)
+        => LaunchAsync(
+            node,
+            runAsAdministrator
+                ? ProjectStructureRuntimeLaunchMode.Elevated
+                : ProjectStructureRuntimeLaunchMode.Direct,
+            cancellationToken);
 
+    public async Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+        ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchMode mode,
+        CancellationToken cancellationToken = default)
+        => await LaunchAsync(
+            node,
+            mode,
+            ProjectStructureRuntimeLaunchApproval.NotGranted,
+            cancellationToken).ConfigureAwait(false);
+
+    public async Task<ProjectStructureRuntimeLaunchResult> LaunchAsync(
+        ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchMode mode,
+        ProjectStructureRuntimeLaunchApproval approval,
+        CancellationToken cancellationToken = default)
+    {
         var resolution = Resolve(node);
         if (!resolution.IsSuccess || resolution.Plan is null)
         {
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, resolution.Message));
+            return new(false, resolution.Message);
         }
 
         var plan = resolution.Plan;
-        if (!Directory.Exists(plan.WorkingDirectory))
+        if (plan.RequiresApproval && approval != ProjectStructureRuntimeLaunchApproval.OperatorConfirmed)
         {
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "The configured working directory is no longer available on disk."));
+            return new(
+                false,
+                "This explicit script plan requires operator confirmation for each launch.");
         }
 
-        if (plan.Target is not null && !TargetExists(plan.Target))
+        if (ValidatePlanTargets(plan) is { } targetFailure)
         {
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, $"The configured {plan.Target.Description} is no longer available on disk."));
+            return new(false, targetFailure);
         }
 
-        try
+        var capability = mode switch
         {
-            using var process = StartPowerShell(plan, runAsAdministrator);
-            if (process is null)
-            {
-                return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "PowerShell did not accept the runtime command."));
-            }
+            ProjectStructureRuntimeLaunchMode.Direct => resolution.EffectiveCapabilities.Direct,
+            ProjectStructureRuntimeLaunchMode.Terminal => resolution.EffectiveCapabilities.Terminal,
+            ProjectStructureRuntimeLaunchMode.Elevated => resolution.EffectiveCapabilities.Elevation,
+            _ => ProjectStructureRuntimeCapability.Unavailable(
+                ProjectStructureRuntimeCapabilityStatus.Unsupported,
+                "The requested runtime launch mode is not supported.")
+        };
+        if (!capability.IsAvailable)
+        {
+            return new(false, capability.Message);
+        }
 
-            logger.LogInformation(
-                "Launched runtime PowerShell for node {NodeId} in {WorkingDirectory} using plan {DisplayName}.",
-                node.Id,
-                plan.WorkingDirectory,
-                plan.DisplayName);
-
-            var prefix = runAsAdministrator ? "Opened elevated PowerShell" : "Opened PowerShell";
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(
-                true,
-                $"{prefix} and handed off the {plan.DisplayName} command. Verify the terminal output to confirm that the application started successfully."));
-        }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        logger.LogInformation(
+            "Launching Workbench runtime node {NodeId} through {LaunchMode} using plan {PlanKind}.",
+            node.Id,
+            mode,
+            plan.Kind);
+        return mode switch
         {
-            var prefix = runAsAdministrator ? "The elevated PowerShell launch" : "The PowerShell launch";
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, $"{prefix} was canceled."));
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(
-                ex,
-                "Failed to launch runtime PowerShell for node {NodeId} in {WorkingDirectory} using plan {DisplayName}.",
-                node.Id,
-                plan.WorkingDirectory,
-                plan.DisplayName);
-            return Task.FromResult(new ProjectStructureRuntimeLaunchResult(false, "PowerShell could not be launched on this host."));
-        }
+            ProjectStructureRuntimeLaunchMode.Direct =>
+                await executionAdapter.LaunchAsync(plan, node.Id, cancellationToken).ConfigureAwait(false),
+            ProjectStructureRuntimeLaunchMode.Terminal =>
+                await terminalPresenter.OpenAsync(plan, node.Id, cancellationToken).ConfigureAwait(false),
+            ProjectStructureRuntimeLaunchMode.Elevated =>
+                await elevationAdapter.LaunchAsync(plan, node.Id, cancellationToken).ConfigureAwait(false),
+            _ => new(false, "The requested runtime launch mode is not supported.")
+        };
     }
 
-    [SupportedOSPlatform("windows")]
-    private static Process? StartPowerShell(ProjectStructureRuntimeLaunchPlan plan, bool runAsAdministrator)
-        => Process.Start(BuildStartInfo(plan, runAsAdministrator));
+    public Task<ProjectStructureRuntimeLaunchResult> StopAsync(
+        ProjectStructureNode node,
+        CancellationToken cancellationToken = default)
+        => executionAdapter.StopAsync(node.Id, cancellationToken);
 
     private ProjectStructureRuntimeLaunchResolution ResolveScriptPlan(
         string objectSubtype,
@@ -189,60 +243,173 @@ public sealed class ProjectStructureRuntimeLauncher(
     {
         metadata ??= new ProjectScriptMetadata();
         var scriptKind = ResolveScriptKind(objectSubtype, metadata);
+        if (ProjectStructureDirectDotNetCommandPolicy.TryClassify(
+                metadata.Command,
+                metadata.Arguments,
+                out _))
+        {
+            return Fail(ProjectStructureDirectDotNetCommandPolicy.TypedEnvironmentRequiredMessage);
+        }
 
-        ProjectStructureRuntimeLaunchTarget? target = null;
-        string? displayCommand = null;
-        string displayName;
+        var workingDirectoryResolution = ResolveScriptWorkingDirectory(metadata, pathAuthorityMode);
+        if (!workingDirectoryResolution.IsSuccess || workingDirectoryResolution.Path is null)
+        {
+            return Fail(workingDirectoryResolution.Message);
+        }
 
+        var workingDirectory = workingDirectoryResolution.Path;
+        return scriptKind switch
+        {
+            ProjectScriptKind.PowerShell => ResolveExplicitShellPlan(
+                ProjectStructureRuntimePlanKind.PowerShellScript,
+                metadata,
+                workingDirectory,
+                pathAuthorityMode),
+            ProjectScriptKind.PosixShell => ResolveExplicitShellPlan(
+                ProjectStructureRuntimePlanKind.PosixShellScript,
+                metadata,
+                workingDirectory,
+                pathAuthorityMode),
+            _ => ResolveDirectScriptPlan(scriptKind, metadata, workingDirectory, pathAuthorityMode)
+        };
+    }
+
+    private ProjectStructureRuntimeLaunchResolution ResolveDirectScriptPlan(
+        ProjectScriptKind scriptKind,
+        ProjectScriptMetadata metadata,
+        string workingDirectory,
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
+    {
+        ProjectStructureLegacyRuntimeCommandMigrationResult migration;
+        IReadOnlyList<ProjectStructureRuntimeLaunchTarget> targets = [];
         if (!string.IsNullOrWhiteSpace(metadata.Command))
         {
-            if (ProjectStructureDirectDotNetCommandPolicy.TryClassify(
-                    metadata.Command,
-                    metadata.Arguments,
-                    out _))
+            migration = ProjectStructureLegacyRuntimeCommandMigrator.TryMigrate(
+                metadata.Command,
+                metadata.Arguments);
+            if (!migration.IsSuccess || migration.Executable is null)
             {
-                return Fail(ProjectStructureDirectDotNetCommandPolicy.TypedEnvironmentRequiredMessage);
+                return Fail(migration.Message);
             }
-
-            if (TryResolveScriptWorkingDirectory(
-                    metadata,
-                    pathAuthorityMode,
-                    out var workingDirectory) is { } workingDirectoryFailure)
-            {
-                return workingDirectoryFailure;
-            }
-
-            displayCommand = JoinCommand(metadata.Command, metadata.Arguments);
-            displayName = scriptKind switch
-            {
-                ProjectScriptKind.EfMigration => "EF migration",
-                ProjectScriptKind.TailwindWatch => "Tailwind watch",
-                ProjectScriptKind.PowerShell => "PowerShell script",
-                _ => "script command"
-            };
-
-            return Success(CreatePlan(workingDirectory, displayCommand, displayName, target));
         }
-
-        if (scriptKind == ProjectScriptKind.PowerShell && !string.IsNullOrWhiteSpace(metadata.ScriptPath))
+        else if (!string.IsNullOrWhiteSpace(metadata.ScriptPath))
         {
-            if (TryResolvePowerShellScriptPath(
-                    metadata,
-                    pathAuthorityMode,
-                    out var scriptPath,
-                    out var workingDirectory) is { } scriptPathFailure)
+            var scriptPath = pathResolver.Resolve(
+                metadata.ScriptPath,
+                "Script path",
+                pathAuthorityMode,
+                ProjectStructureRuntimePathKind.File,
+                string.IsNullOrWhiteSpace(metadata.WorkingDirectory) ? null : workingDirectory);
+            if (!scriptPath.IsSuccess || scriptPath.Path is null)
             {
-                return scriptPathFailure;
+                return Fail(scriptPath.Message);
             }
 
-            displayCommand = JoinCommand($"& {QuotePowerShell(scriptPath)}", metadata.Arguments);
-            displayName = "PowerShell script";
-            target = new ProjectStructureRuntimeLaunchTarget("script path", scriptPath, false);
+            if (!ProjectStructureLegacyRuntimeCommandMigrator.TryTokenizeArguments(
+                    metadata.Arguments,
+                    out var arguments,
+                    out var argumentFailure))
+            {
+                return Fail(argumentFailure);
+            }
 
-            return Success(CreatePlan(workingDirectory, displayCommand, displayName, target));
+            migration = ProjectStructureLegacyRuntimeCommandMigrationResult.Success(
+                scriptPath.Path,
+                arguments,
+                wasWrapped: false);
+            targets = [new ProjectStructureRuntimeLaunchTarget("script path", scriptPath.Path, false)];
+        }
+        else
+        {
+            return Fail("Script launch requires a typed command or explicit script path.");
         }
 
-        return Fail("Script launch requires a command or PowerShell script path.");
+        var displayName = scriptKind switch
+        {
+            ProjectScriptKind.EfMigration => "EF migration",
+            ProjectScriptKind.TailwindWatch => "Tailwind watch",
+            _ => "script command"
+        };
+        return Compile(
+            new ProjectStructureDirectRuntimeDefinition(
+                ProjectStructureRuntimePlanKind.DirectExecutable,
+                workingDirectory,
+                displayName,
+                targets,
+                migration.Executable!,
+                migration.Arguments));
+    }
+
+    private ProjectStructureRuntimeLaunchResolution ResolveExplicitShellPlan(
+        ProjectStructureRuntimePlanKind planKind,
+        ProjectScriptMetadata metadata,
+        string initialWorkingDirectory,
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
+    {
+        if (planKind == ProjectStructureRuntimePlanKind.PowerShellScript &&
+            string.IsNullOrWhiteSpace(metadata.ScriptPath) &&
+            ProjectStructureLegacyRuntimeCommandMigrator.ContainsEncodedPowerShellOption(metadata.Command))
+        {
+            return Fail("Encoded shell content cannot be inspected safely and requires operator repair.");
+        }
+
+        string? scriptPath = null;
+        var workingDirectory = initialWorkingDirectory;
+        IReadOnlyList<ProjectStructureRuntimeLaunchTarget> targets = [];
+        if (!string.IsNullOrWhiteSpace(metadata.ScriptPath))
+        {
+            var scriptResolution = pathResolver.Resolve(
+                metadata.ScriptPath,
+                "Script path",
+                pathAuthorityMode,
+                ProjectStructureRuntimePathKind.File,
+                string.IsNullOrWhiteSpace(metadata.WorkingDirectory) ? null : initialWorkingDirectory);
+            if (!scriptResolution.IsSuccess || scriptResolution.Path is null)
+            {
+                return Fail(scriptResolution.Message);
+            }
+
+            scriptPath = scriptResolution.Path;
+            if (string.IsNullOrWhiteSpace(metadata.WorkingDirectory))
+            {
+                workingDirectory = Path.GetDirectoryName(scriptPath) ?? initialWorkingDirectory;
+            }
+
+            targets = [new ProjectStructureRuntimeLaunchTarget("script path", scriptPath, false)];
+        }
+
+        if (scriptPath is null && string.IsNullOrWhiteSpace(metadata.Command))
+        {
+            return Fail("Explicit shell launch requires a command or script path.");
+        }
+
+        if (!ProjectStructureLegacyRuntimeCommandMigrator.TryTokenizeArguments(
+                metadata.Arguments,
+                out var arguments,
+                out var argumentFailure))
+        {
+            return Fail(argumentFailure);
+        }
+
+        var commandText = scriptPath is null
+            ? string.Join(
+                ' ',
+                new[] { metadata.Command }
+                    .Concat(arguments)
+                    .Where(value => !string.IsNullOrWhiteSpace(value)))
+            : null;
+        var shellArguments = scriptPath is null ? Array.Empty<string>() : arguments;
+        return Compile(
+            new ProjectStructureShellRuntimeDefinition(
+                planKind,
+                workingDirectory,
+                planKind == ProjectStructureRuntimePlanKind.PowerShellScript
+                    ? "PowerShell script"
+                    : "POSIX shell script",
+                targets,
+                scriptPath,
+                commandText,
+                shellArguments));
     }
 
     private ProjectStructureRuntimeLaunchResolution ResolveEnvironmentPlan(
@@ -252,7 +419,6 @@ public sealed class ProjectStructureRuntimeLauncher(
     {
         metadata ??= new ProjectEnvironmentMetadata();
         var environmentKind = ResolveEnvironmentKind(objectSubtype, metadata);
-
         return environmentKind switch
         {
             ProjectEnvironmentKind.DotNetWatch => ResolveDotNetPlan(
@@ -260,21 +426,21 @@ public sealed class ProjectStructureRuntimeLauncher(
                 "dotnet watch",
                 isRelease: false,
                 isWatch: true,
-                pathAuthorityMode: pathAuthorityMode),
+                pathAuthorityMode),
             ProjectEnvironmentKind.DotNetRuntime => ResolveDotNetPlan(
                 metadata,
                 ".NET runtime",
                 isRelease: false,
                 isWatch: false,
-                pathAuthorityMode: pathAuthorityMode),
+                pathAuthorityMode),
             ProjectEnvironmentKind.DotNetRelease => ResolveDotNetPlan(
                 metadata,
                 "release run",
                 isRelease: true,
                 isWatch: false,
-                pathAuthorityMode: pathAuthorityMode),
+                pathAuthorityMode),
             ProjectEnvironmentKind.PythonEnvironment => ResolvePythonPlan(metadata, pathAuthorityMode),
-            _ => Fail("PowerShell launch is not supported for this environment type.")
+            _ => Fail("Runtime launch is not supported for this environment type.")
         };
     }
 
@@ -284,13 +450,9 @@ public sealed class ProjectStructureRuntimeLauncher(
         ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
     {
         metadata ??= new ProjectInfrastructureMetadata();
-        var infrastructureKind = ResolveInfrastructureKind(objectSubtype, metadata);
-
-        return infrastructureKind switch
-        {
-            ProjectInfrastructureKind.DockerMode => ResolveDockerPlan(metadata, pathAuthorityMode),
-            _ => Fail("PowerShell launch is not supported for this infrastructure type.")
-        };
+        return ResolveInfrastructureKind(objectSubtype, metadata) == ProjectInfrastructureKind.DockerMode
+            ? ResolveDockerPlan(metadata, pathAuthorityMode)
+            : Fail("Runtime launch is not supported for this infrastructure type.");
     }
 
     private ProjectStructureRuntimeLaunchResolution ResolveDockerPlan(
@@ -302,78 +464,35 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Docker runtime launch requires a runtime command.");
         }
 
-        var workingDirectoryValue = FirstNonEmpty(metadata.WorkingDirectory, metadata.FolderPath, ".");
-        if (TryResolveWorkingDirectory(
-                workingDirectoryValue,
-                "Docker working directory",
-                pathAuthorityMode,
-                out var workingDirectory) is { } workingDirectoryFailure)
-        {
-            return workingDirectoryFailure;
-        }
-
-        var displayCommand = JoinCommand(metadata.RuntimeCommand, metadata.RuntimeArguments);
-        return Success(
-            CreatePlan(
-                workingDirectory,
-                displayCommand,
-                "Docker runtime",
-                new ProjectStructureRuntimeLaunchTarget("Docker working directory", workingDirectory, true)));
-    }
-
-    private ProjectStructureRuntimeLaunchResolution? TryResolveScriptWorkingDirectory(
-        ProjectScriptMetadata metadata,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
-        out string workingDirectory)
-    {
-        var workingDirectoryValue = string.IsNullOrWhiteSpace(metadata.WorkingDirectory)
-            ? "."
-            : metadata.WorkingDirectory;
-        return TryResolveWorkingDirectory(
-            workingDirectoryValue,
-            "Script working directory",
+        var workingDirectory = pathResolver.Resolve(
+            FirstNonEmpty(metadata.WorkingDirectory, metadata.FolderPath, "."),
+            "Docker working directory",
             pathAuthorityMode,
-            out workingDirectory);
-    }
-
-    private ProjectStructureRuntimeLaunchResolution? TryResolvePowerShellScriptPath(
-        ProjectScriptMetadata metadata,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
-        out string scriptPath,
-        out string workingDirectory)
-    {
-        if (!string.IsNullOrWhiteSpace(metadata.WorkingDirectory))
+            ProjectStructureRuntimePathKind.Directory);
+        if (!workingDirectory.IsSuccess || workingDirectory.Path is null)
         {
-            if (TryResolveWorkingDirectory(
-                    metadata.WorkingDirectory,
-                    "Script working directory",
-                    pathAuthorityMode,
-                    out workingDirectory) is { } workingDirectoryFailure)
-            {
-                scriptPath = string.Empty;
-                return workingDirectoryFailure;
-            }
-
-            return TryResolveWorkspacePath(
-                metadata.ScriptPath,
-                "Script path",
-                pathAuthorityMode,
-                out scriptPath,
-                workingDirectory);
+            return Fail(workingDirectory.Message);
         }
 
-        if (TryResolveWorkspacePath(
-                metadata.ScriptPath,
-                "Script path",
-                pathAuthorityMode,
-                out scriptPath) is { } scriptPathFailure)
+        var migration = ProjectStructureLegacyRuntimeCommandMigrator.TryMigrate(
+            metadata.RuntimeCommand,
+            metadata.RuntimeArguments);
+        if (!migration.IsSuccess || migration.Executable is null)
         {
-            workingDirectory = string.Empty;
-            return scriptPathFailure;
+            return Fail(migration.Message);
         }
 
-        workingDirectory = Path.GetDirectoryName(scriptPath) ?? scriptPath;
-        return null;
+        return Compile(
+            new ProjectStructureDirectRuntimeDefinition(
+                ProjectStructureRuntimePlanKind.Docker,
+                workingDirectory.Path,
+                "Docker runtime",
+                [new ProjectStructureRuntimeLaunchTarget(
+                    "Docker working directory",
+                    workingDirectory.Path,
+                    true)],
+                migration.Executable,
+                migration.Arguments));
     }
 
     private ProjectStructureRuntimeLaunchResolution ResolveDotNetPlan(
@@ -388,79 +507,53 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Runtime launch requires a project path.");
         }
 
-        string? resolvedWorkingDirectory = null;
+        string? explicitWorkingDirectory = null;
         if (!string.IsNullOrWhiteSpace(metadata.WorkingDirectory))
         {
-            if (TryResolveWorkingDirectory(
-                    metadata.WorkingDirectory,
-                    "Runtime working directory",
-                    pathAuthorityMode,
-                    out var explicitWorkingDirectory) is { } workingDirectoryFailure)
+            var workingDirectoryResolution = pathResolver.Resolve(
+                metadata.WorkingDirectory,
+                "Runtime working directory",
+                pathAuthorityMode,
+                ProjectStructureRuntimePathKind.Directory);
+            if (!workingDirectoryResolution.IsSuccess || workingDirectoryResolution.Path is null)
             {
-                return workingDirectoryFailure;
+                return Fail(workingDirectoryResolution.Message);
             }
 
-            resolvedWorkingDirectory = explicitWorkingDirectory;
+            explicitWorkingDirectory = workingDirectoryResolution.Path;
         }
 
-        if (TryResolveWorkspacePath(
-                metadata.ProjectPath,
-                "Project path",
-                pathAuthorityMode,
-                out var projectPath,
-                resolvedWorkingDirectory) is { } projectPathFailure)
+        var projectPath = pathResolver.Resolve(
+            metadata.ProjectPath,
+            "Project path",
+            pathAuthorityMode,
+            ProjectStructureRuntimePathKind.FileOrDirectory,
+            explicitWorkingDirectory);
+        if (!projectPath.IsSuccess || projectPath.Path is null)
         {
-            return projectPathFailure;
+            return Fail(projectPath.Message);
         }
 
-        var projectTarget = dotNetProjectTargetResolver.Resolve(projectPath);
+        var projectTarget = dotNetProjectTargetResolver.Resolve(projectPath.Path);
         if (!projectTarget.IsSuccess || string.IsNullOrWhiteSpace(projectTarget.ProjectFilePath))
         {
             return Fail(projectTarget.Message);
         }
 
         var projectFilePath = projectTarget.ProjectFilePath;
-        var workingDirectory = resolvedWorkingDirectory ?? Path.GetDirectoryName(projectFilePath) ?? projectFilePath;
-        var commandParts = new List<string> { "dotnet" };
-        if (isWatch)
-        {
-            commandParts.Add("watch");
-            commandParts.Add("--project");
-            commandParts.Add(QuotePowerShell(projectFilePath));
-            commandParts.Add("run");
-        }
-        else
-        {
-            commandParts.Add("run");
-            commandParts.Add("--project");
-            commandParts.Add(QuotePowerShell(projectFilePath));
-        }
-
-        if (isRelease)
-        {
-            commandParts.Add("-c");
-            commandParts.Add("Release");
-        }
-
-        var startupLines = new List<string>();
-        if (!string.IsNullOrWhiteSpace(metadata.LocalhostUrl))
-        {
-            startupLines.Add($"$env:ASPNETCORE_URLS = {QuotePowerShell(metadata.LocalhostUrl.Trim())}");
-            commandParts.Add("--no-launch-profile");
-        }
-        else if (!string.IsNullOrWhiteSpace(metadata.LaunchProfileName))
-        {
-            commandParts.Add("--launch-profile");
-            commandParts.Add(QuotePowerShell(metadata.LaunchProfileName.Trim()));
-        }
-
-        return Success(
-            CreatePlan(
+        var workingDirectory = explicitWorkingDirectory ??
+                               Path.GetDirectoryName(projectFilePath) ??
+                               projectFilePath;
+        return Compile(
+            new ProjectStructureDotNetRuntimeDefinition(
                 workingDirectory,
-                string.Join(' ', commandParts),
                 displayName,
                 new ProjectStructureRuntimeLaunchTarget("project file", projectFilePath, false),
-                startupLines));
+                projectFilePath,
+                isWatch,
+                isRelease,
+                metadata.LaunchProfileName,
+                metadata.LocalhostUrl));
     }
 
     private ProjectStructureRuntimeLaunchResolution ResolvePythonPlan(
@@ -482,372 +575,240 @@ public sealed class ProjectStructureRuntimeLauncher(
             return Fail("Python environment launch requires a provider.");
         }
 
-        if (TryResolveWorkspacePath(
-                metadata.ProjectPath,
-                "Python project path",
-                pathAuthorityMode,
-                out var projectPath) is { } projectPathFailure)
+        var projectPath = pathResolver.Resolve(
+            metadata.ProjectPath,
+            "Python project path",
+            pathAuthorityMode,
+            ProjectStructureRuntimePathKind.FileOrDirectory);
+        if (!projectPath.IsSuccess || projectPath.Path is null)
         {
-            return projectPathFailure;
+            return Fail(projectPath.Message);
         }
 
-        var projectPathIsDirectory = Directory.Exists(projectPath);
-        var projectPathIsFile = File.Exists(projectPath);
-        if (!projectPathIsDirectory && !projectPathIsFile)
-        {
-            return Fail("Python project path does not exist or is not accessible.");
-        }
-
-        var workingDirectory = projectPathIsDirectory
-            ? projectPath
-            : Path.GetDirectoryName(projectPath) ?? projectPath;
+        var workingDirectory = projectPath.IsDirectory
+            ? projectPath.Path
+            : Path.GetDirectoryName(projectPath.Path) ?? projectPath.Path;
         var projectTarget = new ProjectStructureRuntimeLaunchTarget(
             "Python project path",
-            projectPath,
-            projectPathIsDirectory);
-        return metadata.PythonProvider.Value switch
+            projectPath.Path,
+            projectPath.IsDirectory);
+        var entryPoint = ResolvePythonEntryPoint(metadata, projectPath, workingDirectory, pathAuthorityMode);
+        if (!entryPoint.IsSuccess && !string.IsNullOrWhiteSpace(metadata.EntryPoint))
         {
-            ProjectPythonProvider.Conda => Success(
-                CreatePlan(
+            return Fail(entryPoint.Message);
+        }
+
+        if (!ProjectStructureLegacyRuntimeCommandMigrator.TryTokenizeArguments(
+                metadata.Arguments,
+                out var arguments,
+                out var argumentFailure))
+        {
+            return Fail(argumentFailure);
+        }
+
+        if (metadata.PythonProvider == ProjectPythonProvider.Conda)
+        {
+            return Compile(
+                new ProjectStructurePythonRuntimeDefinition(
                     workingDirectory,
-                    $"conda activate {QuotePowerShell(metadata.EnvironmentName.Trim())}",
                     "Conda environment",
-                    projectTarget)),
-            _ => ResolvePythonVirtualEnvironmentPlan(
-                metadata.EnvironmentName,
+                    projectTarget,
+                    ProjectPythonProvider.Conda,
+                    string.Empty,
+                    metadata.EnvironmentName.Trim(),
+                    entryPoint.Path ?? string.Empty,
+                    arguments));
+        }
+
+        var environmentPath = ResolvePythonEnvironmentPath(
+            metadata.EnvironmentName,
+            workingDirectory,
+            pathAuthorityMode);
+        if (!environmentPath.IsSuccess || environmentPath.Path is null)
+        {
+            return Fail(environmentPath.Message);
+        }
+
+        var interpreterPath = ProjectStructureRuntimePlanCompiler.ResolvePythonInterpreterPath(
+            environmentPath.Path,
+            hostContext.Platform);
+        var interpreter = pathResolver.Resolve(
+            interpreterPath,
+            "Python interpreter",
+            pathAuthorityMode,
+            ProjectStructureRuntimePathKind.File);
+        if (!interpreter.IsSuccess)
+        {
+            return Fail(interpreter.Message);
+        }
+
+        return Compile(
+            new ProjectStructurePythonRuntimeDefinition(
                 workingDirectory,
-                pathAuthorityMode)
-        };
+                "Python environment",
+                projectTarget,
+                ProjectPythonProvider.Python,
+                environmentPath.Path,
+                metadata.EnvironmentName.Trim(),
+                entryPoint.Path ?? string.Empty,
+                arguments));
     }
 
-    private ProjectStructureRuntimeLaunchResolution ResolvePythonVirtualEnvironmentPlan(
+    private ProjectStructureRuntimePathResolution ResolvePythonEntryPoint(
+        ProjectEnvironmentMetadata metadata,
+        ProjectStructureRuntimePathResolution projectPath,
+        string workingDirectory,
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
+    {
+        if (!string.IsNullOrWhiteSpace(metadata.EntryPoint))
+        {
+            return pathResolver.Resolve(
+                metadata.EntryPoint,
+                "Python entry point",
+                pathAuthorityMode,
+                ProjectStructureRuntimePathKind.File,
+                workingDirectory);
+        }
+
+        return projectPath.IsDirectory
+            ? new ProjectStructureRuntimePathResolution(null, false, "Python interactive environment has no headless entry point.")
+            : projectPath;
+    }
+
+    private ProjectStructureRuntimePathResolution ResolvePythonEnvironmentPath(
         string environmentName,
         string workingDirectory,
         ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
     {
-        string activationPath;
-        if (environmentName.Trim().EndsWith(".ps1", StringComparison.OrdinalIgnoreCase))
+        if (!environmentName.Trim().EndsWith(".ps1", StringComparison.OrdinalIgnoreCase))
         {
-            if (TryResolveWorkspacePath(
-                    environmentName,
-                    "Python activation script path",
-                    pathAuthorityMode,
-                    out activationPath,
-                    workingDirectory) is { } activationFailure)
-            {
-                return activationFailure;
-            }
-        }
-        else
-        {
-            if (TryResolveWorkspacePath(
-                    environmentName,
-                    "Python environment path",
-                    pathAuthorityMode,
-                    out var environmentPath,
-                    workingDirectory) is { } environmentFailure)
-            {
-                return environmentFailure;
-            }
-
-            activationPath = Path.Combine(environmentPath, "Scripts", "Activate.ps1");
+            return pathResolver.Resolve(
+                environmentName,
+                "Python environment path",
+                pathAuthorityMode,
+                ProjectStructureRuntimePathKind.Directory,
+                workingDirectory);
         }
 
-        return Success(
-            CreatePlan(
-                workingDirectory,
-                $"& {QuotePowerShell(activationPath)}",
-                "Python environment",
-                new ProjectStructureRuntimeLaunchTarget("Python environment path", activationPath, false)));
+        var activation = pathResolver.Resolve(
+            environmentName,
+            "Python activation script path",
+            pathAuthorityMode,
+            ProjectStructureRuntimePathKind.File,
+            workingDirectory);
+        if (!activation.IsSuccess || activation.Path is null)
+        {
+            return activation;
+        }
+
+        var scriptsDirectory = Path.GetDirectoryName(activation.Path);
+        var environmentDirectory = scriptsDirectory is null
+            ? null
+            : Path.GetDirectoryName(scriptsDirectory);
+        return string.IsNullOrWhiteSpace(environmentDirectory)
+            ? new ProjectStructureRuntimePathResolution(
+                null,
+                false,
+                "Python activation script path does not identify a virtual-environment root.")
+            : new ProjectStructureRuntimePathResolution(
+                environmentDirectory,
+                true,
+                "Legacy activation path migrated to the virtual-environment root.");
     }
 
-    private static ProjectScriptKind ResolveScriptKind(string objectSubtype, ProjectScriptMetadata metadata)
+    private ProjectStructureRuntimePathResolution ResolveScriptWorkingDirectory(
+        ProjectScriptMetadata metadata,
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
+    {
+        if (string.IsNullOrWhiteSpace(metadata.WorkingDirectory) &&
+            !string.IsNullOrWhiteSpace(metadata.ScriptPath))
+        {
+            var scriptPath = pathResolver.Resolve(
+                metadata.ScriptPath,
+                "Script path",
+                pathAuthorityMode,
+                ProjectStructureRuntimePathKind.File);
+            if (scriptPath.IsSuccess && scriptPath.Path is not null)
+            {
+                var directory = Path.GetDirectoryName(scriptPath.Path);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    return new(directory, true, "Script working directory resolved from the script path.");
+                }
+            }
+        }
+
+        return pathResolver.Resolve(
+            string.IsNullOrWhiteSpace(metadata.WorkingDirectory) ? "." : metadata.WorkingDirectory,
+            "Script working directory",
+            pathAuthorityMode,
+            ProjectStructureRuntimePathKind.Directory);
+    }
+
+    private ProjectStructureRuntimeLaunchResolution Compile(ProjectStructureRuntimeNodeDefinition definition)
+    {
+        var compilation = planCompiler.Compile(definition, hostContext.Platform);
+        if (!compilation.IsSuccess || compilation.Plan is null)
+        {
+            return Fail(compilation.Message);
+        }
+
+        var plan = compilation.Plan;
+        if (ValidatePlanTargets(plan) is { } targetFailure)
+        {
+            return Fail(targetFailure);
+        }
+
+        var capabilities = new ProjectStructureRuntimeLaunchCapabilities(
+            executionAdapter.Probe(plan),
+            terminalPresenter.Probe(plan),
+            elevationAdapter.Probe(plan));
+        return new(plan, "Runtime launch plan resolved.", capabilities);
+    }
+
+    private static string? ValidatePlanTargets(ProjectStructureRuntimeLaunchPlan plan)
+    {
+        if (!Directory.Exists(plan.WorkingDirectory))
+        {
+            return File.Exists(plan.WorkingDirectory)
+                ? "The configured runtime working directory is a file and cannot be used as a process working directory."
+                : "The configured runtime working directory does not exist or is not accessible.";
+        }
+
+        foreach (var target in plan.Targets)
+        {
+            var exists = target.IsDirectory
+                ? Directory.Exists(target.Path)
+                : File.Exists(target.Path);
+            if (!exists)
+            {
+                return $"The configured {target.Description} does not exist, has the wrong path type, or is not accessible.";
+            }
+        }
+
+        return null;
+    }
+
+    private static ProjectScriptKind ResolveScriptKind(
+        string objectSubtype,
+        ProjectScriptMetadata metadata)
         => metadata.ScriptKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
             ? ProjectNodeKindRegistry.ResolveScriptKind(objectSubtype)
             : metadata.ScriptKind;
 
-    private static ProjectEnvironmentKind ResolveEnvironmentKind(string objectSubtype, ProjectEnvironmentMetadata metadata)
+    private static ProjectEnvironmentKind ResolveEnvironmentKind(
+        string objectSubtype,
+        ProjectEnvironmentMetadata metadata)
         => metadata.EnvironmentKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
             ? ProjectNodeKindRegistry.ResolveEnvironmentKind(objectSubtype)
             : metadata.EnvironmentKind;
 
-    private static ProjectInfrastructureKind ResolveInfrastructureKind(string objectSubtype, ProjectInfrastructureMetadata metadata)
+    private static ProjectInfrastructureKind ResolveInfrastructureKind(
+        string objectSubtype,
+        ProjectInfrastructureMetadata metadata)
         => metadata.InfrastructureKind == default && !string.IsNullOrWhiteSpace(objectSubtype)
             ? ProjectNodeKindRegistry.ResolveInfrastructureKind(objectSubtype)
             : metadata.InfrastructureKind;
-
-    [SupportedOSPlatform("windows")]
-    private static ProcessStartInfo BuildStartInfo(ProjectStructureRuntimeLaunchPlan plan, bool runAsAdministrator)
-        => new()
-        {
-            FileName = "powershell.exe",
-            Arguments = BuildArguments(plan.StartupScript),
-            UseShellExecute = true,
-            Verb = runAsAdministrator ? "runas" : string.Empty,
-            WorkingDirectory = plan.WorkingDirectory
-        };
-
-    private ProjectStructureRuntimeLaunchPlan CreatePlan(
-        string workingDirectory,
-        string displayCommand,
-        string displayName,
-        ProjectStructureRuntimeLaunchTarget? target,
-        IEnumerable<string>? startupLines = null)
-    {
-        var lines = new List<string>
-        {
-            $"Set-Location -LiteralPath {QuotePowerShell(workingDirectory)}"
-        };
-
-        if (startupLines is not null)
-        {
-            lines.AddRange(startupLines);
-        }
-
-        lines.Add(displayCommand);
-        return new ProjectStructureRuntimeLaunchPlan(
-            workingDirectory,
-            string.Join(Environment.NewLine, lines),
-            displayCommand,
-            displayName,
-            target);
-    }
-
-    private ProjectStructureRuntimeLaunchResolution? TryResolveWorkspacePath(
-        string value,
-        string description,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
-        out string resolvedPath,
-        string? basePath = null)
-    {
-        if (!ExternalTargetAliasCodec.IsVersionedAlias(value))
-        {
-            var resolution = workspacePathAccessGuard.ResolveWorkspacePath(value, basePath);
-            if (resolution.IsSuccess)
-            {
-                if (TryResolveReparseSafePath(
-                        resolution.FullPath,
-                        out resolvedPath,
-                        out var reparseFailureMessage))
-                {
-                    return null;
-                }
-
-                return Fail($"{description} {reparseFailureMessage}");
-            }
-        }
-
-        if (TryResolveExistingLocalDrivePath(
-                value,
-                basePath,
-                pathAuthorityMode,
-                out var localPath,
-                out var localFailureMessage))
-        {
-            resolvedPath = localPath;
-            return null;
-        }
-
-        resolvedPath = string.Empty;
-        if (!string.IsNullOrWhiteSpace(localFailureMessage))
-        {
-            return Fail($"{description} {localFailureMessage}");
-        }
-
-        return Fail($"{description} must stay inside the active workspace root.");
-    }
-
-    private ProjectStructureRuntimeLaunchResolution? TryResolveWorkingDirectory(
-        string value,
-        string description,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
-        out string workingDirectory,
-        string? basePath = null)
-    {
-        if (TryResolveWorkspacePath(
-                value,
-                description,
-                pathAuthorityMode,
-                out workingDirectory,
-                basePath) is { } resolutionFailure)
-        {
-            return resolutionFailure;
-        }
-
-        if (Directory.Exists(workingDirectory))
-        {
-            return null;
-        }
-
-        return File.Exists(workingDirectory)
-            ? Fail($"{description} must be a directory, but the configured path is a file.")
-            : Fail($"{description} does not exist or is not accessible.");
-    }
-
-    private bool TryResolveExistingLocalDrivePath(
-        string value,
-        string? basePath,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
-        out string resolvedPath,
-        out string failureMessage)
-    {
-        resolvedPath = string.Empty;
-        failureMessage = string.Empty;
-        if (string.IsNullOrWhiteSpace(value) || LooksLikeUrl(value))
-        {
-            return false;
-        }
-
-        try
-        {
-            var trimmedValue = value.Trim();
-            string candidatePath;
-            bool isAuthorizedExternalAlias = false;
-            if (ExternalTargetAliasCodec.IsVersionedAlias(trimmedValue))
-            {
-                if (WorkspaceExecutionAuditContext.Current is not { } auditScope)
-                {
-                    failureMessage = "is an external-target alias without an active execution authority scope.";
-                    return false;
-                }
-
-                var accessScope = new EffectiveExternalTargetAccessScope(
-                    auditScope.AllowedExternalTargetAliases,
-                    auditScope.ReadOnlyExternalTargetAliases);
-                if (!accessScope.CanRead(trimmedValue))
-                {
-                    failureMessage = "is not authorized for the current execution.";
-                    return false;
-                }
-
-                var externalTargets = externalTargetPathRegistryFactory.Create(
-                    auditScope.ExternalTargetRootBindings);
-                if (externalTargets.TryResolve(
-                        trimmedValue,
-                        out candidatePath,
-                        out var aliasValidationMessage) != ExternalTargetAliasResolutionKind.Resolved)
-                {
-                    failureMessage = string.IsNullOrWhiteSpace(aliasValidationMessage)
-                        ? "could not be resolved on this host."
-                        : aliasValidationMessage;
-                    return false;
-                }
-
-                isAuthorizedExternalAlias = true;
-            }
-            else if (Path.IsPathRooted(trimmedValue))
-            {
-                candidatePath = Path.GetFullPath(trimmedValue);
-            }
-            else if (!string.IsNullOrWhiteSpace(basePath))
-            {
-                candidatePath = Path.GetFullPath(Path.Combine(basePath, trimmedValue));
-            }
-            else
-            {
-                return false;
-            }
-
-            if (!isAuthorizedExternalAlias &&
-                !CanCurrentExecutionReadPath(candidatePath, pathAuthorityMode))
-            {
-                failureMessage = pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.AgentExecution
-                    ? "is outside the active workspace and is not authorized for this agent execution."
-                    : "is outside the active workspace and is not authorized for the current execution.";
-                return false;
-            }
-
-            if (!TryResolveReparseSafePath(
-                    candidatePath,
-                    out candidatePath,
-                    out var reparseFailureMessage))
-            {
-                failureMessage = reparseFailureMessage;
-                return false;
-            }
-
-            if (!Directory.Exists(candidatePath) && !File.Exists(candidatePath))
-            {
-                failureMessage = "does not exist or is not accessible.";
-                return false;
-            }
-
-            resolvedPath = candidatePath;
-            return true;
-        }
-        catch (Exception exception) when (
-            exception is ArgumentException or IOException or NotSupportedException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    private bool TryResolveReparseSafePath(
-        string path,
-        out string resolvedPath,
-        out string failureMessage)
-    {
-        try
-        {
-            resolvedPath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path);
-            failureMessage = string.Empty;
-            return true;
-        }
-        catch (StorageBrowseException)
-        {
-            resolvedPath = string.Empty;
-            failureMessage = "cannot traverse symbolic links or filesystem reparse points.";
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            resolvedPath = string.Empty;
-            failureMessage = "is not accessible to the current process.";
-            return false;
-        }
-        catch (Exception exception) when (
-            exception is ArgumentException or IOException or NotSupportedException)
-        {
-            resolvedPath = string.Empty;
-            failureMessage = "could not be inspected safely.";
-            return false;
-        }
-    }
-
-    private bool CanCurrentExecutionReadPath(
-        string candidatePath,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
-    {
-        if (workspacePathAccessGuard.ResolveWorkspacePath(candidatePath).IsSuccess)
-        {
-            return true;
-        }
-
-        if (WorkspaceExecutionAuditContext.Current is not { } auditScope)
-        {
-            return pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.OperatorSelected;
-        }
-
-        var externalTargets = externalTargetPathRegistryFactory.Create(
-            auditScope.ExternalTargetRootBindings);
-        if (!externalTargets.TryCreateAlias(candidatePath, out var candidateAlias))
-        {
-            return false;
-        }
-
-        return new EffectiveExternalTargetAccessScope(
-                auditScope.AllowedExternalTargetAliases,
-                auditScope.ReadOnlyExternalTargetAliases)
-            .CanRead(candidateAlias);
-    }
-
-    private static bool TargetExists(ProjectStructureRuntimeLaunchTarget target)
-        => target.IsDirectory ? Directory.Exists(target.Path) : File.Exists(target.Path);
-
-    private static string JoinCommand(string command, string? arguments)
-        => string.IsNullOrWhiteSpace(arguments)
-            ? command.Trim()
-            : $"{command.Trim()} {arguments.Trim()}";
 
     private static string FirstNonEmpty(params string?[] values)
     {
@@ -862,45 +823,6 @@ public sealed class ProjectStructureRuntimeLauncher(
         return string.Empty;
     }
 
-    private static bool LooksLikeUrl(string value)
-    {
-        var trimmedValue = value.Trim();
-        if (Path.IsPathRooted(trimmedValue))
-        {
-            return false;
-        }
-
-        return Uri.TryCreate(trimmedValue, UriKind.Absolute, out var uri) &&
-               !string.IsNullOrWhiteSpace(uri.Scheme) &&
-               !string.Equals(uri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string QuotePowerShell(string value)
-        => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
-
-    private static string BuildArguments(string startupScript)
-    {
-        var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(startupScript));
-        return $"-NoLogo -NoExit -ExecutionPolicy Bypass -EncodedCommand {encodedCommand}";
-    }
-
-    private static ProjectStructureRuntimeLaunchResolution Success(ProjectStructureRuntimeLaunchPlan plan)
-    {
-        if (!Directory.Exists(plan.WorkingDirectory))
-        {
-            return File.Exists(plan.WorkingDirectory)
-                ? Fail("The configured runtime working directory is a file and cannot be used as a process working directory.")
-                : Fail("The configured runtime working directory does not exist or is not accessible.");
-        }
-
-        if (plan.Target is not null && !TargetExists(plan.Target))
-        {
-            return Fail($"The configured {plan.Target.Description} does not exist, has the wrong path type, or is not accessible.");
-        }
-
-        return new(plan, "Launch plan resolved.");
-    }
-
     private static ProjectStructureRuntimeLaunchResolution Fail(string message)
-        => new(null, message);
+        => new(null, message, ProjectStructureRuntimeLaunchCapabilities.Unavailable(message));
 }

@@ -157,117 +157,132 @@ internal sealed class MafRuntimeAgentFactory
             runtimeSessionKey,
             runtimeOptions.TransientContext?.Attachments,
             runtimeOptions.Governance);
-        // Exactly one owner disposes the run's workspace bundle: the top-level
-        // build result. Handoff participant builds share the bundle and must
-        // not register a second ownership.
-        if (ownsWorkspaceRuntimeServices)
+        try
         {
-            capabilityState.AsyncDisposables.Add(workspaceRuntimeServices);
-        }
-        await FilterToolsOutsideExecutionGovernanceAsync(
-            capabilityState,
-            runtimeOptions.Governance,
-            progressCallback);
-        await FilterUnusableApprovalToolsAsync(
-            capabilityState,
-            effectiveProvider,
-            suppressApprovalRequirements,
-            progressCallback);
-        AttachTransientContextProvider(
-            capabilityState,
-            runtimeOptions.TransientContext);
+            // Exactly one owner disposes the run's workspace bundle: the top-level
+            // build result. Handoff participant builds share the bundle and must
+            // not register a second ownership.
+            if (ownsWorkspaceRuntimeServices)
+            {
+                capabilityState.AsyncDisposables.Add(workspaceRuntimeServices);
+            }
+            await FilterToolsOutsideExecutionGovernanceAsync(
+                capabilityState,
+                runtimeOptions.Governance,
+                progressCallback);
+            await FilterUnusableApprovalToolsAsync(
+                capabilityState,
+                effectiveProvider,
+                suppressApprovalRequirements,
+                progressCallback);
+            AttachTransientContextProvider(
+                capabilityState,
+                runtimeOptions.TransientContext);
 
-        if (finalizerCapture is not null)
-        {
-            capabilityState.Tools.AddRange(finalizerCapture.Tools);
-            await progressCallback(
-                ExecutionState.Preparing,
-                "Finalizer policy",
-                $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
-        }
+            if (finalizerCapture is not null)
+            {
+                capabilityState.Tools.AddRange(finalizerCapture.Tools);
+                await progressCallback(
+                    ExecutionState.Preparing,
+                    "Finalizer policy",
+                    $"Attached {runtimeOptions.FinalizerMode} finalizer tool '{finalizerCapture.Policy.ToolName}' for structured output contract '{finalizerCapture.Policy.OutputContract.ContractKey}'.");
+            }
 
-        var frameworkManagedHistory = MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
-        var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
-            effectiveProvider,
-            model,
-            (float)agent.Temperature,
-            forceOmitTemperature,
-            agent.ConfigurationJson);
-        chatOptions.Instructions = AppendFinalizerInstructions(
-            agent.Instructions,
-            finalizerCapture?.Policy,
-            runtimeOptions.FinalizerMode,
-            MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
-        chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ShouldAllowMultipleToolCalls(
-            runtimeOptions.FinalizerMode,
-            capabilityState.HasApprovalTools);
-
-        if (capabilityState.Tools.Count > 0)
-        {
-            chatOptions.Tools = [.. capabilityState.Tools];
-        }
-
-        var requestCompatibilityEvidence = MafProviderRequestCompatibilityEvidenceFactory.Create(
-            effectiveProvider,
-            requestedModel,
-            model,
-            capabilityState.Tools,
-            requestedReasoningEffort);
-        var compatibilityProgressMessage =
-            MafProviderRequestCompatibilityEvidenceFactory.CreateAdjustmentProgressMessage(
-                requestCompatibilityEvidence);
-        if (compatibilityProgressMessage is not null)
-        {
-            await progressCallback(
-                ExecutionState.Preparing,
-                "Provider request compatibility",
-                $"Agent '{agent.Name}' ({agent.Id:D}): {compatibilityProgressMessage}");
-        }
-
-        var options = MafChatClientAgentOptionsFactory.Create(chatOptions);
-        options.Id = agent.Id.ToString("D");
-        options.Name = agent.Name;
-        options.Description = agent.Summary;
-        options.AIContextProviders = capabilityState.ContextProviders;
-        options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null;
-        options.RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence;
-
-        var runtimeAgent = CreateInstrumentedAgent(
-            providerAgentFactory.CreateFrameworkAgent(
+            var frameworkManagedHistory = MafRuntimeSessionBuilder.ShouldUseFrameworkManagedHistory(agent, effectiveProvider, runtimeOptions);
+            var chatOptions = MafModelParametersBuilder.CreateModelCompatibleChatOptions(
                 effectiveProvider,
                 model,
-                options,
-                frameworkManagedHistory,
-                agent.EnableBackgroundResponses && MafRuntimeSessionBuilder.SupportsBackgroundResponses(effectiveProvider)),
-            effectiveProvider,
-            agent,
-            capabilityState,
-            suppressApprovalRequirements,
-            toolInvocationTraceRecorder,
-            finalizerCapture?.Policy,
-            runtimeOptions.FinalizerMode,
-            runtimeOptions.Governance,
-            // Script inspection reads through the effective run scope so
-            // policy evaluation inspects exactly the file the run's tools can
-            // execute — never the runtime construction scope.
-            new MafScriptPolicyInspectionService(
-                workspaceRoot,
-                contextWorkspaceScope,
-                physicalPathPolicyFactory,
-                workspaceRuntimeServices.ExternalTargetPathRegistry));
-        return new RuntimeBuildResult(
-            runtimeAgent,
-            effectiveProvider,
-            model,
-            capabilityState.AsyncDisposables,
-            capabilityState.Disposables,
-            capabilityState.HasApprovalTools,
-            MafModelParametersBuilder.ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
-            finalizerCapture,
-            toolInvocationTraceRecorder,
-            capabilityState.ContextContributionTraceCollector,
-            runtimeCapabilityState: capabilityState,
-            entryAgentRequestCompatibilityEvidence: requestCompatibilityEvidence);
+                (float)agent.Temperature,
+                forceOmitTemperature,
+                agent.ConfigurationJson);
+            chatOptions.Instructions = AppendFinalizerInstructions(
+                agent.Instructions,
+                finalizerCapture?.Policy,
+                runtimeOptions.FinalizerMode,
+                MafRuntimeSessionBuilder.ShouldApplyStructuredOutputResponseFormat(runtimeOptions));
+            chatOptions.AllowMultipleToolCalls = MafFinalizerDriver.ShouldAllowMultipleToolCalls(
+                runtimeOptions.FinalizerMode,
+                capabilityState.HasApprovalTools);
+
+            if (capabilityState.Tools.Count > 0)
+            {
+                chatOptions.Tools = [.. capabilityState.Tools];
+            }
+
+            var requestCompatibilityEvidence = MafProviderRequestCompatibilityEvidenceFactory.Create(
+                effectiveProvider,
+                requestedModel,
+                model,
+                capabilityState.Tools,
+                requestedReasoningEffort);
+            var compatibilityProgressMessage =
+                MafProviderRequestCompatibilityEvidenceFactory.CreateAdjustmentProgressMessage(
+                    requestCompatibilityEvidence);
+            if (compatibilityProgressMessage is not null)
+            {
+                await progressCallback(
+                    ExecutionState.Preparing,
+                    "Provider request compatibility",
+                    $"Agent '{agent.Name}' ({agent.Id:D}): {compatibilityProgressMessage}");
+            }
+
+            var options = MafChatClientAgentOptionsFactory.Create(chatOptions);
+            options.Id = agent.Id.ToString("D");
+            options.Name = agent.Name;
+            options.Description = agent.Summary;
+            options.AIContextProviders = capabilityState.ContextProviders;
+            options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null;
+            options.RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence;
+
+            var runtimeAgent = CreateInstrumentedAgent(
+                providerAgentFactory.CreateFrameworkAgent(
+                    effectiveProvider,
+                    model,
+                    options,
+                    frameworkManagedHistory,
+                    agent.EnableBackgroundResponses && MafRuntimeSessionBuilder.SupportsBackgroundResponses(effectiveProvider)),
+                effectiveProvider,
+                agent,
+                capabilityState,
+                suppressApprovalRequirements,
+                toolInvocationTraceRecorder,
+                finalizerCapture?.Policy,
+                runtimeOptions.FinalizerMode,
+                runtimeOptions.Governance,
+                // Script inspection reads through the effective run scope so
+                // policy evaluation inspects exactly the file the run's tools can
+                // execute — never the runtime construction scope.
+                new MafScriptPolicyInspectionService(
+                    workspaceRoot,
+                    contextWorkspaceScope,
+                    physicalPathPolicyFactory,
+                    workspaceRuntimeServices.ExternalTargetPathRegistry));
+            return new RuntimeBuildResult(
+                runtimeAgent,
+                effectiveProvider,
+                model,
+                capabilityState.AsyncDisposables,
+                capabilityState.Disposables,
+                capabilityState.HasApprovalTools,
+                MafModelParametersBuilder.ShouldOmitTemperature(effectiveProvider, model, forceOmitTemperature),
+                finalizerCapture,
+                toolInvocationTraceRecorder,
+                capabilityState.ContextContributionTraceCollector,
+                runtimeCapabilityState: capabilityState,
+                entryAgentRequestCompatibilityEvidence: requestCompatibilityEvidence);
+        }
+        catch (Exception buildException)
+        {
+            var cleanupExceptions = await capabilityState.DisposeAcquiredResourcesAsync().ConfigureAwait(false);
+            if (cleanupExceptions.Count > 0)
+            {
+                throw new AggregateException(
+                    "Runtime agent construction failed and one or more acquired resources also failed cleanup.",
+                    [buildException, .. cleanupExceptions]);
+            }
+
+            throw;
+        }
     }
 
     internal static void AttachTransientContextProvider(

@@ -157,6 +157,41 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     }
 
     [Fact]
+    public void BuildWatchArgumentList_stops_at_case_variant_workspace_root_on_windows()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\App\App.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\App\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+        var outsideRestoreInput = Path.Combine(Path.GetDirectoryName(workspace.RootPath)!, "Directory.Packages.props");
+        File.WriteAllText(outsideRestoreInput, "<Project />");
+        File.SetLastWriteTimeUtc(outsideRestoreInput, new DateTime(2026, 3, 20, 8, 10, 0, DateTimeKind.Utc));
+
+        try
+        {
+            var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(
+                workspace.RootPath.ToUpperInvariant(),
+                projectPath,
+                new ManagerOptions());
+
+            Assert.Contains("--no-restore", arguments);
+        }
+        finally
+        {
+            File.Delete(outsideRestoreInput);
+        }
+    }
+
+    [Fact]
     public void BuildWatchUrlsEnvironmentValue_returns_null_when_no_explicit_urls_are_configured()
     {
         var value = WorkspaceRuntimeProcessTools.BuildWatchUrlsEnvironmentValue(new ManagerOptions());
@@ -249,17 +284,19 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     }
 
     [Fact]
-    public void ResolveTailwindCliPath_points_to_workspace_local_binary()
+    public void ResolveTailwindCliScriptPath_points_to_workspace_local_node_entry()
     {
         var tailwindWorkspacePath = Path.Combine(Path.GetTempPath(), "CanDoItAll", "Tailwind");
-        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(tailwindWorkspacePath);
+        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath);
 
         Assert.Equal(
             Path.Combine(
                 tailwindWorkspacePath,
                 "node_modules",
-                ".bin",
-                OperatingSystem.IsWindows() ? "tailwindcss.cmd" : "tailwindcss"),
+                "@tailwindcss",
+                "cli",
+                "dist",
+                "index.mjs"),
             path);
     }
 
@@ -270,53 +307,6 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     public void RequiresWorkspaceRecovery_detects_lock_and_port_conflicts(string line)
     {
         Assert.True(WorkspaceRuntimeProcessTools.RequiresWorkspaceRecovery(line));
-    }
-
-    [Fact]
-    public void IsWorkspaceOwnedProcess_matches_watch_host_and_child_processes()
-    {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll");
-        var projectPath = Path.Combine(
-            workspaceRoot,
-            "src",
-            "App",
-            "CanDoItAll.Web",
-            "CanDoItAll.Web.csproj");
-
-        var watchHost = new WorkspaceProcessSnapshot(
-            101,
-            "dotnet",
-            $"dotnet watch --project \"{projectPath}\" run --no-launch-profile",
-            null);
-
-        var watchChild = new WorkspaceProcessSnapshot(
-            102,
-            "dotnet",
-            $"dotnet run --no-build -e DOTNET_WATCH=1 --project \"{projectPath}\"",
-            null);
-
-        var webExecutablePath = Path.Combine(
-            Path.GetDirectoryName(projectPath)!,
-            "bin",
-            "Debug",
-            "net10.0",
-            "CanDoItAll.Web");
-        var webProcess = new WorkspaceProcessSnapshot(
-            103,
-            "CanDoItAll.Web",
-            $"\"{webExecutablePath}\"",
-            webExecutablePath);
-
-        var unrelated = new WorkspaceProcessSnapshot(
-            104,
-            "dotnet",
-            $"dotnet build \"{Path.Combine(Path.GetTempPath(), "Other", "Other.csproj")}\"",
-            null);
-
-        Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(watchHost, projectPath));
-        Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(watchChild, projectPath));
-        Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(webProcess, projectPath));
-        Assert.False(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(unrelated, projectPath));
     }
 
     private sealed class TestWorkspace : IDisposable

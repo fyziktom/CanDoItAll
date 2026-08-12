@@ -373,17 +373,41 @@ public sealed class ProjectStructureActionCatalogAdapterTests
     }
 
     [Fact]
-    public void Runtime_capable_nodes_expose_normal_and_admin_run_actions_when_requested()
+    public void Runtime_capable_nodes_expose_compatible_direct_and_elevated_actions_when_requested()
     {
         var adapter = new ProjectStructureActionCatalogAdapter();
         var node = CreateNode("script", ProjectObjectType.Script, "Run setup", 0, 0);
 
         var actions = adapter.BuildNodeContextActions(node, canLaunchRuntime: true);
 
-        Assert.Contains(actions, action => action.ActionId == "runtime:open" && action.Label == "Run normally");
-        Assert.Contains(actions, action => action.ActionId == "runtime:admin" && action.Label == "Run as administrator");
+        Assert.Contains(actions, action => action.ActionId == "runtime:open" && action.Label == "Run");
+        Assert.Contains(actions, action => action.ActionId == "runtime:admin" && action.Label == "Elevated launch");
         Assert.Equal("runtime:open", actions.Skip(5).First().ActionId);
         AssertDistinctShortcuts(actions);
+    }
+
+    [Fact]
+    public void Runtime_actions_follow_typed_host_capabilities()
+    {
+        var adapter = new ProjectStructureActionCatalogAdapter();
+        var node = CreateNode("script", ProjectObjectType.Script, "Run setup", 0, 0);
+        var capabilities = new ProjectStructureRuntimeLaunchCapabilities(
+            ProjectStructureRuntimeCapability.Unavailable(
+                ProjectStructureRuntimeCapabilityStatus.PolicyDenied,
+                "Direct execution is unavailable."),
+            ProjectStructureRuntimeCapability.Available("Terminal presentation is available."),
+            ProjectStructureRuntimeCapability.Unavailable(
+                ProjectStructureRuntimeCapabilityStatus.Unsupported,
+                "Elevation is unsupported."));
+
+        var actions = adapter.BuildNodeContextActions(
+            node,
+            capabilities,
+            canOpenInFileExplorer: false,
+            canOpenInNewTab: false);
+
+        Assert.Contains(actions, action => action.ActionId == "runtime:terminal" && action.Label == "Open terminal");
+        Assert.DoesNotContain(actions, action => action.ActionId is "runtime:open" or "runtime:admin");
     }
 
     [Fact]
@@ -571,4 +595,3 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Equal(shortcuts.Count, shortcuts.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 }
-

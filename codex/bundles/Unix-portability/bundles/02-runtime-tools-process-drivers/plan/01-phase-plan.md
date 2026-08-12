@@ -2,7 +2,7 @@
 
 ## Entry rule
 
-This bundle is blocked until Core Gate C4. B00 must re-anchor to the exact C4 commit and issue R0 before B01.
+This bundle normally waits for Core Gate C4. The operator-authorized provisional handoff in the core bundle permits B00 to re-anchor to the recorded exact commits and issue R0 before B01 while C4/hosted/macOS support remains deferred.
 
 ## Execution order
 

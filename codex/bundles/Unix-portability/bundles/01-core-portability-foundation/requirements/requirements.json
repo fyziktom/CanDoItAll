@@ -472,7 +472,7 @@
       "owner": "A07",
       "requirement": "An active GitHub Actions workflow restores, builds, and runs the stable test gate on Windows, Ubuntu, and macOS.",
       "acceptance": "All three jobs are required checks or otherwise protected by repository policy evidence.",
-      "status": "Implemented — exact-commit hosted checks and repository policy evidence pending"
+      "status": "Implemented — hosted checks and repository policy evidence deferred under HOSTED-PORTABILITY-VALIDATION-001"
     },
     {
       "id": "CI-002",
@@ -480,7 +480,7 @@
       "owner": "A07",
       "requirement": "Actual-host tests cover path, filesystem, storage, secret-provider selection, permissions, and headless startup.",
       "acceptance": "Tests cannot pass solely through a mocked OS enum.",
-      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI"
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS operator-deferred"
     },
     {
       "id": "CI-003",
@@ -488,7 +488,7 @@
       "owner": "A07",
       "requirement": "Linux and macOS restart tests prove protected state, storage catalogs, and migrated records remain readable.",
       "acceptance": "At least one old-format fixture and one new-format fixture survive restart on each supported migration route.",
-      "status": "Implemented — Ubuntu restart passes; genuine macOS pending hosted CI"
+      "status": "Implemented — Ubuntu restart passes; genuine macOS operator-deferred"
     },
     {
       "id": "CI-004",
@@ -496,7 +496,7 @@
       "owner": "A07",
       "requirement": "Publish artifacts and service/headless smoke tests run from clean directories outside the repository.",
       "acceptance": "No success depends on bin/obj, developer profile, global npm cache, or repository-relative mutable state.",
-      "status": "Implemented — Windows/Ubuntu pass; genuine macOS pending hosted CI"
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS operator-deferred"
     },
     {
       "id": "CI-005",
@@ -504,7 +504,7 @@
       "owner": "A07",
       "requirement": "Windows stable behavior remains green after every core portability phase.",
       "acceptance": "No compatibility change is accepted with unexplained Windows regression.",
-      "status": "Satisfied locally — exact-commit hosted Windows confirmation pending"
+      "status": "Satisfied locally — hosted Windows confirmation operator-deferred"
     },
     {
       "id": "CI-006",
@@ -512,15 +512,15 @@
       "owner": "A07",
       "requirement": "Static scanning blocks new unowned OS checks, raw Windows-only tokens, unsafe absolute-path persistence, and insecure secret fallbacks.",
       "acceptance": "Allowlist entries are narrow, reviewed, and source-linked.",
-      "status": "Implemented and locally enforced — hosted static check pending"
+      "status": "Implemented and locally enforced — hosted static check operator-deferred"
     },
     {
       "id": "CI-007",
       "priority": "P0",
       "owner": "A07",
       "requirement": "Core Gate C4 produces a versioned handoff anchor and evidence pack that is sufficient to start the runtime bundle.",
-      "acceptance": "Runtime bundle remains blocked until C4 is GO and its source references are refreshed.",
-      "status": "Blocked — C4 requires an exact pushed commit and hosted evidence"
+      "acceptance": "Runtime bundle remains blocked until C4 is GO, or an explicit operator deferral identifies immutable provisional anchors and preserves all unverified support limitations, and B00 refreshes its source references.",
+      "status": "Satisfied for implementation progression only — exact pushed anchors recorded; C4 remains deferred"
     }
   ]
 }

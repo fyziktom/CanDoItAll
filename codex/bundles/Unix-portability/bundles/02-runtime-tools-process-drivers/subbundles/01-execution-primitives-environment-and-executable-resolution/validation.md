@@ -3,7 +3,7 @@
 ## Focused commands
 
 ```text
-dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --filter 'FullyQualifiedName~LocalWorkspaceProcessHost|FullyQualifiedName~WorkspaceExecutable|FullyQualifiedName~EnvironmentPolicy|FullyQualifiedName~ExternalProcess'
+dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~WorkspaceExecutableLocatorTests|FullyQualifiedName~WorkspaceCommandEnvironmentPolicyTests|FullyQualifiedName~LocalWorkspaceProcessHostTests|FullyQualifiedName~WorkspaceCommandReceiptWriterTests|FullyQualifiedName~WorkspaceExternalProcessRunnerTests|FullyQualifiedName~WorkspaceGitCommandExecutorTests|FullyQualifiedName~ToolImplementationContractsTests|FullyQualifiedName~RuntimeHostPlatformCapabilityTests.Architecture_limits_host_os_branches_to_reviewed_owners|FullyQualifiedName~WorkspaceCommandExecutionServiceTests'
 ```
 ```text
 dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --filter 'Category=ProcessPortability'
@@ -14,7 +14,7 @@ dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.In
 - Failing-first or characterization result.
 - Focused unit/integration/actual-host result.
 - Stable Windows regression result.
-- Linux/macOS result when the subbundle changes platform behavior.
+- Linux actual-host result when the subbundle changes platform behavior; deterministic macOS contract fixtures are mandatory and actual macOS is deferred under `RUNTIME-MACOS-VALIDATION-001`.
 - Migration/rollback/failure-injection result where applicable.
 - Redaction scan.
 - Source/reference/requirement update.

@@ -56,7 +56,7 @@ Current WMI behavior is Windows-specific and the Unix fallback lacks sufficient 
 
 ## Entry gate
 
-- Status before execution: `Blocked by B02`
+- Status before execution: `Eligible — B02 Workbench gate GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -69,8 +69,8 @@ Current WMI behavior is Windows-specific and the Unix fallback lacks sufficient 
 
 ## Status
 
-- `Blocked by B02`
+- `Completed — Gate R2 GO`
 
 ## Handoff
 
-Record changed files, commands/results, evidence paths, design decisions, residual risks, and the next eligible subbundle. Stop on NO-GO.
+Evidence, the primary recommendation, and independent approval are recorded in reviews 14–16. B04 is the only eligible next subbundle; actual macOS remains deferred under `RUNTIME-MACOS-VALIDATION-001`.

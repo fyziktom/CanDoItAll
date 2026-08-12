@@ -29,7 +29,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
     IAgentReferenceDataProvider agentReferenceDataProvider,
-    IProviderProfileService providerProfileService) : IProcessRuntimeStepAssignmentRepairService
+    IProviderProfileService providerProfileService,
+    IProcessInstancePlanStore planStore,
+    ICanDoItAllAgentWorkspaceFactory workspaceFactory) : IProcessRuntimeStepAssignmentRepairService
 {
     public async ValueTask<ProcessRuntimeStepAssignmentRepairResult> RepairAsync(
         ProcessRuntimeStepAssignment assignment,
@@ -38,23 +40,62 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
-        var readinessRequest = CreateReadinessRequest(assignment);
+        var plan = await planStore.LoadAsync(assignment.PlanId, cancellationToken).ConfigureAwait(false);
+        var planSteps = plan?.Steps
+            .Where(step => step.StepInstanceId == assignment.StepInstanceId)
+            .Take(2)
+            .ToArray() ?? [];
+        if (planSteps.Length != 1)
+        {
+            return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
+        }
+
+        var planStep = planSteps[0];
+        var readinessRequest = CreateReadinessRequest(
+            assignment,
+            planStep.RequiredRuntimeToolNames);
+        var currentRuntimeToolNames = readinessRequest.RequiredRuntimeToolNames ?? [];
+        if (ProcessRequiredRuntimeToolNames.HasInvalidRuntimeToolContract(
+                currentRuntimeToolNames) ||
+            !currentRuntimeToolNames.SequenceEqual(
+                planStep.RequiredRuntimeToolNames,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
+        }
+
         var referenceData = await agentReferenceDataProvider
             .GetAsync(AgentReferenceDataRequest.AgentsAndProviders(), cancellationToken)
             .ConfigureAwait(false);
         var agents = referenceData.Agents;
         var providerById = referenceData.ProviderById;
+        var capabilityCatalog = RequiresBrowserTransportValidation(planStep.RequiredRuntimeToolNames)
+            ? await workspaceFactory
+                .GetOrganizationWorkspaceService()
+                .ListCapabilitiesAsync(cancellationToken)
+                .ConfigureAwait(false)
+            : [];
         var currentAgent = ResolveCurrentAgent(assignment, agents);
         if (currentAgent is not null)
         {
             var currentReadiness = AgentProcessReadinessEvaluator.Evaluate(currentAgent, readinessRequest);
-            if (currentReadiness.IsExecutionReady && currentReadiness.HasRoleFit)
+            if (currentReadiness.IsExecutionReady &&
+                currentReadiness.HasRoleFit &&
+                HasCompatibleBrowserTransport(
+                    currentAgent,
+                    planStep,
+                    capabilityCatalog))
             {
                 return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
             }
         }
 
-        var candidate = SelectAgent(readinessRequest, agents, providerById);
+        var candidate = SelectAgent(
+            readinessRequest,
+            planStep,
+            capabilityCatalog,
+            agents,
+            providerById);
         if (candidate is null)
         {
             return new ProcessRuntimeStepAssignmentRepairResult(assignment, false, string.Empty);
@@ -86,6 +127,8 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
 
     private RepairCandidate? SelectAgent(
         AgentProcessRoleReadinessRequest readinessRequest,
+        StepInstancePlan planStep,
+        IReadOnlyList<CapabilityCatalogItem> capabilityCatalog,
         IReadOnlyList<AgentDefinition> agents,
         IReadOnlyDictionary<Guid, ProviderProfile> providerById)
     {
@@ -104,7 +147,9 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             }
 
             var readiness = AgentProcessReadinessEvaluator.Evaluate(agent, readinessRequest);
-            if (!readiness.IsExecutionReady || !readiness.HasRoleFit)
+            if (!readiness.IsExecutionReady ||
+                !readiness.HasRoleFit ||
+                !HasCompatibleBrowserTransport(agent, planStep, capabilityCatalog))
             {
                 continue;
             }
@@ -123,6 +168,53 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             .FirstOrDefault();
     }
 
+    private static bool RequiresBrowserTransportValidation(IReadOnlyList<string> requiredRuntimeToolNames)
+        => requiredRuntimeToolNames.Any(toolName =>
+            toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasCompatibleBrowserTransport(
+        AgentDefinition agent,
+        StepInstancePlan planStep,
+        IReadOnlyList<CapabilityCatalogItem> capabilityCatalog)
+    {
+        if (!RequiresBrowserTransportValidation(planStep.RequiredRuntimeToolNames))
+        {
+            return true;
+        }
+
+        var transport = BrowserRuntimeToolPreflightContribution.ResolveMcpTransportRequirement(
+            agent,
+            planStep.RequiredRuntimeToolNames,
+            capabilityCatalog);
+        var requiredCapabilities = transport switch
+        {
+            BrowserMcpTransportRequirement.NotApplicable or BrowserMcpTransportRequirement.Remote =>
+                new HashSet<ProcessHostCapabilityId>(),
+            BrowserMcpTransportRequirement.LocalStdio =>
+                new HashSet<ProcessHostCapabilityId> { ProcessHostCapabilityIds.LocalStdioMcp },
+            BrowserMcpTransportRequirement.LocalStdioNode =>
+                new HashSet<ProcessHostCapabilityId>
+                {
+                    ProcessHostCapabilityIds.LocalStdioMcp,
+                    ProcessHostCapabilityIds.NodeRuntime,
+                    ProcessHostCapabilityIds.NodePackageManager
+                },
+            _ => null
+        };
+        if (requiredCapabilities is null)
+        {
+            return false;
+        }
+
+        var sealedBrowserCapabilities = planStep.RequiredHostCapabilities
+            .Where(capability =>
+                capability == ProcessHostCapabilityIds.LocalStdioMcp ||
+                capability == ProcessHostCapabilityIds.NodeRuntime ||
+                capability == ProcessHostCapabilityIds.NodePackageManager)
+            .ToHashSet();
+        return sealedBrowserCapabilities.SetEquals(requiredCapabilities);
+    }
+
     private static AgentDefinition? ResolveCurrentAgent(
         ProcessRuntimeStepAssignment assignment,
         IReadOnlyList<AgentDefinition> agents)
@@ -132,7 +224,9 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             : null;
     }
 
-    private static AgentProcessRoleReadinessRequest CreateReadinessRequest(ProcessRuntimeStepAssignment assignment)
+    private static AgentProcessRoleReadinessRequest CreateReadinessRequest(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> sealedRuntimeToolNames)
     {
         return new AgentProcessRoleReadinessRequest(
             assignment.StepKey,
@@ -144,62 +238,37 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             string.IsNullOrWhiteSpace(assignment.OperationTargetScope)
                 ? string.Empty
                 : assignment.OperationTargetScope.Trim(),
-            ResolveRepairReadinessRequiredRuntimeToolNames(assignment),
+            ResolveRepairReadinessRequiredRuntimeToolNames(assignment, sealedRuntimeToolNames),
             PreferredSpecializationTags: ProcessExecutorSpecializationPolicy.Resolve(assignment.LaunchVariables));
     }
 
-    private static IReadOnlyList<string> ResolveRepairReadinessRequiredRuntimeToolNames(ProcessRuntimeStepAssignment assignment)
+    private static IReadOnlyList<string> ResolveRepairReadinessRequiredRuntimeToolNames(
+        ProcessRuntimeStepAssignment assignment,
+        IReadOnlyList<string> sealedRuntimeToolNames)
     {
         var launchContextToolNames = ResolveRequiredRuntimeToolNames(assignment.LaunchVariables, assignment.StepKey)
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return launchContextToolNames
+        var toolNames = sealedRuntimeToolNames
+            .Concat(launchContextToolNames)
             .Concat(ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        return ProcessRequiredRuntimeToolNames.IsValidBoundedContract(toolNames)
+            ? toolNames
+            : [ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker];
     }
 
     private static IReadOnlyList<string> ResolveRequiredRuntimeToolNames(
         IReadOnlyDictionary<string, string> launchVariables,
         string stepKey)
     {
-        var direct = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts);
-        if (!string.IsNullOrWhiteSpace(direct))
-        {
-            return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(direct);
-        }
-
-        var byStep = ResolveAssignmentLaunchVariable(launchVariables, ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep);
-        if (string.IsNullOrWhiteSpace(byStep) ||
-            string.IsNullOrWhiteSpace(stepKey))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(byStep);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return [];
-            }
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(property.Value);
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-
-        return [];
+        return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(
+            ProcessProductCompletionRuleParser.ResolveUnconditionalProductCompletionRequiredToolReceipts(
+                launchVariables,
+                stepKey));
     }
 
     private static string ResolveAssignmentLaunchVariable(
@@ -250,4 +319,3 @@ internal sealed class AgentFrameworkProcessRuntimeStepAssignmentRepairService(
         string ReadinessHash,
         string ReadinessSummary);
 }
-

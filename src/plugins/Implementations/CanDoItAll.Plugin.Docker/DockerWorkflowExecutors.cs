@@ -8,13 +8,17 @@ namespace CanDoItAll.Modules.Plugins;
 
 public abstract class DockerWorkflowExecutorBase(
     IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
-    IPluginHostToolService hostToolService) : IWorkflowExecutor
+    IPluginHostToolService hostToolService,
+    IDockerHostCapabilitySnapshotProvider capabilitySnapshotProvider)
+    : IWorkflowExecutor, IWorkflowExecutorAvailabilityEvaluator
 {
     private static readonly JsonSerializerOptions SerializerOptions = DockerWorkflowJson.Options;
 
     protected abstract WorkflowExecutorDescriptor DescriptorDefinition { get; }
 
     protected WorkflowExecutorId ExecutorId => DescriptorDefinition.Id;
+
+    WorkflowExecutorId IWorkflowExecutorAvailabilityEvaluator.ExecutorId => ExecutorId;
 
     protected abstract PluginHostToolRecipeId RecipeId { get; }
 
@@ -49,6 +53,34 @@ public abstract class DockerWorkflowExecutorBase(
             context.Node.Id,
             Serialize(payload),
             context.Descriptor.ResultShape);
+    }
+
+    public async ValueTask<WorkflowExecutorAvailabilityDescriptor> EvaluateAvailabilityAsync(
+        CancellationToken cancellationToken = default)
+    {
+        WorkflowExecutorAvailabilityDescriptor grantAvailability = ResolveAvailability();
+        if (!grantAvailability.IsRunnable)
+        {
+            return grantAvailability;
+        }
+
+        DockerHostCapabilitySnapshot snapshot = await capabilitySnapshotProvider.GetAsync(cancellationToken);
+        if (snapshot.IsReady)
+        {
+            return WorkflowExecutorAvailabilityDescriptor.Available() with
+            {
+                Message = $"{snapshot.Message} Endpoint={snapshot.EndpointKind}."
+            };
+        }
+
+        (string component, DockerHostDependencyState state) = snapshot.Executable != DockerHostDependencyState.Available
+            ? ("executable", snapshot.Executable)
+            : snapshot.Context != DockerHostDependencyState.Available
+                ? ("context", snapshot.Context)
+                : ("daemon", snapshot.Daemon);
+        return WorkflowExecutorAvailabilityDescriptor.Unavailable(
+            $"docker-{component}-{state.ToString().ToLowerInvariant()}",
+            snapshot.Message);
     }
 
     protected abstract IReadOnlyDictionary<string, string> CreateArguments(
@@ -182,7 +214,9 @@ internal static class DockerWorkflowSimulationTemplates
 
 public sealed class DockerListContainersWorkflowExecutor(
     IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
-    IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
+    IPluginHostToolService hostToolService,
+    IDockerHostCapabilitySnapshotProvider capabilitySnapshotProvider)
+    : DockerWorkflowExecutorBase(grantEvaluator, hostToolService, capabilitySnapshotProvider)
 {
     protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.ListContainers;
 
@@ -196,7 +230,9 @@ public sealed class DockerListContainersWorkflowExecutor(
 
 public sealed class DockerPullImageWorkflowExecutor(
     IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
-    IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
+    IPluginHostToolService hostToolService,
+    IDockerHostCapabilitySnapshotProvider capabilitySnapshotProvider)
+    : DockerWorkflowExecutorBase(grantEvaluator, hostToolService, capabilitySnapshotProvider)
 {
     protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.PullImage;
 
@@ -233,7 +269,9 @@ public sealed class DockerPullImageWorkflowExecutor(
 
 public sealed class DockerStartContainerWorkflowExecutor(
     IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
-    IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
+    IPluginHostToolService hostToolService,
+    IDockerHostCapabilitySnapshotProvider capabilitySnapshotProvider)
+    : DockerWorkflowExecutorBase(grantEvaluator, hostToolService, capabilitySnapshotProvider)
 {
     protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.StartContainer;
 
@@ -274,7 +312,9 @@ public sealed class DockerStartContainerWorkflowExecutor(
 
 public sealed class DockerReadLogsWorkflowExecutor(
     IPluginWorkflowExecutorGrantEvaluator grantEvaluator,
-    IPluginHostToolService hostToolService) : DockerWorkflowExecutorBase(grantEvaluator, hostToolService)
+    IPluginHostToolService hostToolService,
+    IDockerHostCapabilitySnapshotProvider capabilitySnapshotProvider)
+    : DockerWorkflowExecutorBase(grantEvaluator, hostToolService, capabilitySnapshotProvider)
 {
     protected override WorkflowExecutorDescriptor DescriptorDefinition => DockerWorkflowExecutorDescriptors.ReadLogs;
 

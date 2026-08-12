@@ -57,7 +57,11 @@ internal sealed class DotNetProcessLaunchVariableContributor(
                     $".NET launch contract for process definition '{context.DefinitionKey}' could not be created from its declared existing solution context: {verificationIssue}");
             }
 
-            DotNetProcessLaunchVariableWriter.ApplyExistingSolution(verificationContract, variables);
+            var productRootPolicy = physicalPathPolicyFactory.Create(verificationContract.ProductRoot);
+            DotNetProcessLaunchVariableWriter.ApplyExistingSolution(
+                verificationContract,
+                variables,
+                productRootPolicy.PathComparer);
             return;
         }
 
@@ -70,7 +74,11 @@ internal sealed class DotNetProcessLaunchVariableContributor(
                 $".NET launch contract for process definition '{context.DefinitionKey}' could not be created from its declared initialization plan: {contractIssue}");
         }
 
-        DotNetProcessLaunchVariableWriter.ApplyCore(contract, variables);
+        var initializationRootPolicy = physicalPathPolicyFactory.Create(contract.ProductRoot);
+        DotNetProcessLaunchVariableWriter.ApplyCore(
+            contract,
+            variables,
+            initializationRootPolicy.PathComparer);
         solutionSetupLaunchPlanBuilder.Apply(contract, activation.SetupPolicyBindings, variables);
     }
 }

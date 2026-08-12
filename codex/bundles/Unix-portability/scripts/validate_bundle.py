@@ -393,7 +393,24 @@ def validate_bundle_directory(
         )
 
     if bundle_id == "runtime" and "blocked" not in str(manifest.get("status", "")).casefold() and stage != "completed":
-        context.warning(manifest_path, "Runtime bundle is expected to remain blocked until the Core C4 handoff is accepted.")
+        status = str(manifest.get("status", "")).casefold()
+        entry_gate = str(manifest.get("entry_gate", "")).casefold()
+        provisional_record = (
+            bundle_root.parent
+            / "01-core-portability-foundation"
+            / "reviews"
+            / "22-a07-hosted-validation-deferral.md"
+        )
+        provisional_entry_is_recorded = (
+            "provisional" in status
+            and "provisional" in entry_gate
+            and provisional_record.is_file()
+        )
+        if not provisional_entry_is_recorded:
+            context.warning(
+                manifest_path,
+                "Runtime bundle is expected to remain blocked until the Core C4 handoff or an explicit provisional handoff is accepted.",
+            )
 
     if stage == "completed":
         validate_completed_gate(context, bundle_root, bundle_id)

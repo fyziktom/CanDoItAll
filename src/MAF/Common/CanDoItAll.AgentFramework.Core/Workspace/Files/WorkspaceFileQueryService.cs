@@ -119,7 +119,11 @@ internal sealed class WorkspaceFileQueryService
             IsTruncated: truncated);
     }
 
-    public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
+    public WorkspaceFileListResult ListFiles(
+        string? relativePath = null,
+        string searchPattern = "*",
+        int maxResults = 100,
+        IReadOnlyList<string>? allowedExternalRoots = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var request = NormalizeListRequest(relativePath, searchPattern);
@@ -136,7 +140,12 @@ internal sealed class WorkspaceFileQueryService
                 IsTruncated: false);
         }
 
-        if (!pathPolicy.TryResolveWorkspacePath(request.RelativePath, allowWorkspaceRoot: true, out var resolution, out var validationMessage))
+        if (!TryResolveQueryPath(
+                request.RelativePath,
+                allowWorkspaceRoot: true,
+                allowedExternalRoots,
+                out var resolution,
+                out var validationMessage))
         {
             return new WorkspaceFileListResult(
                 Succeeded: false,
@@ -410,10 +419,18 @@ internal sealed class WorkspaceFileQueryService
             IsTruncated: truncated);
     }
 
-    public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
+    public WorkspaceTextFileReadResult ReadTextFile(
+        string path,
+        int maxCharacters = 12000,
+        IReadOnlyList<string>? allowedExternalRoots = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
-        if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var resolution, out var validationMessage))
+        if (!TryResolveQueryPath(
+                path,
+                allowWorkspaceRoot: false,
+                allowedExternalRoots,
+                out var resolution,
+                out var validationMessage))
         {
             return new WorkspaceTextFileReadResult(
                 Succeeded: false,
@@ -469,10 +486,17 @@ internal sealed class WorkspaceFileQueryService
             IsTruncated: loaded.IsTruncated);
     }
 
-    public WorkspacePathStatResult StatPath(string path)
+    public WorkspacePathStatResult StatPath(
+        string path,
+        IReadOnlyList<string>? allowedExternalRoots = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
-        if (!pathPolicy.TryResolveWorkspacePath(path, allowWorkspaceRoot: false, out var resolution, out var validationMessage))
+        if (!TryResolveQueryPath(
+                path,
+                allowWorkspaceRoot: false,
+                allowedExternalRoots,
+                out var resolution,
+                out var validationMessage))
         {
             return new WorkspacePathStatResult(
                 Succeeded: false,
@@ -684,6 +708,36 @@ internal sealed class WorkspaceFileQueryService
                 PathKind: "directory",
                 SizeBytes: null,
                 LastWriteTimeUtc: Directory.Exists(fullPath) ? Directory.GetLastWriteTimeUtc(fullPath) : null);
+    }
+
+    private bool TryResolveQueryPath(
+        string? path,
+        bool allowWorkspaceRoot,
+        IReadOnlyList<string>? allowedExternalRoots,
+        out WorkspacePathResolution resolution,
+        out string validationMessage)
+    {
+        if (allowedExternalRoots is null)
+        {
+            return pathPolicy.TryResolveWorkspacePath(
+                path,
+                allowWorkspaceRoot,
+                out resolution,
+                out validationMessage);
+        }
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            resolution = default;
+            validationMessage = "Provide a path within an allowed external root.";
+            return false;
+        }
+
+        return pathPolicy.TryResolveAccessiblePath(
+            path,
+            allowedExternalRoots,
+            out resolution,
+            out validationMessage);
     }
 
     private IEnumerable<string> EnumerateSearchFiles(

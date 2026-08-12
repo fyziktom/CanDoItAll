@@ -224,9 +224,9 @@ public sealed class ProjectStructureRuntimeNodeMetadataBoundary(
     private void EnsureAgentPlanPathAuthority(ProjectStructureRuntimeLaunchPlan plan)
     {
         EnsureAgentCanReadPath(plan.WorkingDirectory, "working directory");
-        if (plan.Target is not null)
+        foreach (var target in plan.Targets)
         {
-            EnsureAgentCanReadPath(plan.Target.Path, plan.Target.Description);
+            EnsureAgentCanReadPath(target.Path, target.Description);
         }
     }
 

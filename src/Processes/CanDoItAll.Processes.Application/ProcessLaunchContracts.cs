@@ -39,14 +39,40 @@ public sealed record ProcessLaunchExecutorOverride(
     public ProcessWorkflowExecutorBinding? WorkflowBinding { get; init; }
 }
 
-public sealed record ProcessLaunchResult(
-    ProcessDefinitionId DefinitionId,
-    ProcessInstancePlanId LaunchPlanId,
-    ProcessRunId? RunId,
-    ProcessLaunchStage Stage,
-    string Route,
-    ProcessLaunchPlanView LaunchPlan,
-    IReadOnlyList<string> Warnings);
+public sealed record ProcessLaunchResult
+{
+    public ProcessLaunchResult(
+        ProcessDefinitionId DefinitionId,
+        ProcessInstancePlanId LaunchPlanId,
+        ProcessRunId? RunId,
+        ProcessLaunchStage Stage,
+        string Route,
+        ProcessLaunchPlanView LaunchPlan,
+        IReadOnlyList<string> Warnings)
+    {
+        this.DefinitionId = DefinitionId;
+        this.LaunchPlanId = LaunchPlanId;
+        this.RunId = RunId;
+        this.Stage = Stage;
+        this.Route = Route;
+        this.LaunchPlan = LaunchPlan;
+        this.Warnings = ProcessPublicReceiptTextPolicy.NormalizePublicMessages(Warnings);
+    }
+
+    public ProcessDefinitionId DefinitionId { get; }
+
+    public ProcessInstancePlanId LaunchPlanId { get; }
+
+    public ProcessRunId? RunId { get; }
+
+    public ProcessLaunchStage Stage { get; }
+
+    public string Route { get; }
+
+    public ProcessLaunchPlanView LaunchPlan { get; }
+
+    public IReadOnlyList<string> Warnings { get; }
+}
 
 public enum ProcessLaunchStage
 {
@@ -96,12 +122,38 @@ public sealed record ProcessLaunchStepView(
     public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
 }
 
-public sealed record ProcessLaunchReadinessFinding(
-    ProcessLaunchReadinessSeverity Severity,
-    string Code,
-    string Message,
-    string? StepKey = null,
-    string? RoleKey = null);
+public sealed record ProcessLaunchReadinessFinding
+{
+    public ProcessLaunchReadinessFinding(
+        ProcessLaunchReadinessSeverity severity,
+        string code,
+        string message,
+        string? stepKey = null,
+        string? roleKey = null)
+    {
+        Severity = severity;
+        Code = ProcessPublicReceiptTextPolicy.NormalizePublicToken(
+            code,
+            "process.launch.readiness_invalid");
+        Message = ProcessPublicReceiptTextPolicy.NormalizePublicMessage(
+            message,
+            "Process launch readiness could not be established.");
+        StepKey = ProcessPublicReceiptTextPolicy.NormalizeOptionalPublicToken(stepKey);
+        RoleKey = ProcessPublicReceiptTextPolicy.NormalizeOptionalPublicToken(roleKey);
+    }
+
+    public ProcessLaunchReadinessSeverity Severity { get; }
+
+    public string Code { get; }
+
+    public string Message { get; }
+
+    public string? StepKey { get; }
+
+    public string? RoleKey { get; }
+
+    public bool MustBlockLaunch { get; init; }
+}
 
 public enum ProcessLaunchReadinessSeverity
 {
@@ -117,11 +169,23 @@ public sealed record ProcessLaunchExecutorResolutionRequest(
     IReadOnlyDictionary<string, string> Variables)
 {
     public IReadOnlyList<ProcessLaunchExecutorOverride> ExecutorOverrides { get; init; } = [];
+
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> StepVariablesByKey { get; init; } =
+        new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed record ProcessLaunchExecutorResolution(
     IReadOnlyList<ProcessLaunchExecutorBinding> Bindings,
-    IReadOnlyList<ProcessLaunchReadinessFinding> Findings);
+    IReadOnlyList<ProcessLaunchReadinessFinding> Findings)
+{
+    public IReadOnlyDictionary<string, IReadOnlySet<ProcessHostCapabilityId>> EffectiveHostCapabilitiesByStep { get; init; } =
+        new Dictionary<string, IReadOnlySet<ProcessHostCapabilityId>>(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> EffectiveRuntimeToolNamesByStep { get; init; } =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+
+    public ProcessHostCapabilitySnapshot? HostCapabilities { get; init; }
+}
 
 public sealed record ProcessLaunchExecutorBinding(
     string StepKey,
@@ -145,7 +209,10 @@ public interface IProcessLaunchExecutorResolver
 public sealed record ProcessLaunchDriverCatalog(
     ProcessDriverCatalog DriverCatalog,
     StrategyId StepExecutionStrategyId,
-    IReadOnlySet<CapabilityTag> RequiredCapabilityTags);
+    IReadOnlySet<CapabilityTag> RequiredCapabilityTags)
+{
+    public ProcessHostCapabilitySnapshot HostCapabilities { get; init; } = ProcessHostCapabilitySnapshot.Unknown;
+}
 
 public interface IProcessLaunchDriverCatalogProvider
 {

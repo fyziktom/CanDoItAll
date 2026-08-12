@@ -111,28 +111,28 @@ internal sealed class TailwindWatchSignalQueue
 
 internal static class TailwindSourcePathPolicy
 {
-    private static readonly HashSet<string> IgnoredPathSegments = new(StringComparer.OrdinalIgnoreCase)
-    {
+    private static readonly string[] IgnoredPathSegments =
+    [
         ".artifacts",
         ".git",
         "bin",
         "node_modules",
         "obj"
-    };
+    ];
 
-    private static readonly HashSet<string> TailwindWorkspaceExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
+    private static readonly string[] TailwindWorkspaceExtensions =
+    [
         ".css"
-    };
+    ];
 
-    private static readonly HashSet<string> TailwindWorkspaceFileNames = new(StringComparer.OrdinalIgnoreCase)
-    {
+    private static readonly string[] TailwindWorkspaceFileNames =
+    [
         "package-lock.json",
         "package.json"
-    };
+    ];
 
-    private static readonly HashSet<string> TailwindContentSourceExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
+    private static readonly string[] TailwindContentSourceExtensions =
+    [
         ".cs",
         ".cshtml",
         ".html",
@@ -141,7 +141,7 @@ internal static class TailwindSourcePathPolicy
         ".razor",
         ".ts",
         ".tsx"
-    };
+    ];
 
     public static bool IsRelevant(TailwindWatchRoot root, string fullPath, string outputPath)
     {
@@ -161,7 +161,7 @@ internal static class TailwindSourcePathPolicy
         string[] segments = relativePath.Split(
             [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Any(IgnoredPathSegments.Contains))
+        if (segments.Any(segment => Contains(IgnoredPathSegments, segment, root.PathPolicy.PathComparer)))
         {
             return false;
         }
@@ -175,12 +175,18 @@ internal static class TailwindSourcePathPolicy
         string extension = Path.GetExtension(normalizedPath);
         return root.Kind switch
         {
-            TailwindWatchRootKind.TailwindWorkspace => TailwindWorkspaceFileNames.Contains(fileName) ||
-                                                       TailwindWorkspaceExtensions.Contains(extension),
-            TailwindWatchRootKind.ContentSource => TailwindContentSourceExtensions.Contains(extension),
+            TailwindWatchRootKind.TailwindWorkspace => Contains(TailwindWorkspaceFileNames, fileName, root.PathPolicy.PathComparer) ||
+                                                       Contains(TailwindWorkspaceExtensions, extension, root.PathPolicy.PathComparer),
+            TailwindWatchRootKind.ContentSource => Contains(TailwindContentSourceExtensions, extension, root.PathPolicy.PathComparer),
             _ => false
         };
     }
+
+    private static bool Contains(
+        IReadOnlyList<string> values,
+        string candidate,
+        StringComparer comparer)
+        => values.Any(value => comparer.Equals(value, candidate));
 }
 
 internal static class TailwindSourceFingerprint

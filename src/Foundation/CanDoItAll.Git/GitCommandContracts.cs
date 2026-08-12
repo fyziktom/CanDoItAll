@@ -6,6 +6,8 @@ public sealed record GitCommandSpec(
     GitRepositoryPath RepositoryPath,
     IReadOnlyList<GitCommandArgument> Arguments)
 {
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromMinutes(2);
+
     public string Executable => "git";
 
     public string SanitizedCommand => GitCommandLogSanitizer.Sanitize(this);

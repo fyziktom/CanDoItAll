@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Mcp;
+using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.FileSystem;
@@ -17,6 +19,7 @@ internal static class MafRuntimeTestServices
         services.AddSingleton<IMafProviderRuntimeGateway>(new UnavailableMafProviderRuntimeGateway());
         services.AddSingleton<IMafProviderStreamingDispatchGate>(NoOpMafProviderStreamingDispatchGate.Instance);
         services.AddSingleton<IAgentImageAnalysisService, UnavailableAgentImageAnalysisService>();
+        services.AddSingleton<IMcpClientFactory>(new FakeMcpClientFactory(new FakeMcpServerScript(Tools: [])));
         services.AddSingleton<IPhysicalFileSystemPathPolicyFactory>(
             TestWorkspaceServices.PhysicalPathPolicyFactory);
         services.AddSingleton<IWorkspaceRuntimeServicesFactory>(new WorkspaceRuntimeServicesFactory(

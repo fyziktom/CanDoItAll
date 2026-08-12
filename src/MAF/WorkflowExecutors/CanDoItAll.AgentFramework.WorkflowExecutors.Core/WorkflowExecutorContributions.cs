@@ -84,7 +84,8 @@ internal sealed class WorkflowExecutorDescriptorRegistration<TExecutor>(
     public WorkflowExecutorDescriptor Descriptor { get; } = descriptor;
 }
 
-internal sealed class WorkflowExecutorImplementation<TExecutor> : IWorkflowExecutor
+internal sealed class WorkflowExecutorImplementation<TExecutor>
+    : IWorkflowExecutor, IWorkflowExecutorAvailabilityEvaluator
     where TExecutor : class, IWorkflowExecutor
 {
     private readonly TExecutor executor;
@@ -111,21 +112,30 @@ internal sealed class WorkflowExecutorImplementation<TExecutor> : IWorkflowExecu
 
     public WorkflowExecutorDescriptor Descriptor { get; }
 
-    public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+    public WorkflowExecutorId ExecutorId => Descriptor.Id;
+
+    public ValueTask<WorkflowExecutorAvailabilityDescriptor> EvaluateAvailabilityAsync(
+        CancellationToken cancellationToken = default)
+        => executor is IWorkflowExecutorAvailabilityEvaluator evaluator
+            ? evaluator.EvaluateAvailabilityAsync(cancellationToken)
+            : ValueTask.FromResult(executor.Descriptor.Availability);
+
+    public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowExecutorExecutionContext context,
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default)
     {
-        var availability = executor.Descriptor.Availability;
+        WorkflowExecutorAvailabilityDescriptor availability =
+            await EvaluateAvailabilityAsync(cancellationToken);
         if (!availability.IsRunnable)
         {
             throw WorkflowExecutorFailureDiagnosticMapper.CreateUnavailableException(
                 context.Definition,
                 context.Node,
-                executor.Descriptor);
+                executor.Descriptor with { Availability = availability });
         }
 
-        return executor.ExecuteAsync(context, input, cancellationToken);
+        return await executor.ExecuteAsync(context, input, cancellationToken);
     }
 }
 

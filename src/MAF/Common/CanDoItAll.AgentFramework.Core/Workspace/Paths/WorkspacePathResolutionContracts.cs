@@ -15,6 +15,20 @@ public interface IWorkspacePathResolutionService
     WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing);
 
     WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing);
+
+    WorkspaceResolvedPath ResolveDirectoryPath(
+        string path,
+        bool allowMissing,
+        IReadOnlyList<string>? allowedExternalRoots)
+    {
+        if (allowedExternalRoots is { Count: > 0 })
+        {
+            throw WorkspacePathResolutionException.OutsideWorkspace(
+                "This workspace path resolver does not support external-root authority.");
+        }
+
+        return ResolveDirectoryPath(path, allowMissing);
+    }
 }
 
 public sealed class WorkspacePathResolutionService : IWorkspacePathResolutionService
@@ -59,10 +73,20 @@ public sealed class WorkspacePathResolutionService : IWorkspacePathResolutionSer
     }
 
     public WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing)
+        => ResolveDirectoryPath(path, allowMissing, allowedExternalRoots: null);
+
+    public WorkspaceResolvedPath ResolveDirectoryPath(
+        string path,
+        bool allowMissing,
+        IReadOnlyList<string>? allowedExternalRoots)
     {
         var resolution = allowMissing
-            ? pathPolicy.ResolveAccessiblePath(path)
-            : pathPolicy.ResolveExistingPath(path, allowFiles: false, allowDirectories: true);
+            ? pathPolicy.ResolveAccessiblePath(path, allowedExternalRoots)
+            : pathPolicy.ResolveExistingPath(
+                path,
+                allowFiles: false,
+                allowDirectories: true,
+                allowedExternalRoots);
 
         if (!allowMissing && !Directory.Exists(resolution.FullPath))
         {

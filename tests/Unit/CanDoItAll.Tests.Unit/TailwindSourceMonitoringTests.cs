@@ -104,6 +104,23 @@ public sealed class TailwindSourceMonitoringTests
         Assert.Equal(2, batch.ChangedPaths.Count);
     }
 
+    [Fact]
+    public void Linux_path_policy_does_not_ignore_case_distinct_segments_or_extensions()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using var directory = new TemporaryDirectory();
+        TailwindWatchRoot root = CreateRoot(directory.Path);
+        string upperBinSource = Path.Combine(directory.Path, "BIN", "Component.razor");
+        string upperExtensionSource = Path.Combine(directory.Path, "Component.RAZOR");
+
+        Assert.True(TailwindSourcePathPolicy.IsRelevant(root, upperBinSource, Path.Combine(directory.Path, "output.css")));
+        Assert.False(TailwindSourcePathPolicy.IsRelevant(root, upperExtensionSource, Path.Combine(directory.Path, "output.css")));
+    }
+
     private static TailwindWatchRoot CreateRoot(string path)
     {
         var factory = new PhysicalFileSystemPathPolicyFactory();

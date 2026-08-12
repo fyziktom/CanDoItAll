@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
 {
     private readonly string rootPath = Path.Combine(
@@ -148,6 +149,8 @@ public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
 
     private sealed class RecordingWorkspaceProcessHost : IWorkspaceProcessHost
     {
+        private const string WorkspacePathAliasToolName = "workspace_path_alias";
+
         public WorkspaceProcessExecutionRequest? LastRequest { get; private set; }
 
         public ExecutionBoundaryDescriptor DescribeBoundary()
@@ -166,7 +169,14 @@ public sealed class WorkspaceRuntimePluginScriptArgumentTests : IDisposable
             WorkspaceProcessExecutionRequest request,
             CancellationToken cancellationToken = default)
         {
-            LastRequest = request;
+            if (!string.Equals(
+                    request.ToolName,
+                    WorkspacePathAliasToolName,
+                    StringComparison.Ordinal))
+            {
+                LastRequest = request;
+            }
+
             var now = DateTimeOffset.UtcNow;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,

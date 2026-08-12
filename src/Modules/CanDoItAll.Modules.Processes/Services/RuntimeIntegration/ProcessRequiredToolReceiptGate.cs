@@ -37,7 +37,9 @@ internal static class ProcessRequiredToolReceiptGate
 
     public static string FormatMissingSummary(IReadOnlyList<ProcessRequiredToolReceipt> missingReceipts)
     {
-        return string.Join("; ", missingReceipts.Select(FormatRequirement));
+        return ProcessPublicReceiptTextPolicy.NormalizePublicMessage(
+            string.Join("; ", missingReceipts.Select(FormatRequirement)),
+            "Required tool evidence is missing.");
     }
 
     public static IReadOnlyList<string> ResolveRequiredRuntimeToolNames(ProcessCapabilityScope? capabilityScope)

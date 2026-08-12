@@ -46,7 +46,7 @@ public sealed record FileApplicationPreference
 
         ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
         Extension = extension;
-        ExecutablePath = executablePath.Trim();
+        ExecutablePath = executablePath;
         State = state;
     }
 
@@ -489,6 +489,19 @@ public sealed class FileApplicationPreferenceService(
     private static string ValidateExecutablePath(string executablePath, bool requireExistingFile)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
+        try
+        {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(
+                executablePath,
+                "preferred application executable path");
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new ArgumentException(
+                "The preferred application executable path uses syntax that is not valid for this host.",
+                nameof(executablePath),
+                exception);
+        }
         if (!Path.IsPathFullyQualified(executablePath))
         {
             throw new ArgumentException(
@@ -497,7 +510,7 @@ public sealed class FileApplicationPreferenceService(
         }
 
         string fullPath = Path.GetFullPath(executablePath);
-        if (OperatingSystem.IsWindows() && fullPath.StartsWith("\\\\", StringComparison.Ordinal))
+        if (PhysicalPathSyntaxPolicy.Classify(fullPath) == CanDoItAll.SharedKernel.PhysicalPathSyntax.WindowsUnc)
         {
             throw new ArgumentException(
                 "A preferred application executable must be installed on the local machine.",

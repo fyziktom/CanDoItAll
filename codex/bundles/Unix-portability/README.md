@@ -20,7 +20,7 @@ The deliverable is one ZIP with **two sequential, independently executable Codex
 1. [`01-core-portability-foundation`](bundles/01-core-portability-foundation/README.md) — paths, slash/config cleanup, filesystem semantics, storage/control-plane migration, secrets/key protection, composition, headless hosting, and the first Windows/Linux/macOS CI gate.
 2. [`02-runtime-tools-process-drivers`](bundles/02-runtime-tools-process-drivers/README.md) — process execution primitives, Workbench runtime nodes, Manager, MCP, external tools, plugins/FileTools, and Processes-domain capability adaptation.
 
-The runtime bundle is deliberately prepared now but blocked until **Core Gate C4** succeeds on an exact commit. Its first subbundle, `B00`, must rebase every source reference after the core work lands.
+The runtime bundle is deliberately sequenced after the core implementation. `B00` rebased every source reference to the exact operator-authorized provisional handoff anchors and closed Gate R0. B01 completed with Gate R1a GO, B02 completed with independent Workbench gate GO, B03 completed with independent Gate R2 GO, and B04 completed with independent Gate R3a GO after MCP/tool authority, lifecycle, secret, protocol, and package-integrity remediation. B05 is now the only eligible runtime subbundle. Actual macOS runtime proof is governed by `RUNTIME-MACOS-VALIDATION-001`; it is deferred rather than reported as passed.
 
 ## Why the split is mandatory
 
@@ -44,7 +44,7 @@ python <materialized-bundle>/scripts/validate_bundle.py --bundle-root <materiali
 
 Then execute only `bundles/01-core-portability-foundation/subbundles/00-anchor-baseline-and-current-inventory`.
 
-Do not start the runtime bundle until `bundles/01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md` is completed and Gate C4 is GO.
+Do not start the runtime bundle until `bundles/01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md` records either C4 GO or an explicit provisional implementation handoff that preserves every deferred support limitation. The current handoff is provisional under `HOSTED-PORTABILITY-VALIDATION-001`.
 
 ## Non-negotiable execution rules
 

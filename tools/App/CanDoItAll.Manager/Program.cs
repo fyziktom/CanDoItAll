@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Manager;
@@ -20,9 +21,17 @@ builder.Services.AddSingleton<WatchSupervisorService>();
 builder.Services.AddSingleton<IWatchSupervisor>(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
 builder.Services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
 builder.Services.AddSingleton<DurableFileWriter>();
+builder.Services.AddSingleton<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
+builder.Services.AddSingleton<IWorkspaceLongRunningProcessHost>(serviceProvider =>
+    (IWorkspaceLongRunningProcessHost)serviceProvider.GetRequiredService<IWorkspaceProcessHost>());
+builder.Services.AddSingleton<IManagerProcessDiscovery>(serviceProvider =>
+    ManagerProcessDiscoveryFactory.Create(serviceProvider.GetRequiredService<IWorkspaceProcessHost>()));
+builder.Services.AddSingleton<IManagerOwnedProcessRegistry, FileManagerOwnedProcessRegistry>();
+builder.Services.AddSingleton<IManagerProcessCoordinator, ManagerProcessCoordinator>();
 builder.Services.AddSingleton<TailwindWatchSupervisorService>();
 builder.Services.AddSingleton<ITuningExecutionAdapter, LocalProcessTuningExecutionAdapter>();
 builder.Services.AddSingleton<TuningRequestService>();
+builder.Services.AddHostedService<ManagerProcessRecoveryService>();
 builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<WatchSupervisorService>());
 builder.Services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<TailwindWatchSupervisorService>());
 builder.Services.AddHostedService<CapsuleRefreshService>();

@@ -19,7 +19,7 @@ dotnet --info
 python ./scripts/validate_bundle.py --bundle-root . --repo-root <repo> --stage prepared
 ```
 
-Confirm the commit equals the completed Core C4 handoff before B00.
+Confirm the main and sibling commits equal the accepted core handoff anchors before B00. When the provisional exception is active, also verify that hosted/macOS support remains explicitly deferred.
 
 ## Stable regression (final boundary only)
 

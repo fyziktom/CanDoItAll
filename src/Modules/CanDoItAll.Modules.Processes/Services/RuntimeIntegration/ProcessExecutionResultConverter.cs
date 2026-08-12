@@ -36,6 +36,7 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
 using static CanDoItAll.Modules.Processes.ProcessOutcomeCitationSanitizer;
 using static CanDoItAll.Modules.Processes.ProcessProductCompletionRetryPolicy;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptRetryPolicy;
+using static CanDoItAll.Modules.Processes.ProcessReceiptNarrativeSanitizer;
 using static CanDoItAll.Modules.Processes.ProcessSubprocessCompletionPolicy;
 
 namespace CanDoItAll.Modules.Processes;
@@ -57,6 +58,7 @@ internal sealed class ProcessExecutionResultConverter(
     {
         var rawOutput = output;
         output = RemoveNonCitableSourceMetadataFromOutcome(output);
+        output = Sanitize(assignment, output);
 
         var outcome = output.Status switch
         {
@@ -132,7 +134,12 @@ internal sealed class ProcessExecutionResultConverter(
         }
 
         if (outcome == StrategyOutcome.NeedsManager &&
-            TryCreateProductRequiredStateBlockedRetryIssue(assignment, output, toolReceipts, out var requiredStateBlockedIssue))
+            TryCreateProductRequiredStateBlockedRetryIssue(
+                assignment,
+                output,
+                toolReceipts,
+                completionIssueResultFactory.ProductCompletionPathGate,
+                out var requiredStateBlockedIssue))
         {
             return NeedsManagerForCompletionIssue(
                 assignment,
@@ -292,8 +299,13 @@ internal sealed class ProcessExecutionResultConverter(
             diagnostics,
             managerSignals,
             userSafeSummary,
-            rawOutputHash);
+            NormalizeResultHash(rawOutputHash));
     }
+
+    private static string NormalizeResultHash(string rawOutputHash)
+        => rawOutputHash.StartsWith("sha256:", StringComparison.Ordinal)
+            ? rawOutputHash
+            : $"sha256:{rawOutputHash}";
 
     private static ProcessCompletionIssue CreateInvalidBranchOutcomeIssue(
         ProcessRuntimeStepAssignment assignment)
@@ -325,7 +337,8 @@ internal sealed class ProcessExecutionResultConverter(
         var nextActionSummary = nextActions.Length == 0
             ? string.Empty
             : $" Next action(s): {string.Join(" ", nextActions)}";
-        return CompactDiagnosticText(
+        return SanitizeText(
+            assignment,
             $"Step '{assignment.StepKey}' returned {output.Status}: {reason}{nextActionSummary}",
             1600);
     }

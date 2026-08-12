@@ -3,10 +3,10 @@
 ## Focused commands
 
 ```text
-dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --filter 'FullyQualifiedName~Mcp|FullyQualifiedName~PlaywrightMcp|FullyQualifiedName~ExternalProcessTool'
+dotnet test ./tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj -c Release --no-build --filter 'FullyQualifiedName~Mcp|FullyQualifiedName~ExternalProcess|FullyQualifiedName~ToolImplementationContractsTests|FullyQualifiedName~WorkspaceExternalProcessRunnerTests|FullyQualifiedName~WorkspaceExecutableLocatorTests|FullyQualifiedName~LocalWorkspaceProcessHostTests.Duplex_session|FullyQualifiedName~CapabilityFoundationHardeningTests|FullyQualifiedName~CapabilityMigrationCleanupGuardTests|FullyQualifiedName~CapabilityTemplateSeedMaterializationTests|FullyQualifiedName~Expand_preserves_significant_whitespace_in_a_physical_path'
 ```
 ```text
-dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --filter 'Category=McpPortability|Category=ExternalToolPortability'
+dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj -c Release --no-build --filter 'Category=McpPortability|Category=ExternalToolPortability|Category=ProcessPortability'
 ```
 
 ## Required proof
@@ -19,6 +19,8 @@ dotnet test ./tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.In
 - Redaction scan.
 - Source/reference/requirement update.
 - Independent review required by the active gate.
+
+Actual macOS execution is operator-deferred and must not block local gate progression. Deterministic host-profile coverage remains required; genuine macOS proof is retained for the final platform validation boundary.
 
 ## Failure handling
 

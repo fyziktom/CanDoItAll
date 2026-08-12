@@ -4,7 +4,7 @@
 
 | ID | Priority | Owner | Requirement | Acceptance |
 |---|---|---|---|---|
-| RPREP-001 | P0 | B00 | The runtime bundle is rebased to the exact commit that passed Core Gate C4 before any runtime edit. | Handoff report records core evidence, current HEAD/delta, dirty state, and invalidated source references. |
+| RPREP-001 | P0 | B00 | The runtime bundle is rebased to an exact accepted core handoff anchor before any runtime production edit. | Handoff report records either C4 GO or the explicit operator-authorized provisional exception, immutable core/sibling anchors, local evidence, deferred support proof, current HEAD/delta, dirty state, and invalidated source references. |
 | RPREP-002 | P0 | B00 | Every process launch, terminal, runtime node, Manager supervisor, MCP, external tool, plugin host tool, and process-driver surface is inventoried. | No unclassified P0/P1 runtime surface remains at gate R0. |
 | RPREP-003 | P0 | B00 | Ownership between MAF execution primitives, Workbench presentation, Manager supervision, Plugins, and Processes domain semantics is approved before refactoring. | Architecture map has one authoritative owner for plan, execution, lifecycle, recovery, capability, receipt, and domain failure semantics. |
 | RPREP-004 | P1 | B00 | The bundle split decision is revisited using measured file/project/dependency scope. | If split triggers are met, child bundles are generated before implementation; no miscellaneous overflow is accepted. |

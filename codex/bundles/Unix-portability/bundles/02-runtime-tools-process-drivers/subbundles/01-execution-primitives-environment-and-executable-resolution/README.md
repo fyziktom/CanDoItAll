@@ -25,9 +25,13 @@ The central workspace host is a good base, but environment and executable polici
 
 - `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs`
 - `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs`
+- `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceDotnetProcessLifecycle.cs`
+- `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/WorkspaceProcessContracts.cs`
 - `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs`
 - `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs`
+- `{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceGitCommandExecutor.cs`
 - `{{REPO_ROOT}}/src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.AgentFramework/Services/WorkspaceExternalProcessRunner.cs`
 
 ## Requirements
 
@@ -55,22 +59,26 @@ The central workspace host is a good base, but environment and executable polici
 - Use typed process arguments; shell only for explicitly modeled scripts.
 - Keep source-code comments in English.
 
+## Proof tier
+
+`Governed` for B01 because it changes the P0 process execution, executable identity, environment, cancellation, lifecycle, and receipt boundary. Evidence must include semantic invariant assertions, focused Windows/Linux actual-host behavior, negative/security cases, dependency and source assertions, redaction, hashes, and independent review.
+
 ## Entry gate
 
-- Status before execution: `Blocked by Gate R0`
+- Status before execution: `Eligible — Gate R0 GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
 ## Exit gate
 
-- Gate R1a is GO on Windows/Linux/macOS actual-host tests.
+- Gate R1a is GO for implementation on Windows/Linux actual-host tests plus deterministic macOS contract fixtures under `RUNTIME-MACOS-VALIDATION-001`; actual macOS proof remains deferred.
 - One low-level process primitive and lifecycle owner are authoritative.
 - Executable/environment semantics are OS-correct and security reviewed.
 - No child process leak or secret-bearing receipt remains in tested paths.
 
 ## Status
 
-- `Blocked by Gate R0`
+- `Completed — Gate R1a GO`
 
 ## Handoff
 

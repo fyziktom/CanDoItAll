@@ -13,6 +13,7 @@ public static class WorkflowExecutorServiceCollectionExtensions
         services.TryAddScoped<IWorkflowExecutorCatalog>(serviceProvider =>
             WorkflowExecutorCatalog.FromDescriptors(
                 serviceProvider.GetRequiredService<WorkflowExecutorContributionSet>().Descriptors));
+        services.TryAddScoped<IWorkflowExecutorRuntimeAvailabilityCatalog, WorkflowExecutorRuntimeAvailabilityCatalog>();
         services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
         services.TryAddScoped<IWorkflowExecutorInvoker>(serviceProvider =>
             new WorkflowExecutorInvoker(

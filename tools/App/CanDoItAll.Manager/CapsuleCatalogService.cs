@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Manager;
 
@@ -56,7 +57,8 @@ outputs: capsule json and markdown artifacts
 public sealed class CapsuleCatalogService(
     ILogger<CapsuleCatalogService> logger,
     IConfiguration configuration,
-    DurableFileWriter durableFileWriter) : ICapsuleCatalogService
+    DurableFileWriter durableFileWriter,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory) : ICapsuleCatalogService
 {
     private static readonly string[] RequiredFields = ["kind", "name", "summary", "owns", "deps", "risks", "tests"];
 
@@ -68,11 +70,10 @@ public sealed class CapsuleCatalogService(
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         var workspaceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, _options.WorkspaceRoot));
+        var pathPolicy = physicalPathPolicyFactory.Create(workspaceRoot);
         var files = Directory.GetFiles(workspaceRoot, "*.*", SearchOption.AllDirectories)
-            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}.artifacts{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => IsSourceFile(path, pathPolicy.PathComparer))
+            .Where(path => !HasIgnoredSegment(workspaceRoot, path, pathPolicy.PathComparer))
             .OrderBy(
                 path => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, path)),
                 StringComparer.Ordinal)
@@ -142,6 +143,25 @@ public sealed class CapsuleCatalogService(
 
         await WriteArtifactsAsync(workspaceRoot, records, coverage, cancellationToken);
     }
+
+    private static bool IsSourceFile(string path, StringComparer pathComparer)
+    {
+        var extension = Path.GetExtension(path);
+        return pathComparer.Equals(extension, ".cs") || pathComparer.Equals(extension, ".razor");
+    }
+
+    private static bool HasIgnoredSegment(
+        string workspaceRoot,
+        string path,
+        StringComparer pathComparer)
+        => Path.GetRelativePath(workspaceRoot, path)
+            .Split(
+                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment =>
+                pathComparer.Equals(segment, "bin") ||
+                pathComparer.Equals(segment, "obj") ||
+                pathComparer.Equals(segment, ".artifacts"));
 
     private static string NormalizeEnumerationKey(string path)
         => path

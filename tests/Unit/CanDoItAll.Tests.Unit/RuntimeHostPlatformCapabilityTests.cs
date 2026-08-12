@@ -1,5 +1,6 @@
 using CanDoItAll.Composition;
 using CanDoItAll.FileTools.Desktop;
+using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.DependencyInjection;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -248,6 +250,48 @@ public sealed class RuntimeHostPlatformCapabilityTests
             Assert.True(
                 Array.IndexOf(hostedServiceTypes, typeof(SecretVaultStartupValidator)) <
                 Array.IndexOf(hostedServiceTypes, typeof(HostCapabilityStartupValidator)));
+        }
+        finally
+        {
+            Directory.Delete(contentRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Headless_runtime_profile_overrides_desktop_feature_enablement()
+    {
+        string contentRoot = Path.Combine(Path.GetTempPath(), $"candoitall-b05-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(contentRoot);
+        try
+        {
+            string profile = OperatingSystem.IsWindows()
+                ? nameof(RuntimeHostProfileKind.WindowsHeadless)
+                : OperatingSystem.IsLinux()
+                    ? nameof(RuntimeHostProfileKind.LinuxHeadless)
+                    : nameof(RuntimeHostProfileKind.MacOsHeadless);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["FileTools:DesktopLaunch:Enabled"] = "true",
+                    ["RuntimeHost:Profile"] = profile,
+                    ["SecretVault:UsageProfile"] = nameof(SecretVaultUsageProfile.Headless)
+                })
+                .Build();
+            var services = new ServiceCollection();
+            services.AddSingleton<IConfiguration>(configuration);
+            services.AddCanDoItAllFileToolsIntegration();
+            services.AddRuntimeHostPlatformComposition(
+                configuration,
+                new TestHostEnvironment(contentRoot, "CanDoItAll.B05.Tests"));
+            using ServiceProvider provider = services.BuildServiceProvider();
+
+            FileToolsDesktopLaunchOptions options = provider
+                .GetRequiredService<IOptions<FileToolsDesktopLaunchOptions>>()
+                .Value;
+
+            Assert.True(options.Enabled);
+            Assert.False(options.HostProfileAllowsDesktop);
+            Assert.False(provider.GetRequiredService<IDesktopFileLauncher>().IsAvailable);
         }
         finally
         {
@@ -518,28 +562,28 @@ public sealed class RuntimeHostPlatformCapabilityTests
             "src/Foundation/CanDoItAll.Infrastructure/Common/HostBoundPathPolicy.cs",
             "src/Foundation/CanDoItAll.Infrastructure/Common/PhysicalPathSyntaxPolicy.cs",
             "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
-            "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApplicationPreferences.cs",
             "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
             "src/Foundation/CanDoItAll.Infrastructure/Storage/ExternalTargetPathRegistry.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/ProjectWorkspaceScopePolicy.cs",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/ManagedProjectMediaPath.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathAliasSession.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePhysicalPathSyntaxPolicy.cs",
-            "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalHostPlatform.cs",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
             "src/MAF/Tools/CanDoItAll.Tools.Documents/Spreadsheets/ClosedXmlSpreadsheetDocumentService.cs",
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/WorkflowSourceFileResolver.cs",
             "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPackageServices.cs",
-            "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/Drivers/Workspace/WorkspaceManagedScriptPlanExecutor.cs",
             "src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs",
             "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
             "src/Modules/CanDoItAll.Modules.Workbench/CrossModule/ProjectManagedStorageDeletion.cs",
             "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureExternalAssetSourcePolicy.cs",
             "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureOutputRootAuthorityResolver.cs",
-            "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+            "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs",
             "src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs"
         ];
         string[] actual = EnumerateSourceFiles(sourceRoot)
@@ -554,6 +598,48 @@ public sealed class RuntimeHostPlatformCapabilityTests
             .ToArray();
 
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Architecture_limits_native_process_starts_to_reviewed_runtime_owners()
+    {
+        string root = FindRepositoryRoot();
+        string[] expectedMainRepositoryOwners =
+        [
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+            "src/Modules/CanDoItAll.Modules.Security/NativeSecretVaults.cs",
+            "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs"
+        ];
+        string[] actualMainRepositoryOwners = EnumerateSourceFiles(Path.Combine(root, "src"))
+            .Where(ContainsNativeProcessStart)
+            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expectedMainRepositoryOwners, actualMainRepositoryOwners);
+
+        string fileToolsRoot = Path.GetFullPath(Path.Combine(root, "..", "CanDoItAll.FileTools"));
+        string[] expectedFileToolsOwners =
+        [
+            "src/CanDoItAll.FileTools.Desktop/DesktopFileLauncher.cs"
+        ];
+        string[] actualFileToolsOwners = EnumerateSourceFiles(Path.Combine(fileToolsRoot, "src"))
+            .Where(ContainsNativeProcessStart)
+            .Select(path => Path.GetRelativePath(fileToolsRoot, path).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expectedFileToolsOwners, actualFileToolsOwners);
+
+        static bool ContainsNativeProcessStart(string path)
+        {
+            string source = File.ReadAllText(path);
+            return source.Contains("Process.Start(", StringComparison.Ordinal) ||
+                System.Text.RegularExpressions.Regex.IsMatch(
+                    source,
+                    @"\bnew\s+(?:System\.Diagnostics\.)?Process\s*[\{\(]",
+                    System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        }
     }
 
     [Fact]

@@ -11,6 +11,7 @@ using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetSolutionSetupRuntimeExecutor(
+    IWorkspaceFileService workspaceFiles,
     IWorkspaceCommandExecutionService workspaceCommands,
     WorkspaceManagedScriptPlanExecutor managedScriptPlanExecutor,
     IExternalTargetPathRegistry externalTargetPathRegistry,
@@ -303,7 +304,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingTarget = FindExistingTarget(targetPaths);
+        var existingTarget = FindExistingTarget(targetPaths, receipts, executionRunId);
         if (existingTarget is not null)
         {
             receipts.Add(CreateIdempotentSkipReceipt(
@@ -315,7 +316,19 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return DotNetSolutionSetupOperationResult.Ok;
         }
 
-        Directory.CreateDirectory(parentDirectory);
+        var createParentDirectory = workspaceFiles.CreateDirectory(ToExternalTargetAlias(parentDirectory));
+        receipts.Add(From(executionRunId, createParentDirectory));
+        if (!createParentDirectory.Succeeded)
+        {
+            return new DotNetSolutionSetupOperationResult(
+                false,
+                $"Runtime-owned .NET setup could not prepare the parent directory for '{name}'.",
+                $"dotnet-new-parent-directory:{template}:{name}:{createParentDirectory.Message}",
+                ApplyExecutionPolicy(
+                    ProcessRuntimeOwnedStepFailures.ExecutionFailed,
+                    idempotency));
+        }
+
         var dotnetNew = await workspaceCommands.DotnetNew(
                 template,
                 name,
@@ -327,7 +340,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         receipts.Add(From(executionRunId, dotnetNew));
         if (!dotnetNew.Succeeded)
         {
-            var reconciledTarget = FindExistingTarget(targetPaths);
+            var reconciledTarget = FindExistingTarget(targetPaths, receipts, executionRunId);
             if (reconciledTarget is not null &&
                 string.Equals(
                     dotnetNew.Receipt.Outcome,
@@ -352,7 +365,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     idempotency));
         }
 
-        var createdTarget = targetPaths.FirstOrDefault(File.Exists);
+        var createdTarget = FindExistingTarget(targetPaths, receipts, executionRunId);
         if (createdTarget is null)
         {
             return new DotNetSolutionSetupOperationResult(
@@ -570,8 +583,25 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         return true;
     }
 
-    private static string? FindExistingTarget(IReadOnlyList<string> targetPaths)
-        => targetPaths.FirstOrDefault(File.Exists);
+    private string? FindExistingTarget(
+        IReadOnlyList<string> targetPaths,
+        List<ToolExecutionReceiptRecord> receipts,
+        Guid executionRunId)
+    {
+        foreach (var targetPath in targetPaths)
+        {
+            var targetStat = workspaceFiles.StatPath(ToExternalTargetAlias(targetPath));
+            receipts.Add(From(executionRunId, targetStat));
+            if (targetStat.Succeeded &&
+                targetStat.Exists &&
+                string.Equals(targetStat.PathKind, "file", StringComparison.OrdinalIgnoreCase))
+            {
+                return targetPath;
+            }
+        }
+
+        return null;
+    }
 
     private static bool TryNormalizeContractedProductFile(
         string configuredPath,
@@ -652,7 +682,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return productRoot;
         }
 
-        return Directory.GetParent(projectDirectory)?.FullName ?? productRoot;
+        return Path.GetDirectoryName(projectDirectory) ?? productRoot;
     }
 
     private static string ResolveLaunchVariable(

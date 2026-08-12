@@ -8,6 +8,10 @@
     <ShouldUnsetParentConfigurationAndPlatform Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(UseLocalCanDoItAllLibraries)' == 'true' and '$(MSBuildProjectName)' == 'CanDoItAll.FileTools.Integration'">
+    <DefineConstants>$(DefineConstants);CANDOITALL_FILETOOLS_DIRECT_SOURCE</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
     <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.BaseLib'))" />
     <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.CanvasLib'))" />

@@ -31,7 +31,13 @@ public static class StandardProcessAdapterDescriptors
             {
                 StandardProcessAdapterCapabilities.AdapterExecution,
                 StandardProcessAdapterCapabilities.WorkflowExecution
-            }),
+            })
+        {
+            RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+            {
+                ProcessHostCapabilityIds.ManagedProcessAdapter
+            }
+        },
         new HashSet<CapabilityTag>
         {
             StandardProcessAdapterCapabilities.AdapterExecution,

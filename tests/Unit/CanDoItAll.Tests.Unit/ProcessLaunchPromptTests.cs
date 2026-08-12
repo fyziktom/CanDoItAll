@@ -10,6 +10,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessLaunchPromptTests
 {
     [Fact]
@@ -1027,10 +1028,10 @@ public sealed class ProcessLaunchPromptTests
             });
 
         Assert.Contains("Payload schema: dotnet.solution-context/v1", prompt, StringComparison.Ordinal);
-        Assert.Contains(".NET solution-context authoring contract", prompt, StringComparison.Ordinal);
+        Assert.Contains("## Solution-context contract", prompt, StringComparison.Ordinal);
         Assert.Contains("exactly one fenced `json` block", prompt, StringComparison.Ordinal);
-        Assert.Contains("whole-payload type-and-completeness self-check", prompt, StringComparison.Ordinal);
-        Assert.Contains("`application.templateOptions` are JSON arrays", prompt, StringComparison.Ordinal);
+        Assert.Contains("Whole-payload self-check before writing", prompt, StringComparison.Ordinal);
+        Assert.Contains("`application.templateOptions` is only for optional `dotnet new` option flags", prompt, StringComparison.Ordinal);
         Assert.Equal("processes/dotnet-development-slice/steps/slice-architecture-check.md", executionGuidance.Reference);
         Assert.Contains("The runtime independently checks the workspace-approved options", executionGuidance.Content, StringComparison.Ordinal);
         Assert.Contains("The runtime independently checks the workspace-approved options", prompt, StringComparison.Ordinal);
@@ -1038,7 +1039,6 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("never rely on the installed SDK default", prompt, StringComparison.Ordinal);
         Assert.Contains("machine fields, not display labels", executionGuidance.Content, StringComparison.Ordinal);
         Assert.Contains("Blazor WebAssembly App", prompt, StringComparison.Ordinal);
-        Assert.Contains("Narrative alone is not a substitute for this payload", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

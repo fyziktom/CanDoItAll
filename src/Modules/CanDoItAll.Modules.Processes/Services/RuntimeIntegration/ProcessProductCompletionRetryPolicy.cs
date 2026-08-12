@@ -31,7 +31,6 @@ using static CanDoItAll.Modules.Processes.ProcessCompletionText;
 using static CanDoItAll.Modules.Processes.ProcessExecutionMetadataBuilder;
 using static CanDoItAll.Modules.Processes.ProcessExecutionResultFactory;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
-using static CanDoItAll.Modules.Processes.ProcessProductCompletionPathGate;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -41,24 +40,37 @@ internal static class ProcessProductCompletionRetryPolicy
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts,
+        ProcessProductCompletionPathGate productCompletionPathGate,
         out ProcessCompletionIssue issue)
     {
         issue = null!;
         if (output.Status != ProcessStepOutcomeStatus.Blocked ||
             toolReceipts is null ||
-            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope) ||
-            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+            !AllowsProductMutation(NormalizeOperations(assignment.AllowedOperations), assignment.OperationTargetScope))
         {
             return false;
         }
 
+        var rootResolution = ResolveInspectableProductRoot(assignment.LaunchVariables);
+        if (rootResolution.Kind != ProcessProductRootResolutionKind.Resolved)
+        {
+            return false;
+        }
+
+        var productRoot = rootResolution.ProductRoot;
+
         var requiredIssues = new List<ProcessCompletionIssue>();
-        if (ValidateRequiredProductPaths(assignment, productRoot) is { } requiredPathIssue)
+        if (productCompletionPathGate.ValidateRequiredProductPaths(
+                assignment,
+                productRoot) is { } requiredPathIssue)
         {
             requiredIssues.Add(requiredPathIssue);
         }
 
-        if (ValidateRequiredProductFileContentChecks(assignment, output, productRoot) is { } requiredFileContentIssue)
+        if (productCompletionPathGate.ValidateRequiredProductFileContentChecks(
+                assignment,
+                output,
+                productRoot) is { } requiredFileContentIssue)
         {
             requiredIssues.Add(requiredFileContentIssue);
         }

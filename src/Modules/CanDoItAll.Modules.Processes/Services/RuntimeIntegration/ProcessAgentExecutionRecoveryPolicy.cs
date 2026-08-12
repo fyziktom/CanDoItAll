@@ -57,8 +57,8 @@ internal static class ProcessAgentExecutionRecoveryPolicy
             : string.Join("; ", expectedRefs);
         issue = new ProcessCompletionIssue(
             "process.adapter.agent_output_contract_retryable",
-            $"Agent execution for step '{assignment.StepKey}' did not produce a valid process-step finalizer outcome. Retry the step, create the required current-run evidence first, and only return Completed after submit_process_step_outcome evidenceRefs contains one of: {expectedRefSummary}. Runtime detail: {exception.Message}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-output-contract:{exception.GetType().FullName}:{exception.Message}",
+            $"Agent execution for step '{assignment.StepKey}' did not produce a valid process-step finalizer outcome. Retry the step, create the required current-run evidence first, and only return Completed after submit_process_step_outcome evidenceRefs contains one of: {expectedRefSummary}. Review the restricted execution log using the recorded evidence hash if more detail is required.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-output-contract:{ComputeHash(exception.GetType().FullName + ":" + exception.Message)}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -141,7 +141,8 @@ internal static class ProcessAgentExecutionRecoveryPolicy
         {
             return AppendAttestationStatus(
                 legacyIssue,
-                $"Durable execution detail for run '{executionRunId:D}' was unreadable, so absence of side effects could not be proven. {exception.GetType().Name}: {exception.Message}");
+                $"Durable execution detail for run '{executionRunId:D}' was unreadable, so absence of side effects could not be proven.",
+                ComputeHash(exception.GetType().FullName + ":" + exception.Message));
         }
     }
 
@@ -149,11 +150,10 @@ internal static class ProcessAgentExecutionRecoveryPolicy
         ProcessRuntimeStepAssignment assignment,
         string detail)
     {
-        var safeDetail = LimitDiagnosticText(detail);
         return new ProcessCompletionIssue(
             ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionRetry,
-            $"Agent execution for step '{assignment.StepKey}' failed with a transient provider/runtime error. Retry the same step without relaunching completed child work; preserve any existing managed artifacts and return a normal process-step outcome after the retry. Runtime detail: {safeDetail}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-transient-execution:{ComputeHash(safeDetail)}",
+            $"Agent execution for step '{assignment.StepKey}' failed with a transient provider/runtime error. Retry the same step without relaunching completed child work; preserve any existing managed artifacts and return a normal process-step outcome after the retry. Provider/runtime detail is available only through restricted execution logs; the persisted receipt contains its evidence hash.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-transient-execution:{ComputeHash(detail)}",
             ResolveRequestedArtifactSlotIds(assignment),
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
@@ -166,7 +166,6 @@ internal static class ProcessAgentExecutionRecoveryPolicy
         string evidenceSummary,
         string durableEvidenceDigest)
     {
-        var safeDetail = LimitDiagnosticText(detail, 600);
         var safeEvidenceSummary = LimitDiagnosticText(evidenceSummary, 800);
         var attestation =
             ProcessExecutionSafetyAttestation.FailedBeforeRecordedSideEffects(
@@ -177,8 +176,8 @@ internal static class ProcessAgentExecutionRecoveryPolicy
                 durableEvidenceDigest);
         return new ProcessCompletionIssue(
             ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects,
-            $"Agent execution for step '{assignment.StepKey}' failed with a transient provider/runtime error, and durable execution detail proves that run '{executionRunId:D}' failed before recorded side effects. Retry the same step without relaunching completed child work. Attestation: {safeEvidenceSummary}. Runtime detail: {safeDetail}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-transient-execution-before-side-effects:{attestation.EvidenceHash}",
+            $"Agent execution for step '{assignment.StepKey}' failed with a transient provider/runtime error, and durable execution detail proves that run '{executionRunId:D}' failed before recorded side effects. Retry the same step without relaunching completed child work. Attestation: {safeEvidenceSummary}. Provider/runtime detail is available only through restricted execution logs.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:agent-transient-execution-before-side-effects:{attestation.EvidenceHash}:{ComputeHash(detail)}",
             ResolveRequestedArtifactSlotIds(assignment),
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent)
@@ -189,11 +188,15 @@ internal static class ProcessAgentExecutionRecoveryPolicy
 
     private static ProcessCompletionIssue AppendAttestationStatus(
         ProcessCompletionIssue issue,
-        string attestationStatus)
+        string attestationStatus,
+        string? restrictedDetailHash = null)
     {
         return issue with
         {
-            Summary = $"{issue.Summary} Attestation status: {LimitDiagnosticText(attestationStatus, 800)}"
+            Summary = $"{issue.Summary} Attestation status: {LimitDiagnosticText(attestationStatus, 800)}",
+            Evidence = string.IsNullOrWhiteSpace(restrictedDetailHash)
+                ? issue.Evidence
+                : $"{issue.Evidence}:attestation-detail:{restrictedDetailHash}"
         };
     }
 

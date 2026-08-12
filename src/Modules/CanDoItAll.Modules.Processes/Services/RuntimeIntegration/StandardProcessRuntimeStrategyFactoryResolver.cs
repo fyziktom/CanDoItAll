@@ -36,13 +36,33 @@ internal sealed class StandardProcessRuntimeStrategyFactoryResolver(
         ArgumentNullException.ThrowIfNull(binding);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (binding.StrategyId != executionDriver.Descriptor.Strategy.StrategyId)
+        var descriptor = executionDriver.Descriptor;
+        var strategy = descriptor.Strategy;
+        var boundCapabilityIds = binding.HostCapabilities
+            .Select(fact => fact.Id)
+            .ToHashSet();
+        if (binding.DriverId != descriptor.DriverId ||
+            binding.StrategyId != strategy.StrategyId ||
+            !string.Equals(binding.StrategyVersion, strategy.StrategyVersion, StringComparison.Ordinal) ||
+            !string.Equals(
+                binding.FactoryVersion,
+                ProcessStrategyBindingVersions.ForDriver(
+                    StandardProcessAdapterDriverPackageFactory.DriverVersion),
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                binding.MinRuntimeSchema,
+                StandardProcessAdapterDriverPackageFactory.MinimumRuntimeSchema,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                binding.MaxRuntimeSchema,
+                StandardProcessAdapterDriverPackageFactory.MaximumRuntimeSchema,
+                StringComparison.Ordinal) ||
+            !boundCapabilityIds.SetEquals(strategy.RequiredHostCapabilities))
         {
             throw new InvalidOperationException(
-                $"No process strategy factory is registered for strategy '{binding.StrategyId}'.");
+                "The immutable process strategy binding does not match the registered Standard driver package.");
         }
 
         return ValueTask.FromResult<IProcessStrategyFactory>(new StandardProcessAdapterStrategyFactory(executionDriver));
     }
 }
-

@@ -25,7 +25,12 @@ ProjectStructureRuntimeLauncher currently renders every runtime intent as PowerS
 
 - `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs`
 - `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDirectDotNetCommandPolicy.cs`
-- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimePlan.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeAdapters.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimePathResolver.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLegacyRuntimeCommandMigrator.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeSessionRegistry.cs`
+- `{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureRuntimeLaunchApprovalDialog.razor`
 
 ## Requirements
 
@@ -52,9 +57,16 @@ ProjectStructureRuntimeLauncher currently renders every runtime intent as PowerS
 - Use typed process arguments; shell only for explicitly modeled scripts.
 - Keep source-code comments in English.
 
+## Proof tier
+
+`Governed` because B02 changes P0 runtime execution, path, shell, and elevation
+behavior. Evidence includes semantic source assertions, Windows/Linux actual-host
+behavior, negative/security cases, browser capability states, source/artifact hashes,
+redaction, and independent review.
+
 ## Entry gate
 
-- Status before execution: `Blocked by B01`
+- Status before execution: `Eligible — Gate R1a GO`
 - Verify exact HEAD, dirty state, prerequisites, and prior evidence.
 - Reproduce the relevant baseline before edits.
 
@@ -67,7 +79,7 @@ ProjectStructureRuntimeLauncher currently renders every runtime intent as PowerS
 
 ## Status
 
-- `Blocked by B01`
+- `Completed — Workbench gate GO`
 
 ## Handoff
 

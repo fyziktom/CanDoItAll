@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class AgentFrameworkHostingServiceCollectionTests
 {
     [Fact]
@@ -127,7 +128,7 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
 
         try
         {
-            var services = new ServiceCollection();
+            var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
             services.AddAgentFrameworkCore(
                 workspaceRoot,
                 workspaceScope,

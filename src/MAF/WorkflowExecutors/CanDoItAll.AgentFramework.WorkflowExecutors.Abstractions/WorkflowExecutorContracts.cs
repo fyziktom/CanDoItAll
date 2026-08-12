@@ -26,6 +26,20 @@ public interface IWorkflowExecutor
         CancellationToken cancellationToken = default);
 }
 
+public interface IWorkflowExecutorAvailabilityEvaluator
+{
+    WorkflowExecutorId ExecutorId { get; }
+
+    ValueTask<WorkflowExecutorAvailabilityDescriptor> EvaluateAvailabilityAsync(
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWorkflowExecutorRuntimeAvailabilityCatalog
+{
+    Task<IReadOnlyList<WorkflowExecutorDescriptor>> ListExecutorsAsync(
+        CancellationToken cancellationToken = default);
+}
+
 public interface IWorkflowExecutorInvoker
 {
     ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
