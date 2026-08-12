@@ -126,11 +126,28 @@
                                 </div>
 
                                 <div>
-                                    <label class="cda-field-label">Secret record reference (secret:&lt;id&gt;)</label>
-                                    <InputText @bind-Value="providerModel.ApiKeyEnvironmentVariable"
-                                               class="cda-input"
-                                               placeholder="secret:00000000-0000-0000-0000-000000000000"
-                                               data-testid="providers-api-key-input" />
+                                    <label class="cda-field-label">API key secret</label>
+                                    <InputSelect @bind-Value="providerModel.ApiKeyEnvironmentVariable"
+                                                 class="cda-input"
+                                                 data-testid="providers-api-key-input">
+                                        <option value="">None</option>
+                                        @if (HasUnavailableSecretReference)
+                                        {
+                                            <option value="@providerModel.ApiKeyEnvironmentVariable">Unavailable saved secret</option>
+                                        }
+                                        @foreach (var secret in secrets)
+                                        {
+                                            <option value="@AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
+                                        }
+                                    </InputSelect>
+                                    @if (HasUnavailableSecretReference)
+                                    {
+                                        <p class="cda-body-muted mt-1">The saved secret reference is no longer available in the vault. Select another secret before saving.</p>
+                                    }
+                                    else if (secrets.Count == 0)
+                                    {
+                                        <p class="cda-body-muted mt-1">Add an API key in Settings → Secrets, then refresh this provider list.</p>
+                                    }
                                 </div>
 
                                 <TagEditor Value="@providerTagValues"

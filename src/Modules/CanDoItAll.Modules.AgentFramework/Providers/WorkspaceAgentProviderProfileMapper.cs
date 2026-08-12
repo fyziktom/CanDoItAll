@@ -300,7 +300,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
         WorkspaceProviderProfile provider)
     {
         return provider.ApiKeySecretId.HasValue
-            ? $"secret:{provider.ApiKeySecretId.Value:D}"
+            ? AgentFrameworkProviderMetadata.CreateSecretReference(provider.ApiKeySecretId.Value)
             : string.Empty;
     }
 

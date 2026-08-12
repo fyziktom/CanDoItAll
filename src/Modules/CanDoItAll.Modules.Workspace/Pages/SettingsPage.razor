@@ -132,11 +132,20 @@
                                                    OnSelect="@(() => EditSecretAsync(secret.Id))">
                                     <Status>
                                         <StatusBadge Tone="info" Text="@secret.Kind.ToString()" />
+                                    </Status>
+                                    <Actions>
                                         <CopyButton Value="@secret.Name"
                                                     AriaLabel="Copy secret name"
                                                     DisplayMode="CopyButtonDisplayMode.IconOnly"
                                                     Size="CopyButtonSize.ExtraSmall" />
-                                    </Status>
+                                        <CopyButton Value='@secret.Id.ToString("D")'
+                                                    Text="Copy ID"
+                                                    CopiedText="ID copied"
+                                                    AriaLabel="Copy secret ID"
+                                                    DisplayMode="CopyButtonDisplayMode.TextWithIcon"
+                                                    Size="CopyButtonSize.ExtraSmall"
+                                                    data-testid="@($"settings-secret-copy-id-{secret.Id:N}")" />
+                                    </Actions>
                                 </SelectionListItem>
                             }
                         </Stack>
@@ -470,6 +479,4 @@
         }
     </ChildContent>
 </PageScaffold>
-
-
 
