@@ -248,6 +248,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<AgentChatExecutionNotificationHub>();
         services.AddScoped<IAgentChatExecutionNotificationHub>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatExecutionNotificationHub>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            AgentFrameworkAgentsExecutionAuthorityProvider>());
         services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
