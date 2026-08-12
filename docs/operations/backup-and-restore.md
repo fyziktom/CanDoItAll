@@ -1,8 +1,10 @@
-# Development PostgreSQL Backup And Restore
+# Development Container Backup And Restore
 
-The `db-data` volume contains authoritative application data. Use PostgreSQL-native
-logical backups while the service is healthy. This guide covers only the repository's
-development Compose database. For the separate installed Windows database, use
+The `db-data` and `app-data` volumes form the authoritative development state. Use a
+PostgreSQL-native logical backup for the database and capture `app-data` only while the
+application is stopped so workspace files, control-plane state, Data Protection keys,
+and local vault payloads remain consistent. This guide covers only the repository's
+development Compose instance. For the separate installed Windows database, use
 [Installed Windows Web App](installed-web-app.md#backup-and-restore).
 
 ## Backup
@@ -39,6 +41,12 @@ finally {
 
 Store required backups outside the development workstation with access control,
 encryption, retention, and integrity verification appropriate to the data.
+
+After creating the PostgreSQL dump, stop the stack without removing volumes and back up
+the Compose-scoped `app-data` volume with the workstation's approved volume-backup tool.
+Restore it only into a new empty project-scoped volume, restore the matching database
+dump into that project's empty database volume, and validate `/health` plus representative
+workspace files before cutover. Never restore over the only known-good volumes.
 
 ## Restore Validation
 

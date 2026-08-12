@@ -39,8 +39,10 @@ using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
+DatabasePasswordFileConfiguration.Apply(builder.Configuration, builder.Environment.ContentRootPath);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
 var databaseOptions = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
+var webHostOptions = builder.Configuration.GetSection(WebHostRuntimeOptions.SectionName).Get<WebHostRuntimeOptions>() ?? new WebHostRuntimeOptions();
 
 if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
 {
@@ -93,7 +95,10 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+if (webHostOptions.HttpsRedirectionEnabled)
+{
+    app.UseHttpsRedirection();
+}
 var apiOptions = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
 if (apiOptions.Authorization.Enabled)
 {

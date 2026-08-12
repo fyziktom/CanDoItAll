@@ -45,7 +45,7 @@ This repository does not own:
 
 - the .NET SDK selected by [`global.json`](global.json)
 - PostgreSQL 16 or a compatible supported server
-- Docker Desktop or another Compose v2 runtime when using the development database service
+- Docker Desktop or another Compose v2 runtime when using the development application stack
 - Node.js and npm when rebuilding application Tailwind output
 - PowerShell 7 for repository automation; the Windows installer and generated launcher
   remain compatible with Windows PowerShell 5.1
@@ -85,13 +85,19 @@ Run from the repository root:
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up -d --wait db
-dotnet restore .\CanDoItAll.slnx
-dotnet run --project .\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj
+New-Item -ItemType Directory -Force .secrets | Out-Null
+Set-Content -NoNewline .secrets/db-password "replace-for-local-development"
+docker compose up -d --build --wait
 ```
 
-Open `http://localhost:5032`. The checked-in database credential is a loopback-only local
-development default; replace it before using a shared host.
+Open `http://localhost:8080`. Compose builds the Linux application image, starts its own
+private PostgreSQL service, applies migrations, and preserves application and database
+state in project-scoped named volumes. The ignored password file is granted only to the
+app and database services.
+
+To run the web host directly on the workstation while keeping only PostgreSQL in
+Compose, copy `compose.override.yaml.example` to ignored `compose.override.yaml`, start
+`db`, then run the project. See [container operations](docs/operations/containers.md).
 
 ## Build And Test
 
@@ -111,14 +117,13 @@ test lanes are documented in [Testing](docs/testing.md).
 
 ## Containers
 
-The base Compose model owns only the local **development** PostgreSQL dependency. It is
-not the installed web app database. It publishes PostgreSQL on loopback, stores
-authoritative development data in a named volume, and preserves that volume on normal
-shutdown.
+The base Compose model owns a complete local **development** instance: the Linux web app,
+its private PostgreSQL service, and separate named volumes for application and database
+state. It is not the installed Windows web app database.
 
 ```powershell
 docker compose --env-file .env.example config --quiet
-docker compose up -d --wait db
+docker compose --env-file .env.example up -d --build --wait
 docker compose down
 ```
 

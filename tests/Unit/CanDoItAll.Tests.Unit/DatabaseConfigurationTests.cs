@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -34,6 +35,59 @@ public sealed class DatabaseConfigurationTests
 
         Assert.NotNull(options);
         Assert.True(options!.EnableEntityFrameworkConsoleLogging);
+    }
+
+    [Fact]
+    public void DatabasePasswordFileConfiguration_AppliesPasswordToPostgreSqlConnectionString()
+    {
+        var temporaryDirectory = TestFileSystem.CreateTemporaryRoot("database-password-file");
+        try
+        {
+            var passwordPath = Path.Combine(temporaryDirectory, "db-password");
+            File.WriteAllText(passwordPath, "compose-secret\n");
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Database:ConnectionString"] = "Host=db;Database=candoitall;Username=candoitall",
+                    ["Database:PasswordFile"] = passwordPath
+                })
+                .Build();
+
+            DatabasePasswordFileConfiguration.Apply(configuration, temporaryDirectory);
+
+            var connectionString = new NpgsqlConnectionStringBuilder(
+                configuration["Database:ConnectionString"]);
+            Assert.Equal("compose-secret", connectionString.Password);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(temporaryDirectory);
+        }
+    }
+
+    [Fact]
+    public void DatabasePasswordFileConfiguration_RejectsMissingPasswordFile()
+    {
+        var temporaryDirectory = TestFileSystem.CreateTemporaryRoot("database-password-file");
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Database:ConnectionString"] = "Host=db;Database=candoitall;Username=candoitall",
+                    ["Database:PasswordFile"] = "missing-password"
+                })
+                .Build();
+
+            Assert.Throws<FileNotFoundException>(() =>
+            {
+                DatabasePasswordFileConfiguration.Apply(configuration, temporaryDirectory);
+            });
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(temporaryDirectory);
+        }
     }
 
     [Fact]
