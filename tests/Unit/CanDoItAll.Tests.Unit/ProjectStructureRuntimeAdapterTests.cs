@@ -342,7 +342,11 @@ public sealed class ProjectStructureRuntimeAdapterTests
         public WorkspaceOwnedProcessIdentity Identity { get; } = new(
             1234,
             DateTimeOffset.Parse("2026-08-10T00:00:00Z"),
-            new string('a', 64));
+            new string('a', 64),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                1234,
+                Guid.Empty));
 
         public bool HasExited => false;
 

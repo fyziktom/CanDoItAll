@@ -575,6 +575,7 @@ public sealed class RuntimeHostPlatformCapabilityTests
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePhysicalPathSyntaxPolicy.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalHostPlatform.cs",
             "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+            "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessOwnership.cs",
             "src/MAF/Tools/CanDoItAll.Tools.Documents/Spreadsheets/ClosedXmlSpreadsheetDocumentService.cs",
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/WorkflowSourceFileResolver.cs",
             "src/Modules/CanDoItAll.Modules.Plugins/Catalog/PluginPackageServices.cs",
@@ -618,6 +619,7 @@ public sealed class RuntimeHostPlatformCapabilityTests
 
         Assert.Equal(expectedMainRepositoryOwners, actualMainRepositoryOwners);
 
+#if CANDOITALL_FILETOOLS_DIRECT_SOURCE
         string fileToolsRoot = Path.GetFullPath(Path.Combine(root, "..", "CanDoItAll.FileTools"));
         string[] expectedFileToolsOwners =
         [
@@ -630,6 +632,7 @@ public sealed class RuntimeHostPlatformCapabilityTests
             .ToArray();
 
         Assert.Equal(expectedFileToolsOwners, actualFileToolsOwners);
+#endif
 
         static bool ContainsNativeProcessStart(string path)
         {

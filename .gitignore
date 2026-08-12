@@ -17,6 +17,8 @@ output/
 outputs/
 evidence/
 proof/
+!codex/bundles/unix-merge-readiness-followup/proof/
+!codex/bundles/unix-merge-readiness-followup/proof/**
 *.nupkg
 *.snupkg
 *.binlog
@@ -46,6 +48,7 @@ __pycache__/
 .codex-tmp/
 .codex-temp/
 .codex-obj/
+.local/
 .mcp-state/
 .playwright/
 .playwright-cli/

@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
-using System.Runtime.InteropServices;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -110,11 +110,21 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         var executableIdentityPath = new WorkspaceExecutableLocator().ResolveExecutablePath(
             [request.ExecutablePath],
             request.WorkingDirectory);
+        startInfo.FileName = executableIdentityPath;
         var startedAtUtc = DateTimeOffset.UtcNow;
         Process? process;
+        ILocalWorkspaceProcessOwnership? ownership = null;
         try
         {
+            using var ownershipStart = LocalWorkspaceProcessOwnershipStart.Prepare(
+                startInfo,
+                executableIdentityPath,
+                request.WorkingDirectory);
             process = Process.Start(startInfo);
+            if (process is not null)
+            {
+                ownership = ownershipStart.Attach(process);
+            }
         }
         catch (Exception exception) when (IsStartFailure(exception))
         {
@@ -135,15 +145,16 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
 
         try
         {
-            var runningExecutablePath = ResolveRunningExecutableIdentityPath(
-                process,
-                executableIdentityPath);
             var identity = new WorkspaceOwnedProcessIdentity(
                 process.Id,
                 ResolveProcessStartedAtUtc(process, startedAtUtc),
-                ComputeExecutablePathFingerprint(runningExecutablePath));
+                ComputeExecutablePathFingerprint(executableIdentityPath),
+                ownership?.Identity
+                    ?? throw new InvalidOperationException("The process ownership boundary was not established."));
+            WaitForExecutableIdentity(process, identity.ExecutablePathFingerprint);
             IWorkspaceProcessSession session = new LocalWorkspaceProcessSession(
                 process,
+                ownership,
                 request,
                 identity,
                 startedAtUtc);
@@ -151,6 +162,8 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
         catch
         {
+            ownership?.ForceTerminate();
+            ownership?.Dispose();
             TryKillProcessTree(process);
             process.Dispose();
             throw;
@@ -162,6 +175,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        _ = cancellationToken;
         Process process;
         try
         {
@@ -169,10 +183,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
         catch (ArgumentException)
         {
-            return new WorkspaceProcessTerminationResult(
-                WorkspaceProcessTerminationStatus.AlreadyExited,
-                ResidualProcessPossible: false,
-                "The recorded process is no longer running.");
+            return await TerminateWithoutRootAsync(identity.Boundary).ConfigureAwait(false);
         }
 
         using (process)
@@ -194,29 +205,91 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
                     });
             }
 
-            if (HasExited(process))
+            ILocalWorkspaceProcessOwnership? ownership;
+            try
+            {
+                ownership = LocalWorkspaceProcessOwnershipStart.TryOpen(identity.Boundary);
+            }
+            catch (Exception exception) when (
+                exception is Win32Exception or InvalidOperationException or ArgumentOutOfRangeException)
+            {
+                return new WorkspaceProcessTerminationResult(
+                    WorkspaceProcessTerminationStatus.Failed,
+                    ResidualProcessPossible: true,
+                    "The owned process boundary could not be opened; a residual process may remain.");
+            }
+
+            if (ownership is null)
+            {
+                return new WorkspaceProcessTerminationResult(
+                    WorkspaceProcessTerminationStatus.Failed,
+                    ResidualProcessPossible: true,
+                    "The owned process boundary is unavailable on this host; no process was terminated.");
+            }
+
+            using (ownership)
+            {
+                return await ForceTerminateOwnershipAsync(ownership).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static async Task<WorkspaceProcessTerminationResult> TerminateWithoutRootAsync(
+        WorkspaceOwnedProcessBoundary boundary)
+    {
+        ILocalWorkspaceProcessOwnership? ownership;
+        try
+        {
+            ownership = LocalWorkspaceProcessOwnershipStart.TryOpen(boundary);
+        }
+        catch (Exception exception) when (
+            exception is Win32Exception or InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            return new WorkspaceProcessTerminationResult(
+                WorkspaceProcessTerminationStatus.Failed,
+                ResidualProcessPossible: true,
+                "The root process exited, but its ownership boundary could not be verified.");
+        }
+
+        if (ownership is null)
+        {
+            return new WorkspaceProcessTerminationResult(
+                WorkspaceProcessTerminationStatus.AlreadyExited,
+                ResidualProcessPossible: false,
+                "The recorded owned process boundary no longer exists.");
+        }
+
+        using (ownership)
+        {
+            if (await ownership.WaitForEmptyAsync(TimeSpan.Zero).ConfigureAwait(false))
             {
                 return new WorkspaceProcessTerminationResult(
                     WorkspaceProcessTerminationStatus.AlreadyExited,
                     ResidualProcessPossible: false,
-                    "The recorded process has already exited.");
+                    "The recorded owned process boundary is empty.");
             }
 
-            var killRequested = TryKillProcessTree(process);
-            var exited = await WaitForExitAfterCancellationAsync(process, CancellationToken.None).ConfigureAwait(false);
-            if (killRequested && exited)
-            {
-                return new WorkspaceProcessTerminationResult(
-                    WorkspaceProcessTerminationStatus.Terminated,
-                    ResidualProcessPossible: false,
-                    "The recorded owned process tree was terminated.");
-            }
-
-            return new WorkspaceProcessTerminationResult(
-                WorkspaceProcessTerminationStatus.Failed,
-                ResidualProcessPossible: true,
-                "Process termination could not be confirmed; a residual process may remain.");
+            return await ForceTerminateOwnershipAsync(ownership).ConfigureAwait(false);
         }
+    }
+
+    private static async Task<WorkspaceProcessTerminationResult> ForceTerminateOwnershipAsync(
+        ILocalWorkspaceProcessOwnership ownership)
+    {
+        var terminationRequested = ownership.ForceTerminate();
+        var empty = await ownership.WaitForEmptyAsync(TerminationTimeout).ConfigureAwait(false);
+        if (terminationRequested && empty)
+        {
+            return new WorkspaceProcessTerminationResult(
+                WorkspaceProcessTerminationStatus.Terminated,
+                ResidualProcessPossible: false,
+                "The recorded owned process boundary was terminated and verified empty.");
+        }
+
+        return new WorkspaceProcessTerminationResult(
+            WorkspaceProcessTerminationStatus.Failed,
+            ResidualProcessPossible: true,
+            "Process termination could not be confirmed; a residual process may remain.");
     }
 
     private static ProcessStartInfo BuildStartInfo(WorkspaceProcessSessionRequest request)
@@ -289,28 +362,33 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
     private static string ComputeExecutablePathFingerprint(string path)
     {
         var fullPath = Path.GetFullPath(path);
-        var finalTarget = File.ResolveLinkTarget(fullPath, returnFinalTarget: true);
-        var identityPath = finalTarget?.FullName ?? fullPath;
+        var identityPath = OperatingSystem.IsWindows()
+            ? File.ResolveLinkTarget(fullPath, returnFinalTarget: true)?.FullName ?? fullPath
+            : ResolveUnixRealPath(fullPath);
         var canonical = OperatingSystem.IsWindows()
             ? identityPath.ToUpperInvariant()
             : identityPath;
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
     }
 
-    private static string ResolveRunningExecutableIdentityPath(
-        Process process,
-        string resolvedExecutablePath)
+    private static string ResolveUnixRealPath(string path)
     {
+        var pointer = UnixProcessNativeMethods.RealPath(path, 0);
+        if (pointer == 0)
+        {
+            throw new Win32Exception(
+                Marshal.GetLastPInvokeError(),
+                $"Could not resolve executable identity path '{path}'.");
+        }
+
         try
         {
-            return process.MainModule?.FileName is { Length: > 0 } executablePath
-                ? executablePath
-                : resolvedExecutablePath;
+            return Marshal.PtrToStringUTF8(pointer)
+                ?? throw new InvalidOperationException("The resolved executable identity path was empty.");
         }
-        catch (Exception exception) when (
-            exception is Win32Exception or InvalidOperationException or NotSupportedException)
+        finally
         {
-            return resolvedExecutablePath;
+            UnixProcessNativeMethods.Free(pointer);
         }
     }
 
@@ -333,13 +411,51 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         Process process,
         WorkspaceOwnedProcessIdentity identity)
     {
-        var currentFingerprint = process.MainModule?.FileName is { Length: > 0 } executablePath
-            ? ComputeExecutablePathFingerprint(executablePath)
-            : "unavailable";
+        var currentFingerprint = TryGetExecutablePathFingerprint(process) ?? "unavailable";
         var recordedPrefix = identity.ExecutablePathFingerprint[
             ..Math.Min(12, identity.ExecutablePathFingerprint.Length)];
         var currentPrefix = currentFingerprint[..Math.Min(12, currentFingerprint.Length)];
         return $"The running process executable identity does not match the recorded owned-process identity and was not terminated. Recorded={recordedPrefix}; Current={currentPrefix}.";
+    }
+
+    private static string? TryGetExecutablePathFingerprint(Process process)
+    {
+        try
+        {
+            return process.MainModule?.FileName is { Length: > 0 } executablePath
+                ? ComputeExecutablePathFingerprint(executablePath)
+                : null;
+        }
+        catch (Exception exception) when (
+            exception is Win32Exception or InvalidOperationException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static void WaitForExecutableIdentity(Process process, string expectedFingerprint)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(1);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var fingerprint = TryGetExecutablePathFingerprint(process);
+            if (string.Equals(fingerprint, expectedFingerprint, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (HasExited(process))
+            {
+                return;
+            }
+
+            Thread.Sleep(5);
+            process.Refresh();
+        }
+
+        var currentFingerprint = TryGetExecutablePathFingerprint(process) ?? "unavailable";
+        throw new InvalidOperationException(
+            $"The process executable identity did not stabilize after launch. Expected={expectedFingerprint[..12]}; Current={currentFingerprint[..Math.Min(12, currentFingerprint.Length)]}.");
     }
 
     private static async Task WriteStandardInputAsync(
@@ -527,50 +643,21 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
 
     private static async Task<bool> TerminateProcessTreeAsync(
         Process process,
+        ILocalWorkspaceProcessOwnership ownership,
         WorkspaceProcessTerminationMode terminationMode)
     {
-        if (HasExited(process))
-        {
-            return true;
-        }
-
         if (terminationMode == WorkspaceProcessTerminationMode.GracefulThenForceTree &&
-            TryRequestGracefulTermination(process) &&
-            await WaitForExitAfterCancellationAsync(
-                process,
-                CancellationToken.None,
-                GracefulTerminationTimeout).ConfigureAwait(false))
+            ownership.RequestGracefulTermination(process) &&
+            await ownership.WaitForEmptyAsync(GracefulTerminationTimeout).ConfigureAwait(false))
         {
             return true;
         }
 
-        return TryKillProcessTree(process) &&
-               await WaitForExitAfterCancellationAsync(process, CancellationToken.None).ConfigureAwait(false);
+        return ownership.ForceTerminate() &&
+               await ownership.WaitForEmptyAsync(TerminationTimeout).ConfigureAwait(false);
     }
 
-    private static bool TryRequestGracefulTermination(Process process)
-    {
-        try
-        {
-            if (process.HasExited)
-            {
-                return true;
-            }
-
-            if (OperatingSystem.IsWindows())
-            {
-                return process.CloseMainWindow();
-            }
-
-            return NativeMethods.Kill(process.Id, 15) == 0;
-        }
-        catch
-        {
-            return HasExited(process);
-        }
-    }
-
-    private static bool HasExited(Process process)
+    internal static bool ProcessHasExited(Process process)
     {
         try
         {
@@ -582,15 +669,12 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
     }
 
-    private static class NativeMethods
-    {
-        [DllImport("libc", EntryPoint = "kill", SetLastError = true)]
-        public static extern int Kill(int processId, int signal);
-    }
+    private static bool HasExited(Process process) => ProcessHasExited(process);
 
     private sealed class LocalWorkspaceProcessSession : IWorkspaceDuplexProcessSession
     {
         private readonly Process process;
+        private readonly ILocalWorkspaceProcessOwnership ownership;
         private readonly WorkspaceProcessTerminationMode terminationMode;
         private readonly bool isDuplex;
         private readonly DateTimeOffset startedAtUtc;
@@ -608,17 +692,21 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
 
         public LocalWorkspaceProcessSession(
             Process process,
+            ILocalWorkspaceProcessOwnership ownership,
             WorkspaceProcessSessionRequest request,
             WorkspaceOwnedProcessIdentity identity,
             DateTimeOffset startedAtUtc)
         {
             this.process = process;
+            this.ownership = ownership;
             terminationMode = request.TerminationMode;
             isDuplex = request.StandardIoMode == WorkspaceProcessStandardIoMode.Duplex;
             Identity = identity;
             this.startedAtUtc = startedAtUtc;
             stdoutCapture = new CappedTextCapture(request.StdoutLimitCharacters);
-            stderrCapture = new CappedTextCapture(request.StderrLimitCharacters);
+            stderrCapture = new CappedTextCapture(
+                request.StderrLimitCharacters,
+                request.StderrCaptureMode);
             stdoutTask = isDuplex
                 ? Task.CompletedTask
                 : ReadStreamAsync(
@@ -674,11 +762,16 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             CancellationToken cancellationToken = default)
         {
             await WaitForProcessExitOnlyAsync(process, cancellationToken).ConfigureAwait(false);
+            var ownershipEmpty = await EnsureOwnershipEmptyAsync().ConfigureAwait(false);
             return await CompleteAsync(
-                WorkspaceProcessTerminationReason.Completed,
-                string.Empty,
+                ownershipEmpty
+                    ? WorkspaceProcessTerminationReason.Completed
+                    : WorkspaceProcessTerminationReason.TerminationFailed,
+                ownershipEmpty
+                    ? string.Empty
+                    : "The root process exited, but its owned process boundary could not be verified empty.",
                 timedOut: false,
-                residualProcessPossible: false).ConfigureAwait(false);
+                residualProcessPossible: !ownershipEmpty).ConfigureAwait(false);
         }
 
         public async Task<WorkspaceProcessExecutionResult> TerminateAsync(
@@ -686,7 +779,11 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             string failureMessage,
             CancellationToken cancellationToken = default)
         {
-            var exited = await TerminateProcessTreeAsync(process, terminationMode).ConfigureAwait(false);
+            _ = cancellationToken;
+            var exited = await TerminateProcessTreeAsync(
+                process,
+                ownership,
+                terminationMode).ConfigureAwait(false);
             var residual = !exited;
             if (residual)
             {
@@ -735,6 +832,17 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             catch
             {
             }
+        }
+
+        private async Task<bool> EnsureOwnershipEmptyAsync()
+        {
+            if (await ownership.WaitForEmptyAsync(TimeSpan.Zero).ConfigureAwait(false))
+            {
+                return true;
+            }
+
+            return ownership.ForceTerminate() &&
+                   await ownership.WaitForEmptyAsync(TerminationTimeout).ConfigureAwait(false);
         }
 
         private async Task<WorkspaceProcessExecutionResult> CompleteAsync(
@@ -791,6 +899,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
                     TerminationReason: reason,
                     ResidualProcessPossible: residualProcessPossible);
                 process.Dispose();
+                ownership.Dispose();
                 stdoutReadCancellation.Dispose();
                 stderrReadCancellation.Dispose();
                 standardInputCancellation.Dispose();
@@ -808,17 +917,27 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         private readonly StringBuilder builder = new();
         private readonly object sync = new();
         private readonly int safeLimit;
+        private readonly WorkspaceProcessTextCaptureMode captureMode;
         private bool truncated;
 
-        public CappedTextCapture(int limit)
+        public CappedTextCapture(
+            int limit,
+            WorkspaceProcessTextCaptureMode captureMode = WorkspaceProcessTextCaptureMode.Prefix)
         {
             safeLimit = Math.Clamp(limit, 256, 1024 * 1024);
+            this.captureMode = captureMode;
         }
 
         public void Append(char[] buffer, int read)
         {
             lock (sync)
             {
+                if (captureMode == WorkspaceProcessTextCaptureMode.Tail)
+                {
+                    AppendTail(buffer, read);
+                    return;
+                }
+
                 if (builder.Length < safeLimit)
                 {
                     var available = safeLimit - builder.Length;
@@ -834,6 +953,26 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
                     truncated = true;
                 }
             }
+        }
+
+        private void AppendTail(char[] buffer, int read)
+        {
+            if (read >= safeLimit)
+            {
+                builder.Clear();
+                builder.Append(buffer, read - safeLimit, safeLimit);
+                truncated = true;
+                return;
+            }
+
+            var overflow = builder.Length + read - safeLimit;
+            if (overflow > 0)
+            {
+                builder.Remove(0, overflow);
+                truncated = true;
+            }
+
+            builder.Append(buffer, 0, read);
         }
 
         public void MarkTruncated()

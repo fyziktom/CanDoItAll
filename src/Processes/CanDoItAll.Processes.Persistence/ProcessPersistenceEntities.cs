@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Persistence;
@@ -19,6 +20,12 @@ public sealed class ProcessInstancePlanEntity
 
     public string PlanHash { get; set; } = string.Empty;
 
+    public ProcessPlanHashAlgorithmVersion? PlanHashAlgorithmVersion { get; set; }
+
+    public PersistedProcessPlanExecutionState ExecutionState { get; set; }
+
+    public ProcessPlanMigrationReason? MigrationReason { get; set; }
+
     public string PlanSchemaVersion { get; set; } = string.Empty;
 
     public string DefinitionContentHash { get; set; } = string.Empty;
@@ -26,6 +33,18 @@ public sealed class ProcessInstancePlanEntity
     public string PayloadJson { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAtUtc { get; set; }
+}
+
+public enum PersistedProcessPlanExecutionState
+{
+    Unknown,
+    Executable,
+    NeedsRecompile
+}
+
+public enum ProcessPlanMigrationReason
+{
+    HostCapabilitiesWereNotSealed
 }
 
 public sealed class ProcessRuntimeStateEntity

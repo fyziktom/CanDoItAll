@@ -91,6 +91,81 @@ public sealed class DatabaseConfigurationTests
     }
 
     [Fact]
+    public void DatabasePasswordFileConfiguration_RejectsOversizedPasswordFileWithoutDisclosingContent()
+    {
+        var temporaryDirectory = TestFileSystem.CreateTemporaryRoot("database-password-file");
+        try
+        {
+            string secret = new('s', 4097);
+            var passwordPath = Path.Combine(temporaryDirectory, "db-password");
+            File.WriteAllText(passwordPath, secret);
+            IConfiguration configuration = CreatePasswordFileConfiguration(passwordPath);
+
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                DatabasePasswordFileConfiguration.Apply(configuration, temporaryDirectory));
+
+            Assert.Contains("4096-byte limit", exception.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(secret, exception.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(temporaryDirectory);
+        }
+    }
+
+    [Fact]
+    public void DatabasePasswordFileConfiguration_RejectsNulWithoutDisclosingContent()
+    {
+        var temporaryDirectory = TestFileSystem.CreateTemporaryRoot("database-password-file");
+        try
+        {
+            const string secret = "secret-before-nul\0secret-after-nul";
+            var passwordPath = Path.Combine(temporaryDirectory, "db-password");
+            File.WriteAllText(passwordPath, secret);
+            IConfiguration configuration = CreatePasswordFileConfiguration(passwordPath);
+
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                DatabasePasswordFileConfiguration.Apply(configuration, temporaryDirectory));
+
+            Assert.Contains("NUL", exception.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(secret, exception.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(temporaryDirectory);
+        }
+    }
+
+    [Fact]
+    public void DatabasePasswordFileConfiguration_RejectsSymbolicLink()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var temporaryDirectory = TestFileSystem.CreateTemporaryRoot("database-password-file");
+        try
+        {
+            var targetPath = Path.Combine(temporaryDirectory, "target-password");
+            var passwordPath = Path.Combine(temporaryDirectory, "db-password");
+            File.WriteAllText(targetPath, "must-not-be-read");
+            File.CreateSymbolicLink(passwordPath, targetPath);
+            IConfiguration configuration = CreatePasswordFileConfiguration(passwordPath);
+
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                DatabasePasswordFileConfiguration.Apply(configuration, temporaryDirectory));
+
+            Assert.Contains("cannot be a link", exception.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("must-not-be-read", exception.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(temporaryDirectory);
+        }
+    }
+
+    [Fact]
     public async Task AddCanDoItAllInfrastructure_UsesInMemoryProvider_WhenConfigured()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-inmemory-tests");
@@ -200,4 +275,13 @@ public sealed class DatabaseConfigurationTests
         var dbContextOptions = context.GetService<IDbContextOptions>();
         return Assert.Single(dbContextOptions.Extensions.OfType<RelationalOptionsExtension>());
     }
+
+    private static IConfiguration CreatePasswordFileConfiguration(string passwordPath)
+        => new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Database:ConnectionString"] = "Host=db;Database=candoitall;Username=candoitall",
+                ["Database:PasswordFile"] = passwordPath
+            })
+            .Build();
 }

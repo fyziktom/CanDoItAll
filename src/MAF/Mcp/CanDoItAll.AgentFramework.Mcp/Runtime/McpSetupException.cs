@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Mcp.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Mcp;
 
@@ -7,7 +8,8 @@ public sealed class McpSetupException(
     string fieldPath,
     string detail,
     string repairHint,
-    int? httpStatusCode = null) : Exception(detail)
+    int? httpStatusCode = null,
+    McpTransportFailureKind? transportFailure = null) : Exception(detail)
 {
     public CapabilityDiagnosticCategory Category { get; } = category;
 
@@ -18,4 +20,6 @@ public sealed class McpSetupException(
     public string RepairHint { get; } = repairHint;
 
     public int? HttpStatusCode { get; } = httpStatusCode;
+
+    public McpTransportFailureKind? TransportFailure { get; } = transportFailure;
 }

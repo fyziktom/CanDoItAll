@@ -13,11 +13,11 @@
   "execution_anchor": {
     "repository": "fyziktom/CanDoItAll",
     "branch": "unix-adoption",
-    "commit": "dd78ffa9769ba1d125b8be81a4b303df37c32505",
-    "commit_message": "phase2",
-    "dotnet_sdk": "10.0.302",
-    "executed_date": "2026-08-10",
-    "core_handoff": "Operator-authorized provisional implementation handoff under HOSTED-PORTABILITY-VALIDATION-001",
+    "commit": "386d8beb6038035f89a9a6961ec017d8213879a5",
+    "commit_message": "added bundle; M00-M07 working-tree candidate not frozen until M08",
+    "dotnet_sdk": "10.0.303",
+    "executed_date": "2026-08-12",
+    "core_handoff": "Local Windows/Linux follow-up proven through C2; C4 hosted and macOS claims remain deferred",
     "components_repository": {
       "path": "../CanDoItAll.Components",
       "branch": "development",
@@ -29,16 +29,14 @@
       "commit": "f31e20d054003348c7557b9634e0838fc5996ae0"
     },
     "reference_check": {
-      "referenced_paths": 135,
+      "referenced_paths": 182,
       "missing_paths": 0
     },
     "behavioral_characterization": {
-      "windows_named_unit_tests": "165/165",
-      "windows_named_integration_tests": "4/4",
-      "linux_named_unit_tests": "165/165",
-      "linux_named_integration_tests": "4/4",
-      "full_windows_aggregate_reused": "7459/7459",
-      "full_linux_aggregate_reused": "7459/7459"
+      "windows_runtime_catalog": "422 unit + 45 integration + 1 browser",
+      "linux_runtime_catalog": "422 unit + 45 integration + 1 browser",
+      "windows_stable_candidate": "scheduled at M08",
+      "linux_stable_candidate": "scheduled at M08"
     }
   },
   "entry_anchor": "Core Gate C4 or operator-authorized provisional handoff",
@@ -1704,8 +1702,8 @@
       "portable_reference": "{{REPO_ROOT}}/tools/Validation/Test-RuntimePortability.ps1",
       "owner_bundle": "runtime",
       "area": "Fast focused portability gate",
-      "execution_observation": "Runs prebuilt unit, integration, and browser scopes and rejects governed class or count drift.",
-      "evidence_status": "B07-windows-linux-green"
+      "execution_observation": "BuildOnly creates a commit/source/mode/SDK/anchor/assembly-hash stamp; SkipBuild verifies it before the versioned Unit/Integration/Browser catalog.",
+      "evidence_status": "M07-stamped-runner-self-tests-green"
     },
     {
       "id": "B07-REF-003",
@@ -1742,6 +1740,51 @@
       "area": "Local evidence and hosted limitation",
       "execution_observation": "Records exact local results and preserves the unproved hosted/macOS Final R4 boundary.",
       "evidence_status": "B07-local-ready-r4-deferred"
+    },
+    {
+      "id": "M07-REF-001",
+      "relative_path": "tools/Validation/RuntimePortabilityCatalog.json",
+      "portable_reference": "{{REPO_ROOT}}/tools/Validation/RuntimePortabilityCatalog.json",
+      "owner_bundle": "runtime",
+      "area": "Versioned runtime portability catalog",
+      "execution_observation": "Owns exact classes, browser FQN, assembly paths, TRX names, and reviewed counts 422/45/1.",
+      "evidence_status": "M07-runner-self-tests-green"
+    },
+    {
+      "id": "M07-REF-002",
+      "relative_path": "src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerRecipeContract.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerRecipeContract.cs",
+      "owner_bundle": "runtime",
+      "area": "Strict Docker recipe contract",
+      "execution_observation": "Pure bounded parsing rejects malformed mutation recipes before process resolution or preflight.",
+      "evidence_status": "M05-C2-windows-linux-green"
+    },
+    {
+      "id": "M07-REF-003",
+      "relative_path": "compose.yaml",
+      "portable_reference": "{{REPO_ROOT}}/compose.yaml",
+      "owner_bundle": "runtime",
+      "area": "Local Docker stack",
+      "execution_observation": "Non-root read-only app and unpublished PostgreSQL use a file-backed disposable secret and bounded resources.",
+      "evidence_status": "M05-C2-docker-smoke-green"
+    },
+    {
+      "id": "M07-REF-004",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Configuration/DatabasePasswordFileConfiguration.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Configuration/DatabasePasswordFileConfiguration.cs",
+      "owner_bundle": "core",
+      "area": "Database secret-file policy",
+      "execution_observation": "Accepts only a bounded strict-UTF8 regular non-link password file and redacts path/content failures.",
+      "evidence_status": "M05-C2-windows-linux-green"
+    },
+    {
+      "id": "M07-REF-005",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessOwnership.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessOwnership.cs",
+      "owner_bundle": "runtime",
+      "area": "Owned process boundary interop",
+      "execution_observation": "Creates and controls Windows job or Unix process-group ownership without name-based termination.",
+      "evidence_status": "M03-C2-windows-linux-green"
     },
     {
       "id": "SEC-001",

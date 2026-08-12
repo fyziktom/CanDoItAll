@@ -1,5 +1,5 @@
 # Exit criteria
 
-- [ ] SkipBuild cannot consume stale outputs.
-- [ ] Catalog discovers every intended test exactly once.
-- [ ] All canonical records agree on exact candidate and residuals.
+- [x] SkipBuild cannot consume stale outputs.
+- [x] Catalog discovers every intended test exactly once.
+- [x] All canonical records agree on exact candidate and residuals.

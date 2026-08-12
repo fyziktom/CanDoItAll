@@ -1,5 +1,5 @@
 # Exit criteria
 
-- [ ] All P1 runtime behavior is green on Windows/Linux.
-- [ ] No full-suite run was wasted.
-- [ ] M07 is eligible.
+- [x] All P1 runtime behavior is green on Windows/Linux.
+- [x] No full-suite run was wasted.
+- [x] M07 is eligible.

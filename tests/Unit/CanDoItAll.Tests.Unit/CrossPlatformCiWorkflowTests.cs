@@ -56,6 +56,11 @@ public sealed class CrossPlatformCiWorkflowTests
             workflow.Replace("\r\n", "\n", StringComparison.Ordinal),
             StringComparison.Ordinal);
         Assert.Contains("actions/upload-artifact@v4", workflow, StringComparison.Ordinal);
+        Assert.Contains("Create disposable Compose database secret", workflow, StringComparison.Ordinal);
+        Assert.Contains(".secrets/db-password", workflow, StringComparison.Ordinal);
+        Assert.Contains("Test-Docker.ps1 -RunNegativeFixtures", workflow, StringComparison.Ordinal);
+        Assert.Contains("up -d --build --wait --wait-timeout 360", workflow, StringComparison.Ordinal);
+        Assert.Contains("Remove-Item -LiteralPath .secrets/db-password", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -68,16 +73,37 @@ public sealed class CrossPlatformCiWorkflowTests
             "tools",
             "Validation",
             "Test-RuntimePortability.ps1"));
+        using System.Text.Json.JsonDocument catalog = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "tools",
+            "Validation",
+            "RuntimePortabilityCatalog.json")));
 
-        Assert.Contains("Category=UnixRuntimePortability", script, StringComparison.Ordinal);
-        Assert.Contains("ExpectedCaseCount 422", script, StringComparison.Ordinal);
-        Assert.Contains("ExpectedCaseCount 33", script, StringComparison.Ordinal);
-        Assert.Contains("ExpectedCaseCount 1", script, StringComparison.Ordinal);
+        Assert.Contains("sourceFingerprint", script, StringComparison.Ordinal);
+        Assert.Contains("dependencyMode", script, StringComparison.Ordinal);
+        Assert.Contains("assemblies", script, StringComparison.Ordinal);
+        Assert.Contains("[switch]$SkipBuild", script, StringComparison.Ordinal);
+        Assert.Contains("[switch]$BuildOnly", script, StringComparison.Ordinal);
+        Assert.Contains("[switch]$SelfTest", script, StringComparison.Ordinal);
         Assert.Contains("class selection drifted", script, StringComparison.Ordinal);
-        Assert.Contains("method selection drifted", script, StringComparison.Ordinal);
+        Assert.Contains("fully qualified test selection drifted", script, StringComparison.Ordinal);
         Assert.Contains("ValidateSet('All', 'Unit', 'Integration', 'Browser')", script, StringComparison.Ordinal);
         Assert.Contains("--no-build", script, StringComparison.Ordinal);
         Assert.Contains("--no-restore", script, StringComparison.Ordinal);
+
+        System.Text.Json.JsonElement catalogRoot = catalog.RootElement;
+        Assert.Equal(1, catalogRoot.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal("2026-08-12.1", catalogRoot.GetProperty("catalogVersion").GetString());
+        Assert.Equal("Category=UnixRuntimePortability", catalogRoot.GetProperty("traitFilter").GetString());
+        System.Text.Json.JsonElement[] scopes = catalogRoot.GetProperty("scopes").EnumerateArray().ToArray();
+        Assert.Equal(3, scopes.Length);
+        Assert.Equal(422, FindScope(scopes, "Unit").GetProperty("expectedCaseCount").GetInt32());
+        Assert.Equal(45, FindScope(scopes, "Integration").GetProperty("expectedCaseCount").GetInt32());
+        System.Text.Json.JsonElement browserScope = FindScope(scopes, "Browser");
+        Assert.Equal(1, browserScope.GetProperty("expectedCaseCount").GetInt32());
+        Assert.Equal(
+            "CanDoItAll.Tests.Playwright.AppSmokeTests.Runtime_node_actions_show_direct_optional_and_dependency_missing_states",
+            Assert.Single(browserScope.GetProperty("expectedFullyQualifiedNames").EnumerateArray()).GetString());
     }
 
     [Fact]
@@ -125,5 +151,15 @@ public sealed class CrossPlatformCiWorkflowTests
         }
 
         throw new DirectoryNotFoundException("Could not locate the CanDoItAll repository root.");
+    }
+
+    private static System.Text.Json.JsonElement FindScope(
+        IEnumerable<System.Text.Json.JsonElement> scopes,
+        string name)
+    {
+        return Assert.Single(scopes, scope => string.Equals(
+            scope.GetProperty("name").GetString(),
+            name,
+            StringComparison.Ordinal));
     }
 }

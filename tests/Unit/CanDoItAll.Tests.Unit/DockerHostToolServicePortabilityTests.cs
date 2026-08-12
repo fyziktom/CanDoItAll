@@ -158,6 +158,143 @@ public sealed class DockerHostToolServicePortabilityTests : IDisposable
         Assert.Equal(["container", "ls", "--all", "--filter", "name=^/test-container$", "--format", "{{.Names}}"], request.Arguments);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("yes")]
+    [InlineData(" true")]
+    [InlineData("1")]
+    public async Task Start_container_rejects_malformed_boolean_before_preflight(string value)
+    {
+        var host = new RecordingProcessHost(_ => throw new InvalidOperationException("must not execute"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ExecuteStartAsync(CreateService(host), pullIfMissing: value));
+
+        Assert.Contains("'true' or 'false'", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(host.Requests);
+    }
+
+    [Fact]
+    public async Task Start_container_rejects_excessive_port_mappings_before_preflight()
+    {
+        var host = new RecordingProcessHost(_ => throw new InvalidOperationException("must not execute"));
+        string mappings = string.Join(',', Enumerable.Range(1, 17).Select(port => $"{port}:{port}"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ExecuteStartAsync(CreateService(host), portMappings: mappings));
+
+        Assert.Contains("16-item limit", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(host.Requests);
+    }
+
+    [Theory]
+    [InlineData("environmentVariables", 33)]
+    [InlineData("labels", 33)]
+    [InlineData("mounts", 17)]
+    public async Task Start_container_bounds_reserved_structured_arguments_before_rejecting_them(
+        string argumentName,
+        int count)
+    {
+        var host = new RecordingProcessHost(_ => throw new InvalidOperationException("must not execute"));
+        var arguments = CreateStartArguments();
+        arguments[argumentName] = string.Join(',', Enumerable.Repeat("x", count));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService(host).ExecuteAsync(
+                DockerPluginConstants.PluginId,
+                PluginHostToolRecipeIds.DockerStartContainer,
+                arguments,
+                timeoutSeconds: 60,
+                maxOutputCharacters: 4096));
+
+        Assert.Contains("item limit", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(host.Requests);
+    }
+
+    [Fact]
+    public async Task Recipe_rejects_excessive_total_argument_bytes_before_execution()
+    {
+        var host = new RecordingProcessHost(_ => throw new InvalidOperationException("must not execute"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ExecuteLogsAsync(
+                CreateService(host),
+                new Dictionary<string, string>
+                {
+                    ["containerName"] = "test-container",
+                    ["since"] = new string('x', 16 * 1024)
+                }));
+
+        Assert.Contains("byte argument limit", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(host.Requests);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1001")]
+    [InlineData("12.5")]
+    [InlineData(" 12")]
+    public async Task Read_logs_rejects_malformed_or_out_of_range_tail(string tail)
+    {
+        var host = new RecordingProcessHost(_ => throw new InvalidOperationException("must not execute"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ExecuteLogsAsync(
+                CreateService(host),
+                new Dictionary<string, string>
+                {
+                    ["containerName"] = "test-container",
+                    ["tail"] = tail
+                }));
+
+        Assert.Contains("integer from 1 through 1000", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(host.Requests);
+    }
+
+    [Theory]
+    [InlineData("1h30m")]
+    [InlineData("250ms")]
+    [InlineData("2026-08-12T13:45:00Z")]
+    [InlineData("2026-08-12T13:45:00.1234567-04:00")]
+    public async Task Read_logs_accepts_bounded_duration_or_rfc3339_since(string since)
+    {
+        var host = new RecordingProcessHost(_ => Result(exitCode: 0));
+
+        PluginHostToolExecutionResult result = await ExecuteLogsAsync(
+            CreateService(host),
+            new Dictionary<string, string>
+            {
+                ["containerName"] = "test-container",
+                ["since"] = since
+            });
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(["logs", "--tail", "120", "--since", since, "test-container"], Assert.Single(host.Requests).Arguments);
+    }
+
+    [Theory]
+    [InlineData("--follow")]
+    [InlineData("31d")]
+    [InlineData("721h")]
+    [InlineData("2026-08-12 13:45:00Z")]
+    [InlineData("2026-13-12T13:45:00Z")]
+    public async Task Read_logs_rejects_invalid_or_option_like_since(string since)
+    {
+        var host = new RecordingProcessHost(_ => throw new InvalidOperationException("must not execute"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            ExecuteLogsAsync(
+                CreateService(host),
+                new Dictionary<string, string>
+                {
+                    ["containerName"] = "test-container",
+                    ["since"] = since
+                }));
+
+        Assert.Contains("'since' value is invalid", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(host.Requests);
+    }
+
     [Fact]
     public async Task Start_container_stops_when_running_state_is_indeterminate()
     {
@@ -470,18 +607,36 @@ public sealed class DockerHostToolServicePortabilityTests : IDisposable
             NullLogger<DockerHostToolService>.Instance);
     }
 
-    private static Task<PluginHostToolExecutionResult> ExecuteStartAsync(DockerHostToolService service)
+    private static Task<PluginHostToolExecutionResult> ExecuteStartAsync(
+        DockerHostToolService service,
+        string pullIfMissing = "True",
+        string portMappings = "")
         => service.ExecuteAsync(
             DockerPluginConstants.PluginId,
             PluginHostToolRecipeIds.DockerStartContainer,
-            new Dictionary<string, string>
-            {
-                ["image"] = "alpine:latest",
-                ["containerName"] = "test-container",
-                ["pullIfMissing"] = bool.TrueString,
-                ["portMappings"] = string.Empty
-            },
+            CreateStartArguments(pullIfMissing, portMappings),
             timeoutSeconds: 60,
+            maxOutputCharacters: 4096);
+
+    private static Dictionary<string, string> CreateStartArguments(
+        string pullIfMissing = "True",
+        string portMappings = "")
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["image"] = "alpine:latest",
+            ["containerName"] = "test-container",
+            ["pullIfMissing"] = pullIfMissing,
+            ["portMappings"] = portMappings
+        };
+
+    private static Task<PluginHostToolExecutionResult> ExecuteLogsAsync(
+        DockerHostToolService service,
+        IReadOnlyDictionary<string, string> arguments)
+        => service.ExecuteAsync(
+            DockerPluginConstants.PluginId,
+            PluginHostToolRecipeIds.DockerReadLogs,
+            arguments,
+            timeoutSeconds: 30,
             maxOutputCharacters: 4096);
 
     private static WorkspaceProcessExecutionResult Result(

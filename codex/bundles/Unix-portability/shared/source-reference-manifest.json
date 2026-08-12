@@ -10,6 +10,13 @@
     "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
     "local_build_reproduction": false
   },
+  "m07_reconciliation": {
+    "branch": "unix-adoption",
+    "commit": "386d8beb6038035f89a9a6961ec017d8213879a5",
+    "working_tree_status": "M00-M07 merge-candidate work in progress; immutable candidate is frozen at M08",
+    "dependency_mode": "package",
+    "reconciled_date": "2026-08-12"
+  },
   "portable_token": "{{REPO_ROOT}}",
   "references": [
     {
@@ -41,12 +48,12 @@
     },
     {
       "id": "ROOT-004",
-      "relative_path": ".github/workflows-disabled/ci.yml",
-      "portable_reference": "{{REPO_ROOT}}/.github/workflows-disabled/ci.yml",
+      "relative_path": ".github/workflows/ci.yml",
+      "portable_reference": "{{REPO_ROOT}}/.github/workflows/ci.yml",
       "owner_bundle": "core",
       "area": "CI",
-      "prepared_observation": "Former CI is disabled; application build/test is Windows-only while Ubuntu only exercises container policy.",
-      "evidence_status": "Verified"
+      "prepared_observation": "Active three-host workflow now uses package mode, PostgreSQL, the stamped runtime catalog, headless proof, and a disposable Docker secret; hosted execution remains unclaimed.",
+      "evidence_status": "M07-reconciled-hosted-pending"
     },
     {
       "id": "APP-001",
@@ -329,12 +336,12 @@
     },
     {
       "id": "MAF-008",
-      "relative_path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs",
-      "portable_reference": "{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs",
+      "relative_path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpJsonRpcConnection.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpJsonRpcConnection.cs",
       "owner_bundle": "runtime",
       "area": "MCP",
-      "prepared_observation": "More OS-aware executable resolution than WorkspaceExecutableLocator, creating duplicate semantics.",
-      "evidence_status": "Verified"
+      "prepared_observation": "Local stdio MCP now uses bounded bidirectional JSON-RPC while executable identity remains with the canonical workspace locator/process host.",
+      "evidence_status": "M04-C2-windows-linux-green"
     },
     {
       "id": "MAF-009",

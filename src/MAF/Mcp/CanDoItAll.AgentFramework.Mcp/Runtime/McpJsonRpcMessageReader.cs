@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 
@@ -5,44 +6,72 @@ namespace CanDoItAll.AgentFramework.Mcp;
 
 internal static class McpJsonRpcMessageReader
 {
-    private static readonly Encoding HeaderEncoding = Encoding.ASCII;
-    private static readonly Encoding BodyEncoding = new UTF8Encoding(
-        encoderShouldEmitUTF8Identifier: false);
-    private static readonly byte[] HeaderTerminator = "\r\n\r\n"u8.ToArray();
-
     public static Task<string> ReadAsync(
         Stream stream,
         McpStdioMessageFraming messageFraming,
         CancellationToken cancellationToken,
         McpPayloadSizeLimit? payloadSizeLimit = null)
     {
-        var sizeLimit = payloadSizeLimit ?? McpPayloadSizeLimit.Default;
-        sizeLimit.EnsureValid();
+        return new McpJsonRpcStreamReader(
+                stream,
+                messageFraming,
+                payloadSizeLimit ?? McpPayloadSizeLimit.Default)
+            .ReadAsync(cancellationToken);
+    }
+}
+
+internal sealed class McpJsonRpcStreamReader
+{
+    private const int MaximumHeaderBytes = 8192;
+    private static readonly Encoding HeaderEncoding = Encoding.ASCII;
+    private static readonly Encoding BodyEncoding = new UTF8Encoding(
+        encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
+    private static readonly byte[] HeaderTerminator = "\r\n\r\n"u8.ToArray();
+
+    private readonly Stream stream;
+    private readonly McpStdioMessageFraming messageFraming;
+    private readonly McpPayloadSizeLimit payloadSizeLimit;
+    private readonly byte[] readBuffer = new byte[4096];
+    private int readOffset;
+    private int readCount;
+
+    public McpJsonRpcStreamReader(
+        Stream stream,
+        McpStdioMessageFraming messageFraming,
+        McpPayloadSizeLimit payloadSizeLimit)
+    {
+        this.stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        this.messageFraming = messageFraming;
+        payloadSizeLimit.EnsureValid();
+        this.payloadSizeLimit = payloadSizeLimit;
+    }
+
+    public Task<string> ReadAsync(CancellationToken cancellationToken)
+    {
         return messageFraming switch
         {
             McpStdioMessageFraming.ContentLength =>
-                ReadContentLengthMessageAsync(stream, sizeLimit, cancellationToken),
+                ReadContentLengthMessageAsync(cancellationToken),
             McpStdioMessageFraming.NewlineDelimitedJson =>
-                ReadNewlineDelimitedMessageAsync(stream, sizeLimit, cancellationToken),
+                ReadNewlineDelimitedMessageAsync(cancellationToken),
             _ => throw new InvalidDataException(
                 $"Unsupported MCP stdio message framing '{messageFraming}'.")
         };
     }
 
-    private static async Task<string> ReadContentLengthMessageAsync(
-        Stream stream,
-        McpPayloadSizeLimit sizeLimit,
+    private async Task<string> ReadContentLengthMessageAsync(
         CancellationToken cancellationToken)
     {
-        var header = await ReadHeaderAsync(stream, cancellationToken);
+        var header = await ReadHeaderAsync(cancellationToken);
         var contentLength = ParseContentLength(header);
-        if (contentLength > sizeLimit.MaximumBytes)
+        if (contentLength > payloadSizeLimit.MaximumBytes)
         {
-            throw MessageTooLarge(sizeLimit);
+            throw MessageTooLarge();
         }
 
         var body = new byte[contentLength];
-        var totalRead = 0;
+        var totalRead = CopyBufferedBytes(body);
         while (totalRead < body.Length)
         {
             var read = await stream.ReadAsync(
@@ -57,91 +86,111 @@ internal static class McpJsonRpcMessageReader
             totalRead += read;
         }
 
-        return BodyEncoding.GetString(body);
+        return DecodeBody(body);
     }
 
-    private static async Task<string> ReadNewlineDelimitedMessageAsync(
-        Stream stream,
-        McpPayloadSizeLimit sizeLimit,
+    private async Task<string> ReadNewlineDelimitedMessageAsync(
         CancellationToken cancellationToken)
     {
         while (true)
         {
-            var body = await ReadNewlineDelimitedLineAsync(
-                stream,
-                sizeLimit,
-                cancellationToken);
+            var body = await ReadNewlineDelimitedLineAsync(cancellationToken);
             if (body.Length > 0)
             {
-                return BodyEncoding.GetString(body);
+                return body;
             }
         }
     }
 
-    private static async Task<byte[]> ReadNewlineDelimitedLineAsync(
-        Stream stream,
-        McpPayloadSizeLimit sizeLimit,
+    private async Task<string> ReadNewlineDelimitedLineAsync(
         CancellationToken cancellationToken)
     {
-        var body = new List<byte>(512);
-        var singleByte = new byte[1];
+        var body = new ArrayBufferWriter<byte>(512);
         while (true)
         {
-            var read = await stream.ReadAsync(singleByte, cancellationToken);
-            if (read == 0)
+            await EnsureBufferedAsync(
+                "MCP stdio stream ended while reading a newline-delimited message.",
+                cancellationToken);
+            var available = readBuffer.AsSpan(readOffset, readCount);
+            var newlineIndex = available.IndexOf((byte)'\n');
+            var bytesToCopy = newlineIndex >= 0
+                ? newlineIndex
+                : available.Length;
+            if (body.WrittenCount + bytesToCopy > payloadSizeLimit.MaximumBytes)
             {
-                if (body.Count == 0)
-                {
-                    throw new EndOfStreamException(
-                        "MCP stdio stream ended while reading a newline-delimited message.");
-                }
-
-                return body.ToArray();
+                throw MessageTooLarge();
             }
 
-            var value = singleByte[0];
-            if (value == (byte)'\n')
+            Append(body, available[..bytesToCopy]);
+            AdvanceReadBuffer(bytesToCopy + (newlineIndex >= 0 ? 1 : 0));
+            if (newlineIndex < 0)
             {
-                if (body.Count > 0 && body[^1] == (byte)'\r')
-                {
-                    body.RemoveAt(body.Count - 1);
-                }
-
-                return body.ToArray();
+                continue;
             }
 
-            body.Add(value);
-            if (body.Count > sizeLimit.MaximumBytes)
+            var length = body.WrittenCount;
+            if (length > 0 && body.WrittenSpan[length - 1] == (byte)'\r')
             {
-                throw MessageTooLarge(sizeLimit);
+                length--;
             }
+
+            return DecodeBody(body.WrittenSpan[..length]);
         }
     }
 
-    private static async Task<string> ReadHeaderAsync(
-        Stream stream,
-        CancellationToken cancellationToken)
+    private async Task<string> ReadHeaderAsync(CancellationToken cancellationToken)
     {
         var headerBytes = new List<byte>(128);
-        var singleByte = new byte[1];
         while (!EndsWith(headerBytes, HeaderTerminator))
         {
-            var read = await stream.ReadAsync(singleByte, cancellationToken);
-            if (read == 0)
-            {
-                throw new EndOfStreamException(
-                    "MCP stdio stream ended while reading message headers.");
-            }
-
-            headerBytes.Add(singleByte[0]);
-            if (headerBytes.Count > 8192)
+            await EnsureBufferedAsync(
+                "MCP stdio stream ended while reading message headers.",
+                cancellationToken);
+            headerBytes.Add(readBuffer[readOffset]);
+            AdvanceReadBuffer(1);
+            if (headerBytes.Count > MaximumHeaderBytes)
             {
                 throw new InvalidDataException(
-                    "MCP stdio message header exceeded 8192 bytes.");
+                    $"MCP stdio message header exceeded {MaximumHeaderBytes} bytes.");
             }
         }
 
         return HeaderEncoding.GetString(headerBytes.ToArray());
+    }
+
+    private async Task EnsureBufferedAsync(
+        string endOfStreamMessage,
+        CancellationToken cancellationToken)
+    {
+        if (readCount > 0)
+        {
+            return;
+        }
+
+        readOffset = 0;
+        readCount = await stream.ReadAsync(readBuffer, cancellationToken);
+        if (readCount == 0)
+        {
+            throw new EndOfStreamException(endOfStreamMessage);
+        }
+    }
+
+    private int CopyBufferedBytes(byte[] destination)
+    {
+        var bytesToCopy = Math.Min(readCount, destination.Length);
+        readBuffer.AsSpan(readOffset, bytesToCopy).CopyTo(destination);
+        AdvanceReadBuffer(bytesToCopy);
+        return bytesToCopy;
+    }
+
+    private void AdvanceReadBuffer(int count)
+    {
+        readOffset += count;
+        readCount -= count;
+        if (readCount == 0)
+        {
+            readOffset = 0;
+        }
     }
 
     private static int ParseContentLength(string header)
@@ -167,11 +216,29 @@ internal static class McpJsonRpcMessageReader
             "MCP stdio message header is missing a valid Content-Length value.");
     }
 
-    private static InvalidDataException MessageTooLarge(
-        McpPayloadSizeLimit sizeLimit)
+    private McpMessageTooLargeException MessageTooLarge()
+        => new(payloadSizeLimit.MaximumBytes);
+
+    private static string DecodeBody(ReadOnlySpan<byte> body)
     {
-        return new InvalidDataException(
-            $"MCP message exceeded the host payload limit of {sizeLimit.MaximumBytes} bytes.");
+        try
+        {
+            return BodyEncoding.GetString(body);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new InvalidDataException(
+                "MCP stdio message body is not valid UTF-8.",
+                exception);
+        }
+    }
+
+    private static void Append(
+        ArrayBufferWriter<byte> destination,
+        ReadOnlySpan<byte> source)
+    {
+        source.CopyTo(destination.GetSpan(source.Length));
+        destination.Advance(source.Length);
     }
 
     private static bool EndsWith(List<byte> source, byte[] suffix)
@@ -191,4 +258,11 @@ internal static class McpJsonRpcMessageReader
 
         return true;
     }
+}
+
+internal sealed class McpMessageTooLargeException(int maximumBytes)
+    : IOException(
+        $"MCP message exceeded the host payload limit of {maximumBytes} bytes.")
+{
+    public int MaximumBytes { get; } = maximumBytes;
 }

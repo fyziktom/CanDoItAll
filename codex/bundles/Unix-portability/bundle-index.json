@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-12T04:57:36.764952+00:00",
+  "generated_utc": "2026-08-12T20:22:30.793003+00:00",
   "root_name": "Unix-portability",
   "payload_file_count": 339,
-  "payload_total_bytes": 4765262,
+  "payload_total_bytes": 4904808,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -216,8 +216,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/source-reference-manifest.json",
-      "size_bytes": 34164,
-      "sha256": "94e54760f38af93d07a00e6ff4851c2cfb4aa1ba16f7f5dd5fef21a87e4d464e"
+      "size_bytes": 34534,
+      "sha256": "81f29350f5af1996b16a0242238c9ffadaa3cdb4576844aecff9b7549d2f9232"
     },
     {
       "path": "bundles/01-core-portability-foundation/manifest.json",
@@ -431,8 +431,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/CORE-C4-HANDOFF.md",
-      "size_bytes": 4395,
-      "sha256": "2cb9a42f9328b6e8873616b1811007e31808d35514b63b16432a7d44adff9872"
+      "size_bytes": 5167,
+      "sha256": "44804511c1a61b5fb3a068eac9bd9b203c1541a67e773f93e54501aacacb01e8"
     },
     {
       "path": "bundles/01-core-portability-foundation/reviews/csharp-architecture-gate.md",
@@ -931,8 +931,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/process-ownership-inventory.csv",
-      "size_bytes": 5135,
-      "sha256": "0036bb767c41feb598a1ee245cefab25092407492696fc8ee5b107df35697c5c"
+      "size_bytes": 5423,
+      "sha256": "ade5e77c89aefff421bbf3f3d46d3203c1da8e017b87a4533f2aa4664c47293d"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/requirement-traceability.csv",
@@ -946,13 +946,13 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/runtime-surface-inventory.csv",
-      "size_bytes": 8095,
-      "sha256": "39cef6c7e26e3042bf9b93fcf40a263d050b0561834099ef9b51ffb11621826f"
+      "size_bytes": 8252,
+      "sha256": "a6ef0c958f0adb5e51dcbd7b506b9a2566dba6daed447a29ce45c359c5bf76bc"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/source-reference-manifest.json",
-      "size_bytes": 108226,
-      "sha256": "d6090fa294dd9d0add067104e804c33b60a49df6b7f41c9731aff09bd54b62c7"
+      "size_bytes": 110852,
+      "sha256": "58e254246715a9ff77244a86159907d5071e507a6a7c51a3a7166abadcbd6d44"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/manifest.json",
@@ -1141,8 +1141,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/26-b07-local-evidence-and-hosted-deferral.md",
-      "size_bytes": 5502,
-      "sha256": "00c7d8e66ca491cf43f990d05521f0684efccbdb32aeb649886031af89f7d892"
+      "size_bytes": 6490,
+      "sha256": "3658dddb304d1941db32f3f733a27a1df08301b03819ef63e7c6a682a8b77af2"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/B00-HANDOFF.md",
@@ -1151,8 +1151,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/reviews/RUNTIME-R4-CLOSURE.md",
-      "size_bytes": 911,
-      "sha256": "241465418bd3508a71e49999fd0df2e2aee584eb742b77f1fce3a3ec53294c99"
+      "size_bytes": 2615,
+      "sha256": "aaedef9f45ade69c0eae144b4ba1078d3b64ff6ccfdcbeae83e9a403d45dacbc"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/subbundles/00-core-handoff-anchor-ownership-and-runtime-inventory/README.md",
@@ -1656,8 +1656,8 @@
     },
     {
       "path": "shared/portability-risk-baseline.json",
-      "size_bytes": 3052667,
-      "sha256": "2167d99cde84ffd178db479c2e46ef6b0006dffc6ed0c84db252e149b1d5fc4d"
+      "size_bytes": 3184861,
+      "sha256": "9a49c223eda5db56cc7d448a2eb9f97cbba39e90931a6c44eb712746047fe56e"
     },
     {
       "path": "shared/portability-taxonomy.md",
@@ -1676,8 +1676,8 @@
     },
     {
       "path": "shared/source-reference-manifest.json",
-      "size_bytes": 27015,
-      "sha256": "1c968b3f1a6df609f6ad3fd9a65b1db4d2de91f6f9a5447d98e91470ee2d6aa4"
+      "size_bytes": 27462,
+      "sha256": "cd1d8e471d27873794ea6670ed57cde33df3616efd89915bec75d7d4a305c9a0"
     },
     {
       "path": "shared/support-matrix.csv",

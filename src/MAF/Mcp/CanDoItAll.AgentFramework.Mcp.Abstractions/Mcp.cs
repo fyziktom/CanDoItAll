@@ -29,6 +29,19 @@ public enum McpStdioMessageFraming
     NewlineDelimitedJson
 }
 
+public enum McpTransportFailureKind
+{
+    InvalidJson,
+    InvalidMessage,
+    MessageTooLarge,
+    DuplicateMessageId,
+    InvalidMessageId,
+    ExcessiveUnmatchedMessages,
+    EndOfStream,
+    ProcessExited,
+    IoFailure
+}
+
 public abstract record McpServerDescriptor(
     McpServerDescriptorKind DescriptorKind,
     CapabilityIdentity Identity,

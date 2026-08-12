@@ -10,6 +10,16 @@ internal sealed class ProcessInstancePlanEntityConfiguration : IEntityTypeConfig
         builder.ToTable("process_instance_plans");
         builder.HasKey(plan => plan.PlanId);
         builder.Property(plan => plan.PlanHash).HasMaxLength(128).IsRequired();
+        builder.Property(plan => plan.PlanHashAlgorithmVersion)
+            .HasConversion<string>()
+            .HasMaxLength(64);
+        builder.Property(plan => plan.ExecutionState)
+            .HasConversion<string>()
+            .HasMaxLength(64)
+            .IsRequired();
+        builder.Property(plan => plan.MigrationReason)
+            .HasConversion<string>()
+            .HasMaxLength(128);
         builder.Property(plan => plan.PlanSchemaVersion).HasMaxLength(64).IsRequired();
         builder.Property(plan => plan.DefinitionContentHash).HasMaxLength(128).IsRequired();
         builder.Property(plan => plan.PayloadJson).IsRequired();

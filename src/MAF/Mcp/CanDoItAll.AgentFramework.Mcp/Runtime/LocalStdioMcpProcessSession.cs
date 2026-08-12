@@ -10,6 +10,7 @@ internal sealed class LocalStdioMcpProcessSession
     private readonly string correlationId;
     private readonly IWorkspaceLongRunningProcessHost processHost;
     private readonly IWorkspacePathResolutionService pathResolver;
+    private McpJsonRpcStreamReader? messageReader;
     private LocalStdioMcpServerDescriptor? pendingDescriptor;
     private IWorkspaceDuplexProcessSession? session;
 
@@ -75,10 +76,11 @@ internal sealed class LocalStdioMcpProcessSession
     {
         try
         {
-            return await McpJsonRpcFraming.ReadMessageAsync(
+            messageReader ??= new McpJsonRpcStreamReader(
                 currentSession.StandardOutput,
                 messageFraming,
-                cancellationToken);
+                McpPayloadSizeLimit.Default);
+            return await messageReader.ReadAsync(cancellationToken);
         }
         catch (EndOfStreamException) when (currentSession.HasExited)
         {
@@ -89,6 +91,7 @@ internal sealed class LocalStdioMcpProcessSession
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         var currentSession = Interlocked.Exchange(ref session, null);
+        messageReader = null;
         pendingDescriptor = null;
         if (currentSession is null)
         {
@@ -139,7 +142,7 @@ internal sealed class LocalStdioMcpProcessSession
         var hasStandardError = !string.IsNullOrWhiteSpace(session?.CaptureOutput().Stderr);
         return !hasStandardError
             ? string.Empty
-            : " Bounded stderr was captured and withheld from diagnostics.";
+            : " A bounded redacted stderr tail was captured and withheld from diagnostics.";
     }
 
     private McpSetupException ExitedProcessException(
@@ -150,6 +153,7 @@ internal sealed class LocalStdioMcpProcessSession
             category,
             fieldPath,
             $"MCP server '{serverKey}' exited unexpectedly.{BuildStandardErrorSuffix()}",
-            "Inspect the MCP command, managed package, and bounded stderr output.");
+            "Inspect the MCP command, managed package, and bounded stderr output.",
+            transportFailure: McpTransportFailureKind.ProcessExited);
     }
 }

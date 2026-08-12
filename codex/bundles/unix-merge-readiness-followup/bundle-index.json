@@ -1,8 +1,13 @@
 {
   "schema_version": 1,
-  "bundle_id": "candoitall-unix-merge-readiness-followup-2026-08-12",
-  "prepared_commit": "e282446daa2b775b93f2d70ea7fc0e282e26d802",
-  "file_count_excluding_index_and_checksums": 77,
+  "generated_utc": "2026-08-12T20:23:05.286895+00:00",
+  "root_name": "unix-merge-readiness-followup",
+  "payload_file_count": 126,
+  "payload_total_bytes": 176672,
+  "excluded_integrity_files": [
+    "bundle-index.json",
+    "CHECKSUMS.sha256"
+  ],
   "files": [
     {
       "path": "CODEX-EXECUTION-PROMPT.md",
@@ -16,8 +21,8 @@
     },
     {
       "path": "README.md",
-      "size_bytes": 3758,
-      "sha256": "01067f50bfc468aa0184545ab4954198bd7188a917dcd555ee3776547629101b"
+      "size_bytes": 5077,
+      "sha256": "a8a63d0e723ea69e7d422cc40160caffda3ffb17882808a406a0655988e36d24"
     },
     {
       "path": "REVIEW-SUMMARY-CS.md",
@@ -45,9 +50,14 @@
       "sha256": "347669a8ed366640fedfa9c1e168203dd5f18006269ebc8a14a9534ea862ed8d"
     },
     {
+      "path": "architecture/05-csharp-execution-gate.md",
+      "size_bytes": 3512,
+      "sha256": "a90be1965871e5684fbeb3e3b07a9897296ffb757f3117fb9c781bb248c47867"
+    },
+    {
       "path": "inventories/changed-contracts.csv",
-      "size_bytes": 1089,
-      "sha256": "78a67970c188eab9cc15c2ab0abb86dbdc56feb00cba3ba1f70cfc8ce9f2147a"
+      "size_bytes": 1343,
+      "sha256": "e74a53f8da75770c1f2bde1b27b1693958d737f4ed9a3a6cb9875b264855885b"
     },
     {
       "path": "inventories/findings.csv",
@@ -56,8 +66,8 @@
     },
     {
       "path": "inventories/source-hotspots.csv",
-      "size_bytes": 1389,
-      "sha256": "8e60472ed6e8f6508e18ab17b3e5fd8a647218d24380219194c470756d333d98"
+      "size_bytes": 1570,
+      "sha256": "1d4974f6be4087507242d4a67216a0a8b8828bfb6f0c6ae7d6d329e93cbd2462"
     },
     {
       "path": "manifest.json",
@@ -66,8 +76,8 @@
     },
     {
       "path": "plan/01-phase-plan.md",
-      "size_bytes": 1277,
-      "sha256": "f154cb1bc8a7e095f4da4621ad3ed437467557446bec60b9f4ebe4539c30c6a5"
+      "size_bytes": 1989,
+      "sha256": "36a3bfb4bc6f3e30ee354b2ae0d980086565ebeffc0c24560dc1b7ed81db4ee5"
     },
     {
       "path": "plan/02-validation-strategy.md",
@@ -76,8 +86,8 @@
     },
     {
       "path": "plan/03-validation-matrix.md",
-      "size_bytes": 1605,
-      "sha256": "9a9c171be34e8147dbc766162dbd9fff84ee6d634515a35da83b23aef2fad967"
+      "size_bytes": 1668,
+      "sha256": "88641fde4130a1fceafb9582a6573d83f161b2f918bd167deabb550e5ac191f3"
     },
     {
       "path": "plan/04-rollout-and-rollback.md",
@@ -86,8 +96,173 @@
     },
     {
       "path": "plan/05-command-catalog.md",
-      "size_bytes": 1881,
-      "sha256": "358578a12b85b936f5c3934a41fee69c71f57bdf7af619e8c9a9abebf848cfbc"
+      "size_bytes": 2119,
+      "sha256": "197ad5ec962978e8bb268912127b6988e80496ad239b3617084995a8c624d20f"
+    },
+    {
+      "path": "plan/06-proof-and-progression-contract.md",
+      "size_bytes": 2879,
+      "sha256": "d2b81c679f4c55bc9a55e4b71888c8b918f2c0705005f104df3bdf95c14102c9"
+    },
+    {
+      "path": "proof/C1/manifest.md",
+      "size_bytes": 507,
+      "sha256": "7e088d6d5a505a6e881714ecfae9af2a52c740654f47fef4a016ebc4f8a34b8a"
+    },
+    {
+      "path": "proof/C1/transcripts/validation.txt",
+      "size_bytes": 969,
+      "sha256": "36ab60782b9b79a275507c2db44642b1d39a830a2f6e949a84d1b1ebeba1a065"
+    },
+    {
+      "path": "proof/C2/manifest.md",
+      "size_bytes": 526,
+      "sha256": "f8ac388a6359260c8948a5f4116fa64c86fd226bc154bc73222da4ddc434d596"
+    },
+    {
+      "path": "proof/C2/transcripts/validation.txt",
+      "size_bytes": 1211,
+      "sha256": "60a0dd0937e3f2ed789790a53e0dd70b2e8b6dd262d08371ca91d0b986c12a05"
+    },
+    {
+      "path": "proof/M01/architecture-gate.md",
+      "size_bytes": 1267,
+      "sha256": "532f743796372126b1976654b0ec3db75ae0766b2427abede0ddfb4c9937e121"
+    },
+    {
+      "path": "proof/M01/manifest.md",
+      "size_bytes": 1512,
+      "sha256": "3c9d42f3aac724027a5c948723d4ae6d3f186f9a385002fe7242ee2b080b3022"
+    },
+    {
+      "path": "proof/M01/semantic-invariants.md",
+      "size_bytes": 1418,
+      "sha256": "f640796c37ccd18554409c3ed74a00f04bfef4cb11b0d9d6375100e20ce36b8f"
+    },
+    {
+      "path": "proof/M01/transcripts/failing-first-legacy-plan.txt",
+      "size_bytes": 647,
+      "sha256": "0be8057370f2c828d11a49a920d68d6e8cd22c67629fada87cfebc8ce3340fec"
+    },
+    {
+      "path": "proof/M01/transcripts/validation.txt",
+      "size_bytes": 1525,
+      "sha256": "56711cf75cecc90babbb08769ff75c2687da881a093521c32545df7686021282"
+    },
+    {
+      "path": "proof/M02/architecture-gate.md",
+      "size_bytes": 1313,
+      "sha256": "4a70de23c021512e05769d26c300a68db36e418785d669be847244c71427de3d"
+    },
+    {
+      "path": "proof/M02/manifest.md",
+      "size_bytes": 712,
+      "sha256": "55d6f8eaa7946f251b1a0cb056ac63ed55d0dccdc5421a80df23741dee15d839"
+    },
+    {
+      "path": "proof/M02/patches/filetools-desktop-contract-v2.patch",
+      "size_bytes": 9431,
+      "sha256": "2ec4c19a84a23eea8fc6a70d84026c28c9f0e637c5878876b90d2102d60bf538"
+    },
+    {
+      "path": "proof/M02/sibling-change-report.md",
+      "size_bytes": 1331,
+      "sha256": "493a9c115ba47eeab78874431ba0355023763eda4119f3e302ac135ae0da8829"
+    },
+    {
+      "path": "proof/M02/transcripts/validation.txt",
+      "size_bytes": 1636,
+      "sha256": "ac48f657ed4a3e27ac213ce7a488e2fbfc33524ffafb7f94650e2f45cb7fc395"
+    },
+    {
+      "path": "proof/M03/architecture-gate.md",
+      "size_bytes": 1325,
+      "sha256": "8425552e73f59acc9940b1439796fb1d61cacc476a318092ec1b9e685a6ab556"
+    },
+    {
+      "path": "proof/M03/manifest.md",
+      "size_bytes": 344,
+      "sha256": "bc601627c4cf23f769a712e5e5e1cb308e99111648916d90c831074654fb7a37"
+    },
+    {
+      "path": "proof/M03/transcripts/validation.txt",
+      "size_bytes": 832,
+      "sha256": "102748f63717f349317aacf06fa514e19cf3aab3035eb33d1fc97ba25fa4b410"
+    },
+    {
+      "path": "proof/M04/architecture-gate.md",
+      "size_bytes": 1833,
+      "sha256": "d8e6a4506c0f068d7ee9ae7039d2537cc8bed1239bd36c50b379805041f1c435"
+    },
+    {
+      "path": "proof/M04/manifest.md",
+      "size_bytes": 406,
+      "sha256": "98a4de57dbaff05b0111982cd55273f57119dd58e625b059b7e6b251ff0bdebb"
+    },
+    {
+      "path": "proof/M04/transcripts/validation.txt",
+      "size_bytes": 1610,
+      "sha256": "001f970a15d80802b709ebd30bab5a37d04d854f826d85839aea13a755d42f31"
+    },
+    {
+      "path": "proof/M05/architecture-gate.md",
+      "size_bytes": 1936,
+      "sha256": "a381036aecac4e831c66cf9321de74f2790ba77dbd168fd200fbc1b070b4c3df"
+    },
+    {
+      "path": "proof/M05/manifest.md",
+      "size_bytes": 472,
+      "sha256": "2be5ffeefdd6d77af4ec7e0e7f0ffb545259add9e2d6b3314451fbb476457eb2"
+    },
+    {
+      "path": "proof/M05/transcripts/validation.txt",
+      "size_bytes": 2212,
+      "sha256": "6b6d296ed75c23f148f7c8f9ec4e0a062f598886d0a7866bcc26715acfb79c2b"
+    },
+    {
+      "path": "proof/M06/architecture-gate.md",
+      "size_bytes": 1543,
+      "sha256": "17615a117f15e130f768f165c2b4a8f101bc0b1e6a0521726c3db9ca721e94a2"
+    },
+    {
+      "path": "proof/M06/manifest.md",
+      "size_bytes": 460,
+      "sha256": "c3f926b98e5f36f4ed9686e282a4937e6466e614b3351fedad2a257609487dd2"
+    },
+    {
+      "path": "proof/M06/transcripts/validation.txt",
+      "size_bytes": 711,
+      "sha256": "8873057ab305cc560680717827383660006db272b9fefa48cd648cd3bd34a402"
+    },
+    {
+      "path": "proof/M07/manifest.md",
+      "size_bytes": 675,
+      "sha256": "d2b7f6319fd8581fdf3cf240de78bf9b91c930c1222307baa5cb5d169c138ddb"
+    },
+    {
+      "path": "proof/M07/transcripts/validation.txt",
+      "size_bytes": 1628,
+      "sha256": "9b2032846f3e34e86782da0343370acaff112b600eb0d22500e5b5c24e212c08"
+    },
+    {
+      "path": "proof/M08/manifest.md",
+      "size_bytes": 1164,
+      "sha256": "7ff43cb68473e4e1ee4818b68eca992b31e94b0dab2c7da62b32a99a4daddfd3"
+    },
+    {
+      "path": "proof/M08/transcripts/validation.txt",
+      "size_bytes": 1228,
+      "sha256": "efa33179f252c19d5e59f71909ebd8477fa5148efa5c440c0f318616b8ffb1be"
+    },
+    {
+      "path": "proof/M09/manifest.md",
+      "size_bytes": 561,
+      "sha256": "79fe35aab6dd2cc278fc40a6a1e226d2631462577ac270943fdee40b1473d4a6"
+    },
+    {
+      "path": "proof/M10/manifest.md",
+      "size_bytes": 838,
+      "sha256": "1c606181fe46aa96885dd528725387c8ca18d1a760eb65d8a972379012104107"
     },
     {
       "path": "requirements/requirements.json",
@@ -106,13 +281,23 @@
     },
     {
       "path": "review/01-findings-register.md",
-      "size_bytes": 1807,
-      "sha256": "a15461833472d7b65425091212e0b1d1b4266e5a5f6ab567055be7a2fa53e7c3"
+      "size_bytes": 2134,
+      "sha256": "bab128bba6941ba47d88133fa8d03fd80581cd997217031b20fddf8dde41c0e7"
     },
     {
       "path": "review/02-accepted-alpha-deferrals.md",
-      "size_bytes": 1190,
-      "sha256": "9a18804a7cec84c8c7c6ee02d602e7d3cd645b55267ed21d0b24f91eb4052c7d"
+      "size_bytes": 1400,
+      "sha256": "1a8607850be9926aa11c33481d4aae37bba8f21dfa274e87d940d547e2975d4c"
+    },
+    {
+      "path": "review/03-execution-report.md",
+      "size_bytes": 2547,
+      "sha256": "939370c3b803849bc7a75a5706e339bf3e839a5d85df2c08eafce1ab032eda1d"
+    },
+    {
+      "path": "review/04-reanchor-report.md",
+      "size_bytes": 1556,
+      "sha256": "fa5b40251a267131275f85b01685ecd8145e78a94cdae2578ed881c068a07302"
     },
     {
       "path": "subbundles/c1-p0-shared-checkpoint/README.md",
@@ -122,12 +307,17 @@
     {
       "path": "subbundles/c1-p0-shared-checkpoint/exit-criteria.md",
       "size_bytes": 163,
-      "sha256": "a6c338211eed63438b49f8bc5d32cc7417b39467e149b657874958d983f5eb03"
+      "sha256": "29f55b7e7e82e111decce9c14ed1c000a1676d387eec5082c5e1a09d7c1815dd"
+    },
+    {
+      "path": "subbundles/c1-p0-shared-checkpoint/result.md",
+      "size_bytes": 2134,
+      "sha256": "422c5e6e674940cb663d8a5e325cfbdebbe9ae87d43a42a32c39c93fcf56193d"
     },
     {
       "path": "subbundles/c1-p0-shared-checkpoint/tasks.md",
       "size_bytes": 480,
-      "sha256": "052cb655b688555645d1c0470076e30cc6e0a1b96358c7a9cb27d094253eead2"
+      "sha256": "1cf0ebfff722e64214885d8a381d683d84c51058cc65433025db9a53e8434a10"
     },
     {
       "path": "subbundles/c1-p0-shared-checkpoint/validation.md",
@@ -142,12 +332,17 @@
     {
       "path": "subbundles/c2-protocol-and-authority-checkpoint/exit-criteria.md",
       "size_bytes": 133,
-      "sha256": "a274934c98c5f5dcddd8292454e9323a534fcea92480de5fadebf25b4b3644a3"
+      "sha256": "cdf5a770d941b5a443f42b0f03718e990385d281c62091f1825ee34485b89b76"
+    },
+    {
+      "path": "subbundles/c2-protocol-and-authority-checkpoint/result.md",
+      "size_bytes": 2751,
+      "sha256": "5e42c16289a3c58e47567e224bed4a47cde0e1bc0638f0b3cf3043d72be37d9f"
     },
     {
       "path": "subbundles/c2-protocol-and-authority-checkpoint/tasks.md",
       "size_bytes": 324,
-      "sha256": "12cdf2e9b821300e900b660164ca2c8c79e21f20b1c3ff9094392d8f1af05c7a"
+      "sha256": "123fd4defa135827ef8cb3e31633c36eb5fcb8699ef418b08320c5ee011c7cfa"
     },
     {
       "path": "subbundles/c2-protocol-and-authority-checkpoint/validation.md",
@@ -162,12 +357,17 @@
     {
       "path": "subbundles/m00-exact-anchor-baseline-reconciliation-and-repository-hygiene/exit-criteria.md",
       "size_bytes": 255,
-      "sha256": "d0da0505c19f58268e69b67cfac10f835a69d0c18e9d5573437b98542e78fdb3"
+      "sha256": "abf2d6585c12ee77b49d21205ec2b8fcb6d97eb08a824ecc37f98c689b290a09"
+    },
+    {
+      "path": "subbundles/m00-exact-anchor-baseline-reconciliation-and-repository-hygiene/result.md",
+      "size_bytes": 2332,
+      "sha256": "d02a5af33bbe8371488e386d2106c956986311cf218538fe7ea6d8398dc8ef2b"
     },
     {
       "path": "subbundles/m00-exact-anchor-baseline-reconciliation-and-repository-hygiene/tasks.md",
       "size_bytes": 773,
-      "sha256": "197a878770c5d15913081acfce41e09a66f99a05113369d54602b31606c5c53e"
+      "sha256": "364d07c99596ade4905e51938f38233fcc41a80a9f484554beb149659f24f137"
     },
     {
       "path": "subbundles/m00-exact-anchor-baseline-reconciliation-and-repository-hygiene/validation.md",
@@ -182,12 +382,17 @@
     {
       "path": "subbundles/m01-backward-compatible-persisted-process-plans-and-capability-migration/exit-criteria.md",
       "size_bytes": 285,
-      "sha256": "a4395be8bebb1363893387334b4eaf022448f0d1ed26e51b2933254471f7a353"
+      "sha256": "8d36f23f9ea49085f4bf733eb1d36395286d156cc3e2e23b1b8cdc3e8e96e6a7"
+    },
+    {
+      "path": "subbundles/m01-backward-compatible-persisted-process-plans-and-capability-migration/result.md",
+      "size_bytes": 3357,
+      "sha256": "eee86fcdd16482c17f4c76a1c6e7974806b310614dd8a859c76c723a2e3410b2"
     },
     {
       "path": "subbundles/m01-backward-compatible-persisted-process-plans-and-capability-migration/tasks.md",
       "size_bytes": 866,
-      "sha256": "f9ffe2b411ea4cc6dd644cd2a78827420e577577dd64a382b3864b55ea1dd030"
+      "sha256": "f0d2341d5a54b69a1445b2108ba3af922d6f889c9826b5fe9b3ca1b767bcde03"
     },
     {
       "path": "subbundles/m01-backward-compatible-persisted-process-plans-and-capability-migration/validation.md",
@@ -202,12 +407,17 @@
     {
       "path": "subbundles/m02-filetools-provenance-and-explicit-dependency-modes/exit-criteria.md",
       "size_bytes": 254,
-      "sha256": "674cd653836a9128c121687334c56ce40b42a454c68193165ca2d8ed42ebd630"
+      "sha256": "252401e3ee6d42e9c9e2eefe6298c06fd4dab5a63b21295360521d4377525225"
+    },
+    {
+      "path": "subbundles/m02-filetools-provenance-and-explicit-dependency-modes/result.md",
+      "size_bytes": 3822,
+      "sha256": "5cb53dbee3d7de56ff06d281cda198b6167c17eacd46e791f253b7ea5831c10c"
     },
     {
       "path": "subbundles/m02-filetools-provenance-and-explicit-dependency-modes/tasks.md",
       "size_bytes": 898,
-      "sha256": "a3102bbfcba5eb0df4bccf947958f005d6b16ff1ab48677022844fe4b7619c5f"
+      "sha256": "dba7ed1ba9a7ef9c66617b03643c888f2fe2af5d7515b62eeb069acae59e5860"
     },
     {
       "path": "subbundles/m02-filetools-provenance-and-explicit-dependency-modes/validation.md",
@@ -222,12 +432,17 @@
     {
       "path": "subbundles/m03-owned-process-groups-descendant-termination-and-exact-diagnostics/exit-criteria.md",
       "size_bytes": 279,
-      "sha256": "d99d55a5f18bcbb4866eb3354889101ee745d0b3b6354bffe9d03173e07f474a"
+      "sha256": "c58227f27b8bc767ec6de8fc68172c5bede5840d80cce6a31bd888d82eec7575"
+    },
+    {
+      "path": "subbundles/m03-owned-process-groups-descendant-termination-and-exact-diagnostics/result.md",
+      "size_bytes": 2613,
+      "sha256": "b78781e2dceab04cd29ffa26a35dcd5ea0d24b457596ff033d62953a42b16c18"
     },
     {
       "path": "subbundles/m03-owned-process-groups-descendant-termination-and-exact-diagnostics/tasks.md",
       "size_bytes": 739,
-      "sha256": "9eeaabb3faca0fb398366a39b400bfac0dbf3aa59767d922241de1cd556cc188"
+      "sha256": "33a0c5add9ff0312856074eee145f54ff56cfb01af9b7072e3090f41d2307e9c"
     },
     {
       "path": "subbundles/m03-owned-process-groups-descendant-termination-and-exact-diagnostics/validation.md",
@@ -242,12 +457,17 @@
     {
       "path": "subbundles/m04-local-stdio-mcp-bidirectional-json-rpc-control-handling/exit-criteria.md",
       "size_bytes": 208,
-      "sha256": "383c9da62090429d8a3b5c3337e4971ec7f36bf230b4ad39b12725dec01a3f61"
+      "sha256": "ee8eb065aa8b23404a8b9165d9700133dab5bfec4edba660ea82cbc64a7864a5"
+    },
+    {
+      "path": "subbundles/m04-local-stdio-mcp-bidirectional-json-rpc-control-handling/result.md",
+      "size_bytes": 2688,
+      "sha256": "1e0af1c930593a2d10eb5d87cc7512ac48d65388ec3a3b0488a3109bc57e3354"
     },
     {
       "path": "subbundles/m04-local-stdio-mcp-bidirectional-json-rpc-control-handling/tasks.md",
-      "size_bytes": 720,
-      "sha256": "e4eb5bf150b1b30949305ff76c40a476545b4f3717c665f321e7d512c16a3c24"
+      "size_bytes": 869,
+      "sha256": "29d12eeaed2485c25d8624561cfce255968fb70e2b8fdf4b894290534bdccdee"
     },
     {
       "path": "subbundles/m04-local-stdio-mcp-bidirectional-json-rpc-control-handling/validation.md",
@@ -262,12 +482,17 @@
     {
       "path": "subbundles/m05-docker-recipe-contracts-local-stack-and-future-workflow-readiness/exit-criteria.md",
       "size_bytes": 268,
-      "sha256": "24959ccc307eebdaa521237588b56a0fbab537ff711c46db874aabb2a924a01e"
+      "sha256": "858473c1e467321941a635ea364d5efd7e8e901a2e7fd18f8d618470d0045503"
+    },
+    {
+      "path": "subbundles/m05-docker-recipe-contracts-local-stack-and-future-workflow-readiness/result.md",
+      "size_bytes": 3431,
+      "sha256": "9342a441fa68f9befb6d70b6fc167dc4021b37d31a2fb29e81b19d3353f825cf"
     },
     {
       "path": "subbundles/m05-docker-recipe-contracts-local-stack-and-future-workflow-readiness/tasks.md",
       "size_bytes": 1092,
-      "sha256": "1b7e84e2dac8354bc6a7d9dd6494812c34edd9a128e71c0bcc6616e19de73555"
+      "sha256": "cbc0661d76dc8d304a3b06823e8b63a0f0d1d75f116b558c63c827fa6f5c0f34"
     },
     {
       "path": "subbundles/m05-docker-recipe-contracts-local-stack-and-future-workflow-readiness/validation.md",
@@ -282,12 +507,17 @@
     {
       "path": "subbundles/m06-executable-authority-and-central-workspace-path-safety/exit-criteria.md",
       "size_bytes": 290,
-      "sha256": "1642db974629a0b5c4852c444c4410afabb076b5dab162e2eac3cc6b1cfa2e88"
+      "sha256": "adce30424a444880d5ab3b48ad86368e6b7117f7440a662945b952d74f747c86"
+    },
+    {
+      "path": "subbundles/m06-executable-authority-and-central-workspace-path-safety/result.md",
+      "size_bytes": 2849,
+      "sha256": "331c6cb12dcce55aaf476036a6a1706cf5df157296bfe4c2a345e8a3bc06f519"
     },
     {
       "path": "subbundles/m06-executable-authority-and-central-workspace-path-safety/tasks.md",
       "size_bytes": 853,
-      "sha256": "3d4887d5e143357cddd74d14ac341a712fc0ab2cb8ce9ab36728077d3de219fb"
+      "sha256": "29cdde6193d6c265431288ccabd3afc9f006e74d7516988d7fffb8c60e2d6c61"
     },
     {
       "path": "subbundles/m06-executable-authority-and-central-workspace-path-safety/validation.md",
@@ -302,12 +532,17 @@
     {
       "path": "subbundles/m07-deterministic-validation-tooling-and-canonical-record-reconciliation/exit-criteria.md",
       "size_bytes": 189,
-      "sha256": "7994ae50d662eae1141ea53509156e5535d64f5325722ab829db61357c76f29e"
+      "sha256": "ce800ee756006ee41cc16fce19963ecec7bb52bfc341330b49ffbc512f1f7b6b"
+    },
+    {
+      "path": "subbundles/m07-deterministic-validation-tooling-and-canonical-record-reconciliation/result.md",
+      "size_bytes": 3463,
+      "sha256": "be301607365eb9a2769039e0861a5232eedb050fb774d476bee4cfa2f3a25ba0"
     },
     {
       "path": "subbundles/m07-deterministic-validation-tooling-and-canonical-record-reconciliation/tasks.md",
       "size_bytes": 903,
-      "sha256": "312ab2018a06be81452b1fbab7b70541b1af28434cff8a119e7ff9ac81faa29e"
+      "sha256": "8183cb6cd034ae8f6d033c98a14a32c4861a0a318845fbde994e7fa052ff0d93"
     },
     {
       "path": "subbundles/m07-deterministic-validation-tooling-and-canonical-record-reconciliation/validation.md",
@@ -322,12 +557,17 @@
     {
       "path": "subbundles/m08-integrated-windows-linux-local-merge-candidate/exit-criteria.md",
       "size_bytes": 176,
-      "sha256": "524aeb46a4531fc4dcae318c9257b9c04ba2be71349f0833a4b64c3504b3bc27"
+      "sha256": "93a9aaa844344befa45b1a5f473e1c954d2a33c670c93e6bb8746d6446042f78"
+    },
+    {
+      "path": "subbundles/m08-integrated-windows-linux-local-merge-candidate/result.md",
+      "size_bytes": 5440,
+      "sha256": "56e2d1389dea790633961c132dad391d47cef3080ef35ad2b94a3da59ce9fd94"
     },
     {
       "path": "subbundles/m08-integrated-windows-linux-local-merge-candidate/tasks.md",
       "size_bytes": 689,
-      "sha256": "7b993fc9c16df7dffa5ca429deb80a5f1db7e37561dd3d2532acc8db7ba7debf"
+      "sha256": "206e0b894972fcbc620c1788d8404555cec81bce97eb1320e0f398622f4aa79a"
     },
     {
       "path": "subbundles/m08-integrated-windows-linux-local-merge-candidate/validation.md",
@@ -342,12 +582,17 @@
     {
       "path": "subbundles/m09-genuine-macos-colleague-validation-handoff/exit-criteria.md",
       "size_bytes": 116,
-      "sha256": "652c9f199c01506563b35baf3dd10df5ae243f489a029c7b365cc9841b4c07f9"
+      "sha256": "e82c7e383ffe3b1eafad3feea4619fa7b69f73d9dbc4299ea62010ea253c3c99"
+    },
+    {
+      "path": "subbundles/m09-genuine-macos-colleague-validation-handoff/result.md",
+      "size_bytes": 1737,
+      "sha256": "fa876829dd85dcc3213f1c20ae033a05ee56a807407d72f585c735c8808f139e"
     },
     {
       "path": "subbundles/m09-genuine-macos-colleague-validation-handoff/tasks.md",
       "size_bytes": 740,
-      "sha256": "d4373fa78c6653d1d9fc9f3c722b5ae66e2ae85c77ed34d9b9ead83b90df7ee3"
+      "sha256": "6d0a90bf818adf8d583a9c3e8a1694c82aa155c3fdb6db27ead521cd5e97ebe1"
     },
     {
       "path": "subbundles/m09-genuine-macos-colleague-validation-handoff/validation.md",
@@ -362,12 +607,17 @@
     {
       "path": "subbundles/m10-final-bookkeeping-and-merge-readiness-decision/exit-criteria.md",
       "size_bytes": 123,
-      "sha256": "a4107d75f8b2228fcca5870dde3f0ae53ffae4efa1e07694b93f8507cea27600"
+      "sha256": "7bd5c0b632d73022ead96438ad0ac707c9a643544aa9fb8571f07a2551f2bba4"
+    },
+    {
+      "path": "subbundles/m10-final-bookkeeping-and-merge-readiness-decision/result.md",
+      "size_bytes": 2302,
+      "sha256": "1aff29db825a17216569561e306808c475a7be5e4af09b265854a4c8dde094d7"
     },
     {
       "path": "subbundles/m10-final-bookkeeping-and-merge-readiness-decision/tasks.md",
       "size_bytes": 530,
-      "sha256": "5d8f1080ab6ddc4d74f5d64737b9b372ebda23a65877720af6e8663b26f345d0"
+      "sha256": "0a2ed2d5c97093497b5d9be4897bb25c5aa7378698b01a5bdc50a5ded0983e05"
     },
     {
       "path": "subbundles/m10-final-bookkeeping-and-merge-readiness-decision/validation.md",
@@ -376,8 +626,8 @@
     },
     {
       "path": "templates/macos-handoff.md",
-      "size_bytes": 879,
-      "sha256": "6c89d6c2a6ae8916b22de17f9ea90f4c5781cb57910ea939962c1a22388b7531"
+      "size_bytes": 7696,
+      "sha256": "4585859f5cf0fcda0776012155d4ccc04cca1cab464739e4525f1f97b2ca61d2"
     },
     {
       "path": "templates/subbundle-result.md",
@@ -386,8 +636,8 @@
     },
     {
       "path": "templates/validation-invalidation-ledger.csv",
-      "size_bytes": 144,
-      "sha256": "1c44bac7cebffae5e1b8d960e2a55f343f1c07350d3660d82b89e123c22199a5"
+      "size_bytes": 8210,
+      "sha256": "5152fb7c22d8ef73be07c354507e03d1ad8a37f07e8d37cfb550e911ea1b843f"
     }
   ]
 }

@@ -49,6 +49,81 @@ public sealed class WorkspacePathResolverGuardTests
     }
 
     [Fact]
+    public void ResolveWorkspacePath_rejects_symbolic_link_traversal_to_an_outside_root()
+    {
+        var parentRoot = TestFileSystem.CreateTemporaryRoot("workspace-path-link");
+
+        try
+        {
+            string workspaceRoot = Directory.CreateDirectory(Path.Combine(parentRoot, "workspace")).FullName;
+            string outsideRoot = Directory.CreateDirectory(Path.Combine(parentRoot, "outside")).FullName;
+            string linkPath = Path.Combine(workspaceRoot, "outside-link");
+            Directory.CreateSymbolicLink(linkPath, outsideRoot);
+            var sut = CreateSut(workspaceRoot);
+
+            WorkspacePathAccessResult result = sut.ResolveWorkspacePath(
+                Path.Combine("outside-link", "secret.txt"));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("symbolic-link or reparse-point", result.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(parentRoot);
+        }
+    }
+
+    [Fact]
+    public void ResolveManagedFilePath_rejects_symbolic_link_traversal_to_an_outside_root()
+    {
+        var parentRoot = TestFileSystem.CreateTemporaryRoot("managed-path-link");
+
+        try
+        {
+            string workspaceRoot = Directory.CreateDirectory(Path.Combine(parentRoot, "workspace")).FullName;
+            string managedRoot = Directory.CreateDirectory(Path.Combine(workspaceRoot, "managed-files")).FullName;
+            string outsideRoot = Directory.CreateDirectory(Path.Combine(parentRoot, "outside")).FullName;
+            Directory.CreateSymbolicLink(Path.Combine(managedRoot, "outside-link"), outsideRoot);
+            var sut = CreateSut(workspaceRoot);
+
+            WorkspacePathAccessResult result = sut.ResolveManagedFilePath(
+                Path.Combine("outside-link", "secret.txt"));
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("symbolic-link or reparse-point", result.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(parentRoot);
+        }
+    }
+
+    [Fact]
+    public void ResolveWorkspacePath_accepts_existing_paths_and_contained_missing_leaves()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("workspace-path-safe");
+
+        try
+        {
+            string existingPath = Directory.CreateDirectory(Path.Combine(workspaceRoot, "existing")).FullName;
+            var sut = CreateSut(workspaceRoot);
+
+            WorkspacePathAccessResult existing = sut.ResolveWorkspacePath(existingPath);
+            WorkspacePathAccessResult missingLeaf = sut.ResolveWorkspacePath(
+                Path.Combine("existing", "missing.txt"));
+
+            Assert.True(existing.IsSuccess, existing.Message);
+            Assert.Equal(existingPath, existing.FullPath);
+            Assert.True(missingLeaf.IsSuccess, missingLeaf.Message);
+            Assert.Equal(Path.Combine(existingPath, "missing.txt"), missingLeaf.FullPath);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public void ResolveWorkspacePath_uses_detected_root_case_semantics()
     {
         var parentRoot = TestFileSystem.CreateTemporaryRoot("workspace-path-case");

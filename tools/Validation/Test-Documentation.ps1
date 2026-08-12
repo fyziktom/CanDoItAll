@@ -197,7 +197,7 @@ foreach ($project in $projects) {
 }
 
 $forbiddenTrackedPatterns = @(
-    '^(?:\.codex|\.codex-runtime|docs/images|outputs?)/',
+    '^(?:\.codex|\.codex-runtime|\.local|docs/images|outputs?)/',
     '^CanDoItAll\.Mcp\..*\.settings\.json$',
     '^\.vscode/mcp\.json$',
     '\.csproj\.user$',

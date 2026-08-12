@@ -199,6 +199,132 @@ public sealed class McpExternalToolPortabilityIntegrationTests
         }
     }
 
+    [Fact]
+    [Trait("Category", "McpPortability")]
+    public async Task Local_stdio_MCP_answers_peer_ping_before_list_and_call_responses()
+    {
+        using var workspace = new TemporaryDirectory();
+        var client = await CreateMcpFactory(workspace.Path).CreateAsync(
+            CreateMcpDescriptor(
+                workspace.Path,
+                ["--ping-before-response"],
+                bindSecret: false),
+            "mcp-peer-ping",
+            CancellationToken.None);
+        try
+        {
+            await client.StartAsync(CancellationToken.None);
+            var tools = await client.ListToolsAsync(CancellationToken.None);
+            var result = await client.CallToolAsync(
+                McpToolName.Create("echo"),
+                "{}",
+                CancellationToken.None);
+
+            Assert.Equal("echo", Assert.Single(tools).Name.Value);
+            Assert.Contains("\"ok\":true", result, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await client.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Theory]
+    [InlineData("--unsupported-peer-request")]
+    [InlineData("--notification-before-list")]
+    [InlineData("--exit-after-list")]
+    [Trait("Category", "McpPortability")]
+    public async Task Local_stdio_MCP_handles_bounded_peer_control_before_the_list_response(
+        string mode)
+    {
+        using var workspace = new TemporaryDirectory();
+        var client = await CreateMcpFactory(workspace.Path).CreateAsync(
+            CreateMcpDescriptor(workspace.Path, [mode], bindSecret: false),
+            "mcp-peer-control",
+            CancellationToken.None);
+        try
+        {
+            await client.StartAsync(CancellationToken.None);
+            var tools = await client.ListToolsAsync(CancellationToken.None);
+
+            Assert.Equal("echo", Assert.Single(tools).Name.Value);
+        }
+        finally
+        {
+            await client.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Theory]
+    [InlineData("--excessive-unmatched", McpTransportFailureKind.ExcessiveUnmatchedMessages)]
+    [InlineData("--overlong-list", McpTransportFailureKind.MessageTooLarge)]
+    [InlineData("--deep-list", McpTransportFailureKind.InvalidJson)]
+    [InlineData("--duplicate-peer-id", McpTransportFailureKind.DuplicateMessageId)]
+    [InlineData("--invalid-peer-id", McpTransportFailureKind.InvalidMessageId)]
+    [InlineData("--duplicate-id-property", McpTransportFailureKind.DuplicateMessageId)]
+    [Trait("Category", "McpPortability")]
+    public async Task Local_stdio_MCP_rejects_bounded_or_invalid_peer_traffic(
+        string mode,
+        McpTransportFailureKind expectedFailure)
+    {
+        using var workspace = new TemporaryDirectory();
+        var client = await CreateMcpFactory(workspace.Path).CreateAsync(
+            CreateMcpDescriptor(
+                workspace.Path,
+                [mode],
+                timeout: TimeSpan.FromSeconds(20),
+                bindSecret: false),
+            "mcp-peer-adversarial",
+            CancellationToken.None);
+        try
+        {
+            await client.StartAsync(CancellationToken.None);
+            var exception = await Assert.ThrowsAsync<McpSetupException>(() =>
+                client.ListToolsAsync(CancellationToken.None));
+
+            Assert.Equal(expectedFailure, exception.TransportFailure);
+        }
+        finally
+        {
+            await client.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Theory]
+    [InlineData("--exit-before-list")]
+    [InlineData("--stderr-exit-before-list")]
+    [Trait("Category", "McpPortability")]
+    public async Task Local_stdio_MCP_reports_redacted_typed_transport_exit(string mode)
+    {
+        using var workspace = new TemporaryDirectory();
+        var client = await CreateMcpFactory(workspace.Path).CreateAsync(
+            CreateMcpDescriptor(workspace.Path, [mode], bindSecret: false),
+            "mcp-peer-exit",
+            CancellationToken.None);
+        try
+        {
+            await client.StartAsync(CancellationToken.None);
+            var exception = await Assert.ThrowsAsync<McpSetupException>(() =>
+                client.ListToolsAsync(CancellationToken.None));
+
+            Assert.Contains(
+                exception.TransportFailure,
+                new McpTransportFailureKind?[]
+                {
+                    McpTransportFailureKind.EndOfStream,
+                    McpTransportFailureKind.ProcessExited
+                });
+            Assert.DoesNotContain(
+                "stdio-secret-that-must-not-leak",
+                exception.Detail,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            await client.StopAsync(CancellationToken.None);
+        }
+    }
+
     [Theory]
     [InlineData("--external-json", true)]
     [InlineData("--external-invalid", false)]
@@ -350,7 +476,8 @@ public sealed class McpExternalToolPortabilityIntegrationTests
     private static LocalStdioMcpServerDescriptor CreateMcpDescriptor(
         string workspaceRoot,
         IReadOnlyList<string> arguments,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        bool bindSecret = true)
     {
         return McpDescriptorFactory.LocalStdio(
             CapabilityKey.Create("portable-local-mcp"),
@@ -362,10 +489,12 @@ public sealed class McpExternalToolPortabilityIntegrationTests
             workingDirectory: workspaceRoot,
             allowedWorkingDirectories: [],
             allowedTools: [McpToolName.Create("echo")],
-            environmentVariableBindings: new Dictionary<string, string>
-            {
-                ["MCP_TEST_SECRET"] = SecretSourceName
-            },
+            environmentVariableBindings: bindSecret
+                ? new Dictionary<string, string>
+                {
+                    ["MCP_TEST_SECRET"] = SecretSourceName
+                }
+                : new Dictionary<string, string>(),
             rawEnvironmentVariables: new Dictionary<string, string>(),
             approvalMode: McpApprovalMode.AlwaysRequire,
             timeout: timeout ?? TimeSpan.FromSeconds(5),

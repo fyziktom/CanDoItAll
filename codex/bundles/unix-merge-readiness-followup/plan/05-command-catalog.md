@@ -14,7 +14,7 @@ dotnet --info
 
 ```powershell
 dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false
-dotnet build ./CanDoItAll.slnx -c Release --no-restore -p:UseLocalCanDoItAllLibraries=false /m:1
+./tools/Validation/Test-RuntimePortability.ps1 -Configuration Release -UseLocalCanDoItAllLibraries:$false -BuildOnly
 ```
 
 ## Exact affected tests
@@ -29,7 +29,7 @@ dotnet test <test-project.csproj> -c Release --no-build --no-restore --filter "F
 ./tools/Validation/Test-RuntimePortability.ps1 -Scope All -SkipBuild -Configuration Release
 ```
 
-Only use `-SkipBuild` after the new build-stamp validation passes.
+`-BuildOnly` performs the single solution build and writes a durable stamp. Only use `-SkipBuild` against that exact stamp; the runner rejects commit, source, configuration, dependency-mode, SDK, dependency-anchor, catalog, assembly-path, or assembly-hash drift before starting tests.
 
 ## Stable suite — scheduled only
 

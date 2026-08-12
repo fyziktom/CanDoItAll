@@ -1,5 +1,24 @@
 # Phase plan
 
+## Subbundle Dependency Map
+
+```mermaid
+flowchart LR
+    M00 --> M01 --> M02 --> M03 --> C1
+    C1 --> M04 --> M05 --> M06 --> C2
+    C2 --> M07 --> M08 --> M09 --> M10
+```
+
+## Critical Subbundles
+
+`M01`, `M02`, `M03`, `M05`, `M06`, and `M08` are critical foundations. Reopening one invalidates every later checkpoint that reused its behavior, source anchor, or host proof.
+
+## Phase Gates
+
+- Phase A progresses only after C1 confirms MR-001 through MR-003 and no orphan descendant remains.
+- Phase B progresses only after C2 confirms bounded MCP/Docker behavior and actual-host path/executable authority.
+- Phase C freezes one immutable Windows/Linux candidate before M09; source changes after M08 reopen M08.
+
 ## Phase A — P0 compatibility and ownership
 
 - M00: establish immutable source/dependency baseline.

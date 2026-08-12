@@ -411,7 +411,6 @@ public sealed class EfProcessRuntimeUnitOfWork(
         if (existingPlan is not null)
         {
             ProcessInstancePlanPersistenceMapper.EnsureSameIdentityAndHash(existingPlan, plan);
-            _ = ProcessInstancePlanPersistenceMapper.ToPlan(existingPlan);
             return;
         }
 

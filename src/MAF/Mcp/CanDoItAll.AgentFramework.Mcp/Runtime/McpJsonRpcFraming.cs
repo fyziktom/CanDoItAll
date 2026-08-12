@@ -17,6 +17,12 @@ internal static class McpJsonRpcFraming
         CancellationToken cancellationToken)
     {
         var body = JsonSerializer.SerializeToUtf8Bytes(payload);
+        if (body.Length > McpPayloadSizeLimit.Default.MaximumBytes)
+        {
+            throw new McpMessageTooLargeException(
+                McpPayloadSizeLimit.Default.MaximumBytes);
+        }
+
         switch (messageFraming)
         {
             case McpStdioMessageFraming.ContentLength:

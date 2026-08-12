@@ -159,14 +159,18 @@ public sealed class WorkspacePathAccessGuard(
             }
 
             var candidate = ResolveCandidatePath(path, resolutionBase);
-            return workspacePathPolicy.IsWithinRoot(candidate)
-                ? WorkspacePathAccessResult.Success(candidate)
-                : WorkspacePathAccessResult.Failure("The resolved path is outside the active workspace root.");
+            if (!workspacePathPolicy.IsWithinRoot(candidate))
+            {
+                return WorkspacePathAccessResult.Failure("The resolved path is outside the active workspace root.");
+            }
+
+            workspacePathPolicy.EnsureSafePath(candidate, allowMissingLeaf: true);
+            return WorkspacePathAccessResult.Success(candidate);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             return WorkspacePathAccessResult.Failure(
-                exception is InvalidOperationException
+                exception is InvalidOperationException or PhysicalPathValidationException
                     ? exception.Message
                     : "The resolved path is outside the active workspace root.");
         }
@@ -195,14 +199,18 @@ public sealed class WorkspacePathAccessGuard(
                 ? Path.GetFullPath(path)
                 : ResolveRelativeManagedFilePath(path, workspaceRoot, managedFilesRoot, managedFilesRelativeRoot);
 
-            return managedFilesPathPolicy.IsWithinRoot(candidate)
-                ? WorkspacePathAccessResult.Success(candidate)
-                : WorkspacePathAccessResult.Failure("The resolved path is outside the active managed files root.");
+            if (!managedFilesPathPolicy.IsWithinRoot(candidate))
+            {
+                return WorkspacePathAccessResult.Failure("The resolved path is outside the active managed files root.");
+            }
+
+            managedFilesPathPolicy.EnsureSafePath(candidate, allowMissingLeaf: true);
+            return WorkspacePathAccessResult.Success(candidate);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             return WorkspacePathAccessResult.Failure(
-                exception is InvalidOperationException
+                exception is InvalidOperationException or PhysicalPathValidationException
                     ? exception.Message
                     : "The resolved path is outside the active managed files root.");
         }

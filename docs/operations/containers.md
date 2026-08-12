@@ -24,6 +24,15 @@ database is reachable only through the internal Compose network. Change
 the ignored `.secrets/db-password` value before using a shared host; Compose grants that
 file only to the app and database services as a read-only secret.
 
+PostgreSQL reads `POSTGRES_PASSWORD_FILE` only while initializing an empty `db-data`
+volume. Replacing `.secrets/db-password` does **not** rotate the role password in an
+existing database. It can instead make a recreated app use a password that PostgreSQL
+does not recognize. For disposable development data, run `docker compose down --volumes`,
+replace the ignored file, and create the stack again. To preserve an existing volume,
+connect with the current credential, use the interactive `psql` `\password` command so
+the new value is not placed in command history, then replace the secret file and recreate
+the app service. Never pass either password on a command line or write it to logs.
+
 Validate the resolved model:
 
 ```powershell

@@ -7,9 +7,11 @@ Desktop capability wrapper,src/Integration/CanDoItAll.FileTools.Integration/Conf
 Low-level process host,src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs,M03,P0
 MCP JSON-RPC connection,src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpJsonRpcConnection.cs,M04,P1
 Docker host tool,src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs,M05,P1
+Docker recipe parser,src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerRecipeContract.cs,M05,P1
 Local Docker stack,compose.yaml; src/App/CanDoItAll.Web/Dockerfile,M05,P1
 DB password file,src/Foundation/CanDoItAll.Infrastructure/Configuration/DatabasePasswordFileConfiguration.cs,M05,P2
 Workspace guard,src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs,M06,P1
 Executable locator,src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs,M06,P1
 Runtime test runner,tools/Validation/Test-RuntimePortability.ps1,M07,P1
+Runtime test catalog,tools/Validation/RuntimePortabilityCatalog.json,M07,P1
 Cross-platform workflow,.github/workflows/ci.yml,M05/M07,P1

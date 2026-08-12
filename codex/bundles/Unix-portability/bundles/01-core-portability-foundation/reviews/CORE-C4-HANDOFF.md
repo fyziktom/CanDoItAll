@@ -4,6 +4,12 @@
 
 - `Provisional implementation handoff approved — C4 remains deferred`
 
+## M07 reconciliation — 2026-08-12
+
+The historical pushed anchor below remains the Core-to-Runtime entry record. The current follow-up checkout is commit `386d8beb6038035f89a9a6961ec017d8213879a5` plus reviewed M00-M07 working-tree changes in package mode. Windows and Linux local proof is green through C2, including PostgreSQL, actual Chromium, process ownership, MCP, Docker, workspace-path, and executable-authority slices. M08 still owns the immutable local merge-candidate proof.
+
+This reconciliation does not upgrade C4 to complete: hosted workflow execution and genuine macOS arm64 evidence remain absent. The Components and FileTools package versions are `0.1.18`; explicit source mode remains a separate fail-closed development path with exact clean anchors.
+
 ## Exact anchor
 
 - Repository: `fyziktom/CanDoItAll`

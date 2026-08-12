@@ -1458,9 +1458,12 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         string? sideEffectManifest = null,
         IReadOnlyList<string>? requiredPaths = null)
     {
-        var productRoot = @"C:\temp\CanDoItAll\Calculator";
-        var solutionFile = $@"{productRoot}\Calculator.slnx";
-        var appProjectFile = $@"{productRoot}\src\Calculator\Calculator.csproj";
+        var productRoot = Path.GetFullPath(Path.Combine(
+            Path.GetTempPath(),
+            "CanDoItAll",
+            "Calculator"));
+        var solutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
         scriptRef ??= "artifacts/process-runs/11111111-2222-3333-4444-555555555555/scripts/create-dotnet-project.wire-solution.ps1";
         sideEffectManifest ??= JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
         {

@@ -85,6 +85,107 @@ public static class Program
                 await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
             }
 
+            if (mode == "--exit-before-list" && method == "tools/list")
+            {
+                return 0;
+            }
+
+            if (mode == "--stderr-exit-before-list" && method == "tools/list")
+            {
+                await Console.Error.WriteAsync(
+                    new string('x', 20 * 1024) +
+                    " token=stdio-secret-that-must-not-leak").ConfigureAwait(false);
+                await Console.Error.FlushAsync().ConfigureAwait(false);
+                return 7;
+            }
+
+            if (mode == "--ping-before-response" &&
+                method is "tools/list" or "tools/call" &&
+                !await ExchangePeerRequestAsync(
+                    $"ping-{method}",
+                    "ping",
+                    expectedErrorCode: null).ConfigureAwait(false))
+            {
+                return 31;
+            }
+
+            if (mode == "--unsupported-peer-request" &&
+                method == "tools/list" &&
+                !await ExchangePeerRequestAsync(
+                    "unsupported-1",
+                    "roots/list",
+                    expectedErrorCode: -32601).ConfigureAwait(false))
+            {
+                return 32;
+            }
+
+            if (mode == "--notification-before-list" && method == "tools/list")
+            {
+                await WriteLineAsync(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{}}")
+                    .ConfigureAwait(false);
+            }
+
+            if (mode == "--excessive-unmatched" && method == "tools/list")
+            {
+                for (var index = 0; index < 65; index++)
+                {
+                    await WriteLineAsync(
+                        $"{{\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{{\"progress\":{index}}}}}")
+                        .ConfigureAwait(false);
+                }
+
+                continue;
+            }
+
+            if (mode == "--overlong-list" && method == "tools/list")
+            {
+                await WriteLineAsync(new string('x', 8 * 1024 * 1024 + 1))
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            if (mode == "--deep-list" && method == "tools/list")
+            {
+                await WriteLineAsync(
+                    new string('[', 66) + "0" + new string(']', 66))
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            if (mode == "--duplicate-peer-id" && method == "tools/list")
+            {
+                if (!await ExchangePeerRequestAsync(
+                        "duplicate-1",
+                        "ping",
+                        expectedErrorCode: null).ConfigureAwait(false))
+                {
+                    return 33;
+                }
+
+                await WriteLineAsync(
+                    "{\"jsonrpc\":\"2.0\",\"id\":\"duplicate-1\",\"method\":\"ping\"}")
+                    .ConfigureAwait(false);
+                await Console.In.ReadLineAsync().ConfigureAwait(false);
+                return 0;
+            }
+
+            if (mode == "--invalid-peer-id" && method == "tools/list")
+            {
+                await WriteLineAsync(
+                    "{\"jsonrpc\":\"2.0\",\"id\":{},\"method\":\"ping\"}")
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            if (mode == "--duplicate-id-property" && method == "tools/list")
+            {
+                await WriteLineAsync(
+                    "{\"jsonrpc\":\"2.0\",\"id\":7,\"id\":8,\"method\":\"ping\"}")
+                    .ConfigureAwait(false);
+                continue;
+            }
+
             if (mode == "--invalid-list" && method == "tools/list")
             {
                 await Console.Out.WriteLineAsync(
@@ -183,6 +284,10 @@ public static class Program
             };
             await Console.Out.WriteLineAsync(response.ToJsonString()).ConfigureAwait(false);
             await Console.Out.FlushAsync().ConfigureAwait(false);
+            if (mode == "--exit-after-list" && method == "tools/list")
+            {
+                return 0;
+            }
         }
 
         return 0;
@@ -209,5 +314,53 @@ public static class Program
         {
             File.WriteAllText(readyFile, "ready");
         }
+    }
+
+    private static async Task<bool> ExchangePeerRequestAsync(
+        string id,
+        string method,
+        int? expectedErrorCode)
+    {
+        var request = new JsonObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = id,
+            ["method"] = method
+        };
+        await WriteLineAsync(request.ToJsonString()).ConfigureAwait(false);
+
+        var line = await Console.In.ReadLineAsync().ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return false;
+        }
+
+        using var response = JsonDocument.Parse(line);
+        var root = response.RootElement;
+        if (!root.TryGetProperty("jsonrpc", out var jsonRpc) ||
+            jsonRpc.GetString() != "2.0" ||
+            !root.TryGetProperty("id", out var responseId) ||
+            responseId.GetString() != id)
+        {
+            return false;
+        }
+
+        if (expectedErrorCode is null)
+        {
+            return root.TryGetProperty("result", out var result) &&
+                result.ValueKind == JsonValueKind.Object;
+        }
+
+        return root.TryGetProperty("error", out var error) &&
+            error.ValueKind == JsonValueKind.Object &&
+            error.TryGetProperty("code", out var code) &&
+            code.TryGetInt32(out var actualCode) &&
+            actualCode == expectedErrorCode;
+    }
+
+    private static async Task WriteLineAsync(string value)
+    {
+        await Console.Out.WriteLineAsync(value).ConfigureAwait(false);
+        await Console.Out.FlushAsync().ConfigureAwait(false);
     }
 }

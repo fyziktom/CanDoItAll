@@ -1,4 +1,5 @@
 using CanDoItAll.SharedKernel;
+using System.Runtime.InteropServices;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -20,6 +21,11 @@ public sealed class WorkspaceExecutableResolutionException(
 public sealed class WorkspaceExecutableLocator
 {
     private const string DefaultWindowsPathExtensions = ".COM;.EXE;.BAT;.CMD";
+    private const int MaximumCandidateCount = 16;
+    private const int MaximumCandidateLength = 1024;
+    private const int MaximumPathExtensionCount = 32;
+    private const int MaximumPathExtensionLength = 16;
+    private const int MaximumPathExtensionsLength = 512;
 
     private readonly LocalHostPlatform platform;
     private readonly Func<string, string?> environmentVariableReader;
@@ -42,19 +48,15 @@ public sealed class WorkspaceExecutableLocator
         string? workingDirectory = null)
     {
         ArgumentNullException.ThrowIfNull(candidateNames);
-        var normalizedCandidates = candidateNames
-            .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
-            .Select(candidate => candidate.Trim())
-            .ToArray();
-        if (normalizedCandidates.Length == 0)
+        if (candidateNames.Count is 0 or > MaximumCandidateCount)
         {
             throw new WorkspaceExecutableResolutionException(
                 WorkspaceExecutableResolutionFailure.InvalidCandidate,
-                "At least one executable candidate is required.");
+                $"Executable resolution requires from 1 through {MaximumCandidateCount} candidates.");
         }
 
         var sawNonExecutable = false;
-        foreach (var candidateName in normalizedCandidates)
+        foreach (var candidateName in candidateNames)
         {
             ValidateCandidateSyntax(candidateName);
             if (TryResolveExecutablePath(candidateName, workingDirectory, out var resolvedPath, out var nonExecutable))
@@ -70,8 +72,8 @@ public sealed class WorkspaceExecutableLocator
                 ? WorkspaceExecutableResolutionFailure.NotExecutable
                 : WorkspaceExecutableResolutionFailure.Missing,
             sawNonExecutable
-                ? $"None of the requested executable candidates is executable: {string.Join(", ", normalizedCandidates)}."
-                : $"Unable to resolve any requested executable candidate: {string.Join(", ", normalizedCandidates)}.");
+                ? $"None of the requested executable candidates is executable: {string.Join(", ", candidateNames)}."
+                : $"Unable to resolve any requested executable candidate: {string.Join(", ", candidateNames)}.");
     }
 
     internal static IReadOnlyList<string> GetCandidateFileNames(
@@ -84,13 +86,7 @@ public sealed class WorkspaceExecutableLocator
             return [executableName];
         }
 
-        var extensions = (string.IsNullOrWhiteSpace(pathExtensions)
-                ? DefaultWindowsPathExtensions
-                : pathExtensions)
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(extension => extension[0] == '.' ? extension : "." + extension)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var extensions = ParseWindowsPathExtensions(pathExtensions);
 
         return extensions
             .Select(extension => executableName + extension)
@@ -165,24 +161,29 @@ public sealed class WorkspaceExecutableLocator
         var fullPath = Path.GetFullPath(candidatePath);
         var finalTarget = File.ResolveLinkTarget(fullPath, returnFinalTarget: true);
         var identityPath = finalTarget?.FullName ?? fullPath;
-        if (platform != LocalHostPlatform.Windows && !HasUnixExecutePermission(identityPath))
+        var canonicalPath = platform == LocalHostPlatform.Windows
+            ? Path.GetFullPath(identityPath)
+            : ResolveUnixRealPath(identityPath);
+        if (platform != LocalHostPlatform.Windows && !HasCurrentIdentityUnixExecuteAccess(canonicalPath))
         {
             nonExecutable = true;
             resolvedPath = string.Empty;
             return false;
         }
 
-        resolvedPath = Path.GetFullPath(identityPath);
+        resolvedPath = canonicalPath;
         return true;
     }
 
     private void ValidateCandidateSyntax(string candidate)
     {
-        if (candidate.IndexOfAny(['\r', '\n', '\0']) >= 0)
+        if (string.IsNullOrWhiteSpace(candidate) ||
+            candidate.Length > MaximumCandidateLength ||
+            candidate.Any(char.IsControl))
         {
             throw new WorkspaceExecutableResolutionException(
                 WorkspaceExecutableResolutionFailure.InvalidCandidate,
-                "Executable candidates cannot contain control characters.");
+                $"Executable candidates must contain from 1 through {MaximumCandidateLength} characters and no control characters.");
         }
 
         var syntax = PhysicalPathSyntaxClassifier.Classify(candidate);
@@ -205,18 +206,93 @@ public sealed class WorkspaceExecutableLocator
            candidate.Contains('/', StringComparison.Ordinal) ||
            platform == LocalHostPlatform.Windows && candidate.Contains('\\', StringComparison.Ordinal);
 
-    private static bool HasUnixExecutePermission(string path)
+    private static string[] ParseWindowsPathExtensions(string? pathExtensions)
     {
-        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+        string configuredExtensions = string.IsNullOrEmpty(pathExtensions)
+            ? DefaultWindowsPathExtensions
+            : pathExtensions;
+        if (configuredExtensions.Length > MaximumPathExtensionsLength)
         {
-            return false;
+            throw InvalidPathExtensions(
+                $"PATHEXT exceeds the {MaximumPathExtensionsLength}-character limit.");
         }
 
-        var mode = File.GetUnixFileMode(path);
-        const UnixFileMode executePermissions =
-            UnixFileMode.UserExecute |
-            UnixFileMode.GroupExecute |
-            UnixFileMode.OtherExecute;
-        return (mode & executePermissions) != 0;
+        string[] entries = configuredExtensions.Split(';', StringSplitOptions.None);
+        if (entries.Length is 0 or > MaximumPathExtensionCount)
+        {
+            throw InvalidPathExtensions(
+                $"PATHEXT requires from 1 through {MaximumPathExtensionCount} entries.");
+        }
+
+        var normalizedExtensions = new string[entries.Length];
+        var seenExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < entries.Length; index++)
+        {
+            string entry = entries[index];
+            string extension = entry.StartsWith('.')
+                ? entry
+                : "." + entry;
+            if (entry.Length == 0 ||
+                extension.Length > MaximumPathExtensionLength ||
+                extension.Length == 1 ||
+                extension.Skip(1).Any(character => !char.IsAsciiLetterOrDigit(character)))
+            {
+                throw InvalidPathExtensions(
+                    "PATHEXT entries must be bounded simple alphanumeric file extensions.");
+            }
+
+            if (!seenExtensions.Add(extension))
+            {
+                throw InvalidPathExtensions("PATHEXT cannot contain duplicate extensions.");
+            }
+
+            normalizedExtensions[index] = extension;
+        }
+
+        return normalizedExtensions;
     }
+
+    private static WorkspaceExecutableResolutionException InvalidPathExtensions(string message)
+        => new(WorkspaceExecutableResolutionFailure.InvalidCandidate, message);
+
+    private static bool HasCurrentIdentityUnixExecuteAccess(string path)
+        => (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) &&
+           UnixExecutableNativeMethods.Access(path, UnixExecutableNativeMethods.ExecuteAccess) == 0;
+
+    private static string ResolveUnixRealPath(string path)
+    {
+        var pointer = UnixExecutableNativeMethods.RealPath(path, 0);
+        if (pointer == 0)
+        {
+            throw new WorkspaceExecutableResolutionException(
+                WorkspaceExecutableResolutionFailure.InvalidCandidate,
+                "The executable candidate's canonical path could not be resolved.");
+        }
+
+        try
+        {
+            return Marshal.PtrToStringUTF8(pointer)
+                ?? throw new WorkspaceExecutableResolutionException(
+                    WorkspaceExecutableResolutionFailure.InvalidCandidate,
+                    "The executable candidate's canonical path was empty.");
+        }
+        finally
+        {
+            UnixExecutableNativeMethods.Free(pointer);
+        }
+    }
+}
+
+internal static partial class UnixExecutableNativeMethods
+{
+    internal const int ExecuteAccess = 1;
+
+    [LibraryImport("libc", EntryPoint = "access", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    internal static partial int Access(string path, int mode);
+
+    [LibraryImport("libc", EntryPoint = "realpath", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    internal static partial nint RealPath(string path, nint resolvedPath);
+
+    [LibraryImport("libc", EntryPoint = "free")]
+    internal static partial void Free(nint pointer);
 }

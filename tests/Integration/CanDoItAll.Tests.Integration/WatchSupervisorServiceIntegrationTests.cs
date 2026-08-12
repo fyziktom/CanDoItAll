@@ -312,7 +312,16 @@ public sealed class WatchSupervisorServiceIntegrationTests
             Record = new ManagerOwnedProcessRecord(
                 Guid.NewGuid(),
                 request.Purpose,
-                new WorkspaceOwnedProcessIdentity(Environment.ProcessId, now, new string('a', 64)),
+                new WorkspaceOwnedProcessIdentity(
+                    Environment.ProcessId,
+                    now,
+                    new string('a', 64),
+                    new WorkspaceOwnedProcessBoundary(
+                        OperatingSystem.IsWindows()
+                            ? WorkspaceOwnedProcessBoundaryKind.WindowsJobObject
+                            : WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                        OperatingSystem.IsWindows() ? 0 : Environment.ProcessId,
+                        OperatingSystem.IsWindows() ? Guid.NewGuid() : Guid.Empty)),
                 "test-start",
                 request.ExecutablePath,
                 new string('b', 64),

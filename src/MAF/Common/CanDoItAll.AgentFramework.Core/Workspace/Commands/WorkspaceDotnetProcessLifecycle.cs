@@ -229,14 +229,16 @@ internal sealed class WorkspaceDotnetProcessLifecycle
             new WorkspaceOwnedProcessIdentity(
                 startup.AppProcessId,
                 startup.AppProcessStartedAtUtc,
-                startup.AppProcessExecutableFingerprint),
+                startup.AppProcessExecutableFingerprint,
+                startup.AppProcessBoundary
+                    ?? throw new InvalidDataException("The startup receipt does not contain an owned-process boundary.")),
             cancellationToken).ConfigureAwait(false);
         var succeeded = termination.Status is
             WorkspaceProcessTerminationStatus.Terminated or
             WorkspaceProcessTerminationStatus.AlreadyExited;
         var completedAtUtc = DateTimeOffset.UtcNow;
         var cleanup = new WorkspaceDotnetCleanupReceipt(
-            SchemaVersion: 2,
+            SchemaVersion: 3,
             Succeeded: succeeded,
             Message: termination.Message,
             StartupReceiptPath: lifecycle.StartupReceiptRelativePath,
@@ -288,7 +290,7 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                 processResult.StdoutTruncated,
                 processResult.StderrTruncated));
         var startup = new WorkspaceDotnetStartupReceipt(
-            SchemaVersion: 2,
+            SchemaVersion: 3,
             Succeeded: false,
             Message: processResult.FailureMessage,
             ListenUrl: lifecycle.ListenUrl,
@@ -296,6 +298,7 @@ internal sealed class WorkspaceDotnetProcessLifecycle
             AppProcessId: 0,
             AppProcessStartedAtUtc: processResult.StartedAtUtc,
             AppProcessExecutableFingerprint: string.Empty,
+            AppProcessBoundary: null,
             AppProcessTreeIds: [],
             KeepAlive: lifecycle.KeepAlive,
             LifetimeScope: lifecycle.LifetimeScope,
@@ -323,7 +326,7 @@ internal sealed class WorkspaceDotnetProcessLifecycle
     {
         var completedAtUtc = DateTimeOffset.UtcNow;
         var cleanup = new WorkspaceDotnetCleanupReceipt(
-            SchemaVersion: 2,
+            SchemaVersion: 3,
             Succeeded: false,
             Message: termination.Message,
             StartupReceiptPath: lifecycle.StartupReceiptRelativePath,
@@ -411,7 +414,7 @@ internal sealed class WorkspaceDotnetProcessLifecycle
         bool cleanupAttempted,
         bool? cleanupSucceeded)
         => new(
-            SchemaVersion: 2,
+            SchemaVersion: 3,
             Succeeded: succeeded,
             Message: SensitiveTextRedactor.Redact(message),
             ListenUrl: lifecycle.ListenUrl,
@@ -419,6 +422,7 @@ internal sealed class WorkspaceDotnetProcessLifecycle
             AppProcessId: identity.ProcessId,
             AppProcessStartedAtUtc: identity.StartedAtUtc,
             AppProcessExecutableFingerprint: identity.ExecutablePathFingerprint,
+            AppProcessBoundary: identity.Boundary,
             AppProcessTreeIds: [identity.ProcessId],
             KeepAlive: lifecycle.KeepAlive,
             LifetimeScope: lifecycle.LifetimeScope,
@@ -474,18 +478,30 @@ internal sealed class WorkspaceDotnetProcessLifecycle
 
     private static void ValidateStartupIdentity(WorkspaceDotnetStartupReceipt startup)
     {
-        if (startup.SchemaVersion != 2 ||
+        if (startup.SchemaVersion != 3 ||
             !startup.Succeeded ||
             startup.AppProcessId <= 0 ||
             startup.AppProcessStartedAtUtc == default ||
             string.IsNullOrWhiteSpace(startup.AppProcessExecutableFingerprint) ||
             startup.AppProcessExecutableFingerprint.Length != 64 ||
-            startup.AppProcessExecutableFingerprint.Any(character => !Uri.IsHexDigit(character)))
+            startup.AppProcessExecutableFingerprint.Any(character => !Uri.IsHexDigit(character)) ||
+            startup.AppProcessBoundary is null ||
+            !IsValidBoundary(startup.AppProcessBoundary))
         {
             throw new InvalidDataException(
                 "The startup receipt does not contain a valid owned-process identity.");
         }
     }
+
+    private static bool IsValidBoundary(WorkspaceOwnedProcessBoundary boundary)
+        => boundary.Kind switch
+        {
+            WorkspaceOwnedProcessBoundaryKind.WindowsJobObject =>
+                boundary.NativeId == 0 && boundary.InstanceId != Guid.Empty,
+            WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup =>
+                boundary.NativeId > 0 && boundary.NativeId <= int.MaxValue && boundary.InstanceId == Guid.Empty,
+            _ => false
+        };
 
     private static void WriteOutputLogs(
         WorkspaceDotnetRunLifecyclePlan lifecycle,
@@ -561,6 +577,7 @@ internal sealed record WorkspaceDotnetStartupReceipt(
     int AppProcessId,
     DateTimeOffset AppProcessStartedAtUtc,
     string AppProcessExecutableFingerprint,
+    WorkspaceOwnedProcessBoundary? AppProcessBoundary,
     IReadOnlyList<int> AppProcessTreeIds,
     bool KeepAlive,
     WorkspaceProcessLifetimeScope LifetimeScope,

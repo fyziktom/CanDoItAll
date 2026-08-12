@@ -416,7 +416,14 @@ public sealed class ManagerProcessOwnershipTests
         return new ManagerOwnedProcessRecord(
             Guid.Parse("bca18f44-f3eb-482c-b027-65947ad25a6c"),
             ManagerProcessPurpose.DotnetWatch,
-            new WorkspaceOwnedProcessIdentity(321, now, new string('b', 64)),
+            new WorkspaceOwnedProcessIdentity(
+                321,
+                now,
+                new string('b', 64),
+                new WorkspaceOwnedProcessBoundary(
+                    WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                    321,
+                    Guid.Empty)),
             "linux-proc-start:123456",
             ExecutablePath(),
             new string('c', 64),
@@ -545,7 +552,11 @@ public sealed class ManagerProcessOwnershipTests
         public WorkspaceOwnedProcessIdentity Identity { get; } = new(
             321,
             new DateTimeOffset(2026, 8, 11, 12, 0, 0, TimeSpan.Zero),
-            new string('b', 64));
+            new string('b', 64),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                321,
+                Guid.Empty));
 
         public int TerminationCount { get; private set; }
 

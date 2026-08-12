@@ -6,6 +6,11 @@ namespace CanDoItAll.AgentFramework.Mcp;
 
 internal static class LocalStdioMcpResponseParser
 {
+    private static readonly JsonDocumentOptions DocumentOptions = new()
+    {
+        MaxDepth = 64
+    };
+
     public static void ValidateInitializeResponse(
         JsonDocument response,
         string expectedProtocolVersion)
@@ -49,7 +54,7 @@ internal static class LocalStdioMcpResponseParser
     {
         try
         {
-            return JsonDocument.Parse(message);
+            return JsonDocument.Parse(message, DocumentOptions);
         }
         catch (JsonException)
         {
@@ -57,7 +62,8 @@ internal static class LocalStdioMcpResponseParser
                 category,
                 fieldPath,
                 $"MCP server '{serverKey}' returned invalid JSON.",
-                "Inspect the MCP server stdio framing and response payload.");
+                "Inspect the MCP server stdio framing and response payload.",
+                transportFailure: McpTransportFailureKind.InvalidJson);
         }
     }
 

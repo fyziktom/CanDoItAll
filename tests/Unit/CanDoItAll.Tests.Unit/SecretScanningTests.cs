@@ -69,8 +69,10 @@ public sealed class SecretScanningTests
     [InlineData("artifacts/gpu-profile/Default/Local Storage/state.json", true)]
     [InlineData("artifacts/gpu-profile-evidence/report.txt", false)]
     [InlineData("artifacts/acceptance/provider-output.json", false)]
+    [InlineData(".playwright-cli/page.yml", true)]
+    [InlineData(".playwright-mcp/page.yml", true)]
     [InlineData("src/Modules/Feature.cs", false)]
-    public void Secret_scanner_skips_only_the_generated_gpu_browser_profile_subtree(
+    public void Secret_scanner_skips_only_approved_generated_browser_subtrees(
         string relativePath,
         bool expectedToSkip)
     {
@@ -169,6 +171,7 @@ public sealed class SecretScanningTests
         return segments.Any(segment =>
             string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, ".artifacts", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, ".playwright-cli", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||

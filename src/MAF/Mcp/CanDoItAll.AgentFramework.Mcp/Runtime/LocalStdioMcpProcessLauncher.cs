@@ -150,7 +150,8 @@ internal static class LocalStdioMcpProcessLauncher
                         StdoutLimitCharacters: 256,
                         StderrLimitCharacters: 16 * 1024,
                         TerminationMode: WorkspaceProcessTerminationMode.GracefulThenForceTree,
-                        StandardIoMode: WorkspaceProcessStandardIoMode.Duplex),
+                        StandardIoMode: WorkspaceProcessStandardIoMode.Duplex,
+                        StderrCaptureMode: WorkspaceProcessTextCaptureMode.Tail),
                     cancellationToken)
                 .ConfigureAwait(false);
         }

@@ -1079,7 +1079,11 @@ public sealed class McpPortabilityPolicyTests
         public WorkspaceOwnedProcessIdentity Identity { get; } = new(
             2,
             DateTimeOffset.UnixEpoch,
-            new string('1', 64));
+            new string('1', 64),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                2,
+                Guid.Empty));
 
         public bool HasExited => false;
 
@@ -1140,7 +1144,11 @@ public sealed class McpPortabilityPolicyTests
         public WorkspaceOwnedProcessIdentity Identity { get; } = new(
             1,
             DateTimeOffset.UnixEpoch,
-            new string('0', 64));
+            new string('0', 64),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                1,
+                Guid.Empty));
 
         public bool HasExited => false;
 

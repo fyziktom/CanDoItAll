@@ -8,4 +8,6 @@ compose-local-stack,M05,Compose/Dockerfile/password file,Docker validator and st
 workspace-path-authority,M06,WorkspacePathAccessGuard,path/storage/agent workspace tests
 executable-resolution,M06,WorkspaceExecutableLocator,executable/env/process tests
 validation-catalog,M07,Test-RuntimePortability.ps1,runner self-tests; does not invalidate product behavior alone
+validation-build-stamp,M07,commit/source/mode/SDK/anchor/assembly identity,runner negative fixtures; does not invalidate product behavior alone
+runtime-fqn-catalog,M07,RuntimePortabilityCatalog.json,exact class/FQN/count discovery; no product full suite
 canonical-bookkeeping,M07/M10,bundle reports/inventories/checksums,validators only; no full test invalidation

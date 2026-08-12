@@ -77,6 +77,100 @@ public sealed class ProcessPersistenceStoreTests
         var persistedPlan = await new EfProcessInstancePlanStore(dbContext).LoadAsync(plan.Header.PlanId);
         Assert.NotNull(persistedPlan);
         Assert.Equal(plan.PlanHash, persistedPlan.PlanHash);
+        var persistedEntity = await dbContext.InstancePlans.SingleAsync();
+        Assert.Equal(ProcessPlanHasher.CurrentAlgorithmVersion, persistedEntity.PlanHashAlgorithmVersion);
+        Assert.Equal(PersistedProcessPlanExecutionState.Executable, persistedEntity.ExecutionState);
+        Assert.Null(persistedEntity.MigrationReason);
+    }
+
+    [Fact]
+    public async Task Legacy_v1_plan_without_host_capability_seal_is_persisted_as_needs_recompile()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.InstancePlans.Add(LegacyProcessPlanFixture.CreateEntity());
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+        var store = new EfProcessInstancePlanStore(dbContext);
+
+        var exception = await Assert.ThrowsAsync<ProcessPlanMigrationRequiredException>(() =>
+            store.LoadAsync(LegacyProcessPlanFixture.PlanId).AsTask());
+
+        Assert.Equal(LegacyProcessPlanFixture.PlanId, exception.PlanId);
+        Assert.Equal(ProcessPlanHashAlgorithmVersion.LegacyV1, exception.HashAlgorithmVersion);
+        Assert.Equal(ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed, exception.Reason);
+        var migratedEntity = await dbContext.InstancePlans.SingleAsync();
+        Assert.Equal(ProcessPlanHashAlgorithmVersion.LegacyV1, migratedEntity.PlanHashAlgorithmVersion);
+        Assert.Equal(PersistedProcessPlanExecutionState.NeedsRecompile, migratedEntity.ExecutionState);
+        Assert.Equal(ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed, migratedEntity.MigrationReason);
+        Assert.Equal(LegacyProcessPlanFixture.LegacyHash, migratedEntity.PlanHash);
+        Assert.Equal(LegacyProcessPlanFixture.Payload, migratedEntity.PayloadJson);
+
+        dbContext.ChangeTracker.Clear();
+
+        var restartedStore = new EfProcessInstancePlanStore(dbContext);
+        await Assert.ThrowsAsync<ProcessPlanMigrationRequiredException>(() =>
+            restartedStore.LoadAsync(LegacyProcessPlanFixture.PlanId).AsTask());
+        var restartedEntity = await dbContext.InstancePlans.SingleAsync();
+        Assert.Equal(ProcessPlanHashAlgorithmVersion.LegacyV1, restartedEntity.PlanHashAlgorithmVersion);
+        Assert.Equal(PersistedProcessPlanExecutionState.NeedsRecompile, restartedEntity.ExecutionState);
+        Assert.Equal(ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed, restartedEntity.MigrationReason);
+        Assert.Equal(LegacyProcessPlanFixture.LegacyHash, restartedEntity.PlanHash);
+        Assert.Equal(LegacyProcessPlanFixture.Payload, restartedEntity.PayloadJson);
+    }
+
+    [Fact]
+    public async Task Legacy_v1_plan_tampering_does_not_persist_migration_metadata()
+    {
+        await using var dbContext = CreateDbContext();
+        var entity = LegacyProcessPlanFixture.CreateEntity();
+        var payload = JsonNode.Parse(entity.PayloadJson)?.AsObject()
+            ?? throw new InvalidOperationException("The legacy plan payload must be a JSON object.");
+        payload["definition"]!["definitionContentHash"] = "sha256:tampered";
+        entity.PayloadJson = payload.ToJsonString();
+        dbContext.InstancePlans.Add(entity);
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var store = new EfProcessInstancePlanStore(dbContext);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.LoadAsync(LegacyProcessPlanFixture.PlanId).AsTask());
+
+        var unchangedEntity = await dbContext.InstancePlans.AsNoTracking().SingleAsync();
+        Assert.Null(unchangedEntity.PlanHashAlgorithmVersion);
+        Assert.Equal(PersistedProcessPlanExecutionState.Unknown, unchangedEntity.ExecutionState);
+        Assert.Null(unchangedEntity.MigrationReason);
+    }
+
+    [Fact]
+    public async Task Unversioned_plan_with_current_host_capability_fields_is_not_classified_as_legacy()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessInstancePlanStore(dbContext);
+        var plan = NewInitialPlan();
+        await store.PersistAsync(plan);
+        var entity = await dbContext.InstancePlans.SingleAsync();
+        entity.PlanHashAlgorithmVersion = null;
+        entity.ExecutionState = PersistedProcessPlanExecutionState.Unknown;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.LoadAsync(plan.Header.PlanId).AsTask());
+    }
+
+    [Fact]
+    public async Task Unversioned_plan_created_after_the_migration_boundary_is_not_classified_as_legacy()
+    {
+        await using var dbContext = CreateDbContext();
+        var entity = LegacyProcessPlanFixture.CreateEntity();
+        entity.CreatedAtUtc = ProcessInstancePlanPersistenceMapper.HostCapabilityHashMigrationBoundaryUtc;
+        dbContext.InstancePlans.Add(entity);
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var store = new EfProcessInstancePlanStore(dbContext);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.LoadAsync(LegacyProcessPlanFixture.PlanId).AsTask());
     }
 
     [Fact]
@@ -2576,6 +2670,82 @@ public sealed class ProcessPersistenceStoreTests
             ProcessStepInstanceId.New(),
             ProcessStepDefinitionId.New(),
             binding);
+    }
+
+    private static class LegacyProcessPlanFixture
+    {
+        public static readonly ProcessInstancePlanId PlanId = new(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"));
+
+        private const string DefinitionId = "22222222-2222-2222-2222-222222222222";
+        private const string DefinitionVersionId = "33333333-3333-3333-3333-333333333333";
+        public const string LegacyHash = "sha256:8d4c8bb0aadf2b8a4ed5ef249457e5354789fec5872dd7749a4a51b9810938b6";
+        public const string Payload = """
+            {
+              "header": {
+                "planId": { "value": "11111111-1111-1111-1111-111111111111" },
+                "rootPlanId": { "value": "11111111-1111-1111-1111-111111111111" },
+                "parentPlanId": null,
+                "parentStepId": null,
+                "planSchemaVersion": "processes.instance-plan.v1",
+                "createdAtUtc": "2026-08-01T00:00:00+00:00",
+                "hierarchyDepth": 0
+              },
+              "definition": {
+                "definitionId": { "value": "22222222-2222-2222-2222-222222222222" },
+                "versionId": { "value": "33333333-3333-3333-3333-333333333333" },
+                "definitionContentHash": "sha256:legacy-definition",
+                "sourceSchemaVersion": "runtime/1.0",
+                "targetSchemaVersion": "runtime/1.0",
+                "appliedMigrationIds": [],
+                "templateComponents": [],
+                "appliedLocalOverridePointers": []
+              },
+              "driverStack": { "drivers": [] },
+              "strategies": {
+                "executionBindings": [],
+                "managerBindings": [],
+                "recoveryBindings": [],
+                "resupplyBindings": []
+              },
+              "steps": [],
+              "artifactPlan": { "slots": [], "initialLedgerEntries": [] },
+              "branches": { "routes": [] },
+              "subprocesses": [],
+              "manager": {
+                "policyHash": "sha256:legacy-manager",
+                "managerStrategyBinding": null,
+                "recoveryBindings": [],
+                "resupplyBindings": []
+              },
+              "budgets": { "loopBudgets": [] },
+              "monitoring": {
+                "enabled": false,
+                "projectionConfigHash": "sha256:legacy-projection"
+              },
+              "security": {
+                "governancePolicyHash": "sha256:legacy-governance",
+                "requiredApprovalKeys": []
+              },
+              "planHash": "sha256:8d4c8bb0aadf2b8a4ed5ef249457e5354789fec5872dd7749a4a51b9810938b6"
+            }
+            """;
+
+        public static ProcessInstancePlanEntity CreateEntity()
+        {
+            return new ProcessInstancePlanEntity
+            {
+                PlanId = PlanId.Value,
+                RootPlanId = PlanId.Value,
+                DefinitionId = Guid.Parse(DefinitionId),
+                DefinitionVersionId = Guid.Parse(DefinitionVersionId),
+                PlanHash = LegacyHash,
+                PlanSchemaVersion = "processes.instance-plan.v1",
+                DefinitionContentHash = "sha256:legacy-definition",
+                PayloadJson = Payload,
+                CreatedAtUtc = new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero)
+            };
+        }
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

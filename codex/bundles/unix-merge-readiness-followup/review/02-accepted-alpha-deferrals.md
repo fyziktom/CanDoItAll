@@ -17,6 +17,8 @@ Alpha-supported secret paths are:
 
 Cross-publish is not actual-host proof. Keep macOS profiles `ActualHostUnverified` until `M09` is completed by the colleague. Keychain CRUD may remain a separate deferred validation from the general headless macOS gate.
 
+M08 closed the local Windows/Linux candidate. M09 currently records `MACOS NO-GO — environment` because no actual macOS arm64 colleague run exists. The populated command sequence is a handoff, not evidence.
+
 ## Hosted CI
 
 Do not execute hosted CI during implementation. The workflow must be left internally correct for later use, but local Windows/Linux evidence and the macOS colleague handoff are the current gating path.

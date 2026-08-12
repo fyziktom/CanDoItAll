@@ -70,7 +70,7 @@ public sealed class FileToolsDownloadLeaseTests
     }
 
     [Fact]
-    public async Task Desktop_launcher_delegates_when_the_direct_source_implementation_is_validated()
+    public async Task Desktop_launcher_delegates_when_the_implementation_is_validated()
     {
         var inner = new RecordingDesktopFileLauncher();
         var launcher = new ConfiguredDesktopFileLauncher(
@@ -79,7 +79,8 @@ public sealed class FileToolsDownloadLeaseTests
                 Enabled = true,
                 HostProfileAllowsDesktop = true
             }),
-            inner);
+            inner,
+            implementationValidated: true);
         var request = new DesktopFileLaunchRequest(
             Path.Combine(Path.GetTempPath(), "direct-source-launch.xlsx"));
 
@@ -88,6 +89,16 @@ public sealed class FileToolsDownloadLeaseTests
         Assert.True(launcher.IsAvailable);
         Assert.True(result.Succeeded);
         Assert.Equal(1, inner.LaunchCount);
+    }
+
+    [Fact]
+    public void Desktop_implementation_validation_matches_the_compiled_dependency_mode()
+    {
+#if CANDOITALL_FILETOOLS_DIRECT_SOURCE
+        Assert.True(FileToolsDesktopImplementationValidation.IsValidated);
+#else
+        Assert.False(FileToolsDesktopImplementationValidation.IsValidated);
+#endif
     }
 
     [Fact]

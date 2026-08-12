@@ -973,7 +973,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             var argumentLength = string.Join(" ", processHost.LastRequest.Arguments).Length;
             Assert.True(argumentLength < 8191);
             using var startup = await ReadStartupReceiptAsync(workspaceRoot, result);
-            Assert.Equal(2, startup.RootElement.GetProperty("schemaVersion").GetInt32());
+            Assert.Equal(3, startup.RootElement.GetProperty("schemaVersion").GetInt32());
             Assert.True(startup.RootElement.GetProperty("succeeded").GetBoolean());
             Assert.False(startup.RootElement.GetProperty("keepAlive").GetBoolean());
             Assert.True(startup.RootElement.GetProperty("cleanupAttempted").GetBoolean());
@@ -2577,11 +2577,17 @@ public sealed class WorkspaceCommandExecutionServiceTests
     private static string CreateOwnedProcessStartupReceiptJson(int processId = 12345)
         => JsonSerializer.Serialize(new
         {
-            schemaVersion = 2,
+            schemaVersion = 3,
             succeeded = true,
             appProcessId = processId,
             appProcessStartedAtUtc = DateTimeOffset.Parse("2026-08-10T12:00:00Z"),
             appProcessExecutableFingerprint = new string('a', 64),
+            appProcessBoundary = new
+            {
+                kind = WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                nativeId = processId,
+                instanceId = Guid.Empty
+            },
             appProcessTreeIds = new[] { processId }
         });
 
@@ -2884,7 +2890,11 @@ public sealed class WorkspaceCommandExecutionServiceTests
             public WorkspaceOwnedProcessIdentity Identity { get; } = new(
                 12345,
                 DateTimeOffset.UtcNow,
-                new string('a', 64));
+                new string('a', 64),
+                new WorkspaceOwnedProcessBoundary(
+                    WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                    12345,
+                    Guid.Empty));
 
             public bool HasExited => exitCode != 0 || executionTask?.IsCompleted == true;
 

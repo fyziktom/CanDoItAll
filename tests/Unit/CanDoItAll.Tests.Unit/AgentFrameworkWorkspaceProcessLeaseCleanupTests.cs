@@ -732,7 +732,11 @@ public sealed class AgentFrameworkWorkspaceProcessLeaseCleanupTests
             public WorkspaceOwnedProcessIdentity Identity { get; } = new(
                 12345,
                 DateTimeOffset.UtcNow,
-                new string('a', 64));
+                new string('a', 64),
+                new WorkspaceOwnedProcessBoundary(
+                    WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                    12345,
+                    Guid.Empty));
 
             public bool HasExited => false;
 

@@ -12,6 +12,6 @@
 | M06 | Core path/executable projects | symlink, X_OK, PATHEXT, controls | path/executable subset | no | Windows + Linux |
 | C2 | clean package Release | M04–M06 set | complete on both | no | Windows + Linux |
 | M07 | validation tooling | self-tests and stale-build negative proof | no product rerun unless tooling changes execution | no | Windows |
-| M08 | clean solution + publish | all merge-readiness regressions | complete on both | once each | Windows + Linux |
-| M09 | package Release/publish | macOS focused catalog | complete macOS | colleague decision | macOS arm64 |
-| M10 | none if bookkeeping only | validators/checksums | reuse M08/M09 | no | review |
+| M08 | PASS: clean solution + publish | PASS: all merge-readiness regressions | PASS: 468/468 both | one raw run each; P2 residuals disclosed | Windows + Linux |
+| M09 | not run | handoff ready | not run | `MACOS NO-GO — environment` | actual macOS arm64 required |
+| M10 | bookkeeping only | validators/checksums | M08 reused; no M09 host proof | no | bounded NO-GO review |

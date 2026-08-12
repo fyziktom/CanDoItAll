@@ -68,7 +68,8 @@ internal sealed class ConfiguredDesktopFileLauncher : IDesktopFileLauncher
 internal static class FileToolsDesktopImplementationValidation
 {
 #if CANDOITALL_FILETOOLS_DIRECT_SOURCE
-    public const bool IsValidated = true;
+    public const int RequiredContractVersion = 2;
+    public const bool IsValidated = DesktopFileLaunchContract.Version == RequiredContractVersion;
 #else
     public const bool IsValidated = false;
 #endif

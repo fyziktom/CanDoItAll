@@ -52,6 +52,64 @@ public sealed class WorkspaceExecutableLocatorTests
         Assert.Equal(["portable-tool"], candidates);
     }
 
+    [Theory]
+    [InlineData(".EXE;.C/MD")]
+    [InlineData(".EXE;C:\\CMD")]
+    [InlineData(".EXE;https:.CMD")]
+    [InlineData(".EXE;\t.CMD")]
+    [InlineData(".EXE;.exe")]
+    [InlineData("   ")]
+    public void Windows_Pathext_rejects_malformed_path_like_control_duplicate_or_whitespace_entries(
+        string pathExtensions)
+    {
+        var exception = Assert.Throws<WorkspaceExecutableResolutionException>(() =>
+            WorkspaceExecutableLocator.GetCandidateFileNames(
+                "portable-tool",
+                LocalHostPlatform.Windows,
+                pathExtensions));
+
+        Assert.Equal(WorkspaceExecutableResolutionFailure.InvalidCandidate, exception.Failure);
+    }
+
+    [Fact]
+    public void Windows_Pathext_rejects_excessive_entry_count()
+    {
+        string pathExtensions = string.Join(';', Enumerable.Range(0, 33).Select(index => $".X{index}"));
+
+        var exception = Assert.Throws<WorkspaceExecutableResolutionException>(() =>
+            WorkspaceExecutableLocator.GetCandidateFileNames(
+                "portable-tool",
+                LocalHostPlatform.Windows,
+                pathExtensions));
+
+        Assert.Equal(WorkspaceExecutableResolutionFailure.InvalidCandidate, exception.Failure);
+        Assert.Contains("1 through 32", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("portable\ttool")]
+    [InlineData("portable\u007ftool")]
+    public void Resolution_rejects_all_candidate_control_characters(string candidate)
+    {
+        var locator = new WorkspaceExecutableLocator(LocalHostPlatform.Linux, _ => null);
+
+        var exception = Assert.Throws<WorkspaceExecutableResolutionException>(() =>
+            locator.ResolveExecutablePath([candidate]));
+
+        Assert.Equal(WorkspaceExecutableResolutionFailure.InvalidCandidate, exception.Failure);
+    }
+
+    [Fact]
+    public void Resolution_rejects_excessive_candidate_length()
+    {
+        var locator = new WorkspaceExecutableLocator(LocalHostPlatform.Linux, _ => null);
+
+        var exception = Assert.Throws<WorkspaceExecutableResolutionException>(() =>
+            locator.ResolveExecutablePath([new string('x', 1025)]));
+
+        Assert.Equal(WorkspaceExecutableResolutionFailure.InvalidCandidate, exception.Failure);
+    }
+
     [Fact]
     public void Executable_authorization_uses_Windows_suffix_and_case_semantics()
     {
@@ -160,6 +218,57 @@ public sealed class WorkspaceExecutableLocatorTests
             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         Assert.Equal(Path.GetFullPath(targetPath), locator.ResolveExecutablePath(["portable-tool"]));
+    }
+
+    [Fact]
+    public void Unix_actual_host_requires_execute_access_for_the_current_file_owner_class()
+    {
+        if (OperatingSystem.IsWindows() || string.Equals(Environment.UserName, "root", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        using var directory = new TemporaryDirectory();
+        var executablePath = Path.Combine(directory.Path, "other-class-only-tool");
+        File.WriteAllText(executablePath, "#!/bin/sh\nexit 0\n");
+        File.SetUnixFileMode(
+            executablePath,
+            UnixFileMode.UserRead |
+            UnixFileMode.UserWrite |
+            UnixFileMode.GroupExecute |
+            UnixFileMode.OtherExecute);
+        var locator = new WorkspaceExecutableLocator(
+            LocalHostPlatform.Linux,
+            name => name == "PATH" ? directory.Path : null);
+
+        var exception = Assert.Throws<WorkspaceExecutableResolutionException>(() =>
+            locator.ResolveExecutablePath(["other-class-only-tool"]));
+
+        Assert.Equal(WorkspaceExecutableResolutionFailure.NotExecutable, exception.Failure);
+    }
+
+    [Fact]
+    public void Unix_actual_host_resolves_intermediate_directory_links_to_the_canonical_path()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var directory = new TemporaryDirectory();
+        string targetDirectory = Directory.CreateDirectory(Path.Combine(directory.Path, "target")).FullName;
+        string linkDirectory = Path.Combine(directory.Path, "link");
+        Directory.CreateSymbolicLink(linkDirectory, targetDirectory);
+        string targetPath = Path.Combine(targetDirectory, "portable-tool");
+        File.WriteAllText(targetPath, "#!/bin/sh\nexit 0\n");
+        MakeExecutable(targetPath);
+        var locator = new WorkspaceExecutableLocator(
+            LocalHostPlatform.Linux,
+            name => name == "PATH" ? linkDirectory : null);
+
+        string resolved = locator.ResolveExecutablePath(["portable-tool"]);
+
+        Assert.Equal(Path.GetFullPath(targetPath), resolved);
     }
 
     [Fact]

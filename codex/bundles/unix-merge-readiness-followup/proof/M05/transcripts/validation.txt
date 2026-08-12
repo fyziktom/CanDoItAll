@@ -1,0 +1,40 @@
+M05 validation summary
+Repository commit: 386d8beb6038035f89a9a6961ec017d8213879a5
+Dependency mode: package
+
+dotnet build tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -nologo -v:minimal
+PASS: 0 warnings, 0 errors
+
+dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore -nologo -v:minimal --filter "FullyQualifiedName~DockerHostToolServicePortabilityTests|FullyQualifiedName~DatabaseConfigurationTests|FullyQualifiedName~CrossPlatformCiWorkflowTests"
+PASS: 62 passed, 0 failed, 0 skipped
+
+dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --no-restore -nologo -v:minimal --filter "FullyQualifiedName~PluginDesktopPortabilityIntegrationTests"
+PASS: 2 passed, 0 failed, 0 skipped
+
+./tools/Validation/Test-Docker.ps1 -SkipDockerCommand -RunNegativeFixtures
+PASS: static positive and negative fixture validation
+
+./tools/Validation/Test-Docker.ps1 -RunNegativeFixtures
+PASS: static positive/negative validation and resolved Docker Compose model
+
+dotnet publish src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release --no-restore -nologo -v:minimal -o artifacts/unix-merge-readiness-followup/M05/web-publish
+PASS: final-source package-mode Web publish
+
+DB_PASSWORD_FILE=.secrets/m05-db-password APP_PORT=18085 APP_IMAGE=candoitall-app:m05-smoke docker compose --env-file .env.example -p candoitall-m05-smoke up -d --build --wait --wait-timeout 360
+PASS: final-source image built; app and db healthy
+
+GET http://127.0.0.1:18085/health
+PASS: HTTP 200
+
+docker inspect candoitall-m05-smoke-app-1 / candoitall-m05-smoke-db-1
+PASS: app binding 127.0.0.1:18085->8080; db PortBindings={}; both healthy
+
+docker compose --env-file .env.example -p candoitall-m05-smoke down --volumes --remove-orphans
+docker image rm candoitall-app:m05-smoke
+PASS: exact disposable containers, networks, volumes, image, and secret removed; existing candoitall-app stack remained healthy
+
+CodeAnalytics scoped force refresh: CanDoItAll.Plugin.Docker + CanDoItAll.Infrastructure
+PASS: snap-20260812141334-0b1deb50; hasBlockingErrors=false
+
+./tools/Validation/Test-Documentation.ps1
+PASS: 172 maintained Markdown files

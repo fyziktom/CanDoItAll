@@ -146,6 +146,23 @@ public enum WorkspaceProcessStandardIoMode
     Duplex
 }
 
+public enum WorkspaceProcessTextCaptureMode
+{
+    Prefix,
+    Tail
+}
+
+public enum WorkspaceOwnedProcessBoundaryKind
+{
+    WindowsJobObject,
+    UnixProcessGroup
+}
+
+public sealed record WorkspaceOwnedProcessBoundary(
+    WorkspaceOwnedProcessBoundaryKind Kind,
+    long NativeId,
+    Guid InstanceId);
+
 public sealed record WorkspaceProcessExecutionRequest(
     string ToolName,
     string RecipeId,
@@ -169,12 +186,14 @@ public sealed record WorkspaceProcessSessionRequest(
     int StderrLimitCharacters,
     string? StandardInput = null,
     WorkspaceProcessTerminationMode TerminationMode = WorkspaceProcessTerminationMode.ForceTree,
-    WorkspaceProcessStandardIoMode StandardIoMode = WorkspaceProcessStandardIoMode.Captured);
+    WorkspaceProcessStandardIoMode StandardIoMode = WorkspaceProcessStandardIoMode.Captured,
+    WorkspaceProcessTextCaptureMode StderrCaptureMode = WorkspaceProcessTextCaptureMode.Prefix);
 
 public sealed record WorkspaceOwnedProcessIdentity(
     int ProcessId,
     DateTimeOffset StartedAtUtc,
-    string ExecutablePathFingerprint);
+    string ExecutablePathFingerprint,
+    WorkspaceOwnedProcessBoundary Boundary);
 
 public sealed record WorkspaceProcessOutputSnapshot(
     string Stdout,

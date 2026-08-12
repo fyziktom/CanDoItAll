@@ -5341,6 +5341,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("DefinitionVersionId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExecutionState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MigrationReason")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<Guid?>("ParentPlanId")
                         .HasColumnType("uuid");
 
@@ -5355,6 +5364,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PlanHashAlgorithmVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("PlanSchemaVersion")
                         .IsRequired()
@@ -6193,6 +6206,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("RequiredHostCapabilitiesJson")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("[]");
 

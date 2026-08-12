@@ -95,18 +95,24 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
         try
         {
             var processHost = new LocalWorkspaceProcessHost();
-            await using var parent = await processHost.StartSessionAsync(
-                new WorkspaceProcessSessionRequest(
-                    "manager_reparent_integration",
-                    "manager.reparent-integration.v1",
-                    "/bin/sh",
-                    ["-c", "nohup sleep 30 >/dev/null 2>&1 & echo $!"],
-                    root,
-                    new Dictionary<string, string?>(),
-                    4_096,
-                    4_096));
-            var parentResult = await parent.WaitForExitAsync();
-            childProcessId = int.Parse(parentResult.Stdout.Trim(), System.Globalization.CultureInfo.InvariantCulture);
+            var parentStartInfo = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/setsid",
+                WorkingDirectory = root,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            parentStartInfo.ArgumentList.Add("/bin/sh");
+            parentStartInfo.ArgumentList.Add("-c");
+            parentStartInfo.ArgumentList.Add("nohup sleep 30 >/dev/null 2>&1 & echo $!");
+            using var parent = Process.Start(parentStartInfo)
+                ?? throw new InvalidOperationException("The unmanaged recovery fixture could not start.");
+            int originalParentProcessId = parent.Id;
+            string parentOutput = await parent.StandardOutput.ReadToEndAsync();
+            await parent.WaitForExitAsync();
+            childProcessId = int.Parse(parentOutput.Trim(), System.Globalization.CultureInfo.InvariantCulture);
 
             var discovery = new LinuxManagerProcessDiscovery();
             ManagerProcessDiscoveryResult discovered = ManagerProcessDiscoveryResult.Unavailable(
@@ -117,7 +123,7 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
             {
                 discovered = await discovery.ProbeAsync(childProcessId);
                 if (discovered is { Status: ManagerProcessDiscoveryStatus.Available, Evidence: not null } &&
-                    discovered.Evidence.ParentProcessId != parent.Identity.ProcessId)
+                    discovered.Evidence.ParentProcessId != originalParentProcessId)
                 {
                     break;
                 }
@@ -127,14 +133,20 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
 
             Assert.Equal(ManagerProcessDiscoveryStatus.Available, discovered.Status);
             Assert.NotNull(discovered.Evidence);
-            Assert.NotEqual(parent.Identity.ProcessId, discovered.Evidence.ParentProcessId);
+            Assert.NotEqual(originalParentProcessId, discovered.Evidence.ParentProcessId);
 
             using var child = Process.GetProcessById(childProcessId);
             var executablePath = child.MainModule!.FileName;
             var hostIdentity = new WorkspaceOwnedProcessIdentity(
                 childProcessId,
                 new DateTimeOffset(child.StartTime.ToUniversalTime()),
-                ComputeExecutablePathFingerprint(executablePath));
+                ComputeExecutablePathFingerprint(executablePath),
+                new WorkspaceOwnedProcessBoundary(
+                    OperatingSystem.IsWindows()
+                        ? WorkspaceOwnedProcessBoundaryKind.WindowsJobObject
+                        : WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                    OperatingSystem.IsWindows() ? 0 : originalParentProcessId,
+                    OperatingSystem.IsWindows() ? Guid.NewGuid() : Guid.Empty));
             var now = DateTimeOffset.UtcNow;
             var record = new ManagerOwnedProcessRecord(
                 Guid.NewGuid(),
@@ -146,7 +158,7 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
                 discovered.Evidence.ObservedCommandFingerprint,
                 root,
                 discovered.Evidence.OwnerIdentity,
-                parent.Identity.ProcessId,
+                originalParentProcessId,
                 "reparent-integration",
                 ManagerProcessLifecycleState.Running,
                 now,

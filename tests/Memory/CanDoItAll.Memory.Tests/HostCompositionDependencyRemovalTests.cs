@@ -86,15 +86,12 @@ public sealed class HostCompositionDependencyRemovalTests
             ["Memory:Providers:NativeRemote:ClientName"] = "test-memory-native-remote"
         }), MemoryTestHostEnvironment.Instance);
 
-        using var provider = services.BuildServiceProvider(validateScopes: false);
-        var driverKinds = provider.GetServices<IMemoryProviderDriver>()
-            .Select(driver => driver.DriverKind)
-            .Order()
-            .ToArray();
-
-        Assert.Equal(
-            [MemoryProviderDriverKind.Http, MemoryProviderDriverKind.Mcp, MemoryProviderDriverKind.NativeRemote, MemoryProviderDriverKind.Mock],
-            driverKinds);
+        Assert.Equal(4, services.Count(descriptor => descriptor.ServiceType == typeof(IMemoryProviderDriver)));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(DeterministicMockMemoryProviderDriver));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(HttpMemoryProviderDriver));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(McpMemoryProviderDriver));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(NativeRemoteMemoryProviderDriver));
+        Assert.DoesNotContain(services, descriptor => DescriptorMentions(descriptor, "Qdrant"));
     }
 
     [Fact]

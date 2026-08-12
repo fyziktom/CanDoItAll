@@ -60,6 +60,12 @@ public sealed class LocalWorkspaceProcessHostTests
             Assert.True(SpinWait.SpinUntil(
                 () => !IsProcessRunning(identity.ProcessId),
                 TimeSpan.FromSeconds(5)));
+
+            var repeatedTermination = await new LocalWorkspaceProcessHost()
+                .TerminateOwnedProcessAsync(persistedIdentity);
+
+            Assert.Equal(WorkspaceProcessTerminationStatus.AlreadyExited, repeatedTermination.Status);
+            Assert.False(repeatedTermination.ResidualProcessPossible);
         }
         finally
         {
@@ -135,6 +141,46 @@ public sealed class LocalWorkspaceProcessHostTests
     }
 
     [Fact]
+    public async Task Graceful_unix_termination_forces_surviving_child_after_root_exits()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var childPidFilePath = CreateChildPidFilePath();
+        var command =
+            $"trap 'exit 0' TERM; (trap '' TERM; while :; do sleep 1; done) & child_pid=$!; " +
+            $"printf '%s' \"$child_pid\" > {EscapeShellArgument(childPidFilePath)}; " +
+            "while :; do sleep 1; done";
+        var request = CreateSessionRequest(command) with
+        {
+            TerminationMode = WorkspaceProcessTerminationMode.GracefulThenForceTree
+        };
+        var host = new LocalWorkspaceProcessHost();
+        await using var session = await host.StartSessionAsync(request);
+
+        try
+        {
+            Assert.True(
+                SpinWait.SpinUntil(() => File.Exists(childPidFilePath), TimeSpan.FromSeconds(5)),
+                "Expected the child PID to be published before termination.");
+
+            var result = await session.TerminateAsync(
+                WorkspaceProcessTerminationReason.CallerCanceled,
+                "test termination");
+
+            Assert.False(result.ResidualProcessPossible);
+            AssertChildExited(childPidFilePath);
+        }
+        finally
+        {
+            TryKillProcessFromFile(childPidFilePath);
+            TryDeleteFile(childPidFilePath);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_writes_standard_input_and_closes_the_stream()
     {
         var host = new LocalWorkspaceProcessHost();
@@ -174,6 +220,30 @@ public sealed class LocalWorkspaceProcessHostTests
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("portable-duplex", stdout, StringComparison.Ordinal);
         Assert.Equal(string.Empty, result.Stdout);
+        Assert.False(result.ResidualProcessPossible);
+    }
+
+    [Fact]
+    public async Task Duplex_session_can_retain_a_bounded_stderr_tail()
+    {
+        var host = new LocalWorkspaceProcessHost();
+        var padding = new string('x', 400);
+        var command = OperatingSystem.IsWindows()
+            ? $"[Console]::Error.Write('prefix-{padding}-tail-marker')"
+            : $"printf '%s' 'prefix-{padding}-tail-marker' >&2";
+        var request = CreateSessionRequest(command) with
+        {
+            StandardIoMode = WorkspaceProcessStandardIoMode.Duplex,
+            StderrLimitCharacters = 256,
+            StderrCaptureMode = WorkspaceProcessTextCaptureMode.Tail
+        };
+        await using var session = await host.StartSessionAsync(request);
+
+        var result = await session.WaitForExitAsync(CancellationToken.None);
+
+        Assert.True(result.StderrTruncated);
+        Assert.DoesNotContain("prefix-", result.Stderr, StringComparison.Ordinal);
+        Assert.EndsWith("-tail-marker", result.Stderr, StringComparison.Ordinal);
         Assert.False(result.ResidualProcessPossible);
     }
 
@@ -237,7 +307,7 @@ public sealed class LocalWorkspaceProcessHostTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_returns_after_parent_exit_when_descendant_keeps_redirected_pipe_open()
+    public async Task ExecuteAsync_terminates_descendant_after_parent_exits()
     {
         var host = new LocalWorkspaceProcessHost();
         var childSleepSeconds = 30;
@@ -263,9 +333,8 @@ public sealed class LocalWorkspaceProcessHostTests
             Assert.True(
                 stopwatch.Elapsed < TimeSpan.FromSeconds(12),
                 $"Expected the host to return before the child released the inherited pipe. Elapsed: {stopwatch.Elapsed}.");
-            Assert.True(
-                result.StdoutTruncated || result.StderrTruncated,
-                "Expected at least one redirected stream to be marked truncated after the bounded drain timeout.");
+            Assert.False(result.ResidualProcessPossible);
+            AssertChildExited(childPidFilePath);
         }
         finally
         {
@@ -500,6 +569,9 @@ public sealed class LocalWorkspaceProcessHostTests
                 "$cmdProcess = [System.Diagnostics.Process]::Start($cmdStartInfo)",
                 "if ($cmdProcess -ne $null) {",
                 "    $cmdProcess.WaitForExit(5000) | Out-Null",
+                "}",
+                $"for ($attempt = 0; $attempt -lt 100 -and -not (Test-Path -LiteralPath '{escapedChildPidFilePath}'); $attempt++) {{",
+                "    Start-Sleep -Milliseconds 10",
                 "}",
                 "Write-Output 'parent-done'"
             ]);

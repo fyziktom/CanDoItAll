@@ -100,7 +100,6 @@ public sealed class DockerHostToolService(
 {
     private static readonly Regex ContainerNamePattern = new("^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$", RegexOptions.Compiled);
     private static readonly Regex ImageReferencePattern = new("^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,254}$", RegexOptions.Compiled);
-    private static readonly Regex PortMappingPattern = new("^[0-9]{1,5}:[0-9]{1,5}$", RegexOptions.Compiled);
     private static readonly Regex NamedPipeEndpointPattern = new(
         "^npipe:////\\./pipe/[a-zA-Z0-9._-]+$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -193,6 +192,7 @@ public sealed class DockerHostToolService(
             throw new InvalidOperationException($"Host-tool recipe '{recipeId}' is not available for plugin '{pluginId}'.");
         }
 
+        DockerRecipeContract.ValidateRecipeArguments(recipeId, arguments);
         DockerRuntimeContext? runtime = null;
         IReadOnlyList<string> dockerArguments;
         if (string.Equals(
@@ -245,7 +245,8 @@ public sealed class DockerHostToolService(
     {
         var containerName = RequireContainerName(arguments);
         var image = RequireImage(arguments);
-        var pullIfMissing = GetBool(arguments, "pullIfMissing", defaultValue: true);
+        var pullIfMissing = DockerRecipeContract.GetBoolean(arguments, "pullIfMissing", defaultValue: true);
+        IReadOnlyList<string> portMappings = DockerRecipeContract.ReadPortMappings(arguments);
         var containerInventory = await ExecuteDockerAsync(
             runtime,
             PluginHostToolRecipeIds.DockerStartContainer,
@@ -326,7 +327,7 @@ public sealed class DockerHostToolService(
             "--name",
             containerName
         };
-        foreach (var portMapping in ReadPortMappings(arguments))
+        foreach (var portMapping in portMappings)
         {
             runArguments.Add("-p");
             runArguments.Add(portMapping);
@@ -358,7 +359,7 @@ public sealed class DockerHostToolService(
     private static IReadOnlyList<string> BuildLogsArguments(IReadOnlyDictionary<string, string> arguments)
     {
         var containerName = RequireContainerName(arguments);
-        var tail = GetInt(arguments, "tail", defaultValue: 120, min: 1, max: 1000);
+        var tail = DockerRecipeContract.GetInteger(arguments, "tail", defaultValue: 120, min: 1, max: 1000);
         var dockerArguments = new List<string>
         {
             "logs",
@@ -368,9 +369,8 @@ public sealed class DockerHostToolService(
         if (arguments.TryGetValue("since", out var since) && !string.IsNullOrWhiteSpace(since))
         {
             var normalizedSince = since.Trim();
-            if (normalizedSince.Contains('\r', StringComparison.Ordinal) ||
-                normalizedSince.Contains('\n', StringComparison.Ordinal) ||
-                normalizedSince.Length > 64)
+            if (!string.Equals(since, normalizedSince, StringComparison.Ordinal) ||
+                !DockerRecipeContract.IsValidLogsSince(normalizedSince))
             {
                 throw new InvalidOperationException("Docker logs 'since' value is invalid.");
             }
@@ -391,6 +391,7 @@ public sealed class DockerHostToolService(
         int maxOutputCharacters,
         CancellationToken cancellationToken)
     {
+        DockerRecipeContract.ValidateDockerArguments(arguments);
         var request = new WorkspaceProcessExecutionRequest(
             ToolName: "docker",
             RecipeId: recipeId.Value,
@@ -488,55 +489,6 @@ public sealed class DockerHostToolService(
 
         return normalized;
     }
-
-    private static IReadOnlyList<string> ReadPortMappings(IReadOnlyDictionary<string, string> arguments)
-    {
-        if (!arguments.TryGetValue("portMappings", out var rawMappings) || string.IsNullOrWhiteSpace(rawMappings))
-        {
-            return [];
-        }
-
-        return rawMappings
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(ValidatePortMapping)
-            .ToArray();
-    }
-
-    private static string ValidatePortMapping(string portMapping)
-    {
-        if (!PortMappingPattern.IsMatch(portMapping))
-        {
-            throw new InvalidOperationException($"Docker port mapping '{portMapping}' is invalid.");
-        }
-
-        var parts = portMapping.Split(':');
-        var hostPort = int.Parse(parts[0]);
-        var containerPort = int.Parse(parts[1]);
-        if (hostPort is < 1 or > 65535 || containerPort is < 1 or > 65535)
-        {
-            throw new InvalidOperationException($"Docker port mapping '{portMapping}' is outside the valid port range.");
-        }
-
-        return portMapping;
-    }
-
-    private static bool GetBool(
-        IReadOnlyDictionary<string, string> arguments,
-        string key,
-        bool defaultValue)
-        => arguments.TryGetValue(key, out var value) && bool.TryParse(value, out var parsed)
-            ? parsed
-            : defaultValue;
-
-    private static int GetInt(
-        IReadOnlyDictionary<string, string> arguments,
-        string key,
-        int defaultValue,
-        int min,
-        int max)
-        => arguments.TryGetValue(key, out var value) && int.TryParse(value, out var parsed)
-            ? Math.Clamp(parsed, min, max)
-            : defaultValue;
 
     private DockerRuntimeContext ResolveRuntimeContext()
     {
