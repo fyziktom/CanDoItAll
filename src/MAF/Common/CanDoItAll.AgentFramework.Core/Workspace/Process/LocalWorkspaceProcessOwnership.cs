@@ -23,6 +23,8 @@ internal abstract class LocalWorkspaceProcessOwnershipStart : IDisposable
 
     public abstract ILocalWorkspaceProcessOwnership Attach(Process process);
 
+    public abstract Task<bool> AbortAsync(TimeSpan timeout);
+
     public abstract void Dispose();
 
     public static LocalWorkspaceProcessOwnershipStart Prepare(
@@ -122,6 +124,20 @@ internal sealed class WindowsJobObjectOwnershipStart : LocalWorkspaceProcessOwne
 
         jobHandle = null;
         return new WindowsJobObjectOwnership(handle, Identity);
+    }
+
+    public override async Task<bool> AbortAsync(TimeSpan timeout)
+    {
+        var handle = jobHandle;
+        if (handle is null)
+        {
+            return true;
+        }
+
+        jobHandle = null;
+        using var ownership = new WindowsJobObjectOwnership(handle, Identity);
+        return ownership.ForceTerminate() &&
+               await ownership.WaitForEmptyAsync(timeout).ConfigureAwait(false);
     }
 
     public override void Dispose()
@@ -245,6 +261,7 @@ internal sealed class UnixProcessGroupOwnershipStart : LocalWorkspaceProcessOwne
         "my $program = shift @ARGV; POSIX::setsid() >= 0 or die \"setsid: $!\"; kill 'STOP', $$ or die \"stop: $!\"; exec {$program} $program, @ARGV or die \"exec: $!\";";
     private const string ShellSessionBootstrap =
         "kill -STOP $$; exec \"$@\"";
+    private WorkspaceOwnedProcessBoundary? observedIdentity;
 
     private UnixProcessGroupOwnershipStart()
     {
@@ -302,6 +319,7 @@ internal sealed class UnixProcessGroupOwnershipStart : LocalWorkspaceProcessOwne
                     WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
                     processGroupId,
                     Guid.Empty);
+                observedIdentity = identity;
                 var continueSignal = OperatingSystem.IsMacOS() ? 19 : 18;
                 for (var attempt = 0; attempt < 20; attempt++)
                 {
@@ -332,6 +350,18 @@ internal sealed class UnixProcessGroupOwnershipStart : LocalWorkspaceProcessOwne
         }
 
         throw new InvalidOperationException("The process did not enter its dedicated Unix process group.");
+    }
+
+    public override async Task<bool> AbortAsync(TimeSpan timeout)
+    {
+        if (observedIdentity is not { } identity)
+        {
+            return false;
+        }
+
+        using var ownership = new UnixProcessGroupOwnership(identity);
+        return ownership.ForceTerminate() &&
+               await ownership.WaitForEmptyAsync(timeout).ConfigureAwait(false);
     }
 
     public override void Dispose()

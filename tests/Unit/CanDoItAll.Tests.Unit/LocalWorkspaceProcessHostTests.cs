@@ -8,6 +8,40 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class LocalWorkspaceProcessHostTests
 {
     [Fact]
+    public async Task Attachment_failure_does_not_leave_the_started_process_running()
+    {
+        var childPidFilePath = CreateChildPidFilePath();
+        var ownershipStart = new ThrowingOwnershipStart(childPidFilePath);
+        var host = new LocalWorkspaceProcessHost((_, _, _) => ownershipStart);
+
+        try
+        {
+            await Assert.ThrowsAsync<WorkspaceProcessStartException>(() =>
+                host.StartSessionAsync(CreateSessionRequest(BuildChildAndWaitCommand(childPidFilePath))));
+
+            Assert.True(ownershipStart.ProcessId is > 0);
+            Assert.True(ownershipStart.AbortCalled);
+            Assert.True(ownershipStart.Disposed);
+            Assert.True(
+                SpinWait.SpinUntil(
+                    () => !IsProcessRunning(ownershipStart.ProcessId!.Value),
+                TimeSpan.FromSeconds(5)),
+                $"Expected process {ownershipStart.ProcessId} to be terminated after attachment failed.");
+            AssertChildExited(childPidFilePath);
+        }
+        finally
+        {
+            if (ownershipStart.ProcessId is { } processId)
+            {
+                TryKillProcess(processId);
+            }
+
+            TryKillProcessFromFile(childPidFilePath);
+            TryDeleteFile(childPidFilePath);
+        }
+    }
+
+    [Fact]
     public void Dotnet_run_lifecycle_uses_the_typed_host_without_generated_shell_launchers()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -582,4 +616,40 @@ public sealed class LocalWorkspaceProcessHostTests
 
     private static string EscapeShellArgument(string value)
         => "'" + value.Replace("'", "'\"'\"'") + "'";
+
+    private sealed class ThrowingOwnershipStart(string childPidFilePath) : LocalWorkspaceProcessOwnershipStart
+    {
+        public int? ProcessId { get; private set; }
+
+        public bool Disposed { get; private set; }
+
+        public bool AbortCalled { get; private set; }
+
+        public override WorkspaceOwnedProcessBoundary Identity
+            => throw new InvalidOperationException("Attachment did not establish an ownership identity.");
+
+        public override ILocalWorkspaceProcessOwnership Attach(Process process)
+        {
+            ProcessId = process.Id;
+            if (!SpinWait.SpinUntil(
+                    () => File.Exists(childPidFilePath),
+                    TimeSpan.FromSeconds(5)))
+            {
+                throw new InvalidOperationException("The child process fixture did not publish its identity.");
+            }
+
+            throw new InvalidOperationException("Injected ownership attachment failure.");
+        }
+
+        public override Task<bool> AbortAsync(TimeSpan timeout)
+        {
+            AbortCalled = true;
+            return Task.FromResult(false);
+        }
+
+        public override void Dispose()
+        {
+            Disposed = true;
+        }
+    }
 }

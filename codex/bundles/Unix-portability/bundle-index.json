@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-12T20:22:30.793003+00:00",
+  "generated_utc": "2026-08-13T02:53:33.221514+00:00",
   "root_name": "Unix-portability",
   "payload_file_count": 339,
-  "payload_total_bytes": 4904808,
+  "payload_total_bytes": 4906905,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -181,8 +181,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/finding-to-subbundle.csv",
-      "size_bytes": 3593,
-      "sha256": "15809c65c0cbfbede0cb0b91a48f6460fd1bf59a763450def382c8a5dc1e2e1d"
+      "size_bytes": 3567,
+      "sha256": "9e8bc50a9b1d011ebc70e9267199ff9dd333de94f195fa811e6254ee1f3aea65"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/path-field-inventory-template.csv",
@@ -211,8 +211,8 @@
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/requirement-traceability.csv",
-      "size_bytes": 2753,
-      "sha256": "3afab719aa414fa3de2219686ed198f51b589c1d91f188caede4e4a847b24abd"
+      "size_bytes": 2752,
+      "sha256": "1b4d2e17fac8e9ad817714cc510a85a13d3848f5d370d0266b121b4f39636134"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/source-reference-manifest.json",
@@ -916,8 +916,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/finding-to-subbundle.csv",
-      "size_bytes": 4673,
-      "sha256": "d34751477e0f2ff7448661366059b5205a647142dca8fcab27af670c5e12e419"
+      "size_bytes": 4661,
+      "sha256": "1075ae6a950518529c8280687c4badc7bc429529a3a752c6da3ac436f98d0431"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/platform-sensitive-patterns.txt",
@@ -936,8 +936,8 @@
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/requirement-traceability.csv",
-      "size_bytes": 2764,
-      "sha256": "07afda3a378b80ad031ded90d887532a401a148a453843d01f52fe7bfa70481c"
+      "size_bytes": 2763,
+      "sha256": "799c01d1957e1473f9a63423c3146a2eae2e56b10d2c85cb8174838f34df11d0"
     },
     {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/runtime-surface-inventory-template.csv",
@@ -1631,13 +1631,13 @@
     },
     {
       "path": "shared/external-dependency-ledger.csv",
-      "size_bytes": 2489,
-      "sha256": "eaf616119169c41665fe8335c8d2e3b1aa207bbbd0eebd0136a253d5fffc5cfc"
+      "size_bytes": 2476,
+      "sha256": "9a18860d8533ae3c346afd2c30c2fde48fd5afc99e8d7f85c2f9268de511c3c2"
     },
     {
       "path": "shared/findings-register.csv",
-      "size_bytes": 21195,
-      "sha256": "b0ba76863162272e5e69792feb647b0fc72d0fc9ff84d763fab0da493848529b"
+      "size_bytes": 21152,
+      "sha256": "2ad709fa370abd9242839f31c81957f2fcf0649eedcbdd860781f952813d1dfb"
     },
     {
       "path": "shared/findings-register.json",
@@ -1646,8 +1646,8 @@
     },
     {
       "path": "shared/migration-matrix.csv",
-      "size_bytes": 2193,
-      "sha256": "25733f21bb91edb8c5eb96c9e7471adec865d5bef45ccfbf51aa509d0f7df74c"
+      "size_bytes": 2183,
+      "sha256": "f00a13c598dda1b480bd56ce3836d8d1f549828540d18b97a92508ee5210a726"
     },
     {
       "path": "shared/platform-sensitive-patterns.txt",
@@ -1656,8 +1656,8 @@
     },
     {
       "path": "shared/portability-risk-baseline.json",
-      "size_bytes": 3184861,
-      "sha256": "9a49c223eda5db56cc7d448a2eb9f97cbba39e90931a6c44eb712746047fe56e"
+      "size_bytes": 3187085,
+      "sha256": "51eb4d037cb95b6932c096ba2f5183f2d461ada20b39b9f45883167cbe89fbb0"
     },
     {
       "path": "shared/portability-taxonomy.md",
@@ -1681,8 +1681,8 @@
     },
     {
       "path": "shared/support-matrix.csv",
-      "size_bytes": 1539,
-      "sha256": "bd0cb11d2c5be05f85f2edbefc87d80a6be50f2ee36278bca819de36750cb2ce"
+      "size_bytes": 1531,
+      "sha256": "a906a4cb998195ae8e292ca68e9aed122d567d5aa9631f554e8e084d63d6ec9a"
     },
     {
       "path": "shared/support-matrix.json",
@@ -1691,8 +1691,8 @@
     },
     {
       "path": "shared/test-matrix.csv",
-      "size_bytes": 1792,
-      "sha256": "c6ce7cbeea401d8925430aa7bf5cb835e14e64868900242d6a3deadf21001c52"
+      "size_bytes": 1779,
+      "sha256": "df9bad1158818f2c19a25d6557cc8c2ec707633311b7851f67283f4df95fc781"
     },
     {
       "path": "templates/gate-summary-template.md",

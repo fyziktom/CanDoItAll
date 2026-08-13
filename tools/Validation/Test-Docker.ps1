@@ -236,6 +236,10 @@ if (Test-Path -LiteralPath $dockerfilePath -PathType Leaf) {
         Add-Finding -Findings $findings -Message "The application Dockerfile must select the non-root .NET app user."
     }
 
+    if ($dockerfileContent -notmatch '(?s)apt-get\s+install\s+--yes\s+--no-install-recommends(?:(?!&&).)*\butil-linux\b') {
+        Add-Finding -Findings $findings -Message "The application runtime image must explicitly install util-linux for setsid process-group bootstrap."
+    }
+
     if ($dockerfileContent -notmatch '(?m)^ENTRYPOINT\s+\["dotnet",\s*"CanDoItAll\.Web\.dll"\]\s*$') {
         Add-Finding -Findings $findings -Message "The application Dockerfile must use the JSON-form web entry point."
     }

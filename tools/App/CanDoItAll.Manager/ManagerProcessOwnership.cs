@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
@@ -71,7 +72,7 @@ public interface IManagerProcessDiscovery
 public sealed record ManagerOwnedProcessRecord(
     Guid LeaseId,
     ManagerProcessPurpose Purpose,
-    WorkspaceOwnedProcessIdentity HostIdentity,
+    ManagerProcessTerminationAuthority TerminationAuthority,
     string RecoveryStartIdentity,
     string ExecutablePath,
     string PlannedArgumentsFingerprint,
@@ -84,6 +85,53 @@ public sealed record ManagerOwnedProcessRecord(
     DateTimeOffset RegisteredAtUtc,
     DateTimeOffset UpdatedAtUtc,
     string? DiagnosticCode = null);
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(VerifiedManagerProcessTerminationAuthority), "verified-boundary")]
+[JsonDerivedType(typeof(UnavailableManagerProcessTerminationAuthority), "unavailable")]
+public abstract record ManagerProcessTerminationAuthority;
+
+public sealed record VerifiedManagerProcessTerminationAuthority(
+    WorkspaceOwnedProcessIdentity Identity) : ManagerProcessTerminationAuthority;
+
+public sealed record UnavailableManagerProcessTerminationAuthority : ManagerProcessTerminationAuthority;
+
+internal sealed record ManagerProcessRegistryDocument(
+    int SchemaVersion,
+    IReadOnlyList<ManagerOwnedProcessRecord> Records);
+
+internal sealed record LegacyManagerProcessRegistryDocument(
+    int SchemaVersion,
+    IReadOnlyList<LegacyManagerOwnedProcessRecord> Records);
+
+internal sealed record LegacyManagerOwnedProcessRecord(
+    Guid LeaseId,
+    ManagerProcessPurpose Purpose,
+    LegacyWorkspaceOwnedProcessIdentity? HostIdentity,
+    string RecoveryStartIdentity,
+    string ExecutablePath,
+    string PlannedArgumentsFingerprint,
+    string ObservedCommandFingerprint,
+    string WorkspaceRoot,
+    string OwnerIdentity,
+    int ParentProcessId,
+    string LeaseOwner,
+    ManagerProcessLifecycleState State,
+    DateTimeOffset RegisteredAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    string? DiagnosticCode = null);
+
+internal sealed record LegacyWorkspaceOwnedProcessIdentity(
+    int ProcessId,
+    DateTimeOffset StartedAtUtc,
+    string ExecutablePathFingerprint,
+    WorkspaceOwnedProcessBoundary? Boundary);
+
+internal static class ManagerProcessDiagnosticCodes
+{
+    public const string LegacyBoundaryMissing = "legacy-process-boundary-missing";
+    public const string ProcessBoundaryMissing = "process-boundary-missing";
+}
 
 public interface IManagerOwnedProcessRegistry
 {
@@ -166,7 +214,8 @@ public static class ManagerProcessFingerprint
 
 public sealed class FileManagerOwnedProcessRegistry : IManagerOwnedProcessRegistry
 {
-    private const int SchemaVersion = 1;
+    private const int LegacySchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
     private const int MaximumRegistryBytes = 4 * 1024 * 1024;
     private const int MaximumRecordCount = 10_000;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -229,15 +278,7 @@ public sealed class FileManagerOwnedProcessRegistry : IManagerOwnedProcessRegist
         {
             await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
             records![record.LeaseId] = record;
-            var document = new ManagerProcessRegistryDocument(SchemaVersion, records.Values.ToArray());
-            var json = JsonSerializer.Serialize(document, JsonOptions);
-            durableFileWriter.EnsureDirectory(registryRoot, registryRoot, requirePrivateUnixMode: true);
-            await durableFileWriter.WriteTextAsync(
-                registryRoot,
-                registryPath,
-                json,
-                DurableFileWriteOptions.Private,
-                cancellationToken).ConfigureAwait(false);
+            await PersistCurrentDocumentAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -263,21 +304,25 @@ public sealed class FileManagerOwnedProcessRegistry : IManagerOwnedProcessRegist
             throw new InvalidOperationException("The Manager process registry exceeds its bounded size limit.");
         }
 
-        ManagerProcessRegistryDocument document;
+        IReadOnlyList<ManagerOwnedProcessRecord> loadedRecords;
+        var requiresRewrite = false;
         try
         {
-            await using var stream = new FileStream(
-                registryPath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read,
-                4096,
-                FileOptions.Asynchronous | FileOptions.SequentialScan);
-            document = await JsonSerializer.DeserializeAsync<ManagerProcessRegistryDocument>(
-                           stream,
-                           JsonOptions,
-                           cancellationToken).ConfigureAwait(false)
-                       ?? throw new InvalidDataException("The Manager process registry is empty.");
+            var json = await File.ReadAllTextAsync(registryPath, cancellationToken).ConfigureAwait(false);
+            using var parsed = JsonDocument.Parse(json);
+            if (!parsed.RootElement.TryGetProperty("schemaVersion", out var schemaElement) ||
+                !schemaElement.TryGetInt32(out var schemaVersion))
+            {
+                throw new InvalidDataException("The Manager process registry has no valid schema version.");
+            }
+
+            (loadedRecords, requiresRewrite) = schemaVersion switch
+            {
+                CurrentSchemaVersion => (DeserializeCurrent(json), false),
+                LegacySchemaVersion => (DeserializeLegacy(json), true),
+                _ => throw new InvalidOperationException(
+                    $"The Manager process registry schema '{schemaVersion}' is not supported.")
+            };
         }
         catch (Exception exception) when (exception is JsonException or InvalidDataException)
         {
@@ -286,40 +331,100 @@ public sealed class FileManagerOwnedProcessRegistry : IManagerOwnedProcessRegist
                 exception);
         }
 
-        if (document.SchemaVersion != SchemaVersion)
-        {
-            throw new InvalidOperationException(
-                $"The Manager process registry schema '{document.SchemaVersion}' is not supported.");
-        }
-
-        if (document.Records.Count > MaximumRecordCount)
+        if (loadedRecords.Count > MaximumRecordCount)
         {
             throw new InvalidOperationException("The Manager process registry contains too many records.");
         }
 
-        foreach (var record in document.Records)
+        foreach (var record in loadedRecords)
         {
             Validate(record);
         }
 
-        if (document.Records.Select(record => record.LeaseId).Distinct().Count() != document.Records.Count)
+        if (loadedRecords.Select(record => record.LeaseId).Distinct().Count() != loadedRecords.Count)
         {
             throw new InvalidOperationException("The Manager process registry contains duplicate lease identities.");
         }
 
-        records = document.Records.ToDictionary(record => record.LeaseId);
+        records = loadedRecords.ToDictionary(record => record.LeaseId);
+        if (requiresRewrite)
+        {
+            await PersistCurrentDocumentAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static IReadOnlyList<ManagerOwnedProcessRecord> DeserializeCurrent(string json)
+    {
+        var document = JsonSerializer.Deserialize<ManagerProcessRegistryDocument>(json, JsonOptions)
+            ?? throw new InvalidDataException("The Manager process registry is empty.");
+        return document.Records
+            ?? throw new InvalidDataException("The Manager process registry has no records collection.");
+    }
+
+    private static IReadOnlyList<ManagerOwnedProcessRecord> DeserializeLegacy(string json)
+    {
+        var document = JsonSerializer.Deserialize<LegacyManagerProcessRegistryDocument>(json, JsonOptions)
+            ?? throw new InvalidDataException("The legacy Manager process registry is empty.");
+        var legacyRecords = document.Records
+            ?? throw new InvalidDataException("The legacy Manager process registry has no records collection.");
+        return legacyRecords.Select(MigrateLegacyRecord).ToArray();
+    }
+
+    private static ManagerOwnedProcessRecord MigrateLegacyRecord(LegacyManagerOwnedProcessRecord record)
+    {
+        var legacyIdentity = record.HostIdentity
+            ?? throw new InvalidDataException("A legacy Manager process record has no host identity.");
+        ManagerProcessTerminationAuthority terminationAuthority = legacyIdentity.Boundary is { } boundary
+            ? new VerifiedManagerProcessTerminationAuthority(
+                new WorkspaceOwnedProcessIdentity(
+                    legacyIdentity.ProcessId,
+                    legacyIdentity.StartedAtUtc,
+                    legacyIdentity.ExecutablePathFingerprint,
+                    boundary))
+            : new UnavailableManagerProcessTerminationAuthority();
+        return new ManagerOwnedProcessRecord(
+            record.LeaseId,
+            record.Purpose,
+            terminationAuthority,
+            record.RecoveryStartIdentity,
+            record.ExecutablePath,
+            record.PlannedArgumentsFingerprint,
+            record.ObservedCommandFingerprint,
+            record.WorkspaceRoot,
+            record.OwnerIdentity,
+            record.ParentProcessId,
+            record.LeaseOwner,
+            terminationAuthority is UnavailableManagerProcessTerminationAuthority
+                ? ManagerProcessLifecycleState.OwnershipUnverified
+                : record.State,
+            record.RegisteredAtUtc,
+            record.UpdatedAtUtc,
+            terminationAuthority is UnavailableManagerProcessTerminationAuthority
+                ? ManagerProcessDiagnosticCodes.LegacyBoundaryMissing
+                : record.DiagnosticCode);
+    }
+
+    private async Task PersistCurrentDocumentAsync(CancellationToken cancellationToken)
+    {
+        var document = new ManagerProcessRegistryDocument(CurrentSchemaVersion, records!.Values.ToArray());
+        var json = JsonSerializer.Serialize(document, JsonOptions);
+        durableFileWriter.EnsureDirectory(registryRoot, registryRoot, requirePrivateUnixMode: true);
+        await durableFileWriter.WriteTextAsync(
+            registryRoot,
+            registryPath,
+            json,
+            DurableFileWriteOptions.Private,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static void Validate(ManagerOwnedProcessRecord record)
     {
         if (record.LeaseId == Guid.Empty ||
-            record.HostIdentity.ProcessId <= 0 ||
             string.IsNullOrWhiteSpace(record.RecoveryStartIdentity) ||
             string.IsNullOrWhiteSpace(record.ExecutablePath) ||
             string.IsNullOrWhiteSpace(record.WorkspaceRoot) ||
             string.IsNullOrWhiteSpace(record.OwnerIdentity) ||
             string.IsNullOrWhiteSpace(record.LeaseOwner) ||
-            !IsSha256(record.HostIdentity.ExecutablePathFingerprint) ||
             !IsSha256(record.PlannedArgumentsFingerprint) ||
             !IsSha256(record.ObservedCommandFingerprint) ||
             !Enum.IsDefined(record.Purpose) ||
@@ -328,6 +433,26 @@ public sealed class FileManagerOwnedProcessRegistry : IManagerOwnedProcessRegist
             throw new InvalidOperationException("The Manager process registry contains an incomplete ownership record.");
         }
 
+        switch (record.TerminationAuthority)
+        {
+            case VerifiedManagerProcessTerminationAuthority verified:
+                ValidateHostIdentity(verified.Identity);
+                break;
+            case UnavailableManagerProcessTerminationAuthority:
+                if (record.State != ManagerProcessLifecycleState.OwnershipUnverified ||
+                    record.DiagnosticCode is not (
+                        ManagerProcessDiagnosticCodes.LegacyBoundaryMissing or
+                        ManagerProcessDiagnosticCodes.ProcessBoundaryMissing))
+                {
+                    throw new InvalidOperationException(
+                        "The Manager process registry contains a record without termination authority.");
+                }
+
+                break;
+            default:
+                throw new InvalidOperationException(
+                    "The Manager process registry contains no recognized termination authority.");
+        }
 
         try
         {
@@ -344,12 +469,34 @@ public sealed class FileManagerOwnedProcessRegistry : IManagerOwnedProcessRegist
         }
     }
 
+    private static void ValidateHostIdentity(WorkspaceOwnedProcessIdentity identity)
+    {
+        if (identity.ProcessId <= 0 ||
+            !IsSha256(identity.ExecutablePathFingerprint) ||
+            identity.Boundary is null ||
+            !Enum.IsDefined(identity.Boundary.Kind))
+        {
+            throw new InvalidOperationException("The Manager process registry contains an invalid host identity.");
+        }
+
+        var validBoundary = identity.Boundary.Kind switch
+        {
+            WorkspaceOwnedProcessBoundaryKind.WindowsJobObject =>
+                identity.Boundary.NativeId == 0 && identity.Boundary.InstanceId != Guid.Empty,
+            WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup =>
+                identity.Boundary.NativeId is > 0 and <= int.MaxValue &&
+                identity.Boundary.InstanceId == Guid.Empty,
+            _ => false
+        };
+        if (!validBoundary)
+        {
+            throw new InvalidOperationException("The Manager process registry contains an invalid ownership boundary.");
+        }
+    }
+
     private static bool IsSha256(string? value)
         => value is { Length: 64 } && value.All(Uri.IsHexDigit);
 
-    private sealed record ManagerProcessRegistryDocument(
-        int SchemaVersion,
-        IReadOnlyList<ManagerOwnedProcessRecord> Records);
 }
 
 public sealed class ManagerProcessCoordinator : IManagerProcessCoordinator
@@ -461,7 +608,7 @@ public sealed class ManagerProcessCoordinator : IManagerProcessCoordinator
             var record = new ManagerOwnedProcessRecord(
                 Guid.NewGuid(),
                 request.Purpose,
-                session.Identity,
+                new VerifiedManagerProcessTerminationAuthority(session.Identity),
                 evidence.StartIdentity,
                 evidence.ExecutablePath,
                 plannedFingerprint,
@@ -501,8 +648,14 @@ public sealed class ManagerProcessCoordinator : IManagerProcessCoordinator
                     "Manager refused a duplicate process launch because the previous lease requires explicit cleanup.");
             }
 
+            if (record.TerminationAuthority is not VerifiedManagerProcessTerminationAuthority verifiedAuthority)
+            {
+                throw new InvalidOperationException(
+                    "Manager refused a duplicate process launch because the running lease has no ownership boundary.");
+            }
+
             var discovered = await discovery.ProbeAsync(
-                record.HostIdentity.ProcessId,
+                verifiedAuthority.Identity.ProcessId,
                 cancellationToken).ConfigureAwait(false);
             var ownership = verifier.Verify(record, discovered);
             if (ownership.Status == ManagerProcessOwnershipStatus.AlreadyExited)
@@ -538,8 +691,25 @@ public sealed class ManagerProcessCoordinator : IManagerProcessCoordinator
                      record.State == ManagerProcessLifecycleState.Running))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (record.TerminationAuthority is not VerifiedManagerProcessTerminationAuthority verifiedAuthority)
+            {
+                await registry.UpsertAsync(
+                    record with
+                    {
+                        State = ManagerProcessLifecycleState.OwnershipUnverified,
+                        UpdatedAtUtc = DateTimeOffset.UtcNow,
+                        DiagnosticCode = ManagerProcessDiagnosticCodes.ProcessBoundaryMissing
+                    },
+                    cancellationToken).ConfigureAwait(false);
+                results.Add(new WorkspaceProcessTerminationResult(
+                    WorkspaceProcessTerminationStatus.IdentityMismatch,
+                    ResidualProcessPossible: true,
+                    "The registered Manager process has no ownership boundary and was not terminated."));
+                continue;
+            }
+
             var discovered = await discovery.ProbeAsync(
-                record.HostIdentity.ProcessId,
+                verifiedAuthority.Identity.ProcessId,
                 cancellationToken).ConfigureAwait(false);
             var ownership = verifier.Verify(record, discovered);
             if (ownership.Status == ManagerProcessOwnershipStatus.AlreadyExited)
@@ -577,7 +747,7 @@ public sealed class ManagerProcessCoordinator : IManagerProcessCoordinator
             }
 
             var termination = await processHost.TerminateOwnedProcessAsync(
-                record.HostIdentity,
+                verifiedAuthority.Identity,
                 cancellationToken).ConfigureAwait(false);
             await registry.UpsertAsync(
                 record with
@@ -656,6 +826,11 @@ internal sealed class ManagerProcessOwnershipVerifier(
         ManagerOwnedProcessRecord record,
         ManagerProcessDiscoveryResult discovery)
     {
+        if (record.TerminationAuthority is not VerifiedManagerProcessTerminationAuthority verifiedAuthority)
+        {
+            return Unverified(ManagerProcessDiagnosticCodes.ProcessBoundaryMissing);
+        }
+
         if (discovery.Status == ManagerProcessDiscoveryStatus.Exited)
         {
             return new ManagerProcessOwnershipResult(
@@ -671,7 +846,7 @@ internal sealed class ManagerProcessOwnershipVerifier(
         }
 
         var evidence = discovery.Evidence;
-        if (evidence.ProcessId != record.HostIdentity.ProcessId)
+        if (evidence.ProcessId != verifiedAuthority.Identity.ProcessId)
         {
             return Unverified("pid-mismatch");
         }

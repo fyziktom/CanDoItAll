@@ -8,17 +8,6 @@ namespace CanDoItAll.Processes.Persistence;
 
 internal static class ProcessInstancePlanPersistenceMapper
 {
-    internal static readonly DateTimeOffset HostCapabilityHashMigrationBoundaryUtc =
-        new(2026, 8, 11, 18, 53, 52, TimeSpan.Zero);
-
-    private static readonly HashSet<string> HostCapabilitySealPropertyNames = new(
-        [
-            "hostProfileId",
-            "hostCapabilities",
-            "requiredHostCapabilities",
-            "requiredRuntimeToolNames"
-        ],
-        StringComparer.OrdinalIgnoreCase);
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
     public static ProcessInstancePlanEntity ToEntity(ProcessInstancePlan plan)
@@ -52,6 +41,7 @@ internal static class ProcessInstancePlanPersistenceMapper
         ArgumentNullException.ThrowIfNull(entity);
 
         var planId = new ProcessInstancePlanId(entity.PlanId);
+        var algorithmVersion = ResolveAlgorithmVersion(entity);
         var plan = JsonSerializer.Deserialize<ProcessInstancePlan>(entity.PayloadJson, SerializerOptions)
             ?? throw new InvalidOperationException($"Process instance plan '{planId}' payload deserialized to null.");
         if (plan.Header.PlanId != planId ||
@@ -61,7 +51,6 @@ internal static class ProcessInstancePlanPersistenceMapper
                 $"Process instance plan '{planId}' payload identity or hash does not match the persisted metadata.");
         }
 
-        var algorithmVersion = ResolveAlgorithmVersion(entity);
         if (!string.Equals(
                 ProcessPlanHasher.Compute(plan, algorithmVersion),
                 entity.PlanHash,
@@ -109,19 +98,31 @@ internal static class ProcessInstancePlanPersistenceMapper
     private static ProcessPlanHashAlgorithmVersion ResolveAlgorithmVersion(
         ProcessInstancePlanEntity entity)
     {
+        var payloadShape = ProcessPlanPayloadShapeClassifier.Classify(entity.PayloadJson);
         if (entity.PlanHashAlgorithmVersion.HasValue)
         {
-            return entity.PlanHashAlgorithmVersion.Value;
-        }
+            var expectedShape = entity.PlanHashAlgorithmVersion.Value switch
+            {
+                ProcessPlanHashAlgorithmVersion.LegacyV1 => ProcessPlanPayloadShape.LegacyV1,
+                ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2 => ProcessPlanPayloadShape.HostCapabilitiesV2,
+                _ => ProcessPlanPayloadShape.Unknown
+            };
+            if (payloadShape == expectedShape)
+            {
+                return entity.PlanHashAlgorithmVersion.Value;
+            }
 
-        if (entity.CreatedAtUtc >= HostCapabilityHashMigrationBoundaryUtc ||
-            ContainsHostCapabilitySealProperty(entity.PayloadJson))
-        {
             throw new InvalidOperationException(
-                $"Process instance plan '{new ProcessInstancePlanId(entity.PlanId)}' is missing a bounded hash algorithm version.");
+                $"Process instance plan '{new ProcessInstancePlanId(entity.PlanId)}' has conflicting hash algorithm metadata and payload shape.");
         }
 
-        return ProcessPlanHashAlgorithmVersion.LegacyV1;
+        return payloadShape switch
+        {
+            ProcessPlanPayloadShape.LegacyV1 => ProcessPlanHashAlgorithmVersion.LegacyV1,
+            ProcessPlanPayloadShape.HostCapabilitiesV2 => ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2,
+            _ => throw new InvalidOperationException(
+                $"Process instance plan '{new ProcessInstancePlanId(entity.PlanId)}' has an ambiguous host-capability payload shape.")
+        };
     }
 
     private static ProcessInstancePlanReadResult ReadLegacyPlan(
@@ -161,45 +162,15 @@ internal static class ProcessInstancePlanPersistenceMapper
                 $"Current process instance plan '{plan.Header.PlanId}' has inconsistent execution metadata.");
         }
 
+        var metadataChanged = entity.PlanHashAlgorithmVersion is null;
+        entity.PlanHashAlgorithmVersion = ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2;
+
         return new ProcessInstancePlanReadResult(
             plan,
-            false,
+            metadataChanged,
             PersistedProcessPlanExecutionState.Executable,
             null,
             ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2);
-    }
-
-    private static bool ContainsHostCapabilitySealProperty(string payloadJson)
-    {
-        using var document = JsonDocument.Parse(payloadJson);
-        return ContainsHostCapabilitySealProperty(document.RootElement);
-    }
-
-    private static bool ContainsHostCapabilitySealProperty(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.Object)
-        {
-            foreach (var property in element.EnumerateObject())
-            {
-                if (HostCapabilitySealPropertyNames.Contains(property.Name) ||
-                    ContainsHostCapabilitySealProperty(property.Value))
-                {
-                    return true;
-                }
-            }
-        }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in element.EnumerateArray())
-            {
-                if (ContainsHostCapabilitySealProperty(item))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private static JsonSerializerOptions CreateSerializerOptions()

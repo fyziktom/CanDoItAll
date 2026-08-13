@@ -42,7 +42,7 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends libgssapi-krb5-2 \
+    && apt-get install --yes --no-install-recommends libgssapi-krb5-2 util-linux \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=healthcheck /bin/busybox /usr/local/bin/busybox

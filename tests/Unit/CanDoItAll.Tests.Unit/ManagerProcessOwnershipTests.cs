@@ -1,5 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure;
@@ -112,12 +114,144 @@ public sealed class ManagerProcessOwnershipTests
             var json = await File.ReadAllTextAsync(Path.Combine(root, "manager-process-registry.json"));
 
             Assert.Equal(record, restored);
+            var expectedAuthority = Assert.IsType<VerifiedManagerProcessTerminationAuthority>(record.TerminationAuthority);
+            var restoredAuthority = Assert.IsType<VerifiedManagerProcessTerminationAuthority>(restored.TerminationAuthority);
+            Assert.Equal(expectedAuthority.Identity.Boundary, restoredAuthority.Identity.Boundary);
+            Assert.Equal(2, JsonNode.Parse(json)?["schemaVersion"]?.GetValue<int>());
             Assert.DoesNotContain("sentinel-secret-value", json, StringComparison.Ordinal);
             Assert.DoesNotContain("--token", json, StringComparison.Ordinal);
         }
         finally
         {
             Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Schema_1_registry_without_process_boundary_is_rewritten_without_termination_authority()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Manager.LegacyRegistry.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var registryPath = Path.Combine(root, "manager-process-registry.json");
+            var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                WriteIndented = true
+            };
+            var document = JsonNode.Parse(JsonSerializer.Serialize(
+                new
+                {
+                    schemaVersion = 1,
+                    records = new[] { CreateRecord() }
+                },
+                jsonOptions))?.AsObject()
+                ?? throw new InvalidOperationException("The legacy Manager registry fixture must be a JSON object.");
+            var legacyRecord = document["records"]?.AsArray()[0]?.AsObject()
+                ?? throw new InvalidOperationException("The legacy Manager registry fixture must contain a record.");
+            var hostIdentity = legacyRecord["terminationAuthority"]?["identity"]?.DeepClone().AsObject()
+                ?? throw new InvalidOperationException("The current Manager registry fixture must contain a host identity.");
+            Assert.True(legacyRecord.Remove("terminationAuthority"));
+            legacyRecord["hostIdentity"] = hostIdentity;
+            Assert.True(hostIdentity.Remove("boundary"));
+            await File.WriteAllTextAsync(registryPath, document.ToJsonString(jsonOptions));
+
+            var registry = new FileManagerOwnedProcessRegistry(
+                root,
+                new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory()));
+            var restored = Assert.Single(await registry.ReadAllAsync());
+            var host = new FakeProcessHost();
+            var coordinator = new ManagerProcessCoordinator(
+                host,
+                new FixedDiscovery(ManagerProcessDiscoveryResult.Available(CreateEvidence())),
+                registry,
+                new PhysicalFileSystemPathPolicyFactory(),
+                ManagerHostKind.Linux);
+
+            var results = await coordinator.ReclaimRegisteredAsync(
+                ManagerProcessPurpose.DotnetWatch,
+                "legacy-registry-reclaim");
+
+            Assert.Empty(results);
+            Assert.Equal(0, host.TerminationCount);
+            Assert.Equal(ManagerProcessLifecycleState.OwnershipUnverified, restored.State);
+            Assert.Equal("legacy-process-boundary-missing", restored.DiagnosticCode);
+            Assert.IsType<UnavailableManagerProcessTerminationAuthority>(restored.TerminationAuthority);
+            var rewritten = JsonNode.Parse(await File.ReadAllTextAsync(registryPath))?.AsObject()
+                ?? throw new InvalidOperationException("The rewritten Manager registry must be a JSON object.");
+            Assert.Equal(2, rewritten["schemaVersion"]?.GetValue<int>());
+            var reopened = new FileManagerOwnedProcessRegistry(
+                root,
+                new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory()));
+            Assert.Equal(restored, Assert.Single(await reopened.ReadAllAsync()));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Schema_2_registry_rejects_invalid_boundary_combinations()
+    {
+        var invalidBoundaries = new[]
+        {
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.WindowsJobObject,
+                1,
+                Guid.NewGuid()),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.WindowsJobObject,
+                0,
+                Guid.Empty),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                0,
+                Guid.Empty),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                (long)int.MaxValue + 1,
+                Guid.Empty),
+            new WorkspaceOwnedProcessBoundary(
+                WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                321,
+                Guid.NewGuid())
+        };
+
+        foreach (var boundary in invalidBoundaries)
+        {
+            var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Manager.InvalidBoundary.{Guid.NewGuid():N}");
+            Directory.CreateDirectory(root);
+            try
+            {
+                var record = CreateRecord();
+                var authority = Assert.IsType<VerifiedManagerProcessTerminationAuthority>(record.TerminationAuthority);
+                var invalidRecord = record with
+                {
+                    TerminationAuthority = new VerifiedManagerProcessTerminationAuthority(
+                        authority.Identity with { Boundary = boundary })
+                };
+                await File.WriteAllTextAsync(
+                    Path.Combine(root, "manager-process-registry.json"),
+                    JsonSerializer.Serialize(
+                        new
+                        {
+                            schemaVersion = 2,
+                            records = new[] { invalidRecord }
+                        },
+                        new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+                var registry = new FileManagerOwnedProcessRegistry(
+                    root,
+                    new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory()));
+
+                var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => registry.ReadAllAsync());
+
+                Assert.Contains("ownership boundary", exception.Message, StringComparison.Ordinal);
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
         }
     }
 
@@ -174,7 +308,8 @@ public sealed class ManagerProcessOwnershipTests
 
             var registered = Assert.Single(await recordStore.ReadAllAsync());
             Assert.Equal(ManagerProcessLifecycleState.Running, registered.State);
-            Assert.Equal(host.Identity, registered.HostIdentity);
+            var authority = Assert.IsType<VerifiedManagerProcessTerminationAuthority>(registered.TerminationAuthority);
+            Assert.Equal(host.Identity, authority.Identity);
             Assert.Equal("linux-proc-start:123456", registered.RecoveryStartIdentity);
             Assert.NotEmpty(registered.PlannedArgumentsFingerprint);
             Assert.Equal("uid:1000", registered.OwnerIdentity);
@@ -225,7 +360,8 @@ public sealed class ManagerProcessOwnershipTests
     public async Task Lease_completion_retries_registry_persistence_after_a_transient_failure()
     {
         var registry = new FailOnceRegistry();
-        var session = new FakeSession(CreateRecord().HostIdentity);
+        var authority = Assert.IsType<VerifiedManagerProcessTerminationAuthority>(CreateRecord().TerminationAuthority);
+        var session = new FakeSession(authority.Identity);
         await using var lease = new ManagerProcessLease(session, CreateRecord(), registry);
 
         await Assert.ThrowsAsync<IOException>(() => lease.WaitForExitAsync());
@@ -416,14 +552,15 @@ public sealed class ManagerProcessOwnershipTests
         return new ManagerOwnedProcessRecord(
             Guid.Parse("bca18f44-f3eb-482c-b027-65947ad25a6c"),
             ManagerProcessPurpose.DotnetWatch,
-            new WorkspaceOwnedProcessIdentity(
-                321,
-                now,
-                new string('b', 64),
-                new WorkspaceOwnedProcessBoundary(
-                    WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+            new VerifiedManagerProcessTerminationAuthority(
+                new WorkspaceOwnedProcessIdentity(
                     321,
-                    Guid.Empty)),
+                    now,
+                    new string('b', 64),
+                    new WorkspaceOwnedProcessBoundary(
+                        WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup,
+                        321,
+                        Guid.Empty))),
             "linux-proc-start:123456",
             ExecutablePath(),
             new string('c', 64),

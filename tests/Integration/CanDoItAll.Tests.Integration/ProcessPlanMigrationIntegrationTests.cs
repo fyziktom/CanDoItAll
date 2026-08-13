@@ -13,12 +13,17 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessPlanMigrationIntegrationTests
 {
     private const string PreviousMigrationId = "20260811185352_AddProcessRuntimeStepHostCapabilities";
-    private const string CurrentMigrationId = "20260812112732_AddProcessPlanHashVersioning";
+    private const string HashVersioningMigrationId = "20260812112732_AddProcessPlanHashVersioning";
+    private const string CurrentMigrationId = "20260813012618_CorrectProcessPlanHashClassification";
     private const string LegacyHash = "sha256:8d4c8bb0aadf2b8a4ed5ef249457e5354789fec5872dd7749a4a51b9810938b6";
+    private const string CurrentShapeHash = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    private const string PartialShapeHash = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private static readonly Guid PlanId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid CurrentShapePlanId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+    private static readonly Guid PartialShapePlanId = Guid.Parse("55555555-5555-5555-5555-555555555555");
 
     [Fact]
-    public async Task Legacy_plan_migration_is_transactional_idempotent_restart_safe_and_reversible()
+    public async Task Process_plan_hash_classification_correction_is_transactional_idempotent_restart_safe_and_reversible()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-process-plan-migration");
         var activeProfile = testEnvironment.CreatePostgreSqlProfile("process-plan-migration");
@@ -55,8 +60,29 @@ public sealed class ProcessPlanMigrationIntegrationTests
                       {Guid.Parse("22222222-2222-2222-2222-222222222222")},
                       {Guid.Parse("33333333-3333-3333-3333-333333333333")},
                       {LegacyHash}, 'processes.instance-plan.v1', 'sha256:legacy-definition',
-                      {LegacyPayload}, {new DateTimeOffset(2026, 8, 1, 0, 0, 0, TimeSpan.Zero)});
+                      {LegacyPayload}, {new DateTimeOffset(2026, 8, 12, 0, 0, 0, TimeSpan.Zero)}),
+                     ({CurrentShapePlanId}, {CurrentShapePlanId}, NULL, NULL,
+                      {Guid.Parse("66666666-6666-6666-6666-666666666666")},
+                      {Guid.Parse("77777777-7777-7777-7777-777777777777")},
+                      {CurrentShapeHash}, 'processes.instance-plan.v1', 'sha256:current-shape-definition',
+                      {CurrentShapePayload}, {new DateTimeOffset(2026, 8, 12, 0, 0, 0, TimeSpan.Zero)}),
+                     ({PartialShapePlanId}, {PartialShapePlanId}, NULL, NULL,
+                      {Guid.Parse("88888888-8888-8888-8888-888888888888")},
+                      {Guid.Parse("99999999-9999-9999-9999-999999999999")},
+                      {PartialShapeHash}, 'processes.instance-plan.v1', 'sha256:partial-shape-definition',
+                      {PartialShapePayload}, {new DateTimeOffset(2026, 8, 12, 0, 0, 0, TimeSpan.Zero)});
                  """);
+
+            await migrator.MigrateAsync(HashVersioningMigrationId);
+            var preCorrection = await migrationContext.Set<ProcessInstancePlanEntity>()
+                .AsNoTracking()
+                .ToDictionaryAsync(plan => plan.PlanId);
+            Assert.Null(preCorrection[PlanId].PlanHashAlgorithmVersion);
+            Assert.Equal(PersistedProcessPlanExecutionState.Unknown, preCorrection[PlanId].ExecutionState);
+            Assert.Equal(ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2, preCorrection[CurrentShapePlanId].PlanHashAlgorithmVersion);
+            Assert.Equal(PersistedProcessPlanExecutionState.Executable, preCorrection[CurrentShapePlanId].ExecutionState);
+            Assert.Null(preCorrection[PartialShapePlanId].PlanHashAlgorithmVersion);
+            Assert.Equal(PersistedProcessPlanExecutionState.Unknown, preCorrection[PartialShapePlanId].ExecutionState);
 
             await migrator.MigrateAsync(CurrentMigrationId);
             await migrator.MigrateAsync(CurrentMigrationId);
@@ -72,6 +98,24 @@ public sealed class ProcessPlanMigrationIntegrationTests
             Assert.Equal(ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed, entity.MigrationReason);
             Assert.Equal(LegacyHash, entity.PlanHash);
             Assert.Equal(LegacyPayload, entity.PayloadJson);
+
+            var currentShape = await restartedContext.Set<ProcessInstancePlanEntity>()
+                .AsNoTracking()
+                .SingleAsync(plan => plan.PlanId == CurrentShapePlanId);
+            Assert.Equal(ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2, currentShape.PlanHashAlgorithmVersion);
+            Assert.Equal(PersistedProcessPlanExecutionState.Executable, currentShape.ExecutionState);
+            Assert.Null(currentShape.MigrationReason);
+            Assert.Equal(CurrentShapeHash, currentShape.PlanHash);
+            Assert.Equal(CurrentShapePayload, currentShape.PayloadJson);
+
+            var partialShape = await restartedContext.Set<ProcessInstancePlanEntity>()
+                .AsNoTracking()
+                .SingleAsync(plan => plan.PlanId == PartialShapePlanId);
+            Assert.Null(partialShape.PlanHashAlgorithmVersion);
+            Assert.Equal(PersistedProcessPlanExecutionState.Unknown, partialShape.ExecutionState);
+            Assert.Null(partialShape.MigrationReason);
+            Assert.Equal(PartialShapeHash, partialShape.PlanHash);
+            Assert.Equal(PartialShapePayload, partialShape.PayloadJson);
 
             var processDbContext = scope.ServiceProvider.GetRequiredService<ProcessPersistenceDbContext>();
             var store = new EfProcessInstancePlanStore(processDbContext);
@@ -148,6 +192,65 @@ public sealed class ProcessPlanMigrationIntegrationTests
             "requiredApprovalKeys": []
           },
           "planHash": "sha256:8d4c8bb0aadf2b8a4ed5ef249457e5354789fec5872dd7749a4a51b9810938b6"
+        }
+        """;
+
+    private const string CurrentShapePayload = """
+        {
+          "driverStack": {
+            "drivers": [
+              { "requiredHostCapabilities": [] }
+            ],
+            "hostProfileId": { "value": "linux-headless" },
+            "hostCapabilities": []
+          },
+          "strategies": {
+            "executionBindings": [],
+            "managerBindings": [],
+            "recoveryBindings": [],
+            "resupplyBindings": []
+          },
+          "steps": [
+            {
+              "executionStrategyBinding": null,
+              "requiredHostCapabilities": [],
+              "requiredRuntimeToolNames": []
+            }
+          ],
+          "manager": {
+            "managerStrategyBinding": null,
+            "recoveryBindings": [],
+            "resupplyBindings": []
+          }
+        }
+        """;
+
+    private const string PartialShapePayload = """
+        {
+          "driverStack": {
+            "drivers": [
+              { "requiredHostCapabilities": [] }
+            ],
+            "hostProfileId": { "value": "linux-headless" },
+            "hostCapabilities": []
+          },
+          "strategies": {
+            "executionBindings": [],
+            "managerBindings": [],
+            "recoveryBindings": [],
+            "resupplyBindings": []
+          },
+          "steps": [
+            {
+              "executionStrategyBinding": null,
+              "requiredHostCapabilities": []
+            }
+          ],
+          "manager": {
+            "managerStrategyBinding": null,
+            "recoveryBindings": [],
+            "resupplyBindings": []
+          }
         }
         """;
 }

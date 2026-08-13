@@ -142,13 +142,41 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
-    public async Task Unversioned_plan_with_current_host_capability_fields_is_not_classified_as_legacy()
+    public async Task Unversioned_plan_with_complete_current_host_capability_shape_is_repaired_without_rehashing()
     {
         await using var dbContext = CreateDbContext();
         var store = new EfProcessInstancePlanStore(dbContext);
         var plan = NewInitialPlan();
         await store.PersistAsync(plan);
         var entity = await dbContext.InstancePlans.SingleAsync();
+        var expectedHash = entity.PlanHash;
+        var expectedPayload = entity.PayloadJson;
+        entity.PlanHashAlgorithmVersion = null;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        var restored = await store.LoadAsync(plan.Header.PlanId);
+
+        Assert.NotNull(restored);
+        Assert.Equal(expectedHash, restored.PlanHash);
+        var repairedEntity = await dbContext.InstancePlans.SingleAsync();
+        Assert.Equal(expectedPayload, repairedEntity.PayloadJson);
+        Assert.Equal(ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2, repairedEntity.PlanHashAlgorithmVersion);
+        Assert.Equal(PersistedProcessPlanExecutionState.Executable, repairedEntity.ExecutionState);
+    }
+
+    [Fact]
+    public async Task Unversioned_plan_with_partial_current_host_capability_shape_fails_closed()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessInstancePlanStore(dbContext);
+        var plan = NewInitialPlan();
+        await store.PersistAsync(plan);
+        var entity = await dbContext.InstancePlans.SingleAsync();
+        var payload = JsonNode.Parse(entity.PayloadJson)?.AsObject()
+            ?? throw new InvalidOperationException("The persisted plan payload must be a JSON object.");
+        Assert.True(payload["steps"]?.AsArray()[0]?.AsObject().Remove("requiredRuntimeToolNames"));
+        entity.PayloadJson = payload.ToJsonString();
         entity.PlanHashAlgorithmVersion = null;
         entity.ExecutionState = PersistedProcessPlanExecutionState.Unknown;
         await dbContext.SaveChangesAsync();
@@ -159,18 +187,44 @@ public sealed class ProcessPersistenceStoreTests
     }
 
     [Fact]
-    public async Task Unversioned_plan_created_after_the_migration_boundary_is_not_classified_as_legacy()
+    public async Task Explicit_legacy_version_with_current_payload_shape_fails_closed()
+    {
+        await using var dbContext = CreateDbContext();
+        var store = new EfProcessInstancePlanStore(dbContext);
+        var plan = NewInitialPlan();
+        await store.PersistAsync(plan);
+        var entity = await dbContext.InstancePlans.SingleAsync();
+        entity.PlanHashAlgorithmVersion = ProcessPlanHashAlgorithmVersion.LegacyV1;
+        entity.ExecutionState = PersistedProcessPlanExecutionState.NeedsRecompile;
+        entity.MigrationReason = ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed;
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.LoadAsync(plan.Header.PlanId).AsTask());
+    }
+
+    [Fact]
+    public async Task Unversioned_legacy_v1_plan_created_after_the_migration_boundary_still_requires_recompile()
     {
         await using var dbContext = CreateDbContext();
         var entity = LegacyProcessPlanFixture.CreateEntity();
-        entity.CreatedAtUtc = ProcessInstancePlanPersistenceMapper.HostCapabilityHashMigrationBoundaryUtc;
+        entity.CreatedAtUtc = new DateTimeOffset(2026, 8, 12, 18, 53, 52, TimeSpan.Zero);
         dbContext.InstancePlans.Add(entity);
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
 
         var store = new EfProcessInstancePlanStore(dbContext);
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<ProcessPlanMigrationRequiredException>(() =>
             store.LoadAsync(LegacyProcessPlanFixture.PlanId).AsTask());
+
+        Assert.Equal(ProcessPlanHashAlgorithmVersion.LegacyV1, exception.HashAlgorithmVersion);
+        Assert.Equal(ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed, exception.Reason);
+        var migratedEntity = await dbContext.InstancePlans.SingleAsync();
+        Assert.Equal(ProcessPlanHashAlgorithmVersion.LegacyV1, migratedEntity.PlanHashAlgorithmVersion);
+        Assert.Equal(PersistedProcessPlanExecutionState.NeedsRecompile, migratedEntity.ExecutionState);
+        Assert.Equal(LegacyProcessPlanFixture.LegacyHash, migratedEntity.PlanHash);
+        Assert.Equal(LegacyProcessPlanFixture.Payload, migratedEntity.PayloadJson);
     }
 
     [Fact]

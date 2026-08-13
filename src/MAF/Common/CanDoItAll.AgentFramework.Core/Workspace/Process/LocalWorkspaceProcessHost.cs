@@ -13,6 +13,18 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
     private static readonly TimeSpan StreamCancellationTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan TerminationTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan GracefulTerminationTimeout = TimeSpan.FromMilliseconds(750);
+    private readonly Func<ProcessStartInfo, string, string, LocalWorkspaceProcessOwnershipStart> prepareOwnershipStart;
+
+    public LocalWorkspaceProcessHost()
+        : this(LocalWorkspaceProcessOwnershipStart.Prepare)
+    {
+    }
+
+    internal LocalWorkspaceProcessHost(
+        Func<ProcessStartInfo, string, string, LocalWorkspaceProcessOwnershipStart> prepareOwnershipStart)
+    {
+        this.prepareOwnershipStart = prepareOwnershipStart ?? throw new ArgumentNullException(nameof(prepareOwnershipStart));
+    }
 
     private static readonly ExecutionBoundaryDescriptor Boundary = new(
         Mode: "PolicyOnlyLocal",
@@ -92,7 +104,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
     }
 
-    public Task<IWorkspaceProcessSession> StartSessionAsync(
+    public async Task<IWorkspaceProcessSession> StartSessionAsync(
         WorkspaceProcessSessionRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -112,45 +124,27 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             request.WorkingDirectory);
         startInfo.FileName = executableIdentityPath;
         var startedAtUtc = DateTimeOffset.UtcNow;
-        Process? process;
+        Process? process = null;
+        LocalWorkspaceProcessOwnershipStart? ownershipStart = null;
         ILocalWorkspaceProcessOwnership? ownership = null;
         try
         {
-            using var ownershipStart = LocalWorkspaceProcessOwnershipStart.Prepare(
+            ownershipStart = prepareOwnershipStart(
                 startInfo,
                 executableIdentityPath,
                 request.WorkingDirectory);
             process = Process.Start(startInfo);
-            if (process is not null)
+            if (process is null)
             {
-                ownership = ownershipStart.Attach(process);
+                throw new InvalidOperationException("The process start API returned no process instance.");
             }
-        }
-        catch (Exception exception) when (IsStartFailure(exception))
-        {
-            throw new WorkspaceProcessStartException(
-                "The configured workspace process could not be started.",
-                exception);
-        }
-        finally
-        {
-            startInfo.Environment.Clear();
-        }
 
-        if (process is null)
-        {
-            throw new WorkspaceProcessStartException(
-                "The configured workspace process could not be started.");
-        }
-
-        try
-        {
+            ownership = ownershipStart.Attach(process);
             var identity = new WorkspaceOwnedProcessIdentity(
                 process.Id,
                 ResolveProcessStartedAtUtc(process, startedAtUtc),
                 ComputeExecutablePathFingerprint(executableIdentityPath),
-                ownership?.Identity
-                    ?? throw new InvalidOperationException("The process ownership boundary was not established."));
+                ownership.Identity);
             WaitForExecutableIdentity(process, identity.ExecutablePathFingerprint);
             IWorkspaceProcessSession session = new LocalWorkspaceProcessSession(
                 process,
@@ -158,16 +152,112 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
                 request,
                 identity,
                 startedAtUtc);
-            return Task.FromResult(session);
+            process = null;
+            ownership = null;
+            return session;
         }
-        catch
+        catch (Exception exception) when (IsStartFailure(exception))
         {
-            ownership?.ForceTerminate();
-            ownership?.Dispose();
-            TryKillProcessTree(process);
-            process.Dispose();
-            throw;
+            var cleanupException = await CleanupFailedStartAsync(
+                process,
+                ownership,
+                ownershipStart).ConfigureAwait(false);
+            throw new WorkspaceProcessStartException(
+                "The configured workspace process could not be started.",
+                cleanupException is null
+                    ? exception
+                    : new AggregateException(exception, cleanupException));
         }
+        catch (Exception exception)
+        {
+            var cleanupException = await CleanupFailedStartAsync(
+                process,
+                ownership,
+                ownershipStart).ConfigureAwait(false);
+            if (cleanupException is null)
+            {
+                throw;
+            }
+
+            throw new AggregateException(
+                "Process startup failed and cleanup did not complete cleanly.",
+                exception,
+                cleanupException);
+        }
+        finally
+        {
+            ownershipStart?.Dispose();
+            startInfo.Environment.Clear();
+        }
+    }
+
+    private static async Task<Exception?> CleanupFailedStartAsync(
+        Process? process,
+        ILocalWorkspaceProcessOwnership? ownership,
+        LocalWorkspaceProcessOwnershipStart? ownershipStart)
+    {
+        var failures = new List<Exception>();
+        try
+        {
+            if (ownership is not null)
+            {
+                if (!ownership.ForceTerminate() ||
+                    !await ownership.WaitForEmptyAsync(TerminationTimeout).ConfigureAwait(false))
+                {
+                    failures.Add(new InvalidOperationException(
+                        "The established process ownership boundary did not become empty during failed-start cleanup."));
+                }
+            }
+            else if (ownershipStart is not null)
+            {
+                await ownershipStart.AbortAsync(TerminationTimeout).ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+        finally
+        {
+            try
+            {
+                ownership?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+        }
+
+        if (process is not null)
+        {
+            try
+            {
+                if (!TryKillProcessTree(process) ||
+                    !SpinWait.SpinUntil(
+                        () => ProcessHasExited(process),
+                        TerminationTimeout))
+                {
+                    failures.Add(new InvalidOperationException(
+                        $"Started process '{process.Id}' could not be confirmed terminated during failed-start cleanup."));
+                }
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        return failures.Count switch
+        {
+            0 => null,
+            1 => failures[0],
+            _ => new AggregateException(failures)
+        };
     }
 
     public async Task<WorkspaceProcessTerminationResult> TerminateOwnedProcessAsync(

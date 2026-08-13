@@ -151,7 +151,7 @@ public sealed class ManagerProcessDiscoveryIntegrationTests
             var record = new ManagerOwnedProcessRecord(
                 Guid.NewGuid(),
                 ManagerProcessPurpose.DotnetWatch,
-                hostIdentity,
+                new VerifiedManagerProcessTerminationAuthority(hostIdentity),
                 discovered.Evidence.StartIdentity,
                 discovered.Evidence.ExecutablePath,
                 ManagerProcessFingerprint.ComputeArguments(executablePath, ["30"]),

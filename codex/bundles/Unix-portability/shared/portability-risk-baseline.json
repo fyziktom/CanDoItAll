@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-12T15:45:12.679265+00:00",
+  "generated_utc": "2026-08-13T02:47:52.739908+00:00",
   "review_gate": "A07 Core Gate C4 portability static guard",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 13562,
+  "allowance_count": 13572,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -10901,6 +10901,30 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260812112732_AddProcessPlanHashVersioning.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "ec1bf13c5c8ae896caf83fc2595750026c1e051e79b7d625995bcd18eb2c4cb1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260813012618_CorrectProcessPlanHashClassification.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "41037e71c7add2fd9c52c897f998aedf067f4160a254a59744b0d06588ad45b7",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260813012618_CorrectProcessPlanHashClassification.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5d9c6972563b9719ea0fe407f753ac37fd12466b8393cf03cba58781a1beaeb4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260813012618_CorrectProcessPlanHashClassification.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ca8a5a987e0f1b12fe29f028fdee6bdb52fb7493bf90153d9d6570cf139d816f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260813012618_CorrectProcessPlanHashClassification.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "d5ee868246c1672cebe2db96665c9b94a996b6d2bcabd78d8190b2349bfe70fc",
       "count": 1
     },
     {
@@ -23369,6 +23393,18 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "process-start",
       "source_fingerprint": "1e84b24ea5efdb8036453b10f15e3b1e19ab133638cc7babcf9e18ad93507d64",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "category": "process-start",
+      "source_fingerprint": "2853551e4b44e7208915e8df3eaa90770b737ded1ab52dba2c04d6472841e8d3",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "category": "process-start",
+      "source_fingerprint": "2b2e9ce4a950779005f9c1c7f21d6cd5c6c4079aae5ac455177de6580cee5a14",
       "count": 1
     },
     {
@@ -65858,12 +65894,6 @@
       "count": 1
     },
     {
-      "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessInstancePlanPersistenceMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "3a37a6315dea1a8bf97fdc34721c94fc81ccf1a8e7a53bfe16f1cca5d50e92ba",
-      "count": 1
-    },
-    {
       "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessPersistenceMappers.cs",
       "category": "case-policy",
       "source_fingerprint": "0cfec83450245367b7dfcf88a2bf8f4dfc390484245e6c9babf72af9fdbbc59b",
@@ -69479,7 +69509,7 @@
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "02f1c1746b6bf96074b09f730bb45cc1c98784385fc65df539cd8f3daa4d5b3c",
-      "count": 2
+      "count": 3
     },
     {
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
@@ -69497,6 +69527,12 @@
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "201c7b6b8abcd80d6b643478aa25f8cbfaf7539c8cd3f47631482a3fe3aec645",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "2ac642962a122e1f60bf0e43e468c1c328d7001d0667881e15f25877eb9201bf",
       "count": 1
     },
     {
@@ -69527,6 +69563,18 @@
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "5c79c77f78251b9608fd7efaa69dfb43c1ed06214cefef968bf92c9fc22063c8",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5eb95edd2338a9a12df080c018a43aa88d3f057e79b25b30a4f57645a9daabd0",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "5ff76f6384cb16ed70b65486e1b3bd72261ef23499ffa859efc71452e8fa6846",
       "count": 1
     },
     {
@@ -69587,7 +69635,7 @@
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "b9f095e35e5905427c2a5463bcf3e3c4e9bc6f85e6bb4da44808504367cfac34",
-      "count": 3
+      "count": 4
     },
     {
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
@@ -69610,6 +69658,12 @@
     {
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "cc050cdde755df81250cd0995f53a3e4d02cf7b5faaffc11a425ed01e1b4c8bd",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "d4ba86a17cbe8af31e938ce513c3ed0449e6a0e087daa6ee9c7e68ad00ff063b",
       "count": 1
     },
@@ -69617,6 +69671,12 @@
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "dfa3bff3316c504fc6c2b27c81046dd0dfef0cf21f31839f13125f4e414f4408",
+      "count": 1
+    },
+    {
+      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "e4a9b68b5d739525400a1a5e046bf421b7ff06461380e3e09e5954fe2a5fbd4e",
       "count": 1
     },
     {
@@ -69634,19 +69694,7 @@
     {
       "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "ecffe7b5f4e9c941a977d38494042b85815f541bb64aed2d42bd201099bd5183",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
-      "category": "absolute-path-field",
       "source_fingerprint": "ee0b0340c858959310c654a98b83a9a2e1600e1e7919e66f2ade0f1f516cb03f",
-      "count": 1
-    },
-    {
-      "path": "tools/App/CanDoItAll.Manager/ManagerProcessOwnership.cs",
-      "category": "atomic-write",
-      "source_fingerprint": "ca4781a7156f11856c8630e11f288160d4ceee6a438f314794351a80200dcc9f",
       "count": 1
     },
     {
