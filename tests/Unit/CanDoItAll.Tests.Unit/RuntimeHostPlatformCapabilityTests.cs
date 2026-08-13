@@ -631,7 +631,6 @@ public sealed class RuntimeHostPlatformCapabilityTests
 
         Assert.Equal(expectedMainRepositoryOwners, actualMainRepositoryOwners);
 
-#if CANDOITALL_FILETOOLS_DIRECT_SOURCE
         string fileToolsRoot = Path.GetFullPath(Path.Combine(root, "..", "CanDoItAll.FileTools"));
         string[] expectedFileToolsOwners =
         [
@@ -644,7 +643,6 @@ public sealed class RuntimeHostPlatformCapabilityTests
             .ToArray();
 
         Assert.Equal(expectedFileToolsOwners, actualFileToolsOwners);
-#endif
 
         static bool ContainsNativeProcessStart(string path)
         {

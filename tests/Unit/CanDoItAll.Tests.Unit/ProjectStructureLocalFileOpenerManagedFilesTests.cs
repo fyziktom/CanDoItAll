@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.FileTools.Desktop;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
@@ -10,6 +11,58 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectStructureLocalFileOpenerManagedFilesTests
 {
+    [Fact]
+    public async Task Projected_process_run_folder_uses_the_authoritative_project_scoped_path()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("local-file-opener");
+
+        try
+        {
+            Guid projectId = Guid.NewGuid();
+            Guid runId = Guid.NewGuid();
+            string logicalRoot = $"artifacts/process-runs/{runId:D}";
+            string scopedRoot = WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+                .CombineArtifactPath("process-runs", runId.ToString("D"));
+            string scopedDirectoryPath = Path.Combine(
+                workspaceRoot,
+                scopedRoot.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(scopedDirectoryPath);
+            var launcher = new RecordingDesktopFileLauncher();
+            var sut = CreateSut(workspaceRoot, launcher);
+            var node = CreateNode(
+                mediaRelativePath: string.Empty,
+                objectType: ProjectObjectType.File,
+                objectSubtype: "folder",
+                metadata: new ProjectObjectMetadataEnvelope
+                {
+                    File = new ProjectFileMetadata
+                    {
+                        FileSubtype = ProjectFileSubtype.Folder,
+                        ExternalPath = logicalRoot
+                    }
+                }) with
+            {
+                Id = ProjectStructureProcessNodeKeys.BuildProcessRunOutputNodeKey(runId, logicalRoot),
+                ParentId = ProjectStructureProcessNodeKeys.BuildProcessRunNodeKey(runId),
+                ArtifactKind = ProjectStructureProcessNodeKeys.ProcessRunOutputFolderArtifactKind,
+                ArtifactId = runId,
+                IsSystemManaged = true,
+                ProjectId = projectId
+            };
+
+            Assert.True(sut.CanOpen(node));
+            ProjectStructureLocalFileOpenResult result = await sut.OpenAsync(node);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(Path.GetFullPath(scopedDirectoryPath), launcher.LastRequest?.TargetPath);
+            Assert.Equal(DesktopFileLaunchOperation.OpenContainingFolder, launcher.LastRequest?.Operation);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
     [Fact]
     public void CanOpen_returns_true_for_an_existing_file_inside_the_active_managed_root()
     {

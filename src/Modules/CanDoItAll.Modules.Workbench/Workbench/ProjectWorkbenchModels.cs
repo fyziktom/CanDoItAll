@@ -203,7 +203,8 @@ public sealed record ProjectStructureNode(
     int ParentProjectCount = 0,
     int? DurationSeconds = null,
     ProjectNodeReferenceCollection? NodeReferences = null,
-    bool IsSystemManaged = false);
+    bool IsSystemManaged = false,
+    Guid ProjectId = default);
 
 public sealed record ProjectStructureLink(
     string SourceId,

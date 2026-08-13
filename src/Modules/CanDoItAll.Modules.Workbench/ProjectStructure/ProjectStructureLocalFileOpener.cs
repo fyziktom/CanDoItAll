@@ -309,6 +309,16 @@ public sealed class ProjectStructureLocalFileOpener(
 
     private static IEnumerable<LocalPathCandidate> ResolveMetadataPathCandidates(ProjectStructureNode node, ProjectObjectMetadataEnvelope metadata)
     {
+        if (node.ProjectId != Guid.Empty &&
+            ProjectStructureProcessRunOutputFolderPolicy.TryResolve(node, out var outputFolder))
+        {
+            yield return new LocalPathCandidate(
+                ProjectStructureProcessRunOutputFolderPolicy.ResolveProjectScopedDirectoryPath(
+                    node.ProjectId,
+                    outputFolder));
+            yield break;
+        }
+
         switch (node.ObjectType)
         {
             case ProjectObjectType.File:
@@ -417,4 +427,3 @@ public sealed class ProjectStructureLocalFileOpener(
             .Replace('/', Path.DirectorySeparatorChar);
     }
 }
-

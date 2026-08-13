@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
@@ -284,9 +285,30 @@ public sealed class ProjectStructureFileScopeResolverTests
         FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
 
         Assert.Equal(ResolverFixture.StorageId, binding.StorageId);
-        Assert.Equal(root, binding.Root.Value);
+        Assert.Equal(
+            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+                .CombineArtifactPath("process-runs", runId.ToString("D")),
+            binding.Root.Value);
         Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
         Assert.Contains(":v2:collection:", scope.Id.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveNodeCollectionAsync_maps_projected_product_output_to_the_project_output_scope()
+    {
+        Guid runId = Guid.NewGuid();
+        string root = $"output/process-runs/{runId:D}/Calculator";
+        await using var fixture = await ResolverFixture.CreateProjectedCollectionAsync(runId, root);
+
+        FileToolsSemanticScope scope = await fixture.Sut.ResolveNodeCollectionAsync(
+            fixture.ProjectId,
+            fixture.NodeKey);
+        FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
+
+        Assert.Equal(
+            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+                .CombineOutputPath("process-runs", runId.ToString("D"), "Calculator"),
+            binding.Root.Value);
     }
 
     [Theory]

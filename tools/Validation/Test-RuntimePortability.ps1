@@ -5,8 +5,6 @@ param(
     [string]$CatalogPath,
     [string]$BuildStampPath,
     [bool]$UseLocalCanDoItAllLibraries = $false,
-    [string]$CanDoItAllComponentsExpectedCommit,
-    [string]$CanDoItAllFileToolsExpectedCommit,
     [ValidateSet('All', 'Unit', 'Integration', 'Browser')]
     [string]$Scope = 'All',
     [switch]$SkipBuild,
@@ -15,7 +13,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$stampSchemaVersion = 1
+$stampSchemaVersion = 2
 $catalogSchemaVersion = 1
 
 function Get-Sha256Text {
@@ -92,6 +90,20 @@ function Get-SourceFingerprint {
     }
 
     return Get-Sha256Text ($records -join "`n")
+}
+
+function Get-DependencySourceRecord {
+    param([Parameter(Mandatory)][string]$Root)
+
+    if (-not (Test-Path -LiteralPath (Join-Path $Root '.git'))) {
+        throw "Source dependency is not a Git checkout: $Root"
+    }
+
+    $commit = (Invoke-GitText -Root $Root -Arguments @('rev-parse', 'HEAD') | Select-Object -First 1).Trim()
+    return [ordered]@{
+        commit = $commit
+        sourceFingerprint = Get-SourceFingerprint $Root
+    }
 }
 
 function Assert-CatalogScopeEntries {
@@ -195,8 +207,8 @@ function Get-CurrentBuildStampModel {
         dependencyMode = if ($UseLocalCanDoItAllLibraries) { 'source' } else { 'package' }
         sdkVersion = $sdkVersion
         catalogVersion = [string]$Catalog.catalogVersion
-        componentsCommit = if ($UseLocalCanDoItAllLibraries) { $CanDoItAllComponentsExpectedCommit.Trim() } else { $null }
-        fileToolsCommit = if ($UseLocalCanDoItAllLibraries) { $CanDoItAllFileToolsExpectedCommit.Trim() } else { $null }
+        componentsSource = if ($UseLocalCanDoItAllLibraries) { Get-DependencySourceRecord $CanDoItAllComponentsRepositoryRoot } else { $null }
+        fileToolsSource = if ($UseLocalCanDoItAllLibraries) { Get-DependencySourceRecord $CanDoItAllFileToolsRepositoryRoot } else { $null }
         assemblies = Get-AssemblyRecords -Root $Root -Catalog $Catalog -BuildConfiguration $BuildConfiguration
     }
 }
@@ -235,9 +247,15 @@ function Assert-BuildStampModel {
         throw 'Build stamp has the wrong runtime catalog version.'
     }
 
-    if ($Stamp.componentsCommit -ne $Current.componentsCommit -or
-        $Stamp.fileToolsCommit -ne $Current.fileToolsCommit) {
-        throw 'Build stamp has the wrong explicit dependency anchor.'
+    foreach ($dependencyName in @('componentsSource', 'fileToolsSource')) {
+        $stampedDependency = $Stamp.$dependencyName
+        $currentDependency = $Current.$dependencyName
+        if (($null -eq $stampedDependency) -ne ($null -eq $currentDependency) -or
+            ($null -ne $currentDependency -and
+             ($stampedDependency.commit -ne $currentDependency.commit -or
+              $stampedDependency.sourceFingerprint -ne $currentDependency.sourceFingerprint))) {
+            throw "Build stamp has stale $dependencyName dependency source."
+        }
     }
 
     $stampedAssemblies = @($Stamp.assemblies)
@@ -357,11 +375,6 @@ function Invoke-RuntimePortabilityProject {
         '--results-directory', $OutputDirectory,
         "-p:UseLocalCanDoItAllLibraries=$($UseLocalCanDoItAllLibraries.ToString().ToLowerInvariant())"
     )
-    if ($UseLocalCanDoItAllLibraries) {
-        $arguments += "-p:CanDoItAllComponentsExpectedCommit=$CanDoItAllComponentsExpectedCommit"
-        $arguments += "-p:CanDoItAllFileToolsExpectedCommit=$CanDoItAllFileToolsExpectedCommit"
-    }
-
     & dotnet @arguments
     if ($LASTEXITCODE -ne 0) {
         throw "Runtime portability tests failed for '$($CatalogScope.projectPath)' with exit code $LASTEXITCODE."
@@ -394,15 +407,15 @@ function New-SelfTestStamp {
     )
 
     return [pscustomobject]@{
-        schemaVersion = 1
+        schemaVersion = $stampSchemaVersion
         repositoryCommit = $Commit
         sourceFingerprint = $Fingerprint
         configuration = 'Release'
         dependencyMode = $DependencyMode
         sdkVersion = '10.0.303'
         catalogVersion = 'catalog-a'
-        componentsCommit = $null
-        fileToolsCommit = $null
+        componentsSource = $null
+        fileToolsSource = $null
         assemblies = @([pscustomobject]@{ path = 'tests/test.dll'; sha256 = $AssemblyHash })
     }
 }
@@ -465,6 +478,8 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
 }
 
 $RepositoryRoot = [IO.Path]::GetFullPath($RepositoryRoot)
+$CanDoItAllComponentsRepositoryRoot = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot '..\CanDoItAll.Components'))
+$CanDoItAllFileToolsRepositoryRoot = [IO.Path]::GetFullPath((Join-Path $RepositoryRoot '..\CanDoItAll.FileTools'))
 if ([string]::IsNullOrWhiteSpace($ResultsDirectory)) {
     $ResultsDirectory = Join-Path $RepositoryRoot 'artifacts/runtime-portability'
 }
@@ -481,11 +496,6 @@ if ([string]::IsNullOrWhiteSpace($BuildStampPath)) {
 }
 
 $BuildStampPath = [IO.Path]::GetFullPath($BuildStampPath)
-if ($UseLocalCanDoItAllLibraries -and
-    ([string]::IsNullOrWhiteSpace($CanDoItAllComponentsExpectedCommit) -or
-     [string]::IsNullOrWhiteSpace($CanDoItAllFileToolsExpectedCommit))) {
-    throw 'Explicit source mode requires exact Components and FileTools expected commits.'
-}
 
 $catalog = Read-RuntimeCatalog $CatalogPath
 if ($SkipBuild) {
@@ -506,11 +516,6 @@ else {
         '--nologo',
         "-p:UseLocalCanDoItAllLibraries=$($UseLocalCanDoItAllLibraries.ToString().ToLowerInvariant())"
     )
-    if ($UseLocalCanDoItAllLibraries) {
-        $buildArguments += "-p:CanDoItAllComponentsExpectedCommit=$CanDoItAllComponentsExpectedCommit"
-        $buildArguments += "-p:CanDoItAllFileToolsExpectedCommit=$CanDoItAllFileToolsExpectedCommit"
-    }
-
     & dotnet @buildArguments
     if ($LASTEXITCODE -ne 0) {
         throw "Runtime portability Release build failed with exit code $LASTEXITCODE."

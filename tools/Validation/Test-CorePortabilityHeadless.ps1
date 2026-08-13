@@ -13,10 +13,6 @@ param(
 
     [switch] $UseLocalCanDoItAllLibraries,
 
-    [string] $CanDoItAllComponentsExpectedCommit,
-
-    [string] $CanDoItAllFileToolsExpectedCommit,
-
     [switch] $RetainRuntimeFiles
 )
 
@@ -77,11 +73,6 @@ $publishLogPath = Join-Path $outputRootPath 'publish.log'
 $webProjectPath = Join-Path $repositoryRoot 'src\App\CanDoItAll.Web\CanDoItAll.Web.csproj'
 $playwrightProjectPath = Join-Path $repositoryRoot 'tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj'
 $useLocalLibraries = $UseLocalCanDoItAllLibraries.IsPresent.ToString().ToLowerInvariant()
-if ($UseLocalCanDoItAllLibraries -and
-    ([string]::IsNullOrWhiteSpace($CanDoItAllComponentsExpectedCommit) -or
-     [string]::IsNullOrWhiteSpace($CanDoItAllFileToolsExpectedCommit))) {
-    throw 'Explicit source mode requires exact Components and FileTools expected commits.'
-}
 
 function Get-SanitizedLog {
     param([string] $Value)
@@ -104,11 +95,6 @@ $publishArguments = @(
     '--nologo',
     '--verbosity:minimal'
 )
-if ($UseLocalCanDoItAllLibraries) {
-    $publishArguments += "-p:CanDoItAllComponentsExpectedCommit=$CanDoItAllComponentsExpectedCommit"
-    $publishArguments += "-p:CanDoItAllFileToolsExpectedCommit=$CanDoItAllFileToolsExpectedCommit"
-}
-
 $publishOutput = @(& dotnet @publishArguments 2>&1)
 $sanitizedPublishOutput = Get-SanitizedLog -Value ($publishOutput -join [Environment]::NewLine)
 $sanitizedPublishOutput | Set-Content -LiteralPath $publishLogPath -Encoding utf8

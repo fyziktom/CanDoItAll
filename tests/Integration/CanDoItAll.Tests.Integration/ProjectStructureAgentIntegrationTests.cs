@@ -748,7 +748,10 @@ public sealed class ProjectStructureAgentIntegrationTests
             outputNode.Id);
         FileToolsStorageBinding outputBinding = Assert.Single(
             await nodeStorageBindingSource.ResolveAsync(outputScope));
-        Assert.Equal(managedArtifactRoot, outputBinding.Root.Value);
+        Assert.Equal(
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D"))
+                .CombineArtifactPath("process-runs", runId.Value.ToString("D")),
+            outputBinding.Root.Value);
         var summaryNode = Assert.Single(surface.Nodes, node => string.Equals(node.Id, ProjectStructureProcessNodeKeys.BuildProcessRunSummaryNodeKey(runId.Value), StringComparison.Ordinal));
         Assert.Equal(ProjectObjectType.Note, summaryNode.ObjectType);
         Assert.Equal("process-summary", summaryNode.ObjectSubtype);

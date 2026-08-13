@@ -474,7 +474,10 @@ internal sealed class ProjectStructureFileScopeResolver(
             FileToolsSemanticScopeKind.ProjectNode,
             scopeKey.ToScopeId(),
             node.Title);
-        return new NodeCollectionBinding(scope, storageId, node.Title, outputFolder.DirectoryPath);
+        string scopedDirectoryPath = ProjectStructureProcessRunOutputFolderPolicy.ResolveProjectScopedDirectoryPath(
+            scopeKey.ProjectId,
+            outputFolder);
+        return new NodeCollectionBinding(scope, storageId, node.Title, scopedDirectoryPath);
     }
 
     private async ValueTask<Guid> ResolveWorkspaceStorageIdAsync(CancellationToken cancellationToken)

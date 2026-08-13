@@ -46,7 +46,7 @@ public sealed class FileToolsDownloadLeaseTests
     }
 
     [Fact]
-    public async Task Desktop_launcher_does_not_delegate_when_the_package_implementation_is_unvalidated()
+    public async Task Desktop_launcher_delegates_when_the_host_enables_it()
     {
         var inner = new RecordingDesktopFileLauncher();
         var launcher = new ConfiguredDesktopFileLauncher(
@@ -55,32 +55,7 @@ public sealed class FileToolsDownloadLeaseTests
                 Enabled = true,
                 HostProfileAllowsDesktop = true
             }),
-            inner,
-            implementationValidated: false);
-        var request = new DesktopFileLaunchRequest(
-            Path.Combine(Path.GetTempPath(), "not-launched-package-mode.xlsx"));
-
-        DesktopFileLaunchResult result = await launcher.LaunchAsync(request);
-
-        Assert.False(launcher.IsAvailable);
-        Assert.False(result.Succeeded);
-        Assert.Equal(DesktopFileLaunchFailureCode.DesktopUnavailable, result.Failure?.Code);
-        Assert.Contains("not been validated", result.Failure?.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(0, inner.LaunchCount);
-    }
-
-    [Fact]
-    public async Task Desktop_launcher_delegates_when_the_implementation_is_validated()
-    {
-        var inner = new RecordingDesktopFileLauncher();
-        var launcher = new ConfiguredDesktopFileLauncher(
-            Options.Create(new FileToolsDesktopLaunchOptions
-            {
-                Enabled = true,
-                HostProfileAllowsDesktop = true
-            }),
-            inner,
-            implementationValidated: true);
+            inner);
         var request = new DesktopFileLaunchRequest(
             Path.Combine(Path.GetTempPath(), "direct-source-launch.xlsx"));
 
@@ -89,16 +64,6 @@ public sealed class FileToolsDownloadLeaseTests
         Assert.True(launcher.IsAvailable);
         Assert.True(result.Succeeded);
         Assert.Equal(1, inner.LaunchCount);
-    }
-
-    [Fact]
-    public void Desktop_implementation_validation_matches_the_compiled_dependency_mode()
-    {
-#if CANDOITALL_FILETOOLS_DIRECT_SOURCE
-        Assert.True(FileToolsDesktopImplementationValidation.IsValidated);
-#else
-        Assert.False(FileToolsDesktopImplementationValidation.IsValidated);
-#endif
     }
 
     [Fact]

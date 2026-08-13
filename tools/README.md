@@ -42,13 +42,11 @@ elevation, database mutation, provider selection, or root-policy duplication. Th
 folder contains the stable launcher, idempotent rollback entry point, and systemd/launchd
 templates. See `docs/operations/headless-web-host.md` before using them.
 
-Package references are the default even when sibling `CanDoItAll.Components` and
-`CanDoItAll.FileTools` repositories are present. Direct-source development builds require
-the explicit `UseLocalCanDoItAllLibraries=true` opt-in, exact
-`CanDoItAllComponentsExpectedCommit` and `CanDoItAllFileToolsExpectedCommit` values, and
-clean matching checkouts. A source-mode FileTools desktop capability is validated only
-when that source also exposes the required desktop contract marker. Package mode keeps
-desktop launching unavailable for the alpha release.
+Local development uses sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` project
+references by default. Their roots can be overridden with
+`CanDoItAllComponentsRepositoryRoot` and `CanDoItAllFileToolsRepositoryRoot`. Hosted CI,
+Docker, and release validation must select the reproducible package graph explicitly with
+`UseLocalCanDoItAllLibraries=false`.
 
 The runtime portability gate uses `tools/Validation/RuntimePortabilityCatalog.json` as its
 versioned class/FQN/count contract. Create the one Release build and durable identity stamp

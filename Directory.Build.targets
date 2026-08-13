@@ -3,73 +3,20 @@
     <CopyRepositoryTemplatesToOutput Condition="'$(CopyRepositoryTemplatesToOutput)' == ''">true</CopyRepositoryTemplatesToOutput>
     <CanDoItAllComponentsRepositoryRoot Condition="'$(CanDoItAllComponentsRepositoryRoot)' == ''">$(MSBuildThisFileDirectory)..\CanDoItAll.Components</CanDoItAllComponentsRepositoryRoot>
     <CanDoItAllFileToolsRepositoryRoot Condition="'$(CanDoItAllFileToolsRepositoryRoot)' == ''">$(MSBuildThisFileDirectory)..\CanDoItAll.FileTools</CanDoItAllFileToolsRepositoryRoot>
-    <UseLocalCanDoItAllLibraries Condition="'$(UseLocalCanDoItAllLibraries)' == ''">false</UseLocalCanDoItAllLibraries>
+    <UseLocalCanDoItAllLibraries Condition="'$(UseLocalCanDoItAllLibraries)' == ''">true</UseLocalCanDoItAllLibraries>
     <ShouldUnsetParentConfigurationAndPlatform Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
-    <DefineConstants>$(DefineConstants);CANDOITALL_FILETOOLS_DIRECT_SOURCE</DefineConstants>
-  </PropertyGroup>
-
   <Target
-    Name="ValidateLocalCanDoItAllLibraryProvenance"
+    Name="ValidateLocalCanDoItAllLibraryRepositories"
     BeforeTargets="CollectPackageReferences;PrepareForBuild"
     Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
     <Error
-      Condition="'$(CanDoItAllComponentsExpectedCommit)' == ''"
-      Text="Explicit source mode requires CanDoItAllComponentsExpectedCommit." />
+      Condition="!Exists('$(CanDoItAllComponentsRepositoryRoot)\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj')"
+      Text="Local development requires the CanDoItAll.Components source repository at '$(CanDoItAllComponentsRepositoryRoot)'. Set UseLocalCanDoItAllLibraries=false only for an intentional package build." />
     <Error
-      Condition="'$(CanDoItAllFileToolsExpectedCommit)' == ''"
-      Text="Explicit source mode requires CanDoItAllFileToolsExpectedCommit." />
-    <Error
-      Condition="!Exists('$(CanDoItAllComponentsRepositoryRoot)\.git')"
-      Text="Explicit source mode requires a Components Git checkout at '$(CanDoItAllComponentsRepositoryRoot)'." />
-    <Error
-      Condition="!Exists('$(CanDoItAllFileToolsRepositoryRoot)\.git')"
-      Text="Explicit source mode requires a FileTools Git checkout at '$(CanDoItAllFileToolsRepositoryRoot)'." />
-
-    <Exec
-      Command="git -c safe.directory=&quot;$(CanDoItAllComponentsRepositoryRoot)&quot; -C &quot;$(CanDoItAllComponentsRepositoryRoot)&quot; rev-parse HEAD"
-      ConsoleToMsBuild="true"
-      StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_ActualCanDoItAllComponentsCommitLine" />
-    </Exec>
-    <Exec
-      Command="git -c safe.directory=&quot;$(CanDoItAllFileToolsRepositoryRoot)&quot; -C &quot;$(CanDoItAllFileToolsRepositoryRoot)&quot; rev-parse HEAD"
-      ConsoleToMsBuild="true"
-      StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_ActualCanDoItAllFileToolsCommitLine" />
-    </Exec>
-    <Exec
-      Command="git -c safe.directory=&quot;$(CanDoItAllComponentsRepositoryRoot)&quot; -C &quot;$(CanDoItAllComponentsRepositoryRoot)&quot; status --porcelain --untracked-files=no"
-      ConsoleToMsBuild="true"
-      StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_CanDoItAllComponentsStatusLine" />
-    </Exec>
-    <Exec
-      Command="git -c safe.directory=&quot;$(CanDoItAllFileToolsRepositoryRoot)&quot; -C &quot;$(CanDoItAllFileToolsRepositoryRoot)&quot; status --porcelain --untracked-files=no"
-      ConsoleToMsBuild="true"
-      StandardOutputImportance="Low">
-      <Output TaskParameter="ConsoleOutput" ItemName="_CanDoItAllFileToolsStatusLine" />
-    </Exec>
-
-    <PropertyGroup>
-      <_ActualCanDoItAllComponentsCommit>@(_ActualCanDoItAllComponentsCommitLine)</_ActualCanDoItAllComponentsCommit>
-      <_ActualCanDoItAllFileToolsCommit>@(_ActualCanDoItAllFileToolsCommitLine)</_ActualCanDoItAllFileToolsCommit>
-    </PropertyGroup>
-    <Error
-      Condition="'$(_ActualCanDoItAllComponentsCommit)' != '$(CanDoItAllComponentsExpectedCommit)'"
-      Text="Components source commit '$(_ActualCanDoItAllComponentsCommit)' does not match expected commit '$(CanDoItAllComponentsExpectedCommit)'." />
-    <Error
-      Condition="'$(_ActualCanDoItAllFileToolsCommit)' != '$(CanDoItAllFileToolsExpectedCommit)'"
-      Text="FileTools source commit '$(_ActualCanDoItAllFileToolsCommit)' does not match expected commit '$(CanDoItAllFileToolsExpectedCommit)'." />
-    <Error
-      Condition="'@(_CanDoItAllComponentsStatusLine)' != ''"
-      Text="Components source checkout must be clean before it can support a validated source-mode claim." />
-    <Error
-      Condition="'@(_CanDoItAllFileToolsStatusLine)' != ''"
-      Text="FileTools source checkout must be clean before it can support a validated source-mode claim." />
-
+      Condition="!Exists('$(CanDoItAllFileToolsRepositoryRoot)\src\CanDoItAll.FileTools.Abstractions\CanDoItAll.FileTools.Abstractions.csproj')"
+      Text="Local development requires the CanDoItAll.FileTools source repository at '$(CanDoItAllFileToolsRepositoryRoot)'. Set UseLocalCanDoItAllLibraries=false only for an intentional package build." />
   </Target>
 
   <Target Name="ValidateCanDoItAllLibraryMode" BeforeTargets="CollectPackageReferences;PrepareForBuild">
