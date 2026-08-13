@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "F02",
+  "title": "Transactional process ownership attachment",
+  "goal": "Ensure every failure after Process.Start leaves no process or native ownership resource.",
+  "tasks": [
+    {
+      "id": "T01",
+      "description": "Restructure StartSessionAsync so process and partial ownership state are visible to one total cleanup path.",
+      "status": "planned"
+    },
+    {
+      "id": "T02",
+      "description": "Add an explicit abort operation or equivalent for ownership-start objects.",
+      "status": "planned"
+    },
+    {
+      "id": "T03",
+      "description": "On Windows attachment failure, close the Job Object and terminate the unassigned root process.",
+      "status": "planned"
+    },
+    {
+      "id": "T04",
+      "description": "On Unix attachment/resume failure, terminate the established process group when observable, otherwise terminate the root tree.",
+      "status": "planned"
+    },
+    {
+      "id": "T05",
+      "description": "Use non-cancellable bounded cleanup.",
+      "status": "planned"
+    },
+    {
+      "id": "T06",
+      "description": "Do not return an identity until boundary and executable identity are established.",
+      "status": "planned"
+    },
+    {
+      "id": "T07",
+      "description": "Add deterministic Windows/Unix-friendly tests using an injected attach failure.",
+      "status": "planned"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "F05",
+  "title": "MAF 1.17 authority and approval regression gate",
+  "goal": "Bind the final candidate to the already implemented MAF 1.17 behavior without reopening the wrapper architecture.",
+  "tasks": [
+    {
+      "id": "T01",
+      "description": "Verify exact stable/preview package baselines.",
+      "status": "planned"
+    },
+    {
+      "id": "T02",
+      "description": "Run package reflection tests.",
+      "status": "planned"
+    },
+    {
+      "id": "T03",
+      "description": "Run approval session round-trip and continuation tests.",
+      "status": "planned"
+    },
+    {
+      "id": "T04",
+      "description": "Run runtime architecture service tests.",
+      "status": "planned"
+    },
+    {
+      "id": "T05",
+      "description": "Run canonical authority and activity coordinator tests.",
+      "status": "planned"
+    },
+    {
+      "id": "T06",
+      "description": "Run execution-run tracking integration tests.",
+      "status": "planned"
+    },
+    {
+      "id": "T07",
+      "description": "Investigate only actual failures; do not perform speculative MAF refactoring.",
+      "status": "planned"
+    }
+  ]
+}
