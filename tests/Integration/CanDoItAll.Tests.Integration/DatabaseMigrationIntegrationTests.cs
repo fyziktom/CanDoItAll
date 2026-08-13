@@ -1,5 +1,9 @@
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -149,6 +153,81 @@ public sealed class MigrationBootstrapIntegrationTests
         await bootstrapper.EnsureCurrentProfileReadyAsync();
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await AssertCurrentMigrationChainAsync(dbContext);
+    }
+
+    [Fact]
+    public async Task Bootstrap_migrates_legacy_process_strategy_result_receipts()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-postgres-process-result-hashes");
+        var activeProfile = testEnvironment.CreatePostgreSqlProfile("migration-process-result-hashes");
+
+        var services = new ServiceCollection();
+        var environment = new TestHostEnvironment(activeProfile.EnvironmentRootPath, "CanDoItAll.Tests.Integration");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile);
+        TestApplicationBootstrap.ConfigureDefaultServices(services, configuration, environment);
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        await using var scope = provider.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var runId = Guid.NewGuid();
+        var stepInstanceId = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid();
+        const string legacyHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        const string legacySummary = @"Workflow output is stored at C:\legacy\result.txt";
+
+        await using (var legacyContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var migrator = legacyContext.Database.GetService<IMigrator>();
+            await migrator.MigrateAsync("20260813012618_CorrectProcessPlanHashClassification");
+            await legacyContext.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                 INSERT INTO process_runtime_states
+                     ("RunId", "RootRunId", "PlanId", "PlanHash", "Status", "UpdatedAtUtc", "ConcurrencyToken",
+                      "BlockedRecoveryActionsJson")
+                 VALUES
+                     ({runId}, {runId}, {Guid.NewGuid()}, {"sha256:" + new string('a', 64)}, {"Active"}, {DateTimeOffset.UtcNow},
+                      {Guid.NewGuid()}, {"[]"});
+                 """);
+            await legacyContext.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                 INSERT INTO process_strategy_result_receipts
+                     ("RunId", "StepInstanceId", "StrategyId", "IdempotencyKey", "Outcome", "AppliedStepStatus",
+                      "ResultHash", "DiagnosticsJson", "ProducedArtifactsJson", "UserSafeSummary", "AppliedSequence")
+                 VALUES
+                     ({runId}, {stepInstanceId}, {"strategy.adapter.workflow.execute"}, {idempotencyKey}, {"Succeeded"},
+                      {"Completed"}, {legacyHash}, {"[]"}, {"[]"}, {legacySummary}, {1L});
+                 """);
+        }
+
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedReceipt = await dbContext.Set<ProcessStrategyResultReceiptEntity>()
+            .Where(receipt => receipt.RunId == runId && receipt.IdempotencyKey == idempotencyKey)
+            .SingleAsync();
+
+        Assert.Equal("sha256:" + legacyHash, persistedReceipt.ResultHash);
+        Assert.Equal(
+            ProcessStrategyResultReceiptContractVersion.LegacyV1,
+            persistedReceipt.ContractVersion);
+        var processOptions = new DbContextOptionsBuilder<ProcessPersistenceDbContext>()
+            .UseNpgsql(activeProfile.ConnectionString)
+            .Options;
+        await using var processContext = new ProcessPersistenceDbContext(processOptions);
+        var loaded = await new EfProcessRuntimeUnitOfWork(processContext)
+            .LoadAsync(new ProcessRunId(runId));
+        Assert.NotNull(loaded);
+        var loadedReceipt = Assert.Single(loaded.AppliedResults);
+        Assert.True(ProcessPublicReceiptTextPolicy.IsSafe(
+            loadedReceipt.UserSafeSummary,
+            ProcessStrategyResultLimits.MaximumUserSafeSummaryLength));
         await AssertCurrentMigrationChainAsync(dbContext);
     }
 

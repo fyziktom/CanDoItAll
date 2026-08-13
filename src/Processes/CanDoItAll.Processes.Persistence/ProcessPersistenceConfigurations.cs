@@ -141,6 +141,11 @@ internal sealed class ProcessStrategyResultReceiptEntityConfiguration : IEntityT
     {
         builder.ToTable("process_strategy_result_receipts");
         builder.HasKey(receipt => new { receipt.RunId, receipt.StepInstanceId, receipt.StrategyId, receipt.IdempotencyKey });
+        builder.Property(receipt => receipt.ContractVersion)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .HasDefaultValue(ProcessStrategyResultReceiptContractVersion.BoundedV2)
+            .IsRequired();
         builder.Property(receipt => receipt.StrategyId).HasMaxLength(256).IsRequired();
         builder.Property(receipt => receipt.Outcome).HasMaxLength(64).IsRequired();
         builder.Property(receipt => receipt.AppliedStepStatus).HasConversion<string>().HasMaxLength(64).IsRequired();
