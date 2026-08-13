@@ -1106,6 +1106,23 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     }
 
     [Fact]
+    public void Playwright_provider_secret_reference_uses_canonical_credential_target()
+    {
+        var provider = CreateProviderProfile() with
+        {
+            ApiKeyEnvironmentVariable = $"secret:{Guid.NewGuid():D}"
+        };
+
+        var targets = McpCapabilityBuilder.ResolveProviderCredentialEnvironmentVariableTargets(
+            provider,
+            "Playwright Local MCP");
+
+        Assert.Single(targets);
+        Assert.Contains(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, targets);
+        Assert.DoesNotContain(provider.ApiKeyEnvironmentVariable, targets);
+    }
+
+    [Fact]
     public async Task Local_mcp_package_validation_precedes_stored_secret_resolution()
     {
         using var workspace = new TemporaryDirectory();

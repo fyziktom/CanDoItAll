@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -8,6 +9,12 @@ internal static class BrowserMcpArtifactPathService
     private const string ScopedArtifactsRoot = "artifacts/scopes";
     private const string PlaywrightMcpRoot = ".playwright-mcp";
     private const string BrowserArtifactFolder = "browser";
+
+    public static WorkspaceScopeDescriptor ResolveArtifactScope(WorkspaceScopeDescriptor contextWorkspaceScope)
+    {
+        ArgumentNullException.ThrowIfNull(contextWorkspaceScope);
+        return WorkspaceExecutionAuditContext.Current?.ExecutionWorkspaceScope ?? contextWorkspaceScope;
+    }
 
     public static void EnsureWritableArtifactDirectories(
         string workspaceRoot,

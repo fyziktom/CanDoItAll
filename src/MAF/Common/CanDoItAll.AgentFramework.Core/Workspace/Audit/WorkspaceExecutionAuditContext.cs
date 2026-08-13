@@ -12,7 +12,8 @@ public static class WorkspaceExecutionAuditContext
 
     public static IDisposable BeginScope(
         ExecutionRunRecord run,
-        WorkspaceScopeDescriptor? contextWorkspaceScope = null)
+        WorkspaceScopeDescriptor? contextWorkspaceScope = null,
+        WorkspaceScopeDescriptor? executionWorkspaceScope = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -45,7 +46,8 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
             contextWorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run),
-            ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run));
+            ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run),
+            executionWorkspaceScope);
         return new Scope(previous);
     }
 
@@ -77,7 +79,8 @@ public static class WorkspaceExecutionAuditContext
         string ProcessStepTargetScope,
         WorkspaceScopeDescriptor? ContextWorkspaceScope,
         ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent,
-        ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext);
+        ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext,
+        WorkspaceScopeDescriptor? ExecutionWorkspaceScope = null);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

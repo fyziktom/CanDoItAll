@@ -33,6 +33,7 @@ public static class WorkspaceExecutionAuditTrailWriter
         }
 
         var executionRunId = receipt.ExecutionRunId.Value;
+        var executionWorkspaceScope = scope.ExecutionWorkspaceScope ?? workspaceScope;
         var runtimeToolOwnership = ResolveRuntimeToolOwnership(toolName);
         var receiptRecord = new ToolExecutionReceiptRecord(
             Id: CreateDeterministicGuid($"{executionRunId:N}|receipt|{receipt.ReceiptRelativePath}|{toolName}|{receipt.StartedAtUtc:O}"),
@@ -72,7 +73,7 @@ public static class WorkspaceExecutionAuditTrailWriter
 
         PersistRecord(
             workspaceRoot,
-            Path.Combine(GetRunAuditRoot(workspaceRoot, workspaceScope, executionRunId), "receipts", $"{receiptRecord.Id:N}.json"),
+            Path.Combine(GetRunAuditRoot(workspaceRoot, executionWorkspaceScope, executionRunId), "receipts", $"{receiptRecord.Id:N}.json"),
             receiptRecord);
 
         foreach (var artifact in receipt.ArtifactReferences.Where(item => !string.Equals(item.Zone, "tool-receipt", StringComparison.OrdinalIgnoreCase)))
@@ -99,7 +100,7 @@ public static class WorkspaceExecutionAuditTrailWriter
 
             PersistRecord(
                 workspaceRoot,
-                Path.Combine(GetRunAuditRoot(workspaceRoot, workspaceScope, executionRunId), "artifacts", $"{artifactRecord.Id:N}.json"),
+                Path.Combine(GetRunAuditRoot(workspaceRoot, executionWorkspaceScope, executionRunId), "artifacts", $"{artifactRecord.Id:N}.json"),
                 artifactRecord);
         }
     }

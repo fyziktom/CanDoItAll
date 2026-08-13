@@ -809,6 +809,12 @@ internal sealed class WorkspacePathPolicy
 
     private string ApplyManagedRootScope(string relativePath)
     {
+        var executionArtifactPath = TryMapCurrentRunArtifactToExecutionScope(relativePath);
+        if (executionArtifactPath is not null)
+        {
+            return executionArtifactPath;
+        }
+
         if (workspaceScope.IsDefaultSandbox)
         {
             return relativePath;
@@ -819,6 +825,31 @@ internal sealed class WorkspacePathPolicy
             ?? TryMapManagedRoot(relativePath, "integration-map", workspaceScope.IntegrationMapRootRelativePath)
             ?? TryMapManagedRoot(relativePath, "data", workspaceScope.DataRootRelativePath)
             ?? relativePath;
+    }
+
+    private static string? TryMapCurrentRunArtifactToExecutionScope(string relativePath)
+    {
+        var auditScope = WorkspaceExecutionAuditContext.Current;
+        if (auditScope?.ExecutionWorkspaceScope is not { } executionWorkspaceScope ||
+            !MatchesRoot(relativePath, "artifacts") ||
+            relativePath.StartsWith("artifacts/scopes/", StringComparison.OrdinalIgnoreCase) ||
+            !WorkspaceProcessRunArtifactPath.TryResolveRunId(
+                relativePath,
+                out var referencedRunId,
+                out var artifactSuffix) ||
+            !Guid.TryParse(referencedRunId, out var referencedRunGuid) ||
+            !Guid.TryParse(auditScope.ProcessRunId, out var currentRunGuid) ||
+            referencedRunGuid != currentRunGuid)
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(artifactSuffix)
+            ? executionWorkspaceScope.CombineArtifactPath("process-runs", currentRunGuid.ToString("D"))
+            : executionWorkspaceScope.CombineArtifactPath(
+                "process-runs",
+                currentRunGuid.ToString("D"),
+                artifactSuffix);
     }
 
     private string? TryMapManagedRoot(string relativePath, string rootName, string scopedRootRelativePath)

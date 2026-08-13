@@ -17,6 +17,13 @@ public static class McpEnvironmentVariableNamePolicy
             character == '_');
     }
 
+    public static bool IsValidRuntimeName(string? value)
+    {
+        return !string.IsNullOrEmpty(value) &&
+               !value.Contains('=') &&
+               !value.Contains('\0');
+    }
+
     public static bool IsValidHttpHeaderName(string? value)
     {
         return !string.IsNullOrEmpty(value) &&

@@ -821,6 +821,60 @@ public sealed class McpPortabilityPolicyTests
     }
 
     [Fact]
+    public void Local_MCP_runtime_raw_environment_accepts_host_valid_nonportable_names()
+    {
+        var descriptor = McpDescriptorFactory.LocalStdio(
+            CapabilityKey.Create("host-environment-mcp"),
+            McpServerKey.Create("host-environment-mcp"),
+            "Host environment MCP",
+            "Host environment MCP.",
+            "dotnet",
+            [],
+            ".",
+            [],
+            [McpToolName.Create("echo")],
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>
+            {
+                ["CommonProgramFiles(x86)"] = "host-value"
+            },
+            McpApprovalMode.AlwaysRequire,
+            TimeSpan.FromSeconds(5));
+
+        var environment = LocalStdioMcpEnvironmentBinder.Build(descriptor);
+
+        Assert.Equal("host-value", environment["CommonProgramFiles(x86)"]);
+    }
+
+    [Fact]
+    public void Local_MCP_runtime_raw_environment_rejects_OS_invalid_names()
+    {
+        var descriptor = McpDescriptorFactory.LocalStdio(
+            CapabilityKey.Create("invalid-host-environment-mcp"),
+            McpServerKey.Create("invalid-host-environment-mcp"),
+            "Invalid host environment MCP",
+            "Invalid host environment MCP.",
+            "dotnet",
+            [],
+            ".",
+            [],
+            [McpToolName.Create("echo")],
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>
+            {
+                ["INVALID=TARGET"] = "host-value"
+            },
+            McpApprovalMode.AlwaysRequire,
+            TimeSpan.FromSeconds(5));
+
+        var exception = Assert.Throws<McpSetupException>(() =>
+            LocalStdioMcpEnvironmentBinder.Build(descriptor));
+
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
+        Assert.Equal("$.environmentVariables", exception.FieldPath);
+    }
+
+    [Fact]
     public void MCP_runtime_has_no_second_Process_owner_or_global_npx_cache_authority()
     {
         var root = FindRepositoryRoot();

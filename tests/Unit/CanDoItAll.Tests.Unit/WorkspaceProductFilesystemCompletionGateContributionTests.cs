@@ -269,6 +269,33 @@ public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
     }
 
     [Fact]
+    public void Validate_NativeProductRootWithUnboundAlias_UsesValidatedNativeAuthority()
+    {
+        var workspaceRoot = CreateTemporaryProductRoot();
+        var productRoot = CreateTemporaryProductRoot();
+        try
+        {
+            File.WriteAllText(Path.Combine(productRoot, "product.txt"), "product");
+            var context = CreateContext(
+                productRoot,
+                extraLaunchVariables: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [ProcessRuntimeLaunchVariables.ProductRootAlias] =
+                        "external-target/v1/0123456789abcdef01234567/product"
+                });
+
+            var issue = CreateGate(workspaceRoot, new ExternalTargetPathRegistry()).Validate(context);
+
+            Assert.Null(issue);
+        }
+        finally
+        {
+            DeleteDirectory(productRoot);
+            DeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public void Validate_RequiredPathUnderBoundAlias_UsesOwnerResolution()
     {
         var workspaceRoot = CreateTemporaryProductRoot();

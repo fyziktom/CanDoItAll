@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Tests.Support;
 
@@ -112,6 +113,25 @@ public sealed class BrowserMcpArtifactPathServiceTests
     }
 
     [Fact]
+    public void ResolveArtifactScope_uses_the_owning_execution_scope()
+    {
+        var processRunId = Guid.NewGuid().ToString("D");
+        var contextScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var executionScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var run = CreateRun(processRunId);
+
+        using (WorkspaceExecutionAuditContext.BeginScope(
+                   run,
+                   contextWorkspaceScope: contextScope,
+                   executionWorkspaceScope: executionScope))
+        {
+            Assert.Equal(
+                executionScope,
+                BrowserMcpArtifactPathService.ResolveArtifactScope(contextScope));
+        }
+    }
+
+    [Fact]
     public void EnsureWritableArtifactDirectories_ignores_paths_that_escape_workspace_artifacts()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("browser-mcp-artifacts");
@@ -128,5 +148,37 @@ public sealed class BrowserMcpArtifactPathServiceTests
         {
             TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
         }
+    }
+
+    private static ExecutionRunRecord CreateRun(string processRunId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Browser artifact scope",
+            SourceKind: "process-step",
+            SourceId: "step-001",
+            CorrelationId: processRunId,
+            CausationId: Guid.NewGuid().ToString("D"),
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: "{}",
+            InputSummary: "Capture browser evidence.",
+            ResultSummary: string.Empty,
+            ProviderName: "OpenAI",
+            Model: "gpt-5",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            ProcessRunId: processRunId,
+            ProcessStepId: Guid.NewGuid().ToString("D"));
     }
 }

@@ -524,7 +524,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 inputAttachments: null,
                 jsonSchemaOutput: null);
             AgentRuntimeResponse runtimeResponse;
-            using (WorkspaceExecutionAuditContext.BeginScope(run, runtimeExecutionOptions.ContextWorkspaceScope))
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       runtimeExecutionOptions.ContextWorkspaceScope,
+                       activityWorkspaceIdentity.WorkspaceScope))
             {
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
@@ -1366,7 +1369,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 startup.InputAttachments,
                 jsonSchemaOutput);
             AgentRuntimeResponse runtimeResponse;
-            using (WorkspaceExecutionAuditContext.BeginScope(run, runtimeExecutionOptions.ContextWorkspaceScope))
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       runtimeExecutionOptions.ContextWorkspaceScope,
+                       activityWorkspaceIdentity.WorkspaceScope))
             {
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,

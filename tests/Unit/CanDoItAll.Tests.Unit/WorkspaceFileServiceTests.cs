@@ -279,6 +279,107 @@ public sealed class WorkspaceFileServiceTests
     }
 
     [Fact]
+    public void WriteTextFile_persists_audit_receipt_with_the_owning_execution_scope()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var run = CreateRun();
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var executionScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot, projectScope);
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       contextWorkspaceScope: projectScope,
+                       executionWorkspaceScope: executionScope))
+            {
+                var result = service.WriteTextFile("artifacts/product-proof.md", "proof");
+
+                Assert.True(result.Succeeded);
+            }
+
+            var executionReceiptRoot = Path.Combine(
+                WorkspaceExecutionAuditTrailWriter.GetRunAuditRoot(workspaceRoot, executionScope, run.Id),
+                "receipts");
+            Assert.Single(Directory.GetFiles(executionReceiptRoot, "*.json"));
+
+            var contextReceiptRoot = Path.Combine(
+                WorkspaceExecutionAuditTrailWriter.GetRunAuditRoot(workspaceRoot, projectScope, run.Id),
+                "receipts");
+            Assert.False(Directory.Exists(contextReceiptRoot));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_routes_current_run_artifact_to_the_owning_execution_scope()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var processRunId = Guid.NewGuid();
+        var run = CreateRun() with
+        {
+            ProcessRunId = processRunId.ToString("D")
+        };
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var executionScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var artifactPath = $"artifacts/process-runs/{processRunId:D}/steps/validate-runtime.md";
+
+        try
+        {
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot, projectScope);
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       contextWorkspaceScope: projectScope,
+                       executionWorkspaceScope: executionScope))
+            {
+                var result = service.WriteTextFile(artifactPath, "runtime evidence");
+
+                Assert.True(result.Succeeded);
+            }
+
+            var executionArtifactPath = Path.Combine(
+                workspaceRoot,
+                executionScope.CombineArtifactPath(
+                    "process-runs",
+                    processRunId.ToString("D"),
+                    "steps",
+                    "validate-runtime.md").Replace('/', Path.DirectorySeparatorChar));
+            Assert.Equal("runtime evidence", File.ReadAllText(executionArtifactPath));
+
+            var contextArtifactPath = Path.Combine(
+                workspaceRoot,
+                projectScope.CombineArtifactPath(
+                    "process-runs",
+                    processRunId.ToString("D"),
+                    "steps",
+                    "validate-runtime.md").Replace('/', Path.DirectorySeparatorChar));
+            Assert.False(File.Exists(contextArtifactPath));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
     public void ToolExecutionReceiptRecord_deserializes_legacy_receipts_with_empty_runtime_provider_ownership()
     {
         var receiptId = Guid.NewGuid();

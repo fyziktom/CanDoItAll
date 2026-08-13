@@ -39,6 +39,7 @@ internal sealed class McpCapabilityBuilder(
     Func<string?, CapabilityCatalogItem, McpStdioMessageFraming> resolveMcpMessageFraming)
 {
         private static readonly ProviderProfileService ProviderFeatureService = new();
+        private const string SecretReferencePrefix = "secret:";
         private const int MaxBrowserMcpToolResultCharacters = 12000;
         private const int MaxScreenshotResultCharacters = 2000;
         private static readonly JsonElement DefaultMcpToolInputSchema = JsonDocument
@@ -563,7 +564,8 @@ internal sealed class McpCapabilityBuilder(
             ValidateProviderCredentialTargetCollisions(capability, configuration, provider);
             var environmentVariableNames = ResolveLocalEnvironmentVariableNames(
                 configuration,
-                provider);
+                provider,
+                capability.Name);
             var commandExecutionService = workspaceRuntimeServices.CommandExecutionService;
             var launchDescriptor = commandExecutionService.PrepareLocalMcpServerLaunch(
                 capability.Name,
@@ -906,7 +908,6 @@ internal sealed class McpCapabilityBuilder(
         private static bool TryParseSecretBinding(string value, out Guid secretId)
         {
             secretId = Guid.Empty;
-            const string prefix = "secret:";
             if (string.IsNullOrWhiteSpace(value))
             {
                 return false;
@@ -914,8 +915,8 @@ internal sealed class McpCapabilityBuilder(
 
             var normalized = value.Trim();
             return Guid.TryParse(normalized, out secretId) ||
-                   (normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
-                    Guid.TryParse(normalized[prefix.Length..], out secretId));
+                   (normalized.StartsWith(SecretReferencePrefix, StringComparison.OrdinalIgnoreCase) &&
+                    Guid.TryParse(normalized[SecretReferencePrefix.Length..], out secretId));
         }
 
         private void AttachProviderCredentialForLocalMcp(
@@ -932,9 +933,6 @@ internal sealed class McpCapabilityBuilder(
                 return;
             }
 
-            EnsureValidCredentialEnvironmentVariableName(provider.ApiKeyEnvironmentVariable, capability.Name);
-            EnsureValidCredentialEnvironmentVariableName(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, capability.Name);
-
             var credential = providerCredentialService.Resolve(provider);
             if (!credential.IsResolved)
             {
@@ -942,12 +940,9 @@ internal sealed class McpCapabilityBuilder(
                     $"Local MCP capability '{capability.Name}' requires provider credential for '{provider.Name}' to enable Playwright vision. {credential.FailureMessage}");
             }
 
-            var comparer = new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer;
-            foreach (var targetName in new[]
-                     {
-                         provider.ApiKeyEnvironmentVariable,
-                         MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable
-                     }.Distinct(comparer))
+            foreach (var targetName in ResolveProviderCredentialEnvironmentVariableTargets(
+                         provider,
+                         capability.Name))
             {
                 LocalMcpCredentialEnvironmentPolicy.Add(
                     environmentVariables,
@@ -974,13 +969,10 @@ internal sealed class McpCapabilityBuilder(
                     ? bindings.Keys
                     : Enumerable.Empty<string>())
                 .ToHashSet(comparer);
-            foreach (var targetName in new[]
-                     {
-                         provider.ApiKeyEnvironmentVariable,
-                         MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable
-                     }.Distinct(comparer))
+            foreach (var targetName in ResolveProviderCredentialEnvironmentVariableTargets(
+                         provider,
+                         capability.Name))
             {
-                EnsureValidCredentialEnvironmentVariableName(targetName, capability.Name);
                 if (explicitTargets.Contains(targetName))
                 {
                     throw new InvalidOperationException(
@@ -1030,7 +1022,8 @@ internal sealed class McpCapabilityBuilder(
 
         private static IReadOnlyCollection<string> ResolveLocalEnvironmentVariableNames(
             McpCapabilityConfiguration configuration,
-            ProviderProfile provider)
+            ProviderProfile provider,
+            string capabilityName)
         {
             var comparer = new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer;
             var names = (configuration.EnvironmentVariableBindings is { } bindings
@@ -1042,13 +1035,36 @@ internal sealed class McpCapabilityBuilder(
                     configuration.Command ?? string.Empty,
                     configuration.Arguments ?? []))
             {
-                EnsureValidCredentialEnvironmentVariableName(provider.ApiKeyEnvironmentVariable, "Playwright MCP");
-                EnsureValidCredentialEnvironmentVariableName(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, "Playwright MCP");
-                names.Add(provider.ApiKeyEnvironmentVariable);
-                names.Add(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable);
+                names.UnionWith(ResolveProviderCredentialEnvironmentVariableTargets(
+                    provider,
+                    capabilityName));
             }
 
             return names;
+        }
+
+        internal static IReadOnlySet<string> ResolveProviderCredentialEnvironmentVariableTargets(
+            ProviderProfile provider,
+            string capabilityName)
+        {
+            var targets = new HashSet<string>(
+                new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer)
+            {
+                MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable
+            };
+            var providerTarget = provider.ApiKeyEnvironmentVariable?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(providerTarget) &&
+                !providerTarget.StartsWith(SecretReferencePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                targets.Add(providerTarget);
+            }
+
+            foreach (var target in targets)
+            {
+                EnsureValidCredentialEnvironmentVariableName(target, capabilityName);
+            }
+
+            return targets;
         }
 
         private sealed class BrowserMcpModelContextBoundedAIFunction(
@@ -1061,12 +1077,13 @@ internal sealed class McpCapabilityBuilder(
                 CancellationToken cancellationToken)
             {
                 var fileName = TryGetStringArgument(arguments, "filename");
-                BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(workspaceRoot, workspaceScope, fileName);
+                var artifactScope = BrowserMcpArtifactPathService.ResolveArtifactScope(workspaceScope);
+                BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(workspaceRoot, artifactScope, fileName);
 
                 var result = await base.InvokeCoreAsync(arguments, cancellationToken).ConfigureAwait(false);
                 var importResult = BrowserMcpArtifactPathService.TryImportAfterInvocation(
                     workspaceRoot,
-                    workspaceScope,
+                    artifactScope,
                     fileName,
                     WorkspaceExecutionAuditContext.Current?.ProcessRunId);
 

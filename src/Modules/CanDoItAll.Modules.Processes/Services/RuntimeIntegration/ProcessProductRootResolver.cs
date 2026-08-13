@@ -54,12 +54,12 @@ internal static class ProcessProductRootResolver
         IReadOnlyDictionary<string, string> launchVariables)
     {
         var productRoot = FirstNonEmpty(
-            ResolveLaunchVariable(launchVariables, "ProductRootAlias"),
-            ResolveLaunchVariable(launchVariables, "OutputRootAlias"),
-            ResolveLaunchVariable(launchVariables, "OutputFolder"),
-            ResolveLaunchVariable(launchVariables, "OutputRoot"),
             ResolveLaunchVariable(launchVariables, "ProductRoot"),
-            ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"));
+            ResolveLaunchVariable(launchVariables, "OutputRoot"),
+            ResolveLaunchVariable(launchVariables, "OutputFolder"),
+            ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"),
+            ResolveLaunchVariable(launchVariables, "ProductRootAlias"),
+            ResolveLaunchVariable(launchVariables, "OutputRootAlias"));
         if (string.IsNullOrWhiteSpace(productRoot))
         {
             return new ProcessProductRootResolution(

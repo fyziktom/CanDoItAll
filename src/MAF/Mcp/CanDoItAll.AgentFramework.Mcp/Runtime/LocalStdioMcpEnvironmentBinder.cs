@@ -14,7 +14,7 @@ internal static class LocalStdioMcpEnvironmentBinder
             environmentPolicy.EnvironmentNameComparer);
         foreach (var (targetName, value) in descriptor.RawEnvironmentVariables)
         {
-            ValidateEnvironmentVariableName(descriptor, targetName, "target");
+            ValidateRuntimeEnvironmentVariableName(descriptor, targetName);
 
             if (!explicitValues.TryAdd(targetName, value))
             {
@@ -54,6 +54,20 @@ internal static class LocalStdioMcpEnvironmentBinder
         if (!McpEnvironmentVariableNamePolicy.IsValid(name))
         {
             throw InvalidBinding(descriptor, part);
+        }
+    }
+
+    private static void ValidateRuntimeEnvironmentVariableName(
+        LocalStdioMcpServerDescriptor descriptor,
+        string? name)
+    {
+        if (!McpEnvironmentVariableNamePolicy.IsValidRuntimeName(name))
+        {
+            throw new McpSetupException(
+                CapabilityDiagnosticCategory.SecretBinding,
+                "$.environmentVariables",
+                $"MCP server '{descriptor.ServerKey}' received an invalid runtime environment variable name.",
+                "Repair the runtime environment composition before starting the MCP server.");
         }
     }
 
