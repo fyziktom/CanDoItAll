@@ -6258,13 +6258,6 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("ContractVersion")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)")
-                        .HasDefaultValue("BoundedV2");
-
                     b.Property<string>("DiagnosticsJson")
                         .IsRequired()
                         .HasColumnType("text");

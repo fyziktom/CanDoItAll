@@ -76,7 +76,6 @@ internal static class ProcessPersistenceMappers
             entity.ResultReceipts.Add(new ProcessStrategyResultReceiptEntity
             {
                 RunId = state.RunId.Value,
-                ContractVersion = ProcessStrategyResultReceiptContractVersion.BoundedV2,
                 StepInstanceId = receipt.StepInstanceId.Value,
                 StrategyId = receipt.StrategyId.Value,
                 IdempotencyKey = receipt.IdempotencyKey.Value,
@@ -165,18 +164,12 @@ internal static class ProcessPersistenceMappers
         foreach (var receipt in entity.ResultReceipts
                      .OrderBy(item => item.AppliedSequence))
         {
-            if (!Enum.IsDefined(receipt.ContractVersion))
-            {
-                throw new InvalidOperationException("Persisted process strategy result receipt contract version is invalid.");
-            }
-
             if (!TryParseExactEnum<StrategyOutcome>(receipt.Outcome, out var outcome))
             {
                 throw new InvalidOperationException("Persisted process strategy result receipt is invalid.");
             }
 
-            var isLegacy = receipt.ContractVersion == ProcessStrategyResultReceiptContractVersion.LegacyV1;
-            var diagnosticSet = DeserializeDiagnostics(receipt.DiagnosticsJson, isLegacy);
+            var diagnosticSet = DeserializeDiagnostics(receipt.DiagnosticsJson);
             var deserializedReceipt = new StrategyResultReceipt(
                 new ProcessStepInstanceId(receipt.StepInstanceId),
                 new StrategyId(receipt.StrategyId),
@@ -185,19 +178,14 @@ internal static class ProcessPersistenceMappers
                 receipt.AppliedStepStatus,
                 receipt.ResultHash,
                 diagnosticSet.Diagnostics,
-                DeserializeProducedArtifacts(receipt.ProducedArtifactsJson, isLegacy),
-                DeserializeRecoveryDecision(receipt.RecoveryDecisionJson, isLegacy))
+                DeserializeProducedArtifacts(receipt.ProducedArtifactsJson),
+                DeserializeRecoveryDecision(receipt.RecoveryDecisionJson))
             {
                 UserSafeSummary = NormalizeOptionalText(receipt.UserSafeSummary),
                 AppliedSequence = receipt.AppliedSequence,
                 ExecutionRunId = diagnosticSet.ExecutionRunId,
                 HostCapabilityEvidence = diagnosticSet.HostCapabilityEvidence
             };
-            if (isLegacy)
-            {
-                deserializedReceipt = LegacyProcessStrategyResultReceiptNormalizer.Normalize(deserializedReceipt);
-            }
-
             EnsureValidStrategyResultReceipt(deserializedReceipt);
             receipts.Add(deserializedReceipt);
         }
@@ -568,7 +556,7 @@ internal static class ProcessPersistenceMappers
             ReceiptJsonOptions);
     }
 
-    private static DeserializedStrategyResultDiagnostics DeserializeDiagnostics(string? value, bool isLegacy)
+    private static DeserializedStrategyResultDiagnostics DeserializeDiagnostics(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -601,9 +589,8 @@ internal static class ProcessPersistenceMappers
             throw new InvalidOperationException("Persisted process strategy result metadata is invalid.");
         }
 
-        if (!isLegacy &&
-            (persistedDiagnostics.Length > ProcessStrategyResultLimits.MaximumDiagnostics ||
-             persistedDiagnostics.Any(diagnostic =>
+        if (persistedDiagnostics.Length > ProcessStrategyResultLimits.MaximumDiagnostics ||
+            persistedDiagnostics.Any(diagnostic =>
                 diagnostic is null ||
                 string.IsNullOrWhiteSpace(diagnostic.Code) ||
                 diagnostic.Code.Length > ProcessStrategyResultLimits.MaximumIdentifierLength ||
@@ -613,23 +600,17 @@ internal static class ProcessPersistenceMappers
                 diagnostic.SafeSummary.Length > ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength ||
                 !ProcessStrategyReceiptValuePolicy.IsRestrictedEvidenceReference(diagnostic.RestrictedEvidenceReference) ||
                 !Enum.IsDefined(diagnostic.RetrySafety) ||
-                !Enum.IsDefined(diagnostic.Idempotency))))
+                !Enum.IsDefined(diagnostic.Idempotency)))
         {
             throw new InvalidOperationException("Persisted process strategy result diagnostics are invalid or exceed the bounded contract.");
         }
 
-        var selectedDiagnostics = isLegacy
-            ? persistedDiagnostics
-                .Where(diagnostic => diagnostic is not null)
-                .Take(ProcessStrategyResultLimits.MaximumDiagnostics)
-                .ToArray()
-            : persistedDiagnostics;
-        var diagnostics = selectedDiagnostics
+        var diagnostics = persistedDiagnostics
             .Select(diagnostic => new StrategyResultDiagnosticReceipt(
-                diagnostic.Code?.Trim() ?? string.Empty,
+                diagnostic.Code.Trim(),
                 diagnostic.Sensitivity,
-                diagnostic.EvidenceHash?.Trim() ?? string.Empty,
-                diagnostic.SafeSummary?.Trim() ?? string.Empty,
+                diagnostic.EvidenceHash.Trim(),
+                diagnostic.SafeSummary.Trim(),
                 string.IsNullOrWhiteSpace(diagnostic.RestrictedEvidenceReference)
                     ? null
                     : diagnostic.RestrictedEvidenceReference.Trim(),
@@ -645,7 +626,7 @@ internal static class ProcessPersistenceMappers
             .ToArray();
         return new DeserializedStrategyResultDiagnostics(
             diagnostics,
-            ResolvePersistedExecutionRunId(selectedDiagnostics, diagnostics, payloadExecutionRunId),
+            ResolvePersistedExecutionRunId(persistedDiagnostics, diagnostics, payloadExecutionRunId),
             DeserializeHostCapabilityEvidence(persistedHostCapabilityEvidence));
     }
 
@@ -947,9 +928,7 @@ internal static class ProcessPersistenceMappers
             .ToArray();
     }
 
-    private static IReadOnlyList<StrategyResultArtifactReceipt> DeserializeProducedArtifacts(
-        string? value,
-        bool isLegacy)
+    private static IReadOnlyList<StrategyResultArtifactReceipt> DeserializeProducedArtifacts(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -962,7 +941,7 @@ internal static class ProcessPersistenceMappers
                 artifact is null ||
                 artifact.SlotId == Guid.Empty ||
                 artifact.ArtifactId == Guid.Empty ||
-                !isLegacy && !ProcessStrategyReceiptValuePolicy.IsSha256Digest(artifact.ContentHash)))
+                !ProcessStrategyReceiptValuePolicy.IsSha256Digest(artifact.ContentHash)))
         {
             throw new InvalidOperationException("Persisted process strategy result artifacts are invalid or exceed the bounded contract.");
         }
@@ -971,7 +950,7 @@ internal static class ProcessPersistenceMappers
             .Select(artifact => new StrategyResultArtifactReceipt(
                 new ArtifactSlotId(artifact.SlotId),
                 new ArtifactInstanceId(artifact.ArtifactId),
-                artifact.ContentHash?.Trim() ?? string.Empty))
+                artifact.ContentHash.Trim()))
             .ToArray();
     }
 
@@ -1177,7 +1156,7 @@ internal static class ProcessPersistenceMappers
         }
     }
 
-    private static ProcessRecoveryDecisionReceipt? DeserializeRecoveryDecision(string? value, bool isLegacy)
+    private static ProcessRecoveryDecisionReceipt? DeserializeRecoveryDecision(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -1194,8 +1173,7 @@ internal static class ProcessPersistenceMappers
                 decision.SafeReason?.Trim() ?? string.Empty)
             {
                 RouteKind = decision.RouteKind,
-                ResponsibleStepInstanceId = decision.ResponsibleStepInstanceId is null ||
-                                            decision.ResponsibleStepInstanceId.Value == Guid.Empty
+                ResponsibleStepInstanceId = decision.ResponsibleStepInstanceId is null
                     ? null
                     : new ProcessStepInstanceId(decision.ResponsibleStepInstanceId.Value),
                 DiagnosticFingerprint = decision.DiagnosticFingerprint ?? string.Empty,
@@ -1203,12 +1181,11 @@ internal static class ProcessPersistenceMappers
                 MaximumAutomaticRetryAttempts = decision.MaximumAutomaticRetryAttempts,
                 SameDiagnosticFingerprintAttempt = decision.SameDiagnosticFingerprintAttempt,
                 MaximumSameDiagnosticFingerprintAttempts = decision.MaximumSameDiagnosticFingerprintAttempts,
-                RelatedChildRunId = decision.RelatedChildRunId is null ||
-                                    decision.RelatedChildRunId.Value == Guid.Empty
+                RelatedChildRunId = decision.RelatedChildRunId is null
                     ? null
                     : new ProcessRunId(decision.RelatedChildRunId.Value)
             };
-        if (!isLegacy && !IsValidRecoveryDecision(receipt))
+        if (!IsValidRecoveryDecision(receipt))
         {
             throw new InvalidOperationException(
                 "Persisted process recovery decision is invalid or exceeds the bounded contract.");

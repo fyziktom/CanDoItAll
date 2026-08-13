@@ -189,18 +189,9 @@ public sealed class ProcessDispatchClaimEntity
     public ProcessRuntimeStateEntity? RuntimeState { get; set; }
 }
 
-public enum ProcessStrategyResultReceiptContractVersion
-{
-    LegacyV1,
-    BoundedV2
-}
-
 public sealed class ProcessStrategyResultReceiptEntity
 {
     public Guid RunId { get; set; }
-
-    public ProcessStrategyResultReceiptContractVersion ContractVersion { get; set; } =
-        ProcessStrategyResultReceiptContractVersion.BoundedV2;
 
     public Guid StepInstanceId { get; set; }
 
