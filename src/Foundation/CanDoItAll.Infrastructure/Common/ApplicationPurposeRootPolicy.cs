@@ -139,6 +139,7 @@ public static class ApplicationPurposeRootPolicy
         string applicationRoot = RequireAbsolute(environment.LocalApplicationData, environment.PlatformFamily, "Application Support root");
         applicationRoot = Combine(environment.PlatformFamily, applicationRoot, "CanDoItAll");
         string controlPlaneRoot = Combine(environment.PlatformFamily, applicationRoot, "control-plane");
+        string temporaryRoot = ResolveMacOSTemporaryRoot(environment);
         return new ApplicationPurposeRoots(
             Combine(environment.PlatformFamily, applicationRoot, "workspace"),
             controlPlaneRoot,
@@ -147,9 +148,25 @@ public static class ApplicationPurposeRootPolicy
             Combine(environment.PlatformFamily, home, "Library", "Logs", "CanDoItAll"),
             Combine(
                 environment.PlatformFamily,
-                RequireAbsolute(environment.TemporaryRoot, environment.PlatformFamily, "Temporary root"),
+                temporaryRoot,
                 "CanDoItAll",
                 "runtime"));
+    }
+
+    private static string ResolveMacOSTemporaryRoot(ApplicationRootEnvironment environment)
+    {
+        string temporaryRoot = RequireAbsolute(
+            environment.TemporaryRoot,
+            environment.PlatformFamily,
+            "Temporary root");
+        // macOS exposes these temporary roots through system symlinks, while managed roots reject link traversal.
+        return temporaryRoot switch
+        {
+            "/var" or "/tmp" => $"/private{temporaryRoot}",
+            _ when temporaryRoot.StartsWith("/var/", StringComparison.Ordinal) ||
+                temporaryRoot.StartsWith("/tmp/", StringComparison.Ordinal) => $"/private{temporaryRoot}",
+            _ => temporaryRoot
+        };
     }
 
     private static string ResolveVariableOrDefault(

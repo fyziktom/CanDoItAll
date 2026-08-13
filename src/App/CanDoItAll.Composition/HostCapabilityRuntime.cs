@@ -65,7 +65,15 @@ public sealed class HostCapabilityUnavailableException(HostCapabilitySnapshot sn
                     capability.Availability != HostCapabilityAvailability.Available)
                 .Select(capability =>
                     $"{capability.Id} ({capability.ReasonCode}): {capability.Remediation}"));
-        return $"Runtime host profile '{snapshot.Profile}' is not ready. {failures}".Trim();
+        string purposeRootFailures = string.Join(
+            ", ",
+            snapshot.PurposeRoots
+                .Where(root => root.State != PathFoundationReadinessState.Ready)
+                .Select(root => $"{root.Purpose} ({root.ConfigurationSource}, {root.Reason})"));
+        string purposeRootSummary = purposeRootFailures.Length == 0
+            ? string.Empty
+            : $" PurposeRootFailures=[{purposeRootFailures}].";
+        return $"Runtime host profile '{snapshot.Profile}' is not ready. {failures}{purposeRootSummary}".Trim();
     }
 }
 

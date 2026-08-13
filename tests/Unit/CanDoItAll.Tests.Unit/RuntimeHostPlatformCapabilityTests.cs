@@ -348,7 +348,13 @@ public sealed class RuntimeHostPlatformCapabilityTests
             new PathCapabilityReadiness(
                 PathFoundationReadinessState.Ready,
                 PathFoundationReadinessReason.Ready),
-            []);
+            [
+                new ApplicationPurposeRootReadiness(
+                    ApplicationPurposeRootKind.RuntimeTemporary,
+                    ApplicationPurposeRootConfigurationSource.PlatformDefault,
+                    PathFoundationReadinessState.Unavailable,
+                    PathFoundationReadinessReason.AccessDenied)
+            ]);
         HostCapabilitySnapshot snapshot = HostCapabilitySnapshotProjector.Create(
             profile,
             pathReadiness,
@@ -372,8 +378,14 @@ public sealed class RuntimeHostPlatformCapabilityTests
         var validator = new HostCapabilityStartupValidator(
             new FixedSnapshotProvider(snapshot),
             NullLogger<HostCapabilityStartupValidator>.Instance);
-        await Assert.ThrowsAsync<HostCapabilityUnavailableException>(() =>
+        HostCapabilityUnavailableException exception = await Assert.ThrowsAsync<HostCapabilityUnavailableException>(() =>
             validator.StartAsync(CancellationToken.None));
+        Assert.Contains(
+            "RuntimeTemporary (PlatformDefault, AccessDenied)",
+            exception.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("/home", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\\", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

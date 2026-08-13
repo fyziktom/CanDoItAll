@@ -33,6 +33,27 @@ public sealed class ApplicationStoragePortabilityContractTests
         Assert.NotEqual(roots.RuntimeTemporaryRoot, roots.ControlPlaneRoot);
     }
 
+    [Theory]
+    [InlineData("/var/folders/xy/session/T/", "/private/var/folders/xy/session/T/CanDoItAll/runtime")]
+    [InlineData("/tmp/", "/private/tmp/CanDoItAll/runtime")]
+    [InlineData("/private/var/folders/xy/session/T/", "/private/var/folders/xy/session/T/CanDoItAll/runtime")]
+    [InlineData("/Users/operator/custom-temp/", "/Users/operator/custom-temp/CanDoItAll/runtime")]
+    public void MacOS_runtime_temporary_root_uses_physical_system_aliases(
+        string temporaryRoot,
+        string expectedRuntimeTemporaryRoot)
+    {
+        var environment = new ApplicationRootEnvironment(
+            HostPlatformFamily.MacOS,
+            "/Users/operator",
+            "/Users/operator/Library/Application Support",
+            temporaryRoot,
+            new Dictionary<string, string?>(StringComparer.Ordinal));
+
+        ApplicationPurposeRoots roots = ApplicationPurposeRootPolicy.Resolve(environment);
+
+        Assert.Equal(expectedRuntimeTemporaryRoot, roots.RuntimeTemporaryRoot);
+    }
+
     [Fact]
     public void Linux_service_account_can_use_explicit_xdg_roots_without_a_home_directory()
     {
