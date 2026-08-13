@@ -219,7 +219,8 @@ internal sealed class MafAgentExecutionAdapter : IAgentExecutionRuntime
                 runtimeBuild.SnapshotContextContributionTraces,
                 contextManifest,
                 runtimeBuild.IsTerminalResponseUpdate,
-                runtimeBuild.EntryAgentRequestCompatibilityEvidence);
+                runtimeBuild.EntryAgentRequestCompatibilityEvidence,
+                new HashSet<string>(StringComparer.Ordinal));
 
             return MafRuntimeResponseMapper.AttachPreparedInputUsageObservations(response, preparedInput.UsageObservations);
         }

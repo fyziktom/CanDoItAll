@@ -83,6 +83,12 @@ internal static class AgentExecutionActivityTransitionRules
             return true;
         }
 
+        if (current == AgentExecutionActivityPhase.AwaitingApproval &&
+            next == AgentExecutionActivityPhase.PreparingRuntime)
+        {
+            return true;
+        }
+
         return GetProgressStage(next) > GetProgressStage(current);
     }
 

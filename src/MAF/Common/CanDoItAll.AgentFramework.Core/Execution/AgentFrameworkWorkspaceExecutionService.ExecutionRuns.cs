@@ -512,7 +512,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
-            var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
+            var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(
+                prepared.OriginalRun,
+                agent.Id,
+                session);
             var runtimeExecutionOptions = CreateRuntimeExecutionOptionsCore(
                 run,
                 activityOperationId,
@@ -543,9 +546,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             phase,
                             message,
                             cancellationToken),
-                        SuppressApprovalRequirements: allApproved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                        SuppressApprovalRequirements: false,
                         StructuredOutput: structuredOutput,
-                        ExecutionOptions: runtimeExecutionOptions),
+                        ExecutionOptions: runtimeExecutionOptions)
+                    {
+                        ResolvedApprovalRequestIds = ResolveDecidedApprovalRequestIds(prepared.RunApprovals)
+                    },
                     runtimeCancellationToken));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -575,6 +581,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         structuredOutput,
                         handoffOptions,
+                        ResolveDecidedApprovalRequestIds(prepared.RunApprovals),
                         response =>
                         {
                             TrackRuntimeResponse(response);
@@ -1413,6 +1420,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         request.StructuredOutput,
                         handoffOptions,
+                        new HashSet<string>(StringComparer.Ordinal),
                         response =>
                         {
                             TrackRuntimeResponse(response);

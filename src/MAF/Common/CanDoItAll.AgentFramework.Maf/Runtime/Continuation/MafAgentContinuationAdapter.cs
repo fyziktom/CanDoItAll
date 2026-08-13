@@ -175,6 +175,9 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
                 forceOmitTemperature: forceOmitTemperature,
                 runtimeOptions);
             var inputMessages = approvalContinuationDriver.CreateApprovalInputMessages(session, decisions).ToList();
+            var resolvedApprovalRequestIds = request.ResolvedApprovalRequestIds
+                .Concat(decisions.Select(decision => decision.ProposalId))
+                .ToHashSet(StringComparer.Ordinal);
             var contextManifest = MafContextManifestBuilder.Create(
                 agent,
                 runtimeBuild.Provider,
@@ -210,7 +213,8 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
                 runtimeBuild.SnapshotContextContributionTraces,
                 contextManifest,
                 runtimeBuild.IsTerminalResponseUpdate,
-                runtimeBuild.EntryAgentRequestCompatibilityEvidence);
+                runtimeBuild.EntryAgentRequestCompatibilityEvidence,
+                resolvedApprovalRequestIds);
         }
     }
 }
