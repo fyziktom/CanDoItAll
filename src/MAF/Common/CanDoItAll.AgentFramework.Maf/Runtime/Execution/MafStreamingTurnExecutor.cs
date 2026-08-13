@@ -78,7 +78,8 @@ internal sealed class MafStreamingTurnExecutor
         Func<IReadOnlyList<AgentContextContributionTrace>> snapshotContextContributionTraces,
         AgentRuntimeContextAssemblyManifest contextManifest,
         Func<AgentResponseUpdate, bool>? isTerminalResponseUpdate,
-        ProviderRequestCompatibilityEvidence? entryAgentRequestCompatibilityEvidence)
+        ProviderRequestCompatibilityEvidence? entryAgentRequestCompatibilityEvidence,
+        IReadOnlySet<string> resolvedApprovalRequestIds)
     {
         var updates = new List<AgentResponseUpdate>();
         AgentResponseUpdate? lastTerminalResponseUpdate = null;
@@ -734,10 +735,9 @@ internal sealed class MafStreamingTurnExecutor
             }
 
             var activityResponse = updates.ToAgentResponse();
-            var approvalRequests = activityResponse.Messages
-                .SelectMany(message => message.Contents)
-                .OfType<ToolApprovalRequestContent>()
-                .ToList();
+            var approvalRequests = MafRuntimeResponseAssembler.ResolvePendingApprovalRequests(
+                activityResponse,
+                resolvedApprovalRequestIds);
             var response = approvalRequests.Count > 0
                 ? activityResponse
                 : MafRuntimeResponseAssembler.ProjectTerminalResponse(
@@ -774,7 +774,10 @@ internal sealed class MafStreamingTurnExecutor
 
                 if (pendingApprovals.Count > 0)
                 {
-                    await progressCallback(ExecutionState.WaitingOnTool, "Approval", "The run is waiting for a tool approval response before it can continue.");
+                    await progressCallback(
+                        ExecutionState.WaitingOnTool,
+                        "Approval",
+                        $"The run is waiting for tool approval: {DescribePendingApprovals(approvalRequests)}.");
                 }
 
                 MafRuntimeResponseAssembler.ThrowIfEmptyProviderCompletion(provider, resolvedModel, response, pendingApprovals);
@@ -810,6 +813,15 @@ internal sealed class MafStreamingTurnExecutor
                 runtimeOptions);
             inputMessages = [];
         }
+    }
+
+    private static string DescribePendingApprovals(
+        IReadOnlyCollection<ToolApprovalRequestContent> approvalRequests)
+    {
+        return string.Join(
+            ", ",
+            approvalRequests.Select(request =>
+                $"{MafToolInvocationArgumentFormatter.ResolveToolName(request.ToolCall)} ({request.RequestId})"));
     }
 
     private AIAgent CreateRequiredFinalizerJsonRepairAgent(

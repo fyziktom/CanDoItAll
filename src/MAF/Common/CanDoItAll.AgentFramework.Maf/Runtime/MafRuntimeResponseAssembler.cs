@@ -13,6 +13,20 @@ internal static class MafRuntimeResponseAssembler
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
+    public static IReadOnlyList<ToolApprovalRequestContent> ResolvePendingApprovalRequests(
+        AgentResponse activityResponse,
+        IReadOnlySet<string> resolvedApprovalRequestIds)
+    {
+        ArgumentNullException.ThrowIfNull(activityResponse);
+        ArgumentNullException.ThrowIfNull(resolvedApprovalRequestIds);
+
+        return activityResponse.Messages
+            .SelectMany(message => message.Contents)
+            .OfType<ToolApprovalRequestContent>()
+            .Where(request => !resolvedApprovalRequestIds.Contains(request.RequestId))
+            .ToList();
+    }
+
     public static AgentResponse ProjectTerminalResponse(
         AgentResponse activityResponse,
         AgentResponseUpdate? terminalResponseUpdate)

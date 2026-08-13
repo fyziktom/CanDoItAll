@@ -232,7 +232,11 @@ internal sealed class MafRuntimeAgentFactory
             options.Description = agent.Summary;
             options.AIContextProviders = capabilityState.ContextProviders;
             options.ChatHistoryProvider = frameworkManagedHistory ? CreateChatHistoryProvider() : null;
-            options.RequirePerServiceCallChatHistoryPersistence = agent.RequirePerServiceCallChatHistoryPersistence;
+            options.RequirePerServiceCallChatHistoryPersistence =
+                MafChatClientAgentOptionsFactory.ResolvePerServiceCallHistoryPersistence(
+                    agent.RequirePerServiceCallChatHistoryPersistence,
+                    frameworkManagedHistory,
+                    capabilityState.HasApprovalTools);
 
             var runtimeAgent = CreateInstrumentedAgent(
                 providerAgentFactory.CreateFrameworkAgent(

@@ -195,23 +195,47 @@ internal sealed class MafApprovalContinuationDriver : IMafApprovalContinuationDr
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        if (pendingApprovalCache.TryGetValue(session.Id, out var cached))
+        var durableApprovals = session.Compatibility?.PendingApprovals;
+        if (durableApprovals is { Count: > 0 })
         {
-            return cached.Requests;
+            if (pendingApprovalCache.TryGetValue(session.Id, out var cached) &&
+                CacheMatchesDurableApprovals(cached.Requests, durableApprovals))
+            {
+                return cached.Requests;
+            }
+
+            var rehydrated = durableApprovals
+                .Select(RehydratePendingApproval)
+                .ToList();
+
+            StorePendingApprovals(session.Id, rehydrated);
+            return rehydrated;
         }
 
-        var compatibility = session.Compatibility;
-        if (compatibility is null || compatibility.PendingApprovals.Count == 0)
+        if (pendingApprovalCache.TryGetValue(session.Id, out var cachedWithoutDurableState))
         {
-            throw new InvalidOperationException("This session does not have any cached approval requests to continue.");
+            return cachedWithoutDurableState.Requests;
         }
 
-        var rehydrated = compatibility.PendingApprovals
-            .Select(RehydratePendingApproval)
-            .ToList();
+        throw new InvalidOperationException("This session does not have any pending approval requests to continue.");
+    }
 
-        StorePendingApprovals(session.Id, rehydrated);
-        return rehydrated;
+    private static bool CacheMatchesDurableApprovals(
+        IReadOnlyList<ToolApprovalRequestContent> cached,
+        IReadOnlyList<PendingToolApprovalRecord> durable)
+    {
+        if (cached.Count != durable.Count)
+        {
+            return false;
+        }
+
+        var durableByApprovalId = durable.ToDictionary(
+            item => item.ApprovalId,
+            StringComparer.Ordinal);
+
+        return cached.All(item =>
+            durableByApprovalId.TryGetValue(item.RequestId, out var persisted) &&
+            string.Equals(item.ToolCall.CallId, persisted.CallId, StringComparison.Ordinal));
     }
 
     private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)

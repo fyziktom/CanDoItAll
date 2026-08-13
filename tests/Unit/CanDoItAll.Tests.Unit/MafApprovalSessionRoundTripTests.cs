@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit;
@@ -21,6 +22,7 @@ public sealed class MafApprovalSessionRoundTripTests
     private const string UnknownApprovalId = "approval-unknown";
     private const string ToolName = "workspace_write_file";
     private const string SafePath = "artifacts/approved.txt";
+    private const string SecondSafePath = "artifacts/approved-second.txt";
     private const string TamperedPath = "artifacts/tampered.txt";
 
     [Theory]
@@ -223,6 +225,93 @@ public sealed class MafApprovalSessionRoundTripTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Consecutive_approval_requests_survive_serialized_session_reentry(
+        bool useStreaming)
+    {
+        var probe = new InvocationProbe();
+        var initialAgent = CreateAgent(
+            new ConsecutiveApprovalScriptChatClient(),
+            probe,
+            includeCompaction: true);
+        var initialSession = await initialAgent.CreateSessionAsync();
+        var firstApproval = await RequestApprovalAsync(
+            initialAgent,
+            initialSession,
+            useStreaming);
+        var firstSerializedSession = await initialAgent.SerializeSessionAsync(initialSession);
+
+        var secondAgent = CreateAgent(
+            new ConsecutiveApprovalScriptChatClient(),
+            probe,
+            includeCompaction: true);
+        var secondSession = await secondAgent.DeserializeSessionAsync(firstSerializedSession);
+        var firstContinuationMessages = CreateRehydratedApprovalMessages(
+            firstApproval,
+            firstSerializedSession);
+        var secondResponse = await RunAsync(
+            secondAgent,
+            firstContinuationMessages,
+            secondSession,
+            useStreaming);
+        var secondApproval = Assert.Single(GetApprovalRequests(secondResponse));
+
+        Assert.Equal(1, probe.InvocationCount);
+        Assert.Equal(SafePath, probe.LastPath);
+        Assert.NotEqual(firstApproval.RequestId, secondApproval.RequestId);
+
+        var secondSerializedSession = await secondAgent.SerializeSessionAsync(secondSession);
+        Assert.Contains(
+            secondApproval.RequestId,
+            secondSerializedSession.GetRawText(),
+            StringComparison.Ordinal);
+
+        var finalAgent = CreateAgent(
+            new ConsecutiveApprovalScriptChatClient(),
+            probe,
+            includeCompaction: true);
+        var finalSession = await finalAgent.DeserializeSessionAsync(secondSerializedSession);
+        var secondContinuationMessages = CreateRehydratedApprovalMessages(
+            secondApproval,
+            secondSerializedSession);
+        var completion = await RunAsync(
+            finalAgent,
+            secondContinuationMessages,
+            finalSession,
+            useStreaming);
+
+        Assert.Equal("completed", completion.Text);
+        Assert.Equal(2, probe.InvocationCount);
+        Assert.Equal(SecondSafePath, probe.LastPath);
+    }
+
+    private static IReadOnlyList<ChatMessage> CreateRehydratedApprovalMessages(
+        ToolApprovalRequestContent approval,
+        JsonElement serializedSession)
+    {
+        var pending = new MafApprovalContinuationDriver().MapPendingApproval(approval);
+        var timestamp = new DateTimeOffset(2026, 7, 28, 12, 0, 0, TimeSpan.Zero);
+        var persistedSession = new ChatSessionRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Title: "Approval binding fixture",
+            CreatedAtUtc: timestamp,
+            UpdatedAtUtc: timestamp,
+            Messages: [],
+            Compatibility: new ChatSessionRuntimeCompatibilityRecord(
+                runtimeSessionKey: ConversationId,
+                serializedSessionStateJson: serializedSession.GetRawText(),
+                pendingApprovals: [pending]));
+
+        return new MafApprovalContinuationDriver()
+            .CreateApprovalInputMessages(
+                persistedSession,
+                [new AgentRuntimeApprovalDecision(pending.ApprovalId, Approved: true)])
+            .ToList();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Approval_response_from_another_session_does_not_invoke_tool(
         bool useStreaming)
     {
@@ -278,28 +367,46 @@ public sealed class MafApprovalSessionRoundTripTests
 
     private static ChatClientAgent CreateAgent(
         IChatClient chatClient,
-        InvocationProbe probe)
+        InvocationProbe probe,
+        bool includeCompaction = false)
     {
         var function = AIFunctionFactory.Create(
             new Func<string, string>(probe.Write),
             ToolName,
             "Writes one governed artifact.");
 
+        var options = new ChatClientAgentOptions
+        {
+            ChatOptions = new ChatOptions
+            {
+                Tools =
+                [
+                    new ApprovalRequiredAIFunction(function)
+                ]
+            },
+            UseProvidedChatClientAsIs = false,
+            DisableApprovalNotRequiredFunctionBypassing = true,
+            DisableApprovalResponseBinding = false
+        };
+        if (includeCompaction)
+        {
+#pragma warning disable MAAI001
+            options.AIContextProviders =
+            [
+                new CompactionProvider(
+                    new PipelineCompactionStrategy(
+                        new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(40)),
+                        new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(32)),
+                        new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(64000))))
+            ];
+#pragma warning restore MAAI001
+            options.ChatHistoryProvider = new InMemoryChatHistoryProvider();
+            options.RequirePerServiceCallChatHistoryPersistence = true;
+        }
+
         return new ChatClientAgent(
             chatClient,
-            new ChatClientAgentOptions
-            {
-                ChatOptions = new ChatOptions
-                {
-                    Tools =
-                    [
-                        new ApprovalRequiredAIFunction(function)
-                    ]
-                },
-                UseProvidedChatClientAsIs = false,
-                DisableApprovalNotRequiredFunctionBypassing = true,
-                DisableApprovalResponseBinding = false
-            });
+            options);
     }
 
     private static ChatClientAgent CreateHostedMcpAgent(
@@ -543,6 +650,72 @@ public sealed class MafApprovalSessionRoundTripTests
             return hostedMcpApprovalRequest is null
                 ? ConversationId
                 : HostedMcpConversationId;
+        }
+    }
+
+    private sealed class ConsecutiveApprovalScriptChatClient : IChatClient
+    {
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var functionResults = messages
+                .SelectMany(message => message.Contents)
+                .OfType<FunctionResultContent>()
+                .ToList();
+            if (functionResults.Any(result => string.Equals(result.CallId, "call-002", StringComparison.Ordinal)))
+            {
+                return Task.FromResult(CreateResponse(new TextContent("completed")));
+            }
+
+            var nextCall = functionResults.Any(result => string.Equals(result.CallId, CallId, StringComparison.Ordinal))
+                ? new FunctionCallContent(
+                    "call-002",
+                    ToolName,
+                    new Dictionary<string, object?>
+                    {
+                        ["path"] = SecondSafePath
+                    })
+                : new FunctionCallContent(
+                    CallId,
+                    ToolName,
+                    new Dictionary<string, object?>
+                    {
+                        ["path"] = SafePath
+                    });
+
+            return Task.FromResult(CreateResponse(nextCall));
+        }
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var response = await GetResponseAsync(messages, options, cancellationToken);
+            foreach (var update in response.ToChatResponseUpdates())
+            {
+                yield return update;
+            }
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null)
+        {
+            return serviceKey is null && serviceType.IsInstanceOfType(this)
+                ? this
+                : null;
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private static ChatResponse CreateResponse(AIContent content)
+        {
+            return new ChatResponse(new ChatMessage(ChatRole.Assistant, [content]));
         }
     }
 }

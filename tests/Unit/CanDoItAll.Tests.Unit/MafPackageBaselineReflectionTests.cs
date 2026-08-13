@@ -9,11 +9,11 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class MafPackageBaselineReflectionTests
 {
-    private const string ExpectedAssemblyVersion = "1.15.0.0";
-    private const string ExpectedStablePackageVersion = "1.15.0";
-    private const string ExpectedPreviewPackageVersion = "1.15.0-preview.260722.1";
-    private const string ExpectedStableInformationalVersionPrefix = "1.15.0+";
-    private const string ExpectedPreviewInformationalVersionPrefix = "1.15.0-preview+";
+    private const string ExpectedAssemblyVersion = "1.17.0.0";
+    private const string ExpectedStablePackageVersion = "1.17.0";
+    private const string ExpectedPreviewPackageVersion = "1.17.0-preview.260804.1";
+    private const string ExpectedStableInformationalVersionPrefix = "1.17.0+";
+    private const string ExpectedPreviewInformationalVersionPrefix = "1.17.0-preview+";
     private static readonly string[] ExpectedMafAssemblyNames =
     [
         "Microsoft.Agents.AI",

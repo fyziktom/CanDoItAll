@@ -959,7 +959,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.Empty(completedDetail.Run.PendingApprovals);
         Assert.Equal(expectedEvidence, completedDetail.Run.EntryAgentRequestCompatibilityEvidence);
         Assert.Contains(completedDetail.ChatSession!.Messages, message => message.Role == ChatMessageRole.Assistant);
-        Assert.True(Assert.Single(runtime.ContinuationSuppressApprovalRequirements));
+        Assert.False(Assert.Single(runtime.ContinuationSuppressApprovalRequirements));
         Assert.Equal(
             AgentRuntimeContextPurpose.InteractiveChat,
             Assert.Single(runtime.ContinuationExecutionOptions)?.ContextIntent?.Purpose);
@@ -1262,6 +1262,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.NotNull(detail);
         Assert.Equal(ExecutionState.Failed, detail.Run.State);
         Assert.Equal(expectedEvidence, detail.Run.EntryAgentRequestCompatibilityEvidence);
+        Assert.Equal(2, runtime.ContinuationSuppressApprovalRequirements.Count);
+        Assert.All(runtime.ContinuationSuppressApprovalRequirements, Assert.False);
+        Assert.Collection(
+            runtime.ContinuationSessionPendingApprovals,
+            pending => Assert.Equal("approval-001", Assert.Single(pending).ApprovalId),
+            pending => Assert.Equal("approval-002", Assert.Single(pending).ApprovalId));
         var traceReceipts = detail.ToolReceipts
             .Where(receipt => receipt.ToolFamily == "agent-tool-trace")
             .ToArray();
@@ -3075,6 +3081,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         public List<bool> ContinuationSuppressApprovalRequirements { get; } = [];
 
+        public List<IReadOnlyList<PendingToolApprovalRecord>> ContinuationSessionPendingApprovals { get; } = [];
+
         public List<Guid> ObservedExecutionRunIds { get; } = [];
 
         public string InitialResponseText { get; init; } = "Pending approval.";
@@ -3227,6 +3235,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             ContinuationStructuredOutputs.Add(structuredOutput);
             ContinuationExecutionOptions.Add(executionOptions);
             ContinuationSuppressApprovalRequirements.Add(suppressApprovalRequirements);
+            ContinuationSessionPendingApprovals.Add(session.Compatibility?.PendingApprovals ?? []);
             if (continuationResponseIndex < ContinuationResponses.Count)
             {
                 return Task.FromResult(ContinuationResponses[continuationResponseIndex++]);

@@ -358,6 +358,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         Func<ExecutionState, string, string, Task> progressCallback,
         AgentStructuredOutputContract? structuredOutput,
         AgentRuntimeHandoffExecutionOptions? handoffOptions,
+        IReadOnlySet<string> resolvedApprovalRequestIds,
         Action<AgentRuntimeResponse> responseObserved,
         CancellationToken cancellationToken)
     {
@@ -367,9 +368,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var totalCachedInputTokens = initialResponse.CachedInputTokens;
         var totalOutputTokens = initialResponse.OutputTokens;
         var totalToolCalls = initialResponse.ToolCalls;
+        var resolvedApprovalIds = resolvedApprovalRequestIds.ToHashSet(StringComparer.Ordinal);
 
         while (currentResponse.PendingApprovals.Count > 0 && ShouldAutoApprovePendingToolCalls(agent, currentSession))
         {
+            foreach (var pendingApproval in currentResponse.PendingApprovals)
+            {
+                resolvedApprovalIds.Add(pendingApproval.ApprovalId);
+            }
+
             await AppendExecutionLogAsync(
                 run.Id,
                 agent.Id,
@@ -407,7 +414,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ? null
                         : ChatSessionRuntimeCompatibilityAdapter.RuntimeSessionKeyOrEmpty(currentSession),
                     progressCallback,
-                    SuppressApprovalRequirements: true,
+                    SuppressApprovalRequirements: false,
                     StructuredOutput: structuredOutput,
                     ExecutionOptions: CreateRuntimeExecutionOptionsCore(
                         run,
@@ -415,7 +422,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         structuredOutput,
                         handoffOptions,
                         inputAttachments: null,
-                        jsonSchemaOutput: null)),
+                        jsonSchemaOutput: null))
+                {
+                    ResolvedApprovalRequestIds = resolvedApprovalIds.ToHashSet(StringComparer.Ordinal)
+                },
                 cancellationToken);
 
             currentResponse = continuationResponse with
@@ -433,6 +443,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
 
         return (currentSession, currentResponse, totalInputTokens, totalCachedInputTokens, totalOutputTokens, totalToolCalls);
+    }
+
+    private static IReadOnlySet<string> ResolveDecidedApprovalRequestIds(
+        IReadOnlyList<ExecutionApprovalRecord> approvals)
+    {
+        return approvals
+            .Where(approval => approval.Status != ExecutionApprovalStatus.Pending)
+            .Select(approval => approval.ApprovalId)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     internal static IReadOnlyList<AgentToolInvocationTrace> AggregateToolInvocationTraces(

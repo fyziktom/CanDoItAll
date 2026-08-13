@@ -88,6 +88,9 @@ public sealed record AgentRuntimeContinuationRequest(
 
     public bool AllDecisionsApproved => Decisions.Count > 0 && Decisions.All(d => d.Approved);
 
+    public IReadOnlySet<string> ResolvedApprovalRequestIds { get; init; } =
+        new HashSet<string>(StringComparer.Ordinal);
+
     private static IReadOnlyList<AgentRuntimeApprovalDecision> ValidateDecisions(
         IReadOnlyList<AgentRuntimeApprovalDecision> decisions)
     {
