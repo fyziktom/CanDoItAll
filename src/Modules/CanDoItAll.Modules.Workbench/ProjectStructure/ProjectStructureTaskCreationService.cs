@@ -227,7 +227,8 @@ public sealed class ProjectStructureTaskCreationService(
             var deletedCount = await agentService.DeleteNodeAsync(
                 projectId,
                 taskNodeId,
-                new ProjectStructureNodeDeleteInput(),
+                new ProjectStructureNodeDeleteInput(
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles),
                 agent,
                 CancellationToken.None);
             if (deletedCount == 0)

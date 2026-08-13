@@ -137,6 +137,46 @@ public sealed class ProjectWorkbenchRelationService(
             reconcileDetachedTaskResource: true,
             cancellationToken);
 
+    internal async Task<bool> DetachProjectedNodeAsync(
+        Guid projectId,
+        string nodeKey,
+        CancellationToken cancellationToken = default)
+    {
+        ProjectObjectLinkRecord? removableLink;
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
+            var snapshot = await projectStructureAssemblyService.LoadAsync(
+                dbContext,
+                projectId,
+                cancellationToken);
+            var target = snapshot.Nodes.FirstOrDefault(node =>
+                node.IsSystemManaged &&
+                string.Equals(node.NodeKey, nodeKey, StringComparison.Ordinal));
+            if (target is null)
+            {
+                return false;
+            }
+
+            removableLink = snapshot.Links.FirstOrDefault(link =>
+                !link.IsSystemManaged &&
+                string.Equals(link.TargetNodeKey, nodeKey, StringComparison.Ordinal) &&
+                (string.IsNullOrWhiteSpace(target.ParentNodeKey) ||
+                 string.Equals(link.SourceNodeKey, target.ParentNodeKey, StringComparison.Ordinal)))
+                ?? snapshot.Links.FirstOrDefault(link =>
+                    !link.IsSystemManaged &&
+                    string.Equals(link.TargetNodeKey, nodeKey, StringComparison.Ordinal));
+        }
+
+        return removableLink is not null &&
+               await UnlinkObjectsAsync(
+                   projectId,
+                   removableLink.SourceNodeKey,
+                   removableLink.TargetNodeKey,
+                   removableLink.LinkKind,
+                   cancellationToken);
+    }
+
     internal Task<bool> UnlinkCanonicalTaskResourceAsync(
         Guid projectId,
         string sourceNodeKey,

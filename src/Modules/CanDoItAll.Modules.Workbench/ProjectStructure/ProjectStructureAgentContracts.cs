@@ -410,11 +410,13 @@ public sealed record ProjectStructureNodeParentInput(
     string? LeaseToken = null);
 
 public sealed record ProjectStructureNodeDeleteInput(
+    ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null,
     Guid? DurableMutationId = null);
 
 public sealed record ProjectStructureNodeDeleteBatchInput(
     IReadOnlyList<string> NodeIds,
+    ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null);
 
 public sealed record ProjectStructureLinkInput(

@@ -1,6 +1,7 @@
 using System.Data;
 using System.Net;
 using System.Text.Json;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
@@ -22,6 +23,54 @@ public sealed class ProjectDeletionIntegrationTests
         new(JsonSerializerDefaults.Web);
     private static readonly ProjectDeletionParticipantId WorkbenchParticipantId =
         new("workbench");
+
+    [Fact]
+    public async Task Historical_node_deletion_payload_reports_delete_owned_files_disposition()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectId = await CreateProjectAsync(projects, "Historical node deletion payload");
+        const string rootNodeId = "legacy-deleted-node";
+        var timestamp = DateTimeOffset.UtcNow;
+        var mutation = new ProjectCrossModuleMutationRecord
+        {
+            ProjectId = projectId,
+            ScopeNodeKey = rootNodeId,
+            MutationKind = ProjectCrossModuleMutationKind.DeleteSubtree,
+            Status = ProjectCrossModuleMutationStatus.Failed,
+            ApprovalState = ProjectCrossModuleMutationApprovalState.NotRequired,
+            PayloadJson = """
+                {
+                  "rootNodeKey": "legacy-deleted-node",
+                  "deletedNodeKeys": ["legacy-deleted-node"],
+                  "linkCount": 0,
+                  "managedStorageObjects": [],
+                  "managedStorageOutcomes": [],
+                  "managedStorageCandidates": []
+                }
+                """,
+            ErrorMessage = "Historical cleanup is pending.",
+            AttemptCount = 1,
+            CreatedAtUtc = timestamp,
+            UpdatedAtUtc = timestamp
+        };
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            dbContext.Set<ProjectCrossModuleMutationRecord>().Add(mutation);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var recovery = Assert.Single(
+            await workbench.ListPendingDeletionRecoveriesAsync(projectId));
+
+        Assert.Equal(rootNodeId, recovery.RootNodeId);
+        Assert.Equal(
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            recovery.ManagedStorageDisposition);
+    }
 
     [Fact]
     public async Task Exact_project_cleanup_retry_rejects_a_whitespace_participant_with_a_typed_400()
@@ -88,9 +137,163 @@ public sealed class ProjectDeletionIntegrationTests
         Assert.Equal(2, mutations.Count);
         var firstPayload = Deserialize<DeleteSubtreeMutationPayload>(mutations[0].PayloadJson);
         var finalPayload = Deserialize<DeleteSubtreeMutationPayload>(mutations[1].PayloadJson);
+        Assert.Equal(
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            firstPayload.ManagedStorageDisposition);
+        Assert.Equal(
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            finalPayload.ManagedStorageDisposition);
         Assert.Empty(firstPayload.ManagedStorageObjects ?? []);
         Assert.Single(finalPayload.ManagedStorageObjects ?? []);
         Assert.Single(finalPayload.ManagedStorageOutcomes ?? []);
+    }
+
+    [Fact]
+    public async Task Retain_managed_files_deletes_a_node_even_when_its_creation_workspace_was_retargeted()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var workspacePathResolver = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
+        var projectId = await CreateProjectAsync(projects, "Retargeted node-only deletion");
+        var asset = await CreateImageAsync(workbench, projectId, "Retargeted image");
+        var physicalPath = Path.Combine(
+            workspacePathResolver.ResolveWorkspaceRoot(),
+            asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(physicalPath));
+
+        var historicalRoot = Path.Combine(
+            Path.GetTempPath(),
+            nameof(ProjectDeletionIntegrationTests),
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(historicalRoot);
+        Guid assetRecordId = default;
+        try
+        {
+            await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+            {
+                var assetRecord = await dbContext.Set<ProjectObjectRecord>()
+                    .SingleAsync(record =>
+                        record.ProjectId == projectId &&
+                        record.NodeKey == asset.Id);
+                assetRecordId = assetRecord.Id;
+                var binding = await dbContext.Set<ProjectNodeBindingRecord>()
+                    .SingleAsync(record => record.ProjectObjectId == assetRecordId);
+                var reference = StorageJson.ParseReference(binding.StorageObjectReferenceJson)
+                    ?? throw new InvalidOperationException("The generated test asset has no storage reference.");
+                var currentStorage = await dbContext.Set<StorageCatalogRecord>()
+                    .SingleAsync(storage => storage.Id == reference.StorageId);
+                var historicalStorage = new StorageCatalogRecord
+                {
+                    Id = currentStorage.Id,
+                    Name = currentStorage.Name,
+                    ProviderKind = currentStorage.ProviderKind,
+                    EndpointOrRoot = historicalRoot,
+                    IsEnabled = true,
+                    IsSystemDefault = true
+                };
+                StorageCatalogHostBindingPolicy.BindCurrent(
+                    historicalStorage,
+                    historicalRoot,
+                    DateTimeOffset.UtcNow);
+                var historicalIdentityPolicy = new ProjectManagedStoragePhysicalIdentityPolicy(
+                    new FileSystemStoragePathPolicy(
+                        new StaticWorkspacePathResolver(historicalRoot)),
+                    new PhysicalFileSystemPathPolicyFactory());
+                var historicalReference = ProjectManagedStorageProvenancePolicy.Stamp(
+                    reference with { MetadataJson = "{}" },
+                    reference.Locator,
+                    historicalStorage,
+                    historicalIdentityPolicy);
+                binding.StorageObjectReferenceJson = StorageJson.SerializeReference(historicalReference);
+                await dbContext.SaveChangesAsync();
+            }
+
+            await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
+                workbench.DeleteObjectDetailedAsync(
+                    projectId,
+                    asset.Id,
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles));
+
+            var retained = await workbench.DeleteObjectDetailedAsync(
+                projectId,
+                asset.Id,
+                ProjectStructureManagedStorageDisposition.RetainManagedFiles);
+
+            Assert.Equal(1, retained.DeletedNodeCount);
+            Assert.True(File.Exists(physicalPath));
+            await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
+            Assert.False(await verificationContext.Set<ProjectObjectRecord>()
+                .AnyAsync(record => record.ProjectId == projectId && record.NodeKey == asset.Id));
+            Assert.False(await verificationContext.Set<ProjectNodeBindingRecord>()
+                .AnyAsync(record => record.ProjectObjectId == assetRecordId));
+            var mutation = await verificationContext.Set<ProjectCrossModuleMutationRecord>()
+                .SingleAsync(record =>
+                    record.ProjectId == projectId &&
+                    record.ScopeNodeKey == asset.Id &&
+                    record.MutationKind == ProjectCrossModuleMutationKind.DeleteSubtree);
+            var payload = Deserialize<DeleteSubtreeMutationPayload>(mutation.PayloadJson);
+            Assert.Equal(
+                ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+                payload.ManagedStorageDisposition);
+            Assert.Empty(payload.ManagedStorageObjects ?? []);
+        }
+        finally
+        {
+            Directory.Delete(historicalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Batch_deletion_detaches_a_user_link_from_a_non_hideable_projected_node()
+    {
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
+        {
+            ConfigureServices = services =>
+                services.AddSingleton<IProjectStructureProjectionContributor,
+                    NonHideablePhaseProjectionContributor>()
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var coordinator = scope.ServiceProvider
+            .GetRequiredService<ProjectStructureBatchDeletionCoordinator>();
+        var dbContextFactory = scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var projectId = await CreateProjectAsync(projects, "Projected link detachment");
+        var note = await workbench.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.Note,
+                "Linked note",
+                string.Empty,
+                string.Empty,
+                BuildProjectRootNodeKey(projectId),
+                200,
+                200));
+        await workbench.LinkObjectsAsync(
+            projectId,
+            note.Id,
+            NonHideablePhaseProjectionContributor.NodeKey,
+            ProjectObjectLinkKind.DependsOn);
+
+        var result = await coordinator.DeleteNodesAsync(
+            projectId,
+            [NonHideablePhaseProjectionContributor.NodeKey],
+            ProjectStructureManagedStorageDisposition.RetainManagedFiles);
+
+        Assert.Equal(1, result.DeletedNodeCount);
+        Assert.DoesNotContain(
+            (await workbench.GetStructureAsync(projectId)).Nodes,
+            node => node.Id == NonHideablePhaseProjectionContributor.NodeKey);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.False(await dbContext.Set<ProjectObjectLinkRecord>().AnyAsync(link =>
+            link.ProjectId == projectId &&
+            !link.IsSystemManaged &&
+            link.SourceNodeKey == note.Id &&
+            link.TargetNodeKey == NonHideablePhaseProjectionContributor.NodeKey));
     }
 
     [Fact]
@@ -279,6 +482,9 @@ public sealed class ProjectDeletionIntegrationTests
 
         Assert.Equal(projectId, failure.Recovery.ProjectId);
         Assert.Equal(asset.Id, failure.Recovery.RootNodeId);
+        Assert.Equal(
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            failure.Recovery.ManagedStorageDisposition);
         Assert.True(File.Exists(physicalPath));
         await using (var failedContext = await dbContextFactory.CreateDbContextAsync())
         {
@@ -288,6 +494,17 @@ public sealed class ProjectDeletionIntegrationTests
                 .SingleAsync(record => record.Id == failure.Recovery.DurableMutationId);
             Assert.Equal(ProjectCrossModuleMutationStatus.Failed, mutation.Status);
         }
+
+        var mismatch = await Assert.ThrowsAsync<ProjectStructureDeletionDispositionMismatchException>(() =>
+            workbench.RetryDeletionCleanupDetailedAsync(
+                projectId,
+                asset.Id,
+                failure.Recovery.DurableMutationId,
+                ProjectStructureManagedStorageDisposition.RetainManagedFiles));
+        Assert.Equal(
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            mismatch.PersistedDisposition);
+        Assert.Equal(1, mismatch.CompletedNodeCount);
 
         Assert.Equal(
             1,
@@ -1099,9 +1316,43 @@ public sealed class ProjectDeletionIntegrationTests
     private static string BuildProjectRootNodeKey(Guid projectId)
         => $"project:{projectId}";
 
+    private sealed class NonHideablePhaseProjectionContributor : IProjectStructureProjectionContributor
+    {
+        public const string NodeKey = "projection:non-hideable-phase";
+
+        public Task ContributeAsync(
+            ProjectStructureProjectionContext context,
+            CancellationToken cancellationToken)
+        {
+            context.AddNode(new ProjectObjectRecord
+            {
+                NodeKey = NodeKey,
+                ParentNodeKey = BuildProjectRootNodeKey(context.ProjectId),
+                ObjectType = ProjectObjectType.Phase,
+                Title = "Projected phase",
+                CreatedAtUtc = context.AssembledAtUtc,
+                UpdatedAtUtc = context.AssembledAtUtc
+            });
+            return Task.CompletedTask;
+        }
+    }
+
     private static TPayload Deserialize<TPayload>(string json)
         => JsonSerializer.Deserialize<TPayload>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web))
            ?? throw new InvalidOperationException($"Unable to deserialize {typeof(TPayload).Name}.");
+
+    private sealed class StaticWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
+    {
+        public string ResolveWorkspaceRoot() => workspaceRoot;
+
+        public string ResolveManagedFilesRoot() => Path.Combine(workspaceRoot, "managed-files");
+
+        public string ResolveExportsRoot() => Path.Combine(workspaceRoot, "exports");
+
+        public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
+
+        public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, "manager-artifacts");
+    }
 
     private sealed class ObservedStorageDriverRegistry : IStorageDriverRegistry
     {

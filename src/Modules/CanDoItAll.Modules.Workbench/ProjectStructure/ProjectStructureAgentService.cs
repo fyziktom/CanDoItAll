@@ -1303,6 +1303,7 @@ public sealed class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        EnsureManagedStorageDispositionSpecified(request.ManagedStorageDisposition);
         return ExecuteWithAgentFailureMappingAsync(() =>
             leaseService.RunWithProjectMutationLeaseAsync(
                 projectId,
@@ -1313,6 +1314,7 @@ public sealed class ProjectStructureAgentService(
                     projectId,
                     nodeId,
                     request.DurableMutationId,
+                    request.ManagedStorageDisposition,
                     cancellationToken),
                 cancellationToken));
     }
@@ -1321,13 +1323,15 @@ public sealed class ProjectStructureAgentService(
         Guid projectId,
         string nodeId,
         Guid? durableMutationId,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         CancellationToken cancellationToken)
     {
         if (!durableMutationId.HasValue)
         {
-            return await projectWorkbenchService.DeleteObjectDetailedAsync(
+            return await batchDeletionCoordinator.DeleteNodesAsync(
                 projectId,
-                nodeId,
+                [nodeId],
+                managedStorageDisposition,
                 cancellationToken);
         }
 
@@ -1337,15 +1341,17 @@ public sealed class ProjectStructureAgentService(
                 projectId,
                 nodeId,
                 durableMutationId.Value,
+                managedStorageDisposition,
                 cancellationToken);
         }
         catch (ProjectStructureDeletionRecoveryNotFoundException exception)
         {
-            throw new ProjectStructureAgentException(
+            throw ProjectStructureAgentException.CreateAgentVisible(
                 404,
                 "ProjectStructureDeletionRecoveryNotFound",
-                "The exact durable deletion cleanup was not found for the requested project and root.",
-                new
+                "The exact durable deletion cleanup was not found for the requested project and root. List pending deletion cleanups and retry with the matching project, root, durable mutation id, and managed-file choice.",
+                canRetryWithCorrectedInput: true,
+                diagnosticDetails: new
                 {
                     ProjectId = projectId,
                     RootNodeId = nodeId,
@@ -1406,6 +1412,7 @@ public sealed class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        EnsureManagedStorageDispositionSpecified(request.ManagedStorageDisposition);
         return ExecuteWithAgentFailureMappingAsync(async () =>
         {
             var selection = batchDeletionCoordinator.NormalizeSelection(request.NodeIds);
@@ -1417,9 +1424,35 @@ public sealed class ProjectStructureAgentService(
                 cancellationToken => batchDeletionCoordinator.DeleteNodesAsync(
                     projectId,
                     selection,
+                    request.ManagedStorageDisposition,
                     cancellationToken),
                 cancellationToken);
         });
+    }
+
+    private static void EnsureManagedStorageDispositionSpecified(
+        ProjectStructureManagedStorageDisposition disposition)
+    {
+        if (disposition is ProjectStructureManagedStorageDisposition.RetainManagedFiles or
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)
+        {
+            return;
+        }
+
+        throw ProjectStructureAgentException.CreateAgentVisible(
+            400,
+            "ProjectStructureManagedStorageDispositionRequired",
+            "Choose whether deletion retains managed files or deletes owned managed files.",
+            canRetryWithCorrectedInput: true,
+            diagnosticDetails: new
+            {
+                Field = "managedStorageDisposition",
+                SupportedValues = new[]
+                {
+                    ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
+                }
+            });
     }
 
     public async Task<ProjectStructureNodeSummary> CreateApprovalRequestAsync(

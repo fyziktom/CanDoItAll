@@ -19,10 +19,22 @@ public sealed class ProjectStructureBatchDeletionCoordinator
         Guid projectId,
         IReadOnlyList<string>? nodeIds,
         CancellationToken cancellationToken = default)
+        => DeleteNodesAsync(
+            projectId,
+            nodeIds,
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            cancellationToken);
+
+    public Task<ProjectStructureDeletionResult> DeleteNodesAsync(
+        Guid projectId,
+        IReadOnlyList<string>? nodeIds,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
+        CancellationToken cancellationToken = default)
     {
         return DeleteNodesAsync(
             projectId,
             NormalizeSelection(nodeIds),
+            managedStorageDisposition,
             cancellationToken);
     }
 
@@ -44,17 +56,21 @@ public sealed class ProjectStructureBatchDeletionCoordinator
     internal async Task<ProjectStructureDeletionResult> DeleteNodesAsync(
         Guid projectId,
         ProjectStructureBatchDeletionSelection selection,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(selection);
+        ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(managedStorageDisposition);
         var requestedNodeIds = selection.NodeIds;
         var surface = await operations.GetStructureAsync(projectId, cancellationToken);
         var visibleNodeIds = surface.Nodes
             .Select(node => node.Id)
             .ToHashSet(StringComparer.Ordinal);
         var deletedNodeIds = new HashSet<string>(StringComparer.Ordinal);
+        var replaylessDeletedNodeCount = 0;
         var deletionWarnings = new List<ProjectStructureDeletionWarning>();
         var recoveries = new List<ProjectStructureDeletionRecovery>();
+        var branchFailures = new List<ProjectStructureDeletionBranchFailure>();
 
         await ReplayMissingBranchesAsync(
             projectId,
@@ -63,6 +79,8 @@ public sealed class ProjectStructureBatchDeletionCoordinator
             deletedNodeIds,
             deletionWarnings,
             recoveries,
+            branchFailures,
+            managedStorageDisposition,
             cancellationToken);
 
         surface = await operations.GetStructureAsync(projectId, cancellationToken);
@@ -74,28 +92,38 @@ public sealed class ProjectStructureBatchDeletionCoordinator
                 requestedNodeIds,
                 deletedNodeIds,
                 deletionWarnings,
-                recoveries);
+                recoveries,
+                branchFailures);
         }
 
-        await DeleteIndependentBranchesAsync(
+        replaylessDeletedNodeCount = await DeleteIndependentBranchesAsync(
             projectId,
             deleteRootIds,
             deletedNodeIds,
             deletionWarnings,
             recoveries,
+            branchFailures,
+            managedStorageDisposition,
             cancellationToken);
 
-        if (recoveries.Count > 0)
+        if (recoveries.Count > 0 || branchFailures.Count > 0)
         {
             throw CreateBatchDeletionPartialCommitException(
                 projectId,
                 recoveries,
-                deletedNodeIds.Count,
+                branchFailures,
+                ResolveCompletedNodeCount(
+                    deletedNodeIds.Count,
+                    replaylessDeletedNodeCount,
+                    branchFailures),
                 deletionWarnings);
         }
 
         return new ProjectStructureDeletionResult(
-            deletedNodeIds.Count,
+            ResolveCompletedNodeCount(
+                deletedNodeIds.Count,
+                replaylessDeletedNodeCount,
+                branchFailures),
             deletionWarnings);
     }
 
@@ -106,6 +134,8 @@ public sealed class ProjectStructureBatchDeletionCoordinator
         HashSet<string> deletedNodeIds,
         List<ProjectStructureDeletionWarning> deletionWarnings,
         List<ProjectStructureDeletionRecovery> recoveries,
+        List<ProjectStructureDeletionBranchFailure> branchFailures,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         CancellationToken cancellationToken)
     {
         foreach (var requestedNodeId in requestedNodeIds.Where(id => !visibleNodeIds.Contains(id)))
@@ -115,6 +145,7 @@ public sealed class ProjectStructureBatchDeletionCoordinator
                 var replay = await operations.ReplayDeletionAsync(
                     projectId,
                     requestedNodeId,
+                    managedStorageDisposition,
                     cancellationToken);
                 if (replay is null)
                 {
@@ -128,17 +159,49 @@ public sealed class ProjectStructureBatchDeletionCoordinator
             {
                 recoveries.Add(exception.Recovery);
             }
+            catch (ProjectStructureDeletionDispositionMismatchException exception)
+            {
+                branchFailures.Add(CreateDispositionMismatchFailure(
+                    requestedNodeId,
+                    managedStorageDisposition,
+                    exception.PersistedDisposition,
+                    exception.CompletedNodeCount));
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (
+                deletedNodeIds.Count > 0 || recoveries.Count > 0 || branchFailures.Count > 0)
+            {
+                branchFailures.Add(CreateOperationFailure(
+                    requestedNodeId,
+                    managedStorageDisposition));
+                throw CreateBatchDeletionPartialCommitException(
+                    projectId,
+                    recoveries,
+                    branchFailures,
+                    ResolveCompletedNodeCount(
+                        deletedNodeIds.Count,
+                        replaylessDeletedNodeCount: 0,
+                        branchFailures),
+                    deletionWarnings,
+                    exception);
+            }
         }
     }
 
-    private async Task DeleteIndependentBranchesAsync(
+    private async Task<int> DeleteIndependentBranchesAsync(
         Guid projectId,
         IReadOnlyList<string> deleteRootIds,
         HashSet<string> deletedNodeIds,
         List<ProjectStructureDeletionWarning> deletionWarnings,
         List<ProjectStructureDeletionRecovery> recoveries,
+        List<ProjectStructureDeletionBranchFailure> branchFailures,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         CancellationToken cancellationToken)
     {
+        var replaylessDeletedNodeCount = 0;
         foreach (var nodeId in deleteRootIds)
         {
             try
@@ -146,22 +209,68 @@ public sealed class ProjectStructureBatchDeletionCoordinator
                 var deletion = await operations.DeleteObjectDetailedAsync(
                     projectId,
                     nodeId,
+                    managedStorageDisposition,
                     cancellationToken);
                 deletionWarnings.AddRange(deletion.DeletionWarnings);
-                var replay = await operations.ReplayDeletionAsync(
-                    projectId,
-                    nodeId,
-                    cancellationToken);
-                if (replay is not null)
+                if (deletion.DeletedNodeCount > 0)
                 {
-                    deletedNodeIds.UnionWith(replay.DeletedNodeKeys);
+                    replaylessDeletedNodeCount += deletion.DeletedNodeCount;
                 }
             }
             catch (ProjectStructureDeletionPartialCommitException exception)
             {
                 recoveries.Add(exception.Recovery);
             }
+            catch (ProjectStructureDeletionDispositionMismatchException exception)
+            {
+                branchFailures.Add(CreateDispositionMismatchFailure(
+                    nodeId,
+                    managedStorageDisposition,
+                    exception.PersistedDisposition,
+                    exception.CompletedNodeCount));
+            }
+            catch (ProjectManagedStorageBindingException exception)
+            {
+                branchFailures.Add(new ProjectStructureDeletionBranchFailure(
+                    nodeId,
+                    ProjectStructureDeletionBranchFailureKind.ManagedStorageValidation,
+                    managedStorageDisposition,
+                    exception.BindingId,
+                    "The branch was not deleted because current managed-file ownership could not be verified.",
+                    "Retry this branch with the node-only deletion option to preserve its files, or migrate the files into the active workspace first.")
+                {
+                    SuggestedRetryDisposition = ProjectStructureManagedStorageDisposition.RetainManagedFiles
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception) when (
+                ResolveCompletedNodeCount(
+                    deletedNodeIds.Count,
+                    replaylessDeletedNodeCount,
+                    branchFailures) > 0 ||
+                recoveries.Count > 0 ||
+                branchFailures.Count > 0)
+            {
+                branchFailures.Add(CreateOperationFailure(
+                    nodeId,
+                    managedStorageDisposition));
+                throw CreateBatchDeletionPartialCommitException(
+                    projectId,
+                    recoveries,
+                    branchFailures,
+                    ResolveCompletedNodeCount(
+                        deletedNodeIds.Count,
+                        replaylessDeletedNodeCount,
+                        branchFailures),
+                    deletionWarnings,
+                    exception);
+            }
         }
+
+        return replaylessDeletedNodeCount;
     }
 
     private static ProjectStructureDeletionResult ResolveReplayOnlyResult(
@@ -169,14 +278,19 @@ public sealed class ProjectStructureBatchDeletionCoordinator
         IReadOnlyList<string> requestedNodeIds,
         IReadOnlySet<string> deletedNodeIds,
         IReadOnlyList<ProjectStructureDeletionWarning> deletionWarnings,
-        IReadOnlyList<ProjectStructureDeletionRecovery> recoveries)
+        IReadOnlyList<ProjectStructureDeletionRecovery> recoveries,
+        IReadOnlyList<ProjectStructureDeletionBranchFailure> branchFailures)
     {
-        if (recoveries.Count > 0)
+        if (recoveries.Count > 0 || branchFailures.Count > 0)
         {
             throw CreateBatchDeletionPartialCommitException(
                 projectId,
                 recoveries,
-                deletedNodeIds.Count,
+                branchFailures,
+                ResolveCompletedNodeCount(
+                    deletedNodeIds.Count,
+                    replaylessDeletedNodeCount: 0,
+                    branchFailures),
                 deletionWarnings);
         }
 
@@ -196,9 +310,17 @@ public sealed class ProjectStructureBatchDeletionCoordinator
     private static ProjectStructureDeletionBatchPartialCommitException CreateBatchDeletionPartialCommitException(
         Guid projectId,
         IReadOnlyList<ProjectStructureDeletionRecovery> recoveries,
+        IReadOnlyList<ProjectStructureDeletionBranchFailure> branchFailures,
         int completedNodeCount,
-        IReadOnlyList<ProjectStructureDeletionWarning> warnings)
+        IReadOnlyList<ProjectStructureDeletionWarning> warnings,
+        Exception? innerException = null)
     {
+        var message = branchFailures.Count switch
+        {
+            0 => $"{recoveries.Count} deleted branch cleanup operation(s) remain incomplete. Retry each exact durable mutation id; independent requested branches were still processed.",
+            _ when recoveries.Count == 0 => $"{completedNodeCount} node(s) were confirmed deleted, and {branchFailures.Count} independent branch(es) require separate follow-up.",
+            _ => $"{completedNodeCount} node(s) were confirmed deleted, {recoveries.Count} cleanup operation(s) remain incomplete, and {branchFailures.Count} independent branch(es) require separate follow-up."
+        };
         return new ProjectStructureDeletionBatchPartialCommitException(
             new ProjectStructureDeletionBatchRecovery(
                 projectId,
@@ -207,9 +329,49 @@ public sealed class ProjectStructureBatchDeletionCoordinator
                     .Select(group => group.First())
                     .ToArray(),
                 completedNodeCount,
-                warnings),
-            $"{recoveries.Count} deleted branch cleanup operation(s) remain incomplete. Retry each exact durable mutation id; independent requested branches were still processed.");
+                warnings)
+            {
+                BranchFailures = branchFailures.ToArray()
+            },
+            message,
+            innerException);
     }
+
+    private static ProjectStructureDeletionBranchFailure CreateOperationFailure(
+        string rootNodeId,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition)
+        => new(
+            rootNodeId,
+            ProjectStructureDeletionBranchFailureKind.OperationFailed,
+            managedStorageDisposition,
+            BindingId: null,
+            "The branch could not be deleted because an unexpected operation failure occurred.",
+            "Inspect the server log for this root, correct the failure, and retry the branch separately.");
+
+    private static ProjectStructureDeletionBranchFailure CreateDispositionMismatchFailure(
+        string rootNodeId,
+        ProjectStructureManagedStorageDisposition requestedDisposition,
+        ProjectStructureManagedStorageDisposition requiredDisposition,
+        int completedNodeCount)
+        => new(
+            rootNodeId,
+            ProjectStructureDeletionBranchFailureKind.DispositionMismatch,
+            requestedDisposition,
+            BindingId: null,
+            "This branch was deleted, but its durable cleanup uses a different managed-file choice.",
+            "Retry this branch separately using the originally recorded managed-file choice.")
+        {
+            SuggestedRetryDisposition = requiredDisposition,
+            CompletedNodeCount = completedNodeCount
+        };
+
+    private static int ResolveCompletedNodeCount(
+        int deletedNodeIdCount,
+        int replaylessDeletedNodeCount,
+        IReadOnlyList<ProjectStructureDeletionBranchFailure> branchFailures)
+        => deletedNodeIdCount +
+           replaylessDeletedNodeCount +
+           branchFailures.Sum(static failure => failure.CompletedNodeCount);
 
     private static IReadOnlyList<string> NormalizeNodeIds(IReadOnlyList<string>? nodeIds)
         => nodeIds?
@@ -268,8 +430,8 @@ internal sealed record ProjectStructureBatchDeletionSelection(
 
 internal sealed record ProjectStructureBatchDeletionOperations(
     Func<Guid, CancellationToken, Task<ProjectStructureSurface>> GetStructureAsync,
-    Func<Guid, string, CancellationToken, Task<ProjectStructureDeletionReplayResult?>> ReplayDeletionAsync,
-    Func<Guid, string, CancellationToken, Task<ProjectStructureDeletionResult>> DeleteObjectDetailedAsync)
+    Func<Guid, string, ProjectStructureManagedStorageDisposition, CancellationToken, Task<ProjectStructureDeletionReplayResult?>> ReplayDeletionAsync,
+    Func<Guid, string, ProjectStructureManagedStorageDisposition, CancellationToken, Task<ProjectStructureDeletionResult>> DeleteObjectDetailedAsync)
 {
     public static ProjectStructureBatchDeletionOperations Create(
         ProjectWorkbenchService projectWorkbenchService)

@@ -12,6 +12,9 @@ public partial class ProjectStructurePage
     [Inject]
     private ProjectAssetCreationService AssetCreationService { get; set; } = default!;
 
+    [Inject]
+    private ProjectStructureBatchDeletionCoordinator BatchDeletionCoordinator { get; set; } = default!;
+
     private static readonly IReadOnlyList<string> SummaryStatusOptions =
     [
         "Draft",
@@ -158,6 +161,7 @@ public partial class ProjectStructurePage
         {
             var deleted = await DeleteSelectedNodesAsync(
                 [targetNode],
+                ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
                 $"{targetNode.Title} was deleted.",
                 "The selected node could not be deleted.");
             if (!deleted)
@@ -190,14 +194,16 @@ public partial class ProjectStructurePage
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ConfirmDeleteAsync()
+    private async Task ConfirmDeleteAsync(
+        ProjectStructureManagedStorageDisposition managedStorageDisposition)
     {
         if (pendingDeletePrompt is null)
         {
             return;
         }
 
-        var nodeIds = ResolvePendingDeleteNodeIds(pendingDeletePrompt);
+        var deletePrompt = pendingDeletePrompt;
+        var nodeIds = ResolvePendingDeleteNodeIds(deletePrompt);
         pendingDeletePrompt = null;
         reconnectNodeId = null;
         var targetNodes = ResolveDeleteTargetNodes(nodeIds);
@@ -210,9 +216,23 @@ public partial class ProjectStructurePage
         }
 
         var isBulk = targetNodes.Count > 1;
+        var hasManagedAttachments = deletePrompt.ManagedAttachmentCount > 0;
+        var retainedFiles = managedStorageDisposition ==
+            ProjectStructureManagedStorageDisposition.RetainManagedFiles;
         await DeleteSelectedNodesAsync(
             targetNodes,
-            isBulk ? $"{targetNodes.Count} selected branches were deleted." : "The selected branch was deleted.",
+            managedStorageDisposition,
+            !hasManagedAttachments
+                ? isBulk
+                    ? $"{targetNodes.Count} selected branches were deleted."
+                    : "The selected branch was deleted."
+                : retainedFiles
+                ? isBulk
+                    ? $"{targetNodes.Count} selected branches were deleted; their managed files were preserved."
+                    : "The selected branch was deleted; its managed files were preserved."
+                : isBulk
+                    ? $"{targetNodes.Count} selected branches and eligible managed files were deleted."
+                    : "The selected branch and its eligible managed files were deleted.",
             isBulk ? "The selected branches could not be deleted." : "The selected branch could not be deleted.");
     }
 
@@ -221,47 +241,85 @@ public partial class ProjectStructurePage
 
     private async Task<bool> DeleteSelectedNodesAsync(
         IReadOnlyList<ProjectStructureNode> targetNodes,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         string successMessage,
         string failureMessage)
     {
         var deletedAny = false;
         var failedAny = false;
+        string? partialFailureFeedback = null;
         var deletionWarnings = new List<ProjectStructureDeletionWarning>();
-        foreach (var requestedNode in targetNodes)
+        try
         {
-            try
+            var deletion = await BatchDeletionCoordinator.DeleteNodesAsync(
+                ProjectId,
+                targetNodes.Select(node => node.Id).ToArray(),
+                managedStorageDisposition);
+            deletionWarnings.AddRange(deletion.DeletionWarnings);
+            deletedAny = deletion.DeletedNodeCount > 0;
+        }
+        catch (ProjectStructureDeletionBatchPartialCommitException exception)
+        {
+            deletedAny = exception.Recovery.CompletedNodeCount > 0 ||
+                         exception.Recovery.Recoveries.Count > 0;
+            failedAny = true;
+            deletionWarnings.AddRange(exception.Recovery.Warnings);
+            foreach (var recovery in exception.Recovery.Recoveries)
             {
-                var targetNode = ResolveNode(requestedNode.Id) ?? requestedNode;
-                var deletion = await ProjectWorkbenchService.DeleteObjectDetailedAsync(
-                    ProjectId,
-                    targetNode.Id);
-                deletionWarnings.AddRange(deletion.DeletionWarnings);
-                if (deletion.DeletedNodeCount > 0)
-                {
-                    deletedAny = true;
-                    continue;
-                }
+                AddOrReplacePendingDeletionRecovery(recovery);
+            }
 
-                if (await TryDetachProjectedNodeAsync(targetNode))
+            if (exception.Recovery.BranchFailures.Count > 0)
+            {
+                var completedText = exception.Recovery.CompletedNodeCount == 1
+                    ? "1 node was confirmed deleted."
+                    : $"{exception.Recovery.CompletedNodeCount} nodes were confirmed deleted.";
+                var failedText = exception.Recovery.BranchFailures.Count == 1
+                    ? "1 selected branch requires separate follow-up."
+                    : $"{exception.Recovery.BranchFailures.Count} selected branches require separate follow-up.";
+                var remediation = string.Join(
+                    " ",
+                    exception.Recovery.BranchFailures
+                        .Select(failure => failure.Remediation)
+                        .Distinct(StringComparer.Ordinal));
+                partialFailureFeedback = exception.Recovery.CompletedNodeCount > 0
+                    ? $"{completedText} {failedText} {remediation}"
+                    : $"No additional nodes were confirmed deleted. {failedText} {remediation}";
+                failureMessage = partialFailureFeedback;
+                foreach (var branchFailure in exception.Recovery.BranchFailures)
                 {
-                    deletedAny = true;
+                    Logger.LogWarning(
+                        "Project structure branch deletion failed. ProjectId={ProjectId} RootNodeId={RootNodeId} FailureKind={FailureKind} BindingId={BindingId} Disposition={Disposition}.",
+                        ProjectId,
+                        branchFailure.RootNodeId,
+                        branchFailure.Kind,
+                        branchFailure.BindingId,
+                        branchFailure.RequestedDisposition);
                 }
             }
-            catch (ProjectStructureDeletionPartialCommitException exception)
-            {
-                deletedAny = true;
-                failedAny = true;
-                AddOrReplacePendingDeletionRecovery(exception.Recovery);
-            }
-            catch (Exception exception)
-            {
-                failedAny = true;
-                Logger.LogWarning(
-                    "Project structure deletion failed before durable completion. ProjectId={ProjectId} RootNodeId={RootNodeId} FailureType={FailureType}.",
-                    ProjectId,
-                    requestedNode.Id,
-                    exception.GetType().Name);
-            }
+        }
+        catch (ProjectManagedStorageBindingException exception)
+        {
+            failedAny = true;
+            failureMessage = managedStorageDisposition ==
+                ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
+                    ? "The nodes were not deleted because current managed-file ownership could not be verified. Choose Delete node only to preserve the files, or migrate the files into the active workspace first."
+                    : failureMessage;
+            Logger.LogWarning(
+                "Project structure deletion was blocked by managed-storage validation. ProjectId={ProjectId} BindingId={BindingId} Disposition={Disposition}.",
+                ProjectId,
+                exception.BindingId,
+                managedStorageDisposition);
+        }
+        catch (Exception exception)
+        {
+            failedAny = true;
+            Logger.LogWarning(
+                "Project structure deletion failed before durable completion. ProjectId={ProjectId} RootCount={RootCount} Disposition={Disposition} FailureType={FailureType}.",
+                ProjectId,
+                targetNodes.Count,
+                managedStorageDisposition,
+                exception.GetType().Name);
         }
 
         if (failedAny)
@@ -269,9 +327,13 @@ public partial class ProjectStructurePage
             await ReloadSurfaceAsync();
             workflowFeedback = pendingDeletionRecoveries.Count > 0
                 ? AppendDeletionWarningFeedback(
-                    $"{pendingDeletionRecoveries.Count} deleted branch cleanup operation(s) remain pending. Retry cleanup to finish managed-storage and assignment reconciliation.",
+                    string.Join(
+                        " ",
+                        partialFailureFeedback,
+                        $"{pendingDeletionRecoveries.Count} deleted branch cleanup operation(s) remain pending. Retry cleanup to finish managed-storage and assignment reconciliation.")
+                        .Trim(),
                     deletionWarnings)
-                : "One or more selected branches could not be deleted. No unsafe cleanup was attempted.";
+                : AppendDeletionWarningFeedback(failureMessage, deletionWarnings);
             workflowFeedbackTone = "warn";
             return false;
         }
@@ -439,39 +501,6 @@ public partial class ProjectStructurePage
 
     private static IReadOnlyList<string> ResolvePendingDeleteNodeIds(ProjectStructureDeletePrompt prompt)
         => prompt.NodeIds.Count > 0 ? prompt.NodeIds : [prompt.NodeId];
-
-    private async Task<bool> TryDetachProjectedNodeAsync(ProjectStructureNode targetNode)
-    {
-        if (surface is null)
-        {
-            return false;
-        }
-
-        var removableLink = surface.Links
-            .FirstOrDefault(link =>
-                link.IsUserAuthored &&
-                string.Equals(link.TargetId, targetNode.Id, StringComparison.Ordinal) &&
-                (string.IsNullOrWhiteSpace(targetNode.ParentId) ||
-                 string.Equals(link.SourceId, targetNode.ParentId, StringComparison.Ordinal)));
-        if (removableLink is null)
-        {
-            removableLink = surface.Links
-                .FirstOrDefault(link =>
-                    link.IsUserAuthored &&
-                    string.Equals(link.TargetId, targetNode.Id, StringComparison.Ordinal));
-        }
-
-        if (removableLink is null)
-        {
-            return false;
-        }
-
-        return await ProjectWorkbenchService.UnlinkObjectsAsync(
-            ProjectId,
-            removableLink.SourceId,
-            removableLink.TargetId,
-            removableLink.Kind);
-    }
 
     private async Task OpenSummaryAsync(string? nodeId = null)
     {
@@ -968,7 +997,8 @@ public partial class ProjectStructurePage
             node.Title,
             descendantCount,
             requiresConfirmation,
-            impactCopy);
+            impactCopy,
+            managedAttachmentCount);
     }
 
     private ProjectStructureDeletePrompt BuildDeletePrompt(IReadOnlyList<ProjectStructureNode> nodes)
@@ -1009,7 +1039,8 @@ public partial class ProjectStructurePage
             $"{nodeIds.Count} selected nodes",
             descendantCount,
             RequiresConfirmation: true,
-            string.Join(" ", impactParts))
+            string.Join(" ", impactParts),
+            managedAttachmentCount)
         {
             NodeIds = nodeIds
         };
@@ -1071,8 +1102,8 @@ public partial class ProjectStructurePage
         }
 
         impactParts.Add(managedAttachmentCount == 1
-            ? "The associated managed file attachment will also be removed. Its stored file will be deleted when managed storage owns it and no other node references it; retained content will be reported."
-            : $"{managedAttachmentCount} associated managed file attachments will also be removed. Stored files owned by managed storage and not referenced by other nodes will be deleted; retained content will be reported.");
+            ? "This branch has one managed file attachment. Choose whether to preserve its stored file or request deletion; deletion occurs only when managed storage owns it and no other node references it."
+            : $"This branch has {managedAttachmentCount} managed file attachments. Choose whether to preserve their stored files or request deletion; deletion occurs only for files owned by managed storage and not referenced by other nodes.");
     }
 
     private int CountLinkedNodes(string nodeId)
