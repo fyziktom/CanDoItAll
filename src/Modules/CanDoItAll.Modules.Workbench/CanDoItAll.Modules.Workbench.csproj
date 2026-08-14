@@ -36,6 +36,7 @@
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Components" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Core" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Markdown" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Spreadsheet" Version="$(CanDoItAllFileToolsPackageVersion)" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj" />

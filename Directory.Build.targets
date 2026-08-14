@@ -43,6 +43,7 @@
     <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Components'))" />
     <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Core'))" />
     <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Markdown'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Spreadsheet'))" />
     <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.Providers.FileSystem'))" />
 
     <PackageReference Remove="@(_LocalCanDoItAllComponentsPackage);@(_LocalCanDoItAllFileToolsPackage)" />

@@ -13,6 +13,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
+using CanDoItAll.FileTools.FileInteraction.Spreadsheet;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
@@ -39,7 +40,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
             .AddZoomPanRenderers()
             .AddMarkdown()
             .AddWorkbenchMermaid()
-            .AddWorkbenchSpreadsheetPreview());
+            .AddSpreadsheet());
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddScoped<ISpreadsheetWorkbookContentPreviewService>(serviceProvider =>
             serviceProvider.GetRequiredService<ISpreadsheetDocumentService>());
