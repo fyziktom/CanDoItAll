@@ -4122,6 +4122,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     [Theory]
     [InlineData("The #blazor-error-ui remained visible and displayed 'An unhandled error has occurred.' while the console remained clean.")]
     [InlineData("Browser showed #blazor-error-ui; no other runtime error occurred.")]
+    [InlineData("The browser snapshot exposes the framework error UI text 'An unexpected error occurred.' while the console remains clean.")]
+    [InlineData("Source readback showed #blazor-error-ui is not hidden by the current stylesheet.")]
     public void RepairRequired_with_current_run_browser_state_artifact_accepts_visible_unhandled_error_with_clean_console(
         string reason)
     {
@@ -4254,6 +4256,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
     [InlineData("#blazor-error-ui was not visible after the repair.")]
     [InlineData("#blazor-error-ui is no longer visible after the repair.")]
     [InlineData("The application error surface was hidden with display: none.")]
+    [InlineData("The browser did not expose 'An unexpected error occurred.' after the repair.")]
     public void RepairRequired_rejects_negated_browser_defect_claims(
         string reason)
     {

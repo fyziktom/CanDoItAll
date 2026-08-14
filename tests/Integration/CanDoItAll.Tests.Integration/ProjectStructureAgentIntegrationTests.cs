@@ -375,6 +375,71 @@ public sealed class ProjectStructureAgentIntegrationTests
     }
 
     [Fact]
+    public async Task AgentService_CreateNodeAsync_allows_writeback_below_a_bound_physical_project_block_root()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
+        var externalTargetRegistry = scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
+        var externalRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.AgentWriteback.Audited.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(externalRoot);
+
+        try
+        {
+            var projectId = await CreateProjectAsync(projects, "Audited result writeback authority");
+            var deliveryBlock = await workbench.CreateObjectAsync(
+                projectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.ProjectBlock,
+                    "Output folder",
+                    "Delivery target",
+                    "An operator-selected external output root.",
+                    $"project:{projectId:D}",
+                    ObjectSubtype: "delivery",
+                    MetadataJson: CreateProjectBlockMetadata(externalRoot)));
+            var targetWorkItem = await workbench.CreateObjectAsync(
+                projectId,
+                new ProjectObjectCreateRequest(
+                    ProjectObjectType.WorkItem,
+                    "Main app",
+                    string.Empty,
+                    string.Empty,
+                    deliveryBlock.Id,
+                    ObjectSubtype: ProjectObjectSubtypePolicy.Task));
+            var externalAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                externalRoot,
+                externalTargetRegistry);
+            Assert.False(string.IsNullOrWhiteSpace(externalAlias));
+            using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+                CreateAuditedExecutionRun([externalAlias!], externalTargetRegistry));
+
+            var resultNote = await agentService.CreateNodeAsync(
+                projectId,
+                new ProjectStructureNodeCreateInput(
+                    ProjectObjectType.Note,
+                    "Blazor results and evidence index",
+                    "Current-run writeback",
+                    "The accepted result and evidence references.",
+                    targetWorkItem.Id,
+                    MetadataJson: "{}"),
+                DefaultAgent);
+
+            var surface = await workbench.GetStructureAsync(projectId);
+            var persistedNote = Assert.Single(surface.Nodes, node => node.Id == resultNote.Id);
+            Assert.Equal(targetWorkItem.Id, persistedNote.ParentId);
+            Assert.Equal(ProjectObjectType.Note, persistedNote.ObjectType);
+        }
+        finally
+        {
+            Directory.Delete(externalRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task StartProcessNodeAsync_resolves_linked_definition_targets_source_node_and_records_launch_context()
     {
         await using var application = await TestApplication.CreateAsync();

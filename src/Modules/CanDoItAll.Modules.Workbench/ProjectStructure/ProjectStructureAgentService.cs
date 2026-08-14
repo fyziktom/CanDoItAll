@@ -18,6 +18,7 @@ public sealed class ProjectStructureAgentService(
     ProjectStructureImportService importService,
     IProjectStructureRuntimeLauncher runtimeLauncher,
     ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary,
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathResolver workspacePathResolver,
     ProjectStructureAssetContentReader assetContentReader,
@@ -494,7 +495,8 @@ public sealed class ProjectStructureAgentService(
 
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             metadataJson,
-            workspacePathResolver.ResolveWorkspaceRoot());
+            workspacePathResolver.ResolveWorkspaceRoot(),
+            externalTargetPathRegistryFactory);
     }
 
     private async Task EnsureParentAuthorityAllowedAsync(
@@ -510,7 +512,8 @@ public sealed class ProjectStructureAgentService(
             string.IsNullOrWhiteSpace(parentNodeKey)
                 ? ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)
                 : parentNodeKey.Trim(),
-            workspacePathResolver.ResolveWorkspaceRoot());
+            workspacePathResolver.ResolveWorkspaceRoot(),
+            externalTargetPathRegistryFactory);
     }
 
     public async Task<int> UpdateNodeStatusesAsync(

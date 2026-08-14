@@ -179,7 +179,7 @@ public sealed class GenericProcessStepBriefBuilder : IProcessStepBriefBuilder
             out var parsedAcceptanceBranchKeys)
             ? parsedAcceptanceBranchKeys
             : [];
-        const string evidenceShapeGuidance = "Every acceptanceCriteriaEvidence entry must use the exact structured property names criterionId, status, summary, and evidenceRefs; use Passed, Failed, or NotVerified for status. Do not substitute aliases such as id, passed, or proofRefs.";
+        const string evidenceShapeGuidance = "Place acceptanceCriteriaEvidence inside the sole submit_process_step_outcome result object, never as a sibling argument. Every entry must use the exact structured property names criterionId, status, summary, and evidenceRefs; use Passed, Failed, or NotVerified for status. Do not substitute aliases such as id, passed, or proofRefs.";
         const string failedCriterionGuidance = "For a non-acceptance branch that reports an observed product or deliverable defect, populate acceptanceCriteriaEvidence for every criterion you directly found to fail. Each failed entry must use the exact criterionId, status Failed, a concise observed-failure summary, and at least one grounded current-run evidenceRefs entry. Do not mark a criterion Failed merely because a later parent-owned proof has not run.";
         return acceptanceBranchKeys.Count == 0
             ? $"This step contributes evidence to a later acceptance owner. Preserve criterion-relevant proof in its managed artifact, but do not claim end-to-end acceptance solely from this step. {evidenceShapeGuidance} {failedCriterionGuidance}"

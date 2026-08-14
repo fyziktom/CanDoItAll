@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -49,6 +50,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
         ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator,
         IDatabaseRuntimeState databaseRuntimeState,
+        IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(agentService);
@@ -66,6 +68,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ArgumentNullException.ThrowIfNull(projectCreationCoordinator);
         ArgumentNullException.ThrowIfNull(nodeCopyCoordinator);
         ArgumentNullException.ThrowIfNull(databaseRuntimeState);
+        ArgumentNullException.ThrowIfNull(externalTargetPathRegistryFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
@@ -86,6 +89,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             workspacePaths,
             workspaceRoot,
             databaseRuntimeState,
+            externalTargetPathRegistryFactory,
             timeProvider);
     }
 
@@ -223,6 +227,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         IWorkspacePathResolutionService workspacePaths,
         string workspaceRoot,
         IDatabaseRuntimeState databaseRuntimeState,
+        IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         TimeProvider timeProvider)
     {
         private readonly ProjectStructureAgentService agentService = agentService;
@@ -242,6 +247,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         private readonly IWorkspacePathResolutionService workspacePaths = workspacePaths;
         private readonly string workspaceRoot = workspaceRoot;
         private readonly IDatabaseRuntimeState databaseRuntimeState = databaseRuntimeState;
+        private readonly IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory = externalTargetPathRegistryFactory;
         private readonly TimeProvider timeProvider = timeProvider;
         private string? currentBranchName;
 
@@ -1201,7 +1207,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
-                        workspaceRoot);
+                        workspaceRoot,
+                        externalTargetPathRegistryFactory);
                     var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
                     ProjectStructureNonTaskWritePolicy.EnsureNodeCreateAllowed(
                         accessState.RequiresNonTaskWriteGuard,
@@ -1248,7 +1255,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
-                        workspaceRoot);
+                        workspaceRoot,
+                        externalTargetPathRegistryFactory);
                     var currentNode = await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
@@ -1262,7 +1270,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     {
                         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                             currentNode.MetadataJson,
-                            workspaceRoot);
+                            workspaceRoot,
+                            externalTargetPathRegistryFactory);
                     }
 
                     return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
@@ -1302,7 +1311,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     {
                         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                             currentNode.MetadataJson,
-                            workspaceRoot);
+                            workspaceRoot,
+                            externalTargetPathRegistryFactory);
                     }
 
                     return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
@@ -1333,7 +1343,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
-                        workspaceRoot);
+                        workspaceRoot,
+                        externalTargetPathRegistryFactory);
                     await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,

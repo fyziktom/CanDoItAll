@@ -12,16 +12,20 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
 {
     private readonly string workspaceRoot = TestFileSystem.CreateTemporaryRoot("project-root-guard-workspace");
     private readonly string authorizedExternalRoot = TestFileSystem.CreateTemporaryRoot("project-root-guard-external");
+    private readonly string unauthorizedExternalRoot = TestFileSystem.CreateTemporaryRoot("project-root-guard-unscoped");
+    private readonly IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory = new ExternalTargetPathRegistryFactory();
+    private readonly IReadOnlyList<ExternalTargetRootBinding> externalTargetRootBindings;
     private readonly string authorizedExternalAlias;
     private readonly string authorizedExternalChildAlias;
 
     public ProjectStructureAgentRootAuthorityWriteGuardTests()
     {
-        var registry = new ExternalTargetPathRegistry();
+        var registry = externalTargetPathRegistryFactory.Create([]);
         Assert.True(registry.TryCreateAlias(authorizedExternalRoot, out authorizedExternalAlias));
         Assert.True(registry.TryCreateAlias(
             Path.Combine(authorizedExternalRoot, "src"),
             out authorizedExternalChildAlias));
+        externalTargetRootBindings = registry.ExportBindings([authorizedExternalAlias]);
     }
 
     [Fact]
@@ -29,7 +33,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
     {
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             CreateProjectBlockMetadata(@"src\Calculator"),
-            workspaceRoot);
+            workspaceRoot,
+            externalTargetPathRegistryFactory);
     }
 
     [Fact]
@@ -39,7 +44,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 CreateProjectBlockMetadata(
                     Path.Combine(authorizedExternalRoot, "unscoped")),
-                workspaceRoot));
+                workspaceRoot,
+                externalTargetPathRegistryFactory));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -54,7 +60,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 JsonSerializer.Serialize(new { outputRoot = Path.Combine(authorizedExternalRoot, "legacy") }),
-                workspaceRoot));
+                workspaceRoot,
+                externalTargetPathRegistryFactory));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -69,7 +76,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
 
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             CreateProjectBlockMetadata(@"src\Calculator"),
-            workspaceRoot);
+            workspaceRoot,
+            externalTargetPathRegistryFactory);
     }
 
     [Fact]
@@ -81,7 +89,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
             CreateProjectBlockMetadata(
                 authorizedExternalChildAlias),
-            workspaceRoot);
+            workspaceRoot,
+            externalTargetPathRegistryFactory);
     }
 
     [Fact]
@@ -93,8 +102,9 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 CreateProjectBlockMetadata(
-                    Path.Combine(authorizedExternalRoot, "unselected-project")),
-                workspaceRoot));
+                    Path.Combine(unauthorizedExternalRoot, "unselected-project")),
+                workspaceRoot,
+                externalTargetPathRegistryFactory));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -102,7 +112,7 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         Assert.True(exception.IsSafeToExpose);
         Assert.True(exception.CanRetryWithCorrectedInput);
         Assert.DoesNotContain(
-            Path.Combine(authorizedExternalRoot, "unselected-project"),
+            Path.Combine(unauthorizedExternalRoot, "unselected-project"),
             exception.SafeMessage,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -121,7 +131,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
                 [projectRoot, externalOwner],
                 externalOwner.Id,
-                workspaceRoot));
+                workspaceRoot,
+                externalTargetPathRegistryFactory));
 
         Assert.Equal(
             ProjectStructureAgentRootAuthorityWriteGuard.FailureCode,
@@ -143,7 +154,60 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
             [projectRoot, authorizedOwner],
             authorizedOwner.Id,
-            workspaceRoot);
+            workspaceRoot,
+            externalTargetPathRegistryFactory);
+    }
+
+    [Fact]
+    public void Audited_agent_parent_mutation_allows_a_bound_physical_root_in_the_execution_scope()
+    {
+        using var audit = WorkspaceExecutionAuditContext.BeginScope(
+            CreateExecutionRun(
+                [authorizedExternalAlias],
+                externalTargetRootBindings));
+        var projectRoot = CreateNode("project:root", parentId: null);
+        var authorizedOwner = CreateNode(
+            "custom:authorized-owner",
+            projectRoot.Id,
+            ProjectObjectType.ProjectBlock,
+            CreateProjectBlockMetadata(authorizedExternalRoot));
+        var targetWorkItem = CreateNode(
+            "custom:target-work-item",
+            authorizedOwner.Id,
+            ProjectObjectType.WorkItem);
+
+        ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
+            [projectRoot, authorizedOwner, targetWorkItem],
+            targetWorkItem.Id,
+            workspaceRoot,
+            externalTargetPathRegistryFactory);
+    }
+
+    [Fact]
+    public void Audited_agent_parent_mutation_rejects_a_physical_root_without_its_bound_identity()
+    {
+        using var audit = WorkspaceExecutionAuditContext.BeginScope(
+            CreateExecutionRun([authorizedExternalAlias]));
+        var projectRoot = CreateNode("project:root", parentId: null);
+        var externalOwner = CreateNode(
+            "custom:external-owner",
+            projectRoot.Id,
+            ProjectObjectType.ProjectBlock,
+            CreateProjectBlockMetadata(authorizedExternalRoot));
+        var targetWorkItem = CreateNode(
+            "custom:target-work-item",
+            externalOwner.Id,
+            ProjectObjectType.WorkItem);
+
+        var exception = Assert.Throws<ProjectStructureAgentException>(() =>
+            ProjectStructureAgentRootAuthorityWriteGuard.EnsureParentAllowed(
+                [projectRoot, externalOwner, targetWorkItem],
+                targetWorkItem.Id,
+                workspaceRoot,
+                externalTargetPathRegistryFactory));
+
+        Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, exception.ErrorCode);
+        Assert.Contains("requested parent", exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -158,7 +222,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 CreateProjectBlockMetadata(Path.Combine(differentlyCasedRoot, "src")),
-                workspaceRoot));
+                workspaceRoot,
+                externalTargetPathRegistryFactory));
 
         Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, exception.ErrorCode);
     }
@@ -172,7 +237,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
         var exception = Assert.Throws<ProjectStructureAgentException>(() =>
             ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                 CreateProjectBlockMetadata("src"),
-                foreignWorkspaceRoot));
+                foreignWorkspaceRoot,
+                externalTargetPathRegistryFactory));
 
         Assert.Equal(ProjectStructureAgentRootAuthorityWriteGuard.FailureCode, exception.ErrorCode);
     }
@@ -180,6 +246,7 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
     public void Dispose()
     {
         TestFileSystem.DeleteDirectoryWithRetry(authorizedExternalRoot);
+        TestFileSystem.DeleteDirectoryWithRetry(unauthorizedExternalRoot);
         TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
     }
 
@@ -227,7 +294,8 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
             MetadataJson: metadataJson);
 
     private static ExecutionRunRecord CreateExecutionRun(
-        IReadOnlyList<string> readOnlyExternalTargetAliases)
+        IReadOnlyList<string> readOnlyExternalTargetAliases,
+        IReadOnlyList<ExternalTargetRootBinding>? externalTargetRootBindings = null)
     {
         var now = DateTimeOffset.UtcNow;
         var metadataJson = JsonSerializer.Serialize(
@@ -236,6 +304,13 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
                 [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
                     readOnlyExternalTargetAliases
             });
+        if (externalTargetRootBindings is not null)
+        {
+            metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+                metadataJson,
+                externalTargetRootBindings);
+        }
+
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),
             AgentId: Guid.NewGuid(),

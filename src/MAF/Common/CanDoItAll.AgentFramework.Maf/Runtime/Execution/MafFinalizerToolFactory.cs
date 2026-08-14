@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
@@ -41,17 +43,44 @@ internal static class MafFinalizerToolFactory
             Description = policy.ToolDescription,
             SerializerOptions = AgentOutputJson.SerializerOptions
         };
-        if (policy.ResultParameterDescription is { } resultParameterDescription)
+        var resultSchema = CreateTolerantResultSchema(policy);
+        var resultParameterDescription = policy.ResultParameterDescription;
+        if (resultParameterDescription is not null || resultSchema is not null)
         {
             options.JsonSchemaCreateOptions = new AIJsonSchemaCreateOptions
             {
                 ParameterDescriptionProvider = parameter =>
                     string.Equals(parameter.Name, "result", StringComparison.Ordinal)
                         ? resultParameterDescription
-                        : null
+                        : null,
+                TransformSchemaNode = resultSchema is null
+                    ? null
+                    : (context, schema) => context.TypeInfo.Type == typeof(JsonElement)
+                        ? resultSchema.DeepClone()
+                        : schema
             };
         }
 
-        return AIFunctionFactory.Create(capture.CreateSubmitDelegate(), options);
+        var function = AIFunctionFactory.Create(capture.CreateSubmitDelegate(), options);
+        return new ExactFinalizerArgumentsAIFunction(function, policy);
+    }
+
+    private static JsonNode? CreateTolerantResultSchema(AgentFinalizerPolicy policy)
+    {
+        if (policy.KnownOutputNormalizer is null)
+        {
+            return null;
+        }
+
+        var schema = AIJsonUtilities.CreateJsonSchema(
+            policy.OutputType,
+            policy.ResultParameterDescription,
+            hasDefaultValue: false,
+            defaultValue: null,
+            AgentOutputJson.SerializerOptions,
+            new AIJsonSchemaCreateOptions());
+        return JsonNode.Parse(schema.GetRawText())
+            ?? throw new InvalidOperationException(
+                $"Finalizer result schema for '{policy.ToolName}' could not be materialized.");
     }
 }

@@ -361,6 +361,46 @@ and generic process contracts, never in the reverse direction.
     `quality-repair-no-go`. There is no backward route, recursive subprocess,
     model-controlled retry count, or mutable loop ledger outside the compiled
     definition snapshot.
+34. A required finalizer always exposes the schema of its governed output
+    contract, including when the runtime deliberately captures a raw JSON
+    element for tolerant normalization. Its invocation has exactly one
+    top-level `result` argument. Unknown sibling arguments are rejected before
+    binding rather than silently discarded, and process acceptance-criterion
+    evidence must therefore remain inside the typed result object. Tolerant
+    normalization may repair known shapes inside `result`; it cannot widen the
+    finalizer protocol.
+35. Typed failed acceptance-criterion evidence remains the primary authority
+    for a repair branch. A driver-owned observed-defect contribution is a
+    bounded fallback only when it can bind a positive, non-negated framework
+    defect claim to exact successful receipts and managed evidence references
+    from the current execution. That contribution may recognize standard
+    framework error surfaces, but it must not contain application names,
+    product rules, or workflow-specific branch exceptions.
+36. Generic Blazor validation derives topology and required capabilities from
+    the resolved execution contract. Browser proof is captured after the
+    current startup receipt in a fresh page or context; pre-start DOM, console,
+    screenshot, cache, or service-worker state is not current-runtime proof.
+    API, persistence, PWA, test-project, and directory requirements apply only
+    when the resolved contract declares them.
+37. Launch-time acceptance extraction is source-authoritative. Selected source
+    items and typed product requirements may contribute implicit required
+    criteria; contextual work items require an explicit acceptance section;
+    contextual operational material remains non-blocking delivery-planning
+    context unless it declares explicit acceptance or definition-of-done
+    criteria. Visual target assets remain product-acceptance inputs. Explicit
+    list items remain whole criteria rather than being split on punctuation.
+38. Review branches distinguish defects from missing proof. `repair-required`
+    and `repair-escalation` require a typed failed criterion or equivalent
+    deterministic current-build product defect. `NotVerified` requires the
+    authorized proof action, or a branchless `Blocked` outcome when a current
+    failed tool, input, access, or contract receipt prevents that proof.
+39. A governed project-structure mutation below an existing external-root
+    ProjectBlock may inherit only root authority already bound into the current
+    audited execution. The write guard converts a stored physical root through
+    the execution's protected root bindings and compares the resulting alias to
+    the current allowed or read-only alias set. Missing, foreign-host, malformed,
+    or unrelated bindings remain denied. This equivalence check changes no
+    stored root and cannot mint new execution authority.
 
 ## Rejected alternatives
 
@@ -485,10 +525,25 @@ and generic process contracts, never in the reverse direction.
   completed-result identities. Merely launching another fresh root was also
   rejected as the durable policy because it retains the same inadequate repair
   topology. A fresh root is used only to validate the new snapshotted DAG.
+- Accepting unknown sibling finalizer arguments and trying to recover their
+  meaning later was rejected because model binding can discard them before the
+  governed output exists. Weakening repair-branch evidence requirements was
+  rejected for the same reason: it would turn a protocol defect into routing
+  authority.
+- Treating browser state captured before the current startup as proof, or
+  prescribing one test layout, persistence abstraction, API, or test framework
+  in the common Blazor process, was rejected. Those choices belong to the
+  resolved product contract and source graph, not the process runtime.
+- Weakening the project-root guard, trusting a stored physical path by itself,
+  or rewriting operator-selected roots to execution aliases was rejected. The
+  protected binding is the only proof that the stored physical root and the
+  current execution alias identify the same authorized namespace.
 
 ## Validation
 
 - focused MAF finalizer and process adapter unit tests;
+- finalizer argument-shape, typed-schema, and nested acceptance-evidence tests;
+- generic Blazor template projection and post-start browser-proof tests;
 - process architecture baseline tests;
 - solution build and test suite;
 - live `software-delivery` runs for Calculator and Tetris using Terra or Luna

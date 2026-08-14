@@ -124,5 +124,6 @@ public enum ProcessLaunchSourceItemKind
 {
     Other,
     ImageAsset,
-    WorkItem
+    WorkItem,
+    ProductRequirement
 }

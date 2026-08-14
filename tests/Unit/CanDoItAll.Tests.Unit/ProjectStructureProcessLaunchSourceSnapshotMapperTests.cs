@@ -34,6 +34,72 @@ public sealed class ProjectStructureProcessLaunchSourceSnapshotMapperTests
             Assert.Single(context.Source.ContextItems).Kind);
     }
 
+    [Theory]
+    [InlineData(ProjectObjectType.ProjectBlock)]
+    [InlineData(ProjectObjectType.Decision)]
+    public void Create_maps_product_requirement_nodes_to_the_typed_launch_source_kind(
+        ProjectObjectType objectType)
+    {
+        var projectId = Guid.NewGuid();
+        var selected = CreateNode(
+            "selected",
+            ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
+            objectType);
+        var surface = new ProjectStructureSurface(
+            projectId,
+            "TetrisGame",
+            [selected],
+            [],
+            null);
+
+        var context = ProjectStructureProcessLaunchSourceSnapshotMapper.Create(
+            surface,
+            selected,
+            "software-delivery",
+            false,
+            string.Empty);
+
+        Assert.Equal(
+            ProcessLaunchSourceItemKind.ProductRequirement,
+            context.Source.SelectedItem.Kind);
+        Assert.Equal(
+            ProcessLaunchSourceItemKind.ProductRequirement,
+            Assert.Single(context.Source.ContextItems).Kind);
+    }
+
+    [Theory]
+    [InlineData(ProjectObjectType.Environment)]
+    [InlineData(ProjectObjectType.Note)]
+    public void Create_maps_non_requirement_context_to_other(
+        ProjectObjectType objectType)
+    {
+        var projectId = Guid.NewGuid();
+        var selected = CreateNode(
+            "selected",
+            ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
+            objectType);
+        var surface = new ProjectStructureSurface(
+            projectId,
+            "TetrisGame",
+            [selected],
+            [],
+            null);
+
+        var context = ProjectStructureProcessLaunchSourceSnapshotMapper.Create(
+            surface,
+            selected,
+            "software-delivery",
+            false,
+            string.Empty);
+
+        Assert.Equal(
+            ProcessLaunchSourceItemKind.Other,
+            context.Source.SelectedItem.Kind);
+        Assert.Equal(
+            ProcessLaunchSourceItemKind.Other,
+            Assert.Single(context.Source.ContextItems).Kind);
+    }
+
     private static ProjectStructureNode CreateNode(
         string id,
         string? parentId,

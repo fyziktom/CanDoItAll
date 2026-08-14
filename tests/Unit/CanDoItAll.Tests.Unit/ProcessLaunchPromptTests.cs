@@ -219,6 +219,10 @@ public sealed class ProcessLaunchPromptTests
         Assert.Contains("AC-001", prompt, StringComparison.Ordinal);
         Assert.Contains("AC-020", prompt, StringComparison.Ordinal);
         Assert.Contains("acceptanceCriteriaEvidence", prompt, StringComparison.Ordinal);
+        Assert.Contains(
+            "inside the sole submit_process_step_outcome result object, never as a sibling argument",
+            prompt,
+            StringComparison.Ordinal);
         Assert.Contains("criterionId", prompt, StringComparison.Ordinal);
         Assert.Contains("status Passed", prompt, StringComparison.Ordinal);
         Assert.Contains("status Failed", prompt, StringComparison.Ordinal);

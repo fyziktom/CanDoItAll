@@ -61,6 +61,24 @@ public sealed class ProjectStructureProcessContextNodeFilterTests
         Assert.True(include);
     }
 
+    [Fact]
+    public void ShouldIncludeInProcessContext_excludes_notes_that_embed_prior_process_run_artifacts()
+    {
+        var node = CreateNode(
+            "custom:old-result-note",
+            $"custom:{Guid.NewGuid():N}",
+            ProjectObjectType.Note,
+            "result",
+            "Prior delivery result",
+            "Accepted using artifacts/process-runs/old-run/browser/after.yml.",
+            string.Empty,
+            string.Empty);
+
+        var include = ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node);
+
+        Assert.False(include);
+    }
+
     private static ProjectStructureNode CreateNode(
         string id,
         string? parentId,
