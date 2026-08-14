@@ -120,7 +120,10 @@ public sealed record LlmResponseFormat(
 /// </summary>
 public sealed record LlmModelSettings(
     double? Temperature = null,
-    string ModelParameterConfigurationJson = "");
+    string ModelParameterConfigurationJson = "")
+{
+    public AgentReasoningEffortLevel? ThinkingEffort { get; init; }
+}
 
 /// <summary>
 /// A single stateless, provider-neutral LLM invocation request. Contains only provider/model selection,

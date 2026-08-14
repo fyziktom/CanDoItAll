@@ -11,6 +11,7 @@ first-party agent tool provider for that bounded area.
 | [CRM/HR](../../src/Modules/CanDoItAll.Modules.CrmHr/README.md) | Parties, accounts, opportunities, workforce, recruiting, skills, staffing, and agent/person relationships |
 | [Memory](../../src/Modules/CanDoItAll.Modules.Memory/README.md) | Memory provider configuration, operations, diagnostics, and user-facing Memory surfaces |
 | [Plugins](../../src/Modules/CanDoItAll.Modules.Plugins/README.md) | Plugin catalog, installation, activation, grants, OAuth, settings, and logs |
+| [LLM Chats](../../src/Modules/CanDoItAll.Modules.LlmChats/README.md) | Reusable chat definitions, immutable revisions, pinned conversations, durable operations, and provider-neutral invocation |
 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md) | Process definition, launch, monitoring, recovery, assignments, and process UI |
 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md) | Project portfolio, hierarchy, phases, files, planning, and project-facing services |
 | [Prompts](../../src/Modules/CanDoItAll.Modules.Prompts/README.md) | Prompt catalog, versions, assets, and curation surfaces |
@@ -36,6 +37,7 @@ Each module should:
 Module-to-module references are acceptable only for an intentional product dependency.
 Provider, transport, and persistence details remain behind their owning adapter boundary.
 
-The ordinary multi-turn LLM conversation foundation under `src/MAF/Common` is not an active product
-module. It remains opt-in until a product surface, retention contract, and profile-generation fencing
-are implemented together.
+The ordinary multi-turn LLM conversation foundation under `src/MAF/Common` is not globally active. The
+LLM Chats persistence adapter constructs it only inside the scoped product engine, paired with canonical
+PostgreSQL state and profile-generation fencing. Other products must opt in through their own explicit
+composition boundary rather than publishing the generic service globally.

@@ -1,0 +1,324 @@
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.Modules.LlmChats.Definitions;
+using CanDoItAll.Modules.LlmChats.Operations;
+using CanDoItAll.Modules.LlmChats.Ports;
+
+namespace CanDoItAll.Modules.LlmChats.Persistence;
+
+public sealed class LlmChatConversationEngine(
+    ILlmConversationService conversationService,
+    CanonicalLlmChatProviderResolver providerResolver,
+    ILlmChatRuntimeLeaseFactory runtimeLeaseFactory,
+    ILlmChatOperationScopeAccessor operationScope) : ILlmChatConversationEngine
+{
+    private readonly ILlmChatProviderExecutionResolver executionResolver = providerResolver;
+
+    public Task<LlmChatConversationEngineState> CreateAsync(
+        LlmChatConversationId conversationId,
+        LlmChatDefinitionRevision definitionRevision,
+        string title,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(
+            LlmChatOperationId.New(),
+            async token =>
+            {
+                var resolution = await ResolveProviderAsync(definitionRevision, token).ConfigureAwait(false);
+                var document = await conversationService.StartAsync(
+                    new LlmConversationStartRequest(
+                        resolution.Profile,
+                        resolution.Resolved.Model,
+                        title,
+                        definitionRevision.SystemPrompt)
+                    {
+                        ConversationId = conversationId.Value
+                    },
+                    token).ConfigureAwait(false);
+                return Map(document);
+            },
+            cancellationToken);
+
+    public Task<LlmChatConversationEngineState?> TryGetAsync(
+        LlmChatConversationId conversationId,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(
+            LlmChatOperationId.New(),
+            async token =>
+            {
+                var document = await conversationService.TryGetAsync(conversationId.Value, token)
+                    .ConfigureAwait(false);
+                return document is null ? null : Map(document);
+            },
+            cancellationToken);
+
+    public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
+        LlmChatConversationId conversationId,
+        int take,
+        int offset,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        return ExecuteAsync(
+            LlmChatOperationId.New(),
+            async token =>
+            {
+                var document = await conversationService.TryGetAsync(conversationId.Value, token)
+                    .ConfigureAwait(false);
+                if (document is null)
+                {
+                    return null;
+                }
+
+                var entries = document.Entries
+                    .Skip(offset)
+                    .Take(checked(take + 1))
+                    .ToArray();
+                var hasMore = entries.Length > take;
+                return new LlmChatTranscriptPage(
+                    Map(document),
+                    [.. entries.Take(take).Select(entry => new LlmChatTranscriptEntry(
+                        entry.EntryId,
+                        entry.TurnId,
+                        entry.Role,
+                        entry.Text,
+                        entry.CreatedAtUtc,
+                        entry.Model,
+                        entry.Usage))],
+                    hasMore ? checked(offset + take) : null);
+            },
+            cancellationToken);
+    }
+
+    public Task<LlmChatConversationEngineState> RenameAsync(
+        LlmChatConversationId conversationId,
+        string title,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(
+            LlmChatOperationId.New(),
+            async token => Map(await conversationService.RenameAsync(
+                conversationId.Value,
+                title,
+                expectedTranscriptRevision,
+                token).ConfigureAwait(false)),
+            cancellationToken);
+
+    public Task<LlmChatConversationEngineTurnResult> SendAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(definitionRevision);
+        return ExecuteAsync(
+            operationId,
+            async token =>
+            {
+                EnsureExecutableDefinition(definition, definitionRevision);
+                EnsureTypedThinkingEffortIsAuthoritative(definitionRevision.Settings);
+                var resolution = await ResolveProviderAsync(definitionRevision, token).ConfigureAwait(false);
+                var result = await conversationService.SendAsync(
+                    new LlmConversationTurnRequest(
+                        conversationId.Value,
+                        expectedTranscriptRevision,
+                        userText,
+                        resolution.Profile,
+                        resolution.Resolved.Model,
+                        LlmConversationProviderChangePolicy.Forbid,
+                        definitionRevision.ResponseFormat,
+                        definitionRevision.Settings,
+                        definitionRevision.Timeout,
+                        operationId.ToString())
+                    {
+                        TurnId = operationId.ToTurnId()
+                    },
+                    token).ConfigureAwait(false);
+                return new LlmChatConversationEngineTurnResult(
+                    Map(result.Conversation),
+                    operationId,
+                    result.AssistantEntry.EntryId,
+                    result.AssistantEntry.Text,
+                    result.AssistantEntry.Model,
+                    result.AssistantEntry.Usage ?? LlmUsage.Zero);
+            },
+            cancellationToken);
+    }
+
+    public Task<LlmChatConversationTurnEvidence?> InspectTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(
+            operationId,
+            async token =>
+            {
+                var document = await conversationService.TryGetAsync(conversationId.Value, token)
+                    .ConfigureAwait(false);
+                if (document is null)
+                {
+                    return null;
+                }
+
+                var assistant = document.Entries.SingleOrDefault(entry =>
+                    entry.TurnId == operationId.Value && entry.Role == LlmMessageRole.Assistant);
+                return new LlmChatConversationTurnEvidence(
+                    Map(document),
+                    operationId,
+                    document.ActiveTurn?.TurnId == operationId.Value,
+                    assistant is null
+                        ? null
+                        : new LlmChatAssistantTurnEvidence(
+                            assistant.EntryId,
+                            assistant.Text,
+                            assistant.Model,
+                            assistant.Usage ?? LlmUsage.Zero,
+                            assistant.CreatedAtUtc));
+            },
+            cancellationToken);
+
+    public Task<LlmChatConversationEngineState> AbandonActiveTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(
+            operationId,
+            async token => Map(await conversationService.AbandonActiveTurnAsync(
+                conversationId.Value,
+                operationId.Value,
+                token).ConfigureAwait(false)),
+            cancellationToken);
+
+    private async Task<T> ExecuteAsync<T>(
+        LlmChatOperationId operationId,
+        Func<CancellationToken, Task<T>> execute,
+        CancellationToken cancellationToken)
+    {
+        await using var lease = await runtimeLeaseFactory.AcquireAsync(cancellationToken).ConfigureAwait(false);
+        EnsureCurrent(lease);
+        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity));
+        try
+        {
+            var result = await execute(lease.CancellationToken).ConfigureAwait(false);
+            EnsureCurrent(lease);
+            return result;
+        }
+        catch (OperationCanceledException) when (lease.EnsureCurrent().IsFailure)
+        {
+            throw new LlmChatRuntimeProfileChangedException();
+        }
+    }
+
+    private async Task<LlmChatProviderExecutionResolution> ResolveProviderAsync(
+        LlmChatDefinitionRevision revision,
+        CancellationToken cancellationToken)
+    {
+        var resolution = await executionResolver.ResolveExecutionAsync(
+            revision.ProviderProfileId,
+            revision.ProviderKind,
+            revision.Model,
+            revision.Settings.ThinkingEffort,
+            cancellationToken).ConfigureAwait(false);
+        if (resolution.IsSuccess)
+        {
+            return resolution.Value!;
+        }
+
+        var error = resolution.Errors.First();
+        throw new LlmChatConversationEngineException(error.Code, error.Message);
+    }
+
+    private static void EnsureExecutableDefinition(
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision revision)
+    {
+        if (definition.Status != LlmChatDefinitionStatus.Active)
+        {
+            throw new LlmChatConversationEngineException(
+                LlmChatErrorCodes.DefinitionNotActive,
+                "The LLM Chat definition is not active.");
+        }
+
+        if (definition.Id != revision.DefinitionId)
+        {
+            throw new LlmChatConversationEngineException(
+                LlmChatErrorCodes.StorageCorrupted,
+                "The pinned LLM Chat definition revision does not belong to the conversation definition.");
+        }
+    }
+
+    private static void EnsureTypedThinkingEffortIsAuthoritative(LlmModelSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(settings.ModelParameterConfigurationJson))
+        {
+            return;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(settings.ModelParameterConfigurationJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                ContainsThinkingEffortProperty(document.RootElement))
+            {
+                throw new LlmChatConversationEngineException(
+                    LlmChatErrorCodes.ModelSettingsInvalid,
+                    "Thinking effort must use the typed definition setting, not the model-parameter JSON envelope.");
+            }
+        }
+        catch (JsonException)
+        {
+            throw new LlmChatConversationEngineException(
+                LlmChatErrorCodes.ModelSettingsInvalid,
+                "The model-parameter settings must be a valid JSON object.");
+        }
+    }
+
+    private static bool ContainsThinkingEffortProperty(JsonElement element)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(
+                    property.Name,
+                    AgentThinkingEffortPolicy.ReasoningEffortConfigurationPropertyName,
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property.Name, "think", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(
+                    property.Name,
+                    AgentThinkingEffortPolicy.ModelParametersConfigurationPropertyName,
+                    StringComparison.OrdinalIgnoreCase) &&
+                property.Value.ValueKind == JsonValueKind.Object &&
+                ContainsThinkingEffortProperty(property.Value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void EnsureCurrent(ILlmChatRuntimeLease lease)
+    {
+        if (lease.EnsureCurrent().IsFailure)
+        {
+            throw new LlmChatRuntimeProfileChangedException();
+        }
+    }
+
+    private static LlmChatConversationEngineState Map(LlmConversationDocument document)
+        => new(
+            new LlmChatConversationId(document.ConversationId),
+            document.TranscriptRevision,
+            document.ActiveTurn is not null,
+            document.CreatedAtUtc,
+            document.UpdatedAtUtc);
+}

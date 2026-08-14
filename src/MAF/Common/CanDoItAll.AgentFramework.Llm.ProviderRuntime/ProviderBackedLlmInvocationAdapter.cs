@@ -131,7 +131,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             BuildPriorTurns(request.Messages),
             BuildFinalUserPrompt(request.Messages),
             BuildAttachments(request.Attachments),
-            request.Settings?.ModelParameterConfigurationJson ?? string.Empty,
+            ResolveModelParameterConfiguration(request.Settings),
             request.Settings?.Temperature,
             BuildResponseFormat(request.ResponseFormat));
         return await handle.DispatchAsync(
@@ -269,4 +269,18 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                 responseFormat.SchemaJson,
                 responseFormat.SchemaName,
                 responseFormat.SchemaDescription);
+
+    private static string ResolveModelParameterConfiguration(LlmModelSettings? settings)
+    {
+        if (settings is null)
+        {
+            return string.Empty;
+        }
+
+        return settings.ThinkingEffort is { } thinkingEffort
+            ? AgentThinkingEffortPolicy.WriteAgentOverride(
+                settings.ModelParameterConfigurationJson,
+                thinkingEffort)
+            : settings.ModelParameterConfigurationJson;
+    }
 }

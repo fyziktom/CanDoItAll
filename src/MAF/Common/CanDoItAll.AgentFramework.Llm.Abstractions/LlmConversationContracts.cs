@@ -541,6 +541,8 @@ public interface ILlmConversationContextWindowPolicy
 /// <summary>Request to create a conversation bound to a provider/model snapshot.</summary>
 public sealed record LlmConversationStartRequest
 {
+    private Guid? conversationId;
+
     public LlmConversationStartRequest(
         ProviderProfile provider,
         string model = "",
@@ -568,6 +570,20 @@ public sealed record LlmConversationStartRequest
     /// <summary>The live provider profile; only its stable identity is persisted.</summary>
     public ProviderProfile Provider { get; }
 
+    public Guid? ConversationId
+    {
+        get => conversationId;
+        init
+        {
+            if (value == Guid.Empty)
+            {
+                throw new ArgumentException("A supplied conversation id must be non-empty.", nameof(ConversationId));
+            }
+
+            conversationId = value;
+        }
+    }
+
     /// <summary>Optional model override; blank selects the provider's default model.</summary>
     public string Model { get; }
 
@@ -585,6 +601,8 @@ public sealed record LlmConversationStartRequest
 /// </summary>
 public sealed record LlmConversationTurnRequest
 {
+    private Guid? turnId;
+
     public LlmConversationTurnRequest(
         Guid conversationId,
         long expectedTranscriptRevision,
@@ -637,6 +655,20 @@ public sealed record LlmConversationTurnRequest
     }
 
     public Guid ConversationId { get; }
+
+    public Guid? TurnId
+    {
+        get => turnId;
+        init
+        {
+            if (value == Guid.Empty)
+            {
+                throw new ArgumentException("A supplied turn id must be non-empty.", nameof(TurnId));
+            }
+
+            turnId = value;
+        }
+    }
 
     public long ExpectedTranscriptRevision { get; }
 

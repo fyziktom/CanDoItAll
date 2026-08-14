@@ -9,6 +9,8 @@ using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Modules.LlmChats;
+using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -63,6 +65,8 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddProcessesModule(configuration);
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
+        services.AddLlmChatsApplication();
+        services.AddLlmChatsPersistence();
         services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
         services.AddCrmHrModule();
@@ -97,7 +101,7 @@ public static class RuntimeHostServiceCollectionExtensions
             .Bind(configuration.GetSection(RuntimeHostProfileOptions.SectionName))
             .Validate(options => Enum.IsDefined(options.Profile), "Runtime host profile is invalid.")
             .ValidateOnStart();
-        services.AddSingleton(profile);
+        services.AddSingleton<ResolvedRuntimeHostProfile>(profile);
         services.PostConfigure<FileToolsDesktopLaunchOptions>(options =>
             options.HostProfileAllowsDesktop = profile.IsInteractive);
         services.AddSingleton<IRuntimeDeploymentSupportProvider, EmbeddedRuntimeDeploymentSupportProvider>();

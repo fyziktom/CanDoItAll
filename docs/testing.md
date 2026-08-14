@@ -56,6 +56,16 @@ This proof must create and read linked records through `/api/crm-hr`; direct ser
 
 Use the same pattern for other API families: choose the narrowest real-host test slice first, then run the stable solution gate.
 
+For LLM Chats, the focused real-host slice keeps Web, application, provider resolution, EF stores, and
+PostgreSQL real while replacing only the live external provider boundary:
+
+```powershell
+dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~LlmChatsApiPostgreSqlIntegrationTests"
+```
+
+Use the focused migration and `LlmChatsDatabaseTransferIntegrationTests` cases when changing schema or
+transfer behavior. The routine stable Release gate remains the final repository-wide proof.
+
 ## Browser Gate
 
 Build the Playwright project and install Chromium once per machine:

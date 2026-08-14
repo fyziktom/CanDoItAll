@@ -1,0 +1,25 @@
+{
+  "bundleId": "simple-llm-chats-backend-api",
+  "status": "Blocked",
+  "currentGate": "FINAL",
+  "subbundles": {
+    "SB00": "Completed",
+    "SB01": "Completed",
+    "SB02": "Completed",
+    "SB03": "Completed",
+    "SB04": "Completed",
+    "SB05": "Completed",
+    "SB06": "Completed",
+    "SB07": "Completed",
+    "SB08": "Completed",
+    "SB09": "Completed",
+    "SB10": "Completed",
+    "SB11": "Blocked"
+  },
+  "checkpoints": {
+    "CP0": "Pass",
+    "CP1": "Pass",
+    "CP2": "Pass",
+    "FINAL": "Fail"
+  }
+}

@@ -1,7 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
-using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -22,12 +21,7 @@ public static class WorkflowLlmServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // The lightweight port is stateless and only depends on the (already
-        // singleton) provider runtime descriptor store/pool, so it is always a
-        // singleton regardless of the invoker lifetime.
-        services.TryAddSingleton<ILlmInvocationPort>(serviceProvider => new ProviderBackedLlmInvocationAdapter(
-            serviceProvider.GetRequiredService<IProviderRuntimeDescriptorStore>(),
-            serviceProvider.GetRequiredService<IProviderRuntimePool>()));
+        services.AddProviderBackedLlmInvocationPort();
         services.TryAdd(ServiceDescriptor.Describe(
             typeof(IWorkflowLlmComponentInvoker),
             typeof(WorkflowLlmComponentInvoker),

@@ -2,11 +2,16 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Modules.LlmChats.Conversations;
+using CanDoItAll.Modules.LlmChats.Definitions;
+using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -42,6 +47,7 @@ public static class ApiServiceCollectionExtensions
             typeof(ProfileBoundedReplayEventStream<>),
             typeof(ProfileBoundedReplayEventStream<>));
         services.ConfigureAgentApiJson();
+        services.ConfigureLlmChatApiJson();
         services.AddOpenApi(options =>
         {
             options.AddOperationTransformer(
@@ -155,6 +161,27 @@ public static class ApiServiceCollectionExtensions
                 new JsonStringEnumConverter<AgentProviderFailureCategory>(
                     JsonNamingPolicy.CamelCase,
                     allowIntegerValues: false)));
+        return services;
+    }
+
+    internal static IServiceCollection ConfigureLlmChatApiJson(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<LlmChatDefinitionStatus>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.SerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<LlmChatConversationStatus>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.SerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<LlmChatConversationOrigin>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.SerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<LlmMessageRole>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+            options.SerializerOptions.Converters.Add(
+                new JsonStringEnumConverter<LlmChatOperationStatus>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        });
         return services;
     }
 

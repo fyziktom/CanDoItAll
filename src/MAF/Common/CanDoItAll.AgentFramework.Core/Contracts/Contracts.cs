@@ -389,16 +389,6 @@ public interface IProviderProfileRegistry
         CancellationToken cancellationToken = default);
 }
 
-public interface IProviderRuntimeProfileSource
-{
-    Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(
-        CancellationToken cancellationToken = default);
-
-    Task<ProviderProfile?> GetProviderAsync(
-        Guid providerId,
-        CancellationToken cancellationToken = default);
-}
-
 public interface IProviderDiagnosticsService
 {
     Task<ProviderHealthResult> TestProviderAsync(

@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj" />
+    <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.LlmChats.Persistence\CanDoItAll.Modules.LlmChats.Persistence.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />

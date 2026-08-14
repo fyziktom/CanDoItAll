@@ -15,6 +15,37 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class LlmConversationServiceTests
 {
     [Fact]
+    public async Task StartAsync_uses_a_caller_supplied_conversation_id()
+    {
+        var harness = ConversationHarness.Create();
+        var provider = CreateProviderProfile();
+        var conversationId = Guid.NewGuid();
+
+        var conversation = await harness.Service.StartAsync(
+            new LlmConversationStartRequest(provider) { ConversationId = conversationId });
+
+        Assert.Equal(conversationId, conversation.ConversationId);
+    }
+
+    [Fact]
+    public async Task SendAsync_uses_a_caller_supplied_turn_id()
+    {
+        var harness = ConversationHarness.Create();
+        var provider = CreateProviderProfile();
+        var conversation = await harness.Service.StartAsync(new LlmConversationStartRequest(provider));
+        var turnId = Guid.NewGuid();
+
+        var result = await harness.Service.SendAsync(new LlmConversationTurnRequest(
+            conversation.ConversationId,
+            conversation.TranscriptRevision,
+            "Question",
+            provider) { TurnId = turnId });
+
+        Assert.Equal(turnId, result.UserEntry.TurnId);
+        Assert.Equal(turnId, result.AssistantEntry.TurnId);
+    }
+
+    [Fact]
     public async Task StartAsync_creates_a_conversation_with_provider_snapshot_and_optional_system_entry()
     {
         var harness = ConversationHarness.Create();
@@ -745,7 +776,7 @@ public sealed class LlmConversationServiceTests
     }
 
     [Fact]
-    public void Production_has_no_ordinary_conversation_service_consumer()
+    public void Production_ordinary_conversation_consumers_are_confined_to_llm_chat_persistence()
     {
         var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
         var conversationLibrarySegment = Path.Combine(
@@ -774,7 +805,16 @@ public sealed class LlmConversationServiceTests
             .Select(path => Path.GetRelativePath(sourceRoot, path))
             .ToArray();
 
-        Assert.Empty(consumers);
+        Assert.NotEmpty(consumers);
+        var allowedRoot = Path.Combine("Modules", "CanDoItAll.Modules.LlmChats.Persistence");
+        Assert.All(
+            consumers,
+            consumer => Assert.StartsWith(allowedRoot, consumer, StringComparison.OrdinalIgnoreCase));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            sourceRoot,
+            allowedRoot,
+            "LlmChatsPersistenceServiceCollectionExtensions.cs"));
+        Assert.DoesNotContain("AddLlmConversations(", registrationSource, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -90,6 +90,8 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapMemoryProvidersApi();
         group.MapPluginsApi();
         group.MapCrmHrApi();
+        group.MapLlmChatsApi();
+        group.MapLlmChatOperationsApi();
 
         return endpoints;
     }
@@ -123,4 +125,3 @@ public static class ApiEndpointRouteBuilderExtensions
         return builder;
     }
 }
-

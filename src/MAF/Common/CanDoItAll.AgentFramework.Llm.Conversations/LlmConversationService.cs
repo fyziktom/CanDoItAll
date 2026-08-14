@@ -62,7 +62,7 @@ public sealed class LlmConversationService : ILlmConversationService
         }
 
         var document = new LlmConversationDocument(
-            Guid.NewGuid(),
+            request.ConversationId ?? Guid.NewGuid(),
             request.Title,
             snapshot,
             now,
@@ -176,7 +176,16 @@ public sealed class LlmConversationService : ILlmConversationService
                 admitted.AccelerationState);
             var stored = await _store.ReplaceAsync(completed, admitted.TranscriptRevision, cancellationToken)
                 .ConfigureAwait(false);
-            return new LlmConversationTurnResult(stored, pendingEntry, assistantEntry);
+            var storedAssistantEntry = stored.Entries[^1];
+            if (storedAssistantEntry.EntryId != assistantEntry.EntryId)
+            {
+                throw new LlmConversationException(
+                    LlmConversationFailureKind.StorageCorrupted,
+                    stored.ConversationId,
+                    "The committed assistant transcript entry could not be reloaded.");
+            }
+
+            return new LlmConversationTurnResult(stored, pendingEntry, storedAssistantEntry);
         }
         catch
         {
@@ -237,7 +246,7 @@ public sealed class LlmConversationService : ILlmConversationService
         var providerChanged = !ReferenceEquals(snapshot, document.Provider) && snapshot != document.Provider;
         var admittedRevision = document.TranscriptRevision + 1;
         var pendingEntry = new LlmConversationTranscriptEntry(
-            Guid.NewGuid(), Guid.NewGuid(), LlmMessageRole.User, request.UserText, admittedAt);
+            Guid.NewGuid(), request.TurnId ?? Guid.NewGuid(), LlmMessageRole.User, request.UserText, admittedAt);
         var admitted = new LlmConversationDocument(
             document.ConversationId,
             document.Title,

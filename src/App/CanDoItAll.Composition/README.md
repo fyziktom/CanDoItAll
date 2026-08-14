@@ -22,6 +22,11 @@ The authoritative project and package dependency list is in [CanDoItAll.Composit
 
 Composition is the boundary where modules, infrastructure, provider configuration, and shared components are wired together. Keep registrations explicit and avoid moving domain behavior into startup code.
 
+The LLM Chats backend is registered as two explicit seams: application services and PostgreSQL/profile
+persistence. Its product engine constructs a scoped ordinary-conversation service over the EF store and
+the profile-fenced provider port. The generic conversation service and file store are deliberately not
+published through production dependency injection.
+
 The provider-neutral Memory subsystem and its provider integrations are experimental.
 
 ### Generic memory background workers

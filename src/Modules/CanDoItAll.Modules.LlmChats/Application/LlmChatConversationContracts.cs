@@ -1,0 +1,112 @@
+using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.Modules.LlmChats.Conversations;
+using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.SharedKernel;
+
+namespace CanDoItAll.Modules.LlmChats.Application;
+
+public sealed record CreateLlmChatConversationCommand(
+    LlmChatDefinitionId DefinitionId,
+    string Title,
+    LlmChatConversationOrigin Origin);
+
+public sealed record RenameLlmChatConversationCommand(
+    LlmChatConversationId ConversationId,
+    string Title,
+    long ExpectedConcurrencyToken,
+    long ExpectedTranscriptRevision);
+
+public sealed record ArchiveLlmChatConversationCommand(
+    LlmChatConversationId ConversationId,
+    long ExpectedConcurrencyToken);
+
+public sealed record LlmChatConversationQuery
+{
+    public const int MaximumTake = 100;
+
+    public LlmChatConversationQuery(
+        int take = 50,
+        LlmChatDefinitionId? definitionId = null,
+        int offset = 0)
+    {
+        if (take is < 1 or > MaximumTake)
+        {
+            throw new ArgumentOutOfRangeException(nameof(take), take, $"Take must be between 1 and {MaximumTake}.");
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+
+        Take = take;
+        DefinitionId = definitionId;
+        Offset = offset;
+    }
+
+    public int Take { get; }
+
+    public LlmChatDefinitionId? DefinitionId { get; }
+
+    public int Offset { get; }
+}
+
+public sealed record LlmChatTranscriptQuery
+{
+    public const int MaximumTake = 100;
+
+    public LlmChatTranscriptQuery(int take = 50, int offset = 0)
+    {
+        if (take is < 1 or > MaximumTake)
+        {
+            throw new ArgumentOutOfRangeException(nameof(take), take, $"Take must be between 1 and {MaximumTake}.");
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        Take = take;
+        Offset = offset;
+    }
+
+    public int Take { get; }
+
+    public int Offset { get; }
+}
+
+public sealed record LlmChatConversationDetails(
+    LlmChatConversation Conversation,
+    string DefinitionName,
+    LlmChatConversationEngineState Transcript,
+    IReadOnlyList<LlmChatTranscriptEntry>? Messages = null,
+    int? NextMessageOffset = null)
+{
+    public IReadOnlyList<LlmChatTranscriptEntry> TranscriptMessages => Messages ?? [];
+}
+
+public interface ILlmChatConversationApplicationService
+{
+    Task<Result<LlmChatConversationDetails>> CreateAsync(
+        CreateLlmChatConversationCommand command,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<LlmChatConversationDetails>> RenameAsync(
+        RenameLlmChatConversationCommand command,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<LlmChatConversationDetails>> ArchiveAsync(
+        ArchiveLlmChatConversationCommand command,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<LlmChatConversationDetails>> GetAsync(
+        LlmChatConversationId conversationId,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<LlmChatConversationDetails>> GetAsync(
+        LlmChatConversationId conversationId,
+        LlmChatTranscriptQuery transcriptQuery,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<IReadOnlyList<LlmChatConversationDetails>>> ListAsync(
+        LlmChatConversationQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<LlmChatPage<LlmChatConversationDetails>>> ListPageAsync(
+        LlmChatConversationQuery query,
+        CancellationToken cancellationToken = default);
+}
