@@ -5,6 +5,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
@@ -1501,8 +1502,8 @@ public partial class AgentDetailsDialog
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
             .ToList();
 
         editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = SplitEditorLines(allowedStorageCatalogIdsText)

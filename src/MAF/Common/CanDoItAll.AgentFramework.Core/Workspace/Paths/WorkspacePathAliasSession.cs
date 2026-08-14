@@ -1,8 +1,6 @@
-using System.Diagnostics;
-
 namespace CanDoItAll.AgentFramework.Core;
 
-internal sealed class WorkspacePathAliasSession : IDisposable
+internal sealed class WorkspacePathAliasSession : IAsyncDisposable
 {
     private const int WindowsPathBudget = 240;
     private const int RelativePathSafetyAllowance = 120;
@@ -12,22 +10,38 @@ internal sealed class WorkspacePathAliasSession : IDisposable
     private readonly string aliasRootPath;
     private readonly char driveLetter;
     private readonly string workspaceRootPath;
+    private readonly WorkspacePathPolicy pathPolicy;
+    private readonly IWorkspaceProcessHost processHost;
+    private readonly string substExecutablePath;
+    private readonly IReadOnlyDictionary<string, string?> environmentVariables;
     private int disposeState;
 
     private WorkspacePathAliasSession(
         string workspaceRootPath,
         string aliasRootPath,
-        char driveLetter)
+        char driveLetter,
+        WorkspacePathPolicy pathPolicy,
+        IWorkspaceProcessHost processHost,
+        string substExecutablePath,
+        IReadOnlyDictionary<string, string?> environmentVariables)
     {
         this.workspaceRootPath = Path.GetFullPath(workspaceRootPath);
         this.aliasRootPath = aliasRootPath;
         this.driveLetter = driveLetter;
+        this.pathPolicy = pathPolicy;
+        this.processHost = processHost;
+        this.substExecutablePath = substExecutablePath;
+        this.environmentVariables = environmentVariables;
     }
 
-    public static WorkspacePathAliasSession? TryCreate(
+    public static async Task<WorkspacePathAliasSession?> TryCreateAsync(
         string workspaceRootPath,
         string workingDirectoryPath,
-        IReadOnlyList<string> arguments)
+        IReadOnlyList<string> arguments,
+        WorkspacePathPolicy pathPolicy,
+        IWorkspaceProcessHost processHost,
+        IReadOnlyDictionary<string, string?> environmentVariables,
+        CancellationToken cancellationToken)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -35,23 +49,47 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         }
 
         var normalizedWorkspaceRoot = Path.GetFullPath(workspaceRootPath);
-        if (!NeedsAlias(normalizedWorkspaceRoot, workingDirectoryPath, arguments))
+        if (!NeedsAlias(normalizedWorkspaceRoot, workingDirectoryPath, arguments, pathPolicy))
         {
             return null;
         }
 
         var driveLetter = ReserveAvailableDriveLetter();
-        if (!TryRunSubst($"{driveLetter}: {normalizedWorkspaceRoot}", out var failureMessage))
+        var substExecutablePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "subst.exe");
+        WorkspaceProcessExecutionResult createResult;
+        try
+        {
+            createResult = await RunSubstAsync(
+                processHost,
+                substExecutablePath,
+                [$"{driveLetter}:", normalizedWorkspaceRoot],
+                environmentVariables,
+                recipeId: "workspace_path_alias_create",
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            ReleaseDriveLetter(driveLetter);
+            throw;
+        }
+
+        if (!Succeeded(createResult))
         {
             ReleaseDriveLetter(driveLetter);
             throw new InvalidOperationException(
-                $"Failed to create temporary workspace drive alias for '{normalizedWorkspaceRoot}'. {failureMessage}");
+                $"Failed to create a temporary workspace drive alias. {BuildFailureMessage(createResult)}");
         }
 
         return new WorkspacePathAliasSession(
             normalizedWorkspaceRoot,
             $"{driveLetter}:\\",
-            driveLetter);
+            driveLetter,
+            pathPolicy,
+            processHost,
+            substExecutablePath,
+            environmentVariables);
     }
 
     public string RewritePath(string path)
@@ -62,7 +100,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         }
 
         var normalizedPath = Path.GetFullPath(path);
-        if (!WorkspacePathPolicy.IsPathWithinRoot(normalizedPath, workspaceRootPath))
+        if (!pathPolicy.IsPathWithinRoot(normalizedPath, workspaceRootPath))
         {
             return path;
         }
@@ -85,7 +123,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
             .ToArray();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref disposeState, 1) != 0)
         {
@@ -94,7 +132,18 @@ internal sealed class WorkspacePathAliasSession : IDisposable
 
         try
         {
-            TryRunSubst($"{driveLetter}: /d", out _);
+            var deleteResult = await RunSubstAsync(
+                processHost,
+                substExecutablePath,
+                [$"{driveLetter}:", "/d"],
+                environmentVariables,
+                recipeId: "workspace_path_alias_delete",
+                CancellationToken.None).ConfigureAwait(false);
+            if (!Succeeded(deleteResult))
+            {
+                throw new InvalidOperationException(
+                    $"Failed to remove a temporary workspace drive alias. {BuildFailureMessage(deleteResult)}");
+            }
         }
         finally
         {
@@ -112,7 +161,11 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         return RewritePath(argument);
     }
 
-    private static bool NeedsAlias(string workspaceRootPath, string workingDirectoryPath, IReadOnlyList<string> arguments)
+    private static bool NeedsAlias(
+        string workspaceRootPath,
+        string workingDirectoryPath,
+        IReadOnlyList<string> arguments,
+        WorkspacePathPolicy pathPolicy)
     {
         if (workspaceRootPath.Length >= WindowsPathBudget - RelativePathSafetyAllowance)
         {
@@ -133,7 +186,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
 
             if (Path.IsPathRooted(argument))
             {
-                if (WorkspacePathPolicy.IsPathWithinRoot(argument, workspaceRootPath) &&
+                if (pathPolicy.IsPathWithinRoot(argument, workspaceRootPath) &&
                     argument.Length >= WindowsPathBudget)
                 {
                     return true;
@@ -148,7 +201,7 @@ internal sealed class WorkspacePathAliasSession : IDisposable
             }
 
             var candidatePath = Path.GetFullPath(Path.Combine(workingDirectoryPath, argument));
-            if (WorkspacePathPolicy.IsPathWithinRoot(candidatePath, workspaceRootPath) &&
+            if (pathPolicy.IsPathWithinRoot(candidatePath, workspaceRootPath) &&
                 candidatePath.Length >= WindowsPathBudget)
             {
                 return true;
@@ -206,44 +259,49 @@ internal sealed class WorkspacePathAliasSession : IDisposable
         }
     }
 
-    private static bool TryRunSubst(string arguments, out string failureMessage)
+    private static Task<WorkspaceProcessExecutionResult> RunSubstAsync(
+        IWorkspaceProcessHost processHost,
+        string substExecutablePath,
+        IReadOnlyList<string> arguments,
+        IReadOnlyDictionary<string, string?> environmentVariables,
+        string recipeId,
+        CancellationToken cancellationToken)
+        => processHost.ExecuteAsync(
+            new WorkspaceProcessExecutionRequest(
+                ToolName: "workspace_path_alias",
+                RecipeId: recipeId,
+                ExecutablePath: substExecutablePath,
+                Arguments: arguments,
+                WorkingDirectory: Environment.GetFolderPath(Environment.SpecialFolder.System),
+                EnvironmentVariables: environmentVariables,
+                TimeoutSeconds: 15,
+                StdoutLimitCharacters: 4096,
+                StderrLimitCharacters: 4096),
+            cancellationToken);
+
+    private static bool Succeeded(WorkspaceProcessExecutionResult result)
+        => result.Started &&
+           result.ExitCode == 0 &&
+           result.TerminationReason == WorkspaceProcessTerminationReason.Completed &&
+           !result.ResidualProcessPossible;
+
+    private static string BuildFailureMessage(WorkspaceProcessExecutionResult result)
     {
-        using var process = new Process
+        if (!result.Started)
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "subst",
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            }
+            return "The operating-system alias command did not start.";
+        }
+
+        if (result.ResidualProcessPossible)
+        {
+            return "Termination could not be confirmed and a residual process may remain.";
+        }
+
+        return result.TerminationReason switch
+        {
+            WorkspaceProcessTerminationReason.TimedOut => "The operating-system alias command timed out.",
+            WorkspaceProcessTerminationReason.CallerCanceled => "The operating-system alias command was canceled.",
+            _ => $"The operating-system alias command exited with code {result.ExitCode}."
         };
-
-        if (!process.Start())
-        {
-            failureMessage = $"Unable to start subst with arguments '{arguments}'.";
-            return false;
-        }
-
-        process.WaitForExit();
-        if (process.ExitCode == 0)
-        {
-            failureMessage = string.Empty;
-            return true;
-        }
-
-        var stdout = process.StandardOutput.ReadToEnd().Trim();
-        var stderr = process.StandardError.ReadToEnd().Trim();
-        failureMessage = string.Join(
-            " ",
-            new[]
-            {
-                stdout,
-                stderr,
-                $"Exit code {process.ExitCode}."
-            }.Where(item => !string.IsNullOrWhiteSpace(item)));
-        return false;
     }
 }

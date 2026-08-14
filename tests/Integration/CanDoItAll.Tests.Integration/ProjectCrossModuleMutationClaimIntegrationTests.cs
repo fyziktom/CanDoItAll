@@ -5,6 +5,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
@@ -15,6 +16,75 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
         TimeSpan.FromMinutes(5),
         TimeSpan.FromMinutes(1),
         TimeSpan.FromSeconds(5));
+
+    [Fact]
+    public async Task Lost_failure_claim_returns_the_winners_authoritative_payload()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var mutationId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        const string rootNodeKey = "winner-payload-proof";
+        var authoritativePayload = JsonSerializer.Serialize(
+            new DeleteSubtreeMutationPayload(
+                rootNodeKey,
+                [rootNodeKey],
+                0,
+                ManagedStorageDisposition:
+                    ProjectStructureManagedStorageDisposition.RetainManagedFiles));
+        var timestamp = DateTimeOffset.UtcNow;
+        await using (var seedContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            seedContext.Set<ProjectCrossModuleMutationRecord>().Add(
+                new ProjectCrossModuleMutationRecord
+                {
+                    Id = mutationId,
+                    ProjectId = projectId,
+                    ScopeNodeKey = rootNodeKey,
+                    MutationKind = ProjectCrossModuleMutationKind.DeleteSubtree,
+                    Status = ProjectCrossModuleMutationStatus.WorkbenchCommitted,
+                    ApprovalState = ProjectCrossModuleMutationApprovalState.NotRequired,
+                    PayloadJson = "{ invalid-loser-payload",
+                    CreatedAtUtc = timestamp,
+                    UpdatedAtUtc = timestamp
+                });
+            await seedContext.SaveChangesAsync();
+        }
+
+        var winnerCompleted = false;
+        var processor = CreateProcessor(
+            scope.ServiceProvider,
+            new SystemClock(),
+            new CallbackLogger<ProjectCrossModuleMutationProcessor>(() =>
+            {
+                if (winnerCompleted)
+                {
+                    return;
+                }
+
+                winnerCompleted = true;
+                using var winnerContext = dbContextFactory.CreateDbContext();
+                winnerContext.Set<ProjectCrossModuleMutationRecord>()
+                    .Where(record => record.Id == mutationId)
+                    .ExecuteUpdate(setters => setters
+                        .SetProperty(
+                            record => record.Status,
+                            ProjectCrossModuleMutationStatus.Completed)
+                        .SetProperty(record => record.PayloadJson, authoritativePayload)
+                        .SetProperty(record => record.ErrorMessage, string.Empty)
+                        .SetProperty(record => record.CompletedAtUtc, timestamp)
+                        .SetProperty(record => record.UpdatedAtUtc, timestamp));
+            }));
+
+        var result = await processor.ProcessWithPayloadAsync(mutationId);
+
+        Assert.True(winnerCompleted);
+        Assert.NotNull(result);
+        Assert.Equal(ProjectCrossModuleMutationStatus.Completed, result.Status);
+        Assert.Equal(authoritativePayload, result.PayloadJson);
+    }
 
     [Fact]
     public async Task PostgreSql_claim_uses_database_time_and_exactly_one_connection_takes_an_expired_lease()
@@ -171,6 +241,15 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
     private static ProjectCrossModuleMutationProcessor CreateProcessor(
         IServiceProvider services,
         IClock clock)
+        => CreateProcessor(
+            services,
+            clock,
+            NullLogger<ProjectCrossModuleMutationProcessor>.Instance);
+
+    private static ProjectCrossModuleMutationProcessor CreateProcessor(
+        IServiceProvider services,
+        IClock clock,
+        ILogger<ProjectCrossModuleMutationProcessor> logger)
     {
         return new ProjectCrossModuleMutationProcessor(
             services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
@@ -180,7 +259,7 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
             clock,
             ProcessingOptions,
             TimeProvider.System,
-            NullLogger<ProjectCrossModuleMutationProcessor>.Instance);
+            logger);
     }
 
     private static ProjectWorkbenchCrossModuleMutationService CreateMutationService(
@@ -236,5 +315,30 @@ public sealed class ProjectCrossModuleMutationClaimIntegrationTests
     private sealed class FixedClock(DateTimeOffset value) : IClock
     {
         public DateTimeOffset GetUtcNow() => value;
+    }
+
+    private sealed class CallbackLogger<T>(Action onWarning) : ILogger<T>
+    {
+        private int callbackInvoked;
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel >= LogLevel.Warning &&
+                Interlocked.Exchange(ref callbackInvoked, 1) == 0)
+            {
+                onWarning();
+            }
+        }
     }
 }

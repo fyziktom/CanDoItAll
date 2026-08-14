@@ -88,7 +88,8 @@ public enum ProjectScriptKind
     PowerShell,
     Console,
     EfMigration,
-    TailwindWatch
+    TailwindWatch,
+    PosixShell
 }
 
 public enum ProjectEnvironmentKind
@@ -496,10 +497,19 @@ public sealed class ProjectEnvironmentMetadata
 
     [ProjectStructurePreviewField("Localhost URL", 80)]
     public string LocalhostUrl { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Entry point", 90)]
+    public string EntryPoint { get; set; } = string.Empty;
+
+    [ProjectStructurePreviewField("Arguments", 100)]
+    [JsonConverter(typeof(ProjectCommandLineArgumentsJsonConverter))]
+    public string Arguments { get; set; } = string.Empty;
 }
 
 public sealed class ProjectInfrastructureMetadata
 {
+    private string storagePathPrefix = string.Empty;
+
     [ProjectStructurePreviewField("Kind", 10)]
     public ProjectInfrastructureKind InfrastructureKind { get; set; }
 
@@ -567,7 +577,13 @@ public sealed class ProjectInfrastructureMetadata
     public string StoragePurpose { get; set; } = string.Empty;
 
     [ProjectStructurePreviewField("Storage path prefix", 230)]
-    public string StoragePathPrefix { get; set; } = string.Empty;
+    public string StoragePathPrefix
+    {
+        get => storagePathPrefix;
+        set => storagePathPrefix = string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : LogicalPath.ParseLegacyWindowsLogicalPath(value).Value;
+    }
 
     [ProjectStructurePreviewField("AI reference kind", 240)]
     public ProjectAiReferenceKind? AiReferenceKind { get; set; }

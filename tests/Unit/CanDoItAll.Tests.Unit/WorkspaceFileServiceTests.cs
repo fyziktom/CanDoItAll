@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -16,7 +17,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var pathResolution = new WorkspacePathResolutionService(workspaceRoot, scope);
+            var pathResolution = TestWorkspaceServices.CreatePathResolutionService(workspaceRoot, scope);
             var service = new AgentChatAttachmentStagingService(pathResolution);
             var bytes = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
 
@@ -58,7 +59,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var service = new AgentChatAttachmentStagingService(new WorkspacePathResolutionService(workspaceRoot));
+            var service = new AgentChatAttachmentStagingService(TestWorkspaceServices.CreatePathResolutionService(workspaceRoot));
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StageImageAsync(
                 "notes.txt",
@@ -81,6 +82,37 @@ public sealed class WorkspaceFileServiceTests
     }
 
     [Fact]
+    public async Task AgentChatAttachmentStagingService_uses_portable_name_for_legacy_path_and_colon()
+    {
+        string workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.ChatAttachmentPortableNameTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var pathResolution = TestWorkspaceServices.CreatePathResolutionService(workspaceRoot);
+            var service = new AgentChatAttachmentStagingService(pathResolution);
+            byte[] bytes = [137, 80, 78, 71, 13, 10, 26, 10];
+
+            AgentChatAttachmentStagingResult result = await service.StageImageAsync(
+                @"C:\fakepath\qa:shot.PNG",
+                "image/png",
+                bytes.Length,
+                new MemoryStream(bytes));
+
+            Assert.DoesNotContain('\\', result.RelativePath);
+            Assert.DoesNotContain(':', result.RelativePath);
+            Assert.EndsWith(".png", result.RelativePath, StringComparison.Ordinal);
+            Assert.True(File.Exists(
+                pathResolution.ResolveFilePath(result.RelativePath, allowMissing: false).FullPath));
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task AgentChatAttachmentStagingService_rejects_stream_larger_than_declared_limit_and_removes_partial_file()
     {
         var workspaceRoot = Path.Combine(
@@ -91,7 +123,7 @@ public sealed class WorkspaceFileServiceTests
         try
         {
             var service = new AgentChatAttachmentStagingService(
-                new WorkspacePathResolutionService(workspaceRoot));
+                TestWorkspaceServices.CreatePathResolutionService(workspaceRoot));
             var oversizedContent = new byte[
                 checked((int)AgentChatAttachmentStagingService.MaxImageAttachmentBytes + 1)];
 
@@ -173,7 +205,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var service = new WorkspaceFileService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot);
 
             var result = service.WriteTextFile(
                 "showcases/blazor-ssr-workflow/app/SimpleWorkflowApp/Program.cs",
@@ -210,7 +242,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var service = new WorkspaceFileService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot);
             using (WorkspaceExecutionAuditContext.BeginScope(run))
             using (AgentRuntimeToolOwnershipContext.BeginScope(new AgentRuntimeToolOwnership(
                        "processes.runtime-tools",
@@ -233,6 +265,107 @@ public sealed class WorkspaceFileServiceTests
             Assert.Equal("workspace_write_file", receipt.ToolName);
             Assert.Equal("processes.runtime-tools", receipt.RuntimeToolProviderKey);
             Assert.Equal("Processes runtime tools", receipt.RuntimeToolProviderName);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_persists_audit_receipt_with_the_owning_execution_scope()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var run = CreateRun();
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var executionScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot, projectScope);
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       contextWorkspaceScope: projectScope,
+                       executionWorkspaceScope: executionScope))
+            {
+                var result = service.WriteTextFile("artifacts/product-proof.md", "proof");
+
+                Assert.True(result.Succeeded);
+            }
+
+            var executionReceiptRoot = Path.Combine(
+                WorkspaceExecutionAuditTrailWriter.GetRunAuditRoot(workspaceRoot, executionScope, run.Id),
+                "receipts");
+            Assert.Single(Directory.GetFiles(executionReceiptRoot, "*.json"));
+
+            var contextReceiptRoot = Path.Combine(
+                WorkspaceExecutionAuditTrailWriter.GetRunAuditRoot(workspaceRoot, projectScope, run.Id),
+                "receipts");
+            Assert.False(Directory.Exists(contextReceiptRoot));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void WriteTextFile_routes_current_run_artifact_to_the_owning_execution_scope()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceFileServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        var processRunId = Guid.NewGuid();
+        var run = CreateRun() with
+        {
+            ProcessRunId = processRunId.ToString("D")
+        };
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var executionScope = WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N"));
+        var artifactPath = $"artifacts/process-runs/{processRunId:D}/steps/validate-runtime.md";
+
+        try
+        {
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot, projectScope);
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       contextWorkspaceScope: projectScope,
+                       executionWorkspaceScope: executionScope))
+            {
+                var result = service.WriteTextFile(artifactPath, "runtime evidence");
+
+                Assert.True(result.Succeeded);
+            }
+
+            var executionArtifactPath = Path.Combine(
+                workspaceRoot,
+                executionScope.CombineArtifactPath(
+                    "process-runs",
+                    processRunId.ToString("D"),
+                    "steps",
+                    "validate-runtime.md").Replace('/', Path.DirectorySeparatorChar));
+            Assert.Equal("runtime evidence", File.ReadAllText(executionArtifactPath));
+
+            var contextArtifactPath = Path.Combine(
+                workspaceRoot,
+                projectScope.CombineArtifactPath(
+                    "process-runs",
+                    processRunId.ToString("D"),
+                    "steps",
+                    "validate-runtime.md").Replace('/', Path.DirectorySeparatorChar));
+            Assert.False(File.Exists(contextArtifactPath));
         }
         finally
         {
@@ -290,7 +423,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var service = new WorkspaceFileService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot);
 
             var result = service.ZipPath("missing", "archives/docs.zip", overwrite: true);
 
@@ -324,7 +457,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var service = new WorkspaceFileService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot);
 
             var result = service.UnzipArchive("archive.zip", "expanded", overwrite: false);
 
@@ -360,7 +493,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var service = new WorkspaceFileService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateFileService(workspaceRoot);
 
             var result = service.UnzipArchive("archive.zip", "expanded", overwrite: true);
 
@@ -404,7 +537,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+            var pathPolicy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot);
             var service = new WorkspaceFileMutationService(
                 pathPolicy,
                 new WorkspaceFileReceiptWriter(workspaceRoot),
@@ -447,7 +580,7 @@ public sealed class WorkspaceFileServiceTests
 
         try
         {
-            var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+            var pathPolicy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot);
             var service = new WorkspaceFileMutationService(
                 pathPolicy,
                 new WorkspaceFileReceiptWriter(workspaceRoot),
@@ -489,15 +622,16 @@ public sealed class WorkspaceFileServiceTests
         Directory.CreateDirectory(workspaceRoot);
         Directory.CreateDirectory(sourceRoot);
         var targetPath = Path.Combine(sourceRoot, "Feature.cs");
-        var targetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(targetPath);
-        var authorityAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(authorityRoot);
+        var externalTargets = new ExternalTargetPathRegistry();
+        Assert.True(externalTargets.TryCreateAlias(authorityRoot, out var authorityAlias));
+        Assert.True(externalTargets.TryCreateAlias(targetPath, out var targetAlias));
         var scannedRoots = new List<string>();
 
         try
         {
-            Assert.NotNull(targetAlias);
-            Assert.NotNull(authorityAlias);
-            var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+            var pathPolicy = TestWorkspaceServices.CreatePathPolicy(
+                workspaceRoot,
+                externalTargetRegistry: externalTargets);
             var service = new WorkspaceFileMutationService(
                 pathPolicy,
                 new WorkspaceFileReceiptWriter(workspaceRoot),
@@ -508,7 +642,7 @@ public sealed class WorkspaceFileServiceTests
                 });
 
             var result = service.WriteTextFile(
-                targetAlias!,
+                targetAlias,
                 "internal sealed class Feature {}",
                 overwrite: true,
                 authorityRootPath: authorityAlias);
@@ -604,7 +738,7 @@ public sealed class WorkspaceFileServiceTests
         using var workspace = new TemporaryWorkspace();
         var targetPath = Path.Combine(workspace.RootPath, "target.txt");
         var mutationService = new WorkspaceFileMutationService(
-            new WorkspacePathPolicy(workspace.RootPath),
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
             new WorkspaceFileReceiptWriter(workspace.RootPath),
             _ => [],
             WorkspaceFileMutationService.DeleteDirectoryTree,
@@ -646,7 +780,7 @@ public sealed class WorkspaceFileServiceTests
         var targetPath = Path.Combine(workspace.RootPath, "Target.cs");
         File.WriteAllText(targetPath, "internal sealed class Original {}\n");
         var mutationService = new WorkspaceFileMutationService(
-            new WorkspacePathPolicy(workspace.RootPath),
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
             new WorkspaceFileReceiptWriter(workspace.RootPath),
             _ =>
             {
@@ -694,7 +828,7 @@ public sealed class WorkspaceFileServiceTests
         var destinationPath = Path.Combine(destinationRoot, "Feature.cs");
         File.WriteAllText(destinationPath, "internal sealed class ExistingFeature {}");
         var mutationService = new WorkspaceFileMutationService(
-            new WorkspacePathPolicy(workspace.RootPath),
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
             new WorkspaceFileReceiptWriter(workspace.RootPath),
             _ => throw new UnauthorizedAccessException("native access detail"));
 
@@ -867,7 +1001,7 @@ public sealed class WorkspaceFileServiceTests
         File.WriteAllText(Path.Combine(destinationRoot, "old-a.txt"), "old a");
         File.WriteAllText(Path.Combine(destinationRoot, "old-b.txt"), "old b");
         var mutationService = new WorkspaceFileMutationService(
-            new WorkspacePathPolicy(workspace.RootPath),
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
             new WorkspaceFileReceiptWriter(workspace.RootPath),
             _ => [],
             PartiallyDeleteThenFail);
@@ -901,7 +1035,7 @@ public sealed class WorkspaceFileServiceTests
         File.WriteAllText(Path.Combine(targetRoot, "old-a.txt"), "old a");
         File.WriteAllText(Path.Combine(targetRoot, "old-b.txt"), "old b");
         var mutationService = new WorkspaceFileMutationService(
-            new WorkspacePathPolicy(workspace.RootPath),
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
             new WorkspaceFileReceiptWriter(workspace.RootPath),
             _ => [],
             PartiallyDeleteThenFail);
@@ -969,7 +1103,7 @@ public sealed class WorkspaceFileServiceTests
         }
 
         var mutationService = new WorkspaceFileMutationService(
-            new WorkspacePathPolicy(workspace.RootPath),
+            TestWorkspaceServices.CreatePathPolicy(workspace.RootPath),
             new WorkspaceFileReceiptWriter(workspace.RootPath),
             _ => [],
             WorkspaceFileMutationService.DeleteDirectoryTree,
@@ -1005,7 +1139,7 @@ public sealed class WorkspaceFileServiceTests
     private static WorkspaceFileMutationService CreateMutationServiceWithFailingFileCommit(
         string workspaceRoot)
         => new(
-            new WorkspacePathPolicy(workspaceRoot),
+            TestWorkspaceServices.CreatePathPolicy(workspaceRoot),
             new WorkspaceFileReceiptWriter(workspaceRoot),
             _ => [],
             WorkspaceFileMutationService.DeleteDirectoryTree,
@@ -1028,7 +1162,7 @@ public sealed class WorkspaceFileServiceTests
                 Path.GetTempPath(),
                 $"CanDoItAll.WorkspacePlacementTests.{Guid.NewGuid():N}");
             Directory.CreateDirectory(RootPath);
-            Files = new WorkspaceFileService(RootPath);
+            Files = TestWorkspaceServices.CreateFileService(RootPath);
         }
 
         public string RootPath { get; }

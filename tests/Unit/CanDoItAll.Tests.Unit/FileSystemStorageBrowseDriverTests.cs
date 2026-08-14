@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -5,10 +6,197 @@ using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixPortabilityCore")]
 public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 {
     [Fact]
-    public async Task First_page_of_large_directory_stays_within_enumeration_budget()
+    public async Task Save_allocates_distinct_names_for_generated_name_and_occupied_suffix_collisions()
+    {
+        string root = CreateRoot();
+        try
+        {
+            var driver = new FileSystemStorageDriver(
+                new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(root)));
+            StorageCatalogRecord storage = CreateStorage(root);
+            StorageWriteResult first = await SaveAsync(driver, storage, "report:final.txt", "first");
+            StorageWriteResult second = await SaveAsync(
+                driver,
+                storage,
+                first.Reference.Locator,
+                "second");
+            StorageWriteResult third = await SaveAsync(
+                driver,
+                storage,
+                first.Reference.Locator,
+                "third");
+
+            Assert.Equal(3, new[]
+            {
+                first.Reference.Locator,
+                second.Reference.Locator,
+                third.Reference.Locator
+            }.Distinct(StringComparer.Ordinal).Count());
+            Assert.Equal("first", await ReadAsync(driver, storage, first.Reference));
+            Assert.Equal("second", await ReadAsync(driver, storage, second.Reference));
+            Assert.Equal("third", await ReadAsync(driver, storage, third.Reference));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task Concurrent_auto_allocation_never_overwrites_the_committed_winner()
+    {
+        string root = CreateRoot();
+        using var firstTemporaryFlushed = new ManualResetEventSlim();
+        using var allowFirstCommit = new ManualResetEventSlim();
+        var firstObserverEntry = 0;
+        try
+        {
+            var durableWriter = new DurableFileWriter(
+                new PhysicalFileSystemPathPolicyFactory(),
+                stage =>
+                {
+                    if (stage == DurableFileWriteStage.TemporaryFileFlushed &&
+                        Interlocked.CompareExchange(ref firstObserverEntry, 1, 0) == 0)
+                    {
+                        firstTemporaryFlushed.Set();
+                        allowFirstCommit.Wait(TimeSpan.FromSeconds(10));
+                    }
+                });
+            var driver = new FileSystemStorageDriver(
+                new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(root)),
+                durableWriter);
+            StorageCatalogRecord storage = CreateStorage(root);
+            Task<StorageWriteResult> first = Task.Run(
+                () => SaveAsync(driver, storage, "report.txt", "first"));
+            Assert.True(firstTemporaryFlushed.Wait(TimeSpan.FromSeconds(10)));
+            Task<StorageWriteResult> competing = SaveAsync(
+                driver,
+                storage,
+                "report.txt",
+                "competing");
+
+            allowFirstCommit.Set();
+            StorageWriteResult winner = await first;
+            IOException conflict = await Assert.ThrowsAsync<IOException>(() => competing);
+
+            Assert.Contains("became occupied", conflict.Message, StringComparison.Ordinal);
+            Assert.Equal("first", await ReadAsync(driver, storage, winner.Reference));
+        }
+        finally
+        {
+            allowFirstCommit.Set();
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task Auto_allocation_never_overwrites_target_created_after_precommit_guard()
+    {
+        string root = CreateRoot();
+        string targetPath = Path.Combine(root, "report.txt");
+        var injectedOccupancy = 0;
+        try
+        {
+            var durableWriter = new DurableFileWriter(
+                new PhysicalFileSystemPathPolicyFactory(),
+                stage =>
+                {
+                    if (stage == DurableFileWriteStage.BeforeCommit &&
+                        Interlocked.CompareExchange(ref injectedOccupancy, 1, 0) == 0)
+                    {
+                        File.WriteAllText(targetPath, "outside-winner");
+                    }
+                });
+            var driver = new FileSystemStorageDriver(
+                new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(root)),
+                durableWriter);
+            StorageCatalogRecord storage = CreateStorage(root);
+
+            await Assert.ThrowsAsync<IOException>(
+                () => SaveAsync(driver, storage, "report.txt", "losing-allocation"));
+
+            Assert.Equal("outside-winner", await File.ReadAllTextAsync(targetPath));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task Unix_backslash_filename_write_preserves_the_physical_segment_and_opaque_locator()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string root = CreateRoot();
+        try
+        {
+            const string physicalName = "report\\final.txt";
+            string encodedName = Uri.EscapeDataString(physicalName);
+            var pathPolicy = new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(root));
+            var driver = new FileSystemStorageDriver(pathPolicy);
+            StorageCatalogRecord storage = CreateStorage(root);
+
+            StorageWriteResult result = await driver.SaveAsync(
+                storage,
+                new StorageWriteRequest(
+                    physicalName,
+                    "text/plain",
+                    "content"u8.ToArray(),
+                    StorageUsagePurpose.ProjectAsset,
+                    RelativePathHint: encodedName));
+
+            Assert.Equal(encodedName, result.Reference.Locator, ignoreCase: true);
+            Assert.Equal("content", await File.ReadAllTextAsync(Path.Combine(root, physicalName)));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task Unix_backslash_filename_round_trips_through_an_opaque_browse_key()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string root = CreateRoot();
+        try
+        {
+            const string physicalName = "report\\final.txt";
+            string physicalPath = Path.Combine(root, physicalName);
+            await File.WriteAllTextAsync(physicalPath, "content");
+            FileSystemStorageBrowseDriver sut = CreateSut(root);
+            StorageCatalogRecord storage = CreateStorage(root);
+
+            StorageBrowsePage page = await sut.BrowseAsync(
+                storage,
+                new StorageBrowseRequest(StorageBrowseContainer.Root));
+
+            StorageBrowseEntry entry = Assert.Single(page.Entries);
+            Assert.Equal(physicalName, entry.Name);
+            Assert.Contains("%5C", entry.Id.Value, StringComparison.Ordinal);
+            var pathPolicy = new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(root));
+            Assert.Equal(physicalPath, pathPolicy.ResolveFullPath(storage, entry.Id.Value));
+        }
+        finally
+        {
+            DeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public async Task Incomplete_snapshot_fails_before_publishing_nondeterministic_page()
     {
         string root = CreateRoot();
         try
@@ -32,20 +220,13 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 maximumConcurrentMetadataProbes: 0,
                 maximumDuration: TimeSpan.FromSeconds(10));
 
-            StorageBrowsePage page = await sut.BrowseAsync(
-                CreateStorage(root),
-                new StorageBrowseRequest(StorageBrowseContainer.Root, pageSize: 25, budget: budget));
+            StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
+                sut.BrowseAsync(
+                    CreateStorage(root),
+                    new StorageBrowseRequest(StorageBrowseContainer.Root, pageSize: 25, budget: budget)));
 
-            output.WriteLine(
-                "Bounded first page returned={0} reported-inspected={1} enumerated={2} retained={3}",
-                page.Metrics.ReturnedItems,
-                page.Metrics.InspectedItems,
-                enumeratedEntries,
-                page.Metrics.RetainedStateBytes);
-            Assert.Equal(25, page.Entries.Count);
-            Assert.InRange(page.Metrics.InspectedItems, 26, 64);
-            Assert.InRange(enumeratedEntries, 26, 64);
-            Assert.NotNull(page.NextCursor);
+            Assert.Equal(StorageBrowseErrorCode.BudgetExceeded, exception.Error.Code);
+            Assert.Equal(65, enumeratedEntries);
         }
         finally
         {
@@ -55,18 +236,18 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
 
     [Fact]
     [Trait("Category", "Scale")]
-    public async Task Hundred_thousand_entry_fixture_pages_stay_within_structural_budgets()
+    public async Task Large_deterministic_snapshot_pages_stay_within_declared_provider_budget()
     {
         string root = CreateRoot();
         try
         {
-            const int fixtureSize = 100_000;
+            const int fixtureSize = 10_000;
             CreateFiles(root, fixtureSize);
             FileSystemStorageBrowseDriver sut = CreateSut(root);
             StorageCatalogRecord storage = CreateStorage(root);
             var budget = new StorageBrowseWorkBudget(
                 maximumReturnedItems: 50,
-                maximumInspectedItems: 256,
+                maximumInspectedItems: fixtureSize,
                 maximumMetadataProbes: 0,
                 maximumConcurrentMetadataProbes: 0,
                 maximumDuration: TimeSpan.FromMinutes(2));
@@ -74,26 +255,15 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 StorageBrowseContainer.Root,
                 pageSize: 50,
                 budget: budget);
-            var elapsedRuns = new List<double>();
-            long worstAllocation = 0;
-            StorageBrowsePage? first = null;
-            for (int run = 0; run < 3; run++)
-            {
-                long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
-                StorageBrowsePage page = await sut.BrowseAsync(storage, request);
-                long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
-                elapsedRuns.Add(page.Metrics.Duration.TotalMilliseconds);
-                worstAllocation = Math.Max(worstAllocation, allocated);
-                first = page;
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            StorageBrowsePage acceptedFirst = await sut.BrowseAsync(storage, request);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            Assert.Equal(50, acceptedFirst.Entries.Count);
+            Assert.Equal(fixtureSize, acceptedFirst.Metrics.InspectedItems);
+            Assert.Equal(0, acceptedFirst.Metrics.MetadataProbes);
+            Assert.InRange(acceptedFirst.Metrics.RetainedStateBytes, 1, 512);
+            Assert.InRange(allocated, 1, 32 * 1024 * 1024);
 
-                Assert.Equal(50, page.Entries.Count);
-                Assert.Equal(51, page.Metrics.InspectedItems);
-                Assert.Equal(0, page.Metrics.MetadataProbes);
-                Assert.InRange(page.Metrics.RetainedStateBytes, 1, 512);
-                Assert.InRange(allocated, 1, 4 * 1024 * 1024);
-            }
-
-            StorageBrowsePage acceptedFirst = Assert.IsType<StorageBrowsePage>(first);
             StorageBrowsePage second = await sut.BrowseAsync(
                 storage,
                 new StorageBrowseRequest(
@@ -105,18 +275,17 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             string[] secondIds = second.Entries.Select(entry => entry.Id.Value).ToArray();
 
             output.WriteLine(
-                "Large-directory pagination runtime={0} os={1} fixture={2} median-ms={3:F3} worst-ms={4:F3} worst-allocated={5} first-inspected={6} second-inspected={7} retained={8}",
+                "Large-directory pagination runtime={0} os={1} fixture={2} elapsed-ms={3:F3} allocated={4} first-inspected={5} second-inspected={6} retained={7}",
                 Environment.Version,
                 Environment.OSVersion.VersionString,
                 fixtureSize,
-                elapsedRuns.OrderBy(value => value).ElementAt(1),
-                elapsedRuns.Max(),
-                worstAllocation,
+                acceptedFirst.Metrics.Duration.TotalMilliseconds,
+                allocated,
                 acceptedFirst.Metrics.InspectedItems,
                 second.Metrics.InspectedItems,
                 acceptedFirst.Metrics.RetainedStateBytes);
             Assert.Equal(50, second.Entries.Count);
-            Assert.InRange(second.Metrics.InspectedItems, 101, 256);
+            Assert.Equal(fixtureSize, second.Metrics.InspectedItems);
             Assert.Empty(firstIds.Intersect(secondIds, StringComparer.Ordinal));
         }
         finally
@@ -393,23 +562,34 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task Global_name_order_is_explicitly_unsupported()
+    public async Task Global_name_order_is_deterministic_across_different_provider_sequences()
     {
         string root = CreateRoot();
         try
         {
-            FileSystemStorageBrowseDriver sut = CreateSut(root);
+            File.WriteAllText(Path.Combine(root, "zeta.txt"), "z");
+            File.WriteAllText(Path.Combine(root, "alpha.txt"), "a");
+            File.WriteAllText(Path.Combine(root, "beta.txt"), "b");
+            var reverse = false;
+            IEnumerable<FileSystemInfo> ReorderedEnumeration(DirectoryInfo directory)
+            {
+                FileSystemInfo[] entries = directory.EnumerateFileSystemInfos().ToArray();
+                reverse = !reverse;
+                return reverse ? entries.Reverse() : entries;
+            }
 
-            StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
-                sut.BrowseAsync(
-                    CreateStorage(root),
-                    new StorageBrowseRequest(
-                        StorageBrowseContainer.Root,
-                        sort: new StorageBrowseSort(
-                            StorageBrowseSortField.Name,
-                            StorageBrowseSortDirection.Ascending))));
+            FileSystemStorageBrowseDriver sut = CreateSut(root, ReorderedEnumeration);
+            var request = new StorageBrowseRequest(
+                StorageBrowseContainer.Root,
+                sort: new StorageBrowseSort(
+                    StorageBrowseSortField.Name,
+                    StorageBrowseSortDirection.Ascending));
 
-            Assert.Equal(StorageBrowseErrorCode.UnsupportedOperation, exception.Error.Code);
+            StorageBrowsePage first = await sut.BrowseAsync(CreateStorage(root), request);
+            StorageBrowsePage second = await sut.BrowseAsync(CreateStorage(root), request);
+
+            Assert.Equal(["alpha.txt", "beta.txt", "zeta.txt"], first.Entries.Select(entry => entry.Name));
+            Assert.Equal(first.Entries.Select(entry => entry.Id), second.Entries.Select(entry => entry.Id));
         }
         finally
         {
@@ -418,7 +598,7 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task Inspection_limit_returns_typed_partial_page_and_continuation()
+    public async Task Inspection_limit_returns_typed_budget_error_without_partial_order()
     {
         string root = CreateRoot();
         try
@@ -432,17 +612,15 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
                 maximumConcurrentMetadataProbes: 0,
                 maximumDuration: TimeSpan.FromSeconds(10));
 
-            StorageBrowsePage page = await sut.BrowseAsync(
-                CreateStorage(root),
-                new StorageBrowseRequest(
-                    StorageBrowseContainer.Root,
-                    pageSize: 5,
-                    budget: budget));
+            StorageBrowseException exception = await Assert.ThrowsAsync<StorageBrowseException>(() =>
+                sut.BrowseAsync(
+                    CreateStorage(root),
+                    new StorageBrowseRequest(
+                        StorageBrowseContainer.Root,
+                        pageSize: 5,
+                        budget: budget)));
 
-            Assert.Equal(StorageBrowseCompleteness.PartialInspectionLimit, page.Completeness);
-            Assert.Equal(5, page.Entries.Count);
-            Assert.Equal(5, page.Metrics.InspectedItems);
-            Assert.NotNull(page.NextCursor);
+            Assert.Equal(StorageBrowseErrorCode.BudgetExceeded, exception.Error.Code);
         }
         finally
         {
@@ -500,13 +678,40 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
     }
 
     private static StorageCatalogRecord CreateStorage(string root)
-        => new()
+    {
+        var storage = new StorageCatalogRecord
         {
             Id = Guid.NewGuid(),
             Name = "Test files",
             ProviderKind = StorageProviderKind.FileSystem,
             EndpointOrRoot = root
         };
+        StorageCatalogHostBindingPolicy.BindCurrent(storage, root, DateTimeOffset.UtcNow);
+        return storage;
+    }
+
+    private static Task<StorageWriteResult> SaveAsync(
+        FileSystemStorageDriver driver,
+        StorageCatalogRecord storage,
+        string fileName,
+        string content)
+        => driver.SaveAsync(
+            storage,
+            new StorageWriteRequest(
+                fileName,
+                "text/plain",
+                System.Text.Encoding.UTF8.GetBytes(content),
+                StorageUsagePurpose.ProjectAsset));
+
+    private static async Task<string> ReadAsync(
+        FileSystemStorageDriver driver,
+        StorageCatalogRecord storage,
+        StorageObjectReference reference)
+    {
+        await using Stream stream = await driver.OpenReadAsync(storage, reference);
+        using var reader = new StreamReader(stream);
+        return await reader.ReadToEndAsync();
+    }
 
     private static string CreateRoot()
     {

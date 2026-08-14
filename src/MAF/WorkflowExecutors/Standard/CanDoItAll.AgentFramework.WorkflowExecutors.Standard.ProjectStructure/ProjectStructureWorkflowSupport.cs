@@ -45,9 +45,8 @@ public sealed partial class ProjectStructureWorkflowExecutor
 
     private static string SanitizeFileName(string value)
     {
-        var invalid = Path.GetInvalidFileNameChars().ToHashSet();
-        var sanitized = new string(value.Select(character => invalid.Contains(character) ? '-' : character).ToArray()).Trim('-');
-        return string.IsNullOrWhiteSpace(sanitized) ? "asset" : sanitized;
+        string displayName = string.IsNullOrWhiteSpace(value) ? "asset" : value.Trim();
+        return PortablePhysicalFileNamePolicy.Encode(displayName).PhysicalName;
     }
 
     private static string Require(string value, string name)

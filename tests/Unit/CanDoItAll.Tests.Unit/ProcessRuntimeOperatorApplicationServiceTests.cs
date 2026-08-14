@@ -3,6 +3,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
@@ -891,6 +892,52 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
     }
 
     [Fact]
+    public async Task Request_cancellation_does_not_expose_observer_exception_details()
+    {
+        var runId = ProcessRunId.New();
+        var stepId = ProcessStepInstanceId.New();
+        var planId = ProcessInstancePlanId.New();
+        var assignmentStore = new RecordingAssignmentStore(CreateAssignment(runId, planId, stepId));
+        await using var dbContext = CreateDbContext();
+        var projectionStore = new EfProcessProjectionStore(dbContext);
+        var clock = new FixedProcessProjectionClock(Now);
+        var stateStore = new InMemoryRuntimeStateStore(CreateActiveReadyState(runId, planId, stepId));
+        var service = new ProcessRuntimeOperatorApplicationService(
+            clock,
+            stateStore,
+            stateStore,
+            assignmentStore,
+            new RecordingUnitOfWork(stateStore),
+            new RecordingDispatchQueue(),
+            new ProcessRuntimeProjectionCatchupService(
+                new EmptyRuntimeEventReplayStore(),
+                projectionStore,
+                new ProcessRuntimeProjectionProjector(
+                    projectionStore,
+                    ProcessProjectionJsonCodec.Default,
+                    clock,
+                    new EfProcessRunRecordStore(dbContext)),
+                clock),
+            [],
+            [new ThrowingCancellationObserver()]);
+
+        var result = await service.RequestCancellationAsync(new ProcessRuntimeRunCancellationCommand(
+            runId,
+            "unit-test",
+            "Cancel the run."));
+
+        Assert.True(result.Succeeded);
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.All(result.Diagnostics, diagnostic => Assert.True(
+            ProcessPublicReceiptTextPolicy.IsSafe(
+                diagnostic,
+                ProcessPublicReceiptTextPolicy.MaximumPublicMessageLength)));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains("observer-secret", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains(@"C:\private\operator", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Contains(nameof(ThrowingCancellationObserver), StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Request_cancellation_rejection_leaves_root_pending_and_notifies_already_cancelled_runs()
     {
         var rootRunId = ProcessRunId.New();
@@ -1696,6 +1743,17 @@ public sealed class ProcessRuntimeOperatorApplicationServiceTests
         {
             Observations.Add(observation);
             return ValueTask.FromResult(new ProcessRuntimeRunCancellationObservationResult([Diagnostic]));
+        }
+    }
+
+    private sealed class ThrowingCancellationObserver : IProcessRuntimeRunCancellationObserver
+    {
+        public ValueTask<ProcessRuntimeRunCancellationObservationResult> OnRunsCancelledAsync(
+            ProcessRuntimeRunCancellationObservation observation,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException(
+                $"password=observer-secret at C:\\private\\operator\\observer.log {new string('x', 3_000)}");
         }
     }
 

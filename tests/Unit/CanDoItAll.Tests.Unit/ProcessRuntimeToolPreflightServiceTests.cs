@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.Extensions.AI;
 
@@ -14,6 +15,87 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessRuntimeToolPreflightServiceTests
 {
+    private static readonly ProcessHostCapabilityId[] AllHostCapabilityIds =
+    [
+        ProcessHostCapabilityIds.DirectExecution,
+        ProcessHostCapabilityIds.ManagedProcessAdapter,
+        ProcessHostCapabilityIds.PowerShellScript,
+        ProcessHostCapabilityIds.PosixScript,
+        ProcessHostCapabilityIds.DotNetRuntime,
+        ProcessHostCapabilityIds.PythonRuntime,
+        ProcessHostCapabilityIds.NodeRuntime,
+        ProcessHostCapabilityIds.NodePackageManager,
+        ProcessHostCapabilityIds.Docker,
+        ProcessHostCapabilityIds.LocalStdioMcp,
+        ProcessHostCapabilityIds.DesktopOpen,
+        ProcessHostCapabilityIds.InteractiveTerminal
+    ];
+
+    private static readonly IProcessHostCapabilitySnapshotProvider AvailableHostCapabilities =
+        new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("test"),
+                AllHostCapabilityIds
+                    .Select(id => new ProcessHostCapabilityFact(
+                        id,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ResolveExecutionPort(id)))
+                    .ToArray()));
+
+    public static TheoryData<string, ProcessHostCapabilityId> ProcessStartingToolCapabilityRoutes => new()
+    {
+        { ToolContractCatalog.WorkspaceDotNetNew, ProcessHostCapabilityIds.DotNetRuntime },
+        { ToolContractCatalog.WorkspaceDotNetRestore, ProcessHostCapabilityIds.DotNetRuntime },
+        { ToolContractCatalog.WorkspaceDotNetBuild, ProcessHostCapabilityIds.DotNetRuntime },
+        { ToolContractCatalog.WorkspaceDotNetTest, ProcessHostCapabilityIds.DotNetRuntime },
+        { ToolContractCatalog.WorkspaceDotNetRun, ProcessHostCapabilityIds.DotNetRuntime },
+        { ToolContractCatalog.WorkspaceDotNetStop, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspacePowerShellRunScript, ProcessHostCapabilityIds.PowerShellScript },
+        { ToolContractCatalog.WorkspacePythonRunFile, ProcessHostCapabilityIds.PythonRuntime },
+        { ToolContractCatalog.WorkspaceInspectSpreadsheet, ProcessHostCapabilityIds.PythonRuntime },
+        { ToolContractCatalog.WorkspaceCommandRun, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitStatus, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitDiff, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitLog, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitShow, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitAdd, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitUnstage, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitCommit, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitBranchCreate, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.WorkspaceGitSwitch, ProcessHostCapabilityIds.DirectExecution },
+        { ToolContractCatalog.LocalMcpLaunch, ProcessHostCapabilityIds.LocalStdioMcp },
+        { AgentToolInvocationPolicyMetadata.RunSkillScript, ProcessHostCapabilityIds.DirectExecution }
+    };
+
+    [Theory]
+    [MemberData(nameof(ProcessStartingToolCapabilityRoutes))]
+    public void Process_starting_tool_contracts_have_deterministic_host_routes(
+        string toolName,
+        ProcessHostCapabilityId expectedCapability)
+    {
+        Assert.Equal(expectedCapability, ProcessRuntimeToolHostCapabilityPolicy.Resolve(toolName));
+    }
+
+    [Fact]
+    public async Task Step_host_gate_rejects_effective_capability_union_over_32_before_snapshot_evaluation()
+    {
+        var declaredCapabilities = Enumerable.Range(0, ProcessHostCapabilitySnapshot.MaximumCapabilities)
+            .Select(index => new ProcessHostCapabilityId($"host.test.declared-{index:D2}"))
+            .ToArray();
+        var service = CreatePreflightService();
+
+        var result = await service.EvaluateStepHostCapabilitiesAsync(
+            [ToolContractCatalog.WorkspacePythonRunFile],
+            [ToolContractCatalog.WorkspacePythonRunFile],
+            declaredCapabilities,
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Equal(["invalid-host-capability-contract"], result.MissingToolNames);
+        Assert.Null(result.HostCapabilityEvidence);
+    }
+
     [Fact]
     public async Task EvaluateAsync_composes_capability_bound_provider_from_resolved_attached_catalog()
     {
@@ -29,8 +111,9 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [new CapabilityBoundRuntimeToolProvider(
                 AgentToolInvocationPolicyMetadata.WorkflowsDefinitionsList,
                 capability.Id)],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
-            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            AvailableHostCapabilities);
         var resolverCalls = 0;
 
         var result = await service.EvaluateAsync(
@@ -74,8 +157,9 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             descriptor);
         var service = new ProcessRuntimeToolPreflightService(
             [runtimeProvider],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
-            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            AvailableHostCapabilities);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -105,8 +189,9 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
         var service = new ProcessRuntimeToolPreflightService(
             [],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
-            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            AvailableHostCapabilities);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -137,8 +222,9 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             [new CapabilityBoundRuntimeToolProvider(
                 AgentToolInvocationPolicyMetadata.WorkflowsRunStart,
                 capability.Id)],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
-            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            AvailableHostCapabilities);
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -163,7 +249,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -191,7 +277,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
         var resolverCalls = 0;
 
         var result = await service.EvaluateAsync(
@@ -213,6 +299,150 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_rejects_missing_host_capability_before_capability_catalog_resolution()
+    {
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateCapability("workspace-pwsh-run-script", CapabilityKind.Tool)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.MutateProductTarget],
+            ProcessOperationContractNames.ExternalProductTargetMutable);
+        var hostCapabilities = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.PowerShellScript,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var service = new ProcessRuntimeToolPreflightService(
+            [],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            hostCapabilities);
+        var resolverCalls = 0;
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"],
+                CapabilityCatalogResolver: _ =>
+                {
+                    resolverCalls++;
+                    return ValueTask.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]);
+                }),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Equal(0, resolverCalls);
+        var finding = Assert.Single(result.HostCapabilityFindings);
+        Assert.Equal(ProcessHostCapabilityIds.PowerShellScript, finding.CapabilityId);
+        Assert.Equal(ProcessHostCapabilityReason.DependencyMissing, finding.Reason);
+        Assert.Equal(new ProcessHostProfileId("linux"), finding.ProfileId);
+    }
+
+    [Fact]
+    public async Task Spreadsheet_inspection_requires_python_host_capability()
+    {
+        var hostCapabilities = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.PythonRuntime,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var service = new ProcessRuntimeToolPreflightService(
+            [],
+            [],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            hostCapabilities);
+
+        var result = await service.EvaluateHostCapabilitiesAsync(
+            [ToolContractCatalog.WorkspaceInspectSpreadsheet],
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        var finding = Assert.Single(result.HostCapabilityFindings);
+        Assert.Equal(ToolContractCatalog.WorkspaceInspectSpreadsheet, finding.RuntimeToolName);
+        Assert.Equal(ProcessHostCapabilityIds.PythonRuntime, finding.CapabilityId);
+        Assert.Equal(ProcessHostCapabilityReason.DependencyMissing, finding.Reason);
+    }
+
+    [Fact]
+    public async Task Dotnet_stop_requires_owned_process_host_but_not_current_dotnet_runtime()
+    {
+        var hostCapabilities = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.DirectExecution,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessHost),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.DotNetRuntime,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var service = new ProcessRuntimeToolPreflightService(
+            [],
+            [],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            hostCapabilities);
+
+        var result = await service.EvaluateHostCapabilitiesAsync(
+            [ToolContractCatalog.WorkspaceDotNetStop],
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Empty(result.HostCapabilityFindings);
+        var fact = Assert.Single(result.HostCapabilityEvidence!.Capabilities);
+        Assert.Equal(ProcessHostCapabilityIds.DirectExecution, fact.Id);
+        Assert.Equal(ProcessHostCapabilityAvailability.Available, fact.Availability);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_fails_closed_when_mapped_tool_has_no_host_capability_provider()
+    {
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateCapability("workspace-pwsh-run-script", CapabilityKind.Tool)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.MutateProductTarget],
+            ProcessOperationContractNames.ExternalProductTargetMutable);
+        var service = new ProcessRuntimeToolPreflightService(
+            [],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["workspace_pwsh_run_script"]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        var finding = Assert.Single(result.HostCapabilityFindings);
+        Assert.Equal(new ProcessHostProfileId("unknown"), finding.ProfileId);
+        Assert.Equal(ProcessHostCapabilityAvailability.Unavailable, finding.Availability);
+        Assert.Equal(ProcessHostCapabilityReason.NotRegistered, finding.Reason);
+        var evidenceFact = Assert.Single(result.HostCapabilityEvidence!.Capabilities);
+        Assert.Equal(ProcessHostCapabilityIds.PowerShellScript, evidenceFact.Id);
+        Assert.Equal(ProcessHostCapabilityReason.NotRegistered, evidenceFact.Reason);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_missing_workspace_script_when_agent_profile_disables_local_scripts()
     {
         var agent = CreateAgent(
@@ -222,7 +452,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.MutateProductTarget],
             ProcessOperationContractNames.ExternalProductTargetMutable);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -246,7 +476,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -270,7 +500,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             [ProcessOperationContractNames.WriteManagedProcessArtifacts],
             ProcessOperationContractNames.ManagedProcessArtifactsOnly);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -279,7 +509,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 ["workspace_write_file"]),
             CancellationToken.None);
 
-        Assert.True(result.IsSatisfied);
+        Assert.True(result.IsSatisfied, result.Summary);
         Assert.Empty(result.MissingToolNames);
         Assert.Empty(result.CapabilityDiagnostics);
     }
@@ -287,9 +517,10 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
     [Fact]
     public async Task EvaluateAsync_satisfies_browser_tools_from_assigned_playwright_mcp_capability()
     {
+        var capability = CreateMcpCatalogCapability("playwright-local-mcp", "stdio");
         var agent = CreateAgent(
             AgentWorkspaceToolProfileKind.QualityValidation,
-            [CreateCapability("playwright-local-mcp", CapabilityKind.McpServer)]);
+            [CreateAssignment(capability)]);
         var assignment = CreateAssignment(
             agent.Id,
             [
@@ -310,20 +541,357 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                     "browser_snapshot",
                     "browser_take_screenshot",
                     "browser_console_messages"
-                ]),
+                ],
+                CapabilityCatalog: [capability]),
             CancellationToken.None);
 
         Assert.True(result.IsSatisfied);
         Assert.Empty(result.MissingToolNames);
         Assert.Empty(result.CapabilityDiagnostics);
+        Assert.NotNull(result.HostCapabilityEvidence);
+        Assert.Contains(
+            result.HostCapabilityEvidence.Capabilities,
+            fact => fact.Id == ProcessHostCapabilityIds.LocalStdioMcp);
+        Assert.Contains(
+            result.HostCapabilityEvidence.Capabilities,
+            fact => fact.Id == ProcessHostCapabilityIds.NodeRuntime);
+        Assert.Contains(
+            result.HostCapabilityEvidence.Capabilities,
+            fact => fact.Id == ProcessHostCapabilityIds.NodePackageManager);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_evaluates_mapped_and_browser_host_requirements_from_one_snapshot()
+    {
+        var capability = CreateMcpCatalogCapability("playwright-local-mcp", "stdio");
+        var spreadsheetCapability = CreateCatalogCapability("workspace-inspect-spreadsheet");
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            [CreateAssignment(capability), CreateAssignment(spreadsheetCapability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [
+                ProcessOperationContractNames.CaptureRuntimeProof,
+                ProcessOperationContractNames.LaunchRuntime,
+                ProcessOperationContractNames.RunValidation,
+                ProcessOperationContractNames.WriteManagedProcessArtifacts
+            ],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+        var firstSnapshot = new ProcessHostCapabilitySnapshot(
+            new ProcessHostProfileId("linux-first"),
+            [
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.PythonRuntime,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessHost),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.LocalStdioMcp,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.LocalStdioMcpClient),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.NodeRuntime,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessHost),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.NodePackageManager,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessHost)
+            ]);
+        var secondSnapshot = new ProcessHostCapabilitySnapshot(
+            new ProcessHostProfileId("linux-second"),
+            [
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.PythonRuntime,
+                    ProcessHostCapabilityAvailability.Unavailable,
+                    ProcessHostCapabilityReason.ProbePending,
+                    ProcessHostExecutionPort.None),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.LocalStdioMcp,
+                    ProcessHostCapabilityAvailability.Unavailable,
+                    ProcessHostCapabilityReason.ProbePending,
+                    ProcessHostExecutionPort.None),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.NodeRuntime,
+                    ProcessHostCapabilityAvailability.Unavailable,
+                    ProcessHostCapabilityReason.ProbePending,
+                    ProcessHostExecutionPort.None),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.NodePackageManager,
+                    ProcessHostCapabilityAvailability.Unavailable,
+                    ProcessHostCapabilityReason.ProbePending,
+                    ProcessHostExecutionPort.None)
+            ]);
+        var snapshotProvider = new SequentialProcessHostCapabilitySnapshotProvider(
+            firstSnapshot,
+            secondSnapshot);
+        var service = new ProcessRuntimeToolPreflightService(
+            [new CapabilityBoundRuntimeToolProvider(
+                ToolContractCatalog.WorkspaceInspectSpreadsheet,
+                spreadsheetCapability.Id)],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            new ProcessRuntimeToolPreflightContributionCatalog(
+            [
+                new BrowserRuntimeToolPreflightContribution()
+            ]),
+            snapshotProvider);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                [ToolContractCatalog.WorkspaceInspectSpreadsheet, "browser_snapshot"],
+                CapabilityCatalog: [capability, spreadsheetCapability]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied, result.Summary);
+        Assert.Equal(1, snapshotProvider.CallCount);
+        Assert.NotNull(result.HostCapabilityEvidence);
+        Assert.Equal(firstSnapshot.ProfileId, result.HostCapabilityEvidence.ProfileId);
+        Assert.Equal(
+            [
+                ProcessHostCapabilityIds.LocalStdioMcp,
+                ProcessHostCapabilityIds.NodeRuntime,
+                ProcessHostCapabilityIds.NodePackageManager,
+                ProcessHostCapabilityIds.PythonRuntime
+            ],
+            result.HostCapabilityEvidence.Capabilities.Select(fact => fact.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_blocks_local_browser_mcp_before_composition_when_host_port_is_unavailable()
+    {
+        var capability = CreateMcpCatalogCapability("playwright-local-mcp", "stdio");
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.CaptureRuntimeProof],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+        var unavailableHost = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.LocalStdioMcp,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.NotRegistered,
+                        ProcessHostExecutionPort.None),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodeRuntime,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessHost),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodePackageManager,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessHost)
+                ]));
+        var service = CreateBrowserPreflightService(unavailableHost);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["browser_snapshot"],
+                CapabilityCatalog: [capability]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        var finding = Assert.Single(result.HostCapabilityFindings);
+        Assert.Equal(ProcessHostCapabilityIds.LocalStdioMcp, finding.CapabilityId);
+        Assert.Equal(ProcessHostCapabilityReason.NotRegistered, finding.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_blocks_local_playwright_mcp_when_node_runtime_is_unavailable()
+    {
+        var capability = CreateMcpCatalogCapability("playwright-local-mcp", "stdio");
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.CaptureRuntimeProof],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+        var unavailableHost = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.LocalStdioMcp,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.LocalStdioMcpClient),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodeRuntime,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodePackageManager,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessHost)
+                ]));
+        var service = CreateBrowserPreflightService(unavailableHost);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["browser_snapshot"],
+                CapabilityCatalog: [capability]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        var finding = Assert.Single(result.HostCapabilityFindings);
+        Assert.Equal(ProcessHostCapabilityIds.NodeRuntime, finding.CapabilityId);
+        Assert.Equal(ProcessHostCapabilityReason.DependencyMissing, finding.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_blocks_local_playwright_mcp_when_node_package_manager_is_unavailable()
+    {
+        var capability = CreateMcpCatalogCapability("playwright-local-mcp", "stdio");
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.CaptureRuntimeProof],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+        var unavailableHost = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.LocalStdioMcp,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.LocalStdioMcpClient),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodeRuntime,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessHost),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodePackageManager,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var service = CreateBrowserPreflightService(unavailableHost);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["browser_snapshot"],
+                CapabilityCatalog: [capability]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        var finding = Assert.Single(result.HostCapabilityFindings);
+        Assert.Equal(ProcessHostCapabilityIds.NodePackageManager, finding.CapabilityId);
+        Assert.Equal(ProcessHostCapabilityReason.DependencyMissing, finding.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_allows_remote_browser_mcp_without_local_stdio_host_port()
+    {
+        var capability = CreateMcpCatalogCapability("playwright-remote-mcp", "http");
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            [CreateAssignment(capability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.CaptureRuntimeProof],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+        var unavailableHost = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.LocalStdioMcp,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.NotRegistered,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var service = CreateBrowserPreflightService(unavailableHost);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["browser_snapshot"],
+                CapabilityCatalog: [capability]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSatisfied);
+        Assert.Empty(result.HostCapabilityFindings);
+    }
+
+    [Theory]
+    [InlineData("custom-browser-host")]
+    [InlineData("npx")]
+    public async Task EvaluateAsync_rejects_ambiguous_mixed_remote_and_local_browser_mcp_assignments(
+        string localCommand)
+    {
+        var remoteCapability = CreateMcpCatalogCapability("playwright-remote-mcp", "http");
+        var localCapability = CreateMcpCatalogCapability(
+            "playwright-local-mcp",
+            "stdio",
+            localCommand);
+        var agent = CreateAgent(
+            AgentWorkspaceToolProfileKind.QualityValidation,
+            [CreateAssignment(remoteCapability), CreateAssignment(localCapability)]);
+        var assignment = CreateAssignment(
+            agent.Id,
+            [ProcessOperationContractNames.CaptureRuntimeProof],
+            ProcessOperationContractNames.ExternalProductTargetReadOnly);
+        var unavailableHost = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.LocalStdioMcp,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.NotRegistered,
+                        ProcessHostExecutionPort.None),
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.NodeRuntime,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var service = CreateBrowserPreflightService(unavailableHost);
+
+        var result = await service.EvaluateAsync(
+            new ProcessRuntimeToolPreflightRequest(
+                assignment,
+                agent,
+                ["browser_snapshot"],
+                CapabilityCatalog: [remoteCapability, localCapability]),
+            CancellationToken.None);
+
+        Assert.False(result.IsSatisfied);
+        Assert.Equal(["invalid-browser-mcp-transport-contract"], result.MissingToolNames);
+        Assert.Empty(result.HostCapabilityFindings);
     }
 
     [Fact]
     public async Task EvaluateAsync_does_not_satisfy_browser_tools_without_runtime_proof_operation()
     {
+        var capability = CreateMcpCatalogCapability("playwright-local-mcp", "stdio");
         var agent = CreateAgent(
             AgentWorkspaceToolProfileKind.QualityValidation,
-            [CreateCapability("playwright-local-mcp", CapabilityKind.McpServer)]);
+            [CreateAssignment(capability)]);
         var assignment = CreateAssignment(
             agent.Id,
             [ProcessOperationContractNames.RunValidation],
@@ -334,7 +902,8 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             new ProcessRuntimeToolPreflightRequest(
                 assignment,
                 agent,
-                ["browser_snapshot"]),
+                ["browser_snapshot"],
+                CapabilityCatalog: [capability]),
             CancellationToken.None);
 
         Assert.False(result.IsSatisfied);
@@ -437,7 +1006,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 "template=sln",
                 "template=blazorwasm"
             ]));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var resolverCalls = 0;
         var result = await service.EvaluateAsync(
@@ -469,7 +1038,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables(
                 scriptRef: "artifacts/process-runs/{CurrentProcessRunId}/scripts/create-dotnet-project.ps1"));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -499,7 +1068,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var assignment = CreateDotNetCreateProjectAssignment(
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables(sideEffectManifest: manifest));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -525,7 +1094,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                 @"C:\temp\Other\Calculator.slnx",
                 @"C:\temp\CanDoItAll\Calculator\src\Calculator\Calculator.csproj"
             ]));
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -549,7 +1118,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         var assignment = CreateDotNetCreateProjectAssignment(
             agent.Id,
             CreateDotNetCreateProjectLaunchVariables());
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -583,7 +1152,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                         "DotNetCreateProjectExecutionPlan"))
         };
         var assignment = CreateDotNetCreateProjectAssignment(agent.Id, launchVariables);
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -619,7 +1188,7 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
                             "OtherExecutionPlan"))
             }
         };
-        var service = new ProcessRuntimeToolPreflightService([], [new DotNetSolutionSetupRuntimeToolPlanGuard()], ProcessRuntimeToolPreflightContributionCatalog.Empty);
+        var service = CreatePreflightService();
 
         var result = await service.EvaluateAsync(
             new ProcessRuntimeToolPreflightRequest(
@@ -632,15 +1201,26 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         Assert.Empty(result.PlanIssues);
     }
 
-    private static ProcessRuntimeToolPreflightService CreateBrowserPreflightService()
+    private static ProcessRuntimeToolPreflightService CreateBrowserPreflightService(
+        IProcessHostCapabilitySnapshotProvider? hostCapabilities = null)
     {
         return new ProcessRuntimeToolPreflightService(
             [],
-            [new DotNetSolutionSetupRuntimeToolPlanGuard()],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
             new ProcessRuntimeToolPreflightContributionCatalog(
             [
                 new BrowserRuntimeToolPreflightContribution()
-            ]));
+            ]),
+            hostCapabilities ?? AvailableHostCapabilities);
+    }
+
+    private static ProcessRuntimeToolPreflightService CreatePreflightService()
+    {
+        return new ProcessRuntimeToolPreflightService(
+            [],
+            [new DotNetSolutionSetupRuntimeToolPlanGuard(TestWorkspaceServices.PhysicalPathPolicyFactory)],
+            ProcessRuntimeToolPreflightContributionCatalog.Empty,
+            AvailableHostCapabilities);
     }
 
     private static ProcessRuntimeToolPreflightContributionContext CreatePreflightContributionContext(
@@ -672,6 +1252,33 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             ArgumentNullException.ThrowIfNull(context);
 
             callback(context);
+        }
+    }
+
+    private sealed class StaticProcessHostCapabilitySnapshotProvider(
+        ProcessHostCapabilitySnapshot snapshot) : IProcessHostCapabilitySnapshotProvider
+    {
+        public ValueTask<ProcessHostCapabilitySnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(snapshot);
+        }
+    }
+
+    private sealed class SequentialProcessHostCapabilitySnapshotProvider(
+        params ProcessHostCapabilitySnapshot[] snapshots) : IProcessHostCapabilitySnapshotProvider
+    {
+        private int callCount;
+
+        public int CallCount => Volatile.Read(ref callCount);
+
+        public ValueTask<ProcessHostCapabilitySnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var index = Interlocked.Increment(ref callCount) - 1;
+            return ValueTask.FromResult(snapshots[Math.Min(index, snapshots.Length - 1)]);
         }
     }
 
@@ -738,6 +1345,31 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             IsBuiltIn: true);
     }
 
+    private static CapabilityCatalogItem CreateMcpCatalogCapability(
+        string capabilityKey,
+        string transport,
+        string? command = null)
+    {
+        return new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.McpServer,
+            capabilityKey,
+            capabilityKey,
+            string.Empty,
+            string.Empty,
+            JsonSerializer.Serialize(new
+            {
+                transport,
+                command = string.Equals(transport, "stdio", StringComparison.OrdinalIgnoreCase)
+                    ? command ?? "npx"
+                    : null
+            }),
+            CapabilityProofStatus.Verified,
+            string.Empty,
+            LastVerifiedAtUtc: null,
+            IsBuiltIn: true);
+    }
+
     private static AgentCapabilityAssignment CreateAssignment(CapabilityCatalogItem capability)
     {
         return new AgentCapabilityAssignment(
@@ -777,6 +1409,36 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
             DateTimeOffset.UtcNow);
     }
 
+    private static ProcessHostExecutionPort ResolveExecutionPort(ProcessHostCapabilityId capabilityId)
+    {
+        if (capabilityId == ProcessHostCapabilityIds.ManagedProcessAdapter)
+        {
+            return ProcessHostExecutionPort.ManagedProcessAdapter;
+        }
+
+        if (capabilityId == ProcessHostCapabilityIds.Docker)
+        {
+            return ProcessHostExecutionPort.DockerHostTool;
+        }
+
+        if (capabilityId == ProcessHostCapabilityIds.LocalStdioMcp)
+        {
+            return ProcessHostExecutionPort.LocalStdioMcpClient;
+        }
+
+        if (capabilityId == ProcessHostCapabilityIds.DesktopOpen)
+        {
+            return ProcessHostExecutionPort.DesktopLauncher;
+        }
+
+        if (capabilityId == ProcessHostCapabilityIds.InteractiveTerminal)
+        {
+            return ProcessHostExecutionPort.InteractiveTerminal;
+        }
+
+        return ProcessHostExecutionPort.ManagedProcessHost;
+    }
+
     private static ProcessRuntimeStepAssignment CreateDotNetCreateProjectAssignment(
         Guid agentId,
         IReadOnlyDictionary<string, string> launchVariables)
@@ -796,9 +1458,12 @@ public sealed class ProcessRuntimeToolPreflightServiceTests
         string? sideEffectManifest = null,
         IReadOnlyList<string>? requiredPaths = null)
     {
-        var productRoot = @"C:\temp\CanDoItAll\Calculator";
-        var solutionFile = $@"{productRoot}\Calculator.slnx";
-        var appProjectFile = $@"{productRoot}\src\Calculator\Calculator.csproj";
+        var productRoot = Path.GetFullPath(Path.Combine(
+            Path.GetTempPath(),
+            "CanDoItAll",
+            "Calculator"));
+        var solutionFile = Path.Combine(productRoot, "Calculator.slnx");
+        var appProjectFile = Path.Combine(productRoot, "src", "Calculator", "Calculator.csproj");
         scriptRef ??= "artifacts/process-runs/11111111-2222-3333-4444-555555555555/scripts/create-dotnet-project.wire-solution.ps1";
         sideEffectManifest ??= JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
         {

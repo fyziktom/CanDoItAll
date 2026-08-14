@@ -7,6 +7,8 @@
     <ProjectReference Include="..\..\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj" />
     <ProjectReference Include="..\..\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\Capabilities\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabilities.Templates.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 

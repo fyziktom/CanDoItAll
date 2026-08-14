@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
 {
     [Fact]

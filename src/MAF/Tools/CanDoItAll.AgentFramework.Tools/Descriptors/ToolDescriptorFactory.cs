@@ -42,12 +42,12 @@ public static class ToolDescriptorFactory
             NormalizeClassifications([CapabilityOperationClassification.ExternalAction]),
             new CapabilitySideEffectProfile(CapabilitySideEffectKind.ExternalAction, true, true),
             RequireText(executablePath, nameof(executablePath)),
-            NormalizeStrings(arguments),
-            RequireText(workingDirectory, nameof(workingDirectory)),
+            PreserveSequence(arguments),
+            RequireDataValue(workingDirectory, nameof(workingDirectory)),
             timeout,
             Math.Max(64, maxOutputBytes),
-            NormalizeStringSet(allowedExecutableNames),
-            NormalizeStringSet(requiredOutputProperties));
+            NormalizeAuthoritySet(allowedExecutableNames),
+            NormalizeAuthoritySet(requiredOutputProperties));
     }
 
     public static ExternalHttpToolDescriptor ExternalHttp(
@@ -73,7 +73,7 @@ public static class ToolDescriptorFactory
             new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase),
             timeout,
             Math.Max(64, maxResponseBytes),
-            NormalizeStringSet(requiredOutputProperties));
+            NormalizeAuthoritySet(requiredOutputProperties));
     }
 
     public static ProviderNativeToolDescriptor ProviderNative(
@@ -103,20 +103,21 @@ public static class ToolDescriptorFactory
         IEnumerable<CapabilityOperationClassification> classifications)
         => classifications.ToHashSet();
 
-    private static IReadOnlyList<string> NormalizeStrings(IEnumerable<string> values)
-        => values
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .ToArray();
+    private static IReadOnlyList<string> PreserveSequence(IEnumerable<string> values)
+        => values.ToArray();
 
-    private static IReadOnlySet<string> NormalizeStringSet(IEnumerable<string> values)
+    private static IReadOnlySet<string> NormalizeAuthoritySet(IEnumerable<string> values)
         => values
             .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSet(StringComparer.Ordinal);
 
     private static string RequireText(string value, string parameterName)
         => string.IsNullOrWhiteSpace(value)
             ? throw new ArgumentException("Value is required.", parameterName)
             : value.Trim();
+
+    private static string RequireDataValue(string value, string parameterName)
+        => string.IsNullOrWhiteSpace(value)
+            ? throw new ArgumentException("Value is required.", parameterName)
+            : value;
 }

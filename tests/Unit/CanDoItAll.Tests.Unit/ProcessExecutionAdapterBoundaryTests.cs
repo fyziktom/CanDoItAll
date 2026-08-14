@@ -1,6 +1,7 @@
 using CanDoItAll.Git;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
 
@@ -19,6 +20,15 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             stepId,
             new ProcessExecutionExecutorId(Guid.NewGuid()),
             "sha256:" + new string('a', 64));
+        var hostCapabilityEvidence = new ProcessHostCapabilityEvaluationEvidence(
+            new ProcessHostProfileId("linux"),
+            [
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.ManagedProcessAdapter,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessAdapter)
+            ]);
         var driver = new RecordingStepExecutionDriver(
             StandardProcessAdapterDriverIds.Workflow,
             StandardProcessAdapterDescriptors.WorkflowAdapter,
@@ -44,11 +54,19 @@ public sealed class ProcessExecutionAdapterBoundaryTests
                 "The execution requires bounded rework.",
                 "sha256:result")
             {
-                ExecutionRunId = attestation.ExecutionRunId
+                ExecutionRunId = attestation.ExecutionRunId,
+                HostCapabilityEvidence = hostCapabilityEvidence
             });
         var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(
             driver,
             ProcessDriverLayer.Platform);
+        Assert.Equal(ProcessDriverLayer.Platform, package.Descriptor.Layer);
+        Assert.Equal(
+            [ProcessHostCapabilityIds.ManagedProcessAdapter],
+            package.Descriptor.RequiredHostCapabilities);
+        Assert.Equal(
+            [ProcessHostCapabilityIds.ManagedProcessAdapter],
+            Assert.Single(package.Descriptor.Strategies).RequiredHostCapabilities);
         var factory = Assert.Single(package.StrategyFactories);
         var binding = NewBinding(package.Descriptor.DriverId, factory.Descriptor);
         var strategy = await factory.CreateAsync(binding);
@@ -64,6 +82,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
 
         Assert.Equal(attestation, Assert.Single(result.Diagnostics).ExecutionSafetyAttestation);
         Assert.Equal(attestation.ExecutionRunId, result.ExecutionRunId);
+        Assert.Equal(hostCapabilityEvidence, result.HostCapabilityEvidence);
     }
 
     [Fact]
@@ -181,7 +200,18 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         var result = catalog.Match(new ProcessCapabilityRequest(
             new HashSet<CapabilityTag> { StandardProcessAdapterCapabilities.WorkflowExecution },
             new HashSet<CapabilityTag>(),
-            new HashSet<CapabilityTag>()));
+            new HashSet<CapabilityTag>())
+        {
+            HostCapabilities = new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("test"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.ManagedProcessAdapter,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessAdapter)
+                ])
+        });
 
         Assert.True(result.Succeeded, string.Join(", ", result.Diagnostics));
         Assert.Equal(
@@ -251,11 +281,23 @@ public sealed class ProcessExecutionAdapterBoundaryTests
             driverId,
             descriptor.StrategyId,
             descriptor.StrategyVersion,
-            "factory/1.0",
-            "runtime/1.0",
-            "runtime/2.x",
+            ProcessStrategyBindingVersions.ForDriver(
+                StandardProcessAdapterDriverPackageFactory.DriverVersion),
+            StandardProcessAdapterDriverPackageFactory.MinimumRuntimeSchema,
+            StandardProcessAdapterDriverPackageFactory.MaximumRuntimeSchema,
             "sha256:binding",
-            [new StrategyBindingInput(new StrategyBindingInputKey("operation"), "sha256:operation")]);
+            [new StrategyBindingInput(new StrategyBindingInputKey("operation"), "sha256:operation")])
+        {
+            HostProfileId = new ProcessHostProfileId("test"),
+            HostCapabilities =
+            [
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.ManagedProcessAdapter,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessAdapter)
+            ]
+        };
     }
 
     private static IEnumerable<string> FindTermMatches(

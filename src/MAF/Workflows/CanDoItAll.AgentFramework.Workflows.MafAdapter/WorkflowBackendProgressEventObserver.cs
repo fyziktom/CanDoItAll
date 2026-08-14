@@ -27,7 +27,7 @@ internal sealed class WorkflowBackendProgressEventObserver(
 
     public void AddArtifact(WorkflowArtifactRecord? artifact)
     {
-        if (artifact is null || artifacts.Any(item => string.Equals(item.StoragePath, artifact.StoragePath, StringComparison.OrdinalIgnoreCase)))
+        if (artifact is null || artifacts.Any(item => string.Equals(item.StoragePath, artifact.StoragePath, StringComparison.Ordinal)))
         {
             return;
         }

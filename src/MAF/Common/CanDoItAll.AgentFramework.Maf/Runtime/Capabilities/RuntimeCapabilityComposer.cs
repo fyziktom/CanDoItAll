@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Compaction;
@@ -55,6 +56,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     private readonly IAgentImageAnalysisService imageAnalysisService;
     private readonly IRuntimeToolProviderComposer runtimeToolProviderComposer;
     private readonly IMafRuntimeCompositionMetrics compositionMetrics;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
     private readonly ISpreadsheetDocumentService spreadsheetDocumentService;
     private readonly MafRuntimeCapabilityDependencies capabilityDependencies;
     private readonly RuntimeCapabilityDescriptorCatalog descriptorCatalog;
@@ -68,6 +70,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         IAgentImageAnalysisService imageAnalysisService,
         IRuntimeToolProviderComposer runtimeToolProviderComposer,
         IMafRuntimeCompositionMetrics compositionMetrics,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         ISpreadsheetDocumentService spreadsheetDocumentService,
         MafRuntimeCapabilityDependencies capabilityDependencies)
     {
@@ -82,6 +85,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         this.imageAnalysisService = imageAnalysisService ?? throw new ArgumentNullException(nameof(imageAnalysisService));
         this.runtimeToolProviderComposer = runtimeToolProviderComposer ?? throw new ArgumentNullException(nameof(runtimeToolProviderComposer));
         this.compositionMetrics = compositionMetrics ?? throw new ArgumentNullException(nameof(compositionMetrics));
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
         this.spreadsheetDocumentService = spreadsheetDocumentService ?? throw new ArgumentNullException(nameof(spreadsheetDocumentService));
         this.capabilityDependencies = capabilityDependencies ?? throw new ArgumentNullException(nameof(capabilityDependencies));
         descriptorCatalog = new RuntimeCapabilityDescriptorCatalog();
@@ -116,6 +120,9 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             : NoOpMafRuntimeCompositionMetrics.Instance;
         var spreadsheetDocumentService = serviceProvider.GetService(typeof(ISpreadsheetDocumentService)) as ISpreadsheetDocumentService
             ?? new ClosedXmlSpreadsheetDocumentService();
+        var physicalPathPolicyFactory = serviceProvider.GetService(typeof(IPhysicalFileSystemPathPolicyFactory)) as IPhysicalFileSystemPathPolicyFactory
+            ?? throw new InvalidOperationException(
+                $"The MAF provider runtime service graph is incomplete. Missing: {nameof(IPhysicalFileSystemPathPolicyFactory)}.");
 
         return new RuntimeCapabilityComposer(
             workspaceRoot,
@@ -124,6 +131,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             imageAnalysisService,
             runtimeToolProviderComposer,
             compositionMetrics,
+            physicalPathPolicyFactory,
             spreadsheetDocumentService,
             capabilityDependencies);
     }
@@ -185,6 +193,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var totalStopwatch = Stopwatch.StartNew();
+        RuntimeCapabilityState? pendingState = null;
         try
         {
             if (contextIntent.WorkspaceScope is not null &&
@@ -230,6 +239,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                     agentConfiguration,
                     workspaceToolAccess,
                     capabilityAccessPlan));
+            pendingState = composition.State;
 
             TrackAction(
                 "capability.initial-access-state",
@@ -301,7 +311,23 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             TrackAction(
                 "capability.effective-external-target-context",
                 () => AttachEffectiveExternalTargetContext(composition.State, workspaceToolAccess));
+            pendingState = null;
             return composition.State;
+        }
+        catch (Exception compositionException)
+        {
+            if (pendingState is not null)
+            {
+                var cleanupExceptions = await pendingState.DisposeAcquiredResourcesAsync().ConfigureAwait(false);
+                if (cleanupExceptions.Count > 0)
+                {
+                    throw new AggregateException(
+                        "Runtime capability composition failed and one or more acquired resources also failed cleanup.",
+                        [compositionException, .. cleanupExceptions]);
+                }
+            }
+
+            throw;
         }
         finally
         {
@@ -422,12 +448,14 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var filesystemPlugin = new WorkspaceFilesystemRuntimePlugin(
             workspaceRuntimeServices.FileService,
             workspaceRoot,
+            physicalPathPolicyFactory,
             effectiveWorkspaceScope,
             workspaceToolAccess);
         var workspacePlugin = new WorkspaceRuntimePlugin(
             workspaceRuntimeServices.CommandExecutionService,
             workspaceRuntimeServices.ArtifactToolService,
             workspaceRoot,
+            physicalPathPolicyFactory,
             effectiveWorkspaceScope,
             workspaceToolAccess,
             provider,
@@ -436,16 +464,20 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var spreadsheetPlugin = new WorkspaceSpreadsheetRuntimePlugin(
             spreadsheetDocumentService,
             workspaceRoot,
+            physicalPathPolicyFactory,
             effectiveWorkspaceScope,
-            workspaceToolAccess);
+            workspaceToolAccess,
+            workspaceRuntimeServices.ExternalTargetPathRegistry);
         var storagePlugin = CreateStorageRuntimePlugin(workspaceToolAccess);
         var skillBuilder = new SkillCapabilityBuilder(
             workspaceRoot,
+            physicalPathPolicyFactory,
             capabilityDependencies.RegisteredCapabilityServices,
             capabilityDependencies.LoggerFactory);
         var contextBuilder = new ContextCapabilityBuilder(
             workspaceRoot,
-            effectiveWorkspaceScope);
+            effectiveWorkspaceScope,
+            physicalPathPolicyFactory);
         var contextContributors = capabilityDependencies.ContextContributors;
         var runtimeToolProviders = runtimeToolProviderComposer.ComposeRegistrations(
             capabilityDependencies.RuntimeToolProviders);
@@ -455,6 +487,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             workspaceRoot,
             effectiveWorkspaceScope,
             workspaceRuntimeServices,
+            physicalPathPolicyFactory,
             providerCredentialService,
             descriptorCatalog.ResolveCatalogOperationClassifications,
             RuntimeCapabilityDescriptorCatalog.ResolveMcpServerKey,
@@ -478,6 +511,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             workspaceRuntimeServices.CommandExecutionService,
             workspaceToolAccess,
             fileSkillExecutionPolicies,
+            physicalPathPolicyFactory,
             capabilityAccessPlan);
 
         return new RuntimeCapabilityComposition(
@@ -1216,83 +1250,6 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         }
 
         return ChatRole.System;
-    }
-
-    private string ResolvePathFromWorkspace(string path, bool allowExternal, IReadOnlyList<string>? allowedExternalRoots = null)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return workspaceRoot;
-        }
-
-        var expandedPath = ExpandPortablePath(path);
-        var fullPath = Path.GetFullPath(Path.IsPathRooted(expandedPath) ? expandedPath : Path.Combine(workspaceRoot, expandedPath));
-        if (IsPathWithinRoot(fullPath, workspaceRoot))
-        {
-            return fullPath;
-        }
-
-        if (!allowExternal)
-        {
-            throw new InvalidOperationException($"Path '{path}' resolves outside the workspace root. Use a workspace-relative path or import the external file into chat attachments first.");
-        }
-
-        var allowedRoots = allowedExternalRoots?
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(ExpandPortablePath)
-            .Select(item => Path.GetFullPath(Path.IsPathRooted(item) ? item : Path.Combine(workspaceRoot, item)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList()
-            ?? [];
-
-        if (allowedRoots.Any(allowedRoot => IsPathWithinRoot(fullPath, allowedRoot)))
-        {
-            return fullPath;
-        }
-
-        throw new InvalidOperationException($"Path '{path}' resolves outside the workspace root and is not covered by an explicit external-root allowlist.");
-    }
-
-    private static string ExpandPortablePath(string path)
-    {
-        var expanded = Environment.ExpandEnvironmentVariables(path.Trim());
-        if (string.Equals(expanded, "~", StringComparison.Ordinal))
-        {
-            var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            return string.IsNullOrWhiteSpace(homeDirectory)
-                ? expanded
-                : homeDirectory;
-        }
-
-        if (!expanded.StartsWith("~" + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
-            !expanded.StartsWith("~" + Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
-        {
-            return expanded;
-        }
-
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (string.IsNullOrWhiteSpace(home))
-        {
-            return expanded;
-        }
-
-        var relativePath = expanded[2..]
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        return Path.Combine(home, relativePath);
-    }
-
-    private static bool IsPathWithinRoot(string fullPath, string rootPath)
-    {
-        var normalizedRoot = Path.GetFullPath(rootPath);
-        if (string.Equals(fullPath, normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        var rootWithSeparator = normalizedRoot.EndsWith(Path.DirectorySeparatorChar) || normalizedRoot.EndsWith(Path.AltDirectorySeparatorChar)
-            ? normalizedRoot
-            : normalizedRoot + Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
     }
 
     private static TConfiguration? DeserializeConfiguration<TConfiguration>(string? json)

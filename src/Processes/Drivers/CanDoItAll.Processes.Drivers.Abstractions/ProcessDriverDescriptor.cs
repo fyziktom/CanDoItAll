@@ -13,7 +13,11 @@ public sealed record ProcessDriverDescriptor(
     IReadOnlyList<ProcessDriverDependency> Dependencies,
     IReadOnlyList<ProcessDriverConflict> Conflicts,
     IReadOnlyList<ProcessDriverFacetDescriptor> Facets,
-    IReadOnlyList<ProcessStrategyDescriptor> Strategies);
+    IReadOnlyList<ProcessStrategyDescriptor> Strategies)
+{
+    public IReadOnlySet<ProcessHostCapabilityId> RequiredHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
+}
 
 public sealed record ProcessDriverDependency(
     DriverId DriverId,
@@ -33,7 +37,11 @@ public sealed record ProcessStrategyDescriptor(
     StrategyId StrategyId,
     string StrategyVersion,
     ProcessStrategyKind Kind,
-    IReadOnlySet<CapabilityTag> RequiredCapabilityTags);
+    IReadOnlySet<CapabilityTag> RequiredCapabilityTags)
+{
+    public IReadOnlySet<ProcessHostCapabilityId> RequiredHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
+}
 
 public enum ProcessDriverLayer
 {

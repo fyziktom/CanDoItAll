@@ -1,5 +1,8 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
@@ -7,13 +10,19 @@ internal sealed class WorkflowSourceFileResolver
 {
     private static readonly char[] PathTrimCharacters = [' ', '\t', '\r', '\n', '`', '\'', '"'];
     private readonly IWorkspacePathResolutionService paths;
+    private readonly IExternalTargetPathRegistry externalTargetPathRegistry;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
     private readonly Func<string, bool, IEnumerable<string>> fileEnumerator;
 
     public WorkflowSourceFileResolver(
         IWorkspacePathResolutionService paths,
+        IExternalTargetPathRegistry externalTargetPathRegistry,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         Func<string, bool, IEnumerable<string>>? fileEnumerator = null)
     {
         this.paths = paths;
+        this.externalTargetPathRegistry = externalTargetPathRegistry;
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory;
         this.fileEnumerator = fileEnumerator ?? EnumerateFiles;
     }
 
@@ -34,11 +43,16 @@ internal sealed class WorkflowSourceFileResolver
         if (resolvedAsDirectory)
         {
             var directory = ResolveDirectory(candidate.Value, settings);
+            IPhysicalFileSystemPathPolicy directoryPathPolicy = physicalPathPolicyFactory.Create(directory.FullPath);
             var count = 0;
             foreach (var file in EnumerateAccessibleFiles(
                          directory,
+                         directoryPathPolicy,
                          settings.RecursiveFolders)
-                     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+                     .OrderBy(
+                         path => NormalizeEnumerationKey(Path.GetRelativePath(directory.FullPath, path)),
+                         StringComparer.Ordinal)
+                     .ThenBy(path => path, StringComparer.Ordinal))
             {
                 if (!IsAllowedExtension(file, allowedExtensions))
                 {
@@ -47,7 +61,7 @@ internal sealed class WorkflowSourceFileResolver
 
                 yield return new WorkflowSourceIngestionFile(
                     file,
-                    ToDisplayPath(file, directory),
+                    ToDisplayPath(file, directory, directoryPathPolicy),
                     Path.GetFileName(file));
                 count++;
                 if (count >= take)
@@ -81,7 +95,7 @@ internal sealed class WorkflowSourceFileResolver
         {
             return paths.ResolveFilePath(path, allowMissing: false);
         }
-        catch (InvalidOperationException) when (settings.AllowAbsoluteInputPaths && Path.IsPathRooted(path))
+        catch (InvalidOperationException) when (settings.AllowAbsoluteInputPaths && IsNativeAbsolutePath(path))
         {
             var fullPath = Path.GetFullPath(path);
             if (!File.Exists(fullPath))
@@ -89,12 +103,15 @@ internal sealed class WorkflowSourceFileResolver
                 throw new InvalidOperationException($"Source file '{fullPath}' was not found.");
             }
 
-            return new WorkspaceResolvedPath(fullPath, NormalizeAbsoluteDisplayPath(fullPath), IsWorkspacePath: false);
+            physicalPathPolicyFactory.Create(fullPath).EnsureSafePath(fullPath);
+
+            return new WorkspaceResolvedPath(fullPath, ToExternalTargetAlias(fullPath), IsWorkspacePath: false);
         }
     }
 
     private IEnumerable<string> EnumerateAccessibleFiles(
         WorkspaceResolvedPath directory,
+        IPhysicalFileSystemPathPolicy directoryPathPolicy,
         bool recursive)
     {
         IEnumerator<string> enumerator;
@@ -126,6 +143,15 @@ internal sealed class WorkflowSourceFileResolver
                     yield break;
                 }
 
+                try
+                {
+                    directoryPathPolicy.EnsureSafePath(enumerator.Current);
+                }
+                catch (Exception exception) when (exception is UnauthorizedAccessException or IOException)
+                {
+                    throw WorkspaceToolAccessDeniedException.InaccessiblePath(directory.RelativePath);
+                }
+
                 yield return enumerator.Current;
             }
         }
@@ -151,7 +177,7 @@ internal sealed class WorkflowSourceFileResolver
         {
             return paths.ResolveDirectoryPath(path, allowMissing: false);
         }
-        catch (InvalidOperationException) when (settings.AllowAbsoluteInputPaths && Path.IsPathRooted(path))
+        catch (InvalidOperationException) when (settings.AllowAbsoluteInputPaths && IsNativeAbsolutePath(path))
         {
             var fullPath = Path.GetFullPath(path);
             if (!Directory.Exists(fullPath))
@@ -159,7 +185,9 @@ internal sealed class WorkflowSourceFileResolver
                 throw new InvalidOperationException($"Source directory '{fullPath}' was not found.");
             }
 
-            return new WorkspaceResolvedPath(fullPath, NormalizeAbsoluteDisplayPath(fullPath), IsWorkspacePath: false);
+            physicalPathPolicyFactory.Create(fullPath).EnsureSafePath(fullPath);
+
+            return new WorkspaceResolvedPath(fullPath, ToExternalTargetAlias(fullPath), IsWorkspacePath: false);
         }
     }
 
@@ -168,11 +196,14 @@ internal sealed class WorkflowSourceFileResolver
         WorkflowSourceIngestionExecutorSettings settings)
     {
         var path = NormalizeInputPath(value);
-        if (Path.IsPathRooted(path))
+        if (PhysicalPathSyntaxClassifier.Classify(path) != PhysicalPathSyntax.Relative)
         {
-            return settings.AllowAbsoluteInputPaths
-                ? Path.GetFullPath(path)
-                : path;
+            if (!settings.AllowAbsoluteInputPaths || !IsNativeAbsolutePath(path))
+            {
+                return path;
+            }
+
+            return Path.GetFullPath(path);
         }
 
         try
@@ -191,22 +222,73 @@ internal sealed class WorkflowSourceFileResolver
         => allowedExtensions.Count == 0 || allowedExtensions.Contains(Path.GetExtension(fullPath));
 
     private static string NormalizeInputPath(string value)
-        => value.Trim(PathTrimCharacters).Replace('/', Path.DirectorySeparatorChar);
+        => value.Trim(PathTrimCharacters);
 
-    private static string NormalizeAbsoluteDisplayPath(string value)
-        => Path.GetFullPath(value).Replace('\\', '/');
+    public string ToSafeDisplayPath(string value)
+    {
+        var path = NormalizeInputPath(value);
+        var syntax = PhysicalPathSyntaxClassifier.Classify(path);
+        var nativeAbsolute = IsNativeAbsolutePath(path);
+        if (!nativeAbsolute)
+        {
+            return syntax == PhysicalPathSyntax.Relative
+                ? value
+                : "external-target/unresolved";
+        }
 
-    private static string ToDisplayPath(string fullPath, WorkspaceResolvedPath directory)
+        try
+        {
+            return ToExternalTargetAlias(Path.GetFullPath(path));
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
+        {
+            return "external-target/unresolved";
+        }
+    }
+
+    private string ToExternalTargetAlias(string fullPath)
+    {
+        if (externalTargetPathRegistry.TryCreateAlias(fullPath, out var alias))
+        {
+            return alias;
+        }
+
+        throw new InvalidOperationException(
+            "The external source path could not be bound to an opaque external-target alias on this host.");
+    }
+
+    private string ToDisplayPath(
+        string fullPath,
+        WorkspaceResolvedPath directory,
+        IPhysicalFileSystemPathPolicy directoryPathPolicy)
     {
         if (!directory.IsWorkspacePath)
         {
-            return NormalizeAbsoluteDisplayPath(fullPath);
+            return ToExternalTargetAlias(fullPath);
         }
 
-        return NormalizeAbsoluteDisplayPath(fullPath).StartsWith(
-            NormalizeAbsoluteDisplayPath(directory.FullPath),
-            StringComparison.OrdinalIgnoreCase)
-            ? Path.Combine(directory.RelativePath, Path.GetRelativePath(directory.FullPath, fullPath)).Replace('\\', '/')
-            : NormalizeAbsoluteDisplayPath(fullPath);
+        if (!directoryPathPolicy.IsWithinRoot(fullPath))
+        {
+            return ToExternalTargetAlias(fullPath);
+        }
+
+        var relativePath = NormalizeEnumerationKey(Path.GetRelativePath(directory.FullPath, fullPath));
+        var logicalCandidate = $"{directory.RelativePath.TrimEnd('/')}/{relativePath}";
+        return LogicalPath.TryParse(logicalCandidate, out var logicalPath)
+            ? logicalPath!.Value
+            : ToExternalTargetAlias(fullPath);
     }
+
+    private static string NormalizeEnumerationKey(string relativePath)
+        => relativePath
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
+
+    private static bool IsNativeAbsolutePath(string path)
+    {
+        var syntax = PhysicalPathSyntaxClassifier.Classify(path);
+        return syntax == PhysicalPathSyntax.UnixAbsolute && !OperatingSystem.IsWindows() ||
+               syntax is PhysicalPathSyntax.WindowsDriveAbsolute or PhysicalPathSyntax.WindowsUnc && OperatingSystem.IsWindows();
+    }
+
 }

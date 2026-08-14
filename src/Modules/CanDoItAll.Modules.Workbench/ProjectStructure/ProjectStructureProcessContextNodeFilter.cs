@@ -106,7 +106,8 @@ internal static class ProjectStructureProcessContextNodeFilter
 
         if (artifactKind.StartsWith("process-run", StringComparison.OrdinalIgnoreCase) ||
             ContainsProcessRunPath(route) ||
-            ContainsProcessRunPath(mediaRelativePath))
+            ContainsProcessRunPath(mediaRelativePath) ||
+            ContainsProcessRunPath(notes))
         {
             return true;
         }

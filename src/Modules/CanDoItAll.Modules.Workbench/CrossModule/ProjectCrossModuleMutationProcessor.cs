@@ -14,7 +14,13 @@ internal sealed record DeleteSubtreeMutationPayload(
     int LinkCount,
     IReadOnlyList<StorageObjectReference>? ManagedStorageObjects = null,
     IReadOnlyList<ProjectManagedStorageDeletionOutcome>? ManagedStorageOutcomes = null,
-    IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null);
+    IReadOnlyList<ProjectManagedStorageDeletionCandidate>? ManagedStorageCandidates = null,
+    ProjectStructureManagedStorageDisposition ManagedStorageDisposition =
+        ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles);
+
+internal sealed record ProjectCrossModuleMutationProcessingResult(
+    ProjectCrossModuleMutationStatus Status,
+    string PayloadJson);
 
 internal sealed record DeleteProjectMutationPayload(
     IReadOnlyList<string> DeletedNodeKeys,
@@ -77,6 +83,11 @@ public sealed class ProjectCrossModuleMutationProcessor(
     internal async Task<ProjectCrossModuleMutationStatus?> ProcessAsync(
         Guid mutationId,
         CancellationToken cancellationToken = default)
+        => (await ProcessWithPayloadAsync(mutationId, cancellationToken))?.Status;
+
+    internal async Task<ProjectCrossModuleMutationProcessingResult?> ProcessWithPayloadAsync(
+        Guid mutationId,
+        CancellationToken cancellationToken = default)
     {
         var processingLock = ResolveProcessingLock(mutationId);
         await processingLock.WaitAsync(cancellationToken);
@@ -94,24 +105,30 @@ public sealed class ProjectCrossModuleMutationProcessor(
 
             if (current.Status == ProjectCrossModuleMutationStatus.Completed)
             {
-                return current.Status;
+                return new(current.Status, current.PayloadJson);
             }
 
             if (current.ApprovalState is ProjectCrossModuleMutationApprovalState.Pending or
                 ProjectCrossModuleMutationApprovalState.Rejected)
             {
-                return current.Status;
+                return new(current.Status, current.PayloadJson);
             }
 
             var claimToken = $"processing:{Guid.NewGuid():N}";
             if (!await TryClaimAsync(dbContext, mutationId, claimToken, cancellationToken))
             {
-                var status = await dbContext.Set<ProjectCrossModuleMutationRecord>()
+                var observed = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                     .AsNoTracking()
                     .Where(item => item.Id == mutationId)
-                    .Select(item => (ProjectCrossModuleMutationStatus?)item.Status)
+                    .Select(item => new
+                    {
+                        Status = (ProjectCrossModuleMutationStatus?)item.Status,
+                        item.PayloadJson
+                    })
                     .FirstOrDefaultAsync(cancellationToken);
-                return status;
+                return observed?.Status is { } observedStatus
+                    ? new(observedStatus, observed.PayloadJson)
+                    : null;
             }
 
             var mutation = await dbContext.Set<ProjectCrossModuleMutationRecord>()
@@ -133,11 +150,12 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     claimToken,
                     processingCancellation.Token);
                 await StopHeartbeatAsync(heartbeatStop, heartbeatTask, suppressFailure: false);
-                return await CompleteClaimAsync(
+                var completedStatus = await CompleteClaimAsync(
                     dbContext,
                     mutationId,
                     claimToken,
                     cancellationToken);
+                return new(completedStatus, mutation.PayloadJson);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -155,7 +173,9 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     failureTimeout.Token);
                 if (!failedByOwner)
                 {
-                    _ = await LoadStatusAsync(mutationId, failureTimeout.Token);
+                    _ = await LoadProcessingResultAsync(
+                        mutationId,
+                        failureTimeout.Token);
                 }
                 throw;
             }
@@ -174,10 +194,19 @@ public sealed class ProjectCrossModuleMutationProcessor(
                     claimToken,
                     $"Durable reconciliation failed ({exception.GetType().Name}). Retry is required.",
                     failureTimeout.Token);
-                return failedByOwner
-                    ? ProjectCrossModuleMutationStatus.Failed
-                    : await LoadStatusAsync(mutationId, failureTimeout.Token)
-                      ?? ProjectCrossModuleMutationStatus.Failed;
+                if (failedByOwner)
+                {
+                    return new(
+                        ProjectCrossModuleMutationStatus.Failed,
+                        mutation.PayloadJson);
+                }
+
+                return await LoadProcessingResultAsync(
+                           mutationId,
+                           failureTimeout.Token)
+                       ?? new(
+                           ProjectCrossModuleMutationStatus.Failed,
+                           mutation.PayloadJson);
             }
         }
         finally
@@ -622,16 +651,23 @@ public sealed class ProjectCrossModuleMutationProcessor(
         return affected == 1;
     }
 
-    private async Task<ProjectCrossModuleMutationStatus?> LoadStatusAsync(
+    private async Task<ProjectCrossModuleMutationProcessingResult?> LoadProcessingResultAsync(
         Guid mutationId,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await dbContext.Set<ProjectCrossModuleMutationRecord>()
+        var observed = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
             .Where(record => record.Id == mutationId)
-            .Select(record => (ProjectCrossModuleMutationStatus?)record.Status)
+            .Select(record => new
+            {
+                record.Status,
+                record.PayloadJson
+            })
             .SingleOrDefaultAsync(cancellationToken);
+        return observed is null
+            ? null
+            : new(observed.Status, observed.PayloadJson);
     }
 
     private static async Task<ProjectCrossModuleMutationRecord> GetOwnedClaimAsync(

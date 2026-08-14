@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -229,13 +230,9 @@ public sealed class ProjectManagedStorageDeletionTests
         var legacy = CreateObject(projectId, "asset:legacy");
         var upgradedCopy = CreateObject(projectId, "asset:copy");
         var storageId = Guid.NewGuid();
-        dbContext.Add(new StorageCatalogRecord
-        {
-            Id = storageId,
-            Name = "Bootstrap",
-            ProviderKind = StorageProviderKind.FileSystem,
-            IsSystemDefault = true
-        });
+        StorageCatalogRecord bootstrapStorage = CreateBootstrapStorage();
+        bootstrapStorage.Id = storageId;
+        dbContext.Add(bootstrapStorage);
         dbContext.AddRange(legacy, upgradedCopy);
         dbContext.AddRange(
             new ProjectNodeBindingRecord
@@ -262,26 +259,85 @@ public sealed class ProjectManagedStorageDeletionTests
             return;
         }
 
-        await using var dbContext = CreateDbContext();
-        var projectId = Guid.NewGuid();
-        var candidate = CreateObject(projectId, "asset:candidate");
-        var survivor = CreateObject(projectId, "asset:survivor");
-        dbContext.AddRange(candidate, survivor);
-        dbContext.AddRange(
-            new ProjectNodeBindingRecord
-            {
-                ProjectObjectId = candidate.Id,
-                MediaRelativePath = "managed-files/project-media/files/Shared.txt",
-                StorageObjectReferenceJson = StorageJson.SerializeReference(CreateReference("Shared.txt"))
-            },
-            CreateBinding(survivor.Id, CreateReference("shared.txt")));
-        await dbContext.SaveChangesAsync();
+        Directory.CreateDirectory(Path.Combine(
+            StubWorkspacePathResolver.RootPath,
+            "managed-files",
+            "project-media",
+            "files"));
+        try
+        {
+            await using var dbContext = CreateDbContext();
+            var projectId = Guid.NewGuid();
+            var candidate = CreateObject(projectId, "asset:candidate");
+            var survivor = CreateObject(projectId, "asset:survivor");
+            dbContext.AddRange(candidate, survivor);
+            dbContext.AddRange(
+                new ProjectNodeBindingRecord
+                {
+                    ProjectObjectId = candidate.Id,
+                    MediaRelativePath = "managed-files/project-media/files/Shared.txt",
+                    StorageObjectReferenceJson = StorageJson.SerializeReference(CreateReference("Shared.txt"))
+                },
+                CreateBinding(survivor.Id, CreateReference("shared.txt")));
+            await dbContext.SaveChangesAsync();
 
-        var plan = await CreatePlanner().PlanAsync(
-            dbContext,
-            [candidate.Id]);
+            var plan = await CreatePlanner().PlanAsync(
+                dbContext,
+                [candidate.Id]);
 
-        Assert.Empty(plan.References);
+            Assert.Empty(plan.References);
+        }
+        finally
+        {
+            Directory.Delete(StubWorkspacePathResolver.RootPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Planner_does_not_conflate_case_distinct_files_on_a_sensitive_root()
+    {
+        Directory.CreateDirectory(Path.Combine(
+            StubWorkspacePathResolver.RootPath,
+            "managed-files",
+            "project-media",
+            "files"));
+        if (TestWorkspaceServices.PhysicalPathPolicyFactory
+                .Create(StubWorkspacePathResolver.RootPath)
+                .CaseSensitivity != PhysicalFileSystemCaseSensitivity.Sensitive)
+        {
+            Directory.Delete(StubWorkspacePathResolver.RootPath, recursive: true);
+            return;
+        }
+
+        try
+        {
+            await using var dbContext = CreateDbContext();
+            var projectId = Guid.NewGuid();
+            var candidate = CreateObject(projectId, "asset:candidate-sensitive");
+            var survivor = CreateObject(projectId, "asset:survivor-sensitive");
+            dbContext.AddRange(candidate, survivor);
+            dbContext.AddRange(
+                new ProjectNodeBindingRecord
+                {
+                    ProjectObjectId = candidate.Id,
+                    MediaRelativePath = "managed-files/project-media/files/Shared.txt",
+                    StorageObjectReferenceJson = StorageJson.SerializeReference(CreateReference("Shared.txt"))
+                },
+                CreateBinding(survivor.Id, CreateReference("shared.txt")));
+            await dbContext.SaveChangesAsync();
+
+            ProjectManagedStorageDeletionPlan plan = await CreatePlanner().PlanAsync(
+                dbContext,
+                [candidate.Id]);
+
+            Assert.Equal(
+                "managed-files/project-media/files/Shared.txt",
+                Assert.Single(plan.References).Locator);
+        }
+        finally
+        {
+            Directory.Delete(StubWorkspacePathResolver.RootPath, recursive: true);
+        }
     }
 
     [Fact]
@@ -798,7 +854,9 @@ public sealed class ProjectManagedStorageDeletionTests
         => new(CreatePhysicalIdentityPolicy());
 
     private static ProjectManagedStoragePhysicalIdentityPolicy CreatePhysicalIdentityPolicy()
-        => new(new FileSystemStoragePathPolicy(new StubWorkspacePathResolver()));
+        => new(
+            new FileSystemStoragePathPolicy(new StubWorkspacePathResolver()),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
     private static ProjectManagedStorageDeletionCandidate CreateDeletionCandidate(
         StorageObjectReference reference,
@@ -819,7 +877,8 @@ public sealed class ProjectManagedStorageDeletionTests
     }
 
     private static StorageCatalogRecord CreateBootstrapStorage()
-        => new()
+    {
+        var storage = new StorageCatalogRecord
         {
             Id = Guid.NewGuid(),
             Name = "Bootstrap",
@@ -829,6 +888,12 @@ public sealed class ProjectManagedStorageDeletionTests
             EndpointOrRoot = StubWorkspacePathResolver.RootPath,
             CapabilityMask = StorageCapability.Read | StorageCapability.Delete
         };
+        StorageCatalogHostBindingPolicy.BindCurrent(
+            storage,
+            storage.EndpointOrRoot,
+            DateTimeOffset.UtcNow);
+        return storage;
+    }
 
     private static ProjectObjectRecord CreateObject(Guid projectId, string nodeKey)
         => new()
@@ -873,15 +938,28 @@ public sealed class ProjectManagedStorageDeletionTests
             CreatePhysicalIdentityPolicy());
 
     private static StorageCatalogRecord CreateStorage(Guid id, StorageProviderKind providerKind)
-        => new()
+    {
+        var storage = new StorageCatalogRecord
         {
             Id = id,
             Name = "Deletion storage",
             ProviderKind = providerKind,
             IsEnabled = true,
             CapabilityMask = StorageCapability.Read | StorageCapability.Delete,
-            EndpointOrRoot = "unused"
+            EndpointOrRoot = providerKind == StorageProviderKind.FileSystem
+                ? StubWorkspacePathResolver.RootPath
+                : "unused"
         };
+        if (providerKind == StorageProviderKind.FileSystem)
+        {
+            StorageCatalogHostBindingPolicy.BindCurrent(
+                storage,
+                storage.EndpointOrRoot,
+                DateTimeOffset.UtcNow);
+        }
+
+        return storage;
+    }
 
     private sealed class StubStorageCatalogService(
         StorageCatalogRecord storage,
@@ -918,7 +996,11 @@ public sealed class ProjectManagedStorageDeletionTests
 
         internal static string RootPath => Root;
 
-        public string ResolveWorkspaceRoot() => Root;
+        public string ResolveWorkspaceRoot()
+        {
+            Directory.CreateDirectory(Root);
+            return Root;
+        }
 
         public string ResolveManagedFilesRoot() => Path.Combine(Root, "managed-files");
 

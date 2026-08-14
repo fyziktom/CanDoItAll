@@ -1,0 +1,13 @@
+invalidation_key,owner,surface,required_validation
+process-plan-hash-v2,M01,ProcessPlanHasher; persistence mapper; legacy fixtures,process persistence and replay tests; full stable at C1/M08
+filetools-source-contract,M02,Directory.Build.targets; FileTools marker,package/source builds; capability tests
+owned-process-group,M03,LocalWorkspaceProcessHost,process-host and Workbench/Manager/MCP lifecycle tests
+mcp-peer-control,M04,JSON-RPC connection/runtime client,MCP fake-server tests; runtime MCP subset
+docker-recipe-contract,M05,DockerHostToolService,Docker unit/integration; no immediate full stable
+compose-local-stack,M05,Compose/Dockerfile/password file,Docker validator and stack smoke
+workspace-path-authority,M06,WorkspacePathAccessGuard,path/storage/agent workspace tests
+executable-resolution,M06,WorkspaceExecutableLocator,executable/env/process tests
+validation-catalog,M07,Test-RuntimePortability.ps1,runner self-tests; does not invalidate product behavior alone
+validation-build-stamp,M07,commit/source/mode/SDK/anchor/assembly identity,runner negative fixtures; does not invalidate product behavior alone
+runtime-fqn-catalog,M07,RuntimePortabilityCatalog.json,exact class/FQN/count discovery; no product full suite
+canonical-bookkeeping,M07/M10,bundle reports/inventories/checksums,validators only; no full test invalidation

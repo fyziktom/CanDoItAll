@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "F00",
+  "title": "Freeze and characterize the exact candidate",
+  "goal": "Re-anchor the bundle to the actual branch HEAD and create failing-first proof for the three blockers.",
+  "tasks": [
+    {
+      "id": "T01",
+      "description": "Record branch HEAD, development HEAD, merge base, SDK and dependency mode.",
+      "status": "planned"
+    },
+    {
+      "id": "T02",
+      "description": "Inspect any delta after the reviewed anchor before editing.",
+      "status": "planned"
+    },
+    {
+      "id": "T03",
+      "description": "Add a post-cut-off LegacyV1 process-plan fixture that fails under current classification.",
+      "status": "planned"
+    },
+    {
+      "id": "T04",
+      "description": "Add an injectable ownership-attachment failure fixture that proves a survivor under current startup cleanup.",
+      "status": "planned"
+    },
+    {
+      "id": "T05",
+      "description": "Add a schema-1 Manager registry JSON fixture without Boundary and prove current handling is unsafe or non-typed.",
+      "status": "planned"
+    },
+    {
+      "id": "T06",
+      "description": "Do not modify production behavior until the failing-first evidence is recorded.",
+      "status": "planned"
+    }
+  ]
+}

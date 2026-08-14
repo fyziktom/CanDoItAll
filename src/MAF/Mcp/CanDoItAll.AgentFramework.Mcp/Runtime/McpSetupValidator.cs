@@ -94,6 +94,14 @@ internal static class McpSetupValidator
                 "Replace raw environment variables with environmentVariableBindings.");
         }
 
+        var environmentBindingFailure = ValidateLocalEnvironmentBindings(
+            descriptor,
+            correlationId);
+        if (environmentBindingFailure is not null)
+        {
+            return environmentBindingFailure;
+        }
+
         if (!LocalMcpCommandPolicy.IsAllowed(descriptor.Command))
         {
             return McpSetupFailureFactory.Create(
@@ -101,8 +109,33 @@ internal static class McpSetupValidator
                 correlationId,
                 CapabilityDiagnosticCategory.CommandPolicy,
                 "$.command",
-                $"Local MCP command '{descriptor.Command}' is outside the approved command policy.",
+                $"Local MCP server '{descriptor.ServerKey}' uses a command outside the approved command policy.",
                 $"Use an approved command. Allowed commands: {LocalMcpCommandPolicy.DescribeAllowedCommands()}.");
+        }
+
+        return null;
+    }
+
+    private static McpSetupTestResult? ValidateLocalEnvironmentBindings(
+        LocalStdioMcpServerDescriptor descriptor,
+        string correlationId)
+    {
+        var environmentPolicy = new WorkspaceCommandEnvironmentPolicy();
+        var targetNames = new HashSet<string>(environmentPolicy.EnvironmentNameComparer);
+        foreach (var (targetName, sourceName) in descriptor.EnvironmentVariableBindings)
+        {
+            if (!McpEnvironmentVariableNamePolicy.IsValid(targetName) ||
+                !McpEnvironmentVariableNamePolicy.IsValid(sourceName) ||
+                !targetNames.Add(targetName))
+            {
+                return McpSetupFailureFactory.Create(
+                    descriptor,
+                    correlationId,
+                    CapabilityDiagnosticCategory.SecretBinding,
+                    "$.environmentVariableBindings",
+                    $"Local MCP server '{descriptor.ServerKey}' has an invalid or ambiguous environment variable binding.",
+                    "Map each unique target environment-variable name to one normalized runtime source environment-variable name.");
+            }
         }
 
         return null;

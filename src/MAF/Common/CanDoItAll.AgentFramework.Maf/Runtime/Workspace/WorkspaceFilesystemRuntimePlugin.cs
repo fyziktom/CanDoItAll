@@ -1,11 +1,13 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class WorkspaceFilesystemRuntimePlugin(
     IWorkspaceFileService fileService,
     string workspaceRoot,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     WorkspaceScopeDescriptor workspaceScope,
     AgentWorkspaceToolAccessSettings accessSettings)
 {
@@ -27,7 +29,11 @@ internal sealed class WorkspaceFilesystemRuntimePlugin(
 
     private readonly IWorkspaceFileService fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
     private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
-    private readonly WorkspaceRuntimeFileAccessGuard fileAccess = new(workspaceRoot, workspaceScope, accessSettings);
+    private readonly WorkspaceRuntimeFileAccessGuard fileAccess = new(
+        workspaceRoot,
+        physicalPathPolicyFactory,
+        workspaceScope,
+        accessSettings);
 
     public WorkspaceFileListResult ListWorkspaceDirectory(string? relativePath = null, int maxResults = 100)
     {

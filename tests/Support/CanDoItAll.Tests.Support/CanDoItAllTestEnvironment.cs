@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
@@ -29,6 +30,19 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
     public static CanDoItAllTestEnvironment Create(string prefix)
     {
         var rootPath = TestFileSystem.CreateTemporaryRoot(prefix);
+        return new CanDoItAllTestEnvironment(rootPath);
+    }
+
+    public static CanDoItAllTestEnvironment CreateUnder(string parentPath, string prefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        var rootPath = Path.Combine(
+            Path.GetFullPath(parentPath),
+            prefix,
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(rootPath);
         return new CanDoItAllTestEnvironment(rootPath);
     }
 
@@ -107,8 +121,7 @@ public sealed class CanDoItAllTestEnvironment : IAsyncDisposable
 
     private static string SanitizeSegment(string value)
     {
-        var sanitized = string.Concat(value.Trim().Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
+        string sanitized = PortablePhysicalFileNamePolicy.Encode(value.Trim()).PhysicalName;
 
         if (string.IsNullOrWhiteSpace(sanitized))
         {
@@ -235,6 +248,20 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
 
     private static string FindRepositoryRoot()
     {
+        const string repositoryRootEnvironmentVariable = "CANDOITALL_TEST_REPOSITORY_ROOT";
+        string? configuredRoot = Environment.GetEnvironmentVariable(repositoryRootEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(configuredRoot))
+        {
+            string resolvedRoot = Path.GetFullPath(configuredRoot);
+            if (!File.Exists(Path.Combine(resolvedRoot, "CanDoItAll.slnx")))
+            {
+                throw new InvalidOperationException(
+                    $"{repositoryRootEnvironmentVariable} does not identify the CanDoItAll repository root.");
+            }
+
+            return resolvedRoot;
+        }
+
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {

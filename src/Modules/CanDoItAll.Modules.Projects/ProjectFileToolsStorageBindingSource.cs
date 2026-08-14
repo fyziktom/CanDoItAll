@@ -1,5 +1,6 @@
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,8 @@ namespace CanDoItAll.Modules.Projects;
 internal sealed class ProjectFileToolsStorageBindingSource(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IStorageCatalogService storageCatalog,
-    IWorkspacePathResolver workspacePathResolver) : IFileToolsStorageBindingSource
+    IWorkspacePathResolver workspacePathResolver,
+    DurableFileWriter durableFileWriter) : IFileToolsStorageBindingSource
 {
     private static readonly FileToolsBrowseWorkLimits WorkLimits = new(
         maximumReturnedItems: 50,
@@ -61,21 +63,24 @@ internal sealed class ProjectFileToolsStorageBindingSource(
 
     private void EnsureProjectDirectory(FileToolsStorageRoot root)
     {
-        string workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        string projectDirectory = Path.GetFullPath(Path.Combine(
-            workspaceRoot,
-            root.Value.Replace('/', Path.DirectorySeparatorChar)));
-        string workspacePrefix = workspaceRoot.TrimEnd(
-            Path.DirectorySeparatorChar,
-            Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (!projectDirectory.StartsWith(workspacePrefix, StringComparison.OrdinalIgnoreCase))
+        try
         {
-            throw ProviderError(
-                FileBrowserErrorCode.Forbidden,
-                "The project file scope is outside the active workspace.");
+            string workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
+            string projectDirectory = Path.Combine([workspaceRoot, .. root.Value.Split('/')]);
+            durableFileWriter.EnsureDirectory(
+                workspaceRoot,
+                projectDirectory,
+                requirePrivateUnixMode: false);
         }
-
-        Directory.CreateDirectory(projectDirectory);
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or NotSupportedException or UnauthorizedAccessException)
+        {
+            throw new FileBrowserProviderException(
+                new FileBrowserError(
+                    FileBrowserErrorCode.Forbidden,
+                    "The project file scope cannot be created safely inside the active workspace."),
+                exception);
+        }
     }
 
     private static FileBrowserProviderException ProviderError(FileBrowserErrorCode code, string message)

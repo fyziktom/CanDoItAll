@@ -465,6 +465,10 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
         {
             var latestProject = Directory.EnumerateFiles(standaloneRoot, "GeneratedBlazorApp.csproj", SearchOption.AllDirectories)
                 .OrderByDescending(File.GetLastWriteTimeUtc)
+                .ThenBy(
+                    path => NormalizeEnumerationKey(Path.GetRelativePath(standaloneRoot, path)),
+                    StringComparer.Ordinal)
+                .ThenBy(path => path, StringComparer.Ordinal)
                 .FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(latestProject))
             {
@@ -618,6 +622,11 @@ internal sealed partial class ScenarioHarnessAgentRuntime(
     {
         return Path.GetRelativePath(workspaceRoot, fullPath).Replace('\\', '/');
     }
+
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 
     private static int EstimateTokens(string content)
         => Math.Max(1, (content ?? string.Empty).Length / 4);

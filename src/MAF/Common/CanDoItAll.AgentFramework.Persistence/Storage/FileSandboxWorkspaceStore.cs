@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
@@ -90,10 +92,19 @@ public sealed partial class FileSandboxWorkspaceStore :
         Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null)
     {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
-        jsonStore = new FileSandboxWorkspaceJsonStore(jsonReadDiagnostics);
+        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
+        var durableFileWriter = new DurableFileWriter(physicalPathPolicyFactory);
+        jsonStore = new FileSandboxWorkspaceJsonStore(
+            jsonReadDiagnostics,
+            physicalPathPolicyFactory,
+            durableFileWriter,
+            layout.RootPath);
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
-        crossProcessLock = new FileSandboxWorkspaceCrossProcessLock(layout.WorkspaceLockPath);
+        crossProcessLock = new FileSandboxWorkspaceCrossProcessLock(
+            layout.RootPath,
+            layout.WorkspaceLockPath,
+            durableFileWriter);
         this.chatBackedRunCommitBoundary = chatBackedRunCommitBoundary;
         this.genericNewRunCommitBoundary = genericNewRunCommitBoundary;
         this.existingRunDetailCommitBoundary = existingRunDetailCommitBoundary;
@@ -893,7 +904,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         long currentRevision,
         CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
 
         var catalogSave = await SaveCatalogCoreAsync(document.ToCatalog(), cancellationToken);
         var executionChanged = await SaveExecutionCoreAsync(previousDocument.ToExecutionState(), document.ToExecutionState(), cancellationToken);
@@ -1078,7 +1089,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ChatIndexPersisted);
 
-        File.Delete(PendingExistingRunDetailCommitJournalPath);
+        await jsonStore.DeleteFileAsync(PendingExistingRunDetailCommitJournalPath, cancellationToken);
         return journal.PersistencePlan.TargetDetail;
     }
 
@@ -1171,7 +1182,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         NotifyGenericNewRunCommitBoundary(
             GenericNewRunCommitStage.ChatIndexPersisted);
 
-        File.Delete(PendingGenericNewRunCommitJournalPath);
+        await jsonStore.DeleteFileAsync(PendingGenericNewRunCommitJournalPath, cancellationToken);
         return persistedDetail;
     }
 
@@ -1245,7 +1256,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         NotifyChatBackedRunCommitBoundary(
             ChatBackedRunCommitStage.ChatProjectionPersisted);
 
-        File.Delete(PendingChatBackedRunCommitJournalPath);
+        await jsonStore.DeleteFileAsync(PendingChatBackedRunCommitJournalPath, cancellationToken);
         return persistedDetail;
     }
 
@@ -1309,7 +1320,7 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task EnsureSplitFilesCoreAsync(CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
         await RecoverPendingExecutionCommitAsync(cancellationToken);
 
         if (!File.Exists(layout.CatalogPath) &&
@@ -1368,7 +1379,7 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task EnsureCatalogReadCoreAsync(CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
         await RecoverPendingExecutionCommitAsync(cancellationToken);
 
         if (executionSliceStore.ExecutionStorageExists())
@@ -1388,7 +1399,7 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     private async Task EnsureExecutionSummaryReadCoreAsync(CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
         await RecoverPendingExecutionCommitAsync(cancellationToken);
 
         if (executionSliceStore.ExecutionStorageExists())

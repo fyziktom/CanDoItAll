@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -86,12 +87,28 @@ public sealed class WorkflowTemplatePackLoader
                 manifestPath,
                 string.Empty,
                 $"workflowFiles[{index}].relativePath");
-            var relativePath = WorkflowTemplateDiagnostics.Require(
+            var relativePathValue = WorkflowTemplateDiagnostics.Require(
                 file.RelativePath,
                 "workflow file relative path",
                 referenceContext,
                 "Set workflowFiles[].relativePath to a YAML file under the workflow template pack root.");
-            var workflowFilePath = Path.GetFullPath(Path.Combine(root, relativePath));
+            LogicalPath relativePath;
+            try
+            {
+                relativePath = LogicalPath.ParseLegacyWindowsLogicalPath(relativePathValue);
+            }
+            catch (ArgumentException exception)
+            {
+                throw WorkflowTemplateDiagnostics.CreateException(
+                    WorkflowTemplateFailureKind.ManifestLoadFailed,
+                    "Workflow template file reference is not a valid pack-relative logical path.",
+                    referenceContext,
+                    "Use a canonical '/'-separated path under the template pack root without rooted, empty, or dot segments.",
+                    exception);
+            }
+
+            file.RelativePath = relativePath.Value;
+            var workflowFilePath = Path.GetFullPath(Path.Combine(root, Path.Combine(relativePath.Segments.ToArray())));
             var workflowFile = WorkflowTemplateYamlReader.Read<WorkflowTemplateFile>(
                 workflowFilePath,
                 WorkflowTemplateFailureKind.WorkflowLoadFailed,

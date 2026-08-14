@@ -1,27 +1,27 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentStore
 {
-    private readonly string workspaceRoot;
-    private readonly string artifactRoot;
     private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IWorkspacePathResolutionService pathResolutionService;
+    private readonly IWorkspaceFileService workspaceFiles;
 
     public FileWorkflowArtifactContentStore(
-        string workspaceRoot,
-        WorkspaceScopeDescriptor? workspaceScope = null)
+        WorkspaceScopeDescriptor workspaceScope,
+        IWorkspacePathResolutionService pathResolutionService,
+        IWorkspaceFileService workspaceFiles)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
-
-        var resolvedScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
-        this.workspaceScope = resolvedScope;
-        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
-        artifactRoot = Path.GetFullPath(resolvedScope.ResolveArtifactRoot(this.workspaceRoot));
+        this.workspaceScope = workspaceScope ?? throw new ArgumentNullException(nameof(workspaceScope));
+        this.pathResolutionService = pathResolutionService ??
+            throw new ArgumentNullException(nameof(pathResolutionService));
+        this.workspaceFiles = workspaceFiles ?? throw new ArgumentNullException(nameof(workspaceFiles));
     }
 
-    public async Task SaveContentAsync(
+    public Task SaveContentAsync(
         WorkflowArtifactRecord artifact,
         string content,
         CancellationToken cancellationToken = default)
@@ -29,14 +29,18 @@ public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentS
         ArgumentNullException.ThrowIfNull(artifact);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var fullPath = ResolveArtifactContentPath(artifact);
-        var directory = Path.GetDirectoryName(fullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
+        WorkspaceResolvedPath resolved = ResolveArtifactContentPath(artifact, allowMissing: true);
+        WorkspaceFileMutationResult result = workspaceFiles.WriteTextFile(
+            resolved.RelativePath,
+            content ?? string.Empty,
+            overwrite: true);
+        if (!result.Succeeded)
         {
-            Directory.CreateDirectory(directory);
+            throw new InvalidOperationException(
+                $"Workflow artifact '{artifact.Id}' content could not be persisted: {result.Message}");
         }
 
-        await File.WriteAllTextAsync(fullPath, content ?? string.Empty, cancellationToken);
+        return Task.CompletedTask;
     }
 
     public async Task<WorkflowArtifactContent?> ReadContentAsync(
@@ -46,65 +50,67 @@ public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentS
         ArgumentNullException.ThrowIfNull(artifact);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var artifactContentPath = ResolveArtifactContentPath(artifact);
-        if (File.Exists(artifactContentPath))
+        WorkspaceResolvedPath artifactContentPath = ResolveArtifactContentPath(artifact, allowMissing: true);
+        if (File.Exists(artifactContentPath.FullPath))
         {
+            artifactContentPath = ResolveArtifactContentPath(artifact, allowMissing: false);
             return new WorkflowArtifactContent(
                 artifact,
-                await File.ReadAllTextAsync(artifactContentPath, cancellationToken));
+                await File.ReadAllTextAsync(artifactContentPath.FullPath, cancellationToken));
         }
 
         if (artifact.Kind == WorkflowArtifactKind.File &&
             IsTextLike(artifact.ContentType) &&
-            TryResolveWorkspaceFile(artifact.StoragePath, out var workspaceFilePath) &&
-            File.Exists(workspaceFilePath))
+            TryResolveWorkspaceFile(artifact.StoragePath, out WorkspaceResolvedPath workspaceFilePath) &&
+            File.Exists(workspaceFilePath.FullPath))
         {
+            workspaceFilePath = pathResolutionService.ResolveFilePath(
+                workspaceFilePath.RelativePath,
+                allowMissing: false);
             return new WorkflowArtifactContent(
                 artifact,
-                await File.ReadAllTextAsync(workspaceFilePath, cancellationToken));
+                await File.ReadAllTextAsync(workspaceFilePath.FullPath, cancellationToken));
         }
 
         return null;
     }
 
-    private string ResolveArtifactContentPath(WorkflowArtifactRecord artifact)
+    private WorkspaceResolvedPath ResolveArtifactContentPath(
+        WorkflowArtifactRecord artifact,
+        bool allowMissing)
     {
-        var storagePath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.StoragePath);
-        if (string.IsNullOrWhiteSpace(storagePath))
+        LogicalPath storagePath;
+        try
         {
-            throw new InvalidOperationException($"Workflow artifact '{artifact.Id}' does not have a storage path.");
+            storagePath = LogicalPath.Parse(artifact.StoragePath);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidOperationException(
+                $"Workflow artifact '{artifact.Id}' storage path is not a canonical logical path.",
+                exception);
         }
 
-        if (Path.IsPathRooted(storagePath) ||
-            storagePath.Split('/').Any(segment => segment == ".."))
-        {
-            throw new InvalidOperationException($"Workflow artifact '{artifact.Id}' storage path is not workspace-artifact scoped.");
-        }
-
-        var fullPath = Path.GetFullPath(Path.Combine(
-            artifactRoot,
-            storagePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (!IsPathWithinRoot(fullPath, artifactRoot))
+        string relativePath = WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(
+            workspaceScope.ArtifactRootRelativePath,
+            storagePath.Value));
+        WorkspaceResolvedPath resolved = pathResolutionService.ResolveFilePath(relativePath, allowMissing);
+        if (!resolved.IsWorkspacePath)
         {
             throw new InvalidOperationException($"Workflow artifact '{artifact.Id}' storage path escapes the artifact root.");
         }
 
-        return fullPath;
+        return resolved;
     }
 
-    private bool TryResolveWorkspaceFile(string storagePath, out string fullPath)
+    private bool TryResolveWorkspaceFile(string storagePath, out WorkspaceResolvedPath resolved)
     {
-        fullPath = string.Empty;
+        resolved = default!;
         try
         {
-            var fullPathCandidate = ResolveWorkspaceFilePath(storagePath);
-            if (!IsPathWithinRoot(fullPathCandidate, workspaceRoot))
-            {
-                return false;
-            }
-
-            fullPath = fullPathCandidate;
-            return true;
+            string relativePath = ResolveWorkspaceFilePath(storagePath);
+            resolved = pathResolutionService.ResolveFilePath(relativePath, allowMissing: true);
+            return resolved.IsWorkspacePath;
         }
         catch (InvalidOperationException)
         {
@@ -127,24 +133,19 @@ public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentS
 
     private string ResolveWorkspaceFilePath(string storagePath)
     {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(storagePath);
-        if (string.IsNullOrWhiteSpace(normalized) ||
-            Path.IsPathRooted(normalized) ||
-            normalized.Split('/').Any(segment => segment == ".."))
+        LogicalPath normalized;
+        try
         {
-            throw new InvalidOperationException("Workflow artifact workspace file path is not workspace scoped.");
+            normalized = LogicalPath.Parse(storagePath);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidOperationException(
+                "Workflow artifact workspace file path is not a canonical logical path.",
+                exception);
         }
 
-        var scopedRelativePath = ApplyManagedRootScope(normalized);
-        var fullPath = Path.GetFullPath(Path.Combine(
-            workspaceRoot,
-            scopedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (!IsPathWithinRoot(fullPath, workspaceRoot))
-        {
-            throw new InvalidOperationException("Workflow artifact workspace file path escapes the workspace root.");
-        }
-
-        return fullPath;
+        return ApplyManagedRootScope(normalized.Value);
     }
 
     private string ApplyManagedRootScope(string relativePath)
@@ -177,7 +178,7 @@ public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentS
         }
 
         var foreignScopedPrefix = $"{rootName}/scopes/";
-        if (relativePath.StartsWith(foreignScopedPrefix, StringComparison.OrdinalIgnoreCase))
+        if (relativePath.StartsWith(foreignScopedPrefix, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Path '{relativePath}' targets a different managed {rootName} scope. Use the current scope '{workspaceScope.DisplayName}'.");
@@ -189,30 +190,13 @@ public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentS
             : WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(scopedRootRelativePath, suffix));
     }
 
-    private static bool IsPathWithinRoot(string fullPath, string rootPath)
-    {
-        var normalizedFullPath = Path.GetFullPath(fullPath);
-        var normalizedRoot = Path.GetFullPath(rootPath);
-        if (string.Equals(normalizedFullPath, normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        var normalizedRootWithSeparator = EnsureTrailingSeparator(normalizedRoot);
-        return normalizedFullPath.StartsWith(normalizedRootWithSeparator, StringComparison.OrdinalIgnoreCase);
-    }
-
     private static bool MatchesRoot(string relativePath, string rootRelativePath)
-        => string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase) ||
-           relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
+        => string.Equals(relativePath, rootRelativePath, StringComparison.Ordinal) ||
+           relativePath.StartsWith(rootRelativePath + "/", StringComparison.Ordinal);
 
     private static string RemoveRoot(string relativePath, string rootRelativePath)
-        => string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase)
+        => string.Equals(relativePath, rootRelativePath, StringComparison.Ordinal)
             ? string.Empty
             : relativePath[(rootRelativePath.Length + 1)..];
 
-    private static string EnsureTrailingSeparator(string path)
-        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
 }

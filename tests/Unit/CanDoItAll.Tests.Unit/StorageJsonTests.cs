@@ -21,7 +21,7 @@ public sealed class StorageJsonTests
     public void CreateLegacyManagedFileReference_normalizes_the_relative_path_and_route()
     {
         var reference = StorageJson.CreateLegacyManagedFileReference(
-            @"\proof\reports\alpha.pdf",
+            @"proof\reports\alpha.pdf",
             "application/pdf",
             "alpha.pdf",
             2048);
@@ -31,6 +31,119 @@ public sealed class StorageJsonTests
         Assert.Equal("proof/reports/alpha.pdf", reference.Locator);
         Assert.Equal("/managed-files/proof/reports/alpha.pdf", reference.Route);
         Assert.Equal(2048, reference.ContentLength);
+        Assert.Equal(StorageObjectReference.CurrentFormatVersion, reference.FormatVersion);
+    }
+
+    [Fact]
+    public void CreateLegacyManagedFileReference_rejects_a_leading_separator()
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            StorageJson.CreateLegacyManagedFileReference(
+                @"\proof\reports\alpha.pdf",
+                "application/pdf",
+                "alpha.pdf"));
+
+        Assert.Contains("relative", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseReference_migrates_legacy_separators_to_a_versioned_logical_locator()
+    {
+        const string legacyJson = """
+            {
+              "storageId": null,
+              "providerKind": "fileSystem",
+              "locatorKind": "relativePath",
+              "locator": "managed-files\\reports\\alpha.pdf",
+              "displayName": "alpha.pdf"
+            }
+            """;
+
+        StorageObjectReference migrated = Assert.IsType<StorageObjectReference>(
+            StorageJson.ParseReference(legacyJson));
+        string persisted = StorageJson.SerializeReference(migrated);
+
+        Assert.Equal("managed-files/reports/alpha.pdf", migrated.Locator);
+        Assert.Equal(StorageObjectReference.CurrentFormatVersion, migrated.FormatVersion);
+        Assert.Contains("\"formatVersion\":2", persisted, StringComparison.Ordinal);
+        Assert.DoesNotContain("managed-files\\\\reports", persisted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseReference_rejects_traversal_in_a_legacy_logical_locator()
+    {
+        const string legacyJson = """
+            {
+              "providerKind": "fileSystem",
+              "locatorKind": "relativePath",
+              "locator": "managed-files\\..\\outside.txt"
+            }
+            """;
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            StorageJson.ParseReference(legacyJson));
+
+        Assert.Contains("non-traversing", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [MemberData(nameof(RootedOrPhysicalLogicalLocatorCases))]
+    public void SerializeReference_rejects_rooted_or_physical_logical_locators(
+        StorageLocatorKind locatorKind,
+        string locator)
+    {
+        var reference = new StorageObjectReference(
+            null,
+            locatorKind == StorageLocatorKind.RelativePath
+                ? StorageProviderKind.FileSystem
+                : StorageProviderKind.Ftp,
+            locatorKind,
+            locator);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            StorageJson.SerializeReference(reference));
+
+        Assert.Contains("relative", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [MemberData(nameof(RootedOrPhysicalLogicalLocatorCases))]
+    public void ParseReference_rejects_rooted_or_physical_legacy_logical_locators(
+        StorageLocatorKind locatorKind,
+        string locator)
+    {
+        string json = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            formatVersion = 1,
+            providerKind = locatorKind == StorageLocatorKind.RelativePath
+                ? StorageProviderKind.FileSystem
+                : StorageProviderKind.Ftp,
+            locatorKind,
+            locator
+        });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            StorageJson.ParseReference(json));
+
+        Assert.Contains("relative", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("folder//file.txt")]
+    [InlineData("folder/./file.txt")]
+    [InlineData("folder/../file.txt")]
+    public void SerializeReference_rejects_empty_dot_or_traversal_segments(string locator)
+    {
+        var reference = new StorageObjectReference(
+            null,
+            StorageProviderKind.FileSystem,
+            StorageLocatorKind.RelativePath,
+            locator);
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            StorageJson.SerializeReference(reference));
+
+        Assert.Contains("non-traversing", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -114,5 +227,30 @@ public sealed class StorageJsonTests
             StorageJson.ParseProviderConfiguration(json));
 
         Assert.Equal(StorageBrowseErrorCode.InvalidConfiguration, exception.Error.Code);
+    }
+
+    public static IEnumerable<object[]> RootedOrPhysicalLogicalLocatorCases()
+    {
+        string[] locators =
+        [
+            "/etc/passwd",
+            @"\Windows\System32",
+            @"C:\Windows\System32",
+            "C:relative",
+            @"\\server\share\file.txt",
+            "//server/share/file.txt",
+            "https://files.example.test/object"
+        ];
+        foreach (StorageLocatorKind locatorKind in new[]
+                 {
+                     StorageLocatorKind.RelativePath,
+                     StorageLocatorKind.RemotePath
+                 })
+        {
+            foreach (string locator in locators)
+            {
+                yield return [locatorKind, locator];
+            }
+        }
     }
 }

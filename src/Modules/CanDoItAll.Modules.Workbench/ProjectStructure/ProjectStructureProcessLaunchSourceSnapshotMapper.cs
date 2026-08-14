@@ -48,6 +48,8 @@ internal static class ProjectStructureProcessLaunchSourceSnapshotMapper
             node.ObjectType switch
             {
                 ProjectObjectType.ImageAsset => ProcessLaunchSourceItemKind.ImageAsset,
+                ProjectObjectType.ProjectBlock or ProjectObjectType.Decision =>
+                    ProcessLaunchSourceItemKind.ProductRequirement,
                 ProjectObjectType.WorkItem => ProcessLaunchSourceItemKind.WorkItem,
                 _ => ProcessLaunchSourceItemKind.Other
             },

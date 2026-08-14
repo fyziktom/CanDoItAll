@@ -1,15 +1,14 @@
-using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Tools;
 
 public sealed class ExternalProcessToolInvoker(
-    IExternalProcessRunner? processRunner = null) : IExternalProcessToolInvoker
+    IExternalProcessRunner processRunner) : IExternalProcessToolInvoker
 {
-    private readonly IExternalProcessRunner processRunner = processRunner ?? new LocalExternalProcessRunner();
+    private readonly IExternalProcessRunner processRunner = processRunner ?? throw new ArgumentNullException(nameof(processRunner));
 
     public async Task<ToolInvocationResult> InvokeAsync(
         ExternalProcessToolDescriptor descriptor,
@@ -19,19 +18,15 @@ public sealed class ExternalProcessToolInvoker(
         ArgumentNullException.ThrowIfNull(descriptor);
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!IsCommandAllowed(descriptor))
+        if (SensitiveTextRedactor.ContainsSecretBearingArguments(descriptor.Arguments))
         {
-            return ToolInvocationResult.Failure(request.CorrelationId,
-            [
-                ToolDiagnostics.Create(
-                    CapabilityDiagnosticCategory.CommandPolicy,
-                    descriptor,
-                    "$.executablePath",
-                    $"Executable '{descriptor.ExecutablePath}' is not allowed for capability '{descriptor.Identity.Key}'.",
-                    "Use an allowed executable declared by the capability template command policy.",
-                    request.CorrelationId,
-                    CapabilityTransportKind.ExternalProcess)
-            ]);
+            return Failure(
+                descriptor,
+                request.CorrelationId,
+                CapabilityDiagnosticCategory.SecretBinding,
+                "$.arguments",
+                $"Capability '{descriptor.Identity.Key}' contains a persisted secret-bearing process argument.",
+                "Use a runtime secret binding instead of a command-line secret.");
         }
 
         ExternalProcessRunResult runResult;
@@ -45,8 +40,29 @@ public sealed class ExternalProcessToolInvoker(
                     descriptor.Timeout,
                     request.Input.GetRawText(),
                     descriptor.MaxOutputBytes,
-                    request.CorrelationId),
+                    request.CorrelationId,
+                    descriptor.AllowedExecutableNames),
                 cancellationToken);
+        }
+        catch (ExternalProcessCommandPolicyException)
+        {
+            return Failure(
+                descriptor,
+                request.CorrelationId,
+                CapabilityDiagnosticCategory.CommandPolicy,
+                "$.executablePath",
+                $"Capability '{descriptor.Identity.Key}' resolved to an executable outside its command policy.",
+                "Use an executable identity declared by the capability template command policy.");
+        }
+        catch (ExternalProcessAccessPolicyException)
+        {
+            return Failure(
+                descriptor,
+                request.CorrelationId,
+                CapabilityDiagnosticCategory.AccessPolicy,
+                "$.workingDirectory",
+                $"Capability '{descriptor.Identity.Key}' does not have an authorized working directory.",
+                "Select an existing workspace-authorized working directory.");
         }
         catch (TimeoutException exception)
         {
@@ -55,7 +71,7 @@ public sealed class ExternalProcessToolInvoker(
                 request.CorrelationId,
                 CapabilityDiagnosticCategory.Timeout,
                 "$.timeout",
-                $"Process invocation for '{descriptor.ExecutablePath}' exceeded timeout {descriptor.Timeout}. {exception.Message}",
+                $"Process invocation for capability '{descriptor.Identity.Key}' exceeded timeout {descriptor.Timeout}. {exception.GetType().Name}.",
                 "Increase the timeout only after confirming the external tool is healthy and bounded.",
                 timeout: descriptor.Timeout);
         }
@@ -66,9 +82,19 @@ public sealed class ExternalProcessToolInvoker(
                 request.CorrelationId,
                 CapabilityDiagnosticCategory.Cancellation,
                 "$",
-                $"Process invocation for '{descriptor.ExecutablePath}' was cancelled.",
+                $"Process invocation for capability '{descriptor.Identity.Key}' was cancelled.",
                 "Retry only if the caller still owns the setup or tool-call lifecycle.",
                 timeout: descriptor.Timeout);
+        }
+        catch (ExternalProcessResidualProcessException)
+        {
+            return Failure(
+                descriptor,
+                request.CorrelationId,
+                CapabilityDiagnosticCategory.ResourceCleanup,
+                "$.cleanup",
+                $"Capability '{descriptor.Identity.Key}' process-tree cleanup could not be confirmed.",
+                "Inspect and reclaim the owned process tree before retrying this capability.");
         }
         catch (Exception exception)
         {
@@ -77,7 +103,7 @@ public sealed class ExternalProcessToolInvoker(
                 request.CorrelationId,
                 CapabilityDiagnosticCategory.ProcessStart,
                 "$.executablePath",
-                $"Failed to start '{descriptor.ExecutablePath}'. {exception.GetType().Name}: {exception.Message}",
+                $"Capability '{descriptor.Identity.Key}' failed to start its approved executable ({exception.GetType().Name}).",
                 "Check the executable path, working directory, and command policy.");
         }
 
@@ -88,7 +114,7 @@ public sealed class ExternalProcessToolInvoker(
                 request.CorrelationId,
                 CapabilityDiagnosticCategory.ProcessStart,
                 "$.executablePath",
-                $"Process '{descriptor.ExecutablePath}' did not start. stderr: {runResult.Stderr}",
+                $"Capability '{descriptor.Identity.Key}' did not start its approved executable.",
                 "Check the executable path and command policy.");
         }
 
@@ -99,7 +125,7 @@ public sealed class ExternalProcessToolInvoker(
                 request.CorrelationId,
                 CapabilityDiagnosticCategory.ProcessExit,
                 "$.exitCode",
-                $"Process '{descriptor.ExecutablePath}' exited with {runResult.ExitCode}. stdout: {runResult.Stdout}; stderr: {runResult.Stderr}",
+                $"Capability '{descriptor.Identity.Key}' exited with {runResult.ExitCode}.",
                 "Inspect the non-zero exit output and repair the external tool command or setup payload.",
                 exitCode: runResult.ExitCode);
         }
@@ -109,12 +135,6 @@ public sealed class ExternalProcessToolInvoker(
             request.CorrelationId,
             runResult.Stdout,
             CapabilityTransportKind.ExternalProcess);
-    }
-
-    private static bool IsCommandAllowed(ExternalProcessToolDescriptor descriptor)
-    {
-        var executableName = Path.GetFileName(descriptor.ExecutablePath);
-        return descriptor.AllowedExecutableNames.Contains(executableName);
     }
 
     private static ToolInvocationResult ParseAndValidateOutput(
@@ -129,15 +149,27 @@ public sealed class ExternalProcessToolInvoker(
             using var document = JsonDocument.Parse(output);
             root = document.RootElement.Clone();
         }
-        catch (JsonException exception)
+        catch (JsonException)
         {
             return Failure(
                 descriptor,
                 correlationId,
                 CapabilityDiagnosticCategory.JsonParse,
                 "$",
-                $"Output from '{descriptor.ExecutablePath}' was not valid JSON. {exception.Message}. Output: {output}",
+                $"Output from capability '{descriptor.Identity.Key}' was not valid JSON.",
                 "Return a JSON object matching the external tool output schema.");
+        }
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return Failure(
+                descriptor,
+                correlationId,
+                CapabilityDiagnosticCategory.SchemaValidation,
+                "$",
+                $"Output from capability '{descriptor.Identity.Key}' was not a JSON object.",
+                "Return a JSON object matching the external tool output schema.",
+                transport: transport);
         }
 
         foreach (var property in descriptor.RequiredOutputProperties)
@@ -152,7 +184,7 @@ public sealed class ExternalProcessToolInvoker(
                 correlationId,
                 CapabilityDiagnosticCategory.SchemaValidation,
                 "$." + property,
-                $"Output from '{descriptor.ExecutablePath}' did not include required property '{property}'. Output: {output}",
+                $"Output from capability '{descriptor.Identity.Key}' did not include required property '{property}'.",
                 "Return all required output schema properties from the external tool.",
                 transport: transport);
         }
@@ -184,106 +216,5 @@ public sealed class ExternalProcessToolInvoker(
                 exitCode: exitCode,
                 timeout: timeout)
         ]);
-    }
-}
-
-internal sealed class LocalExternalProcessRunner : IExternalProcessRunner
-{
-    public async Task<ExternalProcessRunResult> RunAsync(
-        ExternalProcessRunRequest request,
-        CancellationToken cancellationToken)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        using var process = new Process();
-        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (request.Timeout > TimeSpan.Zero)
-        {
-            timeoutSource.CancelAfter(request.Timeout);
-        }
-
-        var executionToken = timeoutSource.Token;
-        process.StartInfo = new ProcessStartInfo
-        {
-            FileName = request.ExecutablePath,
-            WorkingDirectory = request.WorkingDirectory,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        foreach (var argument in request.Arguments)
-        {
-            process.StartInfo.ArgumentList.Add(argument);
-        }
-
-        try
-        {
-            var started = process.Start();
-            if (!started)
-            {
-                return new ExternalProcessRunResult(false, -1, string.Empty, string.Empty, stopwatch.Elapsed);
-            }
-
-            await process.StandardInput.WriteAsync(request.StandardInput.AsMemory(), executionToken);
-            process.StandardInput.Close();
-            var stdoutTask = ReadBoundedAsync(process.StandardOutput, request.MaxOutputBytes, executionToken);
-            var stderrTask = ReadBoundedAsync(process.StandardError, request.MaxOutputBytes, executionToken);
-            await process.WaitForExitAsync(executionToken);
-            stopwatch.Stop();
-
-            return new ExternalProcessRunResult(
-                true,
-                process.ExitCode,
-                await stdoutTask,
-                await stderrTask,
-                stopwatch.Elapsed);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && timeoutSource.IsCancellationRequested)
-        {
-            TryKill(process);
-            throw new TimeoutException($"Process exceeded the configured timeout of {request.Timeout}.");
-        }
-    }
-
-    private static async Task<string> ReadBoundedAsync(
-        TextReader reader,
-        int maxCharacters,
-        CancellationToken cancellationToken)
-    {
-        maxCharacters = Math.Max(0, maxCharacters);
-        var buffer = new char[1024];
-        var builder = new StringBuilder(capacity: Math.Min(maxCharacters, 4096));
-        while (true)
-        {
-            var read = await reader.ReadAsync(buffer.AsMemory(), cancellationToken);
-            if (read == 0)
-            {
-                break;
-            }
-
-            var remaining = maxCharacters - builder.Length;
-            if (remaining > 0)
-            {
-                builder.Append(buffer, 0, Math.Min(read, remaining));
-            }
-        }
-
-        return builder.ToString();
-    }
-
-    private static void TryKill(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch (InvalidOperationException)
-        {
-        }
     }
 }

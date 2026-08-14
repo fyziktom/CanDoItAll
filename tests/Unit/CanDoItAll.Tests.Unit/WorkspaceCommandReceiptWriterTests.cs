@@ -7,6 +7,52 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkspaceCommandReceiptWriterTests
 {
     [Fact]
+    public void Descriptor_receipts_redact_a_sensitive_value_in_the_next_argv_element()
+    {
+        var workspaceRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.WorkspaceCommandReceiptWriterTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        const string secretValue = "descriptor-secret-value-that-must-not-be-serialized";
+        var writer = new WorkspaceCommandReceiptWriter(workspaceRoot);
+        var now = DateTimeOffset.UtcNow;
+
+        try
+        {
+            var receipt = writer.PersistDescriptorReceipt(
+                toolName: "descriptor_test",
+                recipeId: "descriptor_test",
+                riskClass: "LocalExecution",
+                approvalRequired: false,
+                workingDirectory: ".",
+                arguments: ["--password", secretValue],
+                targetPaths: [],
+                message: "Prepared descriptor.",
+                boundary: new ExecutionBoundaryDescriptor(
+                    Mode: "Test",
+                    FilesystemScope: "Workspace",
+                    NetworkScope: "None",
+                    CredentialScope: "None",
+                    HostLabel: "Receipt test host",
+                    IsEnforcedByHost: false,
+                    Notes: "Unit test boundary."),
+                startedAtUtc: now,
+                completedAtUtc: now,
+                extraPayload: new { kind = "test" });
+
+            var receiptJson = File.ReadAllText(
+                ResolveArtifactPath(workspaceRoot, receipt.ReceiptRelativePath));
+
+            Assert.DoesNotContain(secretValue, receiptJson, StringComparison.Ordinal);
+            Assert.Contains("[REDACTED]", receiptJson, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task Process_receipts_record_sorted_environment_names_without_values()
     {
         var workspaceRoot = Path.Combine(
@@ -14,12 +60,17 @@ public sealed class WorkspaceCommandReceiptWriterTests
             $"CanDoItAll.WorkspaceCommandReceiptWriterTests.{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         const string secretValue = "receipt-secret-value-that-must-not-be-serialized";
-        var processHost = new SuccessfulWorkspaceProcessHost();
+        var processHost = new SuccessfulWorkspaceProcessHost(
+            Stdout: "ok api_key=receipt-output-secret",
+            Stderr: "password=receipt-error-secret");
         var runner = new WorkspaceCommandProcessRunner(
             processHost,
             new WorkspaceCommandEnvironmentPolicy(),
             new WorkspaceExecutableLocator(),
-            new WorkspaceCommandReceiptWriter(workspaceRoot));
+            new WorkspaceCommandReceiptWriter(workspaceRoot),
+            TestWorkspaceServices.CreatePathPolicy(
+                workspaceRoot,
+                externalTargetRegistry: TestExternalTargetPathRegistry.Create()));
         var plan = new WorkspaceCommandPlan(
             Decision: new ToolExecutionDecision(
                 ToolName: "workspace_receipt_test",
@@ -36,7 +87,13 @@ public sealed class WorkspaceCommandReceiptWriterTests
             WorkingDirectory: ".",
             WorkingDirectoryPath: workspaceRoot,
             ExecutableCandidates: ["dotnet"],
-            Arguments: ["--info"],
+            Arguments:
+            [
+                "--info",
+                "--api_key=argument-secret-value",
+                "--client-token",
+                "separate-argument-secret-value"
+            ],
             TimeoutSeconds: 30,
             StdoutLimitCharacters: 4096,
             StderrLimitCharacters: 4096,
@@ -70,12 +127,39 @@ public sealed class WorkspaceCommandReceiptWriterTests
             Assert.Contains("Z_PRIVATE_TOKEN", requestEnvironmentNames);
             Assert.Equal(
                 requestEnvironmentNames
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(name => name, StringComparer.OrdinalIgnoreCase),
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(name => name, StringComparer.Ordinal),
                 requestEnvironmentNames);
             Assert.Equal(requestEnvironmentNames, receiptEnvironmentNames);
             Assert.DoesNotContain(secretValue, requestJson, StringComparison.Ordinal);
             Assert.DoesNotContain(secretValue, receiptJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("argument-secret-value", requestJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("argument-secret-value", receiptJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("argument-secret-value", result.ArgumentsSummary, StringComparison.Ordinal);
+            Assert.DoesNotContain("separate-argument-secret-value", requestJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("separate-argument-secret-value", receiptJson, StringComparison.Ordinal);
+            Assert.DoesNotContain("separate-argument-secret-value", result.ArgumentsSummary, StringComparison.Ordinal);
+            Assert.DoesNotContain("receipt-output-secret", result.StdoutPreview, StringComparison.Ordinal);
+            Assert.DoesNotContain("receipt-error-secret", result.StderrPreview, StringComparison.Ordinal);
+
+            var stdoutReference = Assert.Single(
+                result.ArtifactReferences,
+                reference => reference.DisplayName.Equals(
+                    "environment-receipt-test stdout",
+                    StringComparison.Ordinal));
+            var stderrReference = Assert.Single(
+                result.ArtifactReferences,
+                reference => reference.DisplayName.Equals(
+                    "environment-receipt-test stderr",
+                    StringComparison.Ordinal));
+            var stdout = await File.ReadAllTextAsync(
+                ResolveArtifactPath(workspaceRoot, stdoutReference.RelativePath));
+            var stderr = await File.ReadAllTextAsync(
+                ResolveArtifactPath(workspaceRoot, stderrReference.RelativePath));
+            Assert.DoesNotContain("receipt-output-secret", stdout, StringComparison.Ordinal);
+            Assert.DoesNotContain("receipt-error-secret", stderr, StringComparison.Ordinal);
+            Assert.Contains("[REDACTED]", stdout, StringComparison.Ordinal);
+            Assert.Contains("[REDACTED]", stderr, StringComparison.Ordinal);
         }
         finally
         {
@@ -108,7 +192,7 @@ public sealed class WorkspaceCommandReceiptWriterTests
         }
     }
 
-    private sealed class SuccessfulWorkspaceProcessHost : IWorkspaceProcessHost
+    private sealed class SuccessfulWorkspaceProcessHost(string Stdout = "ok", string Stderr = "") : IWorkspaceProcessHost
     {
         private static readonly ExecutionBoundaryDescriptor Boundary = new(
             Mode: "Test",
@@ -133,8 +217,8 @@ public sealed class WorkspaceCommandReceiptWriterTests
                 new WorkspaceProcessExecutionResult(
                     Started: true,
                     ExitCode: 0,
-                    Stdout: "ok",
-                    Stderr: string.Empty,
+                    Stdout: Stdout,
+                    Stderr: Stderr,
                     StdoutTruncated: false,
                     StderrTruncated: false,
                     StartedAtUtc: now,

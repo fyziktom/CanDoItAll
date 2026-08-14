@@ -5,6 +5,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -96,6 +97,52 @@ public sealed class ZipAgentPackageServiceTests
         Assert.Contains("SHA-256", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ExportAsync_ExecutionRunWithExternalTargetBinding_ExportsAliasWithoutProtectedBinding()
+    {
+        const string rootId = "0123456789abcdef01234567";
+        const string alias = $"external-target/v1/{rootId}/output";
+        const string protectedRootToken = "protected-root-token-that-must-not-be-exported";
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"agent-package-export-{Guid.NewGuid():N}");
+        var agent = CreateAgent();
+        var metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+            $$"""
+              {
+                "{{ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey}}": ["{{alias}}"]
+              }
+              """,
+            [new ExternalTargetRootBinding(rootId, "windows", protectedRootToken)]);
+        var document = SandboxWorkspaceDocument.Empty with
+        {
+            Agents = [agent],
+            ExecutionRuns = [CreateExecutionRun(agent.Id, metadataJson)]
+        };
+
+        try
+        {
+            var result = await new ZipAgentPackageService(workspaceRoot).ExportAsync(document, agent);
+            using var archive = ZipFile.OpenRead(result.PackagePath);
+            var manifestEntry = archive.GetEntry("manifest.json");
+            Assert.NotNull(manifestEntry);
+            using var reader = new StreamReader(manifestEntry.Open(), Encoding.UTF8);
+            var manifestJson = await reader.ReadToEndAsync();
+
+            Assert.Contains(alias, manifestJson, StringComparison.Ordinal);
+            Assert.DoesNotContain(protectedRootToken, manifestJson, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey,
+                manifestJson,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
     private static byte[] CreatePackage(
         AgentDefinition agent,
         string schemaVersion = "1.0",
@@ -170,5 +217,34 @@ public sealed class ZipAgentPackageServiceTests
             Tags: ["package-import", "verification"],
             CreatedAtUtc: FixedTimestamp,
             UpdatedAtUtc: FixedTimestamp);
+    }
+
+    private static ExecutionRunRecord CreateExecutionRun(Guid agentId, string metadataJson)
+    {
+        return new ExecutionRunRecord(
+            Guid.NewGuid(),
+            agentId,
+            null,
+            "External target export",
+            "chat-session",
+            Guid.NewGuid().ToString("N"),
+            string.Empty,
+            string.Empty,
+            "test",
+            "interactive",
+            metadataJson,
+            string.Empty,
+            string.Empty,
+            "test-provider",
+            "test-model",
+            ExecutionState.Idle,
+            null,
+            FixedTimestamp,
+            FixedTimestamp,
+            null,
+            null,
+            string.Empty,
+            null,
+            []);
     }
 }

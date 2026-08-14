@@ -222,12 +222,9 @@ internal sealed class StorageFileAccessAuthorizationCoordinator(
             return true;
         }
 
-        StringComparison comparison = providerKind == StorageProviderKind.FileSystem
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
         string occurrence = occurrenceId.Trim().Replace('\\', '/').Trim('/');
-        return string.Equals(occurrence, root.Value, comparison) ||
-               occurrence.StartsWith(root.Value + "/", comparison);
+        return string.Equals(occurrence, root.Value, StringComparison.Ordinal) ||
+               occurrence.StartsWith(root.Value + "/", StringComparison.Ordinal);
     }
 
     private static FileAccessDeniedException Denied(FileAccessFailureCode code)

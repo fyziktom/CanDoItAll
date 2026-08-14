@@ -10,6 +10,31 @@ internal static class ProjectStructureAgentTransferFailureMapper
     {
         ArgumentNullException.ThrowIfNull(exception);
 
+        if (ProjectStructureExceptionGraph.TryFind<ProjectStructureDeletionDispositionMismatchException>(
+                exception,
+                static _ => true,
+                out var deletionDispositionMismatch))
+        {
+            var safeMessage =
+                $"Root '{deletionDispositionMismatch.RootNodeId}' is already deleted ({deletionDispositionMismatch.CompletedNodeCount} node(s)); retry durable mutation '{deletionDispositionMismatch.DurableMutationId:D}' with managedStorageDisposition '{deletionDispositionMismatch.PersistedDisposition}'.";
+            mappedException = ProjectStructureAgentException.CreateMapped(
+                409,
+                "ProjectStructureDeletionDispositionMismatch",
+                safeMessage,
+                new
+                {
+                    deletionDispositionMismatch.ProjectId,
+                    deletionDispositionMismatch.RootNodeId,
+                    deletionDispositionMismatch.DurableMutationId,
+                    deletionDispositionMismatch.RequestedDisposition,
+                    deletionDispositionMismatch.PersistedDisposition
+                },
+                isSafeToExpose: true,
+                canRetryWithCorrectedInput: true,
+                exception);
+            return true;
+        }
+
         if (ProjectStructureExceptionGraph.TryFind<ProjectStructureDeletionBatchRejectedException>(
                 exception,
                 static _ => true,
@@ -29,10 +54,14 @@ internal static class ProjectStructureAgentTransferFailureMapper
             mappedException = ProjectStructureAgentException.CreateMapped(
                 409,
                 "ProjectStructureDeletionBatchPartialCommit",
-                batchDeletionPartialCommit.Message,
+                BuildBatchDeletionSafeMessage(batchDeletionPartialCommit),
                 batchDeletionPartialCommit.Recovery,
                 isSafeToExpose: true,
-                canRetryWithCorrectedInput: false,
+                canRetryWithCorrectedInput:
+                    batchDeletionPartialCommit.Recovery.Recoveries.Count == 0 &&
+                    batchDeletionPartialCommit.Recovery.BranchFailures.Count > 0 &&
+                    batchDeletionPartialCommit.Recovery.BranchFailures.All(
+                        static failure => failure.SuggestedRetryDisposition.HasValue),
                 exception);
             return true;
         }
@@ -114,6 +143,22 @@ internal static class ProjectStructureAgentTransferFailureMapper
 
         mappedException = null!;
         return false;
+    }
+
+    private static string BuildBatchDeletionSafeMessage(
+        ProjectStructureDeletionBatchPartialCommitException exception)
+    {
+        var branchGuidance = exception.Recovery.BranchFailures.Select(failure =>
+        {
+            var retryGuidance = failure.SuggestedRetryDisposition.HasValue
+                ? $" Retry root '{failure.RootNodeId}' with managedStorageDisposition '{failure.SuggestedRetryDisposition.Value}'."
+                : $" Inspect the server log for root '{failure.RootNodeId}' before retrying it.";
+            return $"Root '{failure.RootNodeId}' requires follow-up ({failure.Kind}).{retryGuidance}";
+        });
+        return string.Join(
+            " ",
+            new[] { exception.Message }
+                .Concat(branchGuidance));
     }
 
     private static ProjectStructureAgentException MapBatchDeletionRejection(

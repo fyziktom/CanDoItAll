@@ -1,24 +1,24 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Agents.AI;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class WorkspaceRagRetriever
 {
-    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
-
     private readonly string workspaceRoot;
     private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IPhysicalFileSystemPathPolicy workspacePathPolicy;
 
     public WorkspaceRagRetriever(
         string workspaceRoot,
-        WorkspaceScopeDescriptor workspaceScope)
+        WorkspaceScopeDescriptor workspaceScope,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
-        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
+        workspacePathPolicy = physicalPathPolicyFactory.Create(workspaceRoot);
+        this.workspaceRoot = workspacePathPolicy.RootPath;
         this.workspaceScope = workspaceScope ?? throw new ArgumentNullException(nameof(workspaceScope));
     }
 
@@ -26,7 +26,17 @@ internal sealed class WorkspaceRagRetriever
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(configuredRoot);
 
-        var normalizedRoot = Path.GetFullPath(configuredRoot);
+        string normalizedRoot;
+        try
+        {
+            normalizedRoot = workspacePathPolicy.ResolveContainedPath(configuredRoot);
+            workspacePathPolicy.EnsureSafePath(normalizedRoot);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or NotSupportedException or PathTooLongException)
+        {
+            return [];
+        }
         if (workspaceScope.Kind != WorkspaceScopeKind.Project)
         {
             return IsSafeSearchRoot(normalizedRoot)
@@ -34,7 +44,7 @@ internal sealed class WorkspaceRagRetriever
                 : [];
         }
 
-        if (!PathComparer.Equals(
+        if (!workspacePathPolicy.PathComparer.Equals(
                 Path.TrimEndingDirectorySeparator(normalizedRoot),
                 Path.TrimEndingDirectorySeparator(workspaceRoot)))
         {
@@ -56,8 +66,12 @@ internal sealed class WorkspaceRagRetriever
                 workspaceRoot,
                 relativePath.Replace('/', Path.DirectorySeparatorChar)))
             .Select(Path.GetFullPath)
-            .Distinct(PathComparer)
-            .Order(PathComparer)
+            .Where(path => IsSafeSearchRoot(path, allowMissingLeaf: true))
+            .Distinct(workspacePathPolicy.PathComparer)
+            .OrderBy(
+                path => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, path)),
+                StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -84,12 +98,15 @@ internal sealed class WorkspaceRagRetriever
         var effectiveMinMatchedTerms = Math.Min(minMatchedTerms, terms.Count);
         var files = rootPaths
             .Where(IsSafeSearchRoot)
-            .Order(PathComparer)
+            .OrderBy(
+                path => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, path)),
+                StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
             .SelectMany(rootPath => WorkspaceSearchSupport.EnumerateSearchFiles(
                 rootPath,
                 extensions,
                 excludedPaths))
-            .Distinct(PathComparer)
+            .Distinct(workspacePathPolicy.PathComparer)
             .Take(maxFilesToScan)
             .ToArray();
         var scoredResults = new List<(int Score, int MatchedTerms, string Path, string Snippet)>();
@@ -147,7 +164,10 @@ internal sealed class WorkspaceRagRetriever
         return scoredResults
             .OrderByDescending(item => item.Score)
             .ThenByDescending(item => item.MatchedTerms)
-            .ThenBy(item => item.Path, PathComparer)
+            .ThenBy(
+                item => NormalizeEnumerationKey(Path.GetRelativePath(workspaceRoot, item.Path)),
+                StringComparer.Ordinal)
+            .ThenBy(item => item.Path, StringComparer.Ordinal)
             .Take(maxResults)
             .Select(item => new TextSearchProvider.TextSearchResult
             {
@@ -159,57 +179,29 @@ internal sealed class WorkspaceRagRetriever
     }
 
     private bool IsSafeSearchRoot(string path)
+        => IsSafeSearchRoot(path, allowMissingLeaf: false);
+
+    private bool IsSafeSearchRoot(string path, bool allowMissingLeaf)
     {
-        if (!File.Exists(path) && !Directory.Exists(path))
+        if (!allowMissingLeaf && !File.Exists(path) && !Directory.Exists(path))
         {
             return false;
         }
 
-        var currentPath = Path.GetFullPath(path);
-        while (!PathComparer.Equals(
-                   Path.TrimEndingDirectorySeparator(currentPath),
-                   Path.TrimEndingDirectorySeparator(workspaceRoot)))
+        try
         {
-            if (!IsWithinWorkspace(currentPath))
-            {
-                return false;
-            }
-
-            try
-            {
-                if (File.GetAttributes(currentPath).HasFlag(FileAttributes.ReparsePoint))
-                {
-                    return false;
-                }
-            }
-            catch (Exception exception) when (
-                exception is UnauthorizedAccessException or IOException)
-            {
-                return false;
-            }
-
-            var parentPath = Path.GetDirectoryName(currentPath);
-            if (string.IsNullOrWhiteSpace(parentPath) ||
-                PathComparer.Equals(parentPath, currentPath))
-            {
-                return false;
-            }
-
-            currentPath = parentPath;
+            workspacePathPolicy.EnsureSafePath(path, allowMissingLeaf);
+            return true;
         }
-
-        return true;
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
     }
 
-    private bool IsWithinWorkspace(string path)
-    {
-        var normalizedWorkspaceRoot = Path.TrimEndingDirectorySeparator(workspaceRoot);
-        var normalizedPath = Path.TrimEndingDirectorySeparator(path);
-        return PathComparer.Equals(normalizedPath, normalizedWorkspaceRoot) ||
-               normalizedPath.StartsWith(
-                   normalizedWorkspaceRoot + Path.DirectorySeparatorChar,
-                   OperatingSystem.IsWindows()
-                       ? StringComparison.OrdinalIgnoreCase
-                       : StringComparison.Ordinal);
-    }
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 }

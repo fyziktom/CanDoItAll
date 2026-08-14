@@ -6,6 +6,7 @@
   <Folder Name="/src/Foundation/">
     <Project Path="src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj" />
+    <Project Path="src/Foundation/CanDoItAll.Infrastructure.Abstractions/CanDoItAll.Infrastructure.Abstractions.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
     <Project Path="src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj" />
@@ -129,6 +130,7 @@
     <Project Path="src/plugins/Implementations/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj" />
   </Folder>
   <Folder Name="/tests/Support/">
+    <Project Path="tests/Support/CanDoItAll.DurableFileWriter.TestHost/CanDoItAll.DurableFileWriter.TestHost.csproj" />
     <Project Path="tests/Support/CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj" />
   </Folder>
   <Folder Name="/tests/Unit/">

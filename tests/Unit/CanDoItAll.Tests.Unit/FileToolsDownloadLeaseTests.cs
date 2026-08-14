@@ -24,6 +24,49 @@ public sealed class FileToolsDownloadLeaseTests
     }
 
     [Fact]
+    public async Task Desktop_launcher_does_not_delegate_when_runtime_profile_is_headless()
+    {
+        var inner = new RecordingDesktopFileLauncher();
+        var launcher = new ConfiguredDesktopFileLauncher(
+            Options.Create(new FileToolsDesktopLaunchOptions
+            {
+                Enabled = true,
+                HostProfileAllowsDesktop = false
+            }),
+            inner);
+        var request = new DesktopFileLaunchRequest(
+            Path.Combine(Path.GetTempPath(), "not-launched-headless.xlsx"));
+
+        DesktopFileLaunchResult result = await launcher.LaunchAsync(request);
+
+        Assert.False(launcher.IsAvailable);
+        Assert.False(result.Succeeded);
+        Assert.Equal(DesktopFileLaunchFailureCode.DesktopUnavailable, result.Failure?.Code);
+        Assert.Equal(0, inner.LaunchCount);
+    }
+
+    [Fact]
+    public async Task Desktop_launcher_delegates_when_the_host_enables_it()
+    {
+        var inner = new RecordingDesktopFileLauncher();
+        var launcher = new ConfiguredDesktopFileLauncher(
+            Options.Create(new FileToolsDesktopLaunchOptions
+            {
+                Enabled = true,
+                HostProfileAllowsDesktop = true
+            }),
+            inner);
+        var request = new DesktopFileLaunchRequest(
+            Path.Combine(Path.GetTempPath(), "direct-source-launch.xlsx"));
+
+        DesktopFileLaunchResult result = await launcher.LaunchAsync(request);
+
+        Assert.True(launcher.IsAvailable);
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, inner.LaunchCount);
+    }
+
+    [Fact]
     public async Task Lease_opens_content_and_revokes_the_authorization_exactly_once()
     {
         var file = new FileReference(AuthorizedFileReference.SourceId, "download-handle");
@@ -90,5 +133,20 @@ public sealed class FileToolsDownloadLeaseTests
 
         public ValueTask RevokeAllAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class RecordingDesktopFileLauncher : IDesktopFileLauncher
+    {
+        public bool IsAvailable => true;
+
+        public int LaunchCount { get; private set; }
+
+        public ValueTask<DesktopFileLaunchResult> LaunchAsync(
+            DesktopFileLaunchRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LaunchCount++;
+            return ValueTask.FromResult(DesktopFileLaunchResult.Success(request.TargetPath));
+        }
     }
 }

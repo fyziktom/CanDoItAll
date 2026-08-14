@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
@@ -49,6 +50,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ProjectStructureAgentProjectCreationCoordinator projectCreationCoordinator,
         ProjectStructureAgentNodeCopyCoordinator nodeCopyCoordinator,
         IDatabaseRuntimeState databaseRuntimeState,
+        IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(agentService);
@@ -66,6 +68,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         ArgumentNullException.ThrowIfNull(projectCreationCoordinator);
         ArgumentNullException.ThrowIfNull(nodeCopyCoordinator);
         ArgumentNullException.ThrowIfNull(databaseRuntimeState);
+        ArgumentNullException.ThrowIfNull(externalTargetPathRegistryFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         var workspaceRoot = workspacePaths.ResolveDirectoryPath(".", allowMissing: false).FullPath;
@@ -86,6 +89,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
             workspacePaths,
             workspaceRoot,
             databaseRuntimeState,
+            externalTargetPathRegistryFactory,
             timeProvider);
     }
 
@@ -223,6 +227,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         IWorkspacePathResolutionService workspacePaths,
         string workspaceRoot,
         IDatabaseRuntimeState databaseRuntimeState,
+        IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
         TimeProvider timeProvider)
     {
         private readonly ProjectStructureAgentService agentService = agentService;
@@ -242,6 +247,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
         private readonly IWorkspacePathResolutionService workspacePaths = workspacePaths;
         private readonly string workspaceRoot = workspaceRoot;
         private readonly IDatabaseRuntimeState databaseRuntimeState = databaseRuntimeState;
+        private readonly IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory = externalTargetPathRegistryFactory;
         private readonly TimeProvider timeProvider = timeProvider;
         private string? currentBranchName;
 
@@ -282,7 +288,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureReadRequest? request = null, CancellationToken cancellationToken = default) => ProjectStructureReadAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_read",
-                    "Reads a filtered project structure. The response includes exact nodeCount and linkCount values; use them instead of manually counting arrays. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated runtime handoff actions (runtime:open/runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). Runtime actions prove only that a launch plan can be handed to the shell; terminal output is required to prove that the application started."),
+                    "Reads a filtered project structure. The response includes exact nodeCount and linkCount values; use them instead of manually counting arrays. ContextDefault is an explicit context policy: interactive project-structure chat uses the captured InvocationSnapshot without storage fallback; governed-process and non-project contexts use CanonicalCurrent. Request InvocationSnapshot explicitly only in eligible interactive project context. Use CanonicalCurrent explicitly for notes, metadata, assets, layout, routes, action capabilities, storage references, file contents, or any snapshot coverage miss. Canonical node.actionCapabilities describe validated direct execution (runtime:open), optional terminal presentation (runtime:terminal), explicit elevation (runtime:admin), local folder actions (open-local), and IPFS new-tab actions (open-new-tab). An available action proves only that its typed launch capability resolved on the current host; runtime output or process evidence is still required to prove that the application started."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProjectStructureNodeCatalogAsync(agent, accessState, cancellationToken),
                     "project_structure_node_catalog",
@@ -310,7 +316,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeEditInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_update",
-                    "Updates an existing non-task project-structure node, including optional title, descriptive notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Asset content cannot be changed through notes or this generic update path; use project_structure_asset_create_revision to store changed File, ImageAsset, VideoAsset, or Mermaid content. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, action capability, or shell handoff as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker."),
+                    "Updates an existing non-task project-structure node, including optional title, descriptive notes, timing, metadata, and requested type or subtype reclassification. Canonical WorkItem/task nodes and reclassification into or out of that type are rejected here; use project_task_update. Asset content cannot be changed through notes or this generic update path; use project_structure_asset_create_revision to store changed File, ImageAsset, VideoAsset, or Mermaid content. Typed blocks must use objectType ProjectBlock plus lowercase objectSubtype values like feature, architecture, implementation, testing, delivery, and deployment. Delivery target blocks should keep metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot when they define the destination folder. Do not invent enum names like FeatureBlock. Runnable commands must be reclassified to Script, Environment, or Infrastructure with matching runtime metadata instead of remaining ProjectBlock delivery nodes. For a .NET run/watch node, inspect the selected project tree and set metadata.environment.projectPath to the exact existing application project file. Do not treat a saved command, canonical readback, or available launch capability as runtime-success evidence. If the project cannot be inspected, leave the node unchanged and report the access blocker."),
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeTypeInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeTypeUpdateAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_type_update",
@@ -406,11 +412,11 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureNodeDeleteInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodeDeleteAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     "project_structure_node_delete",
-                    "Deletes a project-structure node and its editable descendants. For projected process-run branches, this hides the projection from the current project structure without deleting process history. This is destructive for editable nodes: read the branch first, acquire or pass a lease when coordinating with other agents, and use only when the requested cleanup is explicit."),
+                    "Deletes a project-structure node and its editable descendants. Set request.managedStorageDisposition explicitly to RetainManagedFiles to remove nodes while preserving backing files, or DeleteOwnedManagedFiles to request deletion only for unreferenced files whose current managed ownership is proved. Confirmation never bypasses storage safety. For projected process-run branches, this hides the projection from the current project structure without deleting process history. Read the branch first, acquire or pass a lease when coordinating with other agents, and use only when the requested cleanup is explicit."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureNodeDeleteBatchInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureNodesDeleteAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_nodes_delete",
-                    "Deletes multiple project-structure nodes in one governed mutation. Provide all target node ids in request.nodeIds after reading the branch. Descendant duplicates are ignored when an ancestor is also selected. For projected process-run branches, this hides projections from the current project structure without deleting process history."),
+                    "Deletes multiple project-structure nodes in one governed request; each independent selected root has its own durable mutation and partial-cleanup identity. Provide all targets in request.nodeIds and set one explicit request.managedStorageDisposition: RetainManagedFiles preserves backing files, while DeleteOwnedManagedFiles requests deletion only for unreferenced files whose current managed ownership is proved. Descendant duplicates are ignored when an ancestor is also selected. For projected process-run branches, this hides projections without deleting process history."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureApprovalRequestCreateInput request, CancellationToken cancellationToken = default) => ProjectStructureApprovalRequestAsync(agent, accessState, projectId, request, cancellationToken),
                     "project_structure_approval_request",
@@ -1201,7 +1207,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
-                        workspaceRoot);
+                        workspaceRoot,
+                        externalTargetPathRegistryFactory);
                     var effectiveRequest = NormalizeGovernedProcessCreateParent(accessState, request);
                     ProjectStructureNonTaskWritePolicy.EnsureNodeCreateAllowed(
                         accessState.RequiresNonTaskWriteGuard,
@@ -1248,7 +1255,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
-                        workspaceRoot);
+                        workspaceRoot,
+                        externalTargetPathRegistryFactory);
                     var currentNode = await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,
@@ -1262,7 +1270,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     {
                         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                             currentNode.MetadataJson,
-                            workspaceRoot);
+                            workspaceRoot,
+                            externalTargetPathRegistryFactory);
                     }
 
                     return await agentService.UpdateNodeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
@@ -1302,7 +1311,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     {
                         ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                             currentNode.MetadataJson,
-                            workspaceRoot);
+                            workspaceRoot,
+                            externalTargetPathRegistryFactory);
                     }
 
                     return await agentService.UpdateNodeTypeAsync(projectId, nodeId, request, BuildAgentContext(agent, accessState, projectId), cancellationToken);
@@ -1333,7 +1343,8 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                     EnsureAgentMetadataPayloadValid(request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         request.MetadataJson,
-                        workspaceRoot);
+                        workspaceRoot,
+                        externalTargetPathRegistryFactory);
                     await EnsureNodeUpdateAllowedAsync(
                         accessState,
                         projectId,

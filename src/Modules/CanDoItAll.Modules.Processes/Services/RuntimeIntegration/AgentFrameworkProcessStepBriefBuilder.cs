@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
@@ -293,8 +294,8 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Cast<string>()
             .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(item => item, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -470,4 +471,3 @@ internal sealed class AgentFrameworkProcessStepBriefBuilder : IProcessStepBriefB
         """;
     }
 }
-

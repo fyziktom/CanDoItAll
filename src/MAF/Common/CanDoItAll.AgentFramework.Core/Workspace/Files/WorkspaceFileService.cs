@@ -1,4 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Infrastructure.FileSystem;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,9 +16,17 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
     private readonly WorkspaceFileMutationService mutationService;
     private readonly WorkspaceDestinationContentPlacementPolicy destinationContentPlacementPolicy;
 
-    public WorkspaceFileService(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null)
+    public WorkspaceFileService(
+        string workspaceRoot,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
     {
-        pathPolicy = new WorkspacePathPolicy(workspaceRoot, workspaceScope);
+        pathPolicy = new WorkspacePathPolicy(
+            workspaceRoot,
+            physicalPathPolicyFactory,
+            workspaceScope,
+            externalTargetRegistry);
         receiptWriter = new WorkspaceFileReceiptWriter(pathPolicy.WorkspaceRoot, pathPolicy.WorkspaceScope);
         var textContentGuard = new WorkspaceTextContentGuard();
 
@@ -30,14 +41,39 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
     public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
         => queryService.ListFiles(relativePath, searchPattern, maxResults);
 
+    public WorkspaceFileListResult ListFiles(
+        string path,
+        string searchPattern,
+        int maxResults,
+        string authorityRootPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityRootPath);
+        return queryService.ListFiles(path, searchPattern, maxResults, authorityRootPath);
+    }
+
     public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
         => queryService.SearchText(query, relativePath, maxResults);
 
     public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
         => queryService.ReadTextFile(path, maxCharacters);
 
+    public WorkspaceTextFileReadResult ReadTextFile(
+        string path,
+        int maxCharacters,
+        string authorityRootPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityRootPath);
+        return queryService.ReadTextFile(path, maxCharacters, authorityRootPath);
+    }
+
     public WorkspacePathStatResult StatPath(string path)
         => queryService.StatPath(path);
+
+    public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityRootPath);
+        return queryService.StatPath(path, authorityRootPath);
+    }
 
     public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
     {
@@ -62,12 +98,14 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         var limitBytes = Math.Clamp(maxBytes, 1, 100 * 1024 * 1024);
         if (File.Exists(resolution.FullPath))
         {
+            pathPolicy.ValidatePathForUse(resolution.FullPath);
             var info = new FileInfo(resolution.FullPath);
             if (info.Length > limitBytes)
             {
                 return CreateHashFailure(operationName, resolution.RelativePath, "file", $"File '{resolution.RelativePath}' exceeds the configured hash byte limit.", startedAtUtc);
             }
 
+            pathPolicy.ValidatePathForUse(resolution.FullPath);
             using var stream = File.OpenRead(resolution.FullPath);
             var hash = SHA256.HashData(stream);
             return new WorkspacePathHashResult(
@@ -97,7 +135,11 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                     IgnoreInaccessible = false,
                     AttributesToSkip = FileAttributes.ReparsePoint
                 })
-            .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(
+                file => WorkspacePathPolicy.NormalizeRelativePath(
+                    Path.GetRelativePath(resolution.FullPath, file)),
+                StringComparer.Ordinal)
+            .ThenBy(file => file, StringComparer.Ordinal)
             .ToArray();
         if (files.Length > limitFiles)
         {
@@ -224,18 +266,20 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         var directory = Path.GetDirectoryName(destination.FullPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
-            Directory.CreateDirectory(directory);
+            pathPolicy.EnsureDirectoryForMutation(directory);
         }
 
         var stagingArchivePath = WorkspaceFileMutationService.CreateSiblingArtifactPath(
             destination.FullPath,
             "stage");
+        pathPolicy.ValidateMutationTarget(stagingArchivePath);
         try
         {
             using (var archive = ZipFile.Open(stagingArchivePath, ZipArchiveMode.Create))
             {
                 foreach (var file in files)
                 {
+                    pathPolicy.ValidatePathForUse(file);
                     var entryName = sourceKind == "file"
                         ? Path.GetFileName(file)
                         : Path.GetRelativePath(source.FullPath, file).Replace('\\', '/');
@@ -243,12 +287,15 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 }
             }
 
+            pathPolicy.ValidateMutationTarget(stagingArchivePath);
+            pathPolicy.ValidateMutationTarget(destination.FullPath);
             File.Move(stagingArchivePath, destination.FullPath, overwrite);
         }
         finally
         {
             if (File.Exists(stagingArchivePath))
             {
+                pathPolicy.ValidateMutationTarget(stagingArchivePath);
                 File.Delete(stagingArchivePath);
             }
         }
@@ -319,9 +366,11 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             return CreateArchiveFailure(operationName, $"Destination '{destination.RelativePath}' is a file.", source.RelativePath, destination.RelativePath, startedAtUtc);
         }
 
+        pathPolicy.ValidatePathForUse(source.FullPath);
         using var archive = ZipFile.OpenRead(source.FullPath);
         var entries = archive.Entries
             .Where(entry => !string.IsNullOrWhiteSpace(entry.Name))
+            .OrderBy(entry => NormalizeArchiveEntryPath(entry.FullName), StringComparer.Ordinal)
             .ToArray();
         if (entries.Length > Math.Clamp(maxFiles, 1, 2000))
         {
@@ -335,16 +384,16 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         }
 
         var targets = new List<(ZipArchiveEntry Entry, string TargetPath)>();
-        var targetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var targetPaths = new HashSet<string>(pathPolicy.PhysicalPathComparer);
         foreach (var entry in entries)
         {
             var targetPath = Path.GetFullPath(Path.Combine(destination.FullPath, entry.FullName));
-            if (!WorkspacePathPolicy.IsPathWithinRoot(targetPath, destination.FullPath))
+            if (!pathPolicy.IsPathWithinRoot(targetPath, destination.FullPath))
             {
                 return CreateArchiveFailure(operationName, $"Archive entry '{entry.FullName}' escapes the destination directory.", source.RelativePath, destination.RelativePath, startedAtUtc);
             }
 
-            if (!WorkspacePathPolicy.TryValidateNoReparseTraversal(targetPath, out var reparseValidationMessage))
+            if (!pathPolicy.TryValidateNoReparseTraversal(targetPath, out var reparseValidationMessage))
             {
                 return CreateArchiveFailure(operationName, reparseValidationMessage, source.RelativePath, destination.RelativePath, startedAtUtc);
             }
@@ -390,10 +439,11 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
 
         var destinationParent = Path.GetDirectoryName(destination.FullPath)
             ?? throw new InvalidOperationException($"Destination '{destination.FullPath}' has no containing directory.");
-        Directory.CreateDirectory(destinationParent);
+        pathPolicy.EnsureDirectoryForMutation(destinationParent);
         var stagingDirectory = WorkspaceFileMutationService.CreateSiblingArtifactPath(
             destination.FullPath,
             "stage");
+        pathPolicy.ValidateMutationTarget(stagingDirectory);
         WorkspaceMutationCommitResult commitResult;
         try
         {
@@ -403,7 +453,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
             }
             else
             {
-                Directory.CreateDirectory(stagingDirectory);
+                pathPolicy.EnsureDirectoryForMutation(stagingDirectory);
             }
 
             foreach (var (entry, targetPath) in targets)
@@ -413,12 +463,15 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                 var stagingTargetDirectory = Path.GetDirectoryName(stagingTargetPath);
                 if (!string.IsNullOrWhiteSpace(stagingTargetDirectory))
                 {
-                    Directory.CreateDirectory(stagingTargetDirectory);
+                    pathPolicy.EnsureDirectoryForMutation(stagingTargetDirectory);
                 }
 
+                pathPolicy.ValidateMutationTarget(stagingTargetPath);
                 entry.ExtractToFile(stagingTargetPath, overwrite: true);
             }
 
+            pathPolicy.ValidateMutationTarget(stagingDirectory);
+            pathPolicy.ValidateMutationTarget(destination.FullPath);
             commitResult = WorkspaceFileMutationService.CommitStagedDirectory(
                 stagingDirectory,
                 destination.FullPath,
@@ -428,6 +481,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         {
             if (Directory.Exists(stagingDirectory))
             {
+                pathPolicy.ValidateMutationTarget(stagingDirectory);
                 WorkspaceFileMutationService.DeleteDirectoryTree(stagingDirectory);
             }
         }
@@ -508,7 +562,11 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                     IgnoreInaccessible = false,
                     AttributesToSkip = FileAttributes.ReparsePoint
                 })
-            .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(
+                file => WorkspacePathPolicy.NormalizeRelativePath(
+                    Path.GetRelativePath(source.FullPath, file)),
+                StringComparer.Ordinal)
+            .ThenBy(file => file, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -523,9 +581,10 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         return reader.ReadToEnd();
     }
 
-    private static void CopyDirectoryTree(string sourcePath, string destinationPath)
+    private void CopyDirectoryTree(string sourcePath, string destinationPath)
     {
-        Directory.CreateDirectory(destinationPath);
+        pathPolicy.ValidatePathForUse(sourcePath);
+        pathPolicy.EnsureDirectoryForMutation(destinationPath);
         foreach (var directory in Directory.EnumerateDirectories(
                      sourcePath,
                      "*",
@@ -534,9 +593,14 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = false,
                          AttributesToSkip = FileAttributes.ReparsePoint
-                     }))
+                     })
+                 .OrderBy(
+                     directory => WorkspacePathPolicy.NormalizeRelativePath(
+                         Path.GetRelativePath(sourcePath, directory)),
+                     StringComparer.Ordinal)
+                 .ThenBy(directory => directory, StringComparer.Ordinal))
         {
-            Directory.CreateDirectory(
+            pathPolicy.EnsureDirectoryForMutation(
                 Path.Combine(destinationPath, Path.GetRelativePath(sourcePath, directory)));
         }
 
@@ -548,15 +612,25 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
                          RecurseSubdirectories = true,
                          IgnoreInaccessible = false,
                          AttributesToSkip = FileAttributes.ReparsePoint
-                     }))
+                     })
+                 .OrderBy(
+                     file => WorkspacePathPolicy.NormalizeRelativePath(
+                         Path.GetRelativePath(sourcePath, file)),
+                     StringComparer.Ordinal)
+                 .ThenBy(file => file, StringComparer.Ordinal))
         {
             var targetPath = Path.Combine(
                 destinationPath,
                 Path.GetRelativePath(sourcePath, file));
-            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+            pathPolicy.ValidatePathForUse(file);
+            pathPolicy.EnsureParentDirectoryForMutation(targetPath);
+            pathPolicy.ValidateMutationTarget(targetPath);
             File.Copy(file, targetPath, overwrite: false);
         }
     }
+
+    private static string NormalizeArchiveEntryPath(string path)
+        => path.Replace('\\', '/');
 
     private static bool CheckArchiveBounds(
         IReadOnlyList<string> files,
@@ -592,7 +666,7 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         return new[] { sourcePath, destinationPath }
             .OfType<string>()
             .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToList();
     }
 }

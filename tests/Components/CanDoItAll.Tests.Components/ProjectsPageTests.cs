@@ -1022,6 +1022,16 @@ public sealed class ProjectsPageTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<Result> RebindWorkspaceAsync(
+            Guid id,
+            string workspaceRoot,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result> RollbackWorkspacePathMigrationAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         public Task<DatabaseSelectionStateModel> GetCurrentSelectionAsync(
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

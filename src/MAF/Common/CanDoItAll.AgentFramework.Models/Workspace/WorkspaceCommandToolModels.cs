@@ -67,4 +67,5 @@ public sealed record WorkspaceLocalMcpLaunchDescriptor(
     string RiskClass,
     ExecutionBoundaryDescriptor Boundary,
     WorkspaceToolReceipt Receipt,
-    string Message);
+    string Message,
+    bool IsAllowed);

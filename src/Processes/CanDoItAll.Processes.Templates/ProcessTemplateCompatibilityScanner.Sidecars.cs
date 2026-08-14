@@ -18,7 +18,8 @@ public static partial class ProcessTemplateCompatibilityScanner
 
         var sidecars = new List<ProcessTemplateSidecarDrift>();
         foreach (var path in Directory.EnumerateFiles(processRoot, "*.*", SearchOption.AllDirectories)
-                     .OrderBy(item => item, StringComparer.Ordinal))
+                     .OrderBy(item => NormalizeRelative(root, item), StringComparer.Ordinal)
+                     .ThenBy(item => item, StringComparer.Ordinal))
         {
             cancellationToken.ThrowIfCancellationRequested();
 

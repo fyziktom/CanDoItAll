@@ -94,12 +94,18 @@ public sealed class ManagerStatusResponseFactoryTests
     [Fact]
     public void Create_includes_tailwind_service_and_paths()
     {
-        var workspaceRoot = @"C:\repos\CanDoItAll";
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "repos", "CanDoItAll");
+        var webProjectPath = Path.Combine(
+            workspaceRoot,
+            "src",
+            "App",
+            "CanDoItAll.Web",
+            "CanDoItAll.Web.csproj");
         var response = ManagerStatusResponseFactory.Create(
             "Development",
             "token-123",
             workspaceRoot,
-            @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj",
+            webProjectPath,
             new WatchStatusSnapshot(
                 WatchState.Ready,
                 "Ready",
@@ -122,9 +128,11 @@ public sealed class ManagerStatusResponseFactoryTests
         var tailwindService = Assert.Single(response.Services, service => service.Key == "tailwind");
 
         Assert.Equal(TailwindWatchState.Ready.ToString(), response.Tailwind.StateName);
-        Assert.Equal(@"C:\repos\CanDoItAll\Tailwind", response.Tailwind.WorkspacePath);
-        Assert.Equal(@"C:\repos\CanDoItAll\Tailwind\input.css", response.Tailwind.InputFilePath);
-        Assert.Equal(@"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\wwwroot\css\output.css", response.Tailwind.OutputFilePath);
+        Assert.Equal(Path.Combine(workspaceRoot, "Tailwind"), response.Tailwind.WorkspacePath);
+        Assert.Equal(Path.Combine(workspaceRoot, "Tailwind", "input.css"), response.Tailwind.InputFilePath);
+        Assert.Equal(
+            Path.Combine(workspaceRoot, "src", "App", "CanDoItAll.Web", "wwwroot", "css", "output.css"),
+            response.Tailwind.OutputFilePath);
         Assert.Equal("Inputs", tailwindService.ConfiguredLabel);
         Assert.Equal("Outputs", tailwindService.ActiveLabel);
         Assert.Contains(response.Tailwind.OutputFilePath, tailwindService.ActiveTargets);

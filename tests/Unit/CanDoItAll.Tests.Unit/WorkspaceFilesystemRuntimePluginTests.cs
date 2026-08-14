@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -64,8 +65,8 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
     [Fact]
     public void External_access_denial_maps_normalized_alias_without_native_path()
     {
-        const string nativePath = @"C:\operator-private\calculator\Calculator.csproj";
-        const string normalizedAlias = "external-target/C/operator-private/calculator/Calculator.csproj";
+        var nativePath = Path.Combine(Path.GetTempPath(), "operator-private", "calculator", "Calculator.csproj");
+        const string normalizedAlias = "external-target/unresolved";
         var access = new AgentWorkspaceToolAccessSettings
         {
             CanReadFiles = true
@@ -87,8 +88,8 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
     [Fact]
     public void Access_denial_exception_exposes_only_factories_and_normalizes_native_paths()
     {
-        const string nativePath = @"C:\operator-private\calculator\Calculator.csproj";
-        const string normalizedAlias = "external-target/C/operator-private/calculator/Calculator.csproj";
+        var nativePath = Path.Combine(Path.GetTempPath(), "operator-private", "calculator", "Calculator.csproj");
+        const string normalizedAlias = "external-target/unresolved";
         var exceptionType = typeof(WorkspaceToolAccessDeniedException);
 
         Assert.Empty(exceptionType.GetConstructors());
@@ -121,8 +122,8 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
                 (WorkspaceReadOnlyAncestorMutationOperation)int.MaxValue,
                 nativePath));
 
-        const string secondNativePath = @"C:\operator-private\calculator-output";
-        const string secondNormalizedAlias = "external-target/C/operator-private/calculator-output";
+        var secondNativePath = Path.Combine(Path.GetTempPath(), "operator-private", "calculator-output");
+        const string secondNormalizedAlias = "external-target/unresolved";
         var multiPathException = WorkspaceToolAccessDeniedException.InaccessiblePaths(
             nativePath,
             secondNativePath);
@@ -344,14 +345,16 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
     [Fact]
     public void Selected_project_root_attachment_flows_through_invocation_audit_to_recursive_reads_only()
     {
-        const string nativeRoot =
-            @"C:\programovani\dotnet\calculator-e2e-test";
-        const string rootAlias =
-            "external-target/C/programovani/dotnet/calculator-e2e-test";
-        const string projectAlias =
-            "external-target/C/programovani/dotnet/calculator-e2e-test/src/Calculator/Calculator.csproj";
-        const string siblingAlias =
-            "external-target/C/programovani/dotnet/unselected-app";
+        var parentRoot = Path.Combine(Path.GetTempPath(), "selected-project-root", Guid.NewGuid().ToString("N"));
+        var nativeRoot = Path.Combine(parentRoot, "calculator-e2e-test");
+        var externalTargets = new ExternalTargetPathRegistry();
+        Assert.True(externalTargets.TryCreateAlias(nativeRoot, out var rootAlias));
+        Assert.True(externalTargets.TryCreateAlias(
+            Path.Combine(nativeRoot, "src", "Calculator", "Calculator.csproj"),
+            out var projectAlias));
+        Assert.True(externalTargets.TryCreateAlias(
+            Path.Combine(parentRoot, "unselected-app"),
+            out var siblingAlias));
         var capturedAtUtc = new DateTimeOffset(
             2026,
             8,
@@ -361,8 +364,9 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
             0,
             TimeSpan.Zero);
         var attachmentDraft = Assert.IsType<AgentChatContextAttachmentDraft>(
-            AgentChatExternalTargetAccessAttachmentFactory.CreateReadOnlyDraft(
+            AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
                 [nativeRoot],
+                externalTargets,
                 new DatabaseProfileGeneration(7),
                 capturedAtUtc,
                 capturedAtUtc.AddMinutes(5)));
@@ -427,8 +431,9 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
     {
         Directory.CreateDirectory(workspaceRoot);
         return new WorkspaceFilesystemRuntimePlugin(
-            fileService ?? new WorkspaceFileService(workspaceRoot),
+            fileService ?? TestWorkspaceServices.CreateFileService(workspaceRoot),
             workspaceRoot,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
             access);
     }
@@ -466,13 +471,22 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
         public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
+        public WorkspaceFileListResult ListFiles(string path, string searchPattern, int maxResults, string authorityRootPath)
+            => throw new UnauthorizedAccessException(SensitiveFailureMessage);
+
         public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
         public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
+        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters, string authorityRootPath)
+            => throw new UnauthorizedAccessException(SensitiveFailureMessage);
+
         public WorkspacePathStatResult StatPath(string path)
+            => throw new UnauthorizedAccessException(SensitiveFailureMessage);
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
             => throw new UnauthorizedAccessException(SensitiveFailureMessage);
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
@@ -577,6 +591,13 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
                 IsTruncated: false);
         }
 
+        public WorkspaceFileListResult ListFiles(
+            string path,
+            string searchPattern,
+            int maxResults,
+            string authorityRootPath)
+            => ListFiles(path, searchPattern, maxResults);
+
         public WorkspaceTextFileReadResult ReadTextFile(
             string path,
             int maxCharacters = 12000)
@@ -598,6 +619,12 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
                 IsTruncated: false);
         }
 
+        public WorkspaceTextFileReadResult ReadTextFile(
+            string path,
+            int maxCharacters,
+            string authorityRootPath)
+            => ReadTextFile(path, maxCharacters);
+
         public WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100)
             => throw new NotSupportedException();
 
@@ -606,6 +633,9 @@ public sealed class WorkspaceFilesystemRuntimePluginTests : IDisposable
 
         public WorkspacePathStatResult StatPath(string path)
             => throw new NotSupportedException();
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
+            => StatPath(path);
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
             => throw new NotSupportedException();

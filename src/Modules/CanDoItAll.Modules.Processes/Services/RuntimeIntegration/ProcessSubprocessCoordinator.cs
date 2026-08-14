@@ -166,7 +166,7 @@ internal sealed class ProcessSubprocessCoordinator(
             return Failed(
                 "process.adapter.subprocess_launch_output_invalid",
                 FormatValidationErrors(validation.Validation.Errors),
-                validation.RawOutputHash);
+                BuildValidationEvidence(validation.RawOutputHash, validation.Validation.Errors));
         }
 
         if (await TryResolveDeferredOrCompletedSubprocessOutputAsync(

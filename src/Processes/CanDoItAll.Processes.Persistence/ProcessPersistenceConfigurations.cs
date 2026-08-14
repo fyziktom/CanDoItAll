@@ -10,6 +10,16 @@ internal sealed class ProcessInstancePlanEntityConfiguration : IEntityTypeConfig
         builder.ToTable("process_instance_plans");
         builder.HasKey(plan => plan.PlanId);
         builder.Property(plan => plan.PlanHash).HasMaxLength(128).IsRequired();
+        builder.Property(plan => plan.PlanHashAlgorithmVersion)
+            .HasConversion<string>()
+            .HasMaxLength(64);
+        builder.Property(plan => plan.ExecutionState)
+            .HasConversion<string>()
+            .HasMaxLength(64)
+            .IsRequired();
+        builder.Property(plan => plan.MigrationReason)
+            .HasConversion<string>()
+            .HasMaxLength(128);
         builder.Property(plan => plan.PlanSchemaVersion).HasMaxLength(64).IsRequired();
         builder.Property(plan => plan.DefinitionContentHash).HasMaxLength(128).IsRequired();
         builder.Property(plan => plan.PayloadJson).IsRequired();
@@ -104,6 +114,7 @@ internal sealed class ProcessRuntimeStepEntityConfiguration : IEntityTypeConfigu
         builder.Property(step => step.RequiredArtifactSlotIds).IsRequired();
         builder.Property(step => step.ProducedArtifactSlotIds).IsRequired();
         builder.Property(step => step.RequiredRuntimeToolNamesJson).IsRequired();
+        builder.Property(step => step.RequiredHostCapabilitiesJson).HasDefaultValue("[]").IsRequired();
         builder.Property(step => step.ArtifactDescriptorsJson).IsRequired();
         builder.Property(step => step.SubprocessArtifactMappingsJson).IsRequired();
         builder.HasIndex(step => new { step.RunId, step.Status });

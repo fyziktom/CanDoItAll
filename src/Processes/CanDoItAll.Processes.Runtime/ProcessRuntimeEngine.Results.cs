@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
@@ -41,7 +42,37 @@ public sealed partial class ProcessRuntimeEngine
             return ProcessRuntimeMutation.Rejected(state, "Runtime.StepNotRunning", "Strategy result requires a running step.");
         }
 
-        var appliedResult = EnforceStepFinalizationContract(state, step, command.Result);
+        if (!IsValidBoundedStrategyResult(command.Result))
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.StrategyResultReceiptInvalid",
+                "Strategy result receipt fields are invalid or exceed the bounded runtime contract.");
+        }
+
+        if (!TryNormalizeHostCapabilityEvidence(
+                command.Result.HostCapabilityEvidence,
+                out var normalizedHostCapabilityEvidence))
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.HostCapabilityEvidenceInvalid",
+                "Strategy result host capability evidence is invalid or exceeds the bounded runtime contract.");
+        }
+
+        var normalizedResult = command.Result with
+        {
+            HostCapabilityEvidence = normalizedHostCapabilityEvidence
+        };
+        var appliedResult = EnforceStepFinalizationContract(state, step, normalizedResult);
+        if (!IsValidBoundedStrategyResult(appliedResult))
+        {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.StrategyResultReceiptInvalid",
+                "Strategy result receipt fields are invalid or exceed the bounded runtime contract.");
+        }
+
         var resultStepStatus = ToStepStatus(appliedResult);
         var diagnosticReceipts = BuildDiagnosticReceipts(appliedResult, resultStepStatus);
         var recoveryDecision = BuildRecoveryDecision(appliedResult, resultStepStatus, state, step, diagnosticReceipts);
@@ -61,7 +92,8 @@ public sealed partial class ProcessRuntimeEngine
                 ? string.Empty
                 : appliedResult.UserSafeSummary.Trim(),
             AppliedSequence = NextAppliedResultSequence(state.AppliedResults),
-            ExecutionRunId = ResolveExecutionRunId(appliedResult)
+            ExecutionRunId = ResolveExecutionRunId(appliedResult),
+            HostCapabilityEvidence = appliedResult.HostCapabilityEvidence
         };
         var nextClaims = ReplaceClaim(
             state,
@@ -110,6 +142,93 @@ public sealed partial class ProcessRuntimeEngine
                 ? 1L
                 : receipts.Max(receipt => receipt.AppliedSequence) + 1L);
     }
+
+    private static bool TryNormalizeHostCapabilityEvidence(
+        ProcessHostCapabilityEvaluationEvidence? evidence,
+        out ProcessHostCapabilityEvaluationEvidence? normalized)
+    {
+        normalized = null;
+        if (evidence is null)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(evidence.ProfileId.Value) ||
+            evidence.Capabilities is null ||
+            evidence.Capabilities.Count > 32 ||
+            evidence.Capabilities.Any(capability =>
+                capability is null || !capability.IsStructurallyValid()) ||
+            evidence.Capabilities.Select(capability => capability.Id).Distinct().Count() !=
+            evidence.Capabilities.Count)
+        {
+            return false;
+        }
+
+        normalized = new ProcessHostCapabilityEvaluationEvidence(
+            evidence.ProfileId,
+            evidence.Capabilities
+                .OrderBy(capability => capability.Id.Value, StringComparer.Ordinal)
+                .ToArray());
+        return true;
+    }
+
+    private static bool IsValidBoundedStrategyResult(StrategyResultEnvelope result)
+    {
+        return result is not null &&
+               ProcessStrategyReceiptValuePolicy.IsStableIdentifier(result.StrategyId.Value) &&
+               ProcessStrategyReceiptValuePolicy.IsStableVersion(result.StrategyVersion) &&
+               result.IdempotencyKey != Guid.Empty &&
+               Enum.IsDefined(result.Outcome) &&
+               ProcessStrategyReceiptValuePolicy.IsSha256Digest(result.ResultHash) &&
+               ProcessPublicReceiptTextPolicy.IsSafe(
+                   result.UserSafeSummary,
+                   ProcessStrategyResultLimits.MaximumUserSafeSummaryLength) &&
+               result.ProducedArtifacts is { Count: <= ProcessStrategyResultLimits.MaximumArtifacts } &&
+               result.ProducedArtifacts.All(IsValidProducedArtifact) &&
+               result.RequestedArtifacts is { Count: <= ProcessStrategyResultLimits.MaximumArtifacts } &&
+               result.RequestedArtifacts.All(IsValidRequestedArtifact) &&
+               result.Diagnostics is { Count: <= ProcessStrategyResultLimits.MaximumDiagnostics } &&
+               result.Diagnostics.All(IsValidDiagnostic) &&
+               result.ManagerSignals is { Count: <= ProcessStrategyResultLimits.MaximumManagerSignals } &&
+               result.ManagerSignals.All(IsValidManagerSignal);
+    }
+
+    private static bool IsValidProducedArtifact(ProducedArtifactRef artifact)
+        => artifact is not null &&
+           artifact.ArtifactId.Value != Guid.Empty &&
+           artifact.SlotId.Value != Guid.Empty &&
+           ProcessStrategyReceiptValuePolicy.IsSha256Digest(artifact.ContentHash);
+
+    private static bool IsValidRequestedArtifact(RequestedArtifactRef artifact)
+        => artifact is not null &&
+           artifact.SlotId.Value != Guid.Empty &&
+           ProcessStrategyReceiptValuePolicy.IsSha256Digest(artifact.RequestHash);
+
+    private static bool IsValidDiagnostic(StrategyDiagnosticRef diagnostic)
+        => diagnostic is not null &&
+           ProcessStrategyReceiptValuePolicy.IsStableIdentifier(diagnostic.Code.Value) &&
+           Enum.IsDefined(diagnostic.Sensitivity) &&
+           ProcessStrategyReceiptValuePolicy.IsSha256Digest(diagnostic.EvidenceHash) &&
+            ProcessPublicReceiptTextPolicy.IsSafe(
+                diagnostic.SafeSummary,
+                ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength) &&
+           ProcessStrategyReceiptValuePolicy.IsRestrictedEvidenceReference(
+               diagnostic.RestrictedEvidenceReference) &&
+           Enum.IsDefined(diagnostic.RetrySafety) &&
+           Enum.IsDefined(diagnostic.Idempotency) &&
+           (diagnostic.ExecutionSafetyAttestation is null ||
+            diagnostic.ExecutionSafetyAttestation.IsStructurallyValid());
+
+    private static bool IsValidManagerSignal(ManagerSignal signal)
+        => signal is not null &&
+           ProcessStrategyReceiptValuePolicy.IsStableIdentifier(signal.Code.Value) &&
+           ProcessStrategyReceiptValuePolicy.IsSha256Digest(signal.SignalHash) &&
+            ProcessPublicReceiptTextPolicy.IsSafe(
+                signal.SafeSummary,
+                ProcessStrategyResultLimits.MaximumManagerSignalSummaryLength);
+
+    private static bool IsBoundedRequiredText(string? value, int maximumLength)
+        => !string.IsNullOrWhiteSpace(value) && value.Length <= maximumLength;
 
     private static ProcessRuntimeMutation RequestCancellation(ProcessRuntimeStateSnapshot state, RuntimeCommandContext context)
     {

@@ -107,8 +107,8 @@ public sealed class StorageTransferPipeline(
             });
 
         var orderedResults = results
-            .OrderBy(item => item.SourcePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(item => item.TargetPath, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item.SourcePath, StringComparer.Ordinal)
+            .ThenBy(item => item.TargetPath, StringComparer.Ordinal)
             .ToList();
 
         return new StorageTransferResult(

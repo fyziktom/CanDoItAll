@@ -1,0 +1,23 @@
+C1 validation summary — 2026-08-12
+
+Package-mode Release:
+- dotnet restore CanDoItAll.slnx --configfile .local\NuGet.Config -p:UseLocalCanDoItAllLibraries=false
+  Result: PASS.
+- dotnet build CanDoItAll.slnx -c Release --no-restore -p:UseLocalCanDoItAllLibraries=false
+  Result: PASS, 0 warnings, 0 errors; no sibling source outputs.
+
+Focused M01–M03:
+- Unit plan/FileTools/ProcessHost selection: 23 passed.
+- PostgreSQL plan migration: 1 passed.
+
+Runtime portability catalog:
+- Unit: 422 passed.
+- Integration: 33 passed.
+- Browser: 1 passed.
+
+One authorized stable Windows attempt:
+- Category exclusions: Playwright, LiveProcess, LongRunning, Quarantined.
+- Result: command ceiling reached at 15 minutes; not rerun under C1 policy.
+- Completed Components result: 955 passed, 5 failed, 960 total.
+- Exact five-test rerun: 1 passed, 4 failed.
+- Classification: unchanged Component tests, outside M01–M03 invalidation surfaces; no cross-area regression indicated.

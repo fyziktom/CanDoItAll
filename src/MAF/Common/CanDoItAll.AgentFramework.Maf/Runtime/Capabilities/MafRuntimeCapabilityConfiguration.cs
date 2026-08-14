@@ -84,6 +84,13 @@ internal sealed class SkillCapabilityConfiguration
     public FileSkillScriptExecutionConfiguration? ScriptExecution { get; set; }
 }
 
+internal enum SkillCapabilitySource
+{
+    File,
+    Inline,
+    Registered
+}
+
 internal sealed class FileSkillScriptExecutionConfiguration
 {
     public bool? ApprovalRequired { get; set; }

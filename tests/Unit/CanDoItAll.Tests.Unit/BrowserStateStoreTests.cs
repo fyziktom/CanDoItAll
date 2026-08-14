@@ -74,7 +74,7 @@ public sealed class BrowserStateStoreTests
                 },
                 Storage = new DatabaseProfileStorageDescriptor
                 {
-                    WorkspaceRoot = @"C:\workspace"
+                    WorkspaceRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll", "browser-state")
                 },
                 Runtime = new DatabaseProfileRuntimeMetadata
                 {

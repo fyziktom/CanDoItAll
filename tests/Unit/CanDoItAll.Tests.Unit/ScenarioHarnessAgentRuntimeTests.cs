@@ -30,7 +30,7 @@ public sealed class ScenarioHarnessAgentRuntimeTests
             var runtime = new ScenarioHarnessAgentRuntime(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
-                new WorkspaceFileService(workspaceRoot, WorkspaceScopeDescriptor.Sandbox),
+                TestWorkspaceServices.CreateFileService(workspaceRoot, WorkspaceScopeDescriptor.Sandbox),
                 commandService);
 
             var response = await runtime.ExecuteScenarioRunAsync(

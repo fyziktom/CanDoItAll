@@ -12,7 +12,8 @@ public sealed record ProjectStructureDotNetProjectTargetResolution(string? Proje
     public bool IsSuccess => !string.IsNullOrWhiteSpace(ProjectFilePath);
 }
 
-public sealed class ProjectStructureDotNetProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver
+public sealed class ProjectStructureDotNetProjectTargetResolver(
+    FileSystemStoragePathPolicy fileSystemStoragePathPolicy) : IProjectStructureDotNetProjectTargetResolver
 {
     public ProjectStructureDotNetProjectTargetResolution Resolve(string path)
     {
@@ -23,7 +24,7 @@ public sealed class ProjectStructureDotNetProjectTargetResolver : IProjectStruct
 
         try
         {
-            var fullPath = FileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path.Trim());
+            var fullPath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(path.Trim());
             FileAttributes attributes;
             try
             {
@@ -46,9 +47,11 @@ public sealed class ProjectStructureDotNetProjectTargetResolver : IProjectStruct
             var projectFiles = new List<string>();
             foreach (var candidatePath in Directory
                          .EnumerateFiles(fullPath, "*", SearchOption.TopDirectoryOnly)
-                         .Where(IsSupportedProjectFile))
+                         .Where(IsSupportedProjectFile)
+                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
             {
-                var safeCandidatePath = FileSystemStoragePathPolicy.ResolveReparseSafeFullPath(
+                var safeCandidatePath = fileSystemStoragePathPolicy.ResolveReparseSafeFullPath(
                     candidatePath);
                 var candidateAttributes = File.GetAttributes(safeCandidatePath);
                 if (candidateAttributes.HasFlag(FileAttributes.Directory) ||

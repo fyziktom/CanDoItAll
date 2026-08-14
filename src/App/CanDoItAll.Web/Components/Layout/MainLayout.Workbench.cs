@@ -19,6 +19,9 @@ public partial class MainLayout
     private Task OpenSettingsFromShellAsync()
         => HandleNavigateAsync("/settings");
 
+    private Task OpenRuntimeCapabilitiesFromShellAsync()
+        => HandleNavigateAsync("/settings/runtime-capabilities");
+
     private Task HandleOpenWorkbenchItemAsync(string tabId) => HandleSelectTabAsync(tabId);
 
     private Task HandleSelectWorkspaceAsync(string workspaceId)

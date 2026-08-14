@@ -39,8 +39,10 @@ using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
+DatabasePasswordFileConfiguration.Apply(builder.Configuration, builder.Environment.ContentRootPath);
 var detailedErrorsEnabled = builder.Configuration.GetValue<bool?>("DetailedErrors") ?? builder.Environment.IsDevelopment();
 var databaseOptions = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
+var webHostOptions = builder.Configuration.GetSection(WebHostRuntimeOptions.SectionName).Get<WebHostRuntimeOptions>() ?? new WebHostRuntimeOptions();
 
 if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
 {
@@ -54,7 +56,10 @@ builder.Services.AddCanDoItAllBaseLib();
 builder.Services.AddCanDoItAllCharts();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();
-builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddCanDoItAllRuntimeModules(
+    builder.Configuration,
+    builder.Environment,
+    builder.Environment.ContentRootPath);
 builder.Services.AddCanDoItAllDashboard();
 builder.Services.AddCanDoItAllFileToolsStoragePlacementRevision();
 builder.Services.AddCanDoItAllApi(builder.Configuration);
@@ -90,7 +95,10 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+if (webHostOptions.HttpsRedirectionEnabled)
+{
+    app.UseHttpsRedirection();
+}
 var apiOptions = app.Services.GetRequiredService<IOptions<ApiAccessOptions>>().Value;
 if (apiOptions.Authorization.Enabled)
 {
@@ -106,7 +114,9 @@ app.MapCanDoItAllApiDocumentation();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapGet("/_dev/runtime", (IRuntimeReadinessService readiness) =>
+    app.MapGet("/_dev/runtime", (
+        IRuntimeReadinessService readiness,
+        IHostCapabilitySnapshotProvider hostCapabilities) =>
     {
         var iteration = int.TryParse(Environment.GetEnvironmentVariable("DOTNET_WATCH_ITERATION"), out var parsed)
             ? parsed
@@ -127,7 +137,8 @@ if (app.Environment.IsDevelopment())
             ServerInstanceId = app.Configuration["CanDoItAllMcpServerInstanceId"],
             snapshot.StartedAtUtc,
             snapshot.LastChangedAtUtc,
-            snapshot.ActiveUrls
+            snapshot.ActiveUrls,
+            HostCapabilities = hostCapabilities.GetSnapshot()
         });
     }).RequireLocalOrAuthorizedDevelopmentAccess();
 
@@ -301,12 +312,7 @@ if (app.Environment.IsDevelopment())
             return Results.BadRequest(saveResult.Errors.Select(error => error.Message).ToArray());
         }
 
-        var fileName = string.Concat(seedLabel.Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            fileName = "seed";
-        }
+        string fileName = PortablePhysicalFileNamePolicy.Encode(seedLabel).PhysicalName;
 
         var relativePath = managedArtifactStore.GetRelativePath("profile-seeds", $"{fileName}.txt");
         var content = $"seed:{seedLabel}";
@@ -871,6 +877,17 @@ if (app.Environment.IsDevelopment())
 
 app.MapProjectStructureAgentApi();
 app.MapCanDoItAllApi();
+app.MapGet("/api/runtime/capabilities", (
+    IHostCapabilitySnapshotProvider hostCapabilities) =>
+        Results.Ok(hostCapabilities.GetSnapshot()));
+app.MapGet("/api/runtime/operations", (
+    IRuntimeDeploymentSupportProvider deploymentSupport,
+    IRuntimeReadinessService readiness,
+    IHostCapabilitySnapshotProvider hostCapabilities) =>
+        Results.Ok(RuntimeOperationsSnapshotProjector.Create(
+            deploymentSupport.GetManifest(),
+            readiness.GetSnapshot(),
+            hostCapabilities.GetSnapshot())));
 app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(CanDoItAll.Web.Composition.ModuleAssemblies.All)
     .AddInteractiveServerRenderMode();

@@ -59,8 +59,26 @@ public partial class ProjectStructurePage
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
         if (RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess)
         {
-            actions.Add(new ProjectStructureInspectorAction("runtime:open", "Open PowerShell", "powershell", "accent"));
-            actions.Add(new ProjectStructureInspectorAction("runtime:admin", "Open PowerShell (Admin)", "admin_panel_settings", "warn"));
+            var capabilities = runtimeLaunch.EffectiveCapabilities;
+            if (capabilities.Direct.IsAvailable)
+            {
+                actions.Add(new ProjectStructureInspectorAction("runtime:open", "Run", "play_arrow", "accent"));
+            }
+
+            if (capabilities.Terminal.IsAvailable)
+            {
+                actions.Add(new ProjectStructureInspectorAction("runtime:terminal", "Open terminal", "terminal", "sky"));
+            }
+
+            if (capabilities.Elevation.IsAvailable)
+            {
+                actions.Add(new ProjectStructureInspectorAction("runtime:admin", "Elevated launch", "admin_panel_settings", "warn"));
+            }
+
+            if (RuntimeLauncher.IsRunning(node.Id))
+            {
+                actions.Add(new ProjectStructureInspectorAction("runtime:stop", "Stop", "stop_circle", "warn"));
+            }
         }
 
         if (CanShowLocalOpen(node))
@@ -254,10 +272,16 @@ public partial class ProjectStructurePage
                 await InvokeAsync(StateHasChanged);
                 break;
             case "runtime:open":
-                await LaunchRuntimeAsync(node, false);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Direct);
+                break;
+            case "runtime:terminal":
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Terminal);
                 break;
             case "runtime:admin":
-                await LaunchRuntimeAsync(node, true);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Elevated);
+                break;
+            case "runtime:stop":
+                await StopRuntimeAsync(node);
                 break;
             case "open-local":
                 await OpenAttachmentLocallyAsync(node);

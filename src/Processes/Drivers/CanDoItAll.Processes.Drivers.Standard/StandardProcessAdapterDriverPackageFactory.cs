@@ -5,6 +5,10 @@ namespace CanDoItAll.Processes.Drivers.Standard;
 
 public static class StandardProcessAdapterDriverPackageFactory
 {
+    public const string DriverVersion = "1.0.0";
+    public const string MinimumRuntimeSchema = "runtime/1.0";
+    public const string MaximumRuntimeSchema = "runtime/2.x";
+
     public static IReadOnlyList<ProcessDriverPackage> CreateLayeredPackages(IProcessStepExecutionDriver driver)
     {
         ArgumentNullException.ThrowIfNull(driver);
@@ -22,9 +26,9 @@ public static class StandardProcessAdapterDriverPackageFactory
         var descriptor = new ProcessDriverDescriptor(
             driver.Descriptor.DriverId,
             $"{adapter.Kind} Adapter Driver",
-            "1.0.0",
-            "runtime/1.0",
-            "runtime/2.x",
+            DriverVersion,
+            MinimumRuntimeSchema,
+            MaximumRuntimeSchema,
             layer,
             adapter.CapabilityTags,
             [new ProcessDriverDependency(StandardProcessAdapterDriverIds.Foundation, ">=1.0")],
@@ -35,7 +39,10 @@ public static class StandardProcessAdapterDriverPackageFactory
                     "1.0",
                     "Adapter execution facet.")
             ],
-            [adapter.Strategy]);
+            [adapter.Strategy])
+        {
+            RequiredHostCapabilities = adapter.Strategy.RequiredHostCapabilities
+        };
 
         return new ProcessDriverPackage(
             descriptor,

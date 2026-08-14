@@ -32,6 +32,8 @@ public sealed record ProcessExecutionAdapterRequest(
     public ProcessStepExecutionContract StepContract { get; init; } = ProcessStepExecutionContract.Empty;
 
     public required ProcessDispatchClaimIdentity DispatchClaimIdentity { get; init; }
+
+    public ProcessHostCapabilityEvaluationEvidence? DispatchHostCapabilityEvidence { get; init; }
 }
 
 public sealed record ProcessExecutionContextFacet(
@@ -50,6 +52,8 @@ public sealed record ProcessExecutionAdapterResult(
 {
     public ProcessExecutionRunId? ExecutionRunId { get; init; }
 
+    public ProcessHostCapabilityEvaluationEvidence? HostCapabilityEvidence { get; init; }
+
     public static ProcessExecutionAdapterResult Succeeded(
         string userSafeSummary,
         string resultHash)
@@ -64,6 +68,10 @@ public sealed record ProcessExecutionAdapterResult(
             resultHash);
     }
 }
+
+public sealed record ProcessHostCapabilityEvaluationEvidence(
+    ProcessHostProfileId ProfileId,
+    IReadOnlyList<ProcessHostCapabilityFact> Capabilities);
 
 public sealed record ProcessExecutionAdapterDiagnostic(
     StrategyDiagnosticCode Code,

@@ -22,37 +22,59 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 node.MetadataJson,
                 pathAuthorityMode)
             : new ProjectStructureRuntimeLaunchResolution(null, string.Empty);
-        var canLaunchRuntime = isRuntimeCapable &&
-                               runtimeLauncher.IsAvailable &&
-                               runtimeResolution.IsSuccess &&
-                               runtimeResolution.Plan is not null;
+        var canResolveRuntime = isRuntimeCapable &&
+                                runtimeLauncher.IsAvailable &&
+                                runtimeResolution.IsSuccess &&
+                                runtimeResolution.Plan is not null;
         var canOpenInFileExplorer = localFileOpener.IsAvailable && localFileOpener.CanOpen(node);
         var canOpenInNewTab = IsIpfsBackedNode(node) && CanOpenNodeInNewTab(node);
         var canBrowseFiles = ProjectStructureFileActions.CanBrowseFiles(node);
         var storage = ResolveStorage(node);
-        if (canLaunchRuntime && runtimeResolution.Plan is { } runtimePlan)
+        if (canResolveRuntime && runtimeResolution.Plan is { } runtimePlan)
         {
-            actions.Add(new ProjectStructureNodeActionDescriptor(
+            var capabilities = runtimeResolution.EffectiveCapabilities;
+            var canExposePhysicalProjection = pathAuthorityMode == ProjectStructureRuntimePathAuthorityMode.OperatorSelected;
+            AddRuntimeAction(
+                actions,
+                guidance,
+                capabilities.Direct,
                 "runtime:open",
-                "Run normally",
-                "Double-click quick-action dialog and node context menu",
-                "Launches the resolved workspace command in a normal PowerShell window."));
-            actions.Add(new ProjectStructureNodeActionDescriptor(
+                "Run",
+                "Executes the typed runtime plan directly through the owned process host.",
+                "Direct execution");
+            AddRuntimeAction(
+                actions,
+                guidance,
+                capabilities.Terminal,
+                "runtime:terminal",
+                "Open terminal",
+                "Presents the typed runtime plan in an explicitly configured terminal.",
+                "Terminal presentation");
+            AddRuntimeAction(
+                actions,
+                guidance,
+                capabilities.Elevation,
                 "runtime:admin",
-                "Run as administrator",
-                "Double-click quick-action dialog and node context menu",
-                "Launches the same resolved workspace command in an elevated PowerShell window."));
-            guidance.Add("Runtime nodes expose normal and administrator shell-handoff actions only when the launch plan and target resolve on this host.");
-            guidance.Add("A shell handoff is not proof that the application started; verify the terminal output after launch.");
+                "Elevated launch",
+                "Starts the typed runtime plan through the explicitly supported elevation capability.",
+                "Elevated launch");
+            if (runtimeLauncher.IsRunning(node.Id))
+            {
+                actions.Add(new ProjectStructureNodeActionDescriptor(
+                    "runtime:stop",
+                    "Stop",
+                    "Double-click quick-action dialog and node context menu",
+                    "Stops only the process identity owned by this Workbench runtime node."));
+            }
 
             return new ProjectStructureNodeActionCapabilities(
-                CanRunNormally: true,
-                CanRunAsAdministrator: true,
+                CanRunNormally: capabilities.Direct.IsAvailable,
+                CanRunAsAdministrator: capabilities.Elevation.IsAvailable,
                 CanOpenInFileExplorer: canOpenInFileExplorer,
                 CanOpenInNewTab: canOpenInNewTab,
                 RuntimeDisplayName: runtimePlan.DisplayName,
-                RuntimeDisplayCommand: runtimePlan.DisplayCommand,
-                RuntimeWorkingDirectory: runtimePlan.WorkingDirectory,
+                RuntimeDisplayCommand: canExposePhysicalProjection ? runtimePlan.DisplayCommand : string.Empty,
+                RuntimeWorkingDirectory: canExposePhysicalProjection ? runtimePlan.WorkingDirectory : string.Empty,
                 OpenInNewTabRoute: canOpenInNewTab ? node.Route : string.Empty,
                 StorageProvider: storage.Provider,
                 StorageLocatorKind: storage.LocatorKind,
@@ -90,7 +112,39 @@ internal static class ProjectStructureNodeActionCapabilityResolver
             Guidance: guidance);
     }
 
-    private static bool IsRuntimeCapable(ProjectStructureNode node)
+    private static void AddRuntimeAction(
+        List<ProjectStructureNodeActionDescriptor> actions,
+        List<string> guidance,
+        ProjectStructureRuntimeCapability capability,
+        string actionId,
+        string label,
+        string description,
+        string capabilityLabel)
+    {
+        if (capability.IsAvailable)
+        {
+            actions.Add(new ProjectStructureNodeActionDescriptor(
+                actionId,
+                label,
+                "Double-click quick-action dialog and node context menu",
+                description));
+            return;
+        }
+
+        guidance.Add($"{capabilityLabel} is {DescribeStatus(capability.Status)}: {capability.Message}");
+    }
+
+    private static string DescribeStatus(ProjectStructureRuntimeCapabilityStatus status)
+        => status switch
+        {
+            ProjectStructureRuntimeCapabilityStatus.DependencyMissing => "unavailable because a dependency is missing",
+            ProjectStructureRuntimeCapabilityStatus.Headless => "unavailable on this headless host",
+            ProjectStructureRuntimeCapabilityStatus.PolicyDenied => "blocked by policy",
+            ProjectStructureRuntimeCapabilityStatus.Unsupported => "unsupported on this host",
+            _ => "unavailable"
+        };
+
+    internal static bool IsRuntimeCapable(ProjectStructureNode node)
         => node.ObjectType switch
         {
             ProjectObjectType.Script or ProjectObjectType.Environment => true,

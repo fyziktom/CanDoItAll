@@ -4,10 +4,15 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.AgentFramework.Hosting;
 
@@ -36,42 +41,77 @@ public static class AgentFrameworkServiceCollectionExtensions
         }
 
         services.AddLogging();
+        services.AddDataProtection();
+        services.TryAddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
+        services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
+        services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
+        services.TryAddSingleton(serviceProvider => new WorkspaceFileInspectionScopeFactory(
+            normalizedWorkspaceRoot,
+            resolvedScope,
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddSingleton<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddSingleton<IAgentPackageService>(_ => new ZipAgentPackageService(normalizedWorkspaceRoot, resolvedScope));
-        services.TryAddSingleton<IWorkspaceFileService>(_ => new WorkspaceFileService(normalizedWorkspaceRoot, resolvedScope));
-        services.TryAddSingleton<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
-        services.TryAddSingleton<IWorkspacePathResolutionService>(_ => new WorkspacePathResolutionService(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddSingleton<WorkspaceExecutableLocator>();
+        services.TryAddScoped<IWorkspaceFileService>(serviceProvider => new WorkspaceFileService(
+            normalizedWorkspaceRoot,
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            resolvedScope,
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()));
+        services.TryAddScoped<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
+        services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider => new WorkspacePathResolutionService(
+            normalizedWorkspaceRoot,
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            resolvedScope,
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()));
         services.TryAddSingleton<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
-        services.TryAddSingleton<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
+        services.TryAddSingleton<IWorkspaceLongRunningProcessHost>(serviceProvider =>
+            serviceProvider.GetRequiredService<IWorkspaceProcessHost>() as IWorkspaceLongRunningProcessHost
+            ?? throw new InvalidOperationException(
+                "The configured workspace process host does not implement managed process sessions."));
+        services.TryAddScoped<IWorkspaceCommandExecutionService>(serviceProvider => new WorkspaceCommandExecutionService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
             resolvedScope,
-            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()));
+            serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>(),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()));
         services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>(serviceProvider =>
             new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
-                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList()));
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
         services.TryAddSingleton<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
-            new WorkspaceExecutionRunProcessLeaseCleaner(
+        {
+            IPhysicalFileSystemPathPolicyFactory pathPolicyFactory =
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>();
+            return new WorkspaceExecutionRunProcessLeaseCleaner(
                 serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
                 new WorkspaceExecutionScope(
                     normalizedWorkspaceRoot,
                     resolvedScope,
                     resolvedActivityWorkspaceIdentity.DatabaseProfileId,
-                    resolvedActivityWorkspaceIdentity.DatabaseProfileGeneration),
-                serviceProvider.GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>()));
+                    resolvedActivityWorkspaceIdentity.DatabaseProfileGeneration,
+                    rootCaseSensitivity: pathPolicyFactory.Create(normalizedWorkspaceRoot).CaseSensitivity),
+                serviceProvider.GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>());
+        });
         services.TryAddSingleton<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
-        services.TryAddSingleton<IWorkspaceImageOperationService>(_ => new WorkspaceImageOperationService(
+        services.TryAddScoped<IWorkspaceImageOperationService>(serviceProvider => new WorkspaceImageOperationService(
             normalizedWorkspaceRoot,
-            resolvedScope));
-        services.TryAddSingleton<IWorkspaceArtifactToolService>(serviceProvider => new WorkspaceArtifactToolService(
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            resolvedScope,
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()));
+        services.TryAddScoped<IWorkspaceArtifactToolService>(serviceProvider => new WorkspaceArtifactToolService(
             normalizedWorkspaceRoot,
             serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
             serviceProvider.GetRequiredService<IWorkspaceDocumentMarkdownConverter>(),
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
             resolvedScope,
-            serviceProvider.GetRequiredService<IWorkspaceImageOperationService>()));
+            serviceProvider.GetRequiredService<IWorkspaceImageOperationService>(),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistry>()));
         services.TryAddSingleton<IAgentProviderCredentialResolver, EnvironmentVariableAgentProviderCredentialResolver>();
         services.AddMafProviderRuntimeServices();
         services.TryAddSingleton<IProviderProfileService, ProviderProfileService>();
@@ -130,7 +170,9 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.AddAgentFrameworkVoice();
         services.TryAddSingleton<IWorkspaceRuntimeServicesFactory>(serviceProvider => new WorkspaceRuntimeServicesFactory(
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
-            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter()));
+            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
         services.TryAddSingleton<MafAgentRuntime>(serviceProvider => new MafAgentRuntime(normalizedWorkspaceRoot, serviceProvider, resolvedScope));
         // SB18: the four narrow runtime ports resolve directly to the native MAF adapters exposed
         // by the same MafAgentRuntime composition (one adapter set per runtime scope). No broad
@@ -149,7 +191,7 @@ public static class AgentFrameworkServiceCollectionExtensions
             serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
-        services.AddMafWorkflowAdapterServices(ServiceLifetime.Singleton);
+        services.AddMafWorkflowAdapterServices(ServiceLifetime.Scoped);
         services.AddInMemoryWorkflowCatalogServices();
         services.AddInMemoryWorkflowRuntimeStores(normalizedWorkspaceRoot, resolvedScope);
         // AgentFrameworkWorkspaceService takes IEnumerable<IAgentExecutionProviderSelectionPolicy> /

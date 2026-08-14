@@ -1,10 +1,12 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json.Nodes;
 
 namespace CanDoItAll.Tests.Components;
 
@@ -33,8 +35,11 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
         var workspace = scope.ServiceProvider
             .GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()
             .GetOrganizationWorkspaceService();
+        var externalTargetPathRegistry = scope.ServiceProvider
+            .GetRequiredService<IExternalTargetPathRegistry>();
         var administration = new HrAgentAdministrationService(
             workspace,
+            externalTargetPathRegistry,
             NullLogger<HrAgentAdministrationService>.Instance);
 
         var createResult = await administration.CreateAsync(
@@ -52,9 +57,11 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
 
         var firstStorageId = Guid.NewGuid();
         var secondStorageId = Guid.NewGuid();
-        const string ExternalPath = @"C:\repositories\GardenPlanner";
+        var externalPath = Path.Combine(Path.GetTempPath(), "GardenPlanner");
         var expectedAlias = Assert.IsType<string>(
-            AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(ExternalPath));
+            AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                externalPath,
+                externalTargetPathRegistry));
         await administration.UpdateAsync(
             HrAgentIdentity.AgentId,
             new HrAgentSettingsUpdateInput(
@@ -63,7 +70,7 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
                 WorkspaceToolAccess: new HrAgentWorkspaceToolAccessPatch(
                     CanRunLocalScripts: true,
                     CanTransformArtifacts: true,
-                    AllowedExternalTargetAliases: [ExternalPath, expectedAlias],
+                    AllowedExternalTargetAliases: [externalPath, expectedAlias],
                     CanWriteStorage: true,
                     AllowedStorageCatalogIds:
                     [
@@ -140,6 +147,7 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
             .GetOrganizationWorkspaceService();
         var administration = new HrAgentAdministrationService(
             workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
 
         var createResult = await administration.CreateAsync(
@@ -210,6 +218,84 @@ public sealed class HrAgentWorkspaceToolAccessAdministrationTests
                     AllowAllStorageCatalogs: true,
                     AllowedStorageCatalogIds: [Guid.NewGuid()])),
             CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Existing_legacy_external_alias_is_migrated_when_an_unrelated_setting_is_saved_and_reloaded()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        const string legacyAlias = "external-target/C/work/apps/Inventory";
+        await using var environment = CanDoItAllTestEnvironment.Create("hr-workspace-legacy-migration");
+        var profile = environment.CreateInMemoryProfile("primary");
+        var configuration = TestApplicationBootstrap.BuildConfiguration(profile);
+        var services = new ServiceCollection();
+        TestApplicationBootstrap.ConfigureDefaultServices(
+            services,
+            configuration,
+            environment.CreateHostEnvironment("CanDoItAll.HrWorkspaceLegacyMigrationTests"));
+        await using var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        await TestApplicationBootstrap.InitializeSchemaAsync(
+            serviceProvider,
+            TestSchemaBootstrapModules.None);
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var workspace = scope.ServiceProvider
+            .GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()
+            .GetOrganizationWorkspaceService();
+        var administration = new HrAgentAdministrationService(
+            workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
+            NullLogger<HrAgentAdministrationService>.Instance);
+        var createResult = await administration.CreateAsync(
+            HrAgentIdentity.AgentId,
+            CreateInput(new HrAgentWorkspaceToolAccessInput(CanWriteFiles: true)),
+            CancellationToken.None);
+        var created = await FindAgentAsync(workspace, createResult.AgentId);
+        var store = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+
+        await store.UpdateWorkspaceAsync(document =>
+        {
+            var configurationRoot = JsonNode.Parse(created.ConfigurationJson)?.AsObject() ?? new JsonObject();
+            var workspaceTools = configurationRoot["workspaceTools"]?.AsObject() ?? new JsonObject();
+            workspaceTools["allowedExternalTargetAliases"] = new JsonArray(JsonValue.Create(legacyAlias));
+            workspaceTools.Remove("externalTargetRootBindings");
+            configurationRoot["workspaceTools"] = workspaceTools;
+            return document with
+            {
+                Agents = document.Agents
+                    .Select(agent => agent.Id == created.Id
+                        ? agent with { ConfigurationJson = configurationRoot.ToJsonString() }
+                        : agent)
+                    .ToArray()
+            };
+        });
+
+        var persistedLegacy = await FindAgentAsync(workspace, created.Id);
+        Assert.Equal(
+            [legacyAlias],
+            AgentWorkspaceToolAccessMetadata.Read(persistedLegacy.ConfigurationJson).AllowedExternalTargetAliases);
+
+        await administration.UpdateAsync(
+            HrAgentIdentity.AgentId,
+            new HrAgentSettingsUpdateInput(
+                created.Id,
+                persistedLegacy.UpdatedAtUtc,
+                Summary: "Migration-triggering edit"),
+            CancellationToken.None);
+
+        var reloaded = await FindAgentAsync(workspace, created.Id);
+        var migratedAccess = AgentWorkspaceToolAccessMetadata.Read(reloaded.ConfigurationJson);
+        var migratedAlias = Assert.Single(migratedAccess.AllowedExternalTargetAliases);
+        Assert.Matches("^external-target/v1/[0-9a-f]{24}$", migratedAlias);
+        Assert.DoesNotContain(legacyAlias, reloaded.ConfigurationJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(migratedAccess.ExternalTargetRootBindings);
     }
 
     private static HrAgentCreateInput CreateInput(

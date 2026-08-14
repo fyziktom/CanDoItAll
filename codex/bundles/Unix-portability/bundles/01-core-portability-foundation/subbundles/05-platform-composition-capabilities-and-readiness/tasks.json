@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A05",
+  "title": "Platform composition, capabilities, and readiness",
+  "critical": true,
+  "conditional": false,
+  "status": "Completed — Gate C3a GO",
+  "depends_on": [
+    "A04",
+    "Gate C2"
+  ],
+  "unlocks": [
+    "A06"
+  ],
+  "requirements": [
+    "PLAT-001",
+    "PLAT-002",
+    "PLAT-003",
+    "PLAT-004",
+    "PLAT-005"
+  ],
+  "source_hotspots": [
+    "src/App/CanDoItAll.Web/Program.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs",
+    "src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs",
+    "codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md"
+  ],
+  "tasks": [
+    {
+      "id": "A05-T01",
+      "title": "Define narrow platform facts and adapters",
+      "description": "Keep common code on portable .NET APIs. Add purpose-owned contracts only where behavior genuinely differs: root defaults, filesystem semantics, key/vault backend, native permission hardening, and optional capability probes.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T02",
+      "title": "Select implementations at composition",
+      "description": "Register exactly one mandatory implementation per profile and zero-or-one optional adapters. Avoid conditional compilation unless a native reference cannot be isolated otherwise.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T03",
+      "title": "Create capability/readiness descriptors",
+      "description": "Report availability, reason, remediation, support level, implementation registration, identity, optional truthful version, and execution boundary without exposing secrets or full sensitive paths.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T04",
+      "title": "Fail fast for mandatory security/path defects",
+      "description": "The host must not start in a production profile with an unsupported secret provider, unusable control-plane root, insecure key permissions, or ambiguous migration.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T05",
+      "title": "Degrade optional features independently",
+      "description": "Desktop open, terminal presentation, native process discovery, FileTools, and other runtime capabilities can be unavailable without blocking headless core startup.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T06",
+      "title": "Add architecture enforcement",
+      "description": "Add dependency/scan tests that prevent a broad IPlatformService, OS branching in domain/process semantics, and reverse MAF-to-product ownership.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T07",
+      "title": "Prove profile matrix",
+      "description": "Test Windows interactive, Linux headless, Linux interactive-keyring, macOS interactive, macOS headless/service, and explicit test profiles.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A05-T08",
+      "title": "Issue composition gate C3a",
+      "description": "Require consistent capability UI/API/readiness snapshots and no misleading support claims.",
+      "requirements": [
+        "PLAT-001",
+        "PLAT-002",
+        "PLAT-003",
+        "PLAT-004",
+        "PLAT-005"
+      ],
+      "status": "Completed — Gate C3a GO",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

@@ -2,19 +2,21 @@ namespace CanDoItAll.Manager;
 
 public sealed class ManagerOptions
 {
-    public string WorkspaceRoot { get; set; } = "..\\..\\..\\..\\..";
+    public string WorkspaceRoot { get; set; } = "../../../../..";
 
-    public string WatchProjectPath { get; set; } = "src\\App\\CanDoItAll.Web\\CanDoItAll.Web.csproj";
+    public string WatchProjectPath { get; set; } = "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj";
 
     public string TailwindWorkspacePath { get; set; } = "Tailwind";
 
-    public string TailwindInputPath { get; set; } = "Tailwind\\input.css";
+    public string TailwindInputPath { get; set; } = "Tailwind/input.css";
 
-    public string TailwindOutputPath { get; set; } = "src\\App\\CanDoItAll.Web\\wwwroot\\css\\output.css";
+    public string TailwindOutputPath { get; set; } = "src/App/CanDoItAll.Web/wwwroot/css/output.css";
 
     public string[] TailwindContentWatchPaths { get; set; } = ["src"];
 
     public int TailwindWatchDebounceMilliseconds { get; set; } = 150;
+
+    public int TailwindWatchPollingMilliseconds { get; set; } = 2_000;
 
     public string WatchLaunchProfile { get; set; } = "https";
 
@@ -52,9 +54,9 @@ public sealed class ManagerOptions
 
     public bool ReviewBeforeSend { get; set; } = true;
 
-    public string ArtifactsRoot { get; set; } = ".artifacts\\codex-manager";
+    public string ArtifactsRoot { get; set; } = ".artifacts/codex-manager";
 
-    public string CapsuleArtifactsRoot { get; set; } = ".artifacts\\codex-capsules";
+    public string CapsuleArtifactsRoot { get; set; } = ".artifacts/codex-capsules";
 
     public string TuningCommand { get; set; } = string.Empty;
 

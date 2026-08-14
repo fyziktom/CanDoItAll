@@ -313,7 +313,8 @@ public sealed class PluginWorkflowExecutorBoundaryTests
         var project = XDocument.Load(projectPath);
         var projectReferences = project
             .Descendants("ProjectReference")
-            .Select(element => Path.GetFileNameWithoutExtension((string?)element.Attribute("Include") ?? string.Empty))
+            .Select(element => Path.GetFileNameWithoutExtension(
+                ((string?)element.Attribute("Include") ?? string.Empty).Replace('\\', '/')))
             .Where(reference => !string.IsNullOrWhiteSpace(reference))
             .Order(StringComparer.Ordinal)
             .ToArray();

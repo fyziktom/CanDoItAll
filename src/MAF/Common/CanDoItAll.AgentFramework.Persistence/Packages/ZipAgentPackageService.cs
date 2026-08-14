@@ -4,10 +4,13 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
-public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null) : IAgentPackageService
+public sealed class ZipAgentPackageService : IAgentPackageService
 {
     private const string ManagerReviewInputExportSummary = "HR manager-review request redacted for export.";
     private const string ManagerReviewResultExportSummary = "HR manager-review response redacted for export.";
@@ -40,15 +43,27 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
         WriteIndented = true
     };
 
-    private readonly string exportRoot = Path.Combine((workspaceScope ?? WorkspaceScopeDescriptor.Sandbox).ResolveDataRoot(workspaceRoot), "exports");
+    private readonly DurableFileWriter durableFileWriter;
+    private readonly string exportRoot;
+    private readonly string workspaceRoot;
+
+    public ZipAgentPackageService(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor? workspaceScope = null)
+    {
+        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
+        this.workspaceRoot = physicalPathPolicyFactory.Create(workspaceRoot).RootPath;
+        exportRoot = Path.Combine(
+            (workspaceScope ?? WorkspaceScopeDescriptor.Sandbox).ResolveDataRoot(this.workspaceRoot),
+            "exports");
+        durableFileWriter = new DurableFileWriter(physicalPathPolicyFactory);
+    }
 
     public async Task<AgentExportResult> ExportAsync(
         SandboxWorkspaceDocument document,
         AgentDefinition agent,
         CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(exportRoot);
-
         var sensitiveHrApprovalRunIds = document.ExecutionApprovals
             .Where(approval => AgentToolInvocationPolicyMetadata.HasSensitiveHrArguments(approval.ToolName))
             .Select(approval => approval.ExecutionRunId)
@@ -89,47 +104,55 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
             ToolReceipts = document.ToolExecutionReceipts.Where(item => runIds.Contains(item.ExecutionRunId)).ToList()
         };
 
-        var safeName = string.Concat(agent.Name.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '-' : character)).Trim();
-        if (string.IsNullOrWhiteSpace(safeName))
-        {
-            safeName = "agent";
-        }
-
-        var packagePath = Path.Combine(exportRoot, $"{safeName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.zip");
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"agent-package-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempRoot);
-
-        try
-        {
-            var manifestPath = Path.Combine(tempRoot, "manifest.json");
-            var markdownPath = Path.Combine(tempRoot, "agent.md");
-            var instructionsPath = Path.Combine(tempRoot, "instructions.txt");
-            var memoryPath = Path.Combine(tempRoot, "memory.json");
-            var sessionsPath = Path.Combine(tempRoot, "sessions.json");
-            var metricsPath = Path.Combine(tempRoot, "metrics.json");
-
-            await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(manifest, SerializerOptions), cancellationToken);
-            await File.WriteAllTextAsync(markdownPath, BuildMarkdownSummary(agent, manifest), cancellationToken);
-            await File.WriteAllTextAsync(instructionsPath, agent.Instructions, Encoding.UTF8, cancellationToken);
-            await File.WriteAllTextAsync(memoryPath, JsonSerializer.Serialize(manifest.Memory, SerializerOptions), cancellationToken);
-            await File.WriteAllTextAsync(sessionsPath, JsonSerializer.Serialize(manifest.Sessions, SerializerOptions), cancellationToken);
-            await File.WriteAllTextAsync(metricsPath, JsonSerializer.Serialize(manifest.Metrics, SerializerOptions), cancellationToken);
-
-            if (File.Exists(packagePath))
+        string safeName = PortablePhysicalFileNamePolicy.Encode(agent.Name).PhysicalName;
+        string packagePath = Path.Combine(
+            exportRoot,
+            $"{safeName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fffffff}-{Guid.NewGuid():N}.zip");
+        await durableFileWriter.WriteStreamAsync(
+            workspaceRoot,
+            packagePath,
+            async (stream, token) =>
             {
-                File.Delete(packagePath);
-            }
+                using var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true);
+                await WriteArchiveEntryAsync(
+                    archive,
+                    "manifest.json",
+                    JsonSerializer.Serialize(manifest, SerializerOptions),
+                    token);
+                await WriteArchiveEntryAsync(archive, "agent.md", BuildMarkdownSummary(agent, manifest), token);
+                await WriteArchiveEntryAsync(archive, "instructions.txt", agent.Instructions, token);
+                await WriteArchiveEntryAsync(
+                    archive,
+                    "memory.json",
+                    JsonSerializer.Serialize(manifest.Memory, SerializerOptions),
+                    token);
+                await WriteArchiveEntryAsync(
+                    archive,
+                    "sessions.json",
+                    JsonSerializer.Serialize(manifest.Sessions, SerializerOptions),
+                    token);
+                await WriteArchiveEntryAsync(
+                    archive,
+                    "metrics.json",
+                    JsonSerializer.Serialize(manifest.Metrics, SerializerOptions),
+                    token);
+            },
+            cancellationToken: cancellationToken);
 
-            ZipFile.CreateFromDirectory(tempRoot, packagePath);
-            return new AgentExportResult(packagePath, $"Exported {agent.Name} with {manifest.Sessions.Count} chat session(s) and {manifest.Memory.Count} memory item(s).");
-        }
-        finally
-        {
-            if (Directory.Exists(tempRoot))
-            {
-                Directory.Delete(tempRoot, recursive: true);
-            }
-        }
+        return new AgentExportResult(packagePath, $"Exported {agent.Name} with {manifest.Sessions.Count} chat session(s) and {manifest.Memory.Count} memory item(s).");
+    }
+
+    private static async Task WriteArchiveEntryAsync(
+        ZipArchive archive,
+        string entryName,
+        string content,
+        CancellationToken cancellationToken)
+    {
+        ZipArchiveEntry entry = archive.CreateEntry(entryName, CompressionLevel.Optimal);
+        entry.LastWriteTime = new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        await using Stream entryStream = entry.Open();
+        await using var writer = new StreamWriter(entryStream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        await writer.WriteAsync(content.AsMemory(), cancellationToken);
     }
 
     public async Task<AgentImportResult> ImportAsync(string packagePath, CancellationToken cancellationToken = default)
@@ -504,7 +527,7 @@ public sealed class ZipAgentPackageService(string workspaceRoot, WorkspaceScopeD
                 var isManagerReview = IsManagerReviewRun(run);
                 return run with
                 {
-                    MetadataJson = string.IsNullOrWhiteSpace(run.MetadataJson) ? "{}" : run.MetadataJson,
+                    MetadataJson = ExecutionInvocationMetadata.ProtectForUntrustedOutput(run.MetadataJson),
                     InputSummary = isManagerReview ? ManagerReviewInputExportSummary : run.InputSummary,
                     ResultSummary = isManagerReview ? ManagerReviewResultExportSummary : run.ResultSummary,
                     RuntimeSessionKey = isManagerReview || hasSensitiveHrApproval

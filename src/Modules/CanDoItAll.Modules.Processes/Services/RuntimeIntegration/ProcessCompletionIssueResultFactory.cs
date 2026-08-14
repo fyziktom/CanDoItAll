@@ -9,6 +9,7 @@ using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
@@ -32,7 +33,6 @@ using static CanDoItAll.Modules.Processes.ProcessManagedArtifactEvidence;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactService;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactFormatter;
 using static CanDoItAll.Modules.Processes.ProcessManagedArtifactOutcomeParser;
-using static CanDoItAll.Modules.Processes.ProcessProductCompletionPathGate;
 using static CanDoItAll.Modules.Processes.ProcessRequiredReceiptMatcher;
 
 namespace CanDoItAll.Modules.Processes;
@@ -41,15 +41,21 @@ internal sealed class ProcessCompletionIssueResultFactory
 {
     private readonly IWorkspaceFileService workspaceFiles;
     private readonly ProcessCompletionDefectEvidenceCatalog completionDefectEvidenceCatalog;
+    private readonly ProcessProductCompletionPathGate productCompletionPathGate;
 
     public ProcessCompletionIssueResultFactory(
         IWorkspaceFileService workspaceFiles,
-        ProcessCompletionDefectEvidenceCatalog completionDefectEvidenceCatalog)
+        ProcessCompletionDefectEvidenceCatalog completionDefectEvidenceCatalog,
+        ProcessProductCompletionPathGate productCompletionPathGate)
     {
         this.workspaceFiles = workspaceFiles ?? throw new ArgumentNullException(nameof(workspaceFiles));
         this.completionDefectEvidenceCatalog = completionDefectEvidenceCatalog ??
             throw new ArgumentNullException(nameof(completionDefectEvidenceCatalog));
+        this.productCompletionPathGate = productCompletionPathGate ??
+            throw new ArgumentNullException(nameof(productCompletionPathGate));
     }
+
+    internal ProcessProductCompletionPathGate ProductCompletionPathGate => productCompletionPathGate;
 
     internal static ProcessExecutionAdapterResult NeedsManagerForCompletionIssue(
         ProcessRuntimeStepAssignment assignment,
@@ -72,7 +78,16 @@ internal sealed class ProcessCompletionIssueResultFactory
             throw new InvalidOperationException("Completion issue result requires at least one completion gate issue.");
         }
 
-        var issues = evaluation.OrderedIssues;
+        var issues = evaluation.OrderedIssues
+            .Take(ProcessStrategyResultLimits.MaximumDiagnostics)
+            .Select(issue => issue with
+            {
+                Summary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+                    assignment,
+                    issue.Summary,
+                    ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength)
+            })
+            .ToArray();
         var primaryIssue = issues[0];
         var requestedArtifactSlots = ResolveRequestedArtifactSlots(assignment, issues);
         return new ProcessExecutionAdapterResult(
@@ -103,7 +118,10 @@ internal sealed class ProcessCompletionIssueResultFactory
                     ComputeHash($"{rawOutputHash}:manager:{issue.Code}:{issue.Evidence}"),
                     issue.Summary))
                 .ToArray(),
-            BuildCompletionGateSummary(issues),
+            ProcessReceiptNarrativeSanitizer.SanitizeText(
+                assignment,
+                BuildCompletionGateSummary(issues),
+                ProcessStrategyResultLimits.MaximumUserSafeSummaryLength),
             ComputeHash($"{rawOutputHash}:completion-gates:{string.Join("|", issues.Select(issue => $"{issue.Code}:{issue.Evidence}"))}"));
     }
 
@@ -159,9 +177,34 @@ internal sealed class ProcessCompletionIssueResultFactory
         var routeSummary = string.IsNullOrWhiteSpace(route.TargetBranchOutcomeTitle)
             ? $"Branch outcome selected: {route.TargetBranchOutcomeKey}"
             : route.TargetBranchOutcomeTitle;
-        var diagnosticSummary = string.IsNullOrWhiteSpace(defectSummary)
-            ? primaryIssue.Summary
-            : $"{primaryIssue.Summary} Deterministic defect evidence: {defectSummary}.";
+        var safeRouteSummary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            routeSummary,
+            ProcessStrategyResultLimits.MaximumManagerSignalSummaryLength);
+        var safePrimaryIssueSummary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            primaryIssue.Summary,
+            ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength);
+        var safeDefectSummary = string.IsNullOrWhiteSpace(defectSummary)
+            ? string.Empty
+            : ProcessReceiptNarrativeSanitizer.SanitizeText(
+                assignment,
+                defectSummary,
+                ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength);
+        var diagnosticSummary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            string.IsNullOrWhiteSpace(safeDefectSummary)
+                ? safePrimaryIssueSummary
+                : $"{safePrimaryIssueSummary} Deterministic defect evidence: {safeDefectSummary}.",
+            ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength);
+        var publicDiagnosticSummary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            $"Completion issue '{primaryIssue.Code}' was routed from branch '{output.BranchOutcomeKey}' to branch '{route.TargetBranchOutcomeKey}'. {diagnosticSummary}",
+            ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength);
+        var publicResultSummary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            $"Completion issue '{primaryIssue.Code}' was routed to branch '{route.TargetBranchOutcomeKey}'. {safePrimaryIssueSummary}",
+            ProcessStrategyResultLimits.MaximumUserSafeSummaryLength);
         var diagnosticHash = ComputeHash($"{rawOutputHash}:routed-completion-issue:{primaryIssue.Code}:{primaryIssue.Evidence}:{route.TargetBranchOutcomeKey}");
         result = new ProcessExecutionAdapterResult(
             StrategyOutcome.Succeeded,
@@ -172,7 +215,7 @@ internal sealed class ProcessCompletionIssueResultFactory
                     new StrategyDiagnosticCode("process.adapter.completion_issue_routed"),
                     StrategyDiagnosticSensitivity.Normal,
                     diagnosticHash,
-                    $"Completion issue '{primaryIssue.Code}' was routed from branch '{output.BranchOutcomeKey}' to branch '{route.TargetBranchOutcomeKey}'. {diagnosticSummary}",
+                    publicDiagnosticSummary,
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.SafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
@@ -181,9 +224,9 @@ internal sealed class ProcessCompletionIssueResultFactory
                 new ManagerSignal(
                     ProcessBranchSignalCodes.Outcome(route.TargetBranchOutcomeKey),
                     ComputeHash($"{rawOutputHash}:branch:{route.TargetBranchOutcomeKey}:{primaryIssue.Evidence}"),
-                    routeSummary)
+                    safeRouteSummary)
             ],
-            $"Completion issue '{primaryIssue.Code}' was routed to branch '{route.TargetBranchOutcomeKey}'. {primaryIssue.Summary}",
+            publicResultSummary,
             ComputeHash($"{rawOutputHash}:completion-issue-routed:{primaryIssue.Code}:{primaryIssue.Evidence}:{route.TargetBranchOutcomeKey}"));
         return true;
     }
@@ -255,6 +298,14 @@ internal sealed class ProcessCompletionIssueResultFactory
         ProcessCompletionIssue issue,
         ProcessCompletionIssueRoute route)
     {
+        var safeRouteTitle = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            route.TargetBranchOutcomeTitle,
+            ProcessStrategyResultLimits.MaximumManagerSignalSummaryLength);
+        var safeIssueSummary = ProcessReceiptNarrativeSanitizer.SanitizeText(
+            assignment,
+            issue.Summary,
+            ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength);
         var builder = new StringBuilder();
         builder.AppendLine();
         builder.AppendLine("---");
@@ -269,13 +320,13 @@ internal sealed class ProcessCompletionIssueResultFactory
         builder.AppendLine($"- Execution run id: {executionRunId:D}");
         builder.AppendLine($"- Source branch outcome: {output.BranchOutcomeKey}");
         builder.AppendLine($"- Routed branch outcome: {route.TargetBranchOutcomeKey}");
-        if (!string.IsNullOrWhiteSpace(route.TargetBranchOutcomeTitle))
+        if (!string.IsNullOrWhiteSpace(safeRouteTitle))
         {
-            builder.AppendLine($"- Routed branch title: {route.TargetBranchOutcomeTitle}");
+            builder.AppendLine($"- Routed branch title: {safeRouteTitle}");
         }
 
         builder.AppendLine($"- Gate issue code: {issue.Code}");
-        builder.AppendLine($"- Gate issue summary: {issue.Summary}");
+        builder.AppendLine($"- Gate issue summary: {safeIssueSummary}");
         builder.AppendLine($"- Defect evidence required: {route.RequiresDefectEvidence}");
         builder.AppendLine($"- Recorded at UTC: {DateTimeOffset.UtcNow:u}");
         return builder.ToString();
@@ -357,7 +408,10 @@ internal sealed class ProcessCompletionIssueResultFactory
             return true;
         }
 
-        if (HasProductFileContentDefectEvidence(assignment, output, out defectSummary))
+        if (productCompletionPathGate.HasProductFileContentDefectEvidence(
+                assignment,
+                output,
+                out defectSummary))
         {
             return true;
         }

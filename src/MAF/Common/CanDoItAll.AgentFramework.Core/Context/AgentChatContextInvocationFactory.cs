@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -87,12 +88,16 @@ public static class AgentChatContextInvocationFactory
         metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
             metadataJson,
             context.Scope.WorkspaceScope);
+        var externalTargetAccess = ResolveTrustedReadOnlyExternalTargetAccess(
+            context,
+            currentDatabaseProfileGeneration,
+            nowUtc);
         metadataJson = ExecutionInvocationMetadata.ApplyReadOnlyExternalTargetAliases(
             metadataJson,
-            ResolveTrustedReadOnlyExternalTargetAliases(
-                context,
-                currentDatabaseProfileGeneration,
-                nowUtc));
+            externalTargetAccess.Aliases);
+        metadataJson = ExecutionInvocationMetadata.ApplyExternalTargetRootBindings(
+            metadataJson,
+            externalTargetAccess.Bindings);
         if (transientContext is not null)
         {
             metadataJson = ExecutionInvocationMetadata.ApplyTransientContextRequirement(
@@ -218,7 +223,7 @@ public static class AgentChatContextInvocationFactory
         return contributors;
     }
 
-    private static IReadOnlyList<string> ResolveTrustedReadOnlyExternalTargetAliases(
+    private static ExternalTargetAccessGrant ResolveTrustedReadOnlyExternalTargetAccess(
         AgentChatContextSnapshot context,
         DatabaseProfileGeneration currentDatabaseProfileGeneration,
         DateTimeOffset nowUtc)
@@ -233,10 +238,10 @@ public static class AgentChatContextInvocationFactory
             workspaceScope.Kind != WorkspaceScopeKind.Project ||
             !string.Equals(workspaceScope.Key, source.Id.Value, StringComparison.OrdinalIgnoreCase))
         {
-            return [];
+            return ExternalTargetAccessGrant.Empty;
         }
 
-        return context.Attachments
+        var grants = context.Attachments
             .Where(attachment =>
                 attachment.ScopeId == context.Scope.Id &&
                 attachment.Source == source &&
@@ -245,19 +250,36 @@ public static class AgentChatContextInvocationFactory
                     attachment.ContributorId.Value,
                     AgentChatExternalTargetAccessAttachmentFactory.TrustedContributorIdValue,
                     StringComparison.Ordinal))
-            .SelectMany(ResolveValidatedAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Select(ResolveValidatedAccess)
             .ToArray();
+        return new ExternalTargetAccessGrant(
+            grants
+                .SelectMany(grant => grant.Aliases)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray(),
+            grants
+                .SelectMany(grant => grant.Bindings)
+                .Distinct()
+                .OrderBy(binding => binding.RootId, StringComparer.Ordinal)
+                .ToArray());
 
-        IReadOnlyList<string> ResolveValidatedAliases(
+        ExternalTargetAccessGrant ResolveValidatedAccess(
             AgentChatContextAttachmentEnvelope attachment)
-            => AgentChatExternalTargetAccessAttachmentFactory.TryGetValidatedReadOnlyAliases(
+            => AgentChatExternalTargetAccessAttachmentFactory.TryGetValidatedReadOnlyAccess(
                 attachment,
                 currentDatabaseProfileGeneration,
                 nowUtc,
-                out var aliases)
-                ? aliases
-                : [];
+                out var aliases,
+                out var bindings)
+                ? new ExternalTargetAccessGrant(aliases, bindings)
+                : ExternalTargetAccessGrant.Empty;
+    }
+
+    private sealed record ExternalTargetAccessGrant(
+        IReadOnlyList<string> Aliases,
+        IReadOnlyList<ExternalTargetRootBinding> Bindings)
+    {
+        public static ExternalTargetAccessGrant Empty { get; } = new([], []);
     }
 }

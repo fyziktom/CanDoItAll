@@ -336,10 +336,10 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
         return Directory.GetDirectories(organizationRoot)
             .Select(Path.GetFileName)
             .Where(scopeKey => !string.IsNullOrWhiteSpace(scopeKey))
-            .Where(scopeKey => !string.Equals(scopeKey, currentScope.Key, StringComparison.OrdinalIgnoreCase))
+            .Where(scopeKey => !string.Equals(scopeKey, currentScope.Key, StringComparison.Ordinal))
             .Where(scopeKey => LegacyOrganizationScopeExists(organizationRoot, scopeKey!))
             .Cast<string>()
-            .OrderBy(scopeKey => scopeKey, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(scopeKey => scopeKey, StringComparer.Ordinal)
             .ToList();
     }
 

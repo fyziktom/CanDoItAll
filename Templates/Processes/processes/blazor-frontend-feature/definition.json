@@ -302,7 +302,7 @@
       "Key": "validate-blazor-runtime",
       "Title": "Validate Blazor runtime and browser evidence",
       "Subtitle": "Build/test/browser proof",
-      "Notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Before running restore/build, stop any prior workspace_dotnet_run process for the same product root by calling workspace_dotnet_stop with the recorded startup.json receipt when available; do not run build while the product executable is still locked by a previous validation runtime. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. After browser proof, call workspace_dotnet_stop with the startup receipt path and record cleanup.json evidence before returning any branch outcome, including repair-required or Blocked. For frontend/browser validation, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
+      "Notes": "Resolve the declared product root, runnable host, test topology, acceptance surfaces, and capabilities from the current delivery contract. Sibling and nested projects are defects only when undeclared substitutes for declared targets. Start the declared host and record its current startup receipt before browser proof. Treat that receipt as the temporal boundary: create a fresh isolated browser context or page and navigate to the current URL after startup; pre-start, inherited-page, cached, or prior-run evidence is invalid. Isolate WebAssembly/PWA proof from prior cache and service-worker state. Require API/backend, persistence, and PWA-specific proof only when the resolved contract declares those capabilities. Copy authoritative node and tool identifiers verbatim; on NodeNotFound, re-read the grounded source and retry the exact identifier. Complete authorized missing proof before finalizing; NotVerified or missing proof alone is not product-defect evidence. Select repair-required only for a typed Failed required criterion or equivalent deterministic current-build product defect; select quality-accepted when all declared criteria pass, or return Blocked without a branch only when a current failed tool, input, access, or contract receipt prevents required proof.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -312,7 +312,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+      "ExceptionPolicySummary": "Execute authorized missing proof before branch selection. NotVerified or missing proof alone does not select repair-required. Select repair-required only for a typed Failed required criterion or equivalent deterministic current-build product defect. Return Blocked without a branch only when a current failed tool, input, access, or contract receipt prevents required proof; re-read grounded identifiers before treating NodeNotFound as authoritative-target unavailability.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "implement-blazor-change",
       "DependsOnBranchOutcomeKey": "",
@@ -384,7 +384,7 @@
         {
           "Key": "repair-required",
           "Title": "Repair required",
-          "Description": "A reproducible defect, missing proof, or screenshot/console failure must be repaired before writeback."
+          "Description": "A reproducible current-build product defect with deterministic evidence must be repaired before writeback."
         }
       ],
       "ChecklistRefs": [],
@@ -678,7 +678,7 @@
       "Key": "revalidate-blazor-repair",
       "Title": "Revalidate Blazor repair",
       "Subtitle": "Post-repair proof",
-      "Notes": "Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Before running restore/build, stop any prior workspace_dotnet_run process for the same product root by calling workspace_dotnet_stop with the recorded startup.json receipt when available; do not run build while the product executable is still locked by a previous validation runtime. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. After browser proof, call workspace_dotnet_stop with the startup receipt path and record cleanup.json evidence before returning any branch outcome, including repair-escalation or Blocked. For frontend/browser validation, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable.",
+      "Notes": "Resolve the declared product root, runnable host, test topology, acceptance surfaces, and capabilities from the current delivery contract. Sibling and nested projects are defects only when undeclared substitutes for declared targets. Start the repaired host and record its current startup receipt before browser proof. Treat that receipt as the temporal boundary: create a fresh isolated browser context or page and navigate to the current URL after startup; pre-start, inherited-page, cached, pre-repair, or prior-run evidence is invalid. Isolate WebAssembly/PWA proof from prior cache and service-worker state. Require API/backend, persistence, and PWA-specific proof only when the resolved contract declares those capabilities. Copy authoritative node and tool identifiers verbatim; on NodeNotFound, re-read the grounded source and retry the exact identifier. Complete authorized missing proof before finalizing; NotVerified or missing proof alone is not repaired-product defect evidence. Select repair-escalation only for a typed Failed required criterion or equivalent deterministic current repaired-build product defect; select quality-accepted when all declared criteria pass, or return Blocked without a branch only when a current failed tool, input, access, or contract receipt prevents required proof.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -688,7 +688,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+      "ExceptionPolicySummary": "Execute authorized missing proof before branch selection. NotVerified or missing proof alone does not select repair-escalation. Select repair-escalation only for a typed Failed required criterion or equivalent deterministic current repaired-build product defect. Return Blocked without a branch only when a current failed tool, input, access, or contract receipt prevents required proof; re-read grounded identifiers before treating NodeNotFound as authoritative-target unavailability.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "repair-blazor-findings",
       "DependsOnBranchOutcomeKey": "",
@@ -748,7 +748,7 @@
         {
           "Key": "repair-escalation",
           "Title": "Repair escalation",
-          "Description": "The same or new blocking issue remains and must be escalated."
+          "Description": "A deterministic current repaired-build product defect remains and must be escalated."
         }
       ],
       "ChecklistRefs": [],
@@ -935,7 +935,7 @@
       "Key": "record-blazor-results",
       "Title": "Record Blazor results and evidence index",
       "Subtitle": "Project structure writeback",
-      "Notes": "Write a compact run evidence index, agent self-review summary, output-root path, screenshot references, console status, build/test status, and final verdict back into project structure through APIs/tools. Before completing, use project_structure_asset_create for screenshot or evidence files that must become project assets, and use project_structure_node_create to attach the final verdict and evidence index to the target work item. Include concrete node ids, asset ids, and raw record pointers only where needed for selective follow-up. If these project-structure tool calls cannot be completed, return status Blocked with the failed tool names and do not select the Error branch as a completed outcome.",
+      "Notes": "Write the compact current-run evidence index and verdict to exactly one plain Note directly under the target WorkItem resolved from launch context; never fall back to the project root or another delivery/output block. Before creation, use project_structure_read to find an existing result Note for the current process run. On retry, reuse it, reparent it to the target WorkItem with project_structure_node_reparent when necessary, and refresh it with project_structure_node_update; never create a duplicate. Only when no current-run result Note exists, call project_structure_node_create with objectType Note, no subtype, the target WorkItem id as parentNodeKey, and metadataJson {}. Store screenshot/evidence files separately with project_structure_asset_create when applicable, read back the final Note, and record the create-or-reuse disposition, node id, direct parent WorkItem id, asset ids, and receipts. Block with the exact failed tool receipt when required writeback cannot complete.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -999,7 +999,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must confirm result/evidence was written back to project structure through actual project_structure_* tool calls, including project_structure_node_create receipt and screenshot/evidence project_structure_asset_create ids where applicable, target node id, created or updated node ids, asset ids, and final verdict."
+          "ValidationRequirementSummary": "Must confirm exactly one current-run result node is a plain Note with no subtype, metadata {}, and the target WorkItem as its direct parent. Include the initial project_structure_read receipt; either the project_structure_node_create receipt or the reused node id with any project_structure_node_reparent and project_structure_node_update receipts; final readback; create-or-reuse disposition; target WorkItem id; result Note id; asset ids where applicable; and final verdict. Project-root fallback and duplicate current-run Notes are invalid."
         }
       ],
       "ArtifactInputs": [
@@ -1029,7 +1029,7 @@
       "Key": "record-blazor-results-after-repair",
       "Title": "Record repaired Blazor results and evidence index",
       "Subtitle": "Project structure writeback",
-      "Notes": "Write a compact run evidence index, agent self-review summary, output-root path, screenshot references, console status, build/test status, and final verdict back into project structure through APIs/tools. Before completing, use project_structure_asset_create for screenshot or evidence files that must become project assets, and use project_structure_node_create to attach the final verdict and evidence index to the target work item. Include concrete node ids, asset ids, and raw record pointers only where needed for selective follow-up. If these project-structure tool calls cannot be completed, return status Blocked with the failed tool names and do not select the Error branch as a completed outcome.",
+      "Notes": "Write the compact current-run evidence index and verdict to exactly one plain Note directly under the target WorkItem resolved from launch context; never fall back to the project root or another delivery/output block. Before creation, use project_structure_read to find an existing result Note for the current process run. On retry, reuse it, reparent it to the target WorkItem with project_structure_node_reparent when necessary, and refresh it with project_structure_node_update; never create a duplicate. Only when no current-run result Note exists, call project_structure_node_create with objectType Note, no subtype, the target WorkItem id as parentNodeKey, and metadataJson {}. Store screenshot/evidence files separately with project_structure_asset_create when applicable, read back the final Note, and record the create-or-reuse disposition, node id, direct parent WorkItem id, asset ids, and receipts. Block with the exact failed tool receipt when required writeback cannot complete.",
       "StepKind": "End",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -1093,7 +1093,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must confirm repaired result/evidence was written back to project structure, including node ids, asset ids, and final verdict."
+          "ValidationRequirementSummary": "Must confirm exactly one repaired current-run result node is a plain Note with no subtype, metadata {}, and the target WorkItem as its direct parent. Include the initial project_structure_read receipt; either the project_structure_node_create receipt or the reused node id with any project_structure_node_reparent and project_structure_node_update receipts; final readback; create-or-reuse disposition; target WorkItem id; result Note id; asset ids where applicable; and final verdict. Project-root fallback and duplicate current-run Notes are invalid."
         }
       ],
       "ArtifactInputs": [
@@ -1216,4 +1216,3 @@
     }
   ]
 }
-

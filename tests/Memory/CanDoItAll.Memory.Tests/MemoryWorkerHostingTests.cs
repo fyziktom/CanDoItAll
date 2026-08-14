@@ -34,7 +34,7 @@ public sealed class MemoryWorkerHostingTests
             })
             .Build();
 
-        services.AddCanDoItAllRuntimeModules(configuration);
+        services.AddCanDoItAllRuntimeModules(configuration, MemoryTestHostEnvironment.Instance);
 
         var options = Assert.IsType<MemoryWorkerHostingOptions>(services
             .Single(descriptor => descriptor.ServiceType == typeof(MemoryWorkerHostingOptions))

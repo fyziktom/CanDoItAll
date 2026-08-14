@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Persistence;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class FileSandboxWorkspaceUsageProjectionIntegrationTests
 {
     [Fact]

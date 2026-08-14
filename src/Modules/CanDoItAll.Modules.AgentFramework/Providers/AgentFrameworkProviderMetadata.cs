@@ -17,6 +17,7 @@ internal static class AgentFrameworkProviderMetadata
     private const string ConfigSchemaVersionPropertyName = "configSchemaVersion";
     private const string SecretRecordIdPropertyName =
         ProviderProfileMetadataPropertyNames.SecretRecordId;
+    private const string SecretReferencePrefix = "secret:";
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
     private const string PurposePropertyName = "providerPurpose";
@@ -279,6 +280,18 @@ internal static class AgentFrameworkProviderMetadata
         return inlineSecretRecordId ?? configuredSecretRecordId;
     }
 
+    public static string CreateSecretReference(Guid secretRecordId)
+    {
+        if (secretRecordId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A secret reference requires a non-empty record id.",
+                nameof(secretRecordId));
+        }
+
+        return $"{SecretReferencePrefix}{secretRecordId:D}";
+    }
+
     public static string ResolveConnectorPluginKey(
         AgentFrameworkProviderProfileEditorModel model,
         WorkspaceProviderProfile? current)
@@ -525,9 +538,8 @@ internal static class AgentFrameworkProviderMetadata
             return null;
         }
 
-        const string SecretPrefix = "secret:";
         if (!normalizedReference.StartsWith(
-                SecretPrefix,
+                SecretReferencePrefix,
                 StringComparison.OrdinalIgnoreCase))
         {
             if (!rejectEnvironmentVariableName)
@@ -540,7 +552,7 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         if (Guid.TryParse(
-                normalizedReference[SecretPrefix.Length..],
+                normalizedReference[SecretReferencePrefix.Length..],
                 out var secretRecordId) &&
             secretRecordId != Guid.Empty)
         {

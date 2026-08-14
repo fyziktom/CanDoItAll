@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.FileTools.Integration;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -28,6 +29,18 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Assert.Throws<ArgumentException>(() => new FileApplicationExtension(".tar.gz"));
     }
 
+    [Fact]
+    public void File_application_preference_preserves_significant_path_whitespace()
+    {
+        string executablePath = Path.Combine(rootPath, " viewer ");
+
+        var preference = new FileApplicationPreference(
+            new FileApplicationExtension(".xlsx"),
+            executablePath);
+
+        Assert.Equal(executablePath, preference.ExecutablePath);
+    }
+
     [Theory]
     [InlineData("forecast.xlsx", true)]
     [InlineData("proposal.docx", true)]
@@ -54,6 +67,11 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Assert.NotNull(resolved);
         Assert.Equal(".xlsx", resolved.Extension.Value);
         Assert.Equal(Path.GetFullPath(executablePath), resolved.ExecutablePath);
+        string json = await File.ReadAllTextAsync(SettingsPath);
+        Assert.Contains("\"schemaVersion\": 2", json, StringComparison.Ordinal);
+        Assert.Contains("\"executable\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"hostBindingId\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"executablePath\"", json, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -106,6 +124,147 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
         Assert.Equal(Path.GetFullPath(existingExecutablePath), resolved.ExecutablePath);
     }
 
+    [Fact]
+    public async Task SaveAsync_rejects_foreign_executable_syntax_before_filesystem_lookup()
+    {
+        string foreignExecutable = OperatingSystem.IsWindows()
+            ? "/Applications/ForeignViewer.app/Contents/MacOS/ForeignViewer"
+            : @"C:\Program Files\ForeignViewer\viewer.exe";
+        var sut = CreateService();
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            sut.SaveAsync(new FileApplicationPreference(
+                new FileApplicationExtension(".xlsx"),
+                foreignExecutable)));
+
+        Assert.Contains("syntax", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Foreign_legacy_preference_requires_explicit_rebind_and_is_not_resolved_for_launch()
+    {
+        Directory.CreateDirectory(rootPath);
+        string foreignExecutable = OperatingSystem.IsWindows()
+            ? "/Applications/ForeignViewer.app/Contents/MacOS/ForeignViewer"
+            : @"C:\Program Files\ForeignViewer\viewer.exe";
+        await File.WriteAllTextAsync(
+            SettingsPath,
+            $$"""
+            {
+              "schemaVersion": 1,
+              "applications": [
+                {
+                  "extension": ".xlsx",
+                  "executablePath": {{JsonSerializer.Serialize(foreignExecutable)}}
+                }
+              ]
+            }
+            """);
+        FileApplicationPreferenceService sut = CreateService();
+
+        FileApplicationPreference unresolved = Assert.Single(await sut.ListAsync());
+
+        Assert.True(unresolved.RequiresRebind);
+        Assert.Null(sut.ResolveForFile("forecast.xlsx"));
+        string migratedJson = await File.ReadAllTextAsync(SettingsPath);
+        Assert.Contains("needsRebind", migratedJson, StringComparison.OrdinalIgnoreCase);
+        using (JsonDocument migratedDocument = JsonDocument.Parse(migratedJson))
+        {
+            string? persistedExecutable = migratedDocument.RootElement
+                .GetProperty("applications")[0]
+                .GetProperty("executable")
+                .GetProperty("path")
+                .GetString();
+            Assert.Equal(foreignExecutable, persistedExecutable);
+        }
+
+        string reboundExecutable = CreateExecutable("rebound-viewer.exe");
+        await sut.SaveAsync(new FileApplicationPreference(
+            new FileApplicationExtension(".xlsx"),
+            reboundExecutable));
+
+        FileApplicationPreference? rebound = sut.ResolveForFile("forecast.xlsx");
+        Assert.NotNull(rebound);
+        Assert.False(rebound.RequiresRebind);
+        Assert.Equal(Path.GetFullPath(reboundExecutable), rebound.ExecutablePath);
+    }
+
+    [Fact]
+    public async Task Legacy_preference_migration_creates_backup_commit_and_rollback_records()
+    {
+        string executablePath = CreateExecutable("legacy-viewer.exe");
+        await File.WriteAllTextAsync(
+            SettingsPath,
+            $$"""
+            {
+              "schemaVersion": 1,
+              "applications": [
+                {
+                  "extension": ".docx",
+                  "executablePath": {{JsonSerializer.Serialize(executablePath)}}
+                }
+              ]
+            }
+            """);
+        FileApplicationPreferenceService sut = CreateService();
+
+        FileApplicationPreference migrated = Assert.Single(await sut.ListAsync());
+        string migrationRoot = Path.Combine(rootPath, "migrations", "file-applications-v2");
+
+        Assert.True(migrated.RequiresRebind);
+        Assert.Null(sut.ResolveForFile("document.docx"));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "preferences.v1.backup.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "preferences.v1.backup.json.integrity.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "preferences.v2.staged.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "commit.json")));
+
+        File.Delete(Path.Combine(migrationRoot, "commit.json"));
+        FileApplicationPreference repaired = Assert.Single(await CreateService().ListAsync());
+        Assert.True(repaired.RequiresRebind);
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "commit.json")));
+
+        File.Delete(Path.Combine(migrationRoot, "commit.json"));
+        Assert.True(await sut.RollbackPathMigrationAsync());
+        using JsonDocument rolledBack = JsonDocument.Parse(await File.ReadAllTextAsync(SettingsPath));
+        Assert.Equal(1, rolledBack.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "preferences.v2.pre-rollback.json")));
+        Assert.True(File.Exists(Path.Combine(migrationRoot, "rollback.commit.json")));
+    }
+
+    [Fact]
+    public async Task Legacy_preference_rollback_rejects_a_modified_backup()
+    {
+        string executablePath = CreateExecutable("checksum-viewer.exe");
+        await File.WriteAllTextAsync(
+            SettingsPath,
+            $$"""
+            {
+              "schemaVersion": 1,
+              "applications": [
+                {
+                  "extension": ".pptx",
+                  "executablePath": {{JsonSerializer.Serialize(executablePath)}}
+                }
+              ]
+            }
+            """);
+        FileApplicationPreferenceService sut = CreateService();
+        Assert.Single(await sut.ListAsync());
+        string backupPath = Path.Combine(
+            rootPath,
+            "migrations",
+            "file-applications-v2",
+            "preferences.v1.backup.json");
+        File.Delete(Path.Combine(Path.GetDirectoryName(backupPath)!, "commit.json"));
+        await File.AppendAllTextAsync(backupPath, Environment.NewLine);
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.RollbackPathMigrationAsync());
+
+        Assert.Contains("checksum", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(executablePath, exception.Message, StringComparison.Ordinal);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(rootPath))
@@ -119,6 +278,7 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
     private FileApplicationPreferenceService CreateService()
         => new(
             new StaticControlPlanePathResolver(rootPath),
+            new DurableFileWriter(TestWorkspaceServices.PhysicalPathPolicyFactory),
             NullLogger<FileApplicationPreferenceService>.Instance);
 
     private string CreateExecutable(string fileName)
@@ -144,5 +304,11 @@ public sealed class FileApplicationPreferenceServiceTests : IDisposable
             => Path.Combine(rootPath, "file-application-preferences.json");
 
         public string ResolveDataProtectionKeysPath() => Path.Combine(rootPath, "dataprotection-keys");
+
+        public string ResolveStateRootPath() => Path.Combine(rootPath, "state");
+
+        public string ResolveLogsRootPath() => Path.Combine(rootPath, "logs");
+
+        public string ResolveRuntimeTemporaryRootPath() => Path.Combine(rootPath, "runtime");
     }
 }

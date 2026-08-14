@@ -1,10 +1,16 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Mcp;
 
-public sealed class LocalStdioMcpClientFactory : IMcpClientFactory
+public sealed class LocalStdioMcpClientFactory(
+    IWorkspaceLongRunningProcessHost processHost,
+    IWorkspacePathResolutionService pathResolver) : IMcpClientFactory
 {
+    private readonly IWorkspaceLongRunningProcessHost processHost = processHost ?? throw new ArgumentNullException(nameof(processHost));
+    private readonly IWorkspacePathResolutionService pathResolver = pathResolver ?? throw new ArgumentNullException(nameof(pathResolver));
+
     public Task<IMcpRuntimeClient> CreateAsync(
         McpServerDescriptor descriptor,
         string correlationId,
@@ -16,7 +22,11 @@ public sealed class LocalStdioMcpClientFactory : IMcpClientFactory
         return descriptor switch
         {
             LocalStdioMcpServerDescriptor local =>
-                Task.FromResult<IMcpRuntimeClient>(new LocalStdioMcpRuntimeClient(local)),
+                Task.FromResult<IMcpRuntimeClient>(new LocalStdioMcpRuntimeClient(
+                    local,
+                    correlationId,
+                    processHost,
+                    pathResolver)),
             RemoteHttpMcpServerDescriptor remote =>
                 Task.FromResult<IMcpRuntimeClient>(new RemoteHttpMcpRuntimeClient(remote)),
             InternalHostedMcpServerDescriptor => throw new McpSetupException(

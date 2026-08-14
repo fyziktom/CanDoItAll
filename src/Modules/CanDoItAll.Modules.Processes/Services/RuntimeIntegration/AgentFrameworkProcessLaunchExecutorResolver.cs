@@ -33,9 +33,11 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     IAgentReferenceDataProvider agentReferenceDataProvider,
-    ProcessMockAgentCatalogService processMockAgentCatalogService,
     IProviderProfileService providerProfileService,
-    IWorkflowCatalogService workflowCatalog) : IProcessLaunchExecutorResolver
+    IWorkflowCatalogService workflowCatalog,
+    IWorkflowExecutorRuntimeAvailabilityCatalog? workflowExecutorAvailabilityCatalog = null,
+    IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider = null,
+    ICanDoItAllAgentWorkspaceFactory? workspaceFactory = null) : IProcessLaunchExecutorResolver
 {
     public async ValueTask<ProcessLaunchExecutorResolution> ResolveAsync(
         ProcessLaunchExecutorResolutionRequest request,
@@ -43,14 +45,29 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        await processMockAgentCatalogService.EnsureCatalogAsync(cancellationToken).ConfigureAwait(false);
+        var templateStepByKey = request.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
+        var hostCapabilitySnapshot = hostCapabilitySnapshotProvider is null
+            ? ProcessHostCapabilitySnapshot.Unknown
+            : await hostCapabilitySnapshotProvider.GetAsync(cancellationToken).ConfigureAwait(false);
+        var hostCapabilityEvaluation = EvaluatePlanHostCapabilities(
+            request,
+            templateStepByKey,
+            hostCapabilitySnapshot);
+        if (hostCapabilityEvaluation.Findings.Count > 0)
+        {
+            return new ProcessLaunchExecutorResolution([], hostCapabilityEvaluation.Findings)
+            {
+                EffectiveHostCapabilitiesByStep = hostCapabilityEvaluation.EffectiveCapabilitiesByStep,
+                EffectiveRuntimeToolNamesByStep = hostCapabilityEvaluation.EffectiveRuntimeToolNamesByStep,
+                HostCapabilities = hostCapabilitySnapshot
+            };
+        }
 
         var referenceData = await agentReferenceDataProvider
             .GetAsync(AgentReferenceDataRequest.AgentsAndProviders(), cancellationToken)
             .ConfigureAwait(false);
         var agents = referenceData.Agents;
         var providerById = referenceData.ProviderById;
-        var templateStepByKey = request.Definition.Steps.ToDictionary(step => step.Key, StringComparer.OrdinalIgnoreCase);
         var roleByKey = request.Definition.RoleUsages.ToDictionary(role => role.Key, StringComparer.OrdinalIgnoreCase);
         var profileAssignmentByStep = request.LiveRunProfile?.Assignments
             .ToDictionary(assignment => assignment.StepKey, StringComparer.OrdinalIgnoreCase) ??
@@ -64,6 +81,12 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 StringComparer.OrdinalIgnoreCase);
         var bindings = new List<ProcessLaunchExecutorBinding>();
         var findings = new List<ProcessLaunchReadinessFinding>();
+        var effectiveHostCapabilitiesByStep = hostCapabilityEvaluation.EffectiveCapabilitiesByStep
+            .ToDictionary(
+                pair => pair.Key,
+                pair => new HashSet<ProcessHostCapabilityId>(pair.Value),
+                StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<CapabilityCatalogItem>? capabilityCatalog = null;
 
         foreach (var planStep in request.Plan.Steps.Where(step => step.IsExecutable))
         {
@@ -129,7 +152,26 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
-            var readinessRequest = CreateReadinessRequest(planStep.StepKey, templateStep, roleKey, role, request.Variables);
+            var readinessRequest = CreateReadinessRequest(
+                planStep.StepKey,
+                templateStep,
+                roleKey,
+                role,
+                ResolveStepVariables(request, planStep.StepKey));
+            if (ProcessRequiredRuntimeToolNames.HasInvalidRuntimeToolContract(
+                    readinessRequest.RequiredRuntimeToolNames))
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.runtime_tool_contract_invalid",
+                    $"Step '{planStep.StepKey}' has an invalid runtime-tool requirement contract.",
+                    planStep.StepKey,
+                    roleKey)
+                {
+                    MustBlockLaunch = true
+                });
+                continue;
+            }
 
             var candidate = executorOverride is null
                 ? SelectAgent(readinessRequest, agents, providerById, providerProfileService)
@@ -168,6 +210,48 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 continue;
             }
 
+            var requiredRuntimeToolNames = readinessRequest.RequiredRuntimeToolNames ?? [];
+            if (requiredRuntimeToolNames.Any(toolName =>
+                    toolName.StartsWith("browser_", StringComparison.OrdinalIgnoreCase)))
+            {
+                capabilityCatalog ??= workspaceFactory is null
+                    ? []
+                    : await workspaceFactory
+                        .GetOrganizationWorkspaceService()
+                        .ListCapabilitiesAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                var browserHostEvaluation = EvaluateBrowserHostCapabilities(
+                    planStep.StepKey,
+                    roleKey,
+                    candidate.Agent,
+                    requiredRuntimeToolNames,
+                    capabilityCatalog,
+                    hostCapabilitySnapshot);
+                if (browserHostEvaluation.Finding is not null)
+                {
+                    findings.Add(browserHostEvaluation.Finding);
+                    continue;
+                }
+
+                var effectiveCapabilities = effectiveHostCapabilitiesByStep.GetValueOrDefault(planStep.StepKey) ?? [];
+                effectiveCapabilities.UnionWith(browserHostEvaluation.RequiredCapabilities);
+                if (effectiveCapabilities.Count > ProcessHostCapabilitySnapshot.MaximumCapabilities)
+                {
+                    findings.Add(new ProcessLaunchReadinessFinding(
+                        ProcessLaunchReadinessSeverity.Error,
+                        "process.launch.host_capability_limit_exceeded",
+                        $"Step '{planStep.StepKey}' requires more than {ProcessHostCapabilitySnapshot.MaximumCapabilities} effective process host capabilities.",
+                        planStep.StepKey,
+                        roleKey)
+                    {
+                        MustBlockLaunch = true
+                    });
+                    continue;
+                }
+
+                effectiveHostCapabilitiesByStep[planStep.StepKey] = effectiveCapabilities;
+            }
+
             bindings.Add(new ProcessLaunchExecutorBinding(
                 planStep.StepKey,
                 roleKey,
@@ -186,7 +270,15 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
                 "All executable steps have explicit runnable executor bindings."));
         }
 
-        return new ProcessLaunchExecutorResolution(bindings, findings);
+        return new ProcessLaunchExecutorResolution(bindings, findings)
+        {
+            EffectiveHostCapabilitiesByStep = effectiveHostCapabilitiesByStep.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlySet<ProcessHostCapabilityId>)pair.Value,
+                StringComparer.OrdinalIgnoreCase),
+            EffectiveRuntimeToolNamesByStep = hostCapabilityEvaluation.EffectiveRuntimeToolNamesByStep,
+            HostCapabilities = hostCapabilitySnapshot
+        };
     }
 
     private async ValueTask ResolveWorkflowBindingAsync(
@@ -258,18 +350,220 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             return;
         }
 
+        var requiredExecutorIds = definition.Graph.Nodes
+            .Select(node => node.Settings.ExecutorId)
+            .Where(executorId => executorId.HasValue)
+            .Select(executorId => executorId.GetValueOrDefault())
+            .Distinct()
+            .OrderBy(executorId => executorId.Value, StringComparer.Ordinal)
+            .ToArray();
+        var executorAvailability = await ResolveWorkflowExecutorAvailabilityAsync(
+            requiredExecutorIds,
+            cancellationToken).ConfigureAwait(false);
+        var unavailableExecutors = executorAvailability
+            .Where(fact => !fact.IsRunnable)
+            .ToArray();
+        if (unavailableExecutors.Length > 0)
+        {
+            foreach (var unavailable in unavailableExecutors)
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.workflow_executor_capability_unavailable",
+                    $"Workflow executor '{unavailable.ExecutorId}' is not runnable on this host ({unavailable.Availability}). Configure its host capability or select an alternate workflow before starting the process.",
+                    stepKey,
+                    roleKey)
+                {
+                    MustBlockLaunch = true
+                });
+            }
+
+            return;
+        }
+
         bindings.Add(new ProcessLaunchExecutorBinding(
             stepKey,
             roleKey,
             ProcessLaunchExecutorKinds.Workflow,
             workflowBinding.WorkflowId.Value.ToString("D"),
             definition.Name,
-            ComputeWorkflowReadinessHash(definition, detail.Validation),
+            ComputeWorkflowReadinessHash(definition, detail.Validation, executorAvailability),
             ResolveWorkflowAssignmentReason(profileAssignment, executorOverride, definition))
         {
             WorkflowBinding = workflowBinding
         });
     }
+
+    private static LaunchHostCapabilityEvaluation EvaluatePlanHostCapabilities(
+        ProcessLaunchExecutorResolutionRequest request,
+        IReadOnlyDictionary<string, ProcessTemplateDefinitionStepDocument> templateStepByKey,
+        ProcessHostCapabilitySnapshot snapshot)
+    {
+        var findings = new List<ProcessLaunchReadinessFinding>();
+        var requirements = new List<(string StepKey, ProcessHostCapabilityId CapabilityId)>();
+        var effectiveCapabilitiesByStep = new Dictionary<string, IReadOnlySet<ProcessHostCapabilityId>>(
+            StringComparer.OrdinalIgnoreCase);
+        var effectiveRuntimeToolNamesByStep = new Dictionary<string, IReadOnlyList<string>>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var planStep in request.Plan.Steps.Where(step => step.IsExecutable))
+        {
+            if (!templateStepByKey.TryGetValue(planStep.StepKey, out var templateStep))
+            {
+                continue;
+            }
+
+            var requiredRuntimeToolNames = ResolveLaunchReadinessRequiredRuntimeToolNames(
+                ResolveStepVariables(request, planStep.StepKey),
+                planStep.StepKey,
+                templateStep.CapabilityScope,
+                templateStep.ExecutionContract?.RequiredRuntimeToolNames);
+            if (!ProcessRequiredRuntimeToolNames.IsValidBoundedContract(requiredRuntimeToolNames))
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.runtime_tool_contract_invalid",
+                    $"Step '{planStep.StepKey}' has an invalid runtime-tool requirement contract.",
+                    planStep.StepKey)
+                {
+                    MustBlockLaunch = true
+                });
+                continue;
+            }
+
+            effectiveRuntimeToolNamesByStep[planStep.StepKey] = requiredRuntimeToolNames;
+
+            var stepRequirements = planStep.RequiredHostCapabilities
+                .Concat(ProcessRuntimeToolHostCapabilityPolicy.ResolveAll(requiredRuntimeToolNames))
+                .Distinct()
+                .OrderBy(capabilityId => capabilityId.Value, StringComparer.Ordinal)
+                .ToArray();
+            if (stepRequirements.Length > ProcessHostCapabilitySnapshot.MaximumCapabilities)
+            {
+                findings.Add(new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.host_capability_limit_exceeded",
+                    $"Step '{planStep.StepKey}' requires more than {ProcessHostCapabilitySnapshot.MaximumCapabilities} effective process host capabilities.",
+                    planStep.StepKey)
+                {
+                    MustBlockLaunch = true
+                });
+                continue;
+            }
+
+            effectiveCapabilitiesByStep[planStep.StepKey] = stepRequirements.ToHashSet();
+            requirements.AddRange(stepRequirements.Select(capabilityId => (planStep.StepKey, capabilityId)));
+        }
+
+        if (findings.Count > 0 || requirements.Count == 0)
+        {
+            return new LaunchHostCapabilityEvaluation(
+                findings,
+                effectiveCapabilitiesByStep,
+                effectiveRuntimeToolNamesByStep);
+        }
+
+        foreach (var requirement in requirements
+                     .Distinct()
+                     .OrderBy(item => item.StepKey, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(item => item.CapabilityId.Value, StringComparer.Ordinal))
+        {
+            if (snapshot.IsAvailable(requirement.CapabilityId))
+            {
+                continue;
+            }
+
+            snapshot.TryGet(requirement.CapabilityId, out var fact);
+            findings.Add(new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.host_capability_unavailable",
+                $"Step '{requirement.StepKey}' requires process host capability '{requirement.CapabilityId}', which is unavailable on profile '{snapshot.ProfileId}' ({fact?.Reason.ToString() ?? "NotReported"}). Configure the required host adapter or select a compatible process strategy before starting the process.",
+                requirement.StepKey)
+            {
+                MustBlockLaunch = true
+            });
+        }
+
+        return new LaunchHostCapabilityEvaluation(
+            findings,
+            effectiveCapabilitiesByStep,
+            effectiveRuntimeToolNamesByStep);
+    }
+
+    private static IReadOnlyDictionary<string, string> ResolveStepVariables(
+        ProcessLaunchExecutorResolutionRequest request,
+        string stepKey)
+        => request.StepVariablesByKey.TryGetValue(stepKey, out var variables)
+            ? variables
+            : request.Variables;
+
+    private static BrowserHostCapabilityEvaluation EvaluateBrowserHostCapabilities(
+        string stepKey,
+        string roleKey,
+        AgentDefinition agent,
+        IReadOnlyList<string> requiredRuntimeToolNames,
+        IReadOnlyList<CapabilityCatalogItem> capabilityCatalog,
+        ProcessHostCapabilitySnapshot snapshot)
+    {
+        var transport = BrowserRuntimeToolPreflightContribution.ResolveMcpTransportRequirement(
+            agent,
+            requiredRuntimeToolNames,
+            capabilityCatalog);
+        if (transport is BrowserMcpTransportRequirement.NotApplicable or BrowserMcpTransportRequirement.Remote)
+        {
+            return new BrowserHostCapabilityEvaluation(null, new HashSet<ProcessHostCapabilityId>());
+        }
+
+        if (transport == BrowserMcpTransportRequirement.Invalid)
+        {
+            return new BrowserHostCapabilityEvaluation(
+                new ProcessLaunchReadinessFinding(
+                    ProcessLaunchReadinessSeverity.Error,
+                    "process.launch.browser_mcp_transport_invalid",
+                    $"Step '{stepKey}' has an ambiguous or invalid browser MCP transport configuration.",
+                    stepKey,
+                    roleKey)
+                {
+                    MustBlockLaunch = true
+                },
+                new HashSet<ProcessHostCapabilityId>());
+        }
+
+        var requiredCapabilities = transport == BrowserMcpTransportRequirement.LocalStdioNode
+            ? new[]
+            {
+                ProcessHostCapabilityIds.LocalStdioMcp,
+                ProcessHostCapabilityIds.NodeRuntime,
+                ProcessHostCapabilityIds.NodePackageManager
+            }
+            : [ProcessHostCapabilityIds.LocalStdioMcp];
+        var unavailable = requiredCapabilities.FirstOrDefault(capabilityId => !snapshot.IsAvailable(capabilityId));
+        if (string.IsNullOrWhiteSpace(unavailable.Value))
+        {
+            return new BrowserHostCapabilityEvaluation(null, requiredCapabilities.ToHashSet());
+        }
+
+        snapshot.TryGet(unavailable, out var fact);
+        return new BrowserHostCapabilityEvaluation(
+            new ProcessLaunchReadinessFinding(
+                ProcessLaunchReadinessSeverity.Error,
+                "process.launch.host_capability_unavailable",
+                $"Step '{stepKey}' requires process host capability '{unavailable}', which is unavailable on profile '{snapshot.ProfileId}' ({fact?.Reason.ToString() ?? "NotReported"}). Configure the required host adapter or select a compatible process strategy before starting the process.",
+                stepKey,
+                roleKey)
+            {
+                MustBlockLaunch = true
+            },
+            requiredCapabilities.ToHashSet());
+    }
+
+    private sealed record LaunchHostCapabilityEvaluation(
+        IReadOnlyList<ProcessLaunchReadinessFinding> Findings,
+        IReadOnlyDictionary<string, IReadOnlySet<ProcessHostCapabilityId>> EffectiveCapabilitiesByStep,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> EffectiveRuntimeToolNamesByStep);
+
+    private sealed record BrowserHostCapabilityEvaluation(
+        ProcessLaunchReadinessFinding? Finding,
+        IReadOnlySet<ProcessHostCapabilityId> RequiredCapabilities);
 
     private static ProcessWorkflowExecutorBinding? ResolveWorkflowBinding(
         ProcessTemplateDefinitionRoleUsageDocument? role,
@@ -299,7 +593,8 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
 
     private static string ComputeWorkflowReadinessHash(
         WorkflowDefinition definition,
-        WorkflowValidationResult validation)
+        WorkflowValidationResult validation,
+        IReadOnlyList<ProcessWorkflowExecutorAvailabilityFact> executorAvailability)
     {
         var source = string.Join(
             ':',
@@ -307,9 +602,60 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             definition.VersionId.Value.ToString("N"),
             definition.Status,
             validation.Succeeded,
-            string.Join(',', validation.Issues.Select(issue => issue.Code).OrderBy(code => code)));
+            string.Join(',', validation.Issues.Select(issue => issue.Code).OrderBy(code => code)),
+            string.Join(',', executorAvailability.Select(fact =>
+                $"{fact.ExecutorId.Value}:{fact.Availability}:{fact.IsRunnable}")));
         return "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source))).ToLowerInvariant();
     }
+
+    private async ValueTask<IReadOnlyList<ProcessWorkflowExecutorAvailabilityFact>> ResolveWorkflowExecutorAvailabilityAsync(
+        IReadOnlyList<WorkflowExecutorId> requiredExecutorIds,
+        CancellationToken cancellationToken)
+    {
+        if (requiredExecutorIds.Count == 0)
+        {
+            return [];
+        }
+
+        if (workflowExecutorAvailabilityCatalog is null)
+        {
+            return requiredExecutorIds
+                .Select(executorId => new ProcessWorkflowExecutorAvailabilityFact(
+                    executorId,
+                    WorkflowExecutorAvailabilityKind.Unavailable,
+                    false))
+                .ToArray();
+        }
+
+        var descriptors = await workflowExecutorAvailabilityCatalog
+            .ListExecutorsAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var descriptorsById = descriptors
+            .GroupBy(descriptor => descriptor.Id)
+            .ToDictionary(group => group.Key, group => group.ToArray());
+        return requiredExecutorIds
+            .Select(executorId =>
+            {
+                if (!descriptorsById.TryGetValue(executorId, out var matches) || matches.Length != 1)
+                {
+                    return new ProcessWorkflowExecutorAvailabilityFact(
+                        executorId,
+                        WorkflowExecutorAvailabilityKind.Unavailable,
+                        false);
+                }
+
+                return new ProcessWorkflowExecutorAvailabilityFact(
+                    executorId,
+                    matches[0].Availability.Kind,
+                    matches[0].CanExecute);
+            })
+            .ToArray();
+    }
+
+    private sealed record ProcessWorkflowExecutorAvailabilityFact(
+        WorkflowExecutorId ExecutorId,
+        WorkflowExecutorAvailabilityKind Availability,
+        bool IsRunnable);
 
     private static bool AddCapabilityScopeReadinessFindings(
         List<ProcessLaunchReadinessFinding> findings,
@@ -760,7 +1106,7 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return launchContextToolNames
-            .Concat(ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(templateRequiredRuntimeToolNames))
+            .Concat(ProcessRequiredRuntimeToolNames.NormalizeDeclaredRuntimeToolNames(templateRequiredRuntimeToolNames))
             .Concat(ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(capabilityScope, launchContextToolNames))
             .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -772,41 +1118,10 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         IReadOnlyDictionary<string, string> variables,
         string stepKey)
     {
-        if (variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, out var direct) &&
-            !string.IsNullOrWhiteSpace(direct))
-        {
-            return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(direct);
-        }
-
-        if (!variables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep, out var byStep) ||
-            string.IsNullOrWhiteSpace(byStep) ||
-            string.IsNullOrWhiteSpace(stepKey))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(byStep);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return [];
-            }
-
-            foreach (var property in document.RootElement.EnumerateObject())
-            {
-                if (string.Equals(property.Name, stepKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(property.Value);
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-
-        return [];
+        return ProcessRequiredRuntimeToolNames.FromProductCompletionRequiredToolReceipts(
+            ProcessProductCompletionRuleParser.ResolveUnconditionalProductCompletionRequiredToolReceipts(
+                variables,
+                stepKey));
     }
 
     private static bool ValidateStepOperationContract(
@@ -921,4 +1236,3 @@ internal sealed class AgentFrameworkProcessLaunchExecutorResolver(
         string ReadinessHash,
         string ReadinessSummary);
 }
-

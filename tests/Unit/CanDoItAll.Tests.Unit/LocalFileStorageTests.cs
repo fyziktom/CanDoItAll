@@ -36,10 +36,10 @@ public sealed class LocalFileStorageTests
         {
             var sut = CreateSut(workspaceRoot);
 
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
                 sut.SaveTextAsync(Path.Combine("..", "outside.txt"), "alpha"));
 
-            Assert.Contains("outside the active workspace root", exception.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("logical path", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -51,7 +51,9 @@ public sealed class LocalFileStorageTests
     {
         var workspacePathResolver = new TestWorkspacePathResolver(workspaceRoot);
         return new LocalFileStore(
-            new WorkspacePathAccessGuard(workspacePathResolver),
+            new WorkspacePathAccessGuard(
+                workspacePathResolver,
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
             new TestStorageCatalogService(workspaceRoot),
             new StorageDriverRegistry([
                 new FileSystemStorageDriver(new FileSystemStoragePathPolicy(workspacePathResolver))
@@ -73,23 +75,30 @@ public sealed class LocalFileStorageTests
 
     private sealed class TestStorageCatalogService(string workspaceRoot) : IStorageCatalogService
     {
-        private readonly StorageCatalogRecord _storage = new()
+        private readonly StorageCatalogRecord _storage = CreateStorage(workspaceRoot);
+
+        private static StorageCatalogRecord CreateStorage(string workspaceRoot)
         {
-            EndpointOrRoot = workspaceRoot,
-            IsSystemDefault = true,
-            ProviderKind = StorageProviderKind.FileSystem,
-            CapabilityMask =
-                StorageCapability.Read |
-                StorageCapability.Write |
-                StorageCapability.Delete |
-                StorageCapability.Download |
-                StorageCapability.InlinePreview |
-                StorageCapability.OpenLocally |
-                StorageCapability.MutableUpdate |
-                StorageCapability.BatchFolderUpload |
-                StorageCapability.BatchTransfer |
-                StorageCapability.ConnectionTest
-        };
+            var storage = new StorageCatalogRecord
+            {
+                EndpointOrRoot = workspaceRoot,
+                IsSystemDefault = true,
+                ProviderKind = StorageProviderKind.FileSystem,
+                CapabilityMask =
+                    StorageCapability.Read |
+                    StorageCapability.Write |
+                    StorageCapability.Delete |
+                    StorageCapability.Download |
+                    StorageCapability.InlinePreview |
+                    StorageCapability.OpenLocally |
+                    StorageCapability.MutableUpdate |
+                    StorageCapability.BatchFolderUpload |
+                    StorageCapability.BatchTransfer |
+                    StorageCapability.ConnectionTest
+            };
+            StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, DateTimeOffset.UtcNow);
+            return storage;
+        }
 
         public Task<IReadOnlyList<StorageCatalogRecord>> ListAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<StorageCatalogRecord>>([_storage]);

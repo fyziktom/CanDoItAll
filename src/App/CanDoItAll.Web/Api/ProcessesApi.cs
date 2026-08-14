@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Modules.Workbench;
 
@@ -88,9 +89,11 @@ internal static class ProcessesApi
                     result.Status.ToString(),
                     result.Diagnostics));
             }
-            catch (InvalidOperationException exception)
+            catch (ProcessRuntimeDispatchRunNotFoundException)
             {
-                return ApiEndpointResults.NotFound(exception.Message, "process.run_not_found");
+                return ApiEndpointResults.NotFound(
+                    $"Process run '{runId:D}' was not found.",
+                    "process.run_not_found");
             }
         })
         .WithName("DispatchProcessRun");
@@ -121,9 +124,11 @@ internal static class ProcessesApi
                     result.Status.ToString(),
                     result.Diagnostics));
             }
-            catch (InvalidOperationException exception)
+            catch (ProcessRuntimeOperatorRunNotFoundException)
             {
-                return ApiEndpointResults.NotFound(exception.Message, "process.run_not_found");
+                return ApiEndpointResults.NotFound(
+                    $"Process run '{runId:D}' was not found.",
+                    "process.run_not_found");
             }
         })
         .WithName("CancelProcessRun");
@@ -158,9 +163,11 @@ internal static class ProcessesApi
                     result.Status.ToString(),
                     result.Diagnostics));
             }
-            catch (InvalidOperationException exception)
+            catch (ProcessRuntimeOperatorRunNotFoundException)
             {
-                return ApiEndpointResults.NotFound(exception.Message, "process.run_not_found");
+                return ApiEndpointResults.NotFound(
+                    $"Process run '{runId:D}' was not found.",
+                    "process.run_not_found");
             }
         })
         .WithName("RequestProcessStepRework");
@@ -255,16 +262,22 @@ internal static class ProcessesApi
             loggerFactory
                 .CreateLogger("CanDoItAll.Web.Api.ProcessesApi")
                 .LogError(
-                    exception,
-                    "Process launch operation failed. Operation={Operation} DefinitionKey={DefinitionKey} LiveRunProfileKey={LiveRunProfileKey} ProjectId={ProjectId} ProjectNodeId={ProjectNodeId} Execute={Execute} RunReadiness={RunReadiness}",
+                    "Process launch operation failed. Operation={Operation} DefinitionKey={DefinitionKey} LiveRunProfileKey={LiveRunProfileKey} ProjectId={ProjectId} ProjectNodeId={ProjectNodeId} Execute={Execute} RunReadiness={RunReadiness} FailureType={FailureType} Failure={Failure}",
                     previewOnly ? "check" : "launch",
                     request.DefinitionKey,
                     request.LiveRunProfileKey,
                     request.ProjectId,
                     request.ProjectNodeId,
                     request.Execute,
-                    request.RunReadiness);
-            return ApiEndpointResults.BadRequest(exception.Message, previewOnly ? "process.launch_check_failed" : "process.launch_failed");
+                    request.RunReadiness,
+                    exception.GetType().Name,
+                    ProcessPublicReceiptTextPolicy.NormalizePublicMessages([exception.Message]).SingleOrDefault()
+                        ?? "No public diagnostic was available.");
+            return ApiEndpointResults.BadRequest(
+                previewOnly
+                    ? "Process launch validation could not be completed."
+                    : "Process launch could not be completed.",
+                previewOnly ? "process.launch_check_failed" : "process.launch_failed");
         }
     }
 

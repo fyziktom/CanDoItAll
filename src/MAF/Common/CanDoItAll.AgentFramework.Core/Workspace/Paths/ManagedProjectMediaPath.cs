@@ -9,7 +9,7 @@ public static class ManagedProjectMediaPath
 
     public static IReadOnlyList<string> ResolveProjectSegments(string projectKey)
     {
-        var segments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var segments = new HashSet<string>(StringComparer.Ordinal);
         if (!string.IsNullOrWhiteSpace(projectKey))
         {
             segments.Add(projectKey.Trim());
@@ -21,7 +21,7 @@ public static class ManagedProjectMediaPath
             segments.Add(projectId.ToString("D"));
         }
 
-        return segments.Order(StringComparer.OrdinalIgnoreCase).ToArray();
+        return segments.Order(StringComparer.Ordinal).ToArray();
     }
 
     public static IReadOnlyList<string> ResolveTextAssetRelativeRoots(string projectKey)
@@ -37,7 +37,7 @@ public static class ManagedProjectMediaPath
     {
         return TryResolveProjectSegment(path, out var projectSegment) &&
                ResolveProjectSegments(projectKey)
-                   .Contains(projectSegment, StringComparer.OrdinalIgnoreCase);
+                   .Contains(projectSegment, StringComparer.Ordinal);
     }
 
     public static bool TryResolveProjectSegment(
@@ -78,16 +78,14 @@ public static class ManagedProjectMediaPath
 
     public static bool HasParentTraversalSegment(string path)
     {
-        return path
-            .Replace('\\', '/')
+        return NormalizeSeparatorsForMatching(path)
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(segment => segment == "..");
     }
 
     public static bool HasProjectMediaMarker(string path)
     {
-        var segments = path
-            .Replace('\\', '/')
+        var segments = NormalizeSeparatorsForMatching(path)
             .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         for (var index = 0; index < segments.Length - 1; index++)
         {
@@ -108,8 +106,7 @@ public static class ManagedProjectMediaPath
             return string.Empty;
         }
 
-        var normalizedPath = path
-            .Replace('\\', '/')
+        var normalizedPath = NormalizeSeparatorsForMatching(path)
             .Trim()
             .Trim('`', '"', '\'');
         while (normalizedPath.Contains("//", StringComparison.Ordinal))
@@ -142,5 +139,12 @@ public static class ManagedProjectMediaPath
         }
 
         return normalizedPath.Trim('/');
+    }
+
+    private static string NormalizeSeparatorsForMatching(string path)
+    {
+        return OperatingSystem.IsWindows()
+            ? path.Replace('\\', '/')
+            : path;
     }
 }

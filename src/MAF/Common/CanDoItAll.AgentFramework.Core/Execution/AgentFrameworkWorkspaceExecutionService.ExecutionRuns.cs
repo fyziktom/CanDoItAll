@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -511,7 +512,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
             executionCancellation = executionCancellationRegistry.Register(run, cancellationToken);
             var runtimeCancellationToken = executionCancellation.Token;
-            var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
+            var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(
+                prepared.OriginalRun,
+                agent.Id,
+                session);
             var runtimeExecutionOptions = CreateRuntimeExecutionOptionsCore(
                 run,
                 activityOperationId,
@@ -520,7 +524,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 inputAttachments: null,
                 jsonSchemaOutput: null);
             AgentRuntimeResponse runtimeResponse;
-            using (WorkspaceExecutionAuditContext.BeginScope(run, runtimeExecutionOptions.ContextWorkspaceScope))
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       runtimeExecutionOptions.ContextWorkspaceScope,
+                       activityWorkspaceIdentity.WorkspaceScope))
             {
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
@@ -542,9 +549,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             phase,
                             message,
                             cancellationToken),
-                        SuppressApprovalRequirements: allApproved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
+                        SuppressApprovalRequirements: false,
                         StructuredOutput: structuredOutput,
-                        ExecutionOptions: runtimeExecutionOptions),
+                        ExecutionOptions: runtimeExecutionOptions)
+                    {
+                        ResolvedApprovalRequestIds = ResolveDecidedApprovalRequestIds(prepared.RunApprovals)
+                    },
                     runtimeCancellationToken));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
@@ -574,6 +584,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         structuredOutput,
                         handoffOptions,
+                        ResolveDecidedApprovalRequestIds(prepared.RunApprovals),
                         response =>
                         {
                             TrackRuntimeResponse(response);
@@ -1358,7 +1369,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 startup.InputAttachments,
                 jsonSchemaOutput);
             AgentRuntimeResponse runtimeResponse;
-            using (WorkspaceExecutionAuditContext.BeginScope(run, runtimeExecutionOptions.ContextWorkspaceScope))
+            using (WorkspaceExecutionAuditContext.BeginScope(
+                       run,
+                       runtimeExecutionOptions.ContextWorkspaceScope,
+                       activityWorkspaceIdentity.WorkspaceScope))
             {
                 activityOperation.Report(
                     AgentExecutionActivityPhase.WaitingForProvider,
@@ -1412,6 +1426,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             cancellationToken),
                         request.StructuredOutput,
                         handoffOptions,
+                        new HashSet<string>(StringComparer.Ordinal),
                         response =>
                         {
                             TrackRuntimeResponse(response);
@@ -2857,7 +2872,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var requestedPaths = attachmentPaths?
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => path.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToList()
             ?? [];
         if (requestedPaths.Count == 0)

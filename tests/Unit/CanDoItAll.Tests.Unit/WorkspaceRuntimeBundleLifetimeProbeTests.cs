@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 
@@ -22,7 +23,9 @@ public sealed class WorkspaceRuntimeBundleLifetimeProbeTests
         {
             var factory = new WorkspaceRuntimeServicesFactory(
                 lifecycleFactExtractors: [],
-                new ManagedCodeMarkItDownDocumentMarkdownConverter());
+                new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory());
             var bundle = factory.Create(new WorkspaceExecutionScope(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox));
@@ -52,7 +55,9 @@ public sealed class WorkspaceRuntimeBundleLifetimeProbeTests
         {
             var factory = new WorkspaceRuntimeServicesFactory(
                 lifecycleFactExtractors: [],
-                new ManagedCodeMarkItDownDocumentMarkdownConverter());
+                new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory());
             var scope = new WorkspaceExecutionScope(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox);

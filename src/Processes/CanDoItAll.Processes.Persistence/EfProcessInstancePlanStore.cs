@@ -17,6 +17,13 @@ public sealed class EfProcessInstancePlanStore(ProcessPersistenceDbContext dbCon
             .ConfigureAwait(false);
         if (existing is not null)
         {
+            var readResult = ProcessInstancePlanPersistenceMapper.Read(existing);
+            if (readResult.MetadataChanged)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            _ = readResult.RequireExecutablePlan();
             ProcessInstancePlanPersistenceMapper.EnsureSameIdentityAndHash(existing, plan);
             return new PersistedProcessInstancePlan(plan.Header.PlanId, plan.PlanHash);
         }
@@ -32,7 +39,6 @@ public sealed class EfProcessInstancePlanStore(ProcessPersistenceDbContext dbCon
         CancellationToken cancellationToken = default)
     {
         var entity = await dbContext.InstancePlans
-            .AsNoTracking()
             .SingleOrDefaultAsync(plan => plan.PlanId == planId.Value, cancellationToken)
             .ConfigureAwait(false);
         if (entity is null)
@@ -40,7 +46,13 @@ public sealed class EfProcessInstancePlanStore(ProcessPersistenceDbContext dbCon
             return null;
         }
 
-        return ProcessInstancePlanPersistenceMapper.ToPlan(entity);
+        var readResult = ProcessInstancePlanPersistenceMapper.Read(entity);
+        if (readResult.MetadataChanged)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return readResult.RequireExecutablePlan();
     }
 
     public async ValueTask<IReadOnlyList<ProcessInstancePlan>> LoadManyAsync(
@@ -66,13 +78,20 @@ public sealed class EfProcessInstancePlanStore(ProcessPersistenceDbContext dbCon
         }
 
         var entities = await dbContext.InstancePlans
-            .AsNoTracking()
             .Where(plan => values.Contains(plan.PlanId))
             .OrderBy(plan => plan.PlanId)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        return entities
-            .Select(ProcessInstancePlanPersistenceMapper.ToPlan)
+        var readResults = entities
+            .Select(ProcessInstancePlanPersistenceMapper.Read)
+            .ToArray();
+        if (readResults.Any(result => result.MetadataChanged))
+        {
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return readResults
+            .Select(result => result.RequireExecutablePlan())
             .ToArray();
     }
 }

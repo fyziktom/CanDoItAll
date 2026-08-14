@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -16,10 +17,7 @@ public sealed class WorkspaceArtifactToolServiceTests
             Directory.CreateDirectory(Path.GetDirectoryName(imagePath)!);
             await File.WriteAllBytesAsync(imagePath, MinimalPngBytes());
 
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                new FakeDocumentMarkdownConverter());
+            var service = CreateService(root, new FakeDocumentMarkdownConverter());
 
             var result = await service.ConvertDocumentToMarkdown(
                 "managed-files/project-media/images/proposal.png",
@@ -49,10 +47,7 @@ public sealed class WorkspaceArtifactToolServiceTests
             Directory.CreateDirectory(Path.GetDirectoryName(imagePath)!);
             await File.WriteAllBytesAsync(imagePath, MinimalPngBytes());
 
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                new FakeDocumentMarkdownConverter());
+            var service = CreateService(root, new FakeDocumentMarkdownConverter());
 
             var result = await service.ReadImageFile(
                 "artifacts/images/frame.png",
@@ -80,10 +75,7 @@ public sealed class WorkspaceArtifactToolServiceTests
             {
                 Markdown = "## Quote Summary\n\nModel XR-1 costs 12500 USD."
             };
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                converter);
+            var service = CreateService(root, converter);
 
             var result = await service.ConvertDocumentToMarkdown(
                 "source/quote.html",
@@ -113,6 +105,40 @@ public sealed class WorkspaceArtifactToolServiceTests
     }
 
     [Fact]
+    public async Task ConvertDocumentToMarkdown_resolves_a_bound_versioned_external_source_alias()
+    {
+        var root = CreateWorkspaceRoot();
+        var externalRoot = CreateWorkspaceRoot();
+        try
+        {
+            var sourcePath = Path.Combine(externalRoot, "source", "quote.html");
+            Directory.CreateDirectory(Path.GetDirectoryName(sourcePath)!);
+            await File.WriteAllTextAsync(sourcePath, "<h1>External quote</h1>");
+            var externalTargets = TestExternalTargetPathRegistry.Create();
+            Assert.True(externalTargets.TryCreateAlias(externalRoot, out _));
+            Assert.True(externalTargets.TryCreateAlias(sourcePath, out var sourceAlias));
+            var converter = new FakeDocumentMarkdownConverter
+            {
+                Markdown = "# External quote"
+            };
+            var service = CreateService(root, converter, externalTargets: externalTargets);
+
+            var result = await service.ConvertDocumentToMarkdown(
+                sourceAlias,
+                "artifacts/converted-documents/external-quote.md");
+
+            Assert.True(result.Succeeded, result.Diagnostics);
+            Assert.Equal(sourcePath, converter.ObservedSourcePath);
+            Assert.Equal(sourceAlias, result.SourcePath);
+        }
+        finally
+        {
+            DeleteDirectory(externalRoot);
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task ConvertDocumentToMarkdown_uses_bounded_receipt_file_name_for_long_media_paths()
     {
         var root = CreateWorkspaceRoot();
@@ -127,9 +153,8 @@ public sealed class WorkspaceArtifactToolServiceTests
             {
                 Markdown = "Model ZM-x5600 costs 35000 USD."
             };
-            var service = new WorkspaceArtifactToolService(
+            var service = CreateService(
                 root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
                 converter,
                 WorkspaceScopeDescriptor.Organization("e5df9ad633dbc6974a0678a74976013c"));
 
@@ -163,10 +188,7 @@ public sealed class WorkspaceArtifactToolServiceTests
                 Message = "conversion failed",
                 Diagnostics = "unsupported fixture"
             };
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                converter);
+            var service = CreateService(root, converter);
 
             var result = await service.ConvertDocumentToMarkdown(
                 "source/quote.pdf",
@@ -204,10 +226,7 @@ public sealed class WorkspaceArtifactToolServiceTests
             {
                 Markdown = "# Complete replacement\n\nAll converted content."
             };
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                converter);
+            var service = CreateService(root, converter);
 
             var result = await service.ConvertDocumentToMarkdown(
                 "source/quote.html",
@@ -246,10 +265,7 @@ public sealed class WorkspaceArtifactToolServiceTests
             {
                 Markdown = "# Converted markdown"
             };
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                converter);
+            var service = CreateService(root, converter);
 
             var exception = await Record.ExceptionAsync(() =>
                 service.ConvertDocumentToMarkdown(
@@ -288,10 +304,7 @@ public sealed class WorkspaceArtifactToolServiceTests
                     throw new InvalidOperationException("Unreachable after cancellation.");
                 }
             };
-            var service = new WorkspaceArtifactToolService(
-                root,
-                new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
-                converter);
+            var service = CreateService(root, converter);
             using var cancellationSource = new CancellationTokenSource();
 
             var conversion = service.ConvertDocumentToMarkdown(
@@ -319,6 +332,29 @@ public sealed class WorkspaceArtifactToolServiceTests
             Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         return root;
+    }
+
+    private static WorkspaceArtifactToolService CreateService(
+        string workspaceRoot,
+        IWorkspaceDocumentMarkdownConverter converter,
+        WorkspaceScopeDescriptor? workspaceScope = null,
+        IExternalTargetPathRegistry? externalTargets = null)
+    {
+        externalTargets ??= TestExternalTargetPathRegistry.Create();
+        return TestWorkspaceServices.CreateArtifactToolService(
+            workspaceRoot,
+            TestWorkspaceServices.CreateCommandExecutionService(
+                workspaceRoot,
+                new LocalWorkspaceProcessHost(),
+                workspaceScope,
+                externalTargetRegistry: externalTargets),
+            converter,
+            workspaceScope,
+            TestWorkspaceServices.CreateImageOperationService(
+                workspaceRoot,
+                workspaceScope,
+                externalTargets),
+            externalTargets);
     }
 
     private static void DeleteDirectory(string path)

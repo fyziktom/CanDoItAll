@@ -2,7 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -30,9 +32,9 @@ internal static class CapabilityConfigurationEditorSupport
             ApprovalMode = string.IsNullOrWhiteSpace(configuration.ApprovalMode)
                 ? "NeverRequire"
                 : configuration.ApprovalMode.Trim(),
-            ArgumentsText = ToLineText(configuration.Arguments),
+            ArgumentsText = ToArgumentLineText(configuration.Arguments),
             AllowedToolsText = ToLineText(configuration.AllowedTools),
-            AllowedWorkingDirectoriesText = ToLineText(configuration.AllowedWorkingDirectories),
+            AllowedWorkingDirectoriesText = ToAuthorityLineText(configuration.AllowedWorkingDirectories),
             EnvironmentVariableBindingsText = ToKeyValueText(configuration.EnvironmentVariableBindings),
             HeaderBindingsText = ToKeyValueText(configuration.HeaderBindings)
         };
@@ -46,8 +48,8 @@ internal static class CapabilityConfigurationEditorSupport
         var errors = new List<string>();
         var configuration = state.Configuration ?? new McpCapabilityConfigurationModel();
         var transport = NormalizeOptionalText(state.Transport) ?? "stdio";
-        var arguments = SplitLines(state.ArgumentsText);
-        var allowedTools = SplitLines(state.AllowedToolsText);
+        var arguments = SplitArgumentLines(state.ArgumentsText);
+        var allowedTools = SplitTypedNameLines(state.AllowedToolsText);
 
         configuration.Transport = transport;
         configuration.Hosted = state.Hosted ? true : null;
@@ -55,15 +57,23 @@ internal static class CapabilityConfigurationEditorSupport
         configuration.Endpoint = NormalizeOptionalText(state.Endpoint);
         configuration.Command = NormalizeOptionalText(state.Command);
         configuration.Arguments = arguments.Count == 0 ? null : arguments;
-        configuration.WorkingDirectory = NormalizeOptionalText(state.WorkingDirectory);
-        configuration.AllowedWorkingDirectories = SplitLines(state.AllowedWorkingDirectoriesText) is { Count: > 0 } roots ? roots : null;
+        configuration.WorkingDirectory = PreserveOptionalDataValue(state.WorkingDirectory);
+        configuration.AllowedWorkingDirectories = SplitAuthorityLines(state.AllowedWorkingDirectoriesText) is { Count: > 0 } roots ? roots : null;
         configuration.AllowedTools = allowedTools.Count == 0 ? null : allowedTools;
         configuration.ApprovalMode = NormalizeOptionalText(state.ApprovalMode) ?? "NeverRequire";
         configuration.EnvironmentVariables = null;
         configuration.Headers = null;
 
-        var environmentVariableBindings = ParseKeyValueText(state.EnvironmentVariableBindingsText, "environment variable binding", errors);
-        var headerBindings = ParseKeyValueText(state.HeaderBindingsText, "header binding", errors);
+        var environmentVariableBindings = ParseKeyValueText(
+            state.EnvironmentVariableBindingsText,
+            "environment variable binding",
+            new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer,
+            errors);
+        var headerBindings = ParseKeyValueText(
+            state.HeaderBindingsText,
+            "header binding",
+            StringComparer.OrdinalIgnoreCase,
+            errors);
         configuration.EnvironmentVariableBindings = environmentVariableBindings.Count == 0 ? null : environmentVariableBindings;
         configuration.HeaderBindings = headerBindings.Count == 0 ? null : headerBindings;
 
@@ -107,7 +117,7 @@ internal static class CapabilityConfigurationEditorSupport
         {
             SkillSource = source,
             SkillRoot = configuration.SkillRoot ?? ResolveSkillRootFromEditor(editor),
-            AllowedExternalRootsText = ToLineText(configuration.AllowedExternalRoots),
+            AllowedExternalRootsText = ToAuthorityLineText(configuration.AllowedExternalRoots),
             RegisteredSkillServiceType = configuration.RegisteredSkillServiceType ?? string.Empty,
             InlineName = inlineSkill.Name ?? string.Empty,
             InlineDescription = inlineSkill.Description ?? string.Empty,
@@ -208,16 +218,16 @@ internal static class CapabilityConfigurationEditorSupport
             RequiresApprovalByDefault = sideEffects.RequiresApprovalByDefault ?? true,
             IsStateChanging = sideEffects.IsStateChanging ?? true,
             Command = process.Command ?? ResolveCommandFromEditor(editor),
-            ArgumentsText = ToLineText(process.Arguments),
+            ArgumentsText = ToArgumentLineText(process.Arguments),
             WorkingDirectory = string.IsNullOrWhiteSpace(process.WorkingDirectory) ? "." : process.WorkingDirectory,
-            AllowedExecutableNamesText = ToLineText(process.AllowedExecutableNames),
-            ProcessRequiredOutputPropertiesText = ToLineText(process.RequiredOutputProperties),
+            AllowedExecutableNamesText = ToAuthorityLineText(process.AllowedExecutableNames),
+            ProcessRequiredOutputPropertiesText = ToAuthorityLineText(process.RequiredOutputProperties),
             ProcessTimeoutSeconds = process.TimeoutSeconds ?? 30,
             MaxOutputBytes = process.MaxOutputBytes ?? 4096,
             HttpMethod = string.IsNullOrWhiteSpace(http.Method) ? "POST" : http.Method,
             Endpoint = http.Endpoint ?? ResolveEndpointFromEditor(editor),
             HeaderBindingsText = ToKeyValueText(http.HeaderBindings),
-            HttpRequiredOutputPropertiesText = ToLineText(http.RequiredOutputProperties),
+            HttpRequiredOutputPropertiesText = ToAuthorityLineText(http.RequiredOutputProperties),
             HttpTimeoutSeconds = http.TimeoutSeconds ?? 30,
             MaxResponseBytes = http.MaxResponseBytes ?? 4096
         };
@@ -263,13 +273,17 @@ internal static class CapabilityConfigurationEditorSupport
                 errors.Add("External HTTP tool configuration requires an endpoint.");
             }
 
-            var headerBindings = ParseKeyValueText(state.HeaderBindingsText, "header binding", errors);
+            var headerBindings = ParseKeyValueText(
+                state.HeaderBindingsText,
+                "header binding",
+                StringComparer.OrdinalIgnoreCase,
+                errors);
             configuration.ExternalHttp = new ExternalHttpToolConfigurationModel
             {
                 Method = NormalizeOptionalText(state.HttpMethod) ?? "POST",
                 Endpoint = NormalizeOptionalText(state.Endpoint),
                 HeaderBindings = headerBindings.Count == 0 ? null : headerBindings,
-                RequiredOutputProperties = SplitLines(state.HttpRequiredOutputPropertiesText),
+                RequiredOutputProperties = SplitAuthorityLines(state.HttpRequiredOutputPropertiesText),
                 TimeoutSeconds = Math.Max(1, state.HttpTimeoutSeconds),
                 MaxResponseBytes = Math.Max(64, state.MaxResponseBytes)
             };
@@ -283,13 +297,19 @@ internal static class CapabilityConfigurationEditorSupport
                 errors.Add("External process tool configuration requires a command.");
             }
 
+            var arguments = SplitArgumentLines(state.ArgumentsText);
+            if (SensitiveTextRedactor.ContainsSecretBearingArguments(arguments))
+            {
+                errors.Add("External process arguments cannot contain persisted secret values. Use a runtime secret binding instead.");
+            }
+
             configuration.ExternalProcess = new ExternalProcessToolConfigurationModel
             {
                 Command = NormalizeOptionalText(state.Command),
-                Arguments = SplitLines(state.ArgumentsText),
-                WorkingDirectory = NormalizeOptionalText(state.WorkingDirectory) ?? ".",
-                AllowedExecutableNames = SplitLines(state.AllowedExecutableNamesText),
-                RequiredOutputProperties = SplitLines(state.ProcessRequiredOutputPropertiesText),
+                Arguments = arguments,
+                WorkingDirectory = PreserveOptionalDataValue(state.WorkingDirectory) ?? ".",
+                AllowedExecutableNames = SplitAuthorityLines(state.AllowedExecutableNamesText),
+                RequiredOutputProperties = SplitAuthorityLines(state.ProcessRequiredOutputPropertiesText),
                 TimeoutSeconds = Math.Max(1, state.ProcessTimeoutSeconds),
                 MaxOutputBytes = Math.Max(64, state.MaxOutputBytes)
             };
@@ -349,6 +369,31 @@ internal static class CapabilityConfigurationEditorSupport
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    private static List<string> SplitArgumentLines(string value)
+    {
+        if (value.Length == 0)
+        {
+            return [];
+        }
+
+        return value
+            .Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
+            .Select(DecodeArgumentLine)
+            .ToList();
+    }
+
+    private static List<string> SplitAuthorityLines(string value)
+    {
+        return value
+            .Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static string? PreserveOptionalDataValue(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value;
 
     private static string ResolveMcpTransport(CapabilityEditorModel editor, McpCapabilityConfigurationModel configuration)
     {
@@ -463,15 +508,56 @@ internal static class CapabilityConfigurationEditorSupport
     private static string ToLineText(IEnumerable<string>? values)
         => values is null ? string.Empty : string.Join(Environment.NewLine, values.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item.Trim()));
 
+    private static List<string> SplitTypedNameLines(string value)
+        => value
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+    private static string ToArgumentLineText(IEnumerable<string>? values)
+        => values is null
+            ? string.Empty
+            : string.Join(
+                Environment.NewLine,
+                values.Select(value => JsonSerializer.Serialize(value)));
+
+    private static string ToAuthorityLineText(IEnumerable<string>? values)
+        => values is null
+            ? string.Empty
+            : string.Join(
+                Environment.NewLine,
+                values.Where(item => !string.IsNullOrWhiteSpace(item)));
+
+    private static string DecodeArgumentLine(string line)
+    {
+        if (line.Length >= 2 && line[0] == '"' && line[^1] == '"')
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<string>(line) ?? string.Empty;
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return line;
+    }
+
     private static string ToKeyValueText(IDictionary<string, string>? values)
         => values is null
             ? string.Empty
             : string.Join(Environment.NewLine, values.Select(item => $"{item.Key}={item.Value}"));
 
-    private static Dictionary<string, string> ParseKeyValueText(string value, string label, ICollection<string> errors)
+    private static Dictionary<string, string> ParseKeyValueText(
+        string value,
+        string label,
+        StringComparer keyComparer,
+        ICollection<string> errors)
     {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var line in SplitLines(value))
+        var result = new Dictionary<string, string>(keyComparer);
+        foreach (var line in value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var separatorIndex = line.IndexOf('=');
             if (separatorIndex <= 0 || separatorIndex == line.Length - 1)
@@ -488,7 +574,10 @@ internal static class CapabilityConfigurationEditorSupport
                 continue;
             }
 
-            result[key] = binding;
+            if (!result.TryAdd(key, binding))
+            {
+                errors.Add($"Ambiguous {label} target '{key}' for this host.");
+            }
         }
 
         return result;

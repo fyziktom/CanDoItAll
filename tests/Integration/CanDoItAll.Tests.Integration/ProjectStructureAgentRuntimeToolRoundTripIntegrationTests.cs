@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -233,6 +234,89 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
             .ToArray();
 
         Assert.Contains("parentNodeKey", requiredProperties);
+    }
+
+    [Fact]
+    public async Task Delete_tools_require_a_storage_disposition_and_round_trip_both_file_outcomes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var workspacePaths = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
+        var projectId = await CreateProjectAsync(projects);
+        var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
+        var singleDelete = Assert.IsAssignableFrom<AIFunction>(
+            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureNodeDelete));
+        var batchDelete = Assert.IsAssignableFrom<AIFunction>(
+            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureNodesDelete));
+
+        AssertDeleteDispositionRequired(singleDelete);
+        AssertDeleteDispositionRequired(batchDelete);
+        Assert.Contains("RetainManagedFiles", singleDelete.Description, StringComparison.Ordinal);
+        Assert.Contains("DeleteOwnedManagedFiles", batchDelete.Description, StringComparison.Ordinal);
+
+        var retainedOne = await CreateTextAssetAsync(tools, projectId, "Retain one");
+        var retainedTwo = await CreateTextAssetAsync(tools, projectId, "Retain two");
+        var retainedPaths = new[] { retainedOne, retainedTwo }
+            .Select(node => Path.Combine(
+                workspacePaths.ResolveWorkspaceRoot(),
+                node.MediaRelativePath!.Replace('/', Path.DirectorySeparatorChar)))
+            .ToArray();
+        Assert.All(retainedPaths, path => Assert.True(File.Exists(path)));
+
+        var unspecifiedException = await Assert.ThrowsAsync<ProjectStructureAgentException>(
+            () => InvokeAsync<OperationCount>(
+                singleDelete,
+                new AIFunctionArguments
+                {
+                    ["projectId"] = projectId,
+                    ["nodeId"] = retainedOne.Id,
+                    ["request"] = new ProjectStructureNodeDeleteInput(
+                        ProjectStructureManagedStorageDisposition.Unspecified)
+                }));
+        Assert.Equal(
+            "ProjectStructureManagedStorageDispositionRequired",
+            unspecifiedException.ErrorCode);
+        Assert.True(unspecifiedException.IsSafeToExpose);
+        Assert.True(unspecifiedException.CanRetryWithCorrectedInput);
+        Assert.All(retainedPaths, path => Assert.True(File.Exists(path)));
+
+        var retainedResult = await InvokeAsync<OperationCount>(
+            batchDelete,
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureNodeDeleteBatchInput(
+                    [retainedOne.Id, retainedTwo.Id],
+                    ProjectStructureManagedStorageDisposition.RetainManagedFiles)
+            });
+
+        Assert.Equal(2, retainedResult.Count);
+        Assert.All(retainedPaths, path => Assert.True(File.Exists(path)));
+
+        var deletedAsset = await CreateTextAssetAsync(tools, projectId, "Delete owned");
+        var deletedPath = Path.Combine(
+            workspacePaths.ResolveWorkspaceRoot(),
+            deletedAsset.MediaRelativePath!.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(deletedPath));
+
+        var deletedResult = await InvokeAsync<OperationCount>(
+            singleDelete,
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["nodeId"] = deletedAsset.Id,
+                ["request"] = new ProjectStructureNodeDeleteInput(
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)
+            });
+
+        Assert.Equal(1, deletedResult.Count);
+        Assert.False(File.Exists(deletedPath));
+        var surface = await workbench.GetStructureAsync(projectId);
+        Assert.DoesNotContain(surface.Nodes, node => node.Id == retainedOne.Id);
+        Assert.DoesNotContain(surface.Nodes, node => node.Id == retainedTwo.Id);
+        Assert.DoesNotContain(surface.Nodes, node => node.Id == deletedAsset.Id);
     }
 
     [Fact]
@@ -756,6 +840,42 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private static void AssertDeleteDispositionRequired(AIFunction function)
+    {
+        var requestSchema = function.JsonSchema
+            .GetProperty("properties")
+            .GetProperty("request");
+        var requiredProperties = requestSchema
+            .GetProperty("required")
+            .EnumerateArray()
+            .Select(property => property.GetString())
+            .ToArray();
+
+        Assert.Contains("managedStorageDisposition", requiredProperties);
+    }
+
+    private static Task<ProjectStructureNodeSummary> CreateTextAssetAsync(
+        IReadOnlyList<AITool> tools,
+        Guid projectId,
+        string title)
+        => InvokeAsync<ProjectStructureNodeSummary>(
+            FindTool(tools, AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate),
+            new AIFunctionArguments
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureAgentAssetCreateInput(
+                    ProjectObjectType.File,
+                    title,
+                    "Deletion disposition proof",
+                    "Managed content for runtime-tool deletion coverage.",
+                    new ProjectObjectMediaPayload(
+                        $"{title.Replace(' ', '-').ToLowerInvariant()}.txt",
+                        "text/plain",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(title))),
+                    ParentNodeKey: $"project:{projectId:D}",
+                    ObjectSubtype: "txt")
+            });
 
     private static AnalyticsSentinel CreateAnalyticsSentinel(Guid projectId)
     {

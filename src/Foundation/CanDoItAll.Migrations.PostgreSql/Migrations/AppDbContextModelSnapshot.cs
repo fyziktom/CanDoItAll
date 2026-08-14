@@ -175,6 +175,26 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<int>("ProviderKind")
                         .HasColumnType("integer");
 
+                    b.Property<int>("RootBindingFormatVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RootHostBindingId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("RootLastValidatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RootPathState")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RootPathSyntax")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RootPlatformFamily")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -5321,6 +5341,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("DefinitionVersionId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExecutionState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MigrationReason")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<Guid?>("ParentPlanId")
                         .HasColumnType("uuid");
 
@@ -5335,6 +5364,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PlanHashAlgorithmVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("PlanSchemaVersion")
                         .IsRequired()
@@ -6170,6 +6203,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<string>("RequiredArtifactSlotIds")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("RequiredHostCapabilitiesJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("[]");
 
                     b.Property<string>("RequiredRuntimeToolNamesJson")
                         .IsRequired()

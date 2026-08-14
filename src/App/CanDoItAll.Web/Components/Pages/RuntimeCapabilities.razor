@@ -1,0 +1,159 @@
+@page "/settings/runtime-capabilities"
+@using CanDoItAll.Composition
+@using CanDoItAll.Components.Common
+@inject IHostCapabilitySnapshotProvider SnapshotProvider
+
+<PageTitle>Runtime capabilities</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-[1400px]">
+    <Header>
+        <PageHeader Eyebrow="Settings"
+                    Title="Runtime capabilities"
+                    Description="Owner-reported host readiness, support level, and execution boundaries for this application instance."
+                    Compact="true">
+            <Stats>
+                <CompactStat Label="Host profile"
+                             Value="@Snapshot.Profile.ToString()"
+                             TooltipText="The explicitly resolved runtime host profile." />
+                <CompactStat Label="Core readiness"
+                             Value="@(Snapshot.IsReady ? "Ready" : "Blocked")"
+                             Tone="@(Snapshot.IsReady ? "success" : "warning")"
+                             TooltipText="Mandatory capabilities must be available before startup can complete." />
+                <CompactStat Label="Capabilities"
+                             Value="@Snapshot.Capabilities.Count.ToString()"
+                             TooltipText="The complete typed capability catalog for this runtime." />
+            </Stats>
+            <Actions>
+                <PageHeaderActionButton Icon="refresh"
+                                        Label="Refresh capabilities"
+                                        TooltipText="Run the owner readiness probes again."
+                                        Click="Refresh"
+                                        TestId="runtime-capabilities-refresh" />
+            </Actions>
+        </PageHeader>
+    </Header>
+
+    <ChildContent>
+        <Alert AlertStyle="@(Snapshot.IsReady ? AlertStyle.Success : AlertStyle.Danger)"
+               Variant="Variant.Outlined"
+               data-testid="runtime-readiness-summary">
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="@(Snapshot.IsReady ? "Mandatory runtime capabilities are ready." : "Startup is blocked by a mandatory runtime capability.")" />
+            <TextBlock TextStyle="TextStyle.Body2"
+                       Value="@($"Profile {Snapshot.Profile}; operating system {Snapshot.OperatingSystem}; interactive {Snapshot.IsInteractive}.")" />
+        </Alert>
+
+        <Grid Columns="1"
+              ColumnsLg="2"
+              Gap="LayoutGap.Large"
+              data-testid="runtime-capability-grid">
+            @foreach (HostCapabilityDescriptor capability in Snapshot.Capabilities)
+            {
+                <Stack Section="true"
+                       GapScale="LayoutGap.Medium"
+                       AlignItems="AlignItems.Stretch"
+                       Class="cda-section-card w-full"
+                       data-testid="@CapabilityTestId(capability.Id)">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Small"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny">
+                            <TextBlock TextStyle="TextStyle.Eyebrow"
+                                       Value="@capability.Criticality.ToString()" />
+                            <TextBlock TextStyle="TextStyle.H3"
+                                       Value="@FormatName(capability.Id.ToString())" />
+                        </Stack>
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@AvailabilityTone(capability.Availability)"
+                                         Text="@capability.Availability.ToString()" />
+                            <StatusBadge Tone="neutral"
+                                         Text="@FormatName(capability.SupportLevel.ToString())" />
+                        </Cluster>
+                    </Split>
+
+                    <Grid Columns="1" ColumnsMd="2" Gap="LayoutGap.Small">
+                        <CapabilityFact Label="Reason" Value="@FormatName(capability.ReasonCode.ToString())" />
+                        <CapabilityFact Label="Execution boundary" Value="@FormatName(capability.ExecutionBoundary.ToString())" />
+                        <CapabilityFact Label="Implementation" Value="@FormatName(capability.ImplementationRegistration.ToString())" />
+                        <CapabilityFact Label="Observed" Value="@capability.ObservedAtUtc.ToString("u")" />
+                    </Grid>
+
+                    @if (capability.ImplementationRegistration == HostCapabilityImplementationRegistration.Registered)
+                    {
+                        <CapabilityFact Label="Implementation identity"
+                                        Value="@FormatImplementation(capability)" />
+                    }
+
+                    <Alert AlertStyle="@RemediationStyle(capability)"
+                           Variant="Variant.Outlined">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Remediation" />
+                        <TextBlock TextStyle="TextStyle.Body2" Value="@capability.Remediation" />
+                    </Alert>
+                </Stack>
+            }
+        </Grid>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private HostCapabilitySnapshot Snapshot { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        Snapshot = SnapshotProvider.GetSnapshot();
+    }
+
+    private void Refresh()
+    {
+        Snapshot = SnapshotProvider.GetSnapshot();
+    }
+
+    private static string CapabilityTestId(HostCapabilityId id)
+        => $"runtime-capability-{id.ToString().ToLowerInvariant()}";
+
+    private static string FormatImplementation(HostCapabilityDescriptor capability)
+        => capability.ImplementationVersion is { Length: > 0 } version
+            ? $"{capability.ImplementationId} {version}"
+            : capability.ImplementationId ?? "Registered implementation";
+
+    private static string FormatName(string value)
+    {
+        var result = new System.Text.StringBuilder(value.Length + 8);
+        for (int index = 0; index < value.Length; index++)
+        {
+            char current = value[index];
+            if (index > 0 && char.IsUpper(current))
+            {
+                result.Append(' ');
+            }
+
+            result.Append(index == 0 ? char.ToUpperInvariant(current) : current);
+        }
+
+        return result.ToString();
+    }
+
+    private static string AvailabilityTone(HostCapabilityAvailability availability)
+        => availability switch
+        {
+            HostCapabilityAvailability.Available => "success",
+            HostCapabilityAvailability.Unavailable or
+                HostCapabilityAvailability.Misconfigured => "danger",
+            HostCapabilityAvailability.Unsupported or
+                HostCapabilityAvailability.Unverified => "warning",
+            _ => "neutral"
+        };
+
+    private static AlertStyle RemediationStyle(HostCapabilityDescriptor capability)
+        => capability.Availability switch
+        {
+            HostCapabilityAvailability.Available when capability.ReasonCode == HostCapabilityReasonCode.Ready
+                => AlertStyle.Light,
+            HostCapabilityAvailability.Available => AlertStyle.Warning,
+            HostCapabilityAvailability.Unavailable or HostCapabilityAvailability.Misconfigured
+                => AlertStyle.Danger,
+            _ => AlertStyle.Warning
+        };
+}

@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -73,16 +74,28 @@ public sealed class WorkspaceExecutionScopeIdentityTests
     }
 
     [Fact]
-    public void Root_identity_comparison_is_case_sensitive_only_on_case_sensitive_file_systems()
+    public void Root_identity_uses_captured_root_case_model_and_logical_scope_remains_ordinal()
     {
-        Assert.Equal(
-            StringComparison.Ordinal,
-            WorkspaceExecutionScope.ResolveRootIdentityComparison(caseSensitiveFileSystem: true));
-        Assert.Equal(
-            StringComparison.OrdinalIgnoreCase,
-            WorkspaceExecutionScope.ResolveRootIdentityComparison(caseSensitiveFileSystem: false));
-        Assert.Equal(
-            OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase,
-            WorkspaceExecutionScope.RootIdentityComparison);
+        string root = Path.Combine(Path.GetTempPath(), "workspace-root");
+        var insensitive = new WorkspaceExecutionScope(
+            root,
+            WorkspaceScopeDescriptor.Project("Project-A"),
+            rootCaseSensitivity: PhysicalFileSystemCaseSensitivity.Insensitive);
+        var sameInsensitiveRoot = new WorkspaceExecutionScope(
+            root.ToUpperInvariant(),
+            WorkspaceScopeDescriptor.Project("Project-A"),
+            rootCaseSensitivity: PhysicalFileSystemCaseSensitivity.Insensitive);
+        var sensitive = new WorkspaceExecutionScope(
+            root.ToUpperInvariant(),
+            WorkspaceScopeDescriptor.Project("Project-A"),
+            rootCaseSensitivity: PhysicalFileSystemCaseSensitivity.Sensitive);
+        var differentLogicalScope = new WorkspaceExecutionScope(
+            root,
+            WorkspaceScopeDescriptor.Project("project-a") with { Key = "PROJECT-A" },
+            rootCaseSensitivity: PhysicalFileSystemCaseSensitivity.Insensitive);
+
+        Assert.True(insensitive.SharesIdentityWith(sameInsensitiveRoot));
+        Assert.False(insensitive.SharesIdentityWith(sensitive));
+        Assert.False(insensitive.SharesIdentityWith(differentLogicalScope));
     }
 }

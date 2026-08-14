@@ -198,7 +198,32 @@ public sealed class MigrationBootstrapIntegrationTests
         Assert.Equal(PostgreSqlMigrationBaseline.CurrentMigrationId, knownMigrations[0]);
         Assert.DoesNotContain(knownMigrations, PostgreSqlMigrationBaseline.LegacyMigrationIds.Contains);
         Assert.Equal(knownMigrations, appliedMigrations);
+        await AssertProcessRuntimeStepHostCapabilitiesColumnAsync(dbContext);
         await AssertCustomBaselineIndexesAsync(dbContext);
+    }
+
+    private static async Task AssertProcessRuntimeStepHostCapabilitiesColumnAsync(AppDbContext dbContext)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'process_runtime_steps'
+              AND column_name = 'RequiredHostCapabilitiesJson';
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal("NO", reader.GetString(0));
+        Assert.Contains("[]", reader.GetString(1), StringComparison.Ordinal);
+        Assert.False(await reader.ReadAsync());
     }
 
     private static async Task AssertCustomBaselineIndexesAsync(AppDbContext dbContext)

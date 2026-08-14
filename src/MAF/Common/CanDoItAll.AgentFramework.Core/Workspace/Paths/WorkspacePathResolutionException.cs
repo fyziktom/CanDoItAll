@@ -9,7 +9,8 @@ public enum WorkspacePathResolutionFailureKind
     PathMissing,
     ManagedPathAliasMismatch,
     ReparsePointTraversal,
-    ForeignManagedScope
+    ForeignManagedScope,
+    ForeignHostPath
 }
 
 public sealed class WorkspacePathResolutionException : InvalidOperationException
@@ -79,6 +80,12 @@ public sealed class WorkspacePathResolutionException : InvalidOperationException
             WorkspacePathResolutionFailureKind.ForeignManagedScope,
             diagnosticMessage,
             "The requested path targets a different managed workspace scope.");
+
+    public static WorkspacePathResolutionException ForeignHostPath(string diagnosticMessage)
+        => Create(
+            WorkspacePathResolutionFailureKind.ForeignHostPath,
+            diagnosticMessage,
+            "The requested path belongs to a different host platform and requires explicit rebind or migration.");
 
     private static WorkspacePathResolutionException Create(
         WorkspacePathResolutionFailureKind kind,

@@ -1576,6 +1576,162 @@ public sealed class ProcessDefinitionCatalogProjectionTests
     }
 
     [Fact]
+    public void Blazor_delivery_guidance_uses_contract_topology_and_fresh_post_start_browser_evidence()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var processRoot = Path.Combine(repositoryRoot, "Templates", "Processes");
+        var loader = new ProcessTemplatePackLoader(processRoot);
+        var definitionKeys = new[]
+        {
+            "blazor-app-delivery",
+            "blazor-app-repair-fix",
+            "blazor-backend-feature",
+            "blazor-frontend-feature",
+            "blazor-fullstack-feature"
+        };
+
+        foreach (var definitionKey in definitionKeys)
+        {
+            var definition = loader.LoadDefinition(definitionKey);
+            var validation = Assert.Single(definition.Steps, step => step.Key == "validate-blazor-runtime");
+            var revalidation = Assert.Single(definition.Steps, step => step.Key == "revalidate-blazor-repair");
+            var stepRoot = Path.Combine(processRoot, "processes", definitionKey, "steps");
+            var validationDoc = File.ReadAllText(Path.Combine(stepRoot, "validate-blazor-runtime.md"));
+            var revalidationDoc = File.ReadAllText(Path.Combine(stepRoot, "revalidate-blazor-repair.md"));
+
+            Assert.Contains("Honor the declared topology", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("undeclared target substitutes", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("Treat that startup receipt as the temporal boundary", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("fresh isolated browser context or page", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("Evidence produced before the current startup receipt", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("only when the resolved delivery contract requires", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("execute that proof now", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("NotVerified` or missing proof is not product-defect evidence", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("typed `Failed` required criterion", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("return `Blocked` without a branch", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("Copy every authoritative project-structure node id", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("If a lookup returns `NodeNotFound`", validationDoc, StringComparison.Ordinal);
+            Assert.Contains("fresh isolated browser context or page", validation.Notes, StringComparison.Ordinal);
+            Assert.Contains("only when the resolved contract declares", validation.Notes, StringComparison.Ordinal);
+            Assert.Contains("NotVerified or missing proof alone is not product-defect evidence", validation.Notes, StringComparison.Ordinal);
+            Assert.Contains("typed Failed required criterion", validation.ExceptionPolicySummary, StringComparison.Ordinal);
+            Assert.Contains("Blocked without a branch", validation.ExceptionPolicySummary, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "missing proof",
+                Assert.Single(validation.BranchOutcomes, outcome => outcome.Key == "repair-required").Description,
+                StringComparison.OrdinalIgnoreCase);
+
+            Assert.Contains("Treat that startup receipt as the temporal boundary", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("fresh isolated browser context or page", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("repair-escalation", revalidationDoc, StringComparison.Ordinal);
+            Assert.DoesNotContain("repair-required", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("execute that proof now", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("NotVerified` or missing proof is not repaired-product defect evidence", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("typed `Failed` required criterion", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("return `Blocked` without a branch", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("If a lookup returns `NodeNotFound`", revalidationDoc, StringComparison.Ordinal);
+            Assert.Contains("repair-escalation", revalidation.Notes, StringComparison.Ordinal);
+            Assert.Contains("NotVerified or missing proof alone is not repaired-product defect evidence", revalidation.Notes, StringComparison.Ordinal);
+            Assert.Contains("typed Failed required criterion", revalidation.ExceptionPolicySummary, StringComparison.Ordinal);
+            Assert.Contains("Blocked without a branch", revalidation.ExceptionPolicySummary, StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "proof",
+                Assert.Single(revalidation.BranchOutcomes, outcome => outcome.Key == "repair-escalation").Description,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        var capabilityGuidance = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Templates",
+            "Capabilities",
+            "skills",
+            "instructions",
+            "dotnet-app-delivery.md"));
+        var implementationGuidance = File.ReadAllText(Path.Combine(
+            processRoot,
+            "processes",
+            "blazor-app-delivery",
+            "steps",
+            "implement-blazor-change.md"));
+        var repairGuidance = File.ReadAllText(Path.Combine(
+            processRoot,
+            "processes",
+            "blazor-app-delivery",
+            "steps",
+            "repair-blazor-findings.md"));
+        var genericGuidance = string.Join(Environment.NewLine, capabilityGuidance, implementationGuidance, repairGuidance);
+
+        Assert.Contains("complete runtime dependency graph", capabilityGuidance, StringComparison.Ordinal);
+        Assert.Contains("actual framework and package version", genericGuidance, StringComparison.Ordinal);
+        Assert.Contains("only when the resolved contract includes", implementationGuidance, StringComparison.Ordinal);
+        Assert.Contains("Do not require or repair optional capabilities", repairGuidance, StringComparison.Ordinal);
+        Assert.DoesNotContain("MSTEST0037", genericGuidance, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assert.HasCount", genericGuidance, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILocalStorageClient", genericGuidance, StringComparison.Ordinal);
+        Assert.DoesNotContain("PantryPlanner", genericGuidance, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Blazor_result_writeback_reuses_one_plain_note_under_the_target_work_item()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var processRoot = Path.Combine(repositoryRoot, "Templates", "Processes");
+        var loader = new ProcessTemplatePackLoader(processRoot);
+        var definitionKeys = new[]
+        {
+            "blazor-app-delivery",
+            "blazor-app-repair-fix",
+            "blazor-backend-feature",
+            "blazor-frontend-feature",
+            "blazor-fullstack-feature"
+        };
+        var stepKeys = new[]
+        {
+            "record-blazor-results",
+            "record-blazor-results-after-repair"
+        };
+
+        foreach (var definitionKey in definitionKeys)
+        {
+            var definition = loader.LoadDefinition(definitionKey);
+            var stepRoot = Path.Combine(processRoot, "processes", definitionKey, "steps");
+
+            foreach (var stepKey in stepKeys)
+            {
+                var step = Assert.Single(definition.Steps, candidate => candidate.Key == stepKey);
+                var guidance = File.ReadAllText(Path.Combine(stepRoot, $"{stepKey}.md"));
+                var writebackExpectation = Assert.Single(
+                    step.ArtifactExpectations,
+                    expectation => expectation.Key.Contains("project-structure-result-writeback", StringComparison.Ordinal));
+
+                Assert.Contains("use that WorkItem as the direct parent", guidance, StringComparison.Ordinal);
+                Assert.Contains("never fall back to the project root", guidance, StringComparison.Ordinal);
+                Assert.Contains("look for a result Note for the current process run", guidance, StringComparison.Ordinal);
+                Assert.Contains("project_structure_node_reparent", guidance, StringComparison.Ordinal);
+                Assert.Contains("project_structure_node_update", guidance, StringComparison.Ordinal);
+                Assert.Contains("Do not create a duplicate", guidance, StringComparison.Ordinal);
+                Assert.Contains("objectType `Note`", guidance, StringComparison.Ordinal);
+                Assert.Contains("metadataJson `{}`", guidance, StringComparison.Ordinal);
+                Assert.Contains("Read back the final Note", guidance, StringComparison.Ordinal);
+
+                Assert.Contains("exactly one plain Note directly under the target WorkItem", step.Notes, StringComparison.Ordinal);
+                Assert.Contains("never fall back to the project root", step.Notes, StringComparison.Ordinal);
+                Assert.Contains("Before creation, use project_structure_read", step.Notes, StringComparison.Ordinal);
+                Assert.Contains("never create a duplicate", step.Notes, StringComparison.Ordinal);
+                Assert.Contains("metadataJson {}", step.Notes, StringComparison.Ordinal);
+
+                Assert.Contains("exactly one", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains("plain Note with no subtype", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains("metadata {}", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains("target WorkItem as its direct parent", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains("project_structure_node_reparent", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains("project_structure_node_update", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+                Assert.Contains("Project-root fallback and duplicate current-run Notes are invalid", writebackExpectation.ValidationRequirementSummary, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    [Fact]
     public void Software_delivery_parent_subprocess_steps_only_launch_and_observe_children()
     {
         var loader = new ProcessTemplatePackLoader(Path.Combine(FindRepositoryRoot(), "Templates", "Processes"));
@@ -1738,7 +1894,8 @@ public sealed class ProcessDefinitionCatalogProjectionTests
             briefBuilder,
             dispatchQueue: null!,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
 
         await service.PreviewAsync(new ProcessLaunchRequest(
             DefinitionKey: definition.Key,
@@ -3730,7 +3887,7 @@ public sealed class ProcessDefinitionCatalogProjectionTests
                 "1.0.0",
                 "runtime/1.0",
                 "runtime/1.0",
-                ProcessDriverLayer.Platform,
+                ProcessDriverLayer.Framework,
                 Capabilities,
                 [],
                 [],

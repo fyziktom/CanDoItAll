@@ -47,7 +47,7 @@ public sealed class MafWorkflowAdapterIsolationTests
 
         foreach (var relativePath in workflowProjectFiles)
         {
-            var text = File.ReadAllText(Path.Combine(root, relativePath));
+            var text = File.ReadAllText(TestRepositoryPath.Resolve(root, relativePath));
             Assert.DoesNotContain("CanDoItAll.AgentFramework.Maf", text, StringComparison.Ordinal);
             Assert.DoesNotContain("CanDoItAll.AgentFramework.Workflows.MafAdapter", text, StringComparison.Ordinal);
         }
@@ -57,14 +57,14 @@ public sealed class MafWorkflowAdapterIsolationTests
     public void Host_and_module_delegate_maf_workflow_registration_to_adapter_extension()
     {
         var root = FindRepoRoot();
-        var hostRegistration = File.ReadAllText(Path.Combine(
+        var hostRegistration = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\MAF\Common\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs"));
-        var moduleRegistration = File.ReadAllText(Path.Combine(
+        var moduleRegistration = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs"));
 
-        Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Singleton)", hostRegistration, StringComparison.Ordinal);
+        Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)", hostRegistration, StringComparison.Ordinal);
         Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)", moduleRegistration, StringComparison.Ordinal);
 
         foreach (var registration in new[] { hostRegistration, moduleRegistration })
@@ -109,7 +109,7 @@ public sealed class MafWorkflowAdapterIsolationTests
             File.Exists(handoffFactoryPath),
             "MafHandoffWorkflowFactory.cs moved out of the workflow adapter into the MAF runtime and must live at Runtime/Handoffs.");
 
-        var mafProjectText = File.ReadAllText(Path.Combine(
+        var mafProjectText = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj"));
         Assert.DoesNotContain("Workflows.MafAdapter", mafProjectText, StringComparison.Ordinal);

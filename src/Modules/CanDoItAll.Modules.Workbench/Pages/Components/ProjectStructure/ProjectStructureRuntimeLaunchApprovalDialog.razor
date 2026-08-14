@@ -1,0 +1,47 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@inject DialogService DialogService
+
+<Stack GapScale="LayoutGap.Medium"
+       data-testid="project-structure-runtime-launch-approval-content">
+    <Alert AlertStyle="AlertStyle.Warning"
+           Title="Explicit script execution">
+        This node runs an explicitly configured shell script. Review the node metadata before approving this one launch.
+    </Alert>
+    <TextBlock TextStyle="TextStyle.Subtitle2"
+               Value="@DisplayName" />
+    <TextBlock TextStyle="TextStyle.Note"
+               Value="Approval is not remembered and does not change workspace or external-target authority." />
+    <Stack Orientation="Orientation.Horizontal"
+           JustifyContent="JustifyContent.End"
+           GapScale="LayoutGap.Small">
+        <Button Text="Cancel"
+                Variant="Variant.Outlined"
+                ButtonStyle="ButtonStyle.Base"
+                Click="CancelAsync"
+                data-testid="project-structure-runtime-launch-approval-cancel" />
+        <Button Text="Approve this launch"
+                ButtonStyle="ButtonStyle.Warning"
+                Click="ConfirmAsync"
+                data-testid="project-structure-runtime-launch-approval-confirm" />
+    </Stack>
+</Stack>
+
+@code {
+    [CascadingParameter]
+    public DialogReference? DialogReference { get; set; }
+
+    [Parameter, EditorRequired]
+    public string DisplayName { get; set; } = string.Empty;
+
+    private Task ConfirmAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync(true)
+            : DialogReference.CloseAsync(true);
+
+    private Task CancelAsync()
+        => DialogReference is null
+            ? DialogService.CloseAsync(false)
+            : DialogReference.CloseAsync(false);
+}

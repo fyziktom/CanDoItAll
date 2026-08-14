@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "profile": "example",
+  "capabilities": [
+    {
+      "id": "host.exec.direct",
+      "state": "Unverified",
+      "reason_code": "",
+      "remediation": "",
+      "implementation": "",
+      "dependency_version": "",
+      "evidence": [],
+      "grants_authority": false
+    }
+  ]
+}

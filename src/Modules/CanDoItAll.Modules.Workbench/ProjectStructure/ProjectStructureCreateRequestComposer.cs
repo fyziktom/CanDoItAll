@@ -140,6 +140,8 @@ internal static class ProjectStructureCreateRequestComposer
                     EnvironmentName = GetValue(inputValues, "environmentName"),
                     ProjectPath = GetValue(inputValues, "projectPath"),
                     WorkingDirectory = GetValue(inputValues, "workingDirectory"),
+                    EntryPoint = GetValue(inputValues, "entryPoint"),
+                    Arguments = GetValue(inputValues, "environmentArguments"),
                     LaunchProfileName = GetValue(inputValues, "launchProfileName"),
                     RuntimeProtocol = ParseEnum(inputValues, "runtimeProtocol", ProjectRuntimeProtocol.Https),
                     LocalhostUrl = GetValue(inputValues, "localhostUrl")

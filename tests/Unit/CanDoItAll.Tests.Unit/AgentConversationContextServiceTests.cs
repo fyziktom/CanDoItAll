@@ -316,7 +316,7 @@ public sealed class AgentConversationContextServiceTests
 
         foreach (var relativePath in affinitySources)
         {
-            var text = File.ReadAllText(Path.Combine(root, relativePath));
+            var text = File.ReadAllText(TestRepositoryPath.Resolve(root, relativePath));
             Assert.DoesNotContain("IAgentRuntime", text, StringComparison.Ordinal);
             Assert.DoesNotContain("ExecutionService", text, StringComparison.Ordinal);
             Assert.DoesNotContain("ProviderProfile", text, StringComparison.Ordinal);

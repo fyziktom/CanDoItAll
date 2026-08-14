@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -10,7 +12,8 @@ public static class WorkspaceExecutionAuditContext
 
     public static IDisposable BeginScope(
         ExecutionRunRecord run,
-        WorkspaceScopeDescriptor? contextWorkspaceScope = null)
+        WorkspaceScopeDescriptor? contextWorkspaceScope = null,
+        WorkspaceScopeDescriptor? executionWorkspaceScope = null)
     {
         ArgumentNullException.ThrowIfNull(run);
 
@@ -28,6 +31,7 @@ public static class WorkspaceExecutionAuditContext
             run.MessageId,
             run.ProviderName,
             run.Model,
+            ExecutionInvocationMetadata.ResolveExternalTargetRootBindings(run),
             ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run),
             ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run),
             ExecutionInvocationMetadata.ResolveAllowedManagedArtifactReadRefs(run),
@@ -42,7 +46,8 @@ public static class WorkspaceExecutionAuditContext
             ExecutionInvocationMetadata.ResolveProcessStepTargetScope(run),
             contextWorkspaceScope ?? ExecutionInvocationMetadata.ResolveContextWorkspaceScope(run),
             ExecutionInvocationMetadata.ResolveProjectStructureLaunchAgent(run),
-            ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run));
+            ExecutionInvocationMetadata.ResolveProjectStructureProcessNodeContext(run),
+            executionWorkspaceScope);
         return new Scope(previous);
     }
 
@@ -59,6 +64,7 @@ public static class WorkspaceExecutionAuditContext
         string MessageId,
         string ProviderName,
         string Model,
+        IReadOnlyList<ExternalTargetRootBinding> ExternalTargetRootBindings,
         IReadOnlyList<string> AllowedExternalTargetAliases,
         IReadOnlyList<string> ReadOnlyExternalTargetAliases,
         IReadOnlyList<string> AllowedManagedArtifactReadRefs,
@@ -73,7 +79,8 @@ public static class WorkspaceExecutionAuditContext
         string ProcessStepTargetScope,
         WorkspaceScopeDescriptor? ContextWorkspaceScope,
         ProjectStructureAgentIdentityDescriptor? ProjectStructureLaunchAgent,
-        ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext);
+        ProjectStructureProcessNodeContextDescriptor? ProjectStructureProcessNodeContext,
+        WorkspaceScopeDescriptor? ExecutionWorkspaceScope = null);
 
     private sealed class Scope(WorkspaceExecutionAuditScopeState? previous) : IDisposable
     {

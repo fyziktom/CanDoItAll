@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "example",
+      "mandatory_capabilities": [],
+      "optional_capabilities": [],
+      "capabilities": [
+        {
+          "id": "capability.id",
+          "state": "Unverified",
+          "reason_code": "",
+          "remediation": "",
+          "implementation": "",
+          "dependency_version": "",
+          "execution_boundary": "",
+          "evidence": []
+        }
+      ]
+    }
+  ]
+}

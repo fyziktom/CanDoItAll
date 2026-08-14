@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
@@ -13,10 +15,15 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
 
     public SourceIngestionWorkflowExecutor(
         IWorkspacePathResolutionService paths,
-        IWorkspaceDocumentMarkdownConverter documentMarkdownConverter)
+        IWorkspaceDocumentMarkdownConverter documentMarkdownConverter,
+        IExternalTargetPathRegistry externalTargetPathRegistry,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
         : this(
             new WorkflowSourceCandidateCollector(),
-            new WorkflowSourceFileResolver(paths),
+            new WorkflowSourceFileResolver(
+                paths,
+                externalTargetPathRegistry,
+                physicalPathPolicyFactory),
             new WorkflowSourceDocumentReader(documentMarkdownConverter),
             new WorkflowSourceFileContentIdentityResolver())
     {
@@ -51,12 +58,12 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
         var maxCharactersPerFile = Math.Clamp(settings.MaxCharactersPerFile, 1000, 80000);
         var remainingCharacters = Math.Clamp(settings.MaxTotalCharacters, 1000, 240000);
         var candidates = candidateCollector.Collect(root, settings, sourceKeys)
-            .GroupBy(candidate => $"{candidate.Kind}:{candidate.Value}", StringComparer.OrdinalIgnoreCase)
+            .GroupBy(candidate => $"{candidate.Kind}:{candidate.Value}", StringComparer.Ordinal)
             .Select(group => group.First())
             .ToArray();
         var loaded = new List<WorkflowSourceIngestionDocument>();
         var errors = new List<WorkflowSourceIngestionError>();
-        var visitedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visitedFiles = new HashSet<string>(StringComparer.Ordinal);
         var visitedContent = new HashSet<WorkflowSourceFileContentKey>();
         var truncated = false;
 
@@ -116,7 +123,7 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
                     candidate.Key,
                     candidate.Label,
                     candidate.Kind,
-                    candidate.Value,
+                    fileResolver.ToSafeDisplayPath(candidate.Value),
                     candidate.Origin,
                     exception.Message));
             }
@@ -197,4 +204,5 @@ public sealed class SourceIngestionWorkflowExecutor : IWorkflowExecutor
                 ? extension.Trim().ToLowerInvariant()
                 : "." + extension.Trim().ToLowerInvariant())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
 }

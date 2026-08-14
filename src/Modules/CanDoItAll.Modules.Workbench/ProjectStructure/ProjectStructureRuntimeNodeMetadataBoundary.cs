@@ -8,7 +8,8 @@ namespace CanDoItAll.Modules.Workbench;
 
 public sealed class ProjectStructureRuntimeNodeMetadataBoundary(
     IProjectStructureRuntimeLauncher runtimeLauncher,
-    IWorkspacePathAccessGuard workspacePathAccessGuard)
+    IWorkspacePathAccessGuard workspacePathAccessGuard,
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory)
 {
     public string ValidateAndCanonicalize(
         ProjectObjectType objectType,
@@ -223,9 +224,9 @@ public sealed class ProjectStructureRuntimeNodeMetadataBoundary(
     private void EnsureAgentPlanPathAuthority(ProjectStructureRuntimeLaunchPlan plan)
     {
         EnsureAgentCanReadPath(plan.WorkingDirectory, "working directory");
-        if (plan.Target is not null)
+        foreach (var target in plan.Targets)
         {
-            EnsureAgentCanReadPath(plan.Target.Path, plan.Target.Description);
+            EnsureAgentCanReadPath(target.Path, target.Description);
         }
     }
 
@@ -237,11 +238,21 @@ public sealed class ProjectStructureRuntimeNodeMetadataBoundary(
         }
 
         var auditScope = WorkspaceExecutionAuditContext.Current;
-        var canRead = auditScope is not null &&
-            new EffectiveExternalTargetAccessScope(
-                    auditScope.AllowedExternalTargetAliases,
-                    auditScope.ReadOnlyExternalTargetAliases)
-                .CanRead(path);
+        var canRead = false;
+        if (auditScope is not null)
+        {
+            var externalTargetRegistry = externalTargetPathRegistryFactory.Create(
+                auditScope.ExternalTargetRootBindings);
+            var pathAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                path,
+                externalTargetRegistry);
+            canRead = !string.IsNullOrWhiteSpace(pathAlias) &&
+                new EffectiveExternalTargetAccessScope(
+                        auditScope.AllowedExternalTargetAliases,
+                        auditScope.ReadOnlyExternalTargetAliases)
+                    .CanRead(pathAlias);
+        }
+
         if (canRead)
         {
             return;

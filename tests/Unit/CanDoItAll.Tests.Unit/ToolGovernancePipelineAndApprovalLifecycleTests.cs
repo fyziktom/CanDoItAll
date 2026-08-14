@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -257,6 +258,7 @@ public sealed class ToolGovernancePipelineAndApprovalLifecycleTests
             MessageId: string.Empty,
             ProviderName: "OpenAI",
             Model: "unit-test-model",
+            ExternalTargetRootBindings: [],
             AllowedExternalTargetAliases: [],
             ReadOnlyExternalTargetAliases: [],
             AllowedManagedArtifactReadRefs: [],

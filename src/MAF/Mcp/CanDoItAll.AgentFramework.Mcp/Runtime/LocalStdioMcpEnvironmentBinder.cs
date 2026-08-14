@@ -1,39 +1,33 @@
-using System.Diagnostics;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Mcp;
 
 internal static class LocalStdioMcpEnvironmentBinder
 {
-    public static void Apply(
-        ProcessStartInfo startInfo,
+    public static IReadOnlyDictionary<string, string?> Build(
         LocalStdioMcpServerDescriptor descriptor)
     {
+        var environmentPolicy = new WorkspaceCommandEnvironmentPolicy();
+        var explicitValues = new Dictionary<string, string?>(
+            environmentPolicy.EnvironmentNameComparer);
         foreach (var (targetName, value) in descriptor.RawEnvironmentVariables)
         {
-            if (string.IsNullOrWhiteSpace(targetName) ||
-                string.IsNullOrWhiteSpace(value))
-            {
-                continue;
-            }
+            ValidateRuntimeEnvironmentVariableName(descriptor, targetName);
 
-            startInfo.Environment[targetName.Trim()] = value;
+            if (!explicitValues.TryAdd(targetName, value))
+            {
+                throw InvalidBinding(descriptor, "ambiguous target");
+            }
         }
 
         foreach (var (targetName, sourceName) in descriptor.EnvironmentVariableBindings)
         {
-            if (string.IsNullOrWhiteSpace(targetName) ||
-                string.IsNullOrWhiteSpace(sourceName))
-            {
-                throw new McpSetupException(
-                    CapabilityDiagnosticCategory.SecretBinding,
-                    "$.environmentVariableBindings",
-                    $"MCP server '{descriptor.ServerKey}' has an invalid environment variable binding.",
-                    "Set each binding to a target environment variable name and a runtime source environment variable name.");
-            }
+            ValidateEnvironmentVariableName(descriptor, targetName, "target");
+            ValidateEnvironmentVariableName(descriptor, sourceName, "source");
 
-            var value = Environment.GetEnvironmentVariable(sourceName.Trim());
+            var value = Environment.GetEnvironmentVariable(sourceName);
             if (value is null)
             {
                 throw new McpSetupException(
@@ -43,7 +37,46 @@ internal static class LocalStdioMcpEnvironmentBinder
                     "Set the source environment variable before running the setup test.");
             }
 
-            startInfo.Environment[targetName.Trim()] = value;
+            if (!explicitValues.TryAdd(targetName, value))
+            {
+                throw InvalidBinding(descriptor, "ambiguous target");
+            }
+        }
+
+        return environmentPolicy.MergeEnvironmentVariables(explicitValues, "local_mcp");
+    }
+
+    private static void ValidateEnvironmentVariableName(
+        LocalStdioMcpServerDescriptor descriptor,
+        string? name,
+        string part)
+    {
+        if (!McpEnvironmentVariableNamePolicy.IsValid(name))
+        {
+            throw InvalidBinding(descriptor, part);
         }
     }
+
+    private static void ValidateRuntimeEnvironmentVariableName(
+        LocalStdioMcpServerDescriptor descriptor,
+        string? name)
+    {
+        if (!McpEnvironmentVariableNamePolicy.IsValidRuntimeName(name))
+        {
+            throw new McpSetupException(
+                CapabilityDiagnosticCategory.SecretBinding,
+                "$.environmentVariables",
+                $"MCP server '{descriptor.ServerKey}' received an invalid runtime environment variable name.",
+                "Repair the runtime environment composition before starting the MCP server.");
+        }
+    }
+
+    private static McpSetupException InvalidBinding(
+        LocalStdioMcpServerDescriptor descriptor,
+        string part)
+        => new(
+            CapabilityDiagnosticCategory.SecretBinding,
+            "$.environmentVariableBindings",
+            $"MCP server '{descriptor.ServerKey}' has an invalid {part} environment variable name in its bindings.",
+            "Set each binding to a unique normalized target environment-variable name and a normalized runtime source environment-variable name.");
 }

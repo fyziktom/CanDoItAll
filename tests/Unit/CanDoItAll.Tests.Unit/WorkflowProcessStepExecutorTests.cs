@@ -156,6 +156,88 @@ public sealed class WorkflowProcessStepExecutorTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_omits_failed_workflow_backend_summary_from_public_result()
+    {
+        const string protectedBackendSummary = "secret: C:\\private\\workflow\\password=raw-workflow-token";
+        var binding = new ProcessWorkflowExecutorBinding(new ProcessWorkflowId(Guid.NewGuid()));
+        var assignment = CreateAssignment(binding);
+        var child = CreateWorkflowRun(
+            new WorkflowId(binding.WorkflowId.Value),
+            WorkflowVersionId.New(),
+            WorkflowRunState.Failed,
+            CreateProcessOrigin(assignment)) with
+        {
+            Summary = protectedBackendSummary
+        };
+        var runtime = new RecordingWorkflowRuntimeManager { Runs = [child] };
+        var executor = CreateExecutor(new RecordingWorkflowLaunchService(), runtime);
+
+        var result = await executor.ExecuteAsync(
+            assignment,
+            ProcessStepExecutionContract.Empty,
+            CancellationToken.None);
+
+        var publicResult = JsonSerializer.Serialize(result);
+        Assert.Equal(StrategyOutcome.Failed, result.Outcome);
+        Assert.Contains("restricted workflow evidence", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(protectedBackendSummary, publicResult, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-workflow-token", publicResult, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_omits_validator_messages_from_invalid_workflow_output()
+    {
+        const string protectedCriterionId = "secret: C:\\private\\criteria\\token=raw-validation-token";
+        var binding = new ProcessWorkflowExecutorBinding(new ProcessWorkflowId(Guid.NewGuid()));
+        var assignment = CreateAssignment(binding);
+        var child = CreateWorkflowRun(
+            new WorkflowId(binding.WorkflowId.Value),
+            WorkflowVersionId.New(),
+            WorkflowRunState.Completed,
+            CreateProcessOrigin(assignment));
+        var invalidOutput = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "The workflow reported duplicate acceptance evidence.",
+            EvidenceRefs = ["workflow://run/completed"],
+            AcceptanceCriteriaEvidence =
+            [
+                new ProcessAcceptanceCriterionEvidence
+                {
+                    CriterionId = protectedCriterionId,
+                    Status = ProcessAcceptanceCriterionEvidenceStatus.Passed,
+                    Summary = "First proof.",
+                    EvidenceRefs = ["workflow://proof/one"]
+                },
+                new ProcessAcceptanceCriterionEvidence
+                {
+                    CriterionId = protectedCriterionId,
+                    Status = ProcessAcceptanceCriterionEvidenceStatus.Passed,
+                    Summary = "Duplicate proof.",
+                    EvidenceRefs = ["workflow://proof/two"]
+                }
+            ]
+        };
+        var runtime = new RecordingWorkflowRuntimeManager
+        {
+            Runs = [child],
+            Events = [CreateOutputEvent(child.RunId, invalidOutput)]
+        };
+        var executor = CreateExecutor(new RecordingWorkflowLaunchService(), runtime);
+
+        var result = await executor.ExecuteAsync(
+            assignment,
+            ProcessStepExecutionContract.Empty,
+            CancellationToken.None);
+
+        var publicResult = JsonSerializer.Serialize(result);
+        Assert.Equal(StrategyOutcome.Failed, result.Outcome);
+        Assert.Contains("validation rule", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(protectedCriterionId, publicResult, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-validation-token", publicResult, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ignores_same_workflow_run_with_unverified_origin_and_launches_once()
     {
         var binding = new ProcessWorkflowExecutorBinding(new ProcessWorkflowId(Guid.NewGuid()));
@@ -293,11 +375,11 @@ public sealed class WorkflowProcessStepExecutorTests
         IWorkflowLaunchService launchService,
         IWorkflowRuntimeManager runtimeManager)
     {
-        var workspaceFiles = new WorkspaceFileService(Path.Combine(
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.WorkflowProcessStepExecutor.{Guid.NewGuid():N}"));
         var receiptPolicies = new ProcessToolReceiptPolicyCatalog([]);
-        var issueFactory = new ProcessCompletionIssueResultFactory(
+        var issueFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             new ProcessCompletionDefectEvidenceCatalog([]));
         var resultConverter = new ProcessExecutionResultConverter(

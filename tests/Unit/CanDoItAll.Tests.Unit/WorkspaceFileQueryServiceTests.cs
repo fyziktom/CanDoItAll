@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -6,6 +8,7 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
 {
     private readonly string workspaceRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll.WorkspaceFileQueryServiceTests", Guid.NewGuid().ToString("N"));
     private readonly List<string> externalRoots = [];
+    private readonly ExternalTargetPathRegistry externalTargets = new();
 
     [Fact]
     public void ListDirectory_returns_direct_children_without_recursive_traversal()
@@ -418,7 +421,7 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
             20);
 
         Assert.False(result.Succeeded);
-        Assert.Contains("Workspace path 'missing//path' does not exist.", result.Message, StringComparison.Ordinal);
+        Assert.Contains("workspace path is invalid", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("hyphenated segments", result.Message, StringComparison.Ordinal);
     }
 
@@ -495,7 +498,7 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
         Func<string, IReadOnlyList<string>>? enumerateDirectoryEntries = null)
     {
         Directory.CreateDirectory(workspaceRoot);
-        var pathPolicy = new WorkspacePathPolicy(workspaceRoot);
+        var pathPolicy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         return new WorkspaceFileQueryService(
             pathPolicy,
             new WorkspaceFileReceiptWriter(workspaceRoot),
@@ -527,27 +530,11 @@ public sealed class WorkspaceFileQueryServiceTests : IDisposable
         File.WriteAllText(path, content);
     }
 
-    private static string BuildExternalTargetAlias(string fullPath)
+    private string BuildExternalTargetAlias(string fullPath)
     {
-        var normalizedFullPath = Path.GetFullPath(fullPath);
-        var root = Path.GetPathRoot(normalizedFullPath)
-            ?? throw new InvalidOperationException($"Could not resolve a drive root for '{fullPath}'.");
-        var trimmedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmedRoot.Length != 2 || trimmedRoot[1] != ':')
-        {
-            throw new InvalidOperationException($"External-target alias tests require a drive-letter path. Received '{fullPath}'.");
-        }
-
-        var driveLetter = char.ToUpperInvariant(trimmedRoot[0]);
-        var relativeWithinDrive = normalizedFullPath.Length <= root.Length
-            ? string.Empty
-            : normalizedFullPath[root.Length..]
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .TrimStart(Path.DirectorySeparatorChar);
-
-        return string.IsNullOrWhiteSpace(relativeWithinDrive)
-            ? $"external-target/{driveLetter}"
-            : WorkspacePathPolicy.NormalizeRelativePath(Path.Combine("external-target", driveLetter.ToString(), relativeWithinDrive));
+        return externalTargets.TryCreateAlias(fullPath, out var alias)
+            ? alias
+            : throw new InvalidOperationException($"Could not create an external-target alias for '{fullPath}'.");
     }
 
     private sealed class FailAfterFirstReadStream(byte[] content) : MemoryStream(content, writable: false)

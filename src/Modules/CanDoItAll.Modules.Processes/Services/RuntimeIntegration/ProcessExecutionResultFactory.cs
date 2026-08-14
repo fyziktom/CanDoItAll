@@ -42,6 +42,7 @@ internal static class ProcessExecutionResultFactory
         string summary,
         string evidence)
     {
+        summary = SanitizePublicSummary(summary);
         return new ProcessExecutionAdapterResult(
             StrategyOutcome.Failed,
             [],
@@ -66,6 +67,7 @@ internal static class ProcessExecutionResultFactory
         string summary,
         string evidence)
     {
+        summary = SanitizePublicSummary(summary);
         var evidenceHash = ComputeHash(evidence);
         return new ProcessExecutionAdapterResult(
             StrategyOutcome.Canceled,
@@ -91,6 +93,7 @@ internal static class ProcessExecutionResultFactory
         string summary,
         string evidence)
     {
+        summary = SanitizePublicSummary(summary);
         var evidenceHash = ComputeHash(evidence);
         return new ProcessExecutionAdapterResult(
             StrategyOutcome.NeedsManager,
@@ -152,13 +155,26 @@ internal static class ProcessExecutionResultFactory
             return "Agent output did not satisfy the process step outcome contract.";
         }
 
-        return string.Join("; ", errors.Select(error => $"{error.Code}: {error.Message}"));
+        return $"Agent output failed {errors.Count} process outcome validation rule(s). Inspect restricted validation evidence.";
     }
+
+    internal static string BuildValidationEvidence(
+        string rawOutputHash,
+        IReadOnlyList<AgentOutputValidationError> errors)
+        => $"{rawOutputHash}:{ComputeHash(JsonSerializer.Serialize(errors.Select(error => new { error.Code, error.Message })))}";
 
     internal static string ComputeHash(string value)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
         return "sha256:" + Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static string SanitizePublicSummary(string? value)
+    {
+        var sanitized = ProcessPublicReceiptTextPolicy.Sanitize(value).Trim();
+        return sanitized.Length <= ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength
+            ? sanitized
+            : sanitized[..(ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength - 3)].TrimEnd() + "...";
     }
 
     internal static string FirstNonEmpty(params string?[] values)

@@ -27,16 +27,57 @@ namespace CanDoItAll.Modules.Processes;
 
 
 internal sealed class StandardProcessLaunchDriverCatalogProvider(
-    IProcessStepExecutionDriver executionDriver) : IProcessLaunchDriverCatalogProvider
+    IProcessStepExecutionDriver executionDriver,
+    IProcessHostCapabilitySnapshotProvider hostCapabilitySnapshotProvider) : IProcessLaunchDriverCatalogProvider
 {
-    public ValueTask<ProcessLaunchDriverCatalog> LoadAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<ProcessLaunchDriverCatalog> LoadAsync(CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        var snapshot = await hostCapabilitySnapshotProvider.GetAsync(cancellationToken).ConfigureAwait(false);
 
-        return ValueTask.FromResult(new ProcessLaunchDriverCatalog(
+        return new ProcessLaunchDriverCatalog(
             new ProcessDriverCatalog(StandardProcessAdapterDriverPackageFactory.CreateLayeredPackages(executionDriver)),
             executionDriver.Descriptor.Strategy.StrategyId,
-            executionDriver.Descriptor.Adapter.CapabilityTags));
+            executionDriver.Descriptor.Adapter.CapabilityTags)
+        {
+            HostCapabilities = snapshot
+        };
     }
 }
 
+internal sealed record StandardProcessAdapterCompositionRegistration(
+    ProcessStepExecutionDriverDescriptor DriverDescriptor);
+
+internal sealed class StandardProcessAdapterHostCapabilitySource(
+    IEnumerable<StandardProcessAdapterCompositionRegistration> registrations) : IProcessHostCapabilitySource
+{
+    private static readonly IReadOnlySet<ProcessHostCapabilityId> OwnedCapabilities =
+        new HashSet<ProcessHostCapabilityId> { ProcessHostCapabilityIds.ManagedProcessAdapter };
+    private readonly IReadOnlyList<StandardProcessAdapterCompositionRegistration> registrations =
+        (registrations ?? throw new ArgumentNullException(nameof(registrations))).ToArray();
+
+    public ProcessHostCapabilitySourceId SourceId { get; } = new("standard-process-adapter");
+
+    public IReadOnlySet<ProcessHostCapabilityId> DeclaredCapabilities => OwnedCapabilities;
+
+    public ValueTask<IReadOnlyList<ProcessHostCapabilityFact>> ProbeAsync(
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var available = registrations is [var registration] &&
+                        registration.DriverDescriptor == AgentFrameworkProcessExecutionAdapter.DriverDescriptor;
+        return ValueTask.FromResult<IReadOnlyList<ProcessHostCapabilityFact>>(
+        [
+            new ProcessHostCapabilityFact(
+                ProcessHostCapabilityIds.ManagedProcessAdapter,
+                available
+                    ? ProcessHostCapabilityAvailability.Available
+                    : ProcessHostCapabilityAvailability.Unavailable,
+                available
+                    ? ProcessHostCapabilityReason.Ready
+                    : ProcessHostCapabilityReason.InvalidConfiguration,
+                available
+                    ? ProcessHostExecutionPort.ManagedProcessAdapter
+                    : ProcessHostExecutionPort.None)
+        ]);
+    }
+}

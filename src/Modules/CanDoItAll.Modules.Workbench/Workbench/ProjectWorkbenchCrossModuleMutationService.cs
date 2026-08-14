@@ -35,9 +35,21 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken = default)
+        => DeleteObjectDetailedAsync(
+            projectId,
+            nodeKey,
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            cancellationToken);
+
+    public Task<ProjectStructureDeletionResult> DeleteObjectDetailedAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
+        CancellationToken cancellationToken = default)
         => DeleteObjectCoreAsync(
             projectId,
             nodeKey,
+            managedStorageDisposition,
             reconcileDetachedTaskResource: true,
             cancellationToken);
 
@@ -48,15 +60,54 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         => (await DeleteObjectCoreAsync(
                 projectId,
                 nodeKey,
+                ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
                 reconcileDetachedTaskResource: false,
                 cancellationToken))
             .DeletedNodeCount;
 
-    internal async Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
+    internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
         Guid projectId,
         string rootNodeKey,
         Guid? durableMutationId = null,
         CancellationToken cancellationToken = default)
+        => ReplayDeletionCoreAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId,
+            expectedDisposition: null,
+            cancellationToken);
+
+    internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
+        Guid projectId,
+        string rootNodeKey,
+        Guid durableMutationId,
+        ProjectStructureManagedStorageDisposition expectedDisposition,
+        CancellationToken cancellationToken = default)
+        => ReplayDeletionCoreAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId,
+            expectedDisposition,
+            cancellationToken);
+
+    internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
+        Guid projectId,
+        string rootNodeKey,
+        ProjectStructureManagedStorageDisposition expectedDisposition,
+        CancellationToken cancellationToken = default)
+        => ReplayDeletionCoreAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId: null,
+            expectedDisposition,
+            cancellationToken);
+
+    private async Task<ProjectStructureDeletionReplayResult?> ReplayDeletionCoreAsync(
+        Guid projectId,
+        string rootNodeKey,
+        Guid? durableMutationId,
+        ProjectStructureManagedStorageDisposition? expectedDisposition,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootNodeKey);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -101,21 +152,29 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 rootNodeKey,
                 mutation.Id);
         }
+
+        EnsureDispositionMatches(
+            projectId,
+            rootNodeKey,
+            mutation.Id,
+            payload,
+            expectedDisposition);
+
         await mutationScope.CommitAsync(cancellationToken);
         await mutationScope.DisposeAsync();
+        var completedPayload = payload;
         if (mutation.Status != ProjectCrossModuleMutationStatus.Completed)
         {
-            await ProcessDeletionMutationOrThrowAsync(
+            completedPayload = await ProcessDeletionMutationOrThrowAsync(
                 projectId,
                 rootNodeKey,
                 mutation.Id,
+                ProjectStructureManagedStorageDispositionPolicy.ResolvePersisted(
+                    payload.ManagedStorageDisposition),
                 "The subtree is deleted, but durable cleanup remains incomplete.",
                 cancellationToken);
         }
 
-        var completedPayload = await LoadDeletionPayloadAsync(
-            mutation.Id,
-            cancellationToken);
         return new ProjectStructureDeletionReplayResult(
             completedPayload.DeletedNodeKeys,
             MapDeletionWarnings(completedPayload.ManagedStorageOutcomes));
@@ -159,7 +218,9 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 ProjectStructureDeletionCommitState.WorkbenchCommitted,
                 CanRetryNow(mutation, now),
                 ResolveRetryAvailableAtUtc(mutation),
-                DeletionRetryGuidance);
+                DeletionRetryGuidance,
+                ProjectStructureManagedStorageDispositionPolicy.ResolvePersisted(
+                    payload.ManagedStorageDisposition));
         }).ToArray();
     }
 
@@ -197,9 +258,11 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
     private async Task<ProjectStructureDeletionResult> DeleteObjectCoreAsync(
         Guid projectId,
         string nodeKey,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         bool reconcileDetachedTaskResource,
         CancellationToken cancellationToken)
     {
+        ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(managedStorageDisposition);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -229,16 +292,21 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                                   new JsonSerializerOptions(JsonSerializerDefaults.Web))
                               ?? throw new InvalidOperationException(
                                   "Unable to deserialize the durable subtree-deletion payload.");
-                await mutationScope.CommitAsync(cancellationToken);
-                await mutationScope.DisposeAsync();
-                await ProcessDeletionMutationOrThrowAsync(
+                EnsureDispositionMatches(
                     projectId,
                     nodeKey,
                     pendingDeletion.Id,
-                    "The subtree is deleted, but durable cleanup remains incomplete.",
-                    cancellationToken);
-                var completedPayload = await LoadDeletionPayloadAsync(
+                    payload,
+                    managedStorageDisposition);
+                await mutationScope.CommitAsync(cancellationToken);
+                await mutationScope.DisposeAsync();
+                var completedPayload = await ProcessDeletionMutationOrThrowAsync(
+                    projectId,
+                    nodeKey,
                     pendingDeletion.Id,
+                    ProjectStructureManagedStorageDispositionPolicy.ResolvePersisted(
+                        payload.ManagedStorageDisposition),
+                    "The subtree is deleted, but durable cleanup remains incomplete.",
                     cancellationToken);
                 return new ProjectStructureDeletionResult(
                     completedPayload.DeletedNodeKeys.Count,
@@ -279,11 +347,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 .ToArray()
             : [];
 
-        await ProjectNodeBindingStorage.LoadAsync(dbContext, recordsToDelete, cancellationToken);
-        var storageDeletionPlan = await managedStorageDeletionPlanner.PlanAsync(
-            dbContext,
-            recordsToDelete.Select(record => record.Id).ToArray(),
-            cancellationToken);
+        var storageDeletionPlan = managedStorageDisposition ==
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
+                ? await managedStorageDeletionPlanner.PlanAsync(
+                    dbContext,
+                    recordsToDelete.Select(record => record.Id).ToArray(),
+                    cancellationToken)
+                : new ProjectManagedStorageDeletionPlan([], []);
 
         var mutationRecord = mutationCoordinator.Begin(
             projectId,
@@ -295,7 +365,8 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 linksToDelete.Count,
                 storageDeletionPlan.References,
                 storageDeletionPlan.Outcomes,
-                storageDeletionPlan.Candidates)));
+                storageDeletionPlan.Candidates,
+                managedStorageDisposition)));
         await dbContext.Set<ProjectCrossModuleMutationRecord>().AddAsync(mutationRecord, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -318,35 +389,47 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await mutationScope.CommitAsync(cancellationToken);
         await mutationScope.DisposeAsync();
 
-        await ProcessDeletionMutationOrThrowAsync(
+        var completedDeletionPayload = await ProcessDeletionMutationOrThrowAsync(
             projectId,
             root.NodeKey,
             mutationRecord.Id,
+            managedStorageDisposition,
             "Deleting the subtree committed the Workbench change, but durable cleanup failed.",
-            cancellationToken);
-        var completedDeletionPayload = await LoadDeletionPayloadAsync(
-            mutationRecord.Id,
             cancellationToken);
         return new ProjectStructureDeletionResult(
             recordsToDelete.Count,
             MapDeletionWarnings(completedDeletionPayload.ManagedStorageOutcomes));
     }
 
-    private async Task<DeleteSubtreeMutationPayload> LoadDeletionPayloadAsync(
-        Guid mutationId,
-        CancellationToken cancellationToken)
+    private static void EnsureDispositionMatches(
+        Guid projectId,
+        string rootNodeKey,
+        Guid durableMutationId,
+        DeleteSubtreeMutationPayload payload,
+        ProjectStructureManagedStorageDisposition? expectedDisposition)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var payloadJson = await dbContext.Set<ProjectCrossModuleMutationRecord>()
-            .AsNoTracking()
-            .Where(record => record.Id == mutationId)
-            .Select(record => record.PayloadJson)
-            .SingleAsync(cancellationToken);
-        return JsonSerializer.Deserialize<DeleteSubtreeMutationPayload>(
-                   payloadJson,
-                   new JsonSerializerOptions(JsonSerializerDefaults.Web))
-               ?? throw new InvalidOperationException(
-                   "Unable to deserialize the durable subtree-deletion payload.");
+        var persistedDisposition =
+            ProjectStructureManagedStorageDispositionPolicy.ResolvePersisted(
+                payload.ManagedStorageDisposition);
+        if (!expectedDisposition.HasValue)
+        {
+            return;
+        }
+
+        ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(
+            expectedDisposition.Value);
+        if (persistedDisposition == expectedDisposition.Value)
+        {
+            return;
+        }
+
+        throw new ProjectStructureDeletionDispositionMismatchException(
+            projectId,
+            rootNodeKey,
+            durableMutationId,
+            expectedDisposition.Value,
+            persistedDisposition,
+            payload.DeletedNodeKeys.Count);
     }
 
     private static IReadOnlyList<ProjectStructureDeletionWarning> MapDeletionWarnings(
@@ -824,18 +907,22 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         };
     }
 
-    private async Task ProcessDeletionMutationOrThrowAsync(
+    private async Task<DeleteSubtreeMutationPayload> ProcessDeletionMutationOrThrowAsync(
         Guid projectId,
         string rootNodeId,
         Guid mutationId,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         string failureMessage,
         CancellationToken cancellationToken)
     {
-        ProjectCrossModuleMutationStatus status;
+        ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(
+            managedStorageDisposition);
+        ProjectCrossModuleMutationProcessingResult? processingResult;
         try
         {
-            status = await mutationProcessor.ProcessAsync(mutationId, cancellationToken)
-                ?? ProjectCrossModuleMutationStatus.WorkbenchCommitted;
+            processingResult = await mutationProcessor.ProcessWithPayloadAsync(
+                mutationId,
+                cancellationToken);
         }
         catch (Exception exception)
         {
@@ -843,18 +930,42 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 projectId,
                 rootNodeId,
                 mutationId,
+                managedStorageDisposition,
                 failureMessage,
                 exception,
                 CancellationToken.None);
         }
 
+        var status = processingResult?.Status ??
+            ProjectCrossModuleMutationStatus.WorkbenchCommitted;
         if (status != ProjectCrossModuleMutationStatus.Completed)
         {
             throw await CreateDeletionPartialCommitExceptionAsync(
                 projectId,
                 rootNodeId,
                 mutationId,
+                managedStorageDisposition,
                 failureMessage);
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<DeleteSubtreeMutationPayload>(
+                       processingResult!.PayloadJson,
+                       new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                   ?? throw new JsonException(
+                       "The durable subtree-deletion completion receipt is empty.");
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
+        {
+            throw await CreateDeletionPartialCommitExceptionAsync(
+                projectId,
+                rootNodeId,
+                mutationId,
+                managedStorageDisposition,
+                "The subtree is deleted and durable cleanup completed, but its completion receipt is invalid.",
+                exception,
+                CancellationToken.None);
         }
     }
 
@@ -863,10 +974,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid projectId,
         string rootNodeId,
         Guid mutationId,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
         string failureMessage,
         Exception? innerException = null,
         CancellationToken cancellationToken = default)
     {
+        ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(
+            managedStorageDisposition);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(
             cancellationToken);
         var mutation = await dbContext.Set<ProjectCrossModuleMutationRecord>()
@@ -901,7 +1015,8 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             ProjectStructureDeletionCommitState.WorkbenchCommitted,
             CanRetryNow(mutation, now),
             ResolveRetryAvailableAtUtc(mutation),
-            DeletionRetryGuidance);
+            DeletionRetryGuidance,
+            managedStorageDisposition);
         return new ProjectStructureDeletionPartialCommitException(
             recovery,
             $"{failureMessage} {DeletionRetryGuidance}",

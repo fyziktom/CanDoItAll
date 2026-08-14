@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -26,7 +27,7 @@ internal static class WorkspaceProductSourceInspectionReceiptFacts
             ProcessRuntimeLaunchVariables.ProductRootAlias,
             string.Empty);
         productRootAlias = NormalizePath(productRootAlias);
-        return productRootAlias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase);
+        return ExternalTargetAliasCodec.IsAnyAlias(productRootAlias);
     }
 
     internal static bool IsSuccessfulProductSourceRead(
@@ -61,8 +62,8 @@ internal static class WorkspaceProductSourceInspectionReceiptFacts
                 : string.Empty)
             .Where(path => path.Length > 0 && excludedPathFragments.Any(fragment =>
                 path.Contains(fragment, StringComparison.OrdinalIgnoreCase)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -79,8 +80,7 @@ internal static class WorkspaceProductSourceInspectionReceiptFacts
         }
 
         requestSummary = NormalizePath(receipt.RequestSummary);
-        return string.Equals(requestSummary, productRootAlias, StringComparison.OrdinalIgnoreCase) ||
-               requestSummary.Contains(productRootAlias + "/", StringComparison.OrdinalIgnoreCase);
+        return ExternalTargetAliasCodec.IsAliasWithinRoot(requestSummary, productRootAlias);
     }
 
     private static string NormalizePath(string value)

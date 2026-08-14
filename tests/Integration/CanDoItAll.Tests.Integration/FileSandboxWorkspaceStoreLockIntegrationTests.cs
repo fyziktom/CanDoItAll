@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
 {
     [Fact]

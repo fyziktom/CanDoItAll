@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 
@@ -24,4 +25,3 @@
   </ItemGroup>
 
 </Project>
-

@@ -8,6 +8,19 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessTemplateGitFoundationTests
 {
     [Fact]
+    public void Git_path_spec_rejects_foreign_host_full_path_syntax()
+    {
+        var foreignPath = OperatingSystem.IsWindows()
+            ? "/var/lib/candoitall/repository/file.txt"
+            : @"C:\repository\file.txt";
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new GitPathSpec("file.txt", foreignPath));
+
+        Assert.Contains("another host", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Git_path_authorization_rejects_paths_outside_repository()
     {
         var root = new GitRepositoryPath(Path.Combine(Path.GetTempPath(), "repo-root"));
@@ -28,6 +41,33 @@ public sealed class ProcessTemplateGitFoundationTests
 
         Assert.True(result.IsAuthorized);
         Assert.Equal("templates/component.json", result.Path?.RepositoryRelativePath);
+    }
+
+    [Fact]
+    public void Git_path_authorization_rejects_foreign_absolute_syntax()
+    {
+        var root = new GitRepositoryPath(Path.Combine(Path.GetTempPath(), "repo-root"));
+        var foreignPath = OperatingSystem.IsWindows()
+            ? "/srv/repository/file.txt"
+            : @"C:\repository\file.txt";
+
+        var result = GitPathAuthorizer.Authorize(root, foreignPath);
+
+        Assert.False(result.IsAuthorized);
+        Assert.Equal("GitPath.ForeignHostPath", result.ErrorCode);
+    }
+
+    [Theory]
+    [InlineData("templates//component.json")]
+    [InlineData("templates/../component.json")]
+    public void Git_path_authorization_rejects_invalid_logical_paths(string candidatePath)
+    {
+        var root = new GitRepositoryPath(Path.Combine(Path.GetTempPath(), "repo-root"));
+
+        var result = GitPathAuthorizer.Authorize(root, candidatePath);
+
+        Assert.False(result.IsAuthorized);
+        Assert.Equal("GitPath.InvalidLogicalPath", result.ErrorCode);
     }
 
     [Theory]

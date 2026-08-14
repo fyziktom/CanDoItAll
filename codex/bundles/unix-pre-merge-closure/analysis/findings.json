@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "reviewedCommit": "af9206caf3c09dc25088e388727fda0e1b404833",
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "P0",
+      "area": "Process plan persistence",
+      "title": "Legacy algorithm classification depends on a timestamp",
+      "mergeBlocking": true,
+      "ownerSubbundle": "F01"
+    },
+    {
+      "id": "F-002",
+      "severity": "P0",
+      "area": "Process lifecycle",
+      "title": "Ownership attachment failure can leave the started process alive",
+      "mergeBlocking": true,
+      "ownerSubbundle": "F02"
+    },
+    {
+      "id": "F-003",
+      "severity": "P0",
+      "area": "Manager recovery",
+      "title": "Legacy registry records can lack the required process boundary",
+      "mergeBlocking": true,
+      "ownerSubbundle": "F03"
+    },
+    {
+      "id": "F-004",
+      "severity": "P1",
+      "area": "Docker operations",
+      "title": "setsid dependency is not an explicit image contract",
+      "mergeBlocking": false,
+      "ownerSubbundle": "F04"
+    },
+    {
+      "id": "F-005",
+      "severity": "P0",
+      "area": "Evidence",
+      "title": "Integrated evidence predates the final source snapshot",
+      "mergeBlocking": true,
+      "ownerSubbundle": "F06"
+    }
+  ]
+}

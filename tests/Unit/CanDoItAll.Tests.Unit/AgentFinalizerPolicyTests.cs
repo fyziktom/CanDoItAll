@@ -36,6 +36,7 @@ public sealed class AgentFinalizerPolicyTests
             var recovered = MafStreamingTurnExecutor.TryReadCompleteRecoveryArtifact(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 artifactRef,
                 out var artifactMarkdown);
 

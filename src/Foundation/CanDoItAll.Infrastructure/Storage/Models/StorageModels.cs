@@ -125,7 +125,12 @@ public sealed record StorageObjectReference(
     string ContentType = "application/octet-stream",
     long? ContentLength = null,
     string Route = "",
-    string MetadataJson = "{}");
+    string MetadataJson = "{}")
+{
+    public const int CurrentFormatVersion = 2;
+
+    public int FormatVersion { get; init; } = CurrentFormatVersion;
+}
 
 public sealed record StorageAccessDescriptor(
     string PreviewUrl,

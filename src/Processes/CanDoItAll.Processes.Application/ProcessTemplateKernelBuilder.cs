@@ -66,7 +66,11 @@ internal static class ProcessTemplateKernelBuilder
                 stepIds[step.Key],
                 step.Key,
                 ProcessStepKind.Activity,
-                stepExecutionStrategyId))
+                stepExecutionStrategyId)
+            {
+                RequiredHostCapabilities = step.ExecutionContract?.RequiredHostCapabilities ?? [],
+                RequiredRuntimeToolNames = step.ExecutionContract?.RequiredRuntimeToolNames ?? []
+            })
             .ToArray();
         var edges = BuildEdges(definition, stepIds);
         var branches = BuildBranches(definition, stepIds);

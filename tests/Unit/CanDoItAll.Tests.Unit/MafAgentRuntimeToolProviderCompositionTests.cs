@@ -12,6 +12,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Security.Abstractions;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -698,6 +699,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             AgentToolInvocationPolicyMetadata.ProjectStructureNodeWorkflowStatusGet,
             AgentToolInvocationPolicyMetadata.ProcessesRunsList,
             AgentToolInvocationPolicyMetadata.ProcessesRunStart));
+        services.AddSingleton<IMcpClientFactory>(new FakeMcpClientFactory(new FakeMcpServerScript(Tools: [])));
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), services.BuildServiceProvider());
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.SoftwareDevelopment)));
         var provider = CreateProviderProfile();
@@ -861,6 +863,399 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 await disposable.DisposeAsync();
             }
 
+            Assert.Equal(1, fakeFactory.LastClient.StopCount);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Local_mcp_always_require_wraps_discovered_tools_at_the_runtime_boundary()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-local-mcp-approval-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+                Tools:
+                [
+                    new DiscoveredMcpTool(
+                        McpToolName.Create("browser_snapshot"),
+                        "Snapshot page state.")
+                ]));
+            var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+            services.AddSingleton<IMcpClientFactory>(fakeFactory);
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, services.BuildServiceProvider());
+
+            var state = await InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability(McpApprovalMode.AlwaysRequire)],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                suppressApprovalRequirements: false,
+                workspaceRoot: workspaceRoot);
+
+            Assert.IsType<ApprovalRequiredAIFunction>(Assert.Single(
+                ReadTools(state),
+                tool => tool.Name == "browser_snapshot"));
+            Assert.True(ReadHasApprovalTools(state));
+
+            foreach (var disposable in ReadAsyncDisposables(state))
+            {
+                await disposable.DisposeAsync();
+            }
+
+            Assert.Equal(1, fakeFactory.LastClient!.StopCount);
+        }
+        finally
+        {
+            Directory.Delete(workspaceRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Local_mcp_external_working_directory_is_authorized_but_not_disclosed_in_receipts()
+    {
+        using var workspace = new TemporaryDirectory();
+        using var externalRoot = new TemporaryDirectory();
+        var externalWorkingDirectory = Path.Combine(
+            externalRoot.Path,
+            OperatingSystem.IsWindows() ? "external-sentinel-folder" : " external sentinel folder ");
+        Directory.CreateDirectory(externalWorkingDirectory);
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+            Tools: [new DiscoveredMcpTool(McpToolName.Create("browser_snapshot"), "Snapshot page state.")]));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [CreateLocalMcpCapability(
+                workingDirectory: externalWorkingDirectory,
+                allowedWorkingDirectories: [externalRoot.Path])],
+            CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+            progressMessages,
+            workspaceRoot: workspace.Path);
+
+        var descriptor = Assert.IsType<LocalStdioMcpServerDescriptor>(fakeFactory.LastDescriptor);
+        Assert.Equal(externalWorkingDirectory, descriptor.WorkingDirectory);
+        Assert.DoesNotContain(
+            externalRoot.Path,
+            string.Join(" ", progressMessages),
+            StringComparison.Ordinal);
+        var receiptText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(workspace.Path, "*.json", SearchOption.AllDirectories)
+                .Select(File.ReadAllText));
+        Assert.DoesNotContain(externalRoot.Path, receiptText, StringComparison.Ordinal);
+        Assert.Contains("external-target/v1/", receiptText, StringComparison.Ordinal);
+
+        foreach (var disposable in ReadAsyncDisposables(state))
+        {
+            await disposable.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Local_mcp_rejects_an_unlisted_external_working_directory_before_client_creation()
+    {
+        using var workspace = new TemporaryDirectory();
+        using var externalRoot = new TemporaryDirectory();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+
+        await Assert.ThrowsAsync<WorkspacePathResolutionException>(() =>
+            InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability(workingDirectory: externalRoot.Path)],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspace.Path));
+
+        Assert.Equal(0, fakeFactory.CreatedClients);
+    }
+
+    [Fact]
+    public async Task MCP_tool_projection_keeps_typed_tool_names_case_sensitive()
+    {
+        using var workspace = new TemporaryDirectory();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+            Tools:
+            [
+                new DiscoveredMcpTool(McpToolName.Create("SafeTool"), "Allowed."),
+                new DiscoveredMcpTool(McpToolName.Create("safetool"), "Case variant.")
+            ]));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            CreateToolEnabledAgent(),
+            CreateProviderProfile(),
+            [CreateLocalMcpCapability(allowedTools: ["SafeTool"])],
+            CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+            workspaceRoot: workspace.Path);
+
+        Assert.Contains(ReadTools(state), tool => tool.Name == "SafeTool");
+        Assert.DoesNotContain(ReadTools(state), tool => tool.Name == "safetool");
+        foreach (var disposable in ReadAsyncDisposables(state))
+        {
+            await disposable.DisposeAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("AlwaysRequrie", "browser_snapshot", "server.js")]
+    [InlineData("1", "browser_snapshot", "server.js")]
+    [InlineData("AlwaysRequire", "invalid tool name", "server.js")]
+    [InlineData("AlwaysRequire", "browser_snapshot", "--api-key=test-only-value")]
+    public async Task Invalid_local_mcp_authority_configuration_fails_before_client_creation(
+        string approvalMode,
+        string allowedTool,
+        string argument)
+    {
+        using var workspace = new TemporaryDirectory();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability(
+                    arguments: [argument],
+                    allowedTools: [allowedTool],
+                    approvalModeOverride: approvalMode)],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspace.Path));
+
+        Assert.Equal(0, fakeFactory.CreatedClients);
+    }
+
+    [Fact]
+    public async Task Invalid_local_mcp_binding_does_not_resolve_its_stored_secret()
+    {
+        using var workspace = new TemporaryDirectory();
+        var secretId = Guid.NewGuid();
+        var secretResolver = new CountingSecretRuntimeResolver();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        services.AddSingleton<ISecretRuntimeResolver>(secretResolver);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability(environmentVariableBindings: new Dictionary<string, string>
+                {
+                    ["BAD=TARGET"] = $"secret:{secretId:D}"
+                })],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspace.Path));
+
+        Assert.Equal(0, secretResolver.ResolveCount);
+        Assert.Equal(0, fakeFactory.CreatedClients);
+    }
+
+    [Fact]
+    public async Task Playwright_provider_credential_collision_fails_before_stored_secret_resolution()
+    {
+        using var workspace = new TemporaryDirectory();
+        var secretId = Guid.NewGuid();
+        var secretResolver = new CountingSecretRuntimeResolver();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        services.AddSingleton<ISecretRuntimeResolver>(secretResolver);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability(
+                    command: OperatingSystem.IsWindows() ? "npx.cmd" : "npx",
+                    arguments: ["--yes", "@playwright/mcp@0.0.78", "--caps", "vision"],
+                    environmentVariableBindings: new Dictionary<string, string>
+                    {
+                        ["OPENAI_API_KEY"] = $"secret:{secretId:D}"
+                    })],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspace.Path));
+
+        Assert.Contains("reserved", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, secretResolver.ResolveCount);
+        Assert.Equal(0, fakeFactory.CreatedClients);
+    }
+
+    [Fact]
+    public void Playwright_provider_secret_reference_uses_canonical_credential_target()
+    {
+        var provider = CreateProviderProfile() with
+        {
+            ApiKeyEnvironmentVariable = $"secret:{Guid.NewGuid():D}"
+        };
+
+        var targets = McpCapabilityBuilder.ResolveProviderCredentialEnvironmentVariableTargets(
+            provider,
+            "Playwright Local MCP");
+
+        Assert.Single(targets);
+        Assert.Contains(MafProviderRuntimeSettings.OpenAiApiKeyEnvironmentVariable, targets);
+        Assert.DoesNotContain(provider.ApiKeyEnvironmentVariable, targets);
+    }
+
+    [Fact]
+    public async Task Local_mcp_package_validation_precedes_stored_secret_resolution()
+    {
+        using var workspace = new TemporaryDirectory();
+        var secretId = Guid.NewGuid();
+        var secretResolver = new CountingSecretRuntimeResolver();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        services.AddSingleton<ISecretRuntimeResolver>(secretResolver);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability(
+                    command: OperatingSystem.IsWindows() ? "npx.cmd" : "npx",
+                    arguments: ["@playwright/mcp@latest"],
+                    environmentVariableBindings: new Dictionary<string, string>
+                    {
+                        ["MCP_RUNTIME_SECRET"] = $"secret:{secretId:D}"
+                    })],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspace.Path));
+
+        Assert.Equal(0, secretResolver.ResolveCount);
+        Assert.Equal(0, fakeFactory.CreatedClients);
+    }
+
+    [Fact]
+    public async Task Denied_local_mcp_preparation_never_creates_or_starts_a_runtime_client()
+    {
+        using var workspace = new TemporaryDirectory();
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(Tools: []));
+        var deniedRuntimeFactory = new DeniedLocalMcpRuntimeServicesFactory();
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+        var deniedRuntimeServices = deniedRuntimeFactory.Create(new WorkspaceExecutionScope(
+            workspace.Path,
+            WorkspaceScopeDescriptor.Sandbox));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability()],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspace.Path,
+                workspaceRuntimeServices: deniedRuntimeServices));
+
+        Assert.Equal(1, deniedRuntimeFactory.PrepareCount);
+        Assert.Equal(0, fakeFactory.CreatedClients);
+    }
+
+    [Fact]
+    public async Task Authorized_local_mcp_resolves_secret_only_for_final_client_descriptor()
+    {
+        using var workspace = new TemporaryDirectory();
+        var secretId = Guid.NewGuid();
+        var secretResolver = new CountingSecretRuntimeResolver("resolved-secret-with-space ");
+        var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+            Tools: [new DiscoveredMcpTool(McpToolName.Create("browser_snapshot"), "Snapshot.")]));
+        var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+        services.AddSingleton<IMcpClientFactory>(fakeFactory);
+        services.AddSingleton<ISecretRuntimeResolver>(secretResolver);
+        var runtime = RuntimeCapabilityComposer.CreateDefault(workspace.Path, services.BuildServiceProvider());
+        var agent = CreateToolEnabledAgent() with
+        {
+            Permissions = CreateToolEnabledAgent().Permissions with
+            {
+                AllowedSecrets =
+                [
+                    new AgentAllowedSecretReference(
+                        secretId,
+                        "MCP runtime secret",
+                        AgentSecretPurposes.GeneralAgentRequest)
+                ]
+            }
+        };
+
+        var state = await InvokeCreateCapabilityStateCoreAsync(
+            runtime,
+            agent,
+            CreateProviderProfile(),
+            [CreateLocalMcpCapability(environmentVariableBindings: new Dictionary<string, string>
+            {
+                ["MCP_RUNTIME_SECRET"] = $"secret:{secretId:D}"
+            })],
+            CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+            workspaceRoot: workspace.Path);
+
+        Assert.Equal(1, secretResolver.ResolveCount);
+        var descriptor = Assert.IsType<LocalStdioMcpServerDescriptor>(fakeFactory.LastDescriptor);
+        Assert.Equal(
+            "resolved-secret-with-space ",
+            descriptor.RawEnvironmentVariables["MCP_RUNTIME_SECRET"]);
+        foreach (var disposable in ReadAsyncDisposables(state))
+        {
+            await disposable.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Failed_local_mcp_attachment_disposes_the_started_client_once()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "candoitall-local-mcp-failure-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var fakeFactory = new FakeMcpClientFactory(new FakeMcpServerScript(
+                Tools: [],
+                ListToolsException: new McpSetupException(
+                    AccessCapabilityDiagnosticCategory.McpListTools,
+                    "$.tools",
+                    "Deterministic list failure.",
+                    "Repair the test server.")));
+            var services = MafRuntimeTestServices.CreateProviderRuntimeServiceCollection();
+            services.AddSingleton<IMcpClientFactory>(fakeFactory);
+            var runtime = RuntimeCapabilityComposer.CreateDefault(workspaceRoot, services.BuildServiceProvider());
+
+            await Assert.ThrowsAsync<McpSetupException>(() => InvokeCreateCapabilityStateCoreAsync(
+                runtime,
+                CreateToolEnabledAgent(),
+                CreateProviderProfile(),
+                [CreateLocalMcpCapability()],
+                CreateProcessContextIntent(ProcessOperationContractNames.CaptureRuntimeProof),
+                workspaceRoot: workspaceRoot));
+
+            Assert.Equal(1, fakeFactory.LastClient!.StartCount);
+            Assert.Equal(1, fakeFactory.LastClient.ListToolsCount);
             Assert.Equal(1, fakeFactory.LastClient.StopCount);
         }
         finally
@@ -1393,12 +1788,13 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     public async Task MafAgentRuntimeWorkspaceTools_authorized_external_target_attaches_discovery_context_with_discovery_tool()
     {
         var runtime = RuntimeCapabilityComposer.CreateDefault(Path.GetTempPath(), MafRuntimeTestServices.CreateProviderRuntimeServiceCollection().BuildServiceProvider());
+        const string externalAlias = "external-target/v1/0123456789abcdef01234567/calculator";
         var access = new AgentWorkspaceToolAccessSettings
         {
             CanReadFiles = true,
             AllowedExternalTargetAliases =
             [
-                "external-target/C/products/calculator"
+                externalAlias
             ]
         };
         var agent = CreateToolEnabledAgent(CreateWorkspaceToolConfiguration(access));
@@ -1412,7 +1808,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             source.ItemCount == 1);
         var context = ReadEffectiveExternalTargetContext(state);
         Assert.Contains(
-            "\"external-target/C/products/calculator\" (read-only with currently attached tools)",
+            $"\"{externalAlias}\" (read-only with currently attached tools)",
             context,
             StringComparison.Ordinal);
         Assert.DoesNotContain("(read/write", context, StringComparison.Ordinal);
@@ -1990,7 +2386,8 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         string runtimeSessionKey = "",
         IReadOnlyList<AgentChatContextAttachmentEnvelope>? contextAttachments = null,
         WorkspaceScopeDescriptor? contextWorkspaceScope = null,
-        string? workspaceRoot = null)
+        string? workspaceRoot = null,
+        WorkspaceRuntimeServices? workspaceRuntimeServices = null)
     {
         return await composer.CreateCapabilityStateCoreAsync(
             agent,
@@ -2007,7 +2404,7 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             suppressApprovalRequirements,
             contextWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox,
             contextIntent,
-            WorkspaceRuntimeServicesTestFactory.Create(
+            workspaceRuntimeServices ?? WorkspaceRuntimeServicesTestFactory.Create(
                 workspaceRoot ?? Path.GetTempPath(),
                 contextWorkspaceScope ?? WorkspaceScopeDescriptor.Sandbox),
             runtimeSessionKey,
@@ -2169,7 +2566,15 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             LastVerifiedAtUtc: DateTimeOffset.UtcNow,
             IsBuiltIn: false);
 
-    private static CapabilityCatalogItem CreateLocalMcpCapability()
+    private static CapabilityCatalogItem CreateLocalMcpCapability(
+        McpApprovalMode approvalMode = McpApprovalMode.NeverRequire,
+        string command = "node",
+        IReadOnlyList<string>? arguments = null,
+        string workingDirectory = ".",
+        IReadOnlyList<string>? allowedWorkingDirectories = null,
+        IReadOnlyList<string>? allowedTools = null,
+        IReadOnlyDictionary<string, string>? environmentVariableBindings = null,
+        string? approvalModeOverride = null)
         => new(
             Id: Guid.NewGuid(),
             Kind: CapabilityKind.McpServer,
@@ -2177,22 +2582,19 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             Name: "Playwright Local MCP",
             Description: "Local browser automation MCP.",
             EndpointOrPath: string.Empty,
-            ConfigurationJson: """
-                {
-                  "serverName": "playwright-local",
-                  "command": "node",
-                  "arguments": [
-                    "server.js"
-                  ],
-                  "workingDirectory": ".",
-                  "messageFraming": "newlineDelimitedJson",
-                  "allowedTools": [
-                    "browser_snapshot"
-                  ],
-                  "approvalMode": "NeverRequire",
-                  "timeoutSeconds": 5
-                }
-                """,
+            ConfigurationJson: JsonSerializer.Serialize(new
+            {
+                serverName = "playwright-local",
+                command,
+                arguments = arguments ?? ["server.js"],
+                workingDirectory,
+                messageFraming = "newlineDelimitedJson",
+                allowedWorkingDirectories,
+                allowedTools = allowedTools ?? ["browser_snapshot"],
+                environmentVariableBindings,
+                approvalMode = approvalModeOverride ?? approvalMode.ToString(),
+                timeoutSeconds = 5
+            }),
             ProofStatus: CapabilityProofStatus.Verified,
             ProofNotes: string.Empty,
             LastVerifiedAtUtc: DateTimeOffset.UtcNow,
@@ -2357,5 +2759,127 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
             AgentRuntimeToolProviderContext context,
             CancellationToken cancellationToken)
             => throw new InvalidOperationException("provider failed intentionally");
+    }
+
+    private sealed class CountingSecretRuntimeResolver(string value = "secret-value") : ISecretRuntimeResolver
+    {
+        public int ResolveCount { get; private set; }
+
+        public Task<string?> ResolveValueAsync(
+            SecretRuntimeRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ResolveCount++;
+            return Task.FromResult<string?>(value);
+        }
+    }
+
+    private sealed class DeniedLocalMcpRuntimeServicesFactory : IWorkspaceRuntimeServicesFactory
+    {
+        public int PrepareCount { get; private set; }
+
+        public WorkspaceRuntimeServices Create(WorkspaceExecutionScope scope)
+        {
+            var inner = WorkspaceRuntimeServicesTestFactory.Create(scope.WorkspaceRoot, scope.Scope);
+            return new WorkspaceRuntimeServices(
+                scope,
+                inner.FileService,
+                new DeniedLocalMcpCommandExecutionService(
+                    inner.CommandExecutionService,
+                    () => PrepareCount++),
+                inner.ArtifactToolService,
+                inner.ImageOperationService,
+                inner.ProcessHost,
+                inner.ExternalTargetPathRegistry,
+                [inner]);
+        }
+    }
+
+    private sealed class DeniedLocalMcpCommandExecutionService(
+        IWorkspaceCommandExecutionService inner,
+        Action onPrepare) : IWorkspaceCommandExecutionService
+    {
+        public ExecutionBoundaryDescriptor DescribeBoundary() => inner.DescribeBoundary();
+
+        public WorkspaceCommandExecutionResult GetExecutionBoundary() => inner.GetExecutionBoundary();
+
+        public Task<WorkspaceCommandExecutionResult> GitStatus(bool includeBranch = true, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitStatus(includeBranch, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitDiff(string? path = null, bool nameOnly = false, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitDiff(path, nameOnly, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitLog(int count = 10, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitLog(count, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitShow(string revision, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitShow(revision, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitAdd(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitAdd(paths, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitUnstage(string[]? paths, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitUnstage(paths, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitCommit(string message, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitCommit(message, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitBranchCreate(string branchName, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitBranchCreate(branchName, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> GitSwitch(string branchName, string? workingDirectory = null, int timeoutSeconds = 30) => inner.GitSwitch(branchName, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> DotnetRestore(string? targetPath = null, string? workingDirectory = null, int timeoutSeconds = 600) => inner.DotnetRestore(targetPath, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> DotnetBuild(string? targetPath = null, string configuration = "Debug", bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 600) => inner.DotnetBuild(targetPath, configuration, noRestore, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300) => inner.DotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> DotnetRun(string targetPath, string? url = null, string configuration = "Debug", bool noBuild = true, bool waitForHttp = true, string? workingDirectory = null, int startupTimeoutSeconds = 45, int timeoutSeconds = 120, bool keepAlive = false, WorkspaceProcessLifetimeScope lifetimeScope = WorkspaceProcessLifetimeScope.ExecutionRun) => inner.DotnetRun(targetPath, url, configuration, noBuild, waitForHttp, workingDirectory, startupTimeoutSeconds, timeoutSeconds, keepAlive, lifetimeScope);
+
+        public Task<WorkspaceCommandExecutionResult> DotnetStop(string startupReceiptPath, int timeoutSeconds = 30) => inner.DotnetStop(startupReceiptPath, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300, string? targetFramework = null) => inner.DotnetNew(template, name, parentDirectory, force, timeoutSeconds, targetFramework);
+
+        public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null) => inner.PythonRunFile(path, arguments, workingDirectory, timeoutSeconds, sideEffectManifest);
+
+        public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null) => inner.PowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds, sideEffectManifest);
+
+        public Task<WorkspaceCommandExecutionResult> InspectSpreadsheetPreview(string path, int maxRows = 8, int maxColumns = 8, int timeoutSeconds = 300) => inner.InspectSpreadsheetPreview(path, maxRows, maxColumns, timeoutSeconds);
+
+        public Task<WorkspaceCommandExecutionResult> RunSkillScript(string skillName, string scriptPath, string[]? arguments = null, string? workingDirectory = null, bool approvalRequired = true, string trustLevel = "FileSkill", IReadOnlyList<string>? allowedExternalRoots = null) => inner.RunSkillScript(skillName, scriptPath, arguments, workingDirectory, approvalRequired, trustLevel, allowedExternalRoots);
+
+        public WorkspaceLocalMcpLaunchDescriptor PrepareLocalMcpServerLaunch(string capabilityName, string command, string[]? arguments = null, string? workingDirectory = null, IReadOnlyDictionary<string, string?>? environmentVariables = null, bool approvalRequired = true, string? workingDirectoryDisplayPath = null, IReadOnlyCollection<string>? environmentVariableNames = null)
+        {
+            onPrepare();
+            return inner.PrepareLocalMcpServerLaunch(
+                    capabilityName,
+                    command,
+                    arguments,
+                    workingDirectory,
+                    environmentVariables,
+                    approvalRequired,
+                    workingDirectoryDisplayPath,
+                    environmentVariableNames) with
+            {
+                IsAllowed = false,
+                Message = "Denied by deterministic test preparation policy."
+            };
+        }
+
+        public WorkspaceCommandExecutionResult RunLegacyCommand(string executable, string arguments = "", string? workingDirectory = null, int timeoutSeconds = 120) => inner.RunLegacyCommand(executable, arguments, workingDirectory, timeoutSeconds);
+    }
+
+    private sealed class TemporaryDirectory : IDisposable
+    {
+        public TemporaryDirectory()
+        {
+            Path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                $"CanDoItAll.MafMcp.{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Path);
+        }
+
+        public string Path { get; }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path))
+            {
+                Directory.Delete(Path, recursive: true);
+            }
+        }
     }
 }

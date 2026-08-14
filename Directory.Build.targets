@@ -1,7 +1,55 @@
 <Project>
   <PropertyGroup>
     <CopyRepositoryTemplatesToOutput Condition="'$(CopyRepositoryTemplatesToOutput)' == ''">true</CopyRepositoryTemplatesToOutput>
+    <CanDoItAllComponentsRepositoryRoot Condition="'$(CanDoItAllComponentsRepositoryRoot)' == ''">$(MSBuildThisFileDirectory)..\CanDoItAll.Components</CanDoItAllComponentsRepositoryRoot>
+    <CanDoItAllFileToolsRepositoryRoot Condition="'$(CanDoItAllFileToolsRepositoryRoot)' == ''">$(MSBuildThisFileDirectory)..\CanDoItAll.FileTools</CanDoItAllFileToolsRepositoryRoot>
+    <UseLocalCanDoItAllLibraries Condition="'$(UseLocalCanDoItAllLibraries)' == ''">true</UseLocalCanDoItAllLibraries>
+    <ShouldUnsetParentConfigurationAndPlatform Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
+
+  <Target
+    Name="ValidateLocalCanDoItAllLibraryRepositories"
+    BeforeTargets="CollectPackageReferences;PrepareForBuild"
+    Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
+    <Error
+      Condition="!Exists('$(CanDoItAllComponentsRepositoryRoot)\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj')"
+      Text="Local development requires the CanDoItAll.Components source repository at '$(CanDoItAllComponentsRepositoryRoot)'. Set UseLocalCanDoItAllLibraries=false only for an intentional package build." />
+    <Error
+      Condition="!Exists('$(CanDoItAllFileToolsRepositoryRoot)\src\CanDoItAll.FileTools.Abstractions\CanDoItAll.FileTools.Abstractions.csproj')"
+      Text="Local development requires the CanDoItAll.FileTools source repository at '$(CanDoItAllFileToolsRepositoryRoot)'. Set UseLocalCanDoItAllLibraries=false only for an intentional package build." />
+  </Target>
+
+  <Target Name="ValidateCanDoItAllLibraryMode" BeforeTargets="CollectPackageReferences;PrepareForBuild">
+    <Error
+      Condition="'$(UseLocalCanDoItAllLibraries)' != 'true' and '$(UseLocalCanDoItAllLibraries)' != 'false'"
+      Text="UseLocalCanDoItAllLibraries must be explicitly true or false." />
+  </Target>
+
+  <ItemGroup Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.BaseLib'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.CanvasLib'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.Charts'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.Common'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.Gantt'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.Mermaid'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.OverlayLib'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.QRCode'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.WebGlLib'))" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.Components.WebGlRunLib'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.Abstractions'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.Desktop'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileBrowser.Components'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileBrowser.Core'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Components'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Core'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Markdown'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.FileInteraction.Spreadsheet'))" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference->WithMetadataValue('Identity', 'CanDoItAll.FileTools.Providers.FileSystem'))" />
+
+    <PackageReference Remove="@(_LocalCanDoItAllComponentsPackage);@(_LocalCanDoItAllFileToolsPackage)" />
+    <ProjectReference Include="@(_LocalCanDoItAllComponentsPackage->'$(CanDoItAllComponentsRepositoryRoot)\src\%(Identity)\%(Identity).csproj')" />
+    <ProjectReference Include="@(_LocalCanDoItAllFileToolsPackage->'$(CanDoItAllFileToolsRepositoryRoot)\src\%(Identity)\%(Identity).csproj')" />
+  </ItemGroup>
 
   <ItemGroup>
     <RepositoryTemplateContent Include="$(MSBuildThisFileDirectory)Templates\**\*.*" />

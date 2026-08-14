@@ -2,29 +2,18 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public static class LocalMcpCommandPolicy
 {
-    private static readonly HashSet<string> AllowedCommandNames = new(StringComparer.OrdinalIgnoreCase)
-    {
+    private static readonly string[] AllowedCommandNames =
+    [
         "dotnet",
-        "dotnet.exe",
         "node",
-        "node.exe",
         "npx",
-        "npx.cmd",
-        "npx.exe",
-        "npx.ps1",
         "powershell",
-        "powershell.exe",
         "pwsh",
-        "pwsh.exe",
         "python",
-        "python.exe",
         "python3",
-        "python3.exe",
         "uv",
-        "uv.exe",
-        "uvx",
-        "uvx.exe"
-    };
+        "uvx"
+    ];
 
     public static bool IsAllowed(string? command)
     {
@@ -33,11 +22,23 @@ public static class LocalMcpCommandPolicy
             return false;
         }
 
-        return AllowedCommandNames.Contains(Path.GetFileName(command.Trim()));
+        return new WorkspaceExecutableAuthorizationPolicy()
+            .IsAllowedCommandName(command, AllowedCommandNames);
+    }
+
+    public static bool IsResolvedExecutableAllowed(string resolvedExecutablePath)
+    {
+        if (string.IsNullOrWhiteSpace(resolvedExecutablePath))
+        {
+            return false;
+        }
+
+        return new WorkspaceExecutableAuthorizationPolicy()
+            .IsAllowedResolvedPath(resolvedExecutablePath, AllowedCommandNames);
     }
 
     public static string DescribeAllowedCommands()
     {
-        return string.Join(", ", AllowedCommandNames.OrderBy(item => item, StringComparer.OrdinalIgnoreCase));
+        return string.Join(", ", AllowedCommandNames.Order(StringComparer.Ordinal));
     }
 }

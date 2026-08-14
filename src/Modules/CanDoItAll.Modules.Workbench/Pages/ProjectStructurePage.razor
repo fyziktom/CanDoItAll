@@ -31,6 +31,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject IProjectWorkbenchSeedService ProjectWorkbenchSeedService
 @inject IProjectStructureLocalFileOpener LocalFileOpener
 @inject IProjectStructureRuntimeLauncher RuntimeLauncher
+@inject DialogService DialogService
 @inject ProjectStructureFileActionCoordinator FileActionCoordinator
 @inject ProjectStructureKnownFileInteractionCoordinator KnownFileInteractionCoordinator
 @inject ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator
@@ -1043,12 +1044,6 @@ else
                 return;
             }
 
-            await LoadImageGenerationProvidersAsync();
-            if (!IsCurrentSurfaceReload(request))
-            {
-                return;
-            }
-
             var nextStorageCatalog = await loadStorageCatalogTask;
             var nextDeletionRecoveries = await loadDeletionRecoveriesTask;
             var nextDeletionNotices = await loadDeletionNoticesTask;
@@ -1394,7 +1389,7 @@ else
                 GroupContextActions = actionCatalog.BuildGroupContextActions().ToList()
             },
             actionCatalog,
-            CanLaunchRuntimeFromCanvas,
+            ResolveRuntimeCapabilitiesForCanvas,
             CanShowLocalOpen,
             CanOpenIpfsNodeInNewTab);
         HydrateCanvasNodeContextActions(canvasSurface);
@@ -1412,10 +1407,12 @@ else
         }
     }
 
-    private bool CanLaunchRuntimeFromCanvas(ProjectStructureNode node)
+    private ProjectStructureRuntimeLaunchCapabilities? ResolveRuntimeCapabilitiesForCanvas(ProjectStructureNode node)
     {
         var runtimeLaunch = RuntimeLauncher.Resolve(node);
-        return RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess;
+        return RuntimeLauncher.IsAvailable && runtimeLaunch.IsSuccess
+            ? runtimeLaunch.EffectiveCapabilities
+            : null;
     }
 
     private async Task HandleSelectionChangedAsync(CanvasWorkbenchSelectionChangedEventArgs args)
@@ -1872,13 +1869,25 @@ else
             case "runtime:open":
                 if (ResolveNode(nodeId) is { } runtimeNode)
                 {
-                    await LaunchRuntimeAsync(runtimeNode, false);
+                    await LaunchRuntimeAsync(runtimeNode, ProjectStructureRuntimeLaunchMode.Direct);
+                }
+                break;
+            case "runtime:terminal":
+                if (ResolveNode(nodeId) is { } terminalRuntimeNode)
+                {
+                    await LaunchRuntimeAsync(terminalRuntimeNode, ProjectStructureRuntimeLaunchMode.Terminal);
                 }
                 break;
             case "runtime:admin":
                 if (ResolveNode(nodeId) is { } elevatedRuntimeNode)
                 {
-                    await LaunchRuntimeAsync(elevatedRuntimeNode, true);
+                    await LaunchRuntimeAsync(elevatedRuntimeNode, ProjectStructureRuntimeLaunchMode.Elevated);
+                }
+                break;
+            case "runtime:stop":
+                if (ResolveNode(nodeId) is { } stopRuntimeNode)
+                {
+                    await StopRuntimeAsync(stopRuntimeNode);
                 }
                 break;
             case "open-local":

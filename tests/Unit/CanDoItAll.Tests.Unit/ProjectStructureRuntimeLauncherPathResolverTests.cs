@@ -9,6 +9,8 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProjectStructureRuntimeLauncherPathResolverTests
 {
+    private static readonly string WorkspaceRoot = CreateWorkspaceRoot();
+
     [Fact]
     public void Resolve_reports_a_missing_external_project_path()
     {
@@ -17,7 +19,10 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
             ProjectEnvironmentKind.DotNetWatch,
             new ProjectEnvironmentMetadata
             {
-                ProjectPath = @"C:\outside\CanDoItAll.Web.csproj"
+                ProjectPath = Path.Combine(
+                    Path.GetTempPath(),
+                    $"CanDoItAll.RuntimeLauncher.Missing.{Guid.NewGuid():N}",
+                    "CanDoItAll.Web.csproj")
             });
 
         var result = sut.Resolve(node);
@@ -105,24 +110,28 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
 
         try
         {
+            var externalTargetsFactory = new ExternalTargetPathRegistryFactory();
+            var externalTargets = externalTargetsFactory.Create([]);
+            Assert.True(externalTargets.TryCreateAlias(externalRoot, out var externalAlias));
+            string projectAlias = $"{externalAlias}/Calculator.csproj";
+            var bindings = externalTargets.ExportBindings([externalAlias]);
             using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
-                CreateExecutionRun(
-                    AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)));
+                CreateExecutionRun(externalAlias, bindings));
 
             var node = CreateEnvironmentNode(
                 ProjectEnvironmentKind.DotNetWatch,
                 new ProjectEnvironmentMetadata
                 {
-                    ProjectPath = projectPath
+                    ProjectPath = projectAlias
                 });
-            var result = CreateSut().Resolve(
+            var result = CreateSut(externalTargetPathRegistryFactory: externalTargetsFactory).Resolve(
                 node.ObjectType,
                 node.ObjectSubtype,
                 node.Notes,
                 node.MetadataJson,
                 ProjectStructureRuntimePathAuthorityMode.AgentExecution);
 
-            Assert.True(result.IsSuccess);
+            Assert.True(result.IsSuccess, result.Message);
             Assert.Equal(projectPath, result.Plan!.Target!.Path);
         }
         finally
@@ -149,19 +158,26 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
         try
         {
             Directory.CreateSymbolicLink(linkedRoot, linkedTargetRoot);
+            var externalTargetsFactory = new ExternalTargetPathRegistryFactory();
+            var externalTargets = externalTargetsFactory.Create([]);
+            Assert.True(externalTargets.TryCreateAlias(externalRoot, out var externalAlias));
+            string projectAlias = $"{externalAlias}/linked/Calculator.csproj";
+            var bindings = externalTargets.ExportBindings([externalAlias]);
             using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
-                CreateExecutionRun(
-                    AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(externalRoot)));
+                CreateExecutionRun(externalAlias, bindings));
 
-            var result = CreateSut().Resolve(CreateEnvironmentNode(
+            var result = CreateSut(externalTargetPathRegistryFactory: externalTargetsFactory).Resolve(CreateEnvironmentNode(
                 ProjectEnvironmentKind.DotNetWatch,
                 new ProjectEnvironmentMetadata
                 {
-                    ProjectPath = Path.Combine(linkedRoot, "Calculator.csproj")
+                    ProjectPath = projectAlias
                 }));
 
             Assert.False(result.IsSuccess);
-            Assert.Contains("cannot traverse symbolic links or filesystem reparse points", result.Message, StringComparison.Ordinal);
+            Assert.True(
+                result.Message.Contains("symbolic", StringComparison.OrdinalIgnoreCase) &&
+                result.Message.Contains("reparse", StringComparison.OrdinalIgnoreCase),
+                result.Message);
         }
         finally
         {
@@ -176,11 +192,12 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
     }
 
     private static ProjectStructureRuntimeLauncher CreateSut(
-        IProjectStructureDotNetProjectTargetResolver? projectTargetResolver = null)
-        => new(
-            new WorkspacePathAccessGuard(new TestWorkspacePathResolver(@"C:\workspace")),
-            NullLogger<ProjectStructureRuntimeLauncher>.Instance,
-            projectTargetResolver ?? new ExistingProjectTargetResolver());
+        IProjectStructureDotNetProjectTargetResolver? projectTargetResolver = null,
+        IExternalTargetPathRegistryFactory? externalTargetPathRegistryFactory = null)
+        => ProjectStructureRuntimeTestFactory.CreateLauncher(
+            WorkspaceRoot,
+            projectTargetResolver ?? new ExistingProjectTargetResolver(),
+            externalTargetPathRegistryFactory ?? new ExternalTargetPathRegistryFactory());
 
     private static ProjectStructureNode CreateEnvironmentNode(ProjectEnvironmentKind kind, ProjectEnvironmentMetadata metadata)
     {
@@ -219,17 +236,11 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
             }));
     }
 
-    private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
+    private static string CreateWorkspaceRoot()
     {
-        public string ResolveWorkspaceRoot() => workspaceRoot;
-
-        public string ResolveManagedFilesRoot() => Path.Combine(workspaceRoot, "managed-files");
-
-        public string ResolveExportsRoot() => Path.Combine(workspaceRoot, "exports");
-
-        public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
-
-        public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, ".artifacts");
+        var path = Path.Combine(Path.GetTempPath(), "CanDoItAll.RuntimeLauncher.ManagedWorkspace");
+        Directory.CreateDirectory(path);
+        return path;
     }
 
     private sealed class ExistingProjectTargetResolver : IProjectStructureDotNetProjectTargetResolver
@@ -245,18 +256,20 @@ public sealed class ProjectStructureRuntimeLauncherPathResolverTests
                 "An unauthorized external runtime path must be rejected before project inspection.");
     }
 
-    private static ExecutionRunRecord CreateExecutionRun(string? readOnlyExternalTargetAlias)
+    private static ExecutionRunRecord CreateExecutionRun(
+        string? readOnlyExternalTargetAlias,
+        IReadOnlyList<ExternalTargetRootBinding>? externalTargetRootBindings = null)
     {
         var now = DateTimeOffset.UtcNow;
         var metadataJson = readOnlyExternalTargetAlias is null
             ? "{}"
             : System.Text.Json.JsonSerializer.Serialize(
-                new Dictionary<string, string[]>
+                new Dictionary<string, object>
                 {
                     [ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] =
-                    [
-                        readOnlyExternalTargetAlias
-                    ]
+                        new[] { readOnlyExternalTargetAlias! },
+                    [ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey] =
+                        externalTargetRootBindings ?? []
                 });
         return new ExecutionRunRecord(
             Id: Guid.NewGuid(),

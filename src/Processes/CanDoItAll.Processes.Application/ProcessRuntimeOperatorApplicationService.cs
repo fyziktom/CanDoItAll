@@ -56,7 +56,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
         ArgumentNullException.ThrowIfNull(command);
 
         var state = await stateStore.LoadAsync(command.RunId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Process run '{command.RunId}' was not found.");
+            ?? throw new ProcessRuntimeOperatorRunNotFoundException(command.RunId);
         var engine = new ProcessRuntimeEngine(unitOfWork);
         var cascadeDiagnostics = new List<string>();
         var cancelledDescendantRunIds = new List<ProcessRunId>();
@@ -346,10 +346,10 @@ public sealed class ProcessRuntimeOperatorApplicationService(
             {
                 throw;
             }
-            catch (Exception exception)
+            catch (Exception)
             {
                 diagnostics.Add(
-                    $"Cancellation observer '{observer.GetType().FullName}' failed after cancelling process run(s): {exception.Message}");
+                    "A cancellation observer failed after cancelling process run(s). Review restricted host logs for details.");
             }
         }
 
@@ -361,7 +361,7 @@ public sealed class ProcessRuntimeOperatorApplicationService(
         CancellationToken cancellationToken)
     {
         var state = await stateStore.LoadAsync(command.RunId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Process run '{command.RunId}' was not found.");
+            ?? throw new ProcessRuntimeOperatorRunNotFoundException(command.RunId);
         var authorizationIssue = ValidateBlockedRecoveryAuthorization(command, state);
         if (authorizationIssue is not null)
         {
@@ -567,14 +567,12 @@ public sealed class ProcessRuntimeOperatorApplicationService(
         return new RuntimeCommandContext(
             RuntimeCommandId.New(),
             new ProcessEventActor(ProcessEventActorKind.System, new ProcessActorId(OperatorActorId)),
-            new ProcessCorrelationId($"operator-{NormalizeRequestedBy(requestedBy)}-{Guid.NewGuid():N}"),
+            new ProcessCorrelationId($"operator-{Guid.NewGuid():N}"),
             NormalizeUtc(clock.GetUtcNow()));
     }
 
     private static string NormalizeRequestedBy(string requestedBy)
-        => string.IsNullOrWhiteSpace(requestedBy)
-            ? OperatorActorId
-            : requestedBy.Trim();
+        => ProcessActorIdentityPolicy.Normalize(requestedBy, OperatorActorId);
 
     private static string NormalizeReason(string reason)
         => string.IsNullOrWhiteSpace(reason)

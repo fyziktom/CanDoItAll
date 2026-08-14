@@ -9,6 +9,52 @@ public interface IWorkspaceProcessHost
     Task<WorkspaceProcessExecutionResult> ExecuteAsync(WorkspaceProcessExecutionRequest request, CancellationToken cancellationToken = default);
 }
 
+public sealed class WorkspaceProcessStartException : InvalidOperationException
+{
+    public WorkspaceProcessStartException(string message, Exception? innerException = null)
+        : base(message, innerException)
+    {
+    }
+}
+
+public interface IWorkspaceLongRunningProcessHost : IWorkspaceProcessHost
+{
+    Task<IWorkspaceProcessSession> StartSessionAsync(
+        WorkspaceProcessSessionRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkspaceProcessTerminationResult> TerminateOwnedProcessAsync(
+        WorkspaceOwnedProcessIdentity identity,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWorkspaceProcessSession : IAsyncDisposable
+{
+    WorkspaceOwnedProcessIdentity Identity { get; }
+
+    bool HasExited { get; }
+
+    WorkspaceProcessOutputSnapshot CaptureOutput();
+
+    Task<WorkspaceProcessExecutionResult> WaitForExitAsync(CancellationToken cancellationToken = default);
+
+    Task<WorkspaceProcessExecutionResult> TerminateAsync(
+        WorkspaceProcessTerminationReason reason,
+        string failureMessage,
+        CancellationToken cancellationToken = default);
+
+    WorkspaceOwnedProcessIdentity Detach();
+}
+
+public interface IWorkspaceDuplexProcessSession : IWorkspaceProcessSession
+{
+    Stream StandardInput { get; }
+
+    Stream StandardOutput { get; }
+
+    void CompleteStandardInput();
+}
+
 public interface IWorkspaceCommandExecutionService
 {
     ExecutionBoundaryDescriptor DescribeBoundary();
@@ -59,7 +105,7 @@ public interface IWorkspaceCommandExecutionService
 
     Task<WorkspaceCommandExecutionResult> RunSkillScript(string skillName, string scriptPath, string[]? arguments = null, string? workingDirectory = null, bool approvalRequired = true, string trustLevel = "FileSkill", IReadOnlyList<string>? allowedExternalRoots = null);
 
-    WorkspaceLocalMcpLaunchDescriptor PrepareLocalMcpServerLaunch(string capabilityName, string command, string[]? arguments = null, string? workingDirectory = null, IReadOnlyDictionary<string, string?>? environmentVariables = null, bool approvalRequired = true);
+    WorkspaceLocalMcpLaunchDescriptor PrepareLocalMcpServerLaunch(string capabilityName, string command, string[]? arguments = null, string? workingDirectory = null, IReadOnlyDictionary<string, string?>? environmentVariables = null, bool approvalRequired = true, string? workingDirectoryDisplayPath = null, IReadOnlyCollection<string>? environmentVariableNames = null);
 
     WorkspaceCommandExecutionResult RunLegacyCommand(string executable, string arguments = "", string? workingDirectory = null, int timeoutSeconds = 120);
 }
@@ -70,6 +116,53 @@ public enum WorkspaceProcessLifetimeScope
     ProcessRun = 1
 }
 
+public enum WorkspaceProcessTerminationReason
+{
+    Completed = 0,
+    StartFailed = 1,
+    TimedOut = 2,
+    CallerCanceled = 3,
+    TerminationFailed = 4,
+    Running = 5
+}
+
+public enum WorkspaceProcessTerminationStatus
+{
+    Terminated = 0,
+    AlreadyExited = 1,
+    IdentityMismatch = 2,
+    Failed = 3
+}
+
+public enum WorkspaceProcessTerminationMode
+{
+    ForceTree,
+    GracefulThenForceTree
+}
+
+public enum WorkspaceProcessStandardIoMode
+{
+    Captured,
+    Duplex
+}
+
+public enum WorkspaceProcessTextCaptureMode
+{
+    Prefix,
+    Tail
+}
+
+public enum WorkspaceOwnedProcessBoundaryKind
+{
+    WindowsJobObject,
+    UnixProcessGroup
+}
+
+public sealed record WorkspaceOwnedProcessBoundary(
+    WorkspaceOwnedProcessBoundaryKind Kind,
+    long NativeId,
+    Guid InstanceId);
+
 public sealed record WorkspaceProcessExecutionRequest(
     string ToolName,
     string RecipeId,
@@ -79,7 +172,39 @@ public sealed record WorkspaceProcessExecutionRequest(
     IReadOnlyDictionary<string, string?> EnvironmentVariables,
     int TimeoutSeconds,
     int StdoutLimitCharacters,
-    int StderrLimitCharacters);
+    int StderrLimitCharacters,
+    string? StandardInput = null);
+
+public sealed record WorkspaceProcessSessionRequest(
+    string ToolName,
+    string RecipeId,
+    string ExecutablePath,
+    IReadOnlyList<string> Arguments,
+    string WorkingDirectory,
+    IReadOnlyDictionary<string, string?> EnvironmentVariables,
+    int StdoutLimitCharacters,
+    int StderrLimitCharacters,
+    string? StandardInput = null,
+    WorkspaceProcessTerminationMode TerminationMode = WorkspaceProcessTerminationMode.ForceTree,
+    WorkspaceProcessStandardIoMode StandardIoMode = WorkspaceProcessStandardIoMode.Captured,
+    WorkspaceProcessTextCaptureMode StderrCaptureMode = WorkspaceProcessTextCaptureMode.Prefix);
+
+public sealed record WorkspaceOwnedProcessIdentity(
+    int ProcessId,
+    DateTimeOffset StartedAtUtc,
+    string ExecutablePathFingerprint,
+    WorkspaceOwnedProcessBoundary Boundary);
+
+public sealed record WorkspaceProcessOutputSnapshot(
+    string Stdout,
+    string Stderr,
+    bool StdoutTruncated,
+    bool StderrTruncated);
+
+public sealed record WorkspaceProcessTerminationResult(
+    WorkspaceProcessTerminationStatus Status,
+    bool ResidualProcessPossible,
+    string Message);
 
 public sealed record WorkspaceProcessExecutionResult(
     bool Started,
@@ -92,4 +217,6 @@ public sealed record WorkspaceProcessExecutionResult(
     DateTimeOffset CompletedAtUtc,
     bool TimedOut,
     ExecutionBoundaryDescriptor Boundary,
-    string FailureMessage);
+    string FailureMessage,
+    WorkspaceProcessTerminationReason TerminationReason = WorkspaceProcessTerminationReason.Completed,
+    bool ResidualProcessPossible = false);

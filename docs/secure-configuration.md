@@ -22,9 +22,11 @@ The default provider is configured with:
 }
 ```
 
-`Auto` currently selects `DpapiSecretVault` on Windows. DPAPI uses the current Windows user scope, so another Windows user cannot decrypt the payload. macOS, Linux, MAUI, Azure Key Vault, and HashiCorp Vault providers are represented by explicit provider types, but non-Windows desktop providers are not implemented yet. Selecting one of those providers fails explicitly instead of silently downgrading security.
+`Auto` selects current-user DPAPI with typed `Strong` protection on Windows. On non-Windows hosts it selects `LocalUserFile`, the guaranteed first-launch profile: payloads use AES-256-GCM, vault directories are enforced to `0700`, and vault files are enforced to `0600`. Its key is stored in that same directory, so code running as the same operating-system user can access it. Startup therefore reports typed `BasicLocal` protection and logs a non-secret warning instead of presenting this profile as equivalent to an operating-system vault.
 
-`DataProtectionFileVault` exists as an explicit cross-platform fallback for development scenarios. Do not use it as the production default until the host has decided where and how to protect the fallback key file.
+Use an explicit stronger provider when the deployment threat model requires it: `Dpapi` on Windows, `MacOsKeychain` for an interactive macOS user, `LinuxSecretService` for an available and unlocked D-Bus session keyring, or `ExternalWrappingKeyFile` when a protected deployment input supplies the wrapping key. Explicit strong providers fail closed when their platform, session, dependency, or key input is unavailable; they do not fall back to `LocalUserFile`.
+
+`LocalUserFile` is Unix-only; explicit selection on Windows is rejected with guidance to use `Auto` or `Dpapi`. `DataProtectionFile` is the legacy name for the same file format. It remains readable for migration and can be selected only in Development with the existing explicit insecure-provider compatibility opt-in, where it reports `DevelopmentOnly`. New Unix configuration should use `Auto` or `LocalUserFile` and should not enable `AllowInsecureDevelopmentProviders`.
 
 ## Runtime Secret Use
 

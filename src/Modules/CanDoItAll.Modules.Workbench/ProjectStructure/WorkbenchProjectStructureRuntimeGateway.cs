@@ -14,6 +14,7 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
     ProjectStructureLeaseService leaseService,
     IProjectStructureRuntimeLauncher runtimeLauncher,
     ProjectStructureRuntimeNodeMetadataBoundary runtimeMetadataBoundary,
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathResolver workspacePathResolver,
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver) : IProjectStructureRuntimeGateway
@@ -118,7 +119,8 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                         request.MetadataJson);
                     ProjectStructureAgentRootAuthorityWriteGuard.EnsureAllowed(
                         metadataJson,
-                        workspacePathResolver.ResolveWorkspaceRoot());
+                        workspacePathResolver.ResolveWorkspaceRoot(),
+                        externalTargetPathRegistryFactory);
                     var createdNode = await projectWorkbenchService.CreateObjectAsync(
                         projectId,
                         new ProjectObjectCreateRequest(
@@ -213,7 +215,8 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
             string.IsNullOrWhiteSpace(parentNodeKey)
                 ? ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId)
                 : parentNodeKey.Trim(),
-            workspacePathResolver.ResolveWorkspaceRoot());
+            workspacePathResolver.ResolveWorkspaceRoot(),
+            externalTargetPathRegistryFactory);
     }
 
     private async Task<ProjectStructureRuntimeNodeSummary?> TryFindExistingIdempotentNodeAsync(

@@ -1,6 +1,7 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
@@ -22,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -31,7 +33,11 @@ public static class ProcessesModuleServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
+        services.AddDataProtection();
+        services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
+        services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
             ProcessesExecutionAuthorityProvider>());
@@ -61,10 +67,13 @@ public static class ProcessesModuleServiceCollectionExtensions
                 .GetService<IWorkspacePathResolver>();
             var databaseProfileRuntimeAccessor = serviceProvider
                 .GetService<IDatabaseProfileRuntimeAccessor>();
+            var physicalPathPolicyFactory = serviceProvider
+                .GetService<IPhysicalFileSystemPathPolicyFactory>();
             return executionRunStore is not null &&
                    cleanupScopeFactory is not null &&
                    workspacePathResolver is not null &&
-                   databaseProfileRuntimeAccessor is not null
+                   databaseProfileRuntimeAccessor is not null &&
+                   physicalPathPolicyFactory is not null
                 ? new WorkspaceExecutionRunProcessLeaseCleaner(
                     executionRunStore,
                     new WorkspaceExecutionScope(
@@ -73,7 +82,10 @@ public static class ProcessesModuleServiceCollectionExtensions
                             databaseProfileRuntimeAccessor
                                 .ResolveCurrentProfile()
                                 .Profile.Id
-                                .ToString("N"))),
+                                .ToString("N")),
+                        rootCaseSensitivity: physicalPathPolicyFactory
+                            .Create(workspacePathResolver.ResolveWorkspaceRoot())
+                            .CaseSensitivity),
                     cleanupScopeFactory)
                 : UnavailableWorkspaceExecutionRunProcessLeaseCleaner.Instance;
         });
@@ -111,6 +123,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<ProcessExecutionMetadataComposer>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRuntimeToolPreflightContribution, BrowserRuntimeToolPreflightContribution>());
         services.TryAddSingleton<ProcessRuntimeToolPreflightContributionCatalog>();
+        services.AddProcessHostCapabilityRuntime();
         services.TryAddScoped<IProcessRuntimeToolPreflightService, ProcessRuntimeToolPreflightService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceCommandReceiptLifecycleFactExtractor, DotNetWorkspaceCommandReceiptLifecycleFactExtractor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessLaunchVariableContributor, WorkspaceProductTargetAliasLaunchVariableContributor>());
@@ -126,8 +139,10 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, BrowserInteractionToolReceiptPolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessToolReceiptPolicyContribution, DotNetToolReceiptPolicyContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessRuntimeToolPlanGuard, DotNetSolutionSetupRuntimeToolPlanGuard>());
+        services.TryAddScoped<ProcessProductFilesystemInspector>();
+        services.TryAddScoped<ProcessProductCompletionPathGate>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, WorkspaceProductSourceInspectionCompletionGateContribution>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, WorkspaceProductFilesystemCompletionGateContribution>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessCompletionGateContribution, WorkspaceProductFilesystemCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProcessCompletionGateContribution, DotNetSolutionContextCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, BrowserRuntimeLifecycleCompletionGateContribution>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IProcessCompletionGateContribution, BrowserInteractiveAcceptanceCompletionGateContribution>());
@@ -156,6 +171,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<AgentFrameworkProcessExecutionAdapter>();
         services.TryAddScoped<IProcessExecutionAdapter>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
         services.TryAddScoped<IProcessStepExecutionDriver>(serviceProvider => serviceProvider.GetRequiredService<AgentFrameworkProcessExecutionAdapter>());
+        services.TryAddSingleton(new StandardProcessAdapterCompositionRegistration(
+            AgentFrameworkProcessExecutionAdapter.DriverDescriptor));
         services.TryAddScoped<IProcessExecutionObservationReader, AgentFrameworkProcessExecutionObservationReader>();
         services.TryAddScoped<AgentFrameworkProcessRuntimeUsageTelemetryReader>();
         services.TryAddScoped<IProcessRuntimeUsageTelemetryReader, WorkflowAwareProcessRuntimeUsageTelemetryReader>();
@@ -239,6 +256,24 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<ProcessWorkspaceMockProjectionFactory>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IShellNavigationContributor, ProcessesShellNavigationContributor>());
         services.AddSingleton<ProcessModuleRewriteState>(ProcessModuleRewriteState.Enabled);
+        return services;
+    }
+
+    public static IServiceCollection AddProcessHostCapabilityRuntime(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProcessHostCapabilitySource,
+            ManagedRuntimeProcessHostCapabilitySource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProcessHostCapabilitySource,
+            StandardProcessAdapterHostCapabilitySource>());
+        services.TryAddScoped<
+            IProcessHostCapabilitySnapshotProvider,
+            ProcessHostCapabilitySnapshotProvider>();
+
         return services;
     }
 

@@ -203,7 +203,8 @@ public sealed record ProjectStructureNode(
     int ParentProjectCount = 0,
     int? DurationSeconds = null,
     ProjectNodeReferenceCollection? NodeReferences = null,
-    bool IsSystemManaged = false);
+    bool IsSystemManaged = false,
+    Guid ProjectId = default);
 
 public sealed record ProjectStructureLink(
     string SourceId,
@@ -920,17 +921,42 @@ public sealed partial class ProjectWorkbenchService(
 
     public async Task<int> DeleteObjectAsync(Guid projectId, string nodeKey, CancellationToken cancellationToken = default)
     {
-        return await crossModuleMutationService.DeleteObjectAsync(projectId, nodeKey, cancellationToken);
+        return (await DeleteObjectDetailedAsync(projectId, nodeKey, cancellationToken))
+            .DeletedNodeCount;
     }
 
     public Task<ProjectStructureDeletionResult> DeleteObjectDetailedAsync(
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken = default)
-        => crossModuleMutationService.DeleteObjectDetailedAsync(
+        => DeleteObjectDetailedAsync(
             projectId,
             nodeKey,
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
             cancellationToken);
+
+    public async Task<ProjectStructureDeletionResult> DeleteObjectDetailedAsync(
+        Guid projectId,
+        string nodeKey,
+        ProjectStructureManagedStorageDisposition managedStorageDisposition,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await crossModuleMutationService.DeleteObjectDetailedAsync(
+            projectId,
+            nodeKey,
+            managedStorageDisposition,
+            cancellationToken);
+        if (result.DeletedNodeCount > 0 ||
+            !await relationService.DetachProjectedNodeAsync(
+                projectId,
+                nodeKey,
+                cancellationToken))
+        {
+            return result;
+        }
+
+        return result with { DeletedNodeCount = 1 };
+    }
 
     public async Task<int> RetryDeletionCleanupAsync(
         Guid projectId,
@@ -964,6 +990,26 @@ public sealed partial class ProjectWorkbenchService(
                 replay.Warnings);
     }
 
+    public async Task<ProjectStructureDeletionResult> RetryDeletionCleanupDetailedAsync(
+        Guid projectId,
+        string rootNodeKey,
+        Guid durableMutationId,
+        ProjectStructureManagedStorageDisposition expectedDisposition,
+        CancellationToken cancellationToken = default)
+    {
+        var replay = await crossModuleMutationService.ReplayDeletionAsync(
+            projectId,
+            rootNodeKey,
+            durableMutationId,
+            expectedDisposition,
+            cancellationToken);
+        return replay is null
+            ? new ProjectStructureDeletionResult(0, [])
+            : new ProjectStructureDeletionResult(
+                replay.DeletedNodeKeys.Count,
+                replay.Warnings);
+    }
+
     internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
         Guid projectId,
         string rootNodeKey,
@@ -973,6 +1019,17 @@ public sealed partial class ProjectWorkbenchService(
             rootNodeKey,
             durableMutationId: null,
             cancellationToken: cancellationToken);
+
+    internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
+        Guid projectId,
+        string rootNodeKey,
+        ProjectStructureManagedStorageDisposition expectedDisposition,
+        CancellationToken cancellationToken = default)
+        => crossModuleMutationService.ReplayDeletionAsync(
+            projectId,
+            rootNodeKey,
+            expectedDisposition,
+            cancellationToken);
 
     public Task<IReadOnlyList<ProjectStructureDeletionRecovery>> ListPendingDeletionRecoveriesAsync(
         Guid projectId,

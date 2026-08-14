@@ -1,0 +1,33 @@
+C2 validation summary
+Repository commit: 386d8beb6038035f89a9a6961ec017d8213879a5
+Dependency mode: package
+
+Windows Release focused tests, --no-build --no-restore
+PASS: Unit 217; Integration 35
+
+Windows Test-RuntimePortability.ps1, guarded TRX catalog
+PASS: Unit 422; Integration 45; Browser 1
+
+Linux package-mode Release solution build, SDK 10.0.302
+PASS: 0 warnings, 0 errors
+
+Linux Release focused tests, --no-build --no-restore
+PASS: Unit 217; Integration 35
+
+Linux runtime catalog, --no-build --no-restore
+PASS: Unit 422; Integration 45
+
+Initial plain-SDK Linux Browser attempt
+EXPECTED ENVIRONMENT FAILURE: SDK image had no docker executable and no Chromium provisioning
+
+Pinned mcr.microsoft.com/playwright/dotnet:v1.55.0-noble plus SDK 10.0.302, isolated PostgreSQL
+PASS: Browser 1; actual Linux Chromium; Release Web started with --no-build
+
+Test-Docker.ps1 -RunNegativeFixtures
+PASS
+
+candoitall-c2-smoke isolated Compose project
+PASS: HTTP 200; app healthy; db healthy; app UID 1654; read-only root; 127.0.0.1:18086 only; database unpublished
+
+Cleanup
+PASS: exact C2 Compose project, isolated PostgreSQL, networks, volumes, custom images, NuGet cache, runner Dockerfile, and disposable secret removed

@@ -1,12 +1,14 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class BrowserInteractionToolReceiptPolicyContribution : IProcessToolReceiptPolicyContribution
 {
-    internal const string InteractionProofRequirement = "browser interaction proof";
+    internal const string InteractionProofRequirement =
+        ProcessProductToolReceiptRequirements.BrowserInteractionProof;
 
     private static readonly HashSet<string> InteractionToolNames = new(StringComparer.OrdinalIgnoreCase)
     {

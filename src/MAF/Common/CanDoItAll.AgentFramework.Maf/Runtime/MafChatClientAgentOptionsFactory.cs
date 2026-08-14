@@ -17,4 +17,12 @@ internal static class MafChatClientAgentOptionsFactory
             DisableApprovalResponseBinding = false
         };
     }
+
+    public static bool ResolvePerServiceCallHistoryPersistence(
+        bool configured,
+        bool frameworkManagedHistory,
+        bool hasApprovalTools)
+    {
+        return configured || frameworkManagedHistory && hasApprovalTools;
+    }
 }

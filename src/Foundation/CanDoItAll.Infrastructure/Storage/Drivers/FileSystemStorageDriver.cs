@@ -1,15 +1,28 @@
 using System.Security.Cryptography;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
-public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPolicy)
-    : IStorageDriver, IStorageRevisionedContentDriver
+public sealed class FileSystemStorageDriver : IStorageDriver, IStorageRevisionedContentDriver
 {
-    private const int WriteLockCount = 64;
-    private static readonly SemaphoreSlim[] WriteLocks = Enumerable
-        .Range(0, WriteLockCount)
-        .Select(_ => new SemaphoreSlim(1, 1))
-        .ToArray();
+    private readonly FileSystemStoragePathPolicy pathPolicy;
+    private readonly DurableFileWriter durableFileWriter;
+
+    public FileSystemStorageDriver(FileSystemStoragePathPolicy pathPolicy)
+        : this(
+            pathPolicy,
+            new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory()))
+    {
+    }
+
+    public FileSystemStorageDriver(
+        FileSystemStoragePathPolicy pathPolicy,
+        DurableFileWriter durableFileWriter)
+    {
+        this.pathPolicy = pathPolicy ?? throw new ArgumentNullException(nameof(pathPolicy));
+        this.durableFileWriter = durableFileWriter ?? throw new ArgumentNullException(nameof(durableFileWriter));
+    }
 
     public StorageProviderKind ProviderKind => StorageProviderKind.FileSystem;
 
@@ -35,7 +48,8 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
         try
         {
             var rootPath = ResolveRootPath(storage);
-            Directory.CreateDirectory(rootPath);
+            durableFileWriter.EnsureDirectory(rootPath, rootPath, requirePrivateUnixMode: false);
+            pathPolicy.ResolveRootPolicy(storage).EnsureSafePath(rootPath);
 
             return Task.FromResult(new StorageConnectionTestResult(
                 true,
@@ -63,21 +77,26 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(request);
 
-        var relativePath = ResolveRelativePath(request.RelativePathHint, request.FileName);
+        bool allocateNewPhysicalName = string.IsNullOrWhiteSpace(request.RelativePathHint);
+        var relativePath = ResolveRelativePath(storage, request.RelativePathHint, request.FileName);
         var fullPath = pathPolicy.ResolveFullPath(storage, relativePath);
-        var directory = Path.GetDirectoryName(fullPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        await File.WriteAllBytesAsync(fullPath, request.Content, cancellationToken);
+        await durableFileWriter.WriteBytesAsync(
+            pathPolicy.ResolveRootPath(storage),
+            fullPath,
+            request.Content,
+            options: allocateNewPhysicalName
+                ? DurableFileWriteOptions.CreateNew
+                : DurableFileWriteOptions.Default,
+            cancellationToken: cancellationToken,
+            beforeCommit: allocateNewPhysicalName
+                ? token => EnsureAllocatedTargetRemainsAvailableAsync(fullPath, token)
+                : null);
 
         var reference = new StorageObjectReference(
             storage.Id,
             ProviderKind,
             StorageLocatorKind.RelativePath,
-            NormalizeRoutePath(relativePath),
+            relativePath,
             request.FileName,
             string.IsNullOrWhiteSpace(request.ContentType) ? "application/octet-stream" : request.ContentType,
             request.Content.LongLength,
@@ -117,23 +136,18 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
         return Task.FromResult(stream);
     }
 
-    public Task DeleteAsync(
+    public async Task DeleteAsync(
         StorageCatalogRecord storage,
         StorageObjectReference reference,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(reference);
-        cancellationToken.ThrowIfCancellationRequested();
-
         var fullPath = pathPolicy.ResolveFullPath(storage, reference.Locator);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (File.Exists(fullPath))
-        {
-            File.Delete(fullPath);
-        }
-
-        return Task.CompletedTask;
+        await durableFileWriter.DeleteAsync(
+            pathPolicy.ResolveRootPath(storage),
+            fullPath,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     public Task<StorageContentRevision?> GetRevisionAsync(
@@ -156,76 +170,48 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(request);
         string fullPath = pathPolicy.ResolveFullPath(storage, request.Reference.Locator);
-        SemaphoreSlim writeLock = ResolveWriteLock(fullPath);
-        await writeLock.WaitAsync(cancellationToken);
-        try
-        {
-            StorageContentRevision? actualRevision = CreateRevision(fullPath);
-            if (request.ExpectedRevision is { } expected && expected != actualRevision)
+        await durableFileWriter.WriteBytesAsync(
+            pathPolicy.ResolveRootPath(storage),
+            fullPath,
+            request.Content,
+            cancellationToken: cancellationToken,
+            beforeCommit: _ =>
             {
-                throw new StorageContentConflictException(expected, actualRevision);
-            }
-
-            if (request.ExpectedRevision is null && !request.AllowOverwrite)
-            {
-                throw new StorageContentConflictException(null, actualRevision);
-            }
-
-            string? directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            string temporaryPath = fullPath + "." + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)) + ".tmp";
-            try
-            {
-                await File.WriteAllBytesAsync(temporaryPath, request.Content, cancellationToken);
-                if (request.ExpectedRevision is { } expectedBeforeCommit)
+                StorageContentRevision? actualRevision = CreateRevision(fullPath);
+                if (request.ExpectedRevision is { } expected && expected != actualRevision)
                 {
-                    StorageContentRevision? revisionBeforeCommit = CreateRevision(fullPath);
-                    if (expectedBeforeCommit != revisionBeforeCommit)
-                    {
-                        throw new StorageContentConflictException(expectedBeforeCommit, revisionBeforeCommit);
-                    }
+                    throw new StorageContentConflictException(expected, actualRevision);
                 }
 
-                File.Move(temporaryPath, fullPath, overwrite: true);
-            }
-            finally
-            {
-                if (File.Exists(temporaryPath))
+                if (request.ExpectedRevision is null && !request.AllowOverwrite)
                 {
-                    File.Delete(temporaryPath);
+                    throw new StorageContentConflictException(null, actualRevision);
                 }
-            }
 
-            StorageContentRevision persistedRevision = CreateRevision(fullPath)
-                ?? throw new IOException("The storage object was not persisted.");
-            StorageObjectReference persistedReference = request.Reference with
-            {
-                ContentLength = request.Content.LongLength
-            };
-            string token = StorageJson.EncodeReferenceToken(persistedReference);
-            var result = new StorageWriteResult(
-                persistedReference,
-                new StorageAccessDescriptor(
-                    $"/storage/objects/preview?ref={Uri.EscapeDataString(token)}",
-                    $"/storage/objects/download?ref={Uri.EscapeDataString(token)}",
-                    null,
-                    true,
-                    true,
-                    IsTrustedForLocalOpen(storage),
-                    persistedReference.DisplayName,
-                    persistedReference.ContentType,
-                    persistedReference.ContentLength,
-                    string.Empty));
-            return new StorageRevisionedWriteResult(result, persistedRevision);
-        }
-        finally
+                return ValueTask.CompletedTask;
+            });
+
+        StorageContentRevision persistedRevision = CreateRevision(fullPath)
+            ?? throw new IOException("The storage object was not persisted.");
+        StorageObjectReference persistedReference = request.Reference with
         {
-            writeLock.Release();
-        }
+            ContentLength = request.Content.LongLength
+        };
+        string token = StorageJson.EncodeReferenceToken(persistedReference);
+        var result = new StorageWriteResult(
+            persistedReference,
+            new StorageAccessDescriptor(
+                $"/storage/objects/preview?ref={Uri.EscapeDataString(token)}",
+                $"/storage/objects/download?ref={Uri.EscapeDataString(token)}",
+                null,
+                true,
+                true,
+                IsTrustedForLocalOpen(storage),
+                persistedReference.DisplayName,
+                persistedReference.ContentType,
+                persistedReference.ContentLength,
+                string.Empty));
+        return new StorageRevisionedWriteResult(result, persistedRevision);
     }
 
     internal string ResolveFullPath(StorageCatalogRecord storage, string relativePath)
@@ -236,12 +222,6 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
 
     internal bool IsTrustedForLocalOpen(StorageCatalogRecord storage)
         => pathPolicy.IsTrustedForLocalOpen(storage);
-
-    private static SemaphoreSlim ResolveWriteLock(string fullPath)
-    {
-        int hash = StringComparer.OrdinalIgnoreCase.GetHashCode(fullPath) & int.MaxValue;
-        return WriteLocks[hash % WriteLockCount];
-    }
 
     private static StorageContentRevision? CreateRevision(string fullPath)
     {
@@ -256,28 +236,46 @@ public sealed class FileSystemStorageDriver(FileSystemStoragePathPolicy pathPoli
         return new StorageContentRevision(Convert.ToHexStringLower(hash));
     }
 
-    private static string ResolveRelativePath(string? relativePathHint, string fileName)
+    private static ValueTask EnsureAllocatedTargetRemainsAvailableAsync(
+        string fullPath,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (File.Exists(fullPath) || Directory.Exists(fullPath))
+        {
+            throw new IOException(
+                "The allocated storage filename became occupied before commit. Retry the save to allocate a new name.");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private string ResolveRelativePath(
+        StorageCatalogRecord storage,
+        string? relativePathHint,
+        string fileName)
     {
         if (!string.IsNullOrWhiteSpace(relativePathHint))
         {
-            return FileSystemStoragePathPolicy.NormalizeRelativeKey(relativePathHint);
+            return FileSystemStorageKeyCodec.Canonicalize(relativePathHint);
         }
 
-        var sanitizedFileName = string.Concat(fileName.Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
-        return string.IsNullOrWhiteSpace(sanitizedFileName)
-            ? "artifact.bin"
-            : sanitizedFileName;
+        var rootPolicy = pathPolicy.ResolveRootPolicy(storage);
+        IEnumerable<string> existingNames = Directory.Exists(rootPolicy.RootPath)
+            ? Directory.EnumerateFileSystemEntries(rootPolicy.RootPath)
+                .Select(path => Path.GetFileName(path)!)
+            : [];
+        PortablePhysicalFileName encodedName = PortablePhysicalFileNamePolicy.Allocate(
+            fileName,
+            existingNames,
+            rootPolicy.PathComparer);
+        return FileSystemStorageKeyCodec.Append(string.Empty, encodedName.PhysicalName);
     }
-
-    private static string NormalizeRoutePath(string relativePath)
-        => relativePath.Trim().Replace('\\', '/').TrimStart('/');
 
     private static string BuildLegacyRoute(string relativePath)
     {
-        var normalized = NormalizeRoutePath(relativePath);
-        return normalized.StartsWith("managed-files/", StringComparison.OrdinalIgnoreCase)
-            ? "/" + normalized
+        return relativePath.StartsWith("managed-files/", StringComparison.Ordinal)
+            ? "/" + relativePath
             : string.Empty;
     }
 }

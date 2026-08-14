@@ -1,10 +1,18 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.DependencyInjection;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Builder;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -31,7 +39,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             new GenericProcessStepBriefBuilder(),
             dispatchQueue: null!,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
 
         var result = await service.LaunchAsync(new ProcessLaunchRequest(
             DefinitionKey: "dotnet-runtime-command-writeback",
@@ -52,6 +61,47 @@ public sealed class ProcessLaunchAtomicCommitTests
         Assert.Equal(result.LaunchPlanId, commit.InitialPlan.Header.PlanId);
         Assert.Equal(commit.Mutation.State.PlanId, commit.InitialPlan.Header.PlanId);
         Assert.Equal(commit.Mutation.State.PlanHash, commit.InitialPlan.PlanHash);
+    }
+
+    [Fact]
+    public async Task Launch_seals_effective_step_capabilities_into_driver_stack_evidence()
+    {
+        var availablePython = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Available,
+            ProcessHostCapabilityReason.Ready,
+            ProcessHostExecutionPort.ManagedProcessHost);
+        var executorResolver = new AllStepsExecutorResolver(
+            ProcessHostCapabilityIds.PythonRuntime,
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux-launch"),
+                [availablePython]));
+        var unitOfWork = new RejectingUnitOfWork();
+        var service = new ProcessLaunchApplicationService(
+            new ProcessTemplatePackLoader(),
+            new TestClock(),
+            new TestDriverCatalogProvider(),
+            executorResolver,
+            new TrackingPlanStore(),
+            unitOfWork,
+            stateStore: null!,
+            assignmentStore: null!,
+            artifactInitializer: null!,
+            new GenericProcessStepBriefBuilder(),
+            dispatchQueue: null!,
+            projectionCatchupService: null!,
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
+
+        await service.LaunchAsync(NewLaunchRequest(execute: false));
+
+        var plan = Assert.IsType<ProcessInstancePlan>(unitOfWork.Request?.InitialPlan);
+        Assert.All(
+            plan.Steps.Where(step => step.IsExecutable),
+            step => Assert.Contains(ProcessHostCapabilityIds.PythonRuntime, step.RequiredHostCapabilities));
+        Assert.Equal(new ProcessHostProfileId("linux-launch"), plan.DriverStack.HostProfileId);
+        Assert.Equal([availablePython], plan.DriverStack.HostCapabilities);
+        Assert.Equal(ProcessPlanHasher.Compute(plan with { PlanHash = string.Empty }), plan.PlanHash);
     }
 
     [Fact]
@@ -77,6 +127,12 @@ public sealed class ProcessLaunchAtomicCommitTests
         Assert.Contains(
             result.Warnings,
             diagnostic => diagnostic.Contains("artifact root", StringComparison.OrdinalIgnoreCase));
+        Assert.All(result.Warnings, warning => Assert.True(
+            ProcessPublicReceiptTextPolicy.IsSafe(
+                warning,
+                ProcessPublicReceiptTextPolicy.MaximumPublicMessageLength)));
+        Assert.DoesNotContain(result.Warnings, warning => warning.Contains("launch-secret", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Warnings, warning => warning.Contains(@"C:\private\launch", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -117,7 +173,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             new GenericProcessStepBriefBuilder(),
             dispatchQueue: null!,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
 
         var result = await service.LaunchAsync(new ProcessLaunchRequest(
             DefinitionKey: null,
@@ -155,6 +212,163 @@ public sealed class ProcessLaunchAtomicCommitTests
             resolutionRequest.Definition.Key);
     }
 
+    [Fact]
+    public async Task Launch_preview_materializes_current_template_completion_receipts_before_resolution()
+    {
+        var executorResolver = new AllStepsExecutorResolver();
+        var service = new ProcessLaunchApplicationService(
+            new ProcessTemplatePackLoader(),
+            new TestClock(),
+            new TestDriverCatalogProvider(),
+            executorResolver,
+            new TrackingPlanStore(),
+            new RejectingUnitOfWork(),
+            stateStore: null!,
+            assignmentStore: null!,
+            artifactInitializer: null!,
+            new GenericProcessStepBriefBuilder(),
+            dispatchQueue: null!,
+            projectionCatchupService: null!,
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
+
+        await service.LaunchAsync(new ProcessLaunchRequest(
+            DefinitionKey: "blazor-app-delivery",
+            ProcessDefinitionId: null,
+            LiveRunProfileKey: null,
+            ProjectId: null,
+            ProjectNodeId: null,
+            RequestedBy: "unit-test",
+            Variables: new Dictionary<string, string>(StringComparer.Ordinal),
+            RunReadiness: false,
+            Execute: false));
+
+        var request = Assert.IsType<ProcessLaunchExecutorResolutionRequest>(executorResolver.LastRequest);
+        var completionReceiptValues = request.StepVariablesByKey.Values
+            .Where(variables => variables.ContainsKey(
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts))
+            .Select(variables => variables[
+                ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts])
+            .ToArray();
+        Assert.NotEmpty(completionReceiptValues);
+        Assert.Contains(
+            completionReceiptValues,
+            value => value.Contains(
+                ProcessProductToolReceiptRequirements.BrowserInteractionProof,
+                StringComparison.OrdinalIgnoreCase));
+        Assert.All(
+            completionReceiptValues,
+            value => Assert.DoesNotContain(
+                ProcessRequiredRuntimeToolNames.InvalidRuntimeToolContractMarker,
+                ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(value)));
+    }
+
+    [Fact]
+    public async Task LaunchAuthority_IsInspectableByCompletionGateInLaterProductionScope()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create(
+            "process-launch-completion-authority");
+        var productRoot = TestFileSystem.CreateTemporaryRoot("process-launch-product");
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(productRoot, "product.txt"),
+                "persisted product output");
+            var profile = testEnvironment.CreateInMemoryProfile(
+                "unit",
+                "process-launch-completion-authority");
+            var configuration = TestApplicationBootstrap.BuildConfiguration(
+                profile,
+                new Dictionary<string, string?>
+                {
+                    ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath
+                });
+            var services = new ServiceCollection();
+            TestApplicationBootstrap.ConfigureDefaultServices(
+                services,
+                configuration,
+                testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Unit"));
+            await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            });
+
+            ProcessRuntimeStepAssignment assignment;
+            await using (var launchScope = provider.CreateAsyncScope())
+            {
+                var unitOfWork = new RejectingUnitOfWork();
+                var launchService = new ProcessLaunchApplicationService(
+                    new ProcessTemplatePackLoader(),
+                    new TestClock(),
+                    new TestDriverCatalogProvider(),
+                    new AllStepsExecutorResolver(),
+                    new TrackingPlanStore(),
+                    unitOfWork,
+                    stateStore: null!,
+                    assignmentStore: null!,
+                    artifactInitializer: null!,
+                    new GenericProcessStepBriefBuilder(),
+                    dispatchQueue: null!,
+                    projectionCatchupService: null!,
+                    new LaunchVariableTemplateResolver(),
+                    launchScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>());
+
+                var result = await launchService.LaunchAsync(new ProcessLaunchRequest(
+                    DefinitionKey: null,
+                    ProcessDefinitionId: null,
+                    LiveRunProfileKey: "generic-simple-local-app",
+                    ProjectId: null,
+                    ProjectNodeId: null,
+                    RequestedBy: "unit-test",
+                    Variables: new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["AppTopic"] = "Generic test application",
+                        ["ApplicationKind"] = "UI",
+                        ["TechnologyStack"] = ".NET",
+                        [ProcessRuntimeLaunchVariables.ProductRoot] = productRoot,
+                        ["AcceptanceCriteria"] = "The application has persisted product output."
+                    },
+                    RunReadiness: false,
+                    Execute: false));
+
+                Assert.Equal(ProcessLaunchStage.Failed, result.Stage);
+                var commit = Assert.IsType<ProcessRuntimeCommitRequest>(unitOfWork.Request);
+                assignment = Assert.Single(
+                    Assert.IsAssignableFrom<IReadOnlyList<ProcessRuntimeStepAssignment>>(
+                            commit.InitialAssignments)
+                        .Where(candidate => candidate.AllowedOperations.Contains(
+                            ProcessOperationContractNames.MutateProductTarget,
+                            StringComparer.OrdinalIgnoreCase))
+                        .Take(1));
+                Assert.True(ExternalTargetAliasCodec.IsVersionedAlias(
+                    assignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductRootAlias]));
+                Assert.False(string.IsNullOrWhiteSpace(
+                    assignment.LaunchVariables[
+                        ProcessRuntimeLaunchVariables.ExternalTargetRootBindings]));
+            }
+
+            await using var completionScope = provider.CreateAsyncScope();
+            var completionGate =
+                completionScope.ServiceProvider.GetRequiredService<ProcessProductCompletionPathGate>();
+            var issue = completionGate.ValidateProductMutationFilesystemState(
+                assignment,
+                new ProcessStepOutcomeResult
+                {
+                    Status = ProcessStepOutcomeStatus.Completed,
+                    Reason = "Product output is complete.",
+                    EvidenceRefs = ["evidence/completion.md"],
+                    NextActions = []
+                });
+
+            Assert.Null(issue);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(productRoot);
+        }
+    }
+
     private static ProcessLaunchApplicationService NewOperationalService(
         StatefulRuntimeStore runtimeStore,
         IProcessLaunchArtifactInitializer artifactInitializer,
@@ -173,7 +387,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             new GenericProcessStepBriefBuilder(),
             dispatchQueue,
             projectionCatchupService: null!,
-            new LaunchVariableTemplateResolver());
+            new LaunchVariableTemplateResolver(),
+            TestExternalTargetPathRegistry.Create());
     }
 
     private static ProcessLaunchRequest NewLaunchRequest(bool execute)
@@ -215,7 +430,7 @@ public sealed class ProcessLaunchAtomicCommitTests
                 "1.0.0",
                 "runtime/1.0",
                 "runtime/1.0",
-                ProcessDriverLayer.Platform,
+                ProcessDriverLayer.Framework,
                 Capabilities,
                 [],
                 [],
@@ -236,7 +451,9 @@ public sealed class ProcessLaunchAtomicCommitTests
         }
     }
 
-    private sealed class AllStepsExecutorResolver : IProcessLaunchExecutorResolver
+    private sealed class AllStepsExecutorResolver(
+        ProcessHostCapabilityId? effectiveHostCapability = null,
+        ProcessHostCapabilitySnapshot? hostCapabilities = null) : IProcessLaunchExecutorResolver
     {
         public ProcessLaunchExecutorResolutionRequest? LastRequest { get; private set; }
 
@@ -269,7 +486,19 @@ public sealed class ProcessLaunchAtomicCommitTests
                         "Resolved by the focused launch test.");
                 })
                 .ToArray();
-            return ValueTask.FromResult(new ProcessLaunchExecutorResolution(bindings, []));
+            var effectiveHostCapabilitiesByStep = effectiveHostCapability is { } capability
+                ? request.Plan.Steps
+                    .Where(step => step.IsExecutable)
+                    .ToDictionary(
+                        step => step.StepKey,
+                        _ => (IReadOnlySet<ProcessHostCapabilityId>)new HashSet<ProcessHostCapabilityId> { capability },
+                        StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, IReadOnlySet<ProcessHostCapabilityId>>(StringComparer.OrdinalIgnoreCase);
+            return ValueTask.FromResult(new ProcessLaunchExecutorResolution(bindings, [])
+            {
+                EffectiveHostCapabilitiesByStep = effectiveHostCapabilitiesByStep,
+                HostCapabilities = hostCapabilities
+            });
         }
     }
 
@@ -370,7 +599,8 @@ public sealed class ProcessLaunchAtomicCommitTests
             ProcessLaunchArtifactInitializationRequest request,
             CancellationToken cancellationToken = default)
         {
-            throw new IOException("Focused artifact initialization failure.");
+            throw new IOException(
+                $"password=launch-secret at C:\\private\\launch\\artifact-root.txt {new string('x', 3_000)}");
         }
     }
 

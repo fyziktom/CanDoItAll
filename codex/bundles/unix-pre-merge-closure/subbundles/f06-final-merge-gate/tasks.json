@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "F06",
+  "title": "Exact-head merge gate and bookkeeping",
+  "goal": "Produce a truthful decision for merging into development under the current post-merge macOS policy.",
+  "tasks": [
+    {
+      "id": "T01",
+      "description": "Freeze the exact repaired commit and source fingerprint.",
+      "status": "planned"
+    },
+    {
+      "id": "T02",
+      "description": "Run the final C2 gate from validation-strategy.md.",
+      "status": "planned"
+    },
+    {
+      "id": "T03",
+      "description": "Reconcile the focused tests, runtime catalog and Docker smoke.",
+      "status": "planned"
+    },
+    {
+      "id": "T04",
+      "description": "Record any pre-existing stable-suite residuals without re-labeling them as passes.",
+      "status": "planned"
+    },
+    {
+      "id": "T05",
+      "description": "Update prior M10 wording so macOS absence is a post-merge deferral, not an automatic NO-GO.",
+      "status": "planned"
+    },
+    {
+      "id": "T06",
+      "description": "Keep enterprise vault and Keychain limitations explicit.",
+      "status": "planned"
+    },
+    {
+      "id": "T07",
+      "description": "Do not merge or push without operator instruction.",
+      "status": "planned"
+    }
+  ]
+}

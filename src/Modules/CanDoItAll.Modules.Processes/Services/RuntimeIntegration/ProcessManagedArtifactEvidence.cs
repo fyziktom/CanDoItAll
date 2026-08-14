@@ -17,6 +17,7 @@ using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -189,7 +190,7 @@ internal static class ProcessManagedArtifactEvidence
             .Where(item => TrustedExternalTargetVariableNames.Contains(item.Key))
             .SelectMany(item => EnumerateProductTargetReceiptRefs(item.Value))
             .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
     }
 

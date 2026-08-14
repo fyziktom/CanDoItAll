@@ -54,6 +54,7 @@ public sealed class MafStreamingTurnExecutorRecoveryPolicyTests
                 new NeverInvokedProviderAgentFactory(),
                 new MafApprovalContinuationDriver(),
                 new MafRuntimeSessionPersistenceDriver(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 [new ProcessAgentExecutionOutcomeRecoveryPolicy()]);
             AgentFinalizerPolicies.TryResolveForStructuredOutput(
                 AgentStructuredOutputContracts.ProcessStepOutcomeResult,
@@ -138,6 +139,7 @@ public sealed class MafStreamingTurnExecutorRecoveryPolicyTests
                 new NeverInvokedProviderAgentFactory(),
                 new MafApprovalContinuationDriver(),
                 new MafRuntimeSessionPersistenceDriver(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 executionOutcomeRecoveryPolicies: []);
             AgentFinalizerPolicies.TryResolveForStructuredOutput(
                 AgentStructuredOutputContracts.ProcessStepOutcomeResult,

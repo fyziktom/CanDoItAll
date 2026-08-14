@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +22,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

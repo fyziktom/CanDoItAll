@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
@@ -152,12 +153,10 @@ public sealed class FtpStorageDriver(
     {
         if (!string.IsNullOrWhiteSpace(relativePathHint))
         {
-            return relativePathHint.Trim().Replace('\\', '/').TrimStart('/');
+            return StorageJson.NormalizeLogicalLocator(relativePathHint);
         }
 
-        string sanitizedFileName = string.Concat(fileName.Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
-        return string.IsNullOrWhiteSpace(sanitizedFileName) ? "artifact.bin" : sanitizedFileName;
+        return PortablePhysicalFileNamePolicy.Encode(fileName).PhysicalName;
     }
 
     private InvalidOperationException CreateFailure(

@@ -1,43 +1,19 @@
+using CanDoItAll.Infrastructure;
+
 namespace CanDoItAll.AgentFramework.Persistence;
 
-internal sealed class FileSandboxWorkspaceCrossProcessLock(string lockPath)
+internal sealed class FileSandboxWorkspaceCrossProcessLock(
+    string managedRoot,
+    string lockPath,
+    DurableFileWriter durableFileWriter)
 {
-    public async Task<IAsyncDisposable> AcquireAsync(CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+    private static readonly TimeSpan AcquisitionTimeout = TimeSpan.FromMinutes(1);
 
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                var stream = new FileStream(
-                    lockPath,
-                    FileMode.OpenOrCreate,
-                    FileAccess.ReadWrite,
-                    FileShare.Delete,
-                    bufferSize: 1,
-                    options: FileOptions.Asynchronous);
-                return new Releaser(stream);
-            }
-            catch (IOException)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(25), cancellationToken);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(25), cancellationToken);
-            }
-        }
-    }
-
-    private sealed class Releaser(FileStream stream) : IAsyncDisposable
-    {
-        public ValueTask DisposeAsync()
-        {
-            stream.Dispose();
-            return ValueTask.CompletedTask;
-        }
-    }
+    public ValueTask<IAsyncDisposable> AcquireAsync(CancellationToken cancellationToken)
+        => durableFileWriter.AcquireCoordinationAsync(
+            managedRoot,
+            lockPath,
+            AcquisitionTimeout,
+            requirePrivateUnixMode: false,
+            cancellationToken);
 }

@@ -17,10 +17,12 @@ using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
 {
     [Fact]
@@ -48,7 +50,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             now.AddSeconds(1));
         var runtimeStore = new RecordingRuntimeStore(state);
         var assignmentStore = new SingleAssignmentStore(assignment);
-        var planStore = new SinglePlanStore(CreatePlan(planId, now));
+        var planStore = new SinglePlanStore(CreatePlan(planId, stepId, now));
 
         await using var projectionDbContext = CreateProjectionDbContext();
         var clock = new FixedProcessProjectionClock(now.AddSeconds(4));
@@ -62,7 +64,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             planStore,
             assignmentStore,
             projectionCatchupService,
-            CreateCompletionCoordinator(new WorkspaceFileService(Path.GetTempPath())));
+            CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(Path.GetTempPath())));
         var stateBeforeAttempt = runtimeStore.State;
         var executionWithoutIdentity = executionRun with
         {
@@ -113,7 +115,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
         };
         var runtimeStore = new RecordingRuntimeStore(state);
         var assignmentStore = new SingleAssignmentStore(assignment);
-        var planStore = new SinglePlanStore(CreatePlan(planId, now));
+        var planStore = new SinglePlanStore(CreatePlan(planId, stepId, now));
 
         await using var projectionDbContext = CreateProjectionDbContext();
         var clock = new FixedProcessProjectionClock(now.AddSeconds(4));
@@ -124,7 +126,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             planStore,
             assignmentStore,
             CreateProjectionCatchupService(projectionDbContext, clock),
-            CreateCompletionCoordinator(new WorkspaceFileService(Path.GetTempPath())));
+            CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(Path.GetTempPath())));
 
         var blocked = await coordinator.BlockRecoveredExecutionClaimAsync(
             executionRun,
@@ -182,7 +184,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
         var workspaceFactory = new TestWorkspaceFactory(workspaceService);
         var runtimeStore = new RecordingRuntimeStore(state);
         var assignmentStore = new SingleAssignmentStore(assignment);
-        var planStore = new SinglePlanStore(CreatePlan(planId, now));
+        var planStore = new SinglePlanStore(CreatePlan(planId, stepId, now));
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.ClaimRecovery.{Guid.NewGuid():N}");
@@ -196,7 +198,8 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 projectionDbContext,
                 clock);
             var completionCoordinator = CreateCompletionCoordinator(
-                new WorkspaceFileService(workspaceRoot));
+                TestWorkspaceServices.CreateFileService(workspaceRoot));
+            var logger = new RecordingLogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>();
             var coordinator = CreateCoordinator(
                 workspaceFactory,
                 clock,
@@ -204,7 +207,8 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 planStore,
                 assignmentStore,
                 projectionCatchupService,
-                completionCoordinator);
+                completionCoordinator,
+                logger);
 
             var recovered = await coordinator.SubmitRecoveredExecutionResultAsync(
                 executionRun,
@@ -212,7 +216,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 stepId,
                 "claim-recovery-test");
 
-            Assert.True(recovered);
+            Assert.True(recovered, string.Join(Environment.NewLine, logger.Messages));
             var appliedResult = Assert.Single(runtimeStore.State.AppliedResults);
             Assert.Equal(StrategyOutcome.Succeeded, appliedResult.Outcome);
             Assert.Equal(ProcessRuntimeStepStatus.Completed, appliedResult.AppliedStepStatus);
@@ -283,7 +287,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             CreateWorkspaceService(executionRun));
         var runtimeStore = new RecordingRuntimeStore(state);
         var assignmentStore = new SingleAssignmentStore(assignment);
-        var planStore = new SinglePlanStore(CreatePlan(planId, now));
+        var planStore = new SinglePlanStore(CreatePlan(planId, stepId, now));
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.ClaimRecoveryExpired.{Guid.NewGuid():N}");
@@ -300,7 +304,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 planStore,
                 assignmentStore,
                 CreateProjectionCatchupService(projectionDbContext, clock),
-                CreateCompletionCoordinator(new WorkspaceFileService(workspaceRoot)));
+                CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(workspaceRoot)));
             var stateBeforeAttempt = runtimeStore.State;
 
             var recovered = await coordinator.SubmitRecoveredExecutionResultAsync(
@@ -360,7 +364,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             now.AddSeconds(1));
         var runtimeStore = new RecordingRuntimeStore(state);
         var assignmentStore = new SingleAssignmentStore(assignment);
-        var planStore = new SinglePlanStore(CreatePlan(planId, now));
+        var planStore = new SinglePlanStore(CreatePlan(planId, stepId, now));
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.ClaimRecoveryMismatch.{Guid.NewGuid():N}");
@@ -380,7 +384,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 planStore,
                 assignmentStore,
                 projectionCatchupService,
-                CreateCompletionCoordinator(new WorkspaceFileService(workspaceRoot)));
+                CreateCompletionCoordinator(TestWorkspaceServices.CreateFileService(workspaceRoot)));
 
             var failedExecution = executionRun with
             {
@@ -449,7 +453,8 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
         SinglePlanStore planStore,
         SingleAssignmentStore assignmentStore,
         ProcessRuntimeProjectionCatchupService projectionCatchupService,
-        ProcessStepCompletionCoordinator completionCoordinator)
+        ProcessStepCompletionCoordinator completionCoordinator,
+        ILogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>? logger = null)
     {
         var branchSignalRouter = new ProcessRuntimeBranchSignalApplicationService(
             clock,
@@ -468,7 +473,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             branchSignalRouter,
             projectionCatchupService,
             completionCoordinator,
-            NullLogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>.Instance);
+            logger ?? NullLogger<AgentFrameworkProcessExecutionClaimRecoveryCoordinator>.Instance);
     }
 
     private static ProcessRuntimeProjectionCatchupService CreateProjectionCatchupService(
@@ -530,12 +535,12 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             runId,
             runId,
             planId,
-            "sha256:claim-recovery-plan",
+            CreatePlan(planId, stepId, createdAtUtc).PlanHash,
             ProcessRuntimeStatus.Active,
             [
                 new ProcessRuntimeStepState(
                     stepId,
-                    ProcessStepDefinitionId.New(),
+                    ResolveStepDefinitionId(stepId),
                     ProcessRuntimeStepStatus.Running,
                     IsExecutable: true,
                     AttemptNumber: 1,
@@ -574,7 +579,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
         {
             Status = ProcessStepOutcomeStatus.Completed,
             Reason = "The current execution produced independently grounded completion proof.",
-            EvidenceRefs = [$"execution://{Guid.NewGuid():D}"],
+            EvidenceRefs = [$"artifacts/process-runs/{runId.Value:D}/steps/artifact-producer.md"],
             NextActions = [],
             HumanReadableSummaryMarkdown =
                 "The typed recovered outcome is ready for runtime-managed artifact materialization."
@@ -625,7 +630,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
         [
             new GenericWorkspaceToolReceiptPolicyContribution()
         ]);
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             ProcessCompletionDefectEvidenceCatalog.Empty);
         var completionGateEvaluator = new ProcessCompletionGateFactory(
@@ -649,9 +654,10 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
 
     private static ProcessInstancePlan CreatePlan(
         ProcessInstancePlanId planId,
+        ProcessStepInstanceId stepId,
         DateTimeOffset createdAtUtc)
     {
-        return new ProcessInstancePlan(
+        var plan = new ProcessInstancePlan(
             new ProcessInstancePlanHeader(
                 planId,
                 planId,
@@ -661,8 +667,8 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 createdAtUtc,
                 HierarchyDepth: 0),
             new ResolvedProcessDefinitionSnapshot(
-                ProcessDefinitionId.New(),
-                ProcessDefinitionVersionId.New(),
+                new ProcessDefinitionId(new Guid("458fd348-3bf6-480b-ad39-a5c5f89dcaa1")),
+                new ProcessDefinitionVersionId(new Guid("cc23c555-0e54-4fe7-bfa2-cf3ab072467b")),
                 "sha256:claim-recovery-definition",
                 "template/1",
                 "template/1",
@@ -671,7 +677,16 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
                 []),
             new DriverStackSnapshot([]),
             new StrategyBindingSet([], [], [], []),
-            [],
+            [
+                new StepInstancePlan(
+                    stepId,
+                    ResolveStepDefinitionId(stepId),
+                    "artifact-producer",
+                    ProcessStepKind.Activity,
+                    IsExecutable: true,
+                    StartsSubprocess: false,
+                    ExecutionStrategyBinding: null)
+            ],
             new ArtifactPlan([], []),
             new BranchRouteTable([]),
             [],
@@ -679,8 +694,15 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             new BudgetPlan([]),
             new MonitoringPlan(true, "sha256:monitoring"),
             new SecurityPlan("sha256:security", []),
-            "sha256:claim-recovery-plan");
+            string.Empty);
+        return plan with
+        {
+            PlanHash = ProcessPlanHasher.Compute(plan)
+        };
     }
+
+    private static ProcessStepDefinitionId ResolveStepDefinitionId(ProcessStepInstanceId stepId)
+        => new(stepId.Value);
 
     private static IAgentFrameworkWorkspaceService CreateWorkspaceService(
         ExecutionRunRecord executionRun)
@@ -712,7 +734,28 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
     private static string ComputeHash(string content)
         => "sha256:" +
            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)))
-               .ToLowerInvariant();
+                .ToLowerInvariant();
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        internal List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Messages.Add(formatter(state, exception));
+        }
+    }
 
     private sealed class RecordingRuntimeStore(ProcessRuntimeStateSnapshot state) :
         IProcessRuntimeStateStore,

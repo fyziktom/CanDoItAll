@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Persistence;
@@ -14,6 +15,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     IDbContextFactory<ProcessPersistenceDbContext> processDbContextFactory,
     ProcessDefinitionCatalogProjectionService definitionCatalogProjectionService,
     IWorkspacePathResolver workspacePathResolver,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     ILogger<ProjectStructureProcessProjectionContributor> logger,
     ProjectStructureProcessRunRecordProjector runRecordProjector) : IProjectStructureProjectionContributor
 {
@@ -1091,6 +1093,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 return [];
             }
 
+            var runPathPolicy = physicalPathPolicyFactory.Create(runRoot);
             return Directory
                 .EnumerateFiles(
                     runRoot,
@@ -1100,11 +1103,15 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                         RecurseSubdirectories = true,
                         IgnoreInaccessible = true,
                         AttributesToSkip = FileAttributes.ReparsePoint
-                    })
+                })
                 .Where(path => ScreenshotExtensions.Contains(Path.GetExtension(path)))
-                .Select(path => CreateProjectedProcessRunFile(workspaceRoot, path))
+                .Select(path =>
+                {
+                    runPathPolicy.EnsureSafePath(path);
+                    return CreateProjectedProcessRunFile(workspaceRoot, path);
+                })
                 .OrderByDescending(file => file.LastWriteTimeUtc)
-                .ThenBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(file => file.RelativePath, StringComparer.Ordinal)
                 .Take(MaxProjectedScreenshotCount)
                 .ToArray();
         }
@@ -1172,6 +1179,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 return false;
             }
 
+            physicalPathPolicyFactory.Create(candidatePath).EnsureSafePath(candidatePath);
             fullPath = candidatePath;
             return true;
         }
@@ -1184,6 +1192,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
 
     private IReadOnlyList<ProjectedRuntimeProject> FindRuntimeProjects(string productRoot)
     {
+        var physicalPathPolicy = physicalPathPolicyFactory.Create(productRoot);
         var candidates = new List<string>();
         var pending = new Stack<(string DirectoryPath, int Depth)>();
         var visitedEntryCount = 0;
@@ -1194,7 +1203,12 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                candidates.Count < MaxProjectedRuntimeProjectCount * 4)
         {
             var current = pending.Pop();
-            if (!TryEnumerateFileSystemEntries(current.DirectoryPath, "*.csproj", filesOnly: true, out var projectFiles))
+            if (!TryEnumerateFileSystemEntries(
+                    physicalPathPolicy,
+                    current.DirectoryPath,
+                    "*.csproj",
+                    filesOnly: true,
+                    out var projectFiles))
             {
                 continue;
             }
@@ -1215,14 +1229,19 @@ internal sealed class ProjectStructureProcessProjectionContributor(
                 continue;
             }
 
-            if (!TryEnumerateFileSystemEntries(current.DirectoryPath, "*", filesOnly: false, out var childDirectories))
+            if (!TryEnumerateFileSystemEntries(
+                    physicalPathPolicy,
+                    current.DirectoryPath,
+                    "*",
+                    filesOnly: false,
+                    out var childDirectories))
             {
                 continue;
             }
 
             foreach (var childDirectory in childDirectories
                 .Where(directory => !ShouldSkipRuntimeProjectDirectory(directory))
-                .OrderByDescending(directory => directory, StringComparer.OrdinalIgnoreCase))
+                .Reverse())
             {
                 pending.Push((childDirectory, current.Depth + 1));
                 visitedEntryCount++;
@@ -1234,10 +1253,13 @@ internal sealed class ProjectStructureProcessProjectionContributor(
         }
 
         var orderedCandidates = candidates
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(physicalPathPolicy.PathComparer)
             .OrderBy(IsLikelyTestProject)
             .ThenBy(path => CountPathSegments(Path.GetRelativePath(productRoot, path)))
-            .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(
+                path => NormalizeEnumerationKey(Path.GetRelativePath(productRoot, path)),
+                StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
             .ToArray();
         var appCandidates = orderedCandidates
             .Where(path => !IsLikelyTestProject(path))
@@ -1257,6 +1279,7 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     }
 
     private bool TryEnumerateFileSystemEntries(
+        IPhysicalFileSystemPathPolicy physicalPathPolicy,
         string directoryPath,
         string searchPattern,
         bool filesOnly,
@@ -1264,9 +1287,21 @@ internal sealed class ProjectStructureProcessProjectionContributor(
     {
         try
         {
-            entries = filesOnly
+            physicalPathPolicy.EnsureSafePath(directoryPath);
+            var materialized = filesOnly
                 ? Directory.EnumerateFiles(directoryPath, searchPattern, SearchOption.TopDirectoryOnly).ToArray()
                 : Directory.EnumerateDirectories(directoryPath, searchPattern, SearchOption.TopDirectoryOnly).ToArray();
+            foreach (var entry in materialized)
+            {
+                physicalPathPolicy.EnsureSafePath(entry);
+            }
+
+            entries = materialized
+                .OrderBy(
+                    path => NormalizeEnumerationKey(Path.GetRelativePath(physicalPathPolicy.RootPath, path)),
+                    StringComparer.Ordinal)
+                .ThenBy(path => path, StringComparer.Ordinal)
+                .ToArray();
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
@@ -1276,6 +1311,11 @@ internal sealed class ProjectStructureProcessProjectionContributor(
             return false;
         }
     }
+
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 
     private static bool ShouldSkipRuntimeProjectDirectory(string directoryPath)
     {

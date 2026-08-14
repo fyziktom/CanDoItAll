@@ -1,15 +1,19 @@
 using CanDoItAll.Memory.SourceGateway;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AppComponents.FileTools;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
+using CanDoItAll.FileTools.FileInteraction.Spreadsheet;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Projects;
@@ -24,7 +28,9 @@ namespace CanDoItAll.Modules.Workbench;
 
 public static class WorkbenchModuleServiceCollectionExtensions
 {
-    public static IServiceCollection AddWorkbenchModule(this IServiceCollection services)
+    public static IServiceCollection AddWorkbenchModule(
+        this IServiceCollection services,
+        IConfiguration? configuration = null)
     {
         services.TryAddEnumerable(ServiceDescriptor.Singleton<
             IAgentExecutionSourceAuthorityProvider,
@@ -34,7 +40,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
             .AddZoomPanRenderers()
             .AddMarkdown()
             .AddWorkbenchMermaid()
-            .AddWorkbenchSpreadsheetPreview());
+            .AddSpreadsheet());
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddScoped<ISpreadsheetWorkbookContentPreviewService>(serviceProvider =>
             serviceProvider.GetRequiredService<ISpreadsheetDocumentService>());
@@ -143,7 +149,11 @@ public static class WorkbenchModuleServiceCollectionExtensions
             var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
             var profile = serviceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveCurrentProfile();
             var scope = WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N"));
-            return new WorkspacePathResolutionService(workspaceRoot, scope);
+            return new WorkspacePathResolutionService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                scope,
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.AddScoped<ProjectStructureSourceWorkspacePathResolver>();
         services.AddScoped<ProjectStructureSubprojectTransferCoordinator>();
@@ -158,6 +168,23 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectMemoryIngestionService>();
         services.AddScoped<IProjectStructureLocalFileOpener, ProjectStructureLocalFileOpener>();
         services.AddScoped<IProjectStructureDotNetProjectTargetResolver, ProjectStructureDotNetProjectTargetResolver>();
+        services.TryAddSingleton(ProjectStructureRuntimeHostContext.CaptureCurrent());
+        services.TryAddSingleton(
+            configuration?.GetSection(ProjectStructureRuntimePresentationOptions.SectionName)
+                .Get<ProjectStructureRuntimePresentationOptions>() ??
+            ProjectStructureRuntimePresentationOptions.Default);
+        services.TryAddSingleton<ProjectStructureRuntimePlanCompiler>();
+        services.TryAddSingleton<WorkspaceExecutableLocator>();
+        services.AddScoped<IProjectStructureExecutableResolver, ProjectStructureExecutableResolver>();
+        services.AddScoped<ProjectStructureRuntimePathResolver>();
+        services.TryAddSingleton<ProjectStructureRuntimeSessionRegistry>();
+        services.TryAddSingleton<IProjectStructureRuntimeSessionRegistry>(serviceProvider =>
+            serviceProvider.GetRequiredService<ProjectStructureRuntimeSessionRegistry>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, ProjectStructureRuntimeSessionRegistryHostedService>());
+        services.AddScoped<IProjectStructureRuntimeExecutionAdapter, ProjectStructureRuntimeExecutionAdapter>();
+        services.AddScoped<IProjectStructureTerminalPresenter, ProjectStructureTerminalPresenter>();
+        services.AddScoped<IProjectStructureRuntimeElevationAdapter, ProjectStructureRuntimeElevationAdapter>();
         services.AddScoped<IProjectStructureRuntimeLauncher, ProjectStructureRuntimeLauncher>();
         services.AddScoped<ProjectStructureRuntimeNodeMetadataBoundary>();
         services.AddScoped<IProjectStructureNodeFileScopeProvider, ProjectStructureFileScopeResolver>();

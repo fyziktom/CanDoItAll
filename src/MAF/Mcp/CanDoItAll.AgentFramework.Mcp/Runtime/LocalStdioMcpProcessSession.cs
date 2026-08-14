@@ -1,140 +1,159 @@
-using System.Diagnostics;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Mcp;
 
-internal sealed class LocalStdioMcpProcessSession(
-    LocalStdioMcpServerDescriptor descriptor)
+internal sealed class LocalStdioMcpProcessSession
 {
-    private readonly McpStandardErrorCollector standardError = new();
-    private Process? process;
+    private readonly McpServerKey serverKey;
+    private readonly string correlationId;
+    private readonly IWorkspaceLongRunningProcessHost processHost;
+    private readonly IWorkspacePathResolutionService pathResolver;
+    private McpJsonRpcStreamReader? messageReader;
+    private LocalStdioMcpServerDescriptor? pendingDescriptor;
+    private IWorkspaceDuplexProcessSession? session;
+
+    public LocalStdioMcpProcessSession(
+        LocalStdioMcpServerDescriptor descriptor,
+        string correlationId,
+        IWorkspaceLongRunningProcessHost processHost,
+        IWorkspacePathResolutionService pathResolver)
+    {
+        pendingDescriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+        serverKey = descriptor.ServerKey;
+        this.correlationId = correlationId;
+        this.processHost = processHost ?? throw new ArgumentNullException(nameof(processHost));
+        this.pathResolver = pathResolver ?? throw new ArgumentNullException(nameof(pathResolver));
+    }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (process is not null)
+        if (session is not null)
         {
             throw new InvalidOperationException("MCP process has already been started.");
         }
 
-        process = await LocalStdioMcpProcessLauncher.StartAsync(
-            descriptor,
-            cancellationToken);
-        standardError.Start(process.StandardError);
+        var descriptor = Interlocked.Exchange(ref pendingDescriptor, null)
+            ?? throw new InvalidOperationException("MCP process launch has already been attempted.");
+        session = await LocalStdioMcpProcessLauncher.StartAsync(
+                descriptor,
+                correlationId,
+                processHost,
+                pathResolver,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
-    public Process RequireRunningProcess(
+    public IWorkspaceDuplexProcessSession RequireRunningSession(
         CapabilityDiagnosticCategory category,
         string fieldPath)
     {
-        var currentProcess = process;
-        if (currentProcess is null)
+        var currentSession = session;
+        if (currentSession is null)
         {
             throw new McpSetupException(
                 category,
                 fieldPath,
-                $"MCP server '{descriptor.ServerKey}' has not been started.",
+                $"MCP server '{serverKey}' has not been started.",
                 "Start the MCP runtime before calling MCP methods.");
         }
 
-        if (currentProcess.HasExited)
+        if (currentSession.HasExited)
         {
-            throw ExitedProcessException(currentProcess, category, fieldPath);
+            throw ExitedProcessException(category, fieldPath);
         }
 
-        return currentProcess;
+        return currentSession;
     }
 
     public async Task<string> ReadNextMessageAsync(
-        Process currentProcess,
+        IWorkspaceDuplexProcessSession currentSession,
+        McpStdioMessageFraming messageFraming,
         CapabilityDiagnosticCategory category,
         string fieldPath,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await McpJsonRpcFraming.ReadMessageAsync(
-                currentProcess.StandardOutput.BaseStream,
-                descriptor.MessageFraming,
-                cancellationToken);
+            messageReader ??= new McpJsonRpcStreamReader(
+                currentSession.StandardOutput,
+                messageFraming,
+                McpPayloadSizeLimit.Default);
+            return await messageReader.ReadAsync(cancellationToken);
         }
-        catch (EndOfStreamException) when (currentProcess.HasExited)
+        catch (EndOfStreamException) when (currentSession.HasExited)
         {
-            throw ExitedProcessException(currentProcess, category, fieldPath);
+            throw ExitedProcessException(category, fieldPath);
         }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        var currentProcess = process;
-        process = null;
-        if (currentProcess is null)
+        var currentSession = Interlocked.Exchange(ref session, null);
+        messageReader = null;
+        pendingDescriptor = null;
+        if (currentSession is null)
         {
             return;
         }
 
         try
         {
-            if (!currentProcess.HasExited)
+            currentSession.CompleteStandardInput();
+            using var grace = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            grace.CancelAfter(TimeSpan.FromSeconds(2));
+            try
             {
-                TryCloseStandardInput(currentProcess);
-                await WaitForExitAsync(currentProcess, cancellationToken);
+                var result = await currentSession.WaitForExitAsync(grace.Token).ConfigureAwait(false);
+                EnsureCleanupConfirmed(result.ResidualProcessPossible);
             }
-
-            await standardError.WaitForCompletionAsync();
+            catch (OperationCanceledException)
+            {
+                var result = await currentSession.TerminateAsync(
+                    WorkspaceProcessTerminationReason.CallerCanceled,
+                    "The MCP process did not exit during bounded shutdown.",
+                    CancellationToken.None).ConfigureAwait(false);
+                EnsureCleanupConfirmed(result.ResidualProcessPossible);
+            }
         }
         finally
         {
-            currentProcess.Dispose();
+            await currentSession.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    private void EnsureCleanupConfirmed(bool residualProcessPossible)
+    {
+        if (!residualProcessPossible)
+        {
+            return;
+        }
+
+        throw new McpSetupException(
+            CapabilityDiagnosticCategory.ResourceCleanup,
+            "$.cleanup",
+            $"MCP server '{serverKey}' process-tree cleanup could not be confirmed.",
+            "Inspect and reclaim the owned MCP process tree before retrying this server.");
     }
 
     public string BuildStandardErrorSuffix()
     {
-        return standardError.BuildDiagnosticSuffix();
-    }
-
-    private async Task WaitForExitAsync(
-        Process currentProcess,
-        CancellationToken cancellationToken)
-    {
-        using var waitCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken);
-        waitCancellation.CancelAfter(TimeSpan.FromSeconds(2));
-        try
-        {
-            await currentProcess.WaitForExitAsync(waitCancellation.Token);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            currentProcess.Kill(entireProcessTree: true);
-            await currentProcess.WaitForExitAsync(CancellationToken.None);
-        }
+        var hasStandardError = !string.IsNullOrWhiteSpace(session?.CaptureOutput().Stderr);
+        return !hasStandardError
+            ? string.Empty
+            : " A bounded redacted stderr tail was captured and withheld from diagnostics.";
     }
 
     private McpSetupException ExitedProcessException(
-        Process currentProcess,
         CapabilityDiagnosticCategory category,
         string fieldPath)
     {
         return new McpSetupException(
             category,
             fieldPath,
-            $"MCP server '{descriptor.ServerKey}' exited with code {currentProcess.ExitCode}.{BuildStandardErrorSuffix()}",
-            "Inspect the MCP command, arguments, working directory, and stderr output.");
-    }
-
-    private static void TryCloseStandardInput(Process currentProcess)
-    {
-        try
-        {
-            currentProcess.StandardInput.Close();
-        }
-        catch (InvalidOperationException)
-        {
-        }
-        catch (IOException)
-        {
-        }
+            $"MCP server '{serverKey}' exited unexpectedly.{BuildStandardErrorSuffix()}",
+            "Inspect the MCP command, managed package, and bounded stderr output.",
+            transportFailure: McpTransportFailureKind.ProcessExited);
     }
 }

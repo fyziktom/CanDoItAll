@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -43,8 +44,9 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
     private readonly Func<string, IReadOnlyList<string>> enumerateProjectFiles;
 
     public WorkspaceDestinationContentPlacementPolicy(WorkspacePathPolicy pathPolicy)
-        : this(pathPolicy, EnumerateProjectFiles)
     {
+        this.pathPolicy = pathPolicy ?? throw new ArgumentNullException(nameof(pathPolicy));
+        enumerateProjectFiles = EnumerateProjectFiles;
     }
 
     internal WorkspaceDestinationContentPlacementPolicy(
@@ -77,7 +79,7 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
 
         var authorityRoot = ResolveAuthorityRoot(destination, authorityRootPath);
         if (candidateList.Any(candidate =>
-                !WorkspacePathPolicy.IsPathWithinRoot(candidate.FullPath, authorityRoot)))
+                !pathPolicy.IsPathWithinRoot(candidate.FullPath, authorityRoot)))
         {
             message = "Cannot place content outside the authorized destination root.";
             return true;
@@ -163,7 +165,7 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
         return true;
     }
 
-    private static bool TryGetNestedProjectFileMessage(
+    private bool TryGetNestedProjectFileMessage(
         WorkspaceDestinationContentCandidate candidate,
         string authorityRoot,
         IReadOnlyList<string> plannedBuildProjectFiles,
@@ -186,8 +188,9 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
         {
             var projectDirectory = Path.GetDirectoryName(projectFile);
             return !string.IsNullOrWhiteSpace(projectDirectory) &&
-                   !string.Equals(projectDirectory, targetDirectoryPath, StringComparison.OrdinalIgnoreCase) &&
-                   WorkspacePathPolicy.IsPathWithinRoot(targetDirectoryPath, projectDirectory);
+                   !pathPolicy.GetPhysicalPathComparer(authorityRoot)
+                       .Equals(projectDirectory, targetDirectoryPath) &&
+                   pathPolicy.IsPathWithinRoot(targetDirectoryPath, projectDirectory);
         });
         if (!string.IsNullOrWhiteSpace(plannedAncestor))
         {
@@ -197,7 +200,7 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
 
         var currentDirectory = Directory.GetParent(targetDirectoryPath);
         while (currentDirectory is not null &&
-               WorkspacePathPolicy.IsPathWithinRoot(currentDirectory.FullName, authorityRoot))
+               pathPolicy.IsPathWithinRoot(currentDirectory.FullName, authorityRoot))
         {
             if (ContainsTopLevelBuildProjectFile(currentDirectory.FullName))
             {
@@ -211,7 +214,7 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
         return false;
     }
 
-    private static bool TryGetNestedProjectContainerMessage(
+    private bool TryGetNestedProjectContainerMessage(
         WorkspaceDestinationContentCandidate candidate,
         string authorityRoot,
         IReadOnlyList<string> projectFiles,
@@ -233,7 +236,7 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
             ? new DirectoryInfo(targetDirectory)
             : Directory.GetParent(targetDirectory);
         while (currentDirectory is not null &&
-               WorkspacePathPolicy.IsPathWithinRoot(currentDirectory.FullName, authorityRoot))
+               pathPolicy.IsPathWithinRoot(currentDirectory.FullName, authorityRoot))
         {
             if (ContainsTopLevelProjectFile(currentDirectory.FullName))
             {
@@ -270,7 +273,7 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
                 allowWorkspaceRoot: true,
                 out var authorityResolution,
                 out _) &&
-            WorkspacePathPolicy.IsPathWithinRoot(destination.FullPath, authorityResolution.FullPath))
+            pathPolicy.IsPathWithinRoot(destination.FullPath, authorityResolution.FullPath))
         {
             return authorityResolution.FullPath;
         }
@@ -293,17 +296,31 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
                ProjectSourceFileExtensions.Contains(extension);
     }
 
-    private static bool ContainsTopLevelProjectFile(string directory)
-        => Directory.Exists(directory) &&
-           Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-               .Any(path => ProjectFileExtensions.Contains(Path.GetExtension(path)));
+    private bool ContainsTopLevelProjectFile(string directory)
+        => ContainsTopLevelFile(directory, ProjectFileExtensions);
 
-    private static bool ContainsTopLevelBuildProjectFile(string directory)
-        => Directory.Exists(directory) &&
-           Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-               .Any(path => BuildProjectFileExtensions.Contains(Path.GetExtension(path)));
+    private bool ContainsTopLevelBuildProjectFile(string directory)
+        => ContainsTopLevelFile(directory, BuildProjectFileExtensions);
 
-    private static bool TryFindSameNamedNestedProject(
+    private bool ContainsTopLevelFile(string directory, IReadOnlySet<string> extensions)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return false;
+        }
+
+        IPhysicalFileSystemPathPolicy physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(directory);
+        return Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .Any(path =>
+            {
+                physicalPathPolicy.EnsureSafePath(path);
+                return extensions.Contains(Path.GetExtension(path));
+            });
+    }
+
+    private bool TryFindSameNamedNestedProject(
         string containerDirectory,
         IReadOnlyList<string> projectFiles,
         out string projectFile)
@@ -322,14 +339,15 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
 
         foreach (var candidate in projectFiles)
         {
-            if (!WorkspacePathPolicy.IsPathWithinRoot(candidate, containerDirectory))
+            if (!pathPolicy.IsPathWithinRoot(candidate, containerDirectory))
             {
                 continue;
             }
 
             var projectDirectory = Path.GetDirectoryName(candidate);
             if (string.IsNullOrWhiteSpace(projectDirectory) ||
-                string.Equals(projectDirectory, containerDirectory, StringComparison.OrdinalIgnoreCase))
+                pathPolicy.GetPhysicalPathComparer(containerDirectory)
+                    .Equals(projectDirectory, containerDirectory))
             {
                 continue;
             }
@@ -345,13 +363,14 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
         return false;
     }
 
-    private static IReadOnlyList<string> EnumerateProjectFiles(string authorityRoot)
+    private IReadOnlyList<string> EnumerateProjectFiles(string authorityRoot)
     {
         if (!Directory.Exists(authorityRoot))
         {
             return [];
         }
 
+        IPhysicalFileSystemPathPolicy physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(authorityRoot);
         return Directory.EnumerateFiles(
                 authorityRoot,
                 "*.*",
@@ -360,8 +379,18 @@ internal sealed class WorkspaceDestinationContentPlacementPolicy
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = false,
                     AttributesToSkip = FileAttributes.ReparsePoint
-                })
+            })
             .Where(path => ProjectFileExtensions.Contains(Path.GetExtension(path)))
+            .Select(path =>
+            {
+                physicalPathPolicy.EnsureSafePath(path);
+                return path;
+            })
+            .OrderBy(
+                path => WorkspacePathPolicy.NormalizeRelativePath(
+                    Path.GetRelativePath(authorityRoot, path)),
+                StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
             .ToArray();
     }
 }

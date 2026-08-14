@@ -2,16 +2,39 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-internal sealed class MafScriptPolicyInspectionService(
-    string workspaceRoot,
-    WorkspaceScopeDescriptor workspaceScope)
+internal sealed class MafScriptPolicyInspectionService
 {
     private const long MaxPolicyInspectedScriptBytes = 128 * 1024;
 
-    private readonly string workspaceRoot = Path.GetFullPath(workspaceRoot);
+    private readonly string workspaceRoot;
+    private readonly IPhysicalFileSystemPathPolicy workspacePathPolicy;
+    private readonly WorkspaceScopeDescriptor workspaceScope;
+    private readonly IExternalTargetPathRegistry externalTargetPathRegistry;
+
+    public MafScriptPolicyInspectionService(
+        string workspaceRoot,
+        WorkspaceScopeDescriptor workspaceScope,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        IExternalTargetPathRegistry externalTargetPathRegistry)
+    {
+        if (string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
+        }
+
+        workspacePathPolicy = physicalPathPolicyFactory.Create(workspaceRoot);
+        this.workspaceRoot = workspacePathPolicy.RootPath;
+        this.workspaceScope = workspaceScope ?? throw new ArgumentNullException(nameof(workspaceScope));
+        this.externalTargetPathRegistry = externalTargetPathRegistry ??
+            throw new ArgumentNullException(nameof(externalTargetPathRegistry));
+    }
 
     public ScriptContentInspection ResolveScriptContentInspectionForPolicy(
         string functionName,
@@ -147,7 +170,7 @@ internal sealed class MafScriptPolicyInspectionService(
             {
                 var readableAliases = auditScope.AllowedExternalTargetAliases
                     .Concat(auditScope.ReadOnlyExternalTargetAliases)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Distinct(ExternalTargetAliasCodec.EqualityComparer)
                     .ToArray();
                 if (!AgentWorkspaceToolAccessMetadata.IsExternalTargetAliasAllowed(normalizedAlias, readableAliases))
                 {
@@ -156,14 +179,32 @@ internal sealed class MafScriptPolicyInspectionService(
                 }
             }
 
-            return TryMapExternalTargetAliasToFullPath(normalizedAlias, out fullPath, out failureMessage);
+            var resolution = externalTargetPathRegistry.TryResolve(
+                normalizedAlias,
+                out fullPath,
+                out var validationMessage);
+            if (resolution == ExternalTargetAliasResolutionKind.Resolved)
+            {
+                return true;
+            }
+
+            failureMessage = resolution == ExternalTargetAliasResolutionKind.NotVersionedAlias
+                ? $"script path '{normalizedAlias}' uses a legacy external-target alias that requires migration before execution."
+                : $"script path '{normalizedAlias}' could not be resolved: {validationMessage}";
+            fullPath = string.Empty;
+            return false;
         }
 
-        var expandedPath = Environment.ExpandEnvironmentVariables(scriptPath.Trim());
+        var expandedPath = MafRuntimePathResolver.ExpandPortablePath(scriptPath.Trim());
+        if (!TryValidateNativePathSyntax(expandedPath, scriptPath, out failureMessage))
+        {
+            return false;
+        }
+
         if (Path.IsPathRooted(expandedPath))
         {
             fullPath = Path.GetFullPath(expandedPath);
-            if (!MafRuntimePathResolver.IsPathWithinRoot(fullPath, workspaceRoot))
+            if (!workspacePathPolicy.IsWithinRoot(fullPath))
             {
                 failureMessage = $"absolute script path '{scriptPath}' is outside the workspace root.";
                 fullPath = string.Empty;
@@ -183,7 +224,7 @@ internal sealed class MafScriptPolicyInspectionService(
         fullPath = Path.GetFullPath(Path.Combine(
             workspaceRoot,
             scopedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (MafRuntimePathResolver.IsPathWithinRoot(fullPath, workspaceRoot))
+        if (workspacePathPolicy.IsWithinRoot(fullPath))
         {
             return true;
         }
@@ -193,29 +234,22 @@ internal sealed class MafScriptPolicyInspectionService(
         return false;
     }
 
-    private static bool TryMapExternalTargetAliasToFullPath(
-        string alias,
-        out string fullPath,
+    private static bool TryValidateNativePathSyntax(
+        string path,
+        string suppliedPath,
         out string failureMessage)
     {
-        fullPath = string.Empty;
         failureMessage = string.Empty;
-
-        var segments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length < 2 ||
-            !string.Equals(segments[0], "external-target", StringComparison.OrdinalIgnoreCase) ||
-            segments[1].Length != 1 ||
-            !char.IsLetter(segments[1][0]))
+        try
         {
-            failureMessage = $"script path '{alias}' uses invalid external-target syntax.";
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(path, "MAF script-policy path");
+            return true;
+        }
+        catch (InvalidOperationException exception)
+        {
+            failureMessage = $"script path '{suppliedPath}' is not valid on this host: {exception.Message}";
             return false;
         }
-
-        var driveRoot = $"{char.ToUpperInvariant(segments[1][0])}:{Path.DirectorySeparatorChar}";
-        fullPath = segments.Length == 2
-            ? driveRoot
-            : Path.GetFullPath(Path.Combine(driveRoot, Path.Combine(segments.Skip(2).ToArray())));
-        return true;
     }
 
     private string ApplyManagedRootScopeForPolicy(string relativePath)

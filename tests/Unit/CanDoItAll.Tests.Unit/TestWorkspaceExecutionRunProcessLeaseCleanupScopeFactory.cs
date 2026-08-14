@@ -13,7 +13,7 @@ internal sealed class TestWorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
         var processHost = createProcessHost()
             ?? throw new InvalidOperationException(
                 "The test cleanup scope factory produced no process host.");
-        var commandExecutionService = new WorkspaceCommandExecutionService(
+        var commandExecutionService = TestWorkspaceServices.CreateCommandExecutionService(
             scope.WorkspaceRoot,
             processHost,
             scope.Scope);

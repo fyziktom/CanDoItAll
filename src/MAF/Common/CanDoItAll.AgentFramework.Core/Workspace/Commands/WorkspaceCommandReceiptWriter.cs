@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -37,12 +38,19 @@ internal sealed class WorkspaceCommandReceiptWriter
         ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified,
         IReadOnlyList<string>? environmentVariableNames = null)
     {
+        processResult = processResult with
+        {
+            Stdout = SensitiveTextRedactor.Redact(processResult.Stdout),
+            Stderr = SensitiveTextRedactor.Redact(processResult.Stderr),
+            FailureMessage = SensitiveTextRedactor.Redact(processResult.FailureMessage)
+        };
+        var redactedArguments = SensitiveTextRedactor.RedactArguments(arguments);
         var artifactDirectory = ResolveArtifactDirectory(recipeId, processResult.StartedAtUtc);
         Directory.CreateDirectory(artifactDirectory.FullPath);
         var orderedEnvironmentVariableNames = environmentVariableNames?
             .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray() ?? [];
 
         var stdoutRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(artifactDirectory.RelativePath, "stdout.txt"));
@@ -50,8 +58,12 @@ internal sealed class WorkspaceCommandReceiptWriter
         var requestRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(artifactDirectory.RelativePath, "request.json"));
         var receiptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(artifactDirectory.RelativePath, "receipt.json"));
 
-        File.WriteAllText(Path.Combine(workspaceRoot, stdoutRelativePath.Replace('/', Path.DirectorySeparatorChar)), processResult.Stdout ?? string.Empty);
-        File.WriteAllText(Path.Combine(workspaceRoot, stderrRelativePath.Replace('/', Path.DirectorySeparatorChar)), processResult.Stderr ?? string.Empty);
+        File.WriteAllText(
+            Path.Combine(workspaceRoot, stdoutRelativePath.Replace('/', Path.DirectorySeparatorChar)),
+            SensitiveTextRedactor.Redact(processResult.Stdout));
+        File.WriteAllText(
+            Path.Combine(workspaceRoot, stderrRelativePath.Replace('/', Path.DirectorySeparatorChar)),
+            SensitiveTextRedactor.Redact(processResult.Stderr));
         File.WriteAllText(
             Path.Combine(workspaceRoot, requestRelativePath.Replace('/', Path.DirectorySeparatorChar)),
             JsonSerializer.Serialize(
@@ -61,7 +73,7 @@ internal sealed class WorkspaceCommandReceiptWriter
                     recipeId,
                     decision,
                     workingDirectory,
-                    arguments,
+                    arguments = redactedArguments,
                     targetPaths,
                     environmentVariableNames = orderedEnvironmentVariableNames
                 },
@@ -75,7 +87,9 @@ internal sealed class WorkspaceCommandReceiptWriter
             new("generated-output", stderrRelativePath, $"{recipeId} stderr", "text/plain", "Captured stderr preview.")
         };
 
-        foreach (var targetPath in targetPaths.Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var targetPath in targetPaths
+                     .Where(item => !string.IsNullOrWhiteSpace(item))
+                     .Distinct(ExternalTargetAliasCodec.EqualityComparer))
         {
             var zone = TryClassifyArtifactZone(targetPath, out var classifiedZone)
                 ? classifiedZone
@@ -95,7 +109,7 @@ internal sealed class WorkspaceCommandReceiptWriter
             decision,
             boundary = processResult.Boundary,
             workingDirectory,
-            argumentsSummary = BuildArgumentsSummary(arguments),
+            argumentsSummary = BuildArgumentsSummary(redactedArguments),
             environmentVariableNames = orderedEnvironmentVariableNames,
             processResult.ExitCode,
             processResult.TimedOut,
@@ -119,7 +133,7 @@ internal sealed class WorkspaceCommandReceiptWriter
 
         var auditedRequestSummary = BuildAuditedProcessRequestSummary(
             toolName,
-            arguments,
+            redactedArguments,
             targetPaths,
             processResult.Stdout,
             processResult.Stderr);
@@ -272,7 +286,9 @@ internal sealed class WorkspaceCommandReceiptWriter
         => $"{boundary.Mode} via {boundary.HostLabel} (host-enforced: {boundary.IsEnforcedByHost.ToString().ToLowerInvariant()})";
 
     public static string BuildArgumentsSummary(IReadOnlyList<string> arguments)
-        => string.Join(" ", arguments.Select(QuoteArgumentIfNeeded));
+        => string.Join(
+            " ",
+            SensitiveTextRedactor.RedactArguments(arguments).Select(QuoteArgumentIfNeeded));
 
     private string BuildAuditedProcessRequestSummary(
         string toolName,
@@ -356,7 +372,7 @@ internal sealed class WorkspaceCommandReceiptWriter
 
     private static bool IsWithinScopedRoot(string relativePath, string rootRelativePath)
     {
-        return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase)
-               || relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(relativePath, rootRelativePath, StringComparison.Ordinal)
+               || relativePath.StartsWith(rootRelativePath + "/", StringComparison.Ordinal);
     }
 }

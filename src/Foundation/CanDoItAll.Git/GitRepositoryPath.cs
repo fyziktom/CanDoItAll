@@ -1,3 +1,6 @@
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.FileSystem;
+
 namespace CanDoItAll.Git;
 
 public readonly record struct GitRepositoryPath
@@ -7,6 +10,13 @@ public readonly record struct GitRepositoryPath
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new ArgumentException("Git repository path cannot be empty.", nameof(value));
+        }
+
+        if (GitPhysicalPathSyntaxPolicy.IsForeign(value))
+        {
+            throw new ArgumentException(
+                "Git repository path uses physical path syntax from another host and requires explicit rebind or migration.",
+                nameof(value));
         }
 
         Value = Path.GetFullPath(value);
@@ -55,14 +65,27 @@ public sealed record GitPathSpec
             throw new ArgumentException("Git full path cannot be empty.", nameof(fullPath));
         }
 
-        var candidateRelativePath = repositoryRelativePath.Trim().Replace('\\', '/');
-        if (Path.IsPathRooted(candidateRelativePath) ||
-            candidateRelativePath.StartsWith("/", StringComparison.Ordinal))
+        if (GitPhysicalPathSyntaxPolicy.IsForeign(fullPath))
         {
-            throw new ArgumentException("Git path must be repository-relative.", nameof(repositoryRelativePath));
+            throw new ArgumentException(
+                "Git full path uses physical path syntax from another host and requires explicit rebind or migration.",
+                nameof(fullPath));
         }
 
-        var normalizedRelativePath = candidateRelativePath.Trim('/');
+        LogicalPath logicalPath;
+        try
+        {
+            logicalPath = LogicalPath.ParseLegacyWindowsLogicalPath(repositoryRelativePath);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new ArgumentException(
+                "Git path must be a valid repository-relative logical path.",
+                nameof(repositoryRelativePath),
+                exception);
+        }
+
+        var normalizedRelativePath = logicalPath.Value;
         if (GitPathRules.IsForbiddenRepositoryRelativePath(normalizedRelativePath))
         {
             throw new ArgumentException("Git path is not an allowed repository-relative path.", nameof(repositoryRelativePath));
@@ -86,24 +109,86 @@ public sealed record GitPathAuthorizationResult(
 public static class GitPathAuthorizer
 {
     public static GitPathAuthorizationResult Authorize(GitRepositoryPath repositoryPath, string candidatePath)
+        => AuthorizeCore(repositoryPath, candidatePath, physicalPathPolicyFactory: null);
+
+    public static GitPathAuthorizationResult Authorize(
+        GitRepositoryPath repositoryPath,
+        string candidatePath,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
+    {
+        ArgumentNullException.ThrowIfNull(physicalPathPolicyFactory);
+        return AuthorizeCore(repositoryPath, candidatePath, physicalPathPolicyFactory);
+    }
+
+    private static GitPathAuthorizationResult AuthorizeCore(
+        GitRepositoryPath repositoryPath,
+        string candidatePath,
+        IPhysicalFileSystemPathPolicyFactory? physicalPathPolicyFactory)
     {
         if (string.IsNullOrWhiteSpace(candidatePath))
         {
             return Denied("GitPath.Empty", "Git path cannot be empty.");
         }
 
-        var root = EnsureTrailingSeparator(repositoryPath.Value);
-        var fullPath = Path.IsPathRooted(candidatePath)
-            ? Path.GetFullPath(candidatePath)
-            : Path.GetFullPath(Path.Combine(repositoryPath.Value, candidatePath));
+        if (GitPhysicalPathSyntaxPolicy.IsForeign(candidatePath))
+        {
+            return Denied(
+                "GitPath.ForeignHostPath",
+                "Git path uses physical path syntax from another host and requires explicit rebind or migration.");
+        }
 
-        if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(fullPath, repositoryPath.Value, StringComparison.OrdinalIgnoreCase))
+        string fullPath;
+        if (Path.IsPathRooted(candidatePath))
+        {
+            fullPath = Path.GetFullPath(candidatePath);
+        }
+        else
+        {
+            LogicalPath logicalPath;
+            try
+            {
+                logicalPath = LogicalPath.ParseLegacyWindowsLogicalPath(candidatePath);
+            }
+            catch (ArgumentException)
+            {
+                return Denied("GitPath.InvalidLogicalPath", "Git path is not a valid repository-relative logical path.");
+            }
+
+            fullPath = Path.GetFullPath(Path.Combine(
+                repositoryPath.Value,
+                Path.Combine(logicalPath.Segments.ToArray())));
+        }
+
+        if (physicalPathPolicyFactory is not null)
+        {
+            try
+            {
+                IPhysicalFileSystemPathPolicy policy = physicalPathPolicyFactory.Create(repositoryPath.Value);
+                if (!policy.IsWithinRoot(fullPath))
+                {
+                    return Denied("GitPath.OutsideRepository", "Git path must stay inside the authorized repository root.");
+                }
+
+                policy.EnsureSafePath(fullPath, allowMissingLeaf: true);
+            }
+            catch (IOException)
+            {
+                return Denied("GitPath.UnsafePhysicalPath", "Git path cannot be validated safely on the repository filesystem.");
+            }
+        }
+        else if (!fullPath.StartsWith(EnsureTrailingSeparator(repositoryPath.Value), StringComparison.Ordinal) &&
+                 !string.Equals(fullPath, repositoryPath.Value, StringComparison.Ordinal))
         {
             return Denied("GitPath.OutsideRepository", "Git path must stay inside the authorized repository root.");
         }
 
-        var relativePath = Path.GetRelativePath(repositoryPath.Value, fullPath).Replace('\\', '/');
+        var hostRelativePath = Path.GetRelativePath(repositoryPath.Value, fullPath);
+        if (string.Equals(hostRelativePath, ".", StringComparison.Ordinal))
+        {
+            return Denied("GitPath.ForbiddenPath", "Git path is not an allowed repository-relative path.");
+        }
+
+        var relativePath = LogicalPath.ParseLegacyWindowsLogicalPath(hostRelativePath).Value;
         if (GitPathRules.IsForbiddenRepositoryRelativePath(relativePath))
         {
             return Denied("GitPath.ForbiddenPath", "Git path is not an allowed repository-relative path.");
@@ -126,6 +211,23 @@ public static class GitPathAuthorizer
         return path.EndsWith(Path.DirectorySeparatorChar)
             ? path
             : path + Path.DirectorySeparatorChar;
+    }
+}
+
+internal static class GitPhysicalPathSyntaxPolicy
+{
+    public static bool IsForeign(string path)
+    {
+        var syntax = PhysicalPathSyntaxClassifier.Classify(path);
+        return syntax switch
+        {
+            PhysicalPathSyntax.Relative => false,
+            PhysicalPathSyntax.UnixAbsolute => OperatingSystem.IsWindows(),
+            PhysicalPathSyntax.WindowsDriveAbsolute or
+                PhysicalPathSyntax.WindowsUnc or
+                PhysicalPathSyntax.WindowsDevice => !OperatingSystem.IsWindows(),
+            _ => true
+        };
     }
 }
 

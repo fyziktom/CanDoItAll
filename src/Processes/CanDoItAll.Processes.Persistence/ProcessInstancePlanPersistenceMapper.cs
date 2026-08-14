@@ -13,6 +13,7 @@ internal static class ProcessInstancePlanPersistenceMapper
     public static ProcessInstancePlanEntity ToEntity(ProcessInstancePlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        EnsureCanonicalPlanHash(plan);
 
         return new ProcessInstancePlanEntity
         {
@@ -23,6 +24,8 @@ internal static class ProcessInstancePlanPersistenceMapper
             DefinitionId = plan.Definition.DefinitionId.Value,
             DefinitionVersionId = plan.Definition.VersionId.Value,
             PlanHash = plan.PlanHash,
+            PlanHashAlgorithmVersion = ProcessPlanHasher.CurrentAlgorithmVersion,
+            ExecutionState = PersistedProcessPlanExecutionState.Executable,
             PlanSchemaVersion = plan.Header.PlanSchemaVersion,
             DefinitionContentHash = plan.Definition.DefinitionContentHash,
             PayloadJson = JsonSerializer.Serialize(plan, SerializerOptions),
@@ -31,10 +34,14 @@ internal static class ProcessInstancePlanPersistenceMapper
     }
 
     public static ProcessInstancePlan ToPlan(ProcessInstancePlanEntity entity)
+        => Read(entity).RequireExecutablePlan();
+
+    public static ProcessInstancePlanReadResult Read(ProcessInstancePlanEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
 
         var planId = new ProcessInstancePlanId(entity.PlanId);
+        var algorithmVersion = ResolveAlgorithmVersion(entity);
         var plan = JsonSerializer.Deserialize<ProcessInstancePlan>(entity.PayloadJson, SerializerOptions)
             ?? throw new InvalidOperationException($"Process instance plan '{planId}' payload deserialized to null.");
         if (plan.Header.PlanId != planId ||
@@ -44,7 +51,22 @@ internal static class ProcessInstancePlanPersistenceMapper
                 $"Process instance plan '{planId}' payload identity or hash does not match the persisted metadata.");
         }
 
-        return plan;
+        if (!string.Equals(
+                ProcessPlanHasher.Compute(plan, algorithmVersion),
+                entity.PlanHash,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Process instance plan '{planId}' payload identity or hash does not match the persisted metadata.");
+        }
+
+        return algorithmVersion switch
+        {
+            ProcessPlanHashAlgorithmVersion.LegacyV1 => ReadLegacyPlan(entity, plan),
+            ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2 => ReadCurrentPlan(entity, plan),
+            _ => throw new InvalidOperationException(
+                $"Process instance plan '{planId}' uses an unsupported hash algorithm version.")
+        };
     }
 
     public static void EnsureSameIdentityAndHash(
@@ -54,12 +76,101 @@ internal static class ProcessInstancePlanPersistenceMapper
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentNullException.ThrowIfNull(plan);
 
-        if (entity.PlanId != plan.Header.PlanId.Value ||
-            !string.Equals(entity.PlanHash, plan.PlanHash, StringComparison.Ordinal))
+        var persistedPlan = Read(entity).RequireExecutablePlan();
+        if (persistedPlan.Header.PlanId != plan.Header.PlanId ||
+            !string.Equals(entity.PlanHash, plan.PlanHash, StringComparison.Ordinal) ||
+            !string.Equals(ProcessPlanHasher.Compute(plan), plan.PlanHash, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Process instance plan '{plan.Header.PlanId}' already exists with a different identity or hash.");
         }
+    }
+
+    private static void EnsureCanonicalPlanHash(ProcessInstancePlan plan)
+    {
+        if (!string.Equals(ProcessPlanHasher.Compute(plan), plan.PlanHash, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Process instance plan '{plan.Header.PlanId}' does not carry its canonical content hash.");
+        }
+    }
+
+    private static ProcessPlanHashAlgorithmVersion ResolveAlgorithmVersion(
+        ProcessInstancePlanEntity entity)
+    {
+        var payloadShape = ProcessPlanPayloadShapeClassifier.Classify(entity.PayloadJson);
+        if (entity.PlanHashAlgorithmVersion.HasValue)
+        {
+            var expectedShape = entity.PlanHashAlgorithmVersion.Value switch
+            {
+                ProcessPlanHashAlgorithmVersion.LegacyV1 => ProcessPlanPayloadShape.LegacyV1,
+                ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2 => ProcessPlanPayloadShape.HostCapabilitiesV2,
+                _ => ProcessPlanPayloadShape.Unknown
+            };
+            if (payloadShape == expectedShape)
+            {
+                return entity.PlanHashAlgorithmVersion.Value;
+            }
+
+            throw new InvalidOperationException(
+                $"Process instance plan '{new ProcessInstancePlanId(entity.PlanId)}' has conflicting hash algorithm metadata and payload shape.");
+        }
+
+        return payloadShape switch
+        {
+            ProcessPlanPayloadShape.LegacyV1 => ProcessPlanHashAlgorithmVersion.LegacyV1,
+            ProcessPlanPayloadShape.HostCapabilitiesV2 => ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2,
+            _ => throw new InvalidOperationException(
+                $"Process instance plan '{new ProcessInstancePlanId(entity.PlanId)}' has an ambiguous host-capability payload shape.")
+        };
+    }
+
+    private static ProcessInstancePlanReadResult ReadLegacyPlan(
+        ProcessInstancePlanEntity entity,
+        ProcessInstancePlan plan)
+    {
+        if (entity.ExecutionState == PersistedProcessPlanExecutionState.Executable)
+        {
+            throw new InvalidOperationException(
+                $"Legacy process instance plan '{plan.Header.PlanId}' cannot be marked executable without sealed host capabilities.");
+        }
+
+        bool metadataChanged =
+            entity.PlanHashAlgorithmVersion != ProcessPlanHashAlgorithmVersion.LegacyV1 ||
+            entity.ExecutionState != PersistedProcessPlanExecutionState.NeedsRecompile ||
+            entity.MigrationReason != ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed;
+        entity.PlanHashAlgorithmVersion = ProcessPlanHashAlgorithmVersion.LegacyV1;
+        entity.ExecutionState = PersistedProcessPlanExecutionState.NeedsRecompile;
+        entity.MigrationReason = ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed;
+
+        return new ProcessInstancePlanReadResult(
+            plan,
+            metadataChanged,
+            PersistedProcessPlanExecutionState.NeedsRecompile,
+            ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed,
+            ProcessPlanHashAlgorithmVersion.LegacyV1);
+    }
+
+    private static ProcessInstancePlanReadResult ReadCurrentPlan(
+        ProcessInstancePlanEntity entity,
+        ProcessInstancePlan plan)
+    {
+        if (entity.ExecutionState != PersistedProcessPlanExecutionState.Executable ||
+            entity.MigrationReason.HasValue)
+        {
+            throw new InvalidOperationException(
+                $"Current process instance plan '{plan.Header.PlanId}' has inconsistent execution metadata.");
+        }
+
+        var metadataChanged = entity.PlanHashAlgorithmVersion is null;
+        entity.PlanHashAlgorithmVersion = ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2;
+
+        return new ProcessInstancePlanReadResult(
+            plan,
+            metadataChanged,
+            PersistedProcessPlanExecutionState.Executable,
+            null,
+            ProcessPlanHashAlgorithmVersion.HostCapabilitiesV2);
     }
 
     private static JsonSerializerOptions CreateSerializerOptions()
@@ -221,8 +332,23 @@ internal static class ProcessInstancePlanPersistenceMapper
             Type typeToConvert,
             JsonSerializerOptions options)
         {
-            var values = JsonSerializer.Deserialize<List<T>>(ref reader, options) ?? [];
-            return values.ToHashSet();
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                throw new JsonException("Process plan set payload cannot be null.");
+            }
+
+            var values = JsonSerializer.Deserialize<List<T>>(ref reader, options)
+                ?? throw new JsonException("Process plan set payload must be an array.");
+            var result = new HashSet<T>();
+            foreach (var value in values)
+            {
+                if (!result.Add(value))
+                {
+                    throw new JsonException("Process plan set payload cannot contain duplicate values.");
+                }
+            }
+
+            return result;
         }
 
         public override void Write(
@@ -233,4 +359,45 @@ internal static class ProcessInstancePlanPersistenceMapper
             JsonSerializer.Serialize(writer, value.ToArray(), options);
         }
     }
+}
+
+internal sealed record ProcessInstancePlanReadResult(
+    ProcessInstancePlan Plan,
+    bool MetadataChanged,
+    PersistedProcessPlanExecutionState ExecutionState,
+    ProcessPlanMigrationReason? MigrationReason,
+    ProcessPlanHashAlgorithmVersion HashAlgorithmVersion)
+{
+    public ProcessInstancePlan RequireExecutablePlan()
+    {
+        if (ExecutionState == PersistedProcessPlanExecutionState.Executable)
+        {
+            return Plan;
+        }
+
+        throw new ProcessPlanMigrationRequiredException(
+            Plan.Header.PlanId,
+            HashAlgorithmVersion,
+            MigrationReason ?? ProcessPlanMigrationReason.HostCapabilitiesWereNotSealed);
+    }
+}
+
+public sealed class ProcessPlanMigrationRequiredException : InvalidOperationException
+{
+    public ProcessPlanMigrationRequiredException(
+        ProcessInstancePlanId planId,
+        ProcessPlanHashAlgorithmVersion hashAlgorithmVersion,
+        ProcessPlanMigrationReason reason)
+        : base($"Process instance plan '{planId}' is not executable on this version. Recompile the plan before retrying.")
+    {
+        PlanId = planId;
+        HashAlgorithmVersion = hashAlgorithmVersion;
+        Reason = reason;
+    }
+
+    public ProcessInstancePlanId PlanId { get; }
+
+    public ProcessPlanHashAlgorithmVersion HashAlgorithmVersion { get; }
+
+    public ProcessPlanMigrationReason Reason { get; }
 }

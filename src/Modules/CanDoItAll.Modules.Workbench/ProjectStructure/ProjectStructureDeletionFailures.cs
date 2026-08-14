@@ -1,6 +1,42 @@
 namespace CanDoItAll.Modules.Workbench;
 
+using System.Text.Json.Serialization;
 using CanDoItAll.Modules.Projects;
+
+[JsonConverter(typeof(JsonStringEnumConverter<ProjectStructureManagedStorageDisposition>))]
+public enum ProjectStructureManagedStorageDisposition
+{
+    Unspecified = 0,
+    RetainManagedFiles = 1,
+    DeleteOwnedManagedFiles = 2
+}
+
+internal static class ProjectStructureManagedStorageDispositionPolicy
+{
+    public static void EnsureSpecified(ProjectStructureManagedStorageDisposition disposition)
+    {
+        if (disposition is ProjectStructureManagedStorageDisposition.RetainManagedFiles or
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles)
+        {
+            return;
+        }
+
+        throw new ArgumentOutOfRangeException(
+            nameof(disposition),
+            disposition,
+            "A managed-storage disposition is required for project-structure deletion.");
+    }
+
+    public static ProjectStructureManagedStorageDisposition ResolvePersisted(
+        ProjectStructureManagedStorageDisposition disposition)
+    {
+        var resolved = disposition == ProjectStructureManagedStorageDisposition.Unspecified
+            ? ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles
+            : disposition;
+        EnsureSpecified(resolved);
+        return resolved;
+    }
+}
 
 public enum ProjectStructureDeletionCommitState
 {
@@ -24,7 +60,8 @@ public sealed record ProjectStructureDeletionRecovery(
     ProjectStructureDeletionCommitState CommitState,
     bool CanRetryNow,
     DateTimeOffset? RetryAvailableAtUtc,
-    string RetryGuidance);
+    string RetryGuidance,
+    ProjectStructureManagedStorageDisposition ManagedStorageDisposition);
 
 public enum ProjectStructureDeletionWarningKind
 {
@@ -95,14 +132,38 @@ public sealed record ProjectStructureDeletionBatchRecovery(
     Guid ProjectId,
     IReadOnlyList<ProjectStructureDeletionRecovery> Recoveries,
     int CompletedNodeCount,
-    IReadOnlyList<ProjectStructureDeletionWarning> Warnings);
+    IReadOnlyList<ProjectStructureDeletionWarning> Warnings)
+{
+    public IReadOnlyList<ProjectStructureDeletionBranchFailure> BranchFailures { get; init; } = [];
+}
+
+public enum ProjectStructureDeletionBranchFailureKind
+{
+    ManagedStorageValidation = 1,
+    DispositionMismatch = 2,
+    OperationFailed = 3
+}
+
+public sealed record ProjectStructureDeletionBranchFailure(
+    string RootNodeId,
+    ProjectStructureDeletionBranchFailureKind Kind,
+    ProjectStructureManagedStorageDisposition RequestedDisposition,
+    Guid? BindingId,
+    string Message,
+    string Remediation)
+{
+    public ProjectStructureManagedStorageDisposition? SuggestedRetryDisposition { get; init; }
+
+    public int CompletedNodeCount { get; init; }
+}
 
 public sealed class ProjectStructureDeletionBatchPartialCommitException : Exception
 {
     public ProjectStructureDeletionBatchPartialCommitException(
         ProjectStructureDeletionBatchRecovery recovery,
-        string message)
-        : base(message)
+        string message,
+        Exception? innerException = null)
+        : base(message, innerException)
     {
         Recovery = recovery;
     }
@@ -129,4 +190,37 @@ public sealed class ProjectStructureDeletionRecoveryNotFoundException : Exceptio
     public string RootNodeId { get; }
 
     public Guid DurableMutationId { get; }
+}
+
+public sealed class ProjectStructureDeletionDispositionMismatchException : Exception
+{
+    public ProjectStructureDeletionDispositionMismatchException(
+        Guid projectId,
+        string rootNodeId,
+        Guid durableMutationId,
+        ProjectStructureManagedStorageDisposition requestedDisposition,
+        ProjectStructureManagedStorageDisposition persistedDisposition,
+        int completedNodeCount = 0)
+        : base(
+            $"Durable subtree-deletion cleanup '{durableMutationId:D}' uses managed-storage disposition '{persistedDisposition}', not '{requestedDisposition}'.")
+    {
+        ProjectId = projectId;
+        RootNodeId = rootNodeId;
+        DurableMutationId = durableMutationId;
+        RequestedDisposition = requestedDisposition;
+        PersistedDisposition = persistedDisposition;
+        CompletedNodeCount = completedNodeCount;
+    }
+
+    public Guid ProjectId { get; }
+
+    public string RootNodeId { get; }
+
+    public Guid DurableMutationId { get; }
+
+    public ProjectStructureManagedStorageDisposition RequestedDisposition { get; }
+
+    public ProjectStructureManagedStorageDisposition PersistedDisposition { get; }
+
+    public int CompletedNodeCount { get; }
 }

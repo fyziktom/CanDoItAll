@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -19,6 +20,7 @@ public sealed class ProjectPackageService(
     IControlPlanePathResolver controlPlanePathResolver,
     IStorageDriverRegistry storageDrivers,
     ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     IClock clock,
     ILogger<StoragePlacementService> placementLogger,
     ProjectTransferTargetStateGuard targetStateGuard,
@@ -27,10 +29,12 @@ public sealed class ProjectPackageService(
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
     private readonly ProjectPackageStorageExporter _storageExporter = new(
         storageDrivers,
-        physicalIdentityPolicy);
+        physicalIdentityPolicy,
+        physicalPathPolicyFactory);
     private readonly ProjectPackageStorageImporter _storageImporter = new(
         storageDrivers,
         physicalIdentityPolicy,
+        physicalPathPolicyFactory,
         clock,
         placementLogger,
         logger);
@@ -103,6 +107,7 @@ public sealed class ProjectPackageService(
                     workingRoot,
                     packagePath,
                     createdUtc,
+                    physicalPathPolicyFactory,
                     cancellationToken);
 
                 logger.LogInformation(
@@ -168,7 +173,10 @@ public sealed class ProjectPackageService(
             }
 
             var packagePath = Path.GetFullPath(request.PackagePath);
-            var extractionRoot = await ExtractPackageAsync(packagePath, cancellationToken);
+            var extractionRoot = await ExtractPackageAsync(
+                packagePath,
+                physicalPathPolicyFactory,
+                cancellationToken);
             try
             {
                 var manifest = await ReadExtractedManifestAsync(extractionRoot, cancellationToken);
@@ -341,6 +349,7 @@ public sealed class ProjectPackageService(
         {
             var extractionRoot = await ExtractPackageAsync(
                 Path.GetFullPath(packagePath),
+                physicalPathPolicyFactory,
                 cancellationToken);
             try
             {
@@ -412,7 +421,7 @@ public sealed class ProjectPackageService(
         return packagePath;
     }
 
-    private static async Task WritePayloadsAsync(
+    private async Task WritePayloadsAsync(
         string workingRoot,
         ProjectTransferDataSet dataSet,
         ProjectPackageManifest manifest,
@@ -433,7 +442,7 @@ public sealed class ProjectPackageService(
         await WriteTableAsync(workingRoot, manifest, ProjectPackageTables.ViewStates, dataSet.ViewStates, cancellationToken);
     }
 
-    private static async Task<ProjectTransferDataSet> ReadPayloadsAsync(
+    private async Task<ProjectTransferDataSet> ReadPayloadsAsync(
         string extractionRoot,
         ProjectPackageManifest manifest,
         CancellationToken cancellationToken)
@@ -455,7 +464,7 @@ public sealed class ProjectPackageService(
         };
     }
 
-    private static async Task WriteTableAsync<T>(
+    private async Task WriteTableAsync<T>(
         string workingRoot,
         ProjectPackageManifest manifest,
         ProjectPackageTable table,
@@ -463,7 +472,10 @@ public sealed class ProjectPackageService(
         CancellationToken cancellationToken)
         where T : class
     {
-        var filePath = ResolvePackageFilePath(workingRoot, table.FilePath);
+        var filePath = ResolvePackageFilePath(
+            workingRoot,
+            table.FilePath,
+            physicalPathPolicyFactory);
         await WriteJsonFileAsync(filePath, rows, cancellationToken);
         var integrity = await ComputeFileIntegrityAsync(
             filePath,
@@ -479,7 +491,7 @@ public sealed class ProjectPackageService(
         });
     }
 
-    private static async Task<List<T>> ReadTableAsync<T>(
+    private async Task<List<T>> ReadTableAsync<T>(
         string extractionRoot,
         ProjectPackageManifest manifest,
         ProjectPackageTable table,
@@ -494,7 +506,10 @@ public sealed class ProjectPackageService(
                 $"The project package is missing the '{table.Name}' table manifest.");
         }
 
-        var filePath = ResolvePackageFilePath(extractionRoot, tableManifest.FilePath);
+        var filePath = ResolvePackageFilePath(
+            extractionRoot,
+            tableManifest.FilePath,
+            physicalPathPolicyFactory);
         if (!File.Exists(filePath))
         {
             throw new InvalidDataException(
@@ -520,13 +535,14 @@ public sealed class ProjectPackageService(
         return rows;
     }
 
-    private static async Task<ProjectPackageManifest> ReadExtractedManifestAsync(
+    private async Task<ProjectPackageManifest> ReadExtractedManifestAsync(
         string extractionRoot,
         CancellationToken cancellationToken)
     {
         var manifestPath = ResolvePackageFilePath(
             extractionRoot,
-            "manifest.json");
+            "manifest.json",
+            physicalPathPolicyFactory);
         if (!File.Exists(manifestPath))
         {
             throw new InvalidDataException(
