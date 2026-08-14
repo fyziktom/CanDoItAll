@@ -8,30 +8,33 @@ public static class WorkspaceFileLimits
     public const int MaxTextMutationBytes = 4 * 1024 * 1024;
 }
 
-public interface IWorkspaceFileService
+public interface IWorkspaceFileInspectionService
 {
-    WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100);
-
-    WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100);
-
     WorkspaceFileListResult ListFiles(
         string path,
         string searchPattern,
         int maxResults,
         string authorityRootPath);
 
-    WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20);
-
-    WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000);
-
     WorkspaceTextFileReadResult ReadTextFile(
         string path,
         int maxCharacters,
         string authorityRootPath);
 
-    WorkspacePathStatResult StatPath(string path);
-
     WorkspacePathStatResult StatPath(string path, string authorityRootPath);
+}
+
+public interface IWorkspaceFileService : IWorkspaceFileInspectionService
+{
+    WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100);
+
+    WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100);
+
+    WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20);
+
+    WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000);
+
+    WorkspacePathStatResult StatPath(string path);
 
     WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760);
 

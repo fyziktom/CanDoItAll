@@ -47,37 +47,79 @@ internal readonly record struct ProcessProductRootResolution(
 
 internal static class ProcessProductRootResolver
 {
-    private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
-        new PhysicalFileSystemPathPolicyFactory();
-
     internal static ProcessProductRootResolution ResolveInspectableProductRoot(
         IReadOnlyDictionary<string, string> launchVariables)
     {
-        var productRoot = FirstNonEmpty(
-            ResolveLaunchVariable(launchVariables, "ProductRoot"),
-            ResolveLaunchVariable(launchVariables, "OutputRoot"),
-            ResolveLaunchVariable(launchVariables, "OutputFolder"),
-            ResolveLaunchVariable(launchVariables, "ExternalTargetRoot"),
-            ResolveLaunchVariable(launchVariables, "ProductRootAlias"),
-            ResolveLaunchVariable(launchVariables, "OutputRootAlias"));
-        if (string.IsNullOrWhiteSpace(productRoot))
+        var productRoot = ResolveLaunchVariable(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.ProductRoot);
+        var outputRoot = ResolveLaunchVariable(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.OutputRoot);
+        var outputFolder = ResolveLaunchVariable(launchVariables, "OutputFolder");
+        var externalTargetRoot = ResolveLaunchVariable(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.ExternalTargetRoot);
+        var hasProductRootAlias = launchVariables.ContainsKey(
+            ProcessRuntimeLaunchVariables.ProductRootAlias);
+        var productRootAlias = ResolveLaunchVariable(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.ProductRootAlias);
+        var hasOutputRootAlias = launchVariables.ContainsKey(
+            ProcessRuntimeLaunchVariables.OutputRootAlias);
+        var outputRootAlias = ResolveLaunchVariable(
+            launchVariables,
+            ProcessRuntimeLaunchVariables.OutputRootAlias);
+        if ((hasProductRootAlias && string.IsNullOrWhiteSpace(productRootAlias)) ||
+            (hasOutputRootAlias && string.IsNullOrWhiteSpace(outputRootAlias)))
         {
             return new ProcessProductRootResolution(
-                ProcessProductRootResolutionKind.NotConfigured,
+                ProcessProductRootResolutionKind.Invalid,
                 string.Empty,
-                string.Empty);
+                "configured product root alias is empty");
         }
 
-        if (ExternalTargetAliasCodec.IsAnyAlias(productRoot))
+        var configuredAlias = FirstNonEmpty(
+            productRootAlias,
+            outputRootAlias,
+            ExternalTargetAliasCodec.IsAnyAlias(productRoot)
+                ? productRoot
+                : string.Empty,
+            ExternalTargetAliasCodec.IsAnyAlias(outputRoot)
+                ? outputRoot
+                : string.Empty,
+            ExternalTargetAliasCodec.IsAnyAlias(outputFolder)
+                ? outputFolder
+                : string.Empty,
+            ExternalTargetAliasCodec.IsAnyAlias(externalTargetRoot)
+                ? externalTargetRoot
+                : string.Empty);
+        if (string.IsNullOrWhiteSpace(configuredAlias) &&
+            launchVariables.ContainsKey(ProcessRuntimeLaunchVariables.ExternalTargetRootBindings))
         {
-            var normalizedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(productRoot);
-            if (normalizedAlias is null &&
-                !ExternalTargetAliasCodec.TryNormalizeLegacyAlias(productRoot, out normalizedAlias))
+            return new ProcessProductRootResolution(
+                ProcessProductRootResolutionKind.Invalid,
+                string.Empty,
+                "protected product root bindings require a configured versioned alias");
+        }
+
+        if (!string.IsNullOrWhiteSpace(configuredAlias))
+        {
+            if (!ExternalTargetAliasCodec.IsAnyAlias(configuredAlias))
             {
                 return new ProcessProductRootResolution(
                     ProcessProductRootResolutionKind.Invalid,
                     string.Empty,
-                    "invalid external-target alias");
+                    "configured product root alias is invalid");
+            }
+
+            var normalizedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(configuredAlias);
+            if (normalizedAlias is null)
+            {
+                return new ProcessProductRootResolution(
+                    ProcessProductRootResolutionKind.Invalid,
+                    string.Empty,
+                    "legacy or invalid external-target alias requires explicit rebind");
             }
 
             return new ProcessProductRootResolution(
@@ -86,33 +128,23 @@ internal static class ProcessProductRootResolver
                 string.Empty);
         }
 
-        try
+        productRoot = FirstNonEmpty(
+            productRoot,
+            outputRoot,
+            outputFolder,
+            externalTargetRoot);
+        if (string.IsNullOrWhiteSpace(productRoot))
         {
-            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(productRoot, "process product root");
-            if (!Path.IsPathFullyQualified(productRoot))
-            {
-                return new ProcessProductRootResolution(
-                    ProcessProductRootResolutionKind.Invalid,
-                    string.Empty,
-                    "product root is not fully qualified");
-            }
-
-            productRoot = Path.GetFullPath(productRoot);
-            PhysicalPathPolicyFactory.Create(productRoot).EnsureSafePath(
-                productRoot,
-                allowMissingLeaf: true);
             return new ProcessProductRootResolution(
-                ProcessProductRootResolutionKind.Resolved,
-                productRoot,
+                ProcessProductRootResolutionKind.NotConfigured,
+                string.Empty,
                 string.Empty);
         }
-        catch (Exception exception) when (exception is PhysicalPathValidationException or ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
-        {
-            return new ProcessProductRootResolution(
-                ProcessProductRootResolutionKind.Invalid,
-                string.Empty,
-                "product root could not be validated safely");
-        }
+
+        return new ProcessProductRootResolution(
+            ProcessProductRootResolutionKind.Invalid,
+            string.Empty,
+            "product root requires a persisted versioned alias authority");
     }
 
     internal static bool TryResolveRequiredProductPath(
@@ -130,49 +162,17 @@ internal static class ProcessProductRootResolver
             return false;
         }
 
-        if (ExternalTargetAliasCodec.IsAnyAlias(productRoot))
+        if (!ExternalTargetAliasCodec.IsVersionedAlias(productRoot))
         {
-            return TryResolveAliasProductPath(
-                productRoot,
-                candidate,
-                out resolvedPath,
-                out invalidReason);
-        }
-
-        if (ExternalTargetAliasCodec.IsAnyAlias(candidate))
-        {
-            var normalizedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(candidate);
-            if (normalizedAlias is null &&
-                !ExternalTargetAliasCodec.TryNormalizeLegacyAlias(candidate, out normalizedAlias))
-            {
-                invalidReason = "external-target alias is invalid";
-                return false;
-            }
-
-            resolvedPath = normalizedAlias;
-            return true;
-        }
-
-        try
-        {
-            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(productRoot, "process product root");
-            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(candidate, "required process product path");
-            var rootPathPolicy = PhysicalPathPolicyFactory.Create(productRoot);
-            resolvedPath = rootPathPolicy.ResolveContainedPath(candidate);
-        }
-        catch (Exception exception) when (exception is PhysicalPathValidationException or ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
-        {
-            invalidReason = exception.Message;
+            invalidReason = "product root requires a persisted versioned alias authority";
             return false;
         }
 
-        if (!IsSameOrChildPath(productRoot, resolvedPath))
-        {
-            invalidReason = "outside product root";
-            return false;
-        }
-
-        return true;
+        return TryResolveAliasProductPath(
+            productRoot,
+            candidate,
+            out resolvedPath,
+            out invalidReason);
     }
 
     private static bool TryResolveAliasProductPath(
@@ -184,16 +184,10 @@ internal static class ProcessProductRootResolver
         resolvedPath = string.Empty;
         invalidReason = string.Empty;
         var normalizedRoot = ExternalTargetAliasCodec.NormalizeVersionedAlias(productRoot);
-        var isVersionedRoot = normalizedRoot is not null;
         if (normalizedRoot is null)
         {
-            if (!ExternalTargetAliasCodec.TryNormalizeLegacyAlias(productRoot, out var legacyRoot))
-            {
-                invalidReason = "product root external-target alias is invalid";
-                return false;
-            }
-
-            normalizedRoot = legacyRoot;
+            invalidReason = "product root external-target alias is invalid";
+            return false;
         }
 
         if (ExternalTargetAliasCodec.IsAnyAlias(candidate))
@@ -201,13 +195,8 @@ internal static class ProcessProductRootResolver
             var normalizedCandidate = ExternalTargetAliasCodec.NormalizeVersionedAlias(candidate);
             if (normalizedCandidate is null)
             {
-                if (!ExternalTargetAliasCodec.TryNormalizeLegacyAlias(candidate, out var legacyCandidate))
-                {
-                    invalidReason = "required external-target alias is invalid";
-                    return false;
-                }
-
-                normalizedCandidate = legacyCandidate;
+                invalidReason = "required external-target alias is invalid";
+                return false;
             }
 
             if (!ExternalTargetAliasCodec.IsAliasWithinRoot(normalizedCandidate, normalizedRoot))
@@ -232,13 +221,21 @@ internal static class ProcessProductRootResolver
 
         if (Path.IsPathFullyQualified(candidate))
         {
-            invalidReason = "outside product root";
-            return false;
+            try
+            {
+                resolvedPath = Path.GetFullPath(candidate);
+                return true;
+            }
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                invalidReason = "required product path could not be normalized";
+                return false;
+            }
         }
 
-        var candidateSegments = candidate
-            .Replace('\\', '/')
-            .Split('/', StringSplitOptions.None);
+        var candidateSegments = candidate.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.None);
         if (candidateSegments.Length == 0 ||
             candidateSegments.Any(segment => string.IsNullOrEmpty(segment) || segment is "." or ".."))
         {
@@ -246,28 +243,24 @@ internal static class ProcessProductRootResolver
             return false;
         }
 
-        if (isVersionedRoot)
+        ExternalTargetAliasCodec.TryParseVersionedAlias(
+            normalizedRoot,
+            out var rootId,
+            out var rootSegments,
+            out _);
+        try
         {
-            ExternalTargetAliasCodec.TryParseVersionedAlias(
-                normalizedRoot,
-                out var rootId,
-                out var rootSegments,
-                out _);
             resolvedPath = ExternalTargetAliasCodec.BuildAlias(
                 rootId,
                 rootSegments.Concat(candidateSegments).ToArray());
             return true;
         }
-
-        resolvedPath = $"{normalizedRoot}/{string.Join('/', candidateSegments)}";
-        return true;
-    }
-
-    internal static bool IsSameOrChildPath(string root, string candidate)
-    {
-        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(root, "process product containment root");
-        PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(candidate, "process product containment candidate");
-        return PhysicalPathPolicyFactory.Create(root).IsWithinRoot(candidate);
+        catch (ArgumentException)
+        {
+            resolvedPath = string.Empty;
+            invalidReason = "required product path contains a segment that cannot be represented safely";
+            return false;
+        }
     }
 
     internal static bool IsProductFileReference(string path)

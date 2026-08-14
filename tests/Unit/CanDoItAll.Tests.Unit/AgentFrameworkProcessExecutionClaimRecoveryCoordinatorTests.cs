@@ -630,7 +630,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
         [
             new GenericWorkspaceToolReceiptPolicyContribution()
         ]);
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             ProcessCompletionDefectEvidenceCatalog.Empty);
         var completionGateEvaluator = new ProcessCompletionGateFactory(

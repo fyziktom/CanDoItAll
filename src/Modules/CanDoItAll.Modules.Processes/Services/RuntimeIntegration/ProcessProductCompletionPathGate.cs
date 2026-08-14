@@ -60,7 +60,9 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
         }
 
         var productRoot = rootResolution.ProductRoot;
-        var inspection = filesystemInspector.InspectProductRoot(productRoot);
+        var inspection = filesystemInspector.InspectProductRoot(
+            assignment.LaunchVariables,
+            productRoot);
         if (inspection.HasProductFiles)
         {
             return null;
@@ -107,7 +109,10 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
                 continue;
             }
 
-            var inspection = filesystemInspector.InspectPath(productRoot, resolvedPath);
+            var inspection = filesystemInspector.InspectPath(
+                assignment.LaunchVariables,
+                productRoot,
+                resolvedPath);
             if (inspection.State == ProcessProductPathState.Missing)
             {
                 missingPathDetails.Add($"required-path[{pathIndex}]:{ComputeHash(resolvedPath)}");
@@ -178,6 +183,7 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
         }
 
         var evaluation = EvaluateProductFileContentCheckFailures(
+            assignment.LaunchVariables,
             productRoot,
             resolution.Checks,
             check => check.EnforceBranchOutcomeKeys.Count == 0 ||
@@ -273,6 +279,7 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
         }
 
         var evaluation = EvaluateProductFileContentCheckFailures(
+            assignment.LaunchVariables,
             productRoot,
             resolution.Checks,
             check => check.EvidenceBranchOutcomeKeys.Count > 0 &&
@@ -288,6 +295,7 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
     }
 
     internal ProductFileContentCheckEvaluation EvaluateProductFileContentCheckFailures(
+        IReadOnlyDictionary<string, string> launchVariables,
         string productRoot,
         IReadOnlyList<ProductCompletionRequiredFileContentCheck> checks,
         Func<ProductCompletionRequiredFileContentCheck, bool> shouldEvaluate)
@@ -319,7 +327,10 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
                     continue;
                 }
 
-                var pathInspection = filesystemInspector.InspectPath(productRoot, candidatePath);
+                var pathInspection = filesystemInspector.InspectPath(
+                    launchVariables,
+                    productRoot,
+                    candidatePath);
                 if (pathInspection.State is ProcessProductPathState.Missing or ProcessProductPathState.Directory)
                 {
                     missingPaths.Add($"{candidateLabel}:missing");
@@ -358,7 +369,10 @@ internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemI
             var satisfied = false;
             foreach (var (resolvedPath, candidateLabel) in existingPaths)
             {
-                var readResult = filesystemInspector.ReadText(productRoot, resolvedPath);
+                var readResult = filesystemInspector.ReadText(
+                    launchVariables,
+                    productRoot,
+                    resolvedPath);
                 if (!readResult.Succeeded)
                 {
                     candidateInspectionFailures.Add(

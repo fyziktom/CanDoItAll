@@ -21,8 +21,16 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             $"candoitall-agent-framework-authority-{Guid.NewGuid():N}");
         var workspaceRoot = Path.Combine(testRoot, "workspace");
         var externalRoot = Path.Combine(testRoot, "external");
+        var externalSiblingRoot = Path.Combine(testRoot, "external-sibling");
         Directory.CreateDirectory(workspaceRoot);
         Directory.CreateDirectory(externalRoot);
+        Directory.CreateDirectory(externalSiblingRoot);
+        var authorizedNativePath = Path.Combine(externalRoot, "authorized.txt");
+        var workspaceNativePath = Path.Combine(workspaceRoot, "workspace-only.txt");
+        var externalSiblingNativePath = Path.Combine(externalSiblingRoot, "sibling.txt");
+        await File.WriteAllTextAsync(authorizedNativePath, "authorized");
+        await File.WriteAllTextAsync(workspaceNativePath, "workspace");
+        await File.WriteAllTextAsync(externalSiblingNativePath, "sibling");
 
         try
         {
@@ -37,6 +45,7 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             AssertScoped<IWorkspaceCommandExecutionService>(services);
             AssertScoped<IWorkspaceImageOperationService>(services);
             AssertScoped<IWorkspaceArtifactToolService>(services);
+            AssertSingleton<WorkspaceFileInspectionScopeFactory>(services);
 
             await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
             {
@@ -49,10 +58,17 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             var firstRegistry = firstScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
             var sameScopeRegistry = firstScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
             var secondRegistry = secondScope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>();
+            var firstFileServiceScopeFactory = firstScope.ServiceProvider
+                .GetRequiredService<WorkspaceFileInspectionScopeFactory>();
+            var secondFileServiceScopeFactory = secondScope.ServiceProvider
+                .GetRequiredService<WorkspaceFileInspectionScopeFactory>();
 
             Assert.Same(firstRegistry, sameScopeRegistry);
             Assert.NotSame(firstRegistry, secondRegistry);
+            Assert.Same(firstFileServiceScopeFactory, secondFileServiceScopeFactory);
             Assert.True(firstRegistry.TryCreateAlias(externalRoot, out var alias));
+            Assert.True(firstRegistry.TryCreateAlias(authorizedNativePath, out var authorizedPathAlias));
+            Assert.True(firstRegistry.TryCreateAlias(externalSiblingRoot, out var externalSiblingAlias));
             Assert.Equal(
                 ExternalTargetAliasResolutionKind.Resolved,
                 firstRegistry.TryResolve(alias, out var resolvedRoot, out _));
@@ -60,6 +76,32 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
             Assert.Equal(
                 ExternalTargetAliasResolutionKind.Unbound,
                 secondRegistry.TryResolve(alias, out _, out _));
+            var authorizedFiles = firstFileServiceScopeFactory.Create(firstRegistry.ExportBindings([alias]));
+            var unboundFiles = firstFileServiceScopeFactory.Create([]);
+            Assert.True(authorizedFiles.StatPath(alias, alias).Succeeded);
+            Assert.True(authorizedFiles.StatPath(authorizedNativePath, alias).Succeeded);
+            Assert.True(authorizedFiles.StatPath(authorizedPathAlias, alias).Succeeded);
+            Assert.Equal(
+                "Denied",
+                authorizedFiles.StatPath(workspaceNativePath, alias).Receipt.Outcome);
+            Assert.Equal(
+                "Denied",
+                authorizedFiles.StatPath(externalSiblingNativePath, alias).Receipt.Outcome);
+            Assert.Equal(
+                "Denied",
+                authorizedFiles.StatPath(externalSiblingAlias, alias).Receipt.Outcome);
+            Assert.False(unboundFiles.StatPath(alias, alias).Succeeded);
+            Assert.Equal(
+                "Denied",
+                unboundFiles.StatPath(authorizedNativePath, externalRoot).Receipt.Outcome);
+            Assert.Throws<ArgumentNullException>(() =>
+                authorizedFiles.StatPath(workspaceNativePath, null!));
+            Assert.Throws<ArgumentNullException>(() =>
+                authorizedFiles.ReadTextFile(workspaceNativePath, 100, null!));
+            Assert.Throws<ArgumentNullException>(() =>
+                authorizedFiles.ListFiles(workspaceRoot, "*", 10, null!));
+            Assert.Throws<ArgumentException>(() =>
+                authorizedFiles.StatPath(workspaceNativePath, " "));
         }
         finally
         {
@@ -111,6 +153,12 @@ public sealed class AgentFrameworkHostingServiceCollectionTests
     {
         var descriptor = Assert.Single(services, item => item.ServiceType == typeof(TService));
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    private static void AssertSingleton<TService>(IServiceCollection services)
+    {
+        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(TService));
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
 
     [Fact]

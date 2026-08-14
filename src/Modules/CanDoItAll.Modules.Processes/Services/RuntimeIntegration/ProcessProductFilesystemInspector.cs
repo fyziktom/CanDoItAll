@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -14,15 +15,41 @@ internal sealed record ProcessProductPathInspection(ProcessProductPathState Stat
 
 internal sealed record ProcessProductTextInspection(bool Succeeded, string Content);
 
-internal sealed class ProcessProductFilesystemInspector(IWorkspaceFileService workspaceFiles)
+internal sealed class ProcessProductFilesystemInspector
 {
     private const int MaximumProductFileCount = 400;
 
-    internal ProcessProductPathInspection InspectPath(string productRoot, string path)
+    private readonly WorkspaceFileInspectionScopeFactory workspaceFileInspectionScopeFactory;
+
+    public ProcessProductFilesystemInspector(
+        WorkspaceFileInspectionScopeFactory workspaceFileInspectionScopeFactory)
+    {
+        this.workspaceFileInspectionScopeFactory = workspaceFileInspectionScopeFactory ??
+            throw new ArgumentNullException(nameof(workspaceFileInspectionScopeFactory));
+    }
+
+    internal ProcessProductPathInspection InspectPath(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string productRoot,
+        string path)
+    {
+        return TryCreateInspectionScope(
+            launchVariables,
+            productRoot,
+            path,
+            out var inspectionFiles)
+            ? InspectResolvedPath(inspectionFiles, productRoot, path)
+            : new ProcessProductPathInspection(ProcessProductPathState.Unavailable);
+    }
+
+    private static ProcessProductPathInspection InspectResolvedPath(
+        IWorkspaceFileInspectionService inspectionFiles,
+        string productRoot,
+        string path)
     {
         try
         {
-            var result = workspaceFiles.StatPath(path, productRoot);
+            var result = inspectionFiles.StatPath(path, productRoot);
             if (result.Succeeded && result.Exists)
             {
                 return new ProcessProductPathInspection(
@@ -43,11 +70,23 @@ internal sealed class ProcessProductFilesystemInspector(IWorkspaceFileService wo
         }
     }
 
-    internal ProcessProductTextInspection ReadText(string productRoot, string path)
+    internal ProcessProductTextInspection ReadText(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string productRoot,
+        string path)
     {
+        if (!TryCreateInspectionScope(
+                launchVariables,
+                productRoot,
+                path,
+                out var inspectionFiles))
+        {
+            return new ProcessProductTextInspection(false, string.Empty);
+        }
+
         try
         {
-            var result = workspaceFiles.ReadTextFile(
+            var result = inspectionFiles.ReadTextFile(
                 path,
                 WorkspaceFileLimits.MaxTextReadCharacters,
                 productRoot);
@@ -61,9 +100,20 @@ internal sealed class ProcessProductFilesystemInspector(IWorkspaceFileService wo
         }
     }
 
-    internal ProductRootInspection InspectProductRoot(string productRoot)
+    internal ProductRootInspection InspectProductRoot(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string productRoot)
     {
-        var rootInspection = InspectPath(productRoot, productRoot);
+        if (!TryCreateInspectionScope(
+                launchVariables,
+                productRoot,
+                productRoot,
+                out var inspectionFiles))
+        {
+            return new ProductRootInspection(false, "the product root could not be inspected safely");
+        }
+
+        var rootInspection = InspectResolvedPath(inspectionFiles, productRoot, productRoot);
         if (rootInspection.State == ProcessProductPathState.Missing)
         {
             return new ProductRootInspection(false, "the directory does not exist");
@@ -76,7 +126,7 @@ internal sealed class ProcessProductFilesystemInspector(IWorkspaceFileService wo
 
         try
         {
-            var result = workspaceFiles.ListFiles(
+            var result = inspectionFiles.ListFiles(
                 productRoot,
                 "*",
                 MaximumProductFileCount,
@@ -101,5 +151,61 @@ internal sealed class ProcessProductFilesystemInspector(IWorkspaceFileService wo
         {
             return new ProductRootInspection(false, "the product root could not be inspected safely");
         }
+    }
+
+    private bool TryCreateInspectionScope(
+        IReadOnlyDictionary<string, string> launchVariables,
+        string productRoot,
+        string path,
+        out IWorkspaceFileInspectionService inspectionFiles)
+    {
+        inspectionFiles = null!;
+
+        var versionedAliases = new List<string>(2);
+        if (!TryAddVersionedAlias(productRoot, versionedAliases) ||
+            !TryAddVersionedAlias(path, versionedAliases))
+        {
+            return false;
+        }
+
+        if (versionedAliases.Count == 0 ||
+            !ExternalTargetAliasCodec.IsVersionedAlias(productRoot))
+        {
+            return false;
+        }
+
+        try
+        {
+            var bindings = ProcessExternalTargetRootBindingResolver.Resolve(
+                launchVariables,
+                versionedAliases);
+            inspectionFiles = workspaceFileInspectionScopeFactory.Create(bindings);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or ArgumentException or InvalidOperationException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryAddVersionedAlias(string value, ICollection<string> aliases)
+    {
+        if (!ExternalTargetAliasCodec.IsVersionedAlias(value))
+        {
+            return true;
+        }
+
+        var normalizedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(value);
+        if (normalizedAlias is null)
+        {
+            return false;
+        }
+
+        if (!aliases.Contains(normalizedAlias, ExternalTargetAliasCodec.EqualityComparer))
+        {
+            aliases.Add(normalizedAlias);
+        }
+
+        return true;
     }
 }

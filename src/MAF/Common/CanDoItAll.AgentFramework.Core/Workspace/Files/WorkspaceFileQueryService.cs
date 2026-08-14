@@ -123,7 +123,7 @@ internal sealed class WorkspaceFileQueryService
         string? relativePath = null,
         string searchPattern = "*",
         int maxResults = 100,
-        IReadOnlyList<string>? allowedExternalRoots = null)
+        string? authorityRootAlias = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         var request = NormalizeListRequest(relativePath, searchPattern);
@@ -143,7 +143,7 @@ internal sealed class WorkspaceFileQueryService
         if (!TryResolveQueryPath(
                 request.RelativePath,
                 allowWorkspaceRoot: true,
-                allowedExternalRoots,
+                authorityRootAlias,
                 out var resolution,
                 out var validationMessage))
         {
@@ -422,13 +422,13 @@ internal sealed class WorkspaceFileQueryService
     public WorkspaceTextFileReadResult ReadTextFile(
         string path,
         int maxCharacters = 12000,
-        IReadOnlyList<string>? allowedExternalRoots = null)
+        string? authorityRootAlias = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         if (!TryResolveQueryPath(
                 path,
                 allowWorkspaceRoot: false,
-                allowedExternalRoots,
+                authorityRootAlias,
                 out var resolution,
                 out var validationMessage))
         {
@@ -488,13 +488,13 @@ internal sealed class WorkspaceFileQueryService
 
     public WorkspacePathStatResult StatPath(
         string path,
-        IReadOnlyList<string>? allowedExternalRoots = null)
+        string? authorityRootAlias = null)
     {
         var startedAtUtc = DateTimeOffset.UtcNow;
         if (!TryResolveQueryPath(
                 path,
                 allowWorkspaceRoot: false,
-                allowedExternalRoots,
+                authorityRootAlias,
                 out var resolution,
                 out var validationMessage))
         {
@@ -713,11 +713,11 @@ internal sealed class WorkspaceFileQueryService
     private bool TryResolveQueryPath(
         string? path,
         bool allowWorkspaceRoot,
-        IReadOnlyList<string>? allowedExternalRoots,
+        string? authorityRootAlias,
         out WorkspacePathResolution resolution,
         out string validationMessage)
     {
-        if (allowedExternalRoots is null)
+        if (authorityRootAlias is null)
         {
             return pathPolicy.TryResolveWorkspacePath(
                 path,
@@ -733,9 +733,9 @@ internal sealed class WorkspaceFileQueryService
             return false;
         }
 
-        return pathPolicy.TryResolveAccessiblePath(
+        return pathPolicy.TryResolvePathWithinBoundExternalTargetRoot(
             path,
-            allowedExternalRoots,
+            authorityRootAlias,
             out resolution,
             out validationMessage);
     }

@@ -92,6 +92,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 scope,
                 serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
+        services.TryAddScoped<WorkspaceFileInspectionScopeFactory>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceFileInspectionScopeFactory(
+                workspaceRoot,
+                scope,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>());
+        });
         services.TryAddScoped<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {

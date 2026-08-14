@@ -46,13 +46,13 @@ internal sealed class ProcessCompletionIssueResultFactory
     public ProcessCompletionIssueResultFactory(
         IWorkspaceFileService workspaceFiles,
         ProcessCompletionDefectEvidenceCatalog completionDefectEvidenceCatalog,
-        ProcessProductCompletionPathGate? productCompletionPathGate = null)
+        ProcessProductCompletionPathGate productCompletionPathGate)
     {
         this.workspaceFiles = workspaceFiles ?? throw new ArgumentNullException(nameof(workspaceFiles));
         this.completionDefectEvidenceCatalog = completionDefectEvidenceCatalog ??
             throw new ArgumentNullException(nameof(completionDefectEvidenceCatalog));
         this.productCompletionPathGate = productCompletionPathGate ??
-            new ProcessProductCompletionPathGate(new ProcessProductFilesystemInspector(workspaceFiles));
+            throw new ArgumentNullException(nameof(productCompletionPathGate));
     }
 
     internal ProcessProductCompletionPathGate ProductCompletionPathGate => productCompletionPathGate;

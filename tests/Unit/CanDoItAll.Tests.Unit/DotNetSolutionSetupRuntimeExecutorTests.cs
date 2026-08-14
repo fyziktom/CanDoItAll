@@ -7,6 +7,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -120,11 +121,30 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.True(result!.Succeeded, result.Summary);
         Assert.True(File.Exists(generatedSolutionFile));
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var launchRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        Assert.True(launchRegistry.TryCreateAlias(productRoot, out var productRootAlias));
+        var completionLaunchVariables = new Dictionary<string, string>(
+            assignment.LaunchVariables,
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProductRootAlias] = productRootAlias,
+            [ProcessRuntimeLaunchVariables.ExternalTargetRootBindings] =
+                JsonSerializer.Serialize(launchRegistry.ExportBindings([productRootAlias]))
+        };
+        var completionAssignment = assignment with
+        {
+            LaunchVariables = completionLaunchVariables
+        };
         var completionPathGate = new ProcessProductCompletionPathGate(
             new ProcessProductFilesystemInspector(
-                TestWorkspaceServices.CreateFileService(productRoot)));
+                new WorkspaceFileInspectionScopeFactory(
+                    workspace.WorkspaceRoot,
+                    WorkspaceScopeDescriptor.Sandbox,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
+                    new ExternalTargetPathRegistryFactory(dataProtectionProvider))));
         Assert.Null(completionPathGate.ValidateRequiredProductFilesystemState(
-            assignment,
+            completionAssignment,
             result.Output!));
         Assert.Contains(
             result.ToolReceipts,

@@ -379,7 +379,7 @@ public sealed class WorkflowProcessStepExecutorTests
             Path.GetTempPath(),
             $"CanDoItAll.WorkflowProcessStepExecutor.{Guid.NewGuid():N}"));
         var receiptPolicies = new ProcessToolReceiptPolicyCatalog([]);
-        var issueFactory = new ProcessCompletionIssueResultFactory(
+        var issueFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             new ProcessCompletionDefectEvidenceCatalog([]));
         var resultConverter = new ProcessExecutionResultConverter(

@@ -16,6 +16,8 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
@@ -418,7 +420,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             [],
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
-        var factory = new ProcessCompletionIssueResultFactory(
+        var factory = ProcessCompletionTestServices.CreateIssueResultFactory(
             TestWorkspaceServices.CreateFileService(Path.GetTempPath()),
             ProcessCompletionDefectEvidenceCatalog.Empty);
 
@@ -495,7 +497,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 [],
                 ProcessDiagnosticRetrySafety.SafeToRetry,
                 ProcessDiagnosticIdempotencyClassification.Idempotent);
-            var factory = new ProcessCompletionIssueResultFactory(
+            var factory = ProcessCompletionTestServices.CreateIssueResultFactory(
                 workspaceFiles,
                 ProcessCompletionDefectEvidenceCatalog.Empty);
 
@@ -3290,6 +3292,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             File.WriteAllText(Path.Combine(outputRoot, "App.csproj"), "<Project />");
             var assignment = CreateProductMutationAssignment(outputRoot);
+            var dataProtectionProvider = new EphemeralDataProtectionProvider();
+            var launchRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+            (assignment, _) = BindProductRootAlias(assignment, null, launchRegistry);
             var primaryRef = BuildStepArtifactRef(assignment);
             var output = new ProcessStepOutcomeResult
             {
@@ -3305,7 +3310,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 [
                     CreateToolReceipt("workspace_read_file", "external-target/product/Program.cs", "Succeeded: Read file."),
                     CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Created file.")
-                ]);
+                ],
+                bindingDataProtectionProvider: dataProtectionProvider);
             var second = ToAdapterResult(
                 assignment,
                 output,
@@ -3313,7 +3319,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     CreateToolReceipt("workspace_read_file", "external-target/product/App.csproj", "Succeeded: Read file."),
                     CreateToolReceipt("workspace_list_directory", "external-target/product", "Succeeded: Listed directory."),
                     CreateToolReceipt("workspace_write_file", primaryRef, "Succeeded: Updated file.")
-                ]);
+                ],
+                bindingDataProtectionProvider: dataProtectionProvider);
 
             var firstDiagnostic = Assert.Single(first.Diagnostics);
             var secondDiagnostic = Assert.Single(second.Diagnostics);
@@ -3523,7 +3530,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 executionRunId: executionRunId)
         ];
 
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             TestWorkspaceServices.CreateFileService(Path.GetTempPath()),
             new ProcessCompletionDefectEvidenceCatalog(
             [
@@ -3585,7 +3592,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
         var workspaceFiles = TestWorkspaceServices.CreateFileService(Path.GetTempPath());
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             ProcessCompletionDefectEvidenceCatalog.Empty);
         var completionGateEvaluator = new ProcessCompletionGateEvaluator([_ => issue]);
@@ -3669,7 +3676,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 exitSummary,
                 executionRunId: receiptExecutionRunId)
         ];
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             TestWorkspaceServices.CreateFileService(Path.GetTempPath()),
             new ProcessCompletionDefectEvidenceCatalog(
             [
@@ -4600,7 +4607,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 ],
                 NextActions = ["Run downstream validation."]
             };
-            var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
                 workspaceFiles,
                 ProcessCompletionDefectEvidenceCatalog.Empty);
             var completionGateEvaluator = new ProcessCompletionGateEvaluator([_ => null]);
@@ -4686,7 +4693,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 NextActions = [$"Review {physicalEvidenceRef} and {foreignUnixRoot}; secret={rawSecret}"],
                 HumanReadableSummaryMarkdown = $"Managed output from {physicalEvidenceRef} and {foreignUnixRoot}; api_key={rawSecret}"
             };
-            var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
                 workspaceFiles,
                 ProcessCompletionDefectEvidenceCatalog.Empty);
             var completionGateEvaluator = new ProcessCompletionGateEvaluator([_ => null]);
@@ -4742,7 +4749,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     .Select(index => $"Next action {index:D2}")
                     .ToArray()
             };
-            var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
                 workspaceFiles,
                 ProcessCompletionDefectEvidenceCatalog.Empty);
             var completionGateEvaluator = new ProcessCompletionGateEvaluator([_ => null]);
@@ -9326,13 +9333,16 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 [ProcessRuntimeLaunchVariables.ProcessStepRuntimeOwnedExecutorKey] = FakeRuntimeOwnedStepExecutor.RuntimeOwnedExecutorKey
             }
         };
-        var externalTargets = TestExternalTargetPathRegistry.Create();
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var externalTargets = new ExternalTargetPathRegistry(dataProtectionProvider);
         Assert.True(externalTargets.TryCreateAlias(outputRoot, out var productRootAlias));
         assignment = assignment with
         {
             LaunchVariables = WithLaunchVariables(
                 assignment,
-                (ProcessRuntimeLaunchVariables.ProductRootAlias, productRootAlias))
+                (ProcessRuntimeLaunchVariables.ProductRootAlias, productRootAlias),
+                (ProcessRuntimeLaunchVariables.ExternalTargetRootBindings,
+                    JsonSerializer.Serialize(externalTargets.ExportBindings([productRootAlias]))))
         };
         var executionRunId = Guid.NewGuid();
         var runtimeExecutor = new FakeRuntimeOwnedStepExecutor(new ProcessRuntimeOwnedStepExecutionResult(
@@ -9365,7 +9375,9 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The agent must not run when runtime-owned .NET setup handles the step."));
-        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot, externalTargets);
+        var workspaceFiles = CreateWorkspaceFileService(
+            out var workspaceRoot,
+            new ExternalTargetPathRegistry(dataProtectionProvider));
         try
         {
             var adapter = CreateAdapter(
@@ -9374,7 +9386,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles,
-                runtimeOwnedStepExecutors: [runtimeExecutor]);
+                runtimeOwnedStepExecutors: [runtimeExecutor],
+                workspaceFileInspectionScopeFactory: new WorkspaceFileInspectionScopeFactory(
+                    workspaceRoot,
+                    WorkspaceScopeDescriptor.Sandbox,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
+                    new ExternalTargetPathRegistryFactory(dataProtectionProvider)));
 
             var result = await adapter.ExecuteAsync(
                 CreateAdapterRequest(
@@ -9477,7 +9494,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The agent must not run for runtime-owned existing-solution verification."));
-        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var launchRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        (assignment, _) = BindProductRootAlias(assignment, null, launchRegistry);
+        var workspaceFiles = CreateWorkspaceFileService(
+            out var workspaceRoot,
+            new ExternalTargetPathRegistry(dataProtectionProvider));
         try
         {
             var adapter = CreateAdapter(
@@ -9486,7 +9508,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 new InMemoryAssignmentStore(assignment),
                 new InMemoryRuntimeStateStore(NewRuntimeState(assignment.RunId, assignment.RunId, ProcessRuntimeStatus.Active)),
                 workspaceFiles,
-                runtimeOwnedStepExecutors: [runtimeExecutor]);
+                runtimeOwnedStepExecutors: [runtimeExecutor],
+                workspaceFileInspectionScopeFactory: new WorkspaceFileInspectionScopeFactory(
+                    workspaceRoot,
+                    WorkspaceScopeDescriptor.Sandbox,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
+                    new ExternalTargetPathRegistryFactory(dataProtectionProvider)));
 
             var result = await adapter.ExecuteAsync(
                 CreateAdapterRequest(
@@ -10397,7 +10424,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             Assert.True(workspaceFiles.WriteTextFile(primaryRef, "Status: Completed\n\nArchitecture narrative only.").Succeeded);
             var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
-            var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+            var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
                 workspaceFiles,
                 ProcessCompletionDefectEvidenceCatalog.Empty);
             var completionGateEvaluator = new ProcessCompletionGateFactory(
@@ -11562,13 +11589,18 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             ],
             AgentWorkspaceToolProfileKind.ArchitectureReview);
         var baseAssignment = CreateManagedArtifactAssignment("add-tests-and-proof", agent.Id);
-        const string productRoot = "external-target/C/programovani/dotnet/calculator-output";
-        const string productFile = $"{productRoot}/tests/Calculator.Tests/Calculator.Tests.csproj";
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var externalTargets = new ExternalTargetPathRegistry(dataProtectionProvider);
+        var physicalProductRoot = CreateTempProductRoot();
+        Assert.True(externalTargets.TryCreateAlias(physicalProductRoot, out var productRoot));
+        var productFile = $"{productRoot}/tests/Calculator.Tests/Calculator.Tests.csproj";
         var assignment = baseAssignment with
         {
             LaunchVariables = WithLaunchVariables(
                 baseAssignment,
-                ("ExternalTargetRoot", productRoot))
+                ("ExternalTargetRoot", productRoot),
+                (ProcessRuntimeLaunchVariables.ExternalTargetRootBindings,
+                    JsonSerializer.Serialize(externalTargets.ExportBindings([productRoot]))))
         };
         var executionRunId = Guid.NewGuid();
         var primaryRef = BuildStepArtifactRef(assignment);
@@ -11644,6 +11676,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         finally
         {
             DeleteDirectory(workspaceRoot);
+            DeleteDirectory(physicalProductRoot);
         }
     }
 
@@ -11957,21 +11990,35 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         ProcessStepOutcomeResult output,
         IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
         Guid? currentExecutionRunId = null,
-        ProcessStepExecutionContract? stepContract = null)
+        ProcessStepExecutionContract? stepContract = null,
+        IDataProtectionProvider? bindingDataProtectionProvider = null)
     {
-        var externalTargets = TestExternalTargetPathRegistry.Create();
-        (assignment, toolReceipts) = BindProductRootAlias(assignment, toolReceipts, externalTargets);
+        var dataProtectionProvider = bindingDataProtectionProvider ??
+            new EphemeralDataProtectionProvider();
+        var externalTargets = new ExternalTargetPathRegistry(dataProtectionProvider);
+        if (!HasPersistedProductRootAuthority(assignment))
+        {
+            (assignment, toolReceipts) = BindProductRootAlias(
+                assignment,
+                toolReceipts,
+                externalTargets);
+        }
         var workspaceFiles = TestWorkspaceServices.CreateFileService(
             Path.GetTempPath(),
-            externalTargetRegistry: externalTargets);
+            externalTargetRegistry: new ExternalTargetPathRegistry(dataProtectionProvider));
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             new ProcessCompletionDefectEvidenceCatalog(
             [
                 new BrowserConsoleDefectEvidenceContribution(),
                 new BrowserObservedDefectEvidenceContribution()
-            ]));
+            ]),
+            new WorkspaceFileInspectionScopeFactory(
+                Path.GetTempPath(),
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory(dataProtectionProvider)));
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,
                 new ProcessToolReceiptEvidenceGate(workspaceFiles, []),
@@ -12003,6 +12050,16 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             stepContract: effectiveStepContract);
     }
 
+    private static bool HasPersistedProductRootAuthority(ProcessRuntimeStepAssignment assignment)
+    {
+        return ExternalTargetAliasCodec.IsVersionedAlias(
+                   assignment.LaunchVariables.GetValueOrDefault(
+                       ProcessRuntimeLaunchVariables.ProductRootAlias)) &&
+               !string.IsNullOrWhiteSpace(
+                   assignment.LaunchVariables.GetValueOrDefault(
+                       ProcessRuntimeLaunchVariables.ExternalTargetRootBindings));
+    }
+
     private static (
         ProcessRuntimeStepAssignment Assignment,
         IReadOnlyList<ToolExecutionReceiptRecord>? ToolReceipts) BindProductRootAlias(
@@ -12014,7 +12071,6 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var configuredAlias = assignment.LaunchVariables.GetValueOrDefault(
             ProcessRuntimeLaunchVariables.ProductRootAlias);
         if (string.IsNullOrWhiteSpace(physicalProductRoot) ||
-            string.IsNullOrWhiteSpace(configuredAlias) ||
             !externalTargets.TryCreateAlias(physicalProductRoot, out var boundAlias))
         {
             return (assignment, toolReceipts);
@@ -12024,19 +12080,24 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         {
             LaunchVariables = WithLaunchVariables(
                 assignment,
-                (ProcessRuntimeLaunchVariables.ProductRootAlias, boundAlias))
+                (ProcessRuntimeLaunchVariables.ProductRootAlias, boundAlias),
+                (ProcessRuntimeLaunchVariables.ExternalTargetRootBindings,
+                    JsonSerializer.Serialize(externalTargets.ExportBindings([boundAlias]))))
         };
         if (toolReceipts is null)
         {
             return (assignment, null);
         }
 
+        var receiptRoot = string.IsNullOrWhiteSpace(configuredAlias)
+            ? physicalProductRoot
+            : configuredAlias;
         toolReceipts = toolReceipts
             .Select(receipt => receipt with
             {
                 RequestSummary = ReplaceAliasPrefix(
                     receipt.RequestSummary,
-                    configuredAlias,
+                    receiptRoot,
                     boundAlias)
             })
             .ToArray();
@@ -12245,11 +12306,24 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         AgentDefinition agent,
         ProcessRuntimeOwnedStepExecutionResult runtimeResult)
     {
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var launchRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        var boundAssignment = BindProductRootAlias(
+            assignment,
+            runtimeResult.ToolReceipts,
+            launchRegistry);
+        assignment = boundAssignment.Assignment;
+        runtimeResult = runtimeResult with
+        {
+            ToolReceipts = boundAssignment.ToolReceipts ?? []
+        };
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The agent must not run when the runtime-owned executor handles the step."));
         var runtimeExecutor = new FakeRuntimeOwnedStepExecutor(runtimeResult);
-        var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
+        var workspaceFiles = CreateWorkspaceFileService(
+            out var workspaceRoot,
+            new ExternalTargetPathRegistry(dataProtectionProvider));
         try
         {
             var adapter = CreateAdapter(
@@ -12261,7 +12335,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     assignment.RunId,
                     ProcessRuntimeStatus.Active)),
                 workspaceFiles,
-                runtimeOwnedStepExecutors: [runtimeExecutor]);
+                runtimeOwnedStepExecutors: [runtimeExecutor],
+                workspaceFileInspectionScopeFactory: new WorkspaceFileInspectionScopeFactory(
+                    workspaceRoot,
+                    WorkspaceScopeDescriptor.Sandbox,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
+                    new ExternalTargetPathRegistryFactory(dataProtectionProvider)));
 
             var result = await adapter.ExecuteAsync(
                 CreateAdapterRequest(
@@ -12545,12 +12624,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     "template=blazorwasm",
                     "workspace_pwsh_run_script"
                 ]).ToArray()),
-            [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] = JsonSerializer.Serialize(
-                new[]
-                {
-                    solutionFile,
-                    appProjectFile
-                }),
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredPaths] = JsonSerializer.Serialize(
+                    new[]
+                    {
+                        solutionFile,
+                        appProjectFile
+                    }),
             [ProcessRuntimeLaunchVariables.ProductCompletionRequiredFileContentChecks] = JsonSerializer.Serialize(
                 new object[]
                 {
@@ -12703,16 +12782,18 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         IProcessRuntimeToolPreflightService? runtimeToolPreflightService = null,
         IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null,
         IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null,
-        IProcessWorkflowStepExecutor? workflowStepExecutor = null)
+        IProcessWorkflowStepExecutor? workflowStepExecutor = null,
+        WorkspaceFileInspectionScopeFactory? workspaceFileInspectionScopeFactory = null)
     {
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
-        var completionIssueResultFactory = new ProcessCompletionIssueResultFactory(
+        var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
             workspaceFiles,
             new ProcessCompletionDefectEvidenceCatalog(
             [
                 new BrowserConsoleDefectEvidenceContribution(),
                 new BrowserObservedDefectEvidenceContribution()
-            ]));
+            ]),
+            workspaceFileInspectionScopeFactory);
         var completionGateEvaluator = new ProcessCompletionGateFactory(
                 toolReceiptPolicies,
                 new ProcessToolReceiptEvidenceGate(

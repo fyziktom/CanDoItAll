@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit;
@@ -23,42 +24,40 @@ public sealed class ProcessProductRootResolverPortabilityTests
     }
 
     [Fact]
-    public void Product_root_containment_uses_host_case_semantics()
+    public void Required_product_path_preserves_versioned_alias_for_owner_resolution()
     {
-        var root = TestFileSystem.CreateTemporaryRoot("process-product-case");
-        try
-        {
-            var differentlyCasedCandidate = Path.Combine(root.ToUpperInvariant(), "child");
+        const string root = "external-target/v1/0123456789abcdef01234567";
+        const string alias = $"{root}/child";
 
-            Assert.Equal(
-                OperatingSystem.IsWindows(),
-                ProcessProductRootResolver.IsSameOrChildPath(root, differentlyCasedCandidate));
-        }
-        finally
-        {
-            TestFileSystem.DeleteDirectoryWithRetry(root);
-        }
+        Assert.True(ProcessProductRootResolver.TryResolveRequiredProductPath(
+            root,
+            alias,
+            out var resolved,
+            out var invalidReason),
+            invalidReason);
+        Assert.Equal(alias, resolved);
     }
 
     [Fact]
-    public void Required_product_path_preserves_versioned_alias_for_owner_resolution()
+    public void Required_product_path_preserves_host_native_absolute_path_for_authority_scoped_inspection()
     {
-        var root = TestFileSystem.CreateTemporaryRoot("process-product-alias");
+        const string productRootAlias = "external-target/v1/0123456789abcdef01234567";
+        var nativePath = Path.Combine(
+            TestFileSystem.CreateTemporaryRoot("process-product-native-candidate"),
+            "product.txt");
         try
         {
-            var alias = "external-target/v1/0123456789abcdef01234567/child";
-
             Assert.True(ProcessProductRootResolver.TryResolveRequiredProductPath(
-                root,
-                alias,
+                productRootAlias,
+                nativePath,
                 out var resolved,
                 out var invalidReason),
                 invalidReason);
-            Assert.Equal(alias, resolved);
+            Assert.Equal(Path.GetFullPath(nativePath), resolved);
         }
         finally
         {
-            TestFileSystem.DeleteDirectoryWithRetry(root);
+            TestFileSystem.DeleteDirectoryWithRetry(Path.GetDirectoryName(nativePath)!);
         }
     }
 
@@ -70,22 +69,38 @@ public sealed class ProcessProductRootResolverPortabilityTests
             return;
         }
 
-        var root = TestFileSystem.CreateTemporaryRoot("process-product-backslash");
-        try
-        {
-            const string fileName = @"file\name.txt";
+        const string rootId = "0123456789abcdef01234567";
+        var rootAlias = ExternalTargetAliasCodec.BuildAliasRoot(rootId);
+        const string fileName = @"file\name.txt";
 
-            Assert.True(ProcessProductRootResolver.TryResolveRequiredProductPath(
-                root,
-                fileName,
-                out var resolved,
-                out var invalidReason),
-                invalidReason);
-            Assert.Equal(Path.Combine(root, fileName), resolved);
-        }
-        finally
+        Assert.True(ProcessProductRootResolver.TryResolveRequiredProductPath(
+            rootAlias,
+            fileName,
+            out var resolved,
+            out var invalidReason),
+            invalidReason);
+        Assert.Equal(ExternalTargetAliasCodec.BuildAlias(rootId, [fileName]), resolved);
+    }
+
+    [Fact]
+    public void Required_product_path_rejects_segments_that_cannot_be_encoded_safely()
+    {
+        const string productRootAlias = "external-target/v1/0123456789abcdef01234567";
+        var invalidPaths = new[]
         {
-            TestFileSystem.DeleteDirectoryWithRetry(root);
+            "bad\0name.txt",
+            "bad\uD800name.txt"
+        };
+
+        foreach (var invalidPath in invalidPaths)
+        {
+            Assert.False(ProcessProductRootResolver.TryResolveRequiredProductPath(
+                productRootAlias,
+                invalidPath,
+                out var resolved,
+                out var invalidReason));
+            Assert.Empty(resolved);
+            Assert.NotEmpty(invalidReason);
         }
     }
 }

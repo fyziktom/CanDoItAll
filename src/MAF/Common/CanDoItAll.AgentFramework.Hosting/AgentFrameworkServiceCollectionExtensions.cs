@@ -45,6 +45,11 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
         services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
         services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
+        services.TryAddSingleton(serviceProvider => new WorkspaceFileInspectionScopeFactory(
+            normalizedWorkspaceRoot,
+            resolvedScope,
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
         services.TryAddSingleton<ISandboxWorkspaceStore>(_ => new FileSandboxWorkspaceStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());

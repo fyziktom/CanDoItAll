@@ -201,6 +201,51 @@ internal sealed class WorkspacePathPolicy
         }
     }
 
+    public bool TryResolvePathWithinBoundExternalTargetRoot(
+        string path,
+        string authorityRootAlias,
+        out WorkspacePathResolution resolution,
+        out string validationMessage)
+    {
+        resolution = default;
+        var normalizedAuthorityRootAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(
+            authorityRootAlias);
+        if (normalizedAuthorityRootAlias is null)
+        {
+            validationMessage = "The inspection authority root must be a canonical versioned external-target alias.";
+            return false;
+        }
+
+        var authorityResolutionKind = TryResolveExternalTargetAlias(
+            normalizedAuthorityRootAlias,
+            out var authorityResolution,
+            out _);
+        if (authorityResolutionKind != ExternalTargetAliasResolution.Resolved)
+        {
+            validationMessage = "The inspection authority root is unavailable in this workspace scope.";
+            return false;
+        }
+
+        if (!TryResolveAccessiblePath(
+                path,
+                [normalizedAuthorityRootAlias],
+                out var candidateResolution,
+                out validationMessage))
+        {
+            return false;
+        }
+
+        if (!IsPathWithinRoot(candidateResolution.FullPath, authorityResolution.FullPath))
+        {
+            validationMessage = "The requested path is outside the explicit inspection authority root.";
+            return false;
+        }
+
+        resolution = candidateResolution;
+        validationMessage = string.Empty;
+        return true;
+    }
+
     public WorkspacePathResolution ResolveExistingPath(string path, bool allowFiles, bool allowDirectories, IReadOnlyList<string>? allowedExternalRoots = null)
     {
         var resolution = ResolveAccessiblePath(path, allowedExternalRoots);

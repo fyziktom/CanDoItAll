@@ -46,7 +46,10 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         string searchPattern,
         int maxResults,
         string authorityRootPath)
-        => queryService.ListFiles(path, searchPattern, maxResults, [authorityRootPath]);
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityRootPath);
+        return queryService.ListFiles(path, searchPattern, maxResults, authorityRootPath);
+    }
 
     public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
         => queryService.SearchText(query, relativePath, maxResults);
@@ -58,13 +61,19 @@ public sealed class WorkspaceFileService : IWorkspaceFileService
         string path,
         int maxCharacters,
         string authorityRootPath)
-        => queryService.ReadTextFile(path, maxCharacters, [authorityRootPath]);
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityRootPath);
+        return queryService.ReadTextFile(path, maxCharacters, authorityRootPath);
+    }
 
     public WorkspacePathStatResult StatPath(string path)
         => queryService.StatPath(path);
 
     public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
-        => queryService.StatPath(path, [authorityRootPath]);
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorityRootPath);
+        return queryService.StatPath(path, authorityRootPath);
+    }
 
     public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
     {
