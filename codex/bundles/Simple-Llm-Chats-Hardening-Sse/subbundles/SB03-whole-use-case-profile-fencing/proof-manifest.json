@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB03",
+  "title": "Whole-use-case profile fencing",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-011",
+    "RQ-012"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Every public LLM Chat application operation captures profile identity before its first read.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "All repositories, provider resolution, transcript commands, and audit writes use the captured operation scope.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A profile switch prevents every subsequent old-generation durable commit.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A switch during provider execution yields deterministic non-success or RecoveryRequired with retained usage evidence.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No current-profile DbContext or provider lease is cached across operations.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB10",
+  "title": "API security and external-client contract",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-027",
+    "RQ-028",
+    "RQ-029",
+    "RQ-033"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "An API client cannot choose or spoof stored conversation origin.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Authorization-enabled hosts enforce distinct read, manage, and execute policies.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Authorization-disabled trusted-local hosts preserve documented local behavior.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No API/SSE error exposes prompts, system instructions, credentials, or raw provider failures.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "OpenAPI exposes versioned transport DTOs and stable links, not domain or EF entities.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Future chatbot concerns remain a separate documented deployment boundary rather than dormant definition fields.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

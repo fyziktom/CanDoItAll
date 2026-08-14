@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB04",
+  "title": "Durable dispatch lease and multi-instance cancellation",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-013",
+    "RQ-014",
+    "RQ-015",
+    "RQ-016"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Only one instance can hold an execution lease for an operation at a time.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A client disconnect after admission does not cancel the durable operation.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Explicit cancellation reaches a local owner and is observed cross-instance within the configured bound.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Local registry absence never recovers or abandons another instance's live operation.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Expired pre-dispatch work may be reclaimed, while expired post-dispatch work becomes RecoveryRequired.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A host without an available dispatcher cannot falsely accept unexecutable work.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

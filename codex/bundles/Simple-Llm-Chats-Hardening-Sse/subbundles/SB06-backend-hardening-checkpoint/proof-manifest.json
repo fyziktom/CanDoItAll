@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB06",
+  "title": "Backend hardening checkpoint",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-003",
+    "RQ-004",
+    "RQ-005",
+    "RQ-006",
+    "RQ-007",
+    "RQ-008",
+    "RQ-009",
+    "RQ-010",
+    "RQ-011",
+    "RQ-012",
+    "RQ-013",
+    "RQ-014",
+    "RQ-015",
+    "RQ-016",
+    "RQ-017",
+    "RQ-018"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "All SB01-SB05 acceptance criteria have current-head proof.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No parallel legacy turn-execution or independent-transaction path remains reachable.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Focused backend Unit and PostgreSQL integration gates pass.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Migration/model and database-transfer proof pass when schema changed.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "CP1 explicitly unlocks or blocks streaming work.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

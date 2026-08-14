@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB11",
+  "title": "Focused PostgreSQL, HTTP, SSE, and portability proof",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-019",
+    "RQ-020",
+    "RQ-021",
+    "RQ-022",
+    "RQ-023",
+    "RQ-024",
+    "RQ-025",
+    "RQ-026",
+    "RQ-027",
+    "RQ-028",
+    "RQ-029",
+    "RQ-030",
+    "RQ-031"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Atomicity, profile fencing, distributed lease, cancellation, and idempotency scenarios pass against PostgreSQL.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A slow streaming provider produces incremental SSE before terminal completion.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Reconnect, gap, heartbeat, disconnect, explicit cancellation, and terminal closure pass through the real host.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "OpenAI/Azure/Ollama parser tests cover fragmented frames and failures without live network access.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Migration, model snapshot, database transfer, and restart tests pass.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Affected projects build with the CI package graph on the available Linux host.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "CP2 explicitly declares the backend/API ready or blocked.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB02",
+  "title": "Atomic turn state machine and recovery",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-005",
+    "RQ-006",
+    "RQ-007",
+    "RQ-008",
+    "RQ-009",
+    "RQ-010",
+    "RQ-016",
+    "RQ-026"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Turn admission is one transaction across operation, transcript, evidence, and event state.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Successful completion is one transaction across assistant message, usage, active-turn clearing, and operation success.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Failed compensation cannot leave a terminal Failed or Cancelled operation with a live active turn.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A cancellation request committed before finalization prevents Succeeded.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Same operation ID and fingerprint replays the original result even after later lifecycle changes.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Same operation ID with a different fingerprint conflicts before provider dispatch.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Conversation archive cannot race an active or nonterminal turn.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Direct completion and recovery reduce identical durable evidence to the same outcome.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

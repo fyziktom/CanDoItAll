@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB01",
+  "title": "Canonical transaction and persistence repair",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-003",
+    "RQ-004",
+    "RQ-030"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Conversation title and transcript metadata have exactly one canonical writable owner.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Conversation creation commits product binding and transcript root together or commits neither.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Conversation rename updates the canonical title once and cannot leave divergent rows.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No production conversation store creates a second AppDbContext inside an active product command.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Migration and transfer payloads preserve the repaired canonical model.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

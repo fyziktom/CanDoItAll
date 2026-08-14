@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB05",
+  "title": "Bounded transcript queries and pagination",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-017",
+    "RQ-018"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Transcript paging executes a bounded SQL query and never materializes the full transcript.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Conversation and definition listings do not issue one query per item.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Context-window construction reads only the bounded entries it can send.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Externally exposed collections use deterministic cursors and enforced page limits.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Large-transcript tests prove stable memory/query behavior without changing canonical content.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

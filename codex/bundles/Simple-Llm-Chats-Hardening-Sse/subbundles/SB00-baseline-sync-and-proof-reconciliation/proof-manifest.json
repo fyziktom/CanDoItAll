@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB00",
+  "title": "Baseline sync and proof reconciliation",
+  "state": "Ready",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-001",
+    "RQ-002",
+    "RQ-034",
+    "RQ-035"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "The feature branch contains the latest development commit or an explicitly recorded equivalent merge result.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "The actual implementation head and proof head are identical and recorded.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Every one of the 19 prior failures has a reproducible classification or is explicitly obsolete with evidence.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No branch-induced or unresolved prior failure is deferred beyond CP0.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No solution-wide test suite was rerun during this subbundle.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

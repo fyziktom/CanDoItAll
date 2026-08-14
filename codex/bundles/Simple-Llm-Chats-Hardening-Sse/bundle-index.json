@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "simple-llm-chats-hardening-sse",
+  "status": "Prepared",
+  "entrySubbundle": "SB00",
+  "requirements": [
+    {
+      "id": "RQ-001",
+      "text": "Synchronize simple-chats with the latest development baseline before hardening proof.",
+      "owners": [
+        "SB00",
+        "SB13"
+      ]
+    },
+    {
+      "id": "RQ-002",
+      "text": "Replace stale or commitless proof with evidence tied to the actual implementation head and classify the prior 19 failures.",
+      "owners": [
+        "SB00",
+        "SB13"
+      ]
+    },
+    {
+      "id": "RQ-003",
+      "text": "Maintain one canonical writable owner for conversation title and transcript metadata.",
+      "owners": [
+        "SB01",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-004",
+      "text": "Create and rename conversation state atomically without orphan or divergent rows.",
+      "owners": [
+        "SB01",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-005",
+      "text": "Commit operation claim, pending user message, active turn, and admission evidence atomically.",
+      "owners": [
+        "SB02",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-006",
+      "text": "Commit assistant finalization or exact failure compensation atomically with operation state and usage evidence.",
+      "owners": [
+        "SB02",
+        "SB06",
+        "SB08"
+      ]
+    },
+    {
+      "id": "RQ-007",
+      "text": "Escalate unresolved compensation to RecoveryRequired; never leave a live active turn behind a terminal failure.",
+      "owners": [
+        "SB02",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-008",
+      "text": "A durable cancellation request committed before semantic completion must prevent Succeeded.",
+      "owners": [
+        "SB02",
+        "SB06",
+        "SB08"
+      ]
+    },
+    {
+      "id": "RQ-009",
+      "text": "Resolve idempotent replay by operation identity/fingerprint before mutable lifecycle validation.",
+      "owners": [
+        "SB02",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-010",
+      "text": "Conversation archive must not race an active turn or nonterminal operation.",
+      "owners": [
+        "SB02",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-011",
+      "text": "Fence every public use case from first read through final commit/return to one database profile identity and generation.",
+      "owners": [
+        "SB03",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-012",
+      "text": "A profile switch must prevent old-generation writes and produce deterministic retained evidence.",
+      "owners": [
+        "SB03",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-013",
+      "text": "Use durable cross-instance execution ownership with claim, heartbeat, expiry, and release.",
+      "owners": [
+        "SB04",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-014",
+      "text": "Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone.",
+      "owners": [
+        "SB04",
+        "SB06",
+        "SB08"
+      ]
+    },
+    {
+      "id": "RQ-015",
+      "text": "Execute admitted operations independently from the initiating HTTP request through an available dispatcher.",
+      "owners": [
+        "SB04",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-016",
+      "text": "Never automatically redispatch when durable evidence says a provider dispatch may have started.",
+      "owners": [
+        "SB02",
+        "SB04",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-017",
+      "text": "Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries.",
+      "owners": [
+        "SB05",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-018",
+      "text": "Build provider context windows from bounded database reads rather than full transcript materialization.",
+      "owners": [
+        "SB05",
+        "SB06"
+      ]
+    },
+    {
+      "id": "RQ-019",
+      "text": "Provide an additive provider-neutral incremental LLM invocation port without breaking existing non-streaming callers.",
+      "owners": [
+        "SB07",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-020",
+      "text": "Implement true incremental streaming for OpenAI, Azure OpenAI, and Ollama, with a deterministic fallback policy.",
+      "owners": [
+        "SB07",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-021",
+      "text": "Retry a stream only before its first emitted delta and never after partial output is externally visible.",
+      "owners": [
+        "SB07",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-022",
+      "text": "Persist a bounded per-operation event journal with monotonic sequence and durable replay authority.",
+      "owners": [
+        "SB08",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-023",
+      "text": "Expose SSE with Last-Event-ID/after replay, gaps, heartbeat, anti-buffering, profile lifetime, and terminal closure.",
+      "owners": [
+        "SB09",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-024",
+      "text": "SSE/client disconnect must not cancel the durable operation; explicit cancellation remains authoritative.",
+      "owners": [
+        "SB09",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-025",
+      "text": "Turn start must return 202 Accepted promptly with operation, status, and event links.",
+      "owners": [
+        "SB09",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-026",
+      "text": "Audit actual provider attempts with deterministic outcomes shared by direct and recovery reducers.",
+      "owners": [
+        "SB02",
+        "SB07",
+        "SB08",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-027",
+      "text": "Conversation origin is server-owned and cannot be spoofed by an HTTP client.",
+      "owners": [
+        "SB10",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-028",
+      "text": "Enforce LLM Chat read/manage/execute API scopes when bearer authorization is enabled.",
+      "owners": [
+        "SB10",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-029",
+      "text": "Do not expose prompts, system instructions, credentials, raw provider payloads, or raw provider errors through logs/API/SSE.",
+      "owners": [
+        "SB08",
+        "SB09",
+        "SB10",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-030",
+      "text": "Keep EF migration, model snapshot, retention, and database-transfer behavior consistent with the hardened schema.",
+      "owners": [
+        "SB01",
+        "SB08",
+        "SB11"
+      ]
+    },
+    {
+      "id": "RQ-031",
+      "text": "Keep implementation portable and prove affected behavior on Linux plus the final Windows/Linux/macOS CI matrix.",
+      "owners": [
+        "SB11",
+        "SB13"
+      ]
+    },
+    {
+      "id": "RQ-032",
+      "text": "Do not implement UI, shared-component refactoring, floating chat, or Project Structure context in this bundle.",
+      "owners": [
+        "SB12"
+      ]
+    },
+    {
+      "id": "RQ-033",
+      "text": "Preserve a clean future LlmChatDeployment boundary for enterprise chatbot channels without dormant deployment fields now.",
+      "owners": [
+        "SB10",
+        "SB12"
+      ]
+    },
+    {
+      "id": "RQ-034",
+      "text": "Run the expensive stable solution gate and CI matrix once, only at the immutable final head.",
+      "owners": [
+        "SB00",
+        "SB13"
+      ]
+    },
+    {
+      "id": "RQ-035",
+      "text": "Use filtered affected-scope tests throughout; forbid repeated full Unit/Integration/Solution suites before the final gate.",
+      "owners": [
+        "SB00",
+        "SB12",
+        "SB13"
+      ]
+    }
+  ],
+  "subbundles": [
+    {
+      "id": "SB00",
+      "path": "subbundles/SB00-baseline-sync-and-proof-reconciliation",
+      "dependsOn": [],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-001",
+        "RQ-002",
+        "RQ-034",
+        "RQ-035"
+      ],
+      "state": "Ready"
+    },
+    {
+      "id": "SB01",
+      "path": "subbundles/SB01-canonical-transaction-and-persistence-repair",
+      "dependsOn": [
+        "SB00"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-003",
+        "RQ-004",
+        "RQ-030"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB02",
+      "path": "subbundles/SB02-atomic-turn-state-machine-and-recovery",
+      "dependsOn": [
+        "SB01"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-005",
+        "RQ-006",
+        "RQ-007",
+        "RQ-008",
+        "RQ-009",
+        "RQ-010",
+        "RQ-016",
+        "RQ-026"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB03",
+      "path": "subbundles/SB03-whole-use-case-profile-fencing",
+      "dependsOn": [
+        "SB02"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-011",
+        "RQ-012"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB04",
+      "path": "subbundles/SB04-durable-dispatch-lease-and-multi-instance-cancellation",
+      "dependsOn": [
+        "SB03"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-013",
+        "RQ-014",
+        "RQ-015",
+        "RQ-016"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB05",
+      "path": "subbundles/SB05-bounded-transcript-queries-and-pagination",
+      "dependsOn": [
+        "SB04"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-017",
+        "RQ-018"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB06",
+      "path": "subbundles/SB06-backend-hardening-checkpoint",
+      "dependsOn": [
+        "SB05"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-003",
+        "RQ-004",
+        "RQ-005",
+        "RQ-006",
+        "RQ-007",
+        "RQ-008",
+        "RQ-009",
+        "RQ-010",
+        "RQ-011",
+        "RQ-012",
+        "RQ-013",
+        "RQ-014",
+        "RQ-015",
+        "RQ-016",
+        "RQ-017",
+        "RQ-018"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB07",
+      "path": "subbundles/SB07-provider-neutral-streaming-contracts-and-drivers",
+      "dependsOn": [
+        "SB06"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-019",
+        "RQ-020",
+        "RQ-021",
+        "RQ-026"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB08",
+      "path": "subbundles/SB08-durable-stream-event-journal-and-pipeline",
+      "dependsOn": [
+        "SB07"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-006",
+        "RQ-008",
+        "RQ-014",
+        "RQ-022",
+        "RQ-026",
+        "RQ-029",
+        "RQ-030"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB09",
+      "path": "subbundles/SB09-asynchronous-turn-api-and-sse",
+      "dependsOn": [
+        "SB08"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-023",
+        "RQ-024",
+        "RQ-025",
+        "RQ-029"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB10",
+      "path": "subbundles/SB10-api-security-and-external-client-contract",
+      "dependsOn": [
+        "SB09"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-027",
+        "RQ-028",
+        "RQ-029",
+        "RQ-033"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB11",
+      "path": "subbundles/SB11-focused-postgresql-http-sse-and-portability-proof",
+      "dependsOn": [
+        "SB10"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-019",
+        "RQ-020",
+        "RQ-021",
+        "RQ-022",
+        "RQ-023",
+        "RQ-024",
+        "RQ-025",
+        "RQ-026",
+        "RQ-027",
+        "RQ-028",
+        "RQ-029",
+        "RQ-030",
+        "RQ-031"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB12",
+      "path": "subbundles/SB12-documentation-guards-and-dead-path-cleanup",
+      "dependsOn": [
+        "SB11"
+      ],
+      "proofTier": "Behavioral",
+      "requirements": [
+        "RQ-032",
+        "RQ-033",
+        "RQ-035"
+      ],
+      "state": "Locked"
+    },
+    {
+      "id": "SB13",
+      "path": "subbundles/SB13-final-stable-gate-ci-matrix-and-release-decision",
+      "dependsOn": [
+        "SB12"
+      ],
+      "proofTier": "Governed",
+      "requirements": [
+        "RQ-001",
+        "RQ-002",
+        "RQ-031",
+        "RQ-034",
+        "RQ-035"
+      ],
+      "state": "Locked"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP0",
+      "after": "SB00",
+      "path": "reviews/CP0-BASELINE-AND-PROOF.md"
+    },
+    {
+      "id": "CP1",
+      "after": "SB06",
+      "path": "reviews/CP1-BACKEND-HARDENING.md"
+    },
+    {
+      "id": "CP2",
+      "after": "SB11",
+      "path": "reviews/CP2-STREAMING-API.md"
+    },
+    {
+      "id": "FINAL",
+      "after": "SB13",
+      "path": "reviews/FINAL-RELEASE-DECISION.md"
+    }
+  ]
+}

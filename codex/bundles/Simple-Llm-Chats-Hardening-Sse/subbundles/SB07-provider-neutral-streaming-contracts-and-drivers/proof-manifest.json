@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB07",
+  "title": "Provider-neutral streaming contracts and drivers",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-019",
+    "RQ-020",
+    "RQ-021",
+    "RQ-026"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Existing ILlmInvocationPort callers remain source- and behavior-compatible.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "OpenAI, Azure OpenAI, and Ollama produce incremental text through one provider-neutral contract.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A non-incremental supported driver uses a deterministic single-delta fallback or typed unsupported result.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No automatic retry occurs after the first emitted delta.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Every actual provider dispatch attempt receives a distinct monotonic audit ordinal and deterministic outcome.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Streaming failures expose no credentials, raw frames, or raw provider errors.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

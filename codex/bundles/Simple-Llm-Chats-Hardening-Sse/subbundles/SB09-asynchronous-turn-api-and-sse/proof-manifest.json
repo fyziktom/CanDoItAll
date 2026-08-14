@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB09",
+  "title": "Asynchronous turn API and SSE",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-023",
+    "RQ-024",
+    "RQ-025",
+    "RQ-029"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "Turn start returns 202 without waiting for provider completion.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "SSE delivers ordered deltas and exactly one terminal operation event.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Reconnect resumes without duplicate semantic text or a second provider call.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "A replay gap emits stream.gap with a usable recovery cursor while status remains authoritative.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "SSE disconnect does not cancel or abandon the operation.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Explicit cancellation is visible in operation status and event stream.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "The stream closes after terminal success, failure, cancellation, or RecoveryRequired.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Existing anti-buffering, heartbeat, cursor, and profile-lifetime behavior is reused.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB13",
+  "title": "Final stable gate, CI matrix, and release decision",
+  "state": "Locked",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-001",
+    "RQ-002",
+    "RQ-031",
+    "RQ-034",
+    "RQ-035"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "The final Release solution build passes at the exact recorded commit.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "The repository stable filtered test gate passes at the exact recorded commit.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Documentation and pending-model-change checks pass.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Windows, Linux, and macOS CI jobs pass for the same commit.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No broad suite was rerun after an unchanged failure merely to seek a different result.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "FINAL explicitly states whether UI/component-isolation work is unlocked.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}

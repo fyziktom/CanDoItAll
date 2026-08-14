@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB12",
+  "title": "Documentation, guards, and dead-path cleanup",
+  "state": "Locked",
+  "proofTier": "Behavioral",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "",
+  "dependencyMode": "",
+  "host": "",
+  "database": "",
+  "requirements": [
+    "RQ-032",
+    "RQ-033",
+    "RQ-035"
+  ],
+  "commands": [],
+  "sourceAssertions": [],
+  "behavioralCases": [],
+  "negativeCases": [],
+  "acceptance": [
+    {
+      "criterion": "No production path uses the independent-context UoW or synchronous request-owned provider execution.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "No Razor, floating-chat, shared-component, Project Structure context, or UI integration was added.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Executable guards enforce dependency direction and prevent agent/tool/skill/MCP leakage.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Authoritative docs accurately describe asynchronous operation and SSE contracts.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "Future UI, context, and enterprise deployment bundles have explicit ownership handoffs.",
+      "satisfied": false,
+      "evidence": ""
+    },
+    {
+      "criterion": "All proof and closure records reference the actual implementation head.",
+      "satisfied": false,
+      "evidence": ""
+    }
+  ],
+  "architecture": {
+    "owner": "",
+    "dependencyDirection": "",
+    "cycleCheck": "",
+    "partialClassCheck": "",
+    "oldPathRemoval": ""
+  },
+  "bugs": [],
+  "deviations": [],
+  "knownGaps": [],
+  "progression": {
+    "decision": "",
+    "reason": "",
+    "unlocks": []
+  }
+}
