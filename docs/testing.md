@@ -6,20 +6,26 @@ The routine verification contract is the filtered Release gate. Browser, live-pr
 
 The primary solution covers provider-neutral Memory and its isolated provider drivers.
 Native Cognitive Memory implementation tests run only in the standalone repository and
-are not a prerequisite for this solution. DotNetWatch integration tests still require
-the sibling `CanDoItAll.Mcp` repository.
+are not a prerequisite for this solution. The default build graph requires sibling
+`CanDoItAll.Components` and `CanDoItAll.FileTools` repositories as documented in the root
+README. DotNetWatch integration tests additionally require the sibling `CanDoItAll.Mcp`
+repository.
 
 ## Stable Release Gate
 
 Run from the repository root:
 
 ```powershell
-dotnet restore .\CanDoItAll.slnx
-dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+dotnet restore ./CanDoItAll.slnx
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
+dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
 ```
 
 `/m:1` avoids `bin` and `obj` contention when local MCP or watch processes are active. A developer with an isolated workspace may increase parallelism, but the result must still come from the same configuration and filter.
+
+Those commands use sibling source projects. For the clean-checkout package graph used by
+CI and Docker, pass `-p:UseLocalCanDoItAllLibraries=false` to restore, build, and test.
+Keep the dependency mode identical for the whole gate.
 
 The filter intentionally excludes:
 
@@ -33,7 +39,7 @@ Quarantine is not a passing result. Remove a quarantine only with focused replac
 ## Documentation
 
 ```powershell
-& .\tools\Validation\Test-Documentation.ps1
+./tools/Validation/Test-Documentation.ps1
 ```
 
 Run this after changing maintained Markdown, repository metadata, public paths, or source-truth claims represented by the validator.

@@ -8,6 +8,8 @@ authoritative.
 ## Architecture
 
 - [Architecture overview](architecture/overview.md)
+- [Storage, paths, and host portability](architecture/storage-and-path-portability.md)
+- [Runtime execution and shell portability](architecture/runtime-execution-portability.md)
 - [Internal communication](architecture/internal-communication.md)
 - [Module map](architecture/modules.md)
 - [Agent output contracts](agent-output-contracts.md)
@@ -16,6 +18,7 @@ authoritative.
 
 ## Development And Operations
 
+- [Installing instances on Windows, Linux, and macOS](operations/installing-instances.md)
 - [Development runtime](development-runtime.md)
 - [Headless Web host operations](operations/headless-web-host.md)
 - [Installed Windows web app](operations/installed-web-app.md)

@@ -47,6 +47,10 @@ cluster. The generated launcher supplies the exact `Database__Provider` and
 `Database__ConnectionString` overrides. See
 [`docs/operations/installed-web-app.md`](../../../docs/operations/installed-web-app.md).
 
+Windows, Linux, and macOS build/publish choices, default purpose roots, and service
+profiles are indexed in
+[`docs/operations/installing-instances.md`](../../../docs/operations/installing-instances.md).
+
 The host registers the experimental generic Memory runtime with zero enabled providers
 and disabled memory workers by default. Qdrant and native Cognitive Memory are not
 base-host dependencies; the native implementation and API belong to its standalone
@@ -61,4 +65,7 @@ The checked-in API configuration is intended for a trusted local host and leaves
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`
 - Development runtime: `docs/development-runtime.md`
+- Installing instances: `docs/operations/installing-instances.md`
+- Storage and host-path portability: `docs/architecture/storage-and-path-portability.md`
+- Runtime execution and shell portability: `docs/architecture/runtime-execution-portability.md`
 - CRM-HR API: `docs/crm-hr-api.md`

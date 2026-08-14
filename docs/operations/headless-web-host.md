@@ -2,6 +2,10 @@
 
 This runbook covers framework-dependent CanDoItAll Web deployment without desktop, terminal, Manager, MCP, or local-tool requirements. The application still serves its normal Web UI; "headless" means the host process has no desktop-session dependency.
 
+Start with [Installing instances](installing-instances.md) for deployment-model selection,
+common prerequisites, and platform default paths. This runbook contains the detailed
+service lifecycle.
+
 ## Support contract
 
 Every publish contains `runtime-support.json`. Treat it as the artifact's bounded claim, not as proof that an untested host works.
@@ -10,22 +14,32 @@ Every publish contains `runtime-support.json`. Treat it as the artifact's bounde
 | --- | --- | --- |
 | `win-x64` | Framework-dependent | Validated on Windows x64 |
 | `linux-x64` | Framework-dependent | Validated on Ubuntu x64 |
-| `osx-x64` | Framework-dependent | `ActualHostUnverified` until A07 macOS execution |
-| `osx-arm64` | Framework-dependent | `ActualHostUnverified` until A07 macOS execution |
+| `osx-x64` | Framework-dependent | Embedded support manifest reports `ActualHostUnverified` |
+| `osx-arm64` | Framework-dependent | Embedded support manifest reports `ActualHostUnverified` |
 
-The host requires the matching .NET 10 ASP.NET Core runtime, PostgreSQL 16, writable purpose roots, and a stable `CANDOITALL_HOST_BINDING_ID`. Production Unix hosts also require an explicitly configured certificate-backed ASP.NET Core Data Protection key protector. A cross-RID publish is not actual-host evidence. macOS Keychain execution is separately deferred as `MACOS-KEYCHAIN-VALIDATION-001`; headless `Auto` uses LocalUserFile/`BasicLocal`, not Keychain.
+The host requires the matching .NET 10 ASP.NET Core runtime, PostgreSQL 16, writable purpose roots, and a stable `CANDOITALL_HOST_BINDING_ID`. Production Unix hosts also require an explicitly configured certificate-backed ASP.NET Core Data Protection key protector. A cross-RID publish is not actual-host evidence. macOS Keychain execution requires a genuine interactive user Keychain; headless `Auto` uses LocalUserFile/`BasicLocal`, not Keychain.
 
 ## Publish
 
-Publish outside the repository. Do not add self-contained, trimming, single-file, or Native AOT properties to these commands:
+Publish outside the repository. Installation artifacts use the pinned package graph, so
+pass `UseLocalCanDoItAllLibraries=false` to both restore and publish. Restore separately
+for each target RID. Do not add self-contained, trimming, single-file, or Native AOT
+properties to these commands:
 
 ```text
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r linux-x64 --self-contained false -o /absolute/artifacts/linux-x64
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-x64 --self-contained false -o /absolute/artifacts/osx-x64
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-arm64 --self-contained false -o /absolute/artifacts/osx-arm64
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r linux-x64 -p:UseLocalCanDoItAllLibraries=false
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r linux-x64 --self-contained false --no-restore -o /absolute/artifacts/linux-x64 -p:UseLocalCanDoItAllLibraries=false
+
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r osx-x64 -p:UseLocalCanDoItAllLibraries=false
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-x64 --self-contained false --no-restore -o /absolute/artifacts/osx-x64 -p:UseLocalCanDoItAllLibraries=false
+
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r osx-arm64 -p:UseLocalCanDoItAllLibraries=false
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-arm64 --self-contained false --no-restore -o /absolute/artifacts/osx-arm64 -p:UseLocalCanDoItAllLibraries=false
 ```
 
-On Windows use an absolute directory outside the checkout and `-r win-x64`. Verify that the output contains `CanDoItAll.Web.dll`, `runtime-support.json`, `Templates`, and the static Web assets before installation.
+On Windows use an absolute directory outside the checkout and `-r win-x64` on both
+commands. Verify that the output contains `CanDoItAll.Web.dll`, `runtime-support.json`,
+`Templates`, and the static Web assets before installation.
 
 ## Linux systemd profile
 
@@ -97,7 +111,7 @@ curl --fail http://127.0.0.1:5032/health
 curl --fail http://127.0.0.1:5032/api/runtime/operations
 ```
 
-The Keychain interactive profile requires a genuine available user Keychain and is not a headless substitute. Until the deferred actual-host validations pass, macOS artifacts and profiles must remain labeled `ActualHostUnverified`.
+The Keychain interactive profile requires a genuine available user Keychain and is not a headless substitute. macOS artifacts and profiles must retain the embedded manifest's `ActualHostUnverified` label until the manifest and accepted actual-host evidence are deliberately updated together.
 
 ## Upgrade, restart, and rollback
 

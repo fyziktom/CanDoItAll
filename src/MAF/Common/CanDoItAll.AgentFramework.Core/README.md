@@ -83,3 +83,4 @@ provider is registered.
 - Current architecture: `docs/architecture/overview.md`
 - Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
 - Process/MAF/provider implementation map: `docs/architecture/internal-communication.md`
+- Runtime execution and shell portability: `docs/architecture/runtime-execution-portability.md`

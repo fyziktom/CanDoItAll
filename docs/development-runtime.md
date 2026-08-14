@@ -99,5 +99,9 @@ docker compose down
 ```
 
 See [container operations](operations/containers.md) for health checks and lifecycle
-details. See [headless Web host operations](operations/headless-web-host.md) for clean
-framework-dependent publish, systemd, launchd, restart, and rollback guidance.
+details. See [Installing instances](operations/installing-instances.md) for the common
+Windows, Linux, and macOS entry point, and
+[headless Web host operations](operations/headless-web-host.md) for clean
+framework-dependent publish, systemd, launchd, restart, and rollback guidance. The path
+binding and storage-driver rules are documented in
+[Storage, paths, and host portability](architecture/storage-and-path-portability.md).

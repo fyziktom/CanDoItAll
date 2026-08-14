@@ -3,6 +3,10 @@
 The architecture documentation is intentionally small:
 
 - [Overview](overview.md) defines boundaries and dependency direction.
+- [Storage, paths, and host portability](storage-and-path-portability.md) defines provider
+  dispatch, logical locators, host-bound filesystem roots, and cross-host rebind.
+- [Runtime execution and shell portability](runtime-execution-portability.md) distinguishes
+  typed runtime plans, POSIX `sh`, file-skill Bash, terminals, and host capabilities.
 - [Internal communication](internal-communication.md) explains in-process, persistence,
   HTTP, event-stream, provider, and plugin communication.
 - [Modules](modules.md) maps product modules to their responsibilities and entry points.

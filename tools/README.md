@@ -40,7 +40,8 @@ Framework-dependent Unix artifacts use `tools/install/unix/install-candoitall-we
 It installs immutable releases and switches a validated release-id state file without
 elevation, database mutation, provider selection, or root-policy duplication. The same
 folder contains the stable launcher, idempotent rollback entry point, and systemd/launchd
-templates. See `docs/operations/headless-web-host.md` before using them.
+templates. Start with `docs/operations/installing-instances.md`, then use
+`docs/operations/headless-web-host.md` for the detailed service lifecycle.
 
 Local development uses sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` project
 references by default. Their roots can be overridden with

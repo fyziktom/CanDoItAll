@@ -1,6 +1,6 @@
 # CanDoItAll
 
-[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml?query=branch%3Amain)
+[![CI](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/fyziktom/CanDoItAll/actions/workflows/ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -24,6 +24,7 @@ This repository does not own:
 
 - development MCP servers from [CanDoItAll.Mcp](https://github.com/fyziktom/CanDoItAll.Mcp)
 - shared Blazor components from [CanDoItAll.Components](https://github.com/fyziktom/CanDoItAll.Components)
+- reusable file, browser, and desktop adapters from [CanDoItAll.FileTools](https://github.com/fyziktom/CanDoItAll.FileTools)
 - family standards and reusable Codex assets from [CanDoItAll.SharedInfo](https://github.com/fyziktom/CanDoItAll.SharedInfo)
 - native Cognitive Memory from [CanDoItAll.CognitiveMemory](https://github.com/fyziktom/CanDoItAll.CognitiveMemory)
 
@@ -44,40 +45,71 @@ This repository does not own:
 ## Requirements
 
 - the .NET SDK selected by [`global.json`](global.json)
+- Windows, Linux, or macOS for a direct source build; supported publish targets are
+  described in [Installing instances](docs/operations/installing-instances.md#choose-a-deployment-model)
+- sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` source repositories for the
+  default local-development dependency mode, or an explicit package-mode build
 - PostgreSQL 16 or a compatible supported server
 - Docker Desktop or another Compose v2 runtime when using the development application stack
 - Node.js and npm when rebuilding application Tailwind output
-- PowerShell 7 for repository automation; the Windows installer and generated launcher
-  remain compatible with Windows PowerShell 5.1
+- PowerShell 7 on Windows, Linux, or macOS for repository automation; the dedicated
+  Windows installer and generated launcher remain compatible with Windows PowerShell 5.1
 
-## Install The Windows Web App
+## Build Dependency Modes
 
-The Windows installer publishes a self-contained web app and prepares a dedicated
-PostgreSQL database for that installation:
+Local development uses source projects from the Components and FileTools repositories by
+default. Clone all three repositories with these exact sibling names; casing matters on
+case-sensitive filesystems:
 
-```powershell
-& .\tools\install\Install-CanDoItAllWebApp.ps1 -StartAfterInstall
+```text
+<parent>/
+  CanDoItAll/
+  CanDoItAll.Components/
+  CanDoItAll.FileTools/
 ```
 
-When a working Linux Docker engine is available, database setup uses the isolated
-`candoitall-webapp-db` container and `candoitall-webapp-db-data` volume on
-`127.0.0.1:55432`. This is one installer-managed container/volume resource set, not a
-second Compose project. If Docker is unavailable, the installer downloads the pinned
-Windows x64 PostgreSQL 16 archive from EDB and runs a per-user native cluster beneath a
-short local, non-UNC install root. Both paths create the same `candoitall` database and
-non-superuser application role; the launcher starts the selected backend and supplies the
-exact connection settings to the app. Generated passwords are protected for the current
-Windows user and are not stored in the repository or install manifest.
-
-Database setup can also be repaired or rerun independently:
+[`Directory.Build.targets`](Directory.Build.targets) replaces matching package references
+with project references from those roots. A non-sibling layout must pass both root
+properties to every restore, build, test, and publish command:
 
 ```powershell
-& .\tools\install\Install-CanDoItAllWebAppDatabase.ps1
+dotnet restore ./CanDoItAll.slnx `
+  -p:CanDoItAllComponentsRepositoryRoot="D:\work\CanDoItAll.Components" `
+  -p:CanDoItAllFileToolsRepositoryRoot="D:\work\CanDoItAll.FileTools"
 ```
 
-The legacy `tools\Install-CanDoItAllWebApp.ps1` entry point remains as a compatibility
-wrapper. See [installed web app operations](docs/operations/installed-web-app.md) for
-paths, engine selection, lifecycle, and recovery details.
+```sh
+dotnet restore ./CanDoItAll.slnx \
+  -p:CanDoItAllComponentsRepositoryRoot=/source/CanDoItAll.Components \
+  -p:CanDoItAllFileToolsRepositoryRoot=/source/CanDoItAll.FileTools
+```
+
+Clean-checkout, CI, Docker, and reproducible artifact builds use the pinned NuGet graph
+instead. Select that mode explicitly and consistently:
+
+```text
+dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=false /m:1
+```
+
+Do not switch modes between restore and build. The package versions are centralized in
+[`Directory.Build.props`](Directory.Build.props); `false` is an intentional package build,
+not a silent fallback for missing sibling repositories.
+
+## Install An Instance
+
+All supported deployment choices, common prerequisites, default data locations, and
+platform-specific settings are collected in [Installing instances](docs/operations/installing-instances.md):
+
+- [Windows](docs/operations/installing-instances.md#windows)
+- [Linux](docs/operations/installing-instances.md#linux)
+- [macOS](docs/operations/installing-instances.md#macos)
+
+Windows has a dedicated self-contained per-user installer with a managed PostgreSQL
+backend. Linux and macOS use framework-dependent artifacts and the immutable Unix release
+installer, with systemd and launchd service templates respectively. The same
+framework-dependent headless Web host can also be published for Windows. Container-based
+development is available on any host with a Linux Compose engine.
 
 ## Development Quick Start
 
@@ -101,19 +133,27 @@ Compose, copy `compose.override.yaml.example` to ignored `compose.override.yaml`
 
 ## Build And Test
 
+The following commands use the default sibling-source dependency mode. They are identical
+on Windows, Linux, and macOS when run in PowerShell 7:
+
 ```powershell
-dotnet restore .\CanDoItAll.slnx
-dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
-& .\tools\Validation\Test-Documentation.ps1
-& .\tools\install\tests\Test-CanDoItAllWebAppInstallScripts.ps1
+dotnet restore ./CanDoItAll.slnx
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
+dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+./tools/Validation/Test-Documentation.ps1
 ```
 
-GitHub-hosted CI is temporarily disabled. Run the applicable checks locally before
-publishing changes.
+On Windows, also validate the dedicated installer when its boundary or documentation
+changes:
+
+```powershell
+./tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1
+```
 
 The filtered command is the routine repository gate. Environment-dependent and extended
-test lanes are documented in [Testing](docs/testing.md).
+test lanes are documented in [Testing](docs/testing.md). GitHub CI runs the package-mode
+stable and actual-host portability gates on Windows x64, Ubuntu x64, and macOS arm64, plus
+the Linux container gate.
 
 ## Containers
 
@@ -139,6 +179,8 @@ The main dependency direction is:
 Start with:
 
 - [Architecture overview](docs/architecture/overview.md)
+- [Storage, paths, and host portability](docs/architecture/storage-and-path-portability.md)
+- [Runtime execution and shell portability](docs/architecture/runtime-execution-portability.md)
 - [Internal communication](docs/architecture/internal-communication.md)
 - [Module map](docs/architecture/modules.md)
 - [Documentation index](docs/README.md)

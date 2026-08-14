@@ -30,7 +30,9 @@ Project Structure runtime nodes compile to typed executable, argument, environme
 working-directory, and target values. Direct execution uses the owned workspace process
 host and does not require a terminal. PowerShell and POSIX shell nodes remain explicit
 script modes; they are not fallbacks for .NET, Docker, Python, Node, or other ordinary
-runtime nodes.
+runtime nodes. POSIX runtime nodes invoke `sh` on Linux and macOS and are unsupported on
+Windows. Separately, AgentFramework file-skill `.sh` scripts invoke `bash`; Bash is a
+skill-script dependency, not a Workbench runtime fallback.
 
 Interactive terminal presentation is optional. Windows enables its PowerShell
 presentation adapter by default. Linux and macOS require an explicit executable and
@@ -85,3 +87,4 @@ concurrency checks.
 - Current architecture: `docs/architecture/overview.md`
 - Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
 - Agent runtime tool surface: `docs/agent-runtime-tool-surface.md`
+- Runtime execution and shell portability: `docs/architecture/runtime-execution-portability.md`
