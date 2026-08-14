@@ -105,6 +105,13 @@ platform-specific settings are collected in [Installing instances](docs/operatio
 - [Linux](docs/operations/installing-instances.md#linux)
 - [macOS](docs/operations/installing-instances.md#macos)
 
+> **Temporary alpha-upgrade notice:** installations that retained experimental data from
+> before the August 2026 portability changes may need a one-time manual data repair after
+> reinstalling. If project structure pages return HTTP 500, give the
+> [portable-path alpha repair prompt](docs/SpecificAlfaMigrations/2026-08-14-portable-path-data-repair.md)
+> to Codex, Claude, or another coding agent. Do not add legacy fallback behavior to the
+> application for this retired alpha state.
+
 Windows has a dedicated self-contained per-user installer with a managed PostgreSQL
 backend. Linux and macOS use framework-dependent artifacts and the immutable Unix release
 installer, with systemd and launchd service templates respectively. The same
