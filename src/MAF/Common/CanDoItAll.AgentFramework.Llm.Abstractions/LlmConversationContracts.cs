@@ -696,6 +696,55 @@ public sealed record LlmConversationTurnResult(
     LlmConversationTranscriptEntry UserEntry,
     LlmConversationTranscriptEntry AssistantEntry);
 
+public sealed record LlmConversationAdmittedTurnRequest
+{
+    public LlmConversationAdmittedTurnRequest(
+        Guid conversationId,
+        Guid turnId,
+        ProviderProfile provider,
+        string model = "",
+        LlmResponseFormat? responseFormat = null,
+        LlmModelSettings? settings = null,
+        TimeSpan? timeout = null,
+        string correlationId = "")
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(conversationId, Guid.Empty);
+        ArgumentOutOfRangeException.ThrowIfEqual(turnId, Guid.Empty);
+        Provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        var normalizedCorrelationId = correlationId?.Trim() ?? string.Empty;
+        if (normalizedCorrelationId.Length > LlmInvocationRequest.MaximumCorrelationIdLength)
+        {
+            throw new ArgumentException(
+                $"A correlation id cannot exceed {LlmInvocationRequest.MaximumCorrelationIdLength} characters.",
+                nameof(correlationId));
+        }
+
+        ConversationId = conversationId;
+        TurnId = turnId;
+        Model = model?.Trim() ?? string.Empty;
+        ResponseFormat = responseFormat;
+        Settings = settings;
+        Timeout = timeout;
+        CorrelationId = normalizedCorrelationId;
+    }
+
+    public Guid ConversationId { get; }
+
+    public Guid TurnId { get; }
+
+    public ProviderProfile Provider { get; }
+
+    public string Model { get; }
+
+    public LlmResponseFormat? ResponseFormat { get; }
+
+    public LlmModelSettings? Settings { get; }
+
+    public TimeSpan? Timeout { get; }
+
+    public string CorrelationId { get; }
+}
+
 public sealed record LlmConversationTurnAdmission(
     LlmConversationDocument Conversation,
     LlmConversationTranscriptEntry UserEntry,
@@ -732,6 +781,10 @@ public interface ILlmConversationService
 
     Task<LlmConversationTurnAdmission> AdmitTurnAsync(
         LlmConversationTurnRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmConversationAdmittedTurnRequest request,
         CancellationToken cancellationToken = default);
 
     Task<LlmConversationTurnResult> CompleteTurnAsync(

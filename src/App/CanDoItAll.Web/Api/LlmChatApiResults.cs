@@ -35,6 +35,7 @@ internal static class LlmChatApiResults
     public static bool IsRetryable(string code)
         => code is
             LlmChatErrorCodes.ProviderUnavailable or
+            LlmChatErrorCodes.DispatcherUnavailable or
             LlmChatErrorCodes.DeadlineExceeded or
             LlmChatErrorCodes.RuntimeProfileChanged or
             LlmChatErrorCodes.StorageConflict;
@@ -61,7 +62,8 @@ internal static class LlmChatApiResults
             LlmChatErrorCodes.ModelSettingsInvalid or
             LlmChatErrorCodes.ThinkingEffortNotSupported => StatusCodes.Status422UnprocessableEntity,
             LlmChatErrorCodes.DeadlineExceeded => StatusCodes.Status504GatewayTimeout,
-            LlmChatErrorCodes.ProviderUnavailable => StatusCodes.Status503ServiceUnavailable,
+            LlmChatErrorCodes.ProviderUnavailable or
+            LlmChatErrorCodes.DispatcherUnavailable => StatusCodes.Status503ServiceUnavailable,
             LlmChatErrorCodes.StorageCorrupted => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status400BadRequest
         };

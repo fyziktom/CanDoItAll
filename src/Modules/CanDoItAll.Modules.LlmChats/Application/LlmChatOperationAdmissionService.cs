@@ -58,7 +58,7 @@ public sealed class LlmChatOperationAdmissionService(
             if (existing is not null)
             {
                 return Matches(existing, command, requestFingerprint)
-                    ? Result<LlmChatSendAdmission>.Success(new(existing, null, false))
+                    ? Result<LlmChatSendAdmission>.Success(new(existing, false))
                     : Result<LlmChatSendAdmission>.Failure(LlmChatErrors.OperationIdConflict());
             }
 
@@ -90,16 +90,11 @@ public sealed class LlmChatOperationAdmissionService(
             if (!operationAdmission.Created)
             {
                 return Matches(operationAdmission.Operation, command, requestFingerprint)
-                    ? Result<LlmChatSendAdmission>.Success(new(operationAdmission.Operation, null, false))
+                    ? Result<LlmChatSendAdmission>.Success(new(operationAdmission.Operation, false))
                     : Result<LlmChatSendAdmission>.Failure(LlmChatErrors.OperationIdConflict());
             }
 
-            var claimed = await operationRepository.TryClaimDispatchAsync(
-                command.OperationId,
-                requestFingerprint,
-                token).ConfigureAwait(false)
-                ?? throw new InvalidOperationException("A newly admitted LLM Chat operation could not be claimed.");
-            var turn = await conversationEngine.AdmitTurnAsync(
+            await conversationEngine.AdmitTurnAsync(
                 conversation.Id,
                 command.OperationId,
                 definition,
@@ -108,10 +103,10 @@ public sealed class LlmChatOperationAdmissionService(
                 command.ExpectedTranscriptRevision,
                 token).ConfigureAwait(false);
             var admittedOperation = await evidenceSink.MarkTurnAdmittedAsync(
-                claimed.Id,
+                operationAdmission.Operation.Id,
                 timeProvider.GetUtcNow(),
                 token).ConfigureAwait(false);
-            return Result<LlmChatSendAdmission>.Success(new(admittedOperation, turn, true));
+            return Result<LlmChatSendAdmission>.Success(new(admittedOperation, true));
         }, cancellationToken);
 
     private static bool Matches(
@@ -125,9 +120,4 @@ public sealed class LlmChatOperationAdmissionService(
 
 internal sealed record LlmChatSendAdmission(
     LlmChatOperation Operation,
-    LlmConversationTurnAdmission? OptionalTurn,
-    bool Created)
-{
-    public LlmConversationTurnAdmission Turn => OptionalTurn
-        ?? throw new InvalidOperationException("A new operation requires turn admission state.");
-}
+    bool Created);

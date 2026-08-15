@@ -14,7 +14,7 @@ internal sealed record LlmChatsTransferDocument(
     IReadOnlyList<LlmChatOperationRow> Operations,
     IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords)
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     public int RecordCount =>
         Definitions.Count + Revisions.Count + Tags.Count + Conversations.Count + Transcripts.Count +
@@ -95,6 +95,16 @@ internal sealed record LlmChatsTransferDocument(
             InvocationRecords.Any(row => !operationIds.Contains(row.OperationId)))
         {
             throw new InvalidDataException("An LLM Chat operation or invocation record is detached from its parent.");
+        }
+
+        if (Operations.Any(row =>
+                row.ExecutionEpoch < 0 ||
+                !Enum.IsDefined(row.DispatchPhase) ||
+                (row.ExecutionOwnerId is null) != (row.ClaimedAtUtc is null) ||
+                (row.ExecutionOwnerId is null) != (row.HeartbeatAtUtc is null) ||
+                (row.ExecutionOwnerId is null) != (row.LeaseExpiresAtUtc is null)))
+        {
+            throw new InvalidDataException("An LLM Chat operation contains an invalid execution lease.");
         }
     }
 

@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.LlmChats;
+using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
@@ -65,8 +66,14 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddProcessesModule(configuration);
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
+        var dispatcherOptions =
+            configuration.GetSection(LlmChatExecutionLeaseOptions.SectionName).Get<LlmChatExecutionLeaseOptions>() ??
+            new LlmChatExecutionLeaseOptions();
+        dispatcherOptions.Validate();
+        services.AddSingleton<LlmChatExecutionLeaseOptions>(dispatcherOptions);
         services.AddLlmChatsApplication();
         services.AddLlmChatsPersistence();
+        services.AddHostedService<LlmChatOperationDispatcherHostedService>();
         services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
         services.AddCrmHrModule();

@@ -13,6 +13,7 @@ public static class LlmChatErrorCodes
     public const string OperationNotFound = "llm-chat.operation-not-found";
     public const string OperationIdConflict = "llm-chat.operation-id-conflict";
     public const string OperationRecoveryRequired = "llm-chat.operation-recovery-required";
+    public const string DispatcherUnavailable = "llm-chat.dispatcher-unavailable";
     public const string ProviderNotFound = "llm-chat.provider-not-found";
     public const string ProviderKindMismatch = "llm-chat.provider-kind-mismatch";
     public const string ModelNotSupported = "llm-chat.model-not-supported";

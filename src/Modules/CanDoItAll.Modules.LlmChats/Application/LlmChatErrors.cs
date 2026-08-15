@@ -53,4 +53,9 @@ internal static class LlmChatErrors
         => Error.Failure(
             "The active database profile changed during the LLM Chat operation.",
             LlmChatErrorCodes.RuntimeProfileChanged);
+
+    public static Error DispatcherUnavailable()
+        => Error.Failure(
+            "No LLM Chat execution dispatcher is available on this host.",
+            LlmChatErrorCodes.DispatcherUnavailable);
 }

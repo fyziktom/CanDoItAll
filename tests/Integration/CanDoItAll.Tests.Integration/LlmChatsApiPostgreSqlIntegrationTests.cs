@@ -160,23 +160,32 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
                        pinnedDefaultConversation.GetProperty("transcriptRevision").GetInt64(),
                        "provider failure")))
         {
-            Assert.Equal(HttpStatusCode.ServiceUnavailable, providerFailure.StatusCode);
-            var body = await providerFailure.Content.ReadAsStringAsync();
-            Assert.Contains(LlmChatErrorCodes.ProviderUnavailable, body, StringComparison.Ordinal);
-            Assert.Contains(providerFailureOperationId.ToString("D"), body, StringComparison.Ordinal);
-            Assert.DoesNotContain(ControllableLlmChatInvocationPort.ProviderSecret, body, StringComparison.Ordinal);
+            Assert.Equal(HttpStatusCode.Accepted, providerFailure.StatusCode);
+            Assert.NotNull(providerFailure.Headers.Location);
+            var failed = await WaitForOperationTerminalAsync(
+                host.Client,
+                providerFailure.Headers.Location!.ToString());
+            Assert.Equal("failed", failed.GetProperty("status").GetString());
+            Assert.Equal(
+                LlmChatErrorCodes.ProviderUnavailable,
+                failed.GetProperty("failure").GetProperty("code").GetString());
+            Assert.DoesNotContain(
+                ControllableLlmChatInvocationPort.ProviderSecret,
+                failed.GetRawText(),
+                StringComparison.Ordinal);
         }
 
         var afterFailure = await GetJsonAsync(
             host.Client,
             $"/api/llm-conversations/{defaultConversationId:D}");
         var cancellationOperationId = Guid.Parse("72000000-0000-0000-0000-000000000007");
-        var cancellationSend = host.Client.PostAsJsonAsync(
+        using var cancellationSend = await host.Client.PostAsJsonAsync(
             $"/api/llm-conversations/{defaultConversationId:D}/turns",
             CreateTurnBody(
                 cancellationOperationId,
                 afterFailure.GetProperty("transcriptRevision").GetInt64(),
                 "cancel in flight"));
+        Assert.Equal(HttpStatusCode.Accepted, cancellationSend.StatusCode);
         await invocationPort.WaitUntilStartedAsync(ControllableLlmChatInvocationPort.CancellationKey);
         using (var cancellation = await host.Client.PostAsync(
                    $"/api/llm-chat-operations/{cancellationOperationId:D}/cancel",
@@ -184,12 +193,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         {
             Assert.Equal(HttpStatusCode.Accepted, cancellation.StatusCode);
         }
-        using (var cancelledSend = await cancellationSend)
-        {
-            Assert.Equal(HttpStatusCode.Conflict, cancelledSend.StatusCode);
-            Assert.Contains(LlmChatErrorCodes.Cancelled, await cancelledSend.Content.ReadAsStringAsync());
-        }
-        var cancelledOperation = await GetJsonAsync(
+        var cancelledOperation = await WaitForOperationTerminalAsync(
             host.Client,
             $"/api/llm-chat-operations/{cancellationOperationId:D}");
         Assert.Equal("cancelled", cancelledOperation.GetProperty("status").GetString());
@@ -263,22 +267,25 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         var conversation = await CreateConversationAsync(host.Client, definitionId, "Profile fence conversation");
         var conversationId = conversation.GetProperty("id").GetGuid();
         var operationId = Guid.Parse("72000000-0000-0000-0000-000000000008");
-        var send = host.Client.PostAsJsonAsync(
+        using var send = await host.Client.PostAsJsonAsync(
             $"/api/llm-conversations/{conversationId:D}/turns",
             CreateTurnBody(
                 operationId,
                 conversation.GetProperty("transcriptRevision").GetInt64(),
                 "profile switch before finalization"));
+        Assert.Equal(HttpStatusCode.Accepted, send.StatusCode);
         await finalizationBarrier.WaitAsync();
 
         PublishProfileSwitch(host);
         finalizationBarrier.Release();
 
-        using (var response = await send)
+        await WaitUntilAsync(async () =>
         {
-            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-            Assert.Contains(LlmChatErrorCodes.RuntimeProfileChanged, await response.Content.ReadAsStringAsync());
-        }
+            var factory = host.App.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            await using var pollingContext = await factory.CreateDbContextAsync();
+            return await pollingContext.Set<LlmChatInvocationRecordRow>()
+                .AnyAsync(row => row.OperationId == operationId);
+        }, "the profile-fenced invocation audit");
 
         var factory = host.App.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
@@ -300,6 +307,48 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         using var staleQuery = await host.Client.GetAsync($"/api/llm-chat-operations/{operationId:D}");
         Assert.Equal(HttpStatusCode.Conflict, staleQuery.StatusCode);
         Assert.Contains(LlmChatErrorCodes.RuntimeProfileChanged, await staleQuery.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Request_lifetime_ends_before_provider_completion_and_does_not_cancel_durable_execution()
+    {
+        var provider = CreateProvider();
+        var invocationPort = new ControllableLlmChatInvocationPort();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: services => ConfigureProviderBoundary(services, provider, invocationPort));
+        var definition = await CreateDefinitionAsync(host.Client, FastModel, thinkingEffort: null);
+        definition = await ChangeDefinitionStatusAsync(
+            host.Client,
+            definition.GetProperty("id").GetGuid(),
+            "activate",
+            definition);
+        var conversation = await CreateConversationAsync(
+            host.Client,
+            definition.GetProperty("id").GetGuid(),
+            "Detached request lifetime");
+        var conversationId = conversation.GetProperty("id").GetGuid();
+        var operationId = Guid.Parse("72000000-0000-0000-0000-000000000009");
+        using var requestCancellation = new CancellationTokenSource();
+        var send = host.Client.PostAsJsonAsync(
+            $"/api/llm-conversations/{conversationId:D}/turns",
+            CreateTurnBody(
+                operationId,
+                conversation.GetProperty("transcriptRevision").GetInt64(),
+                "request disconnect in flight"),
+            requestCancellation.Token);
+
+        await invocationPort.WaitUntilStartedAsync(ControllableLlmChatInvocationPort.RequestDisconnectKey);
+        using var admitted = await send.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Equal(HttpStatusCode.Accepted, admitted.StatusCode);
+        requestCancellation.Cancel();
+        invocationPort.ReleaseRequestDisconnect();
+
+        var completed = await WaitForOperationTerminalAsync(
+            host.Client,
+            $"/api/llm-chat-operations/{operationId:D}");
+        Assert.Equal("succeeded", completed.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Object, completed.GetProperty("assistantMessage").ValueKind);
     }
 
     private static void ConfigureProviderBoundary(
@@ -554,11 +603,46 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             request);
         var responseBody = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected a successful turn but received {(int)response.StatusCode}: {responseBody}");
+            response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Accepted,
+            $"Expected an admitted turn but received {(int)response.StatusCode}: {responseBody}");
         Assert.NotNull(response.Headers.Location);
         using var document = JsonDocument.Parse(responseBody);
-        return document.RootElement.Clone();
+        var admitted = document.RootElement.Clone();
+        return response.StatusCode == HttpStatusCode.OK
+            ? admitted
+            : await WaitForOperationTerminalAsync(client, response.Headers.Location!.ToString());
+    }
+
+    private static async Task<JsonElement> WaitForOperationTerminalAsync(HttpClient client, string location)
+    {
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            var operation = await GetJsonAsync(client, location);
+            var status = operation.GetProperty("status").GetString();
+            if (status is "succeeded" or "failed" or "cancelled" or "recoveryRequired")
+            {
+                return operation;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(25));
+        }
+
+        throw new TimeoutException($"LLM Chat operation at '{location}' did not become terminal.");
+    }
+
+    private static async Task WaitUntilAsync(Func<Task<bool>> predicate, string description)
+    {
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            if (await predicate())
+            {
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(25));
+        }
+
+        throw new TimeoutException($"Timed out waiting for {description}.");
     }
 
     private static async Task AssertMessagePaginationAsync(HttpClient client, Guid conversationId)
@@ -710,8 +794,12 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
     private static async Task<JsonElement> GetJsonAsync(HttpClient client, string path)
     {
         using var response = await client.GetAsync(path);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return await ReadJsonAsync(response);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            $"Expected 200 from '{path}' but received {(int)response.StatusCode}: {body}");
+        using var document = JsonDocument.Parse(body);
+        return document.RootElement.Clone();
     }
 
     private static async Task<JsonElement> ReadJsonAsync(HttpResponseMessage response)
@@ -739,10 +827,13 @@ internal sealed class ControllableLlmChatInvocationPort : ILlmInvocationPort
 {
     public const string CancellationKey = "cancel";
     public const string ProfileSwitchKey = "profile-switch";
+    public const string RequestDisconnectKey = "request-disconnect";
     public const string ProviderSecret = "provider-secret-must-not-leak";
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> starts = [];
     private readonly TaskCompletionSource<bool> profileSwitchRelease =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> requestDisconnectRelease =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public async Task<LlmInvocationResult> InvokeAsync(
@@ -773,6 +864,12 @@ internal sealed class ControllableLlmChatInvocationPort : ILlmInvocationPort
             await profileSwitchRelease.Task;
         }
 
+        if (userText.Contains("request disconnect in flight", StringComparison.Ordinal))
+        {
+            Signal(RequestDisconnectKey);
+            await requestDisconnectRelease.Task;
+        }
+
         return new LlmInvocationResult(request.Model, $"Assistant response to: {userText}", new LlmUsage(10, 4, 1));
     }
 
@@ -785,6 +882,9 @@ internal sealed class ControllableLlmChatInvocationPort : ILlmInvocationPort
 
     public void ReleaseProfileSwitch()
         => profileSwitchRelease.TrySetResult(true);
+
+    public void ReleaseRequestDisconnect()
+        => requestDisconnectRelease.TrySetResult(true);
 
     private void Signal(string key)
         => starts.GetOrAdd(
@@ -885,6 +985,19 @@ internal sealed class BarrierLlmChatConversationEngine(
         await barrier.WaitForReleaseAsync().ConfigureAwait(false);
         return result;
     }
+
+    public Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        CancellationToken cancellationToken = default)
+        => inner.ResumeAdmittedTurnAsync(
+            conversationId,
+            operationId,
+            definition,
+            definitionRevision,
+            cancellationToken);
 
     public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
         LlmConversationTurnAdmission admission,

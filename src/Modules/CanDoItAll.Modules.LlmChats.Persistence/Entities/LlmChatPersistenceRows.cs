@@ -194,6 +194,18 @@ internal sealed class LlmChatOperationRow
 
     public long CancellationGeneration { get; set; }
 
+    public Guid? ExecutionOwnerId { get; set; }
+
+    public long ExecutionEpoch { get; set; }
+
+    public DateTimeOffset? ClaimedAtUtc { get; set; }
+
+    public DateTimeOffset? HeartbeatAtUtc { get; set; }
+
+    public DateTimeOffset? LeaseExpiresAtUtc { get; set; }
+
+    public LlmChatDispatchPhase DispatchPhase { get; set; }
+
     public DateTimeOffset? TurnAdmittedAtUtc { get; set; }
 
     public DateTimeOffset? ProviderDispatchStartedAtUtc { get; set; }

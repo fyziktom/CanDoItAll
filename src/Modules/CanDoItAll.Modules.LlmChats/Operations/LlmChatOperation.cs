@@ -20,6 +20,14 @@ public enum LlmChatOperationStatus
     RecoveryRequired
 }
 
+public enum LlmChatDispatchPhase
+{
+    Queued,
+    Claimed,
+    ProviderDispatchStarted,
+    ProviderDispatchReturned
+}
+
 public sealed record LlmChatOperation
 {
     public LlmChatOperation(
@@ -86,6 +94,18 @@ public sealed record LlmChatOperation
 
     public long CancellationGeneration { get; init; }
 
+    public LlmChatExecutionOwnerId? ExecutionOwnerId { get; init; }
+
+    public long ExecutionEpoch { get; init; }
+
+    public DateTimeOffset? ClaimedAtUtc { get; init; }
+
+    public DateTimeOffset? HeartbeatAtUtc { get; init; }
+
+    public DateTimeOffset? LeaseExpiresAtUtc { get; init; }
+
+    public LlmChatDispatchPhase DispatchPhase { get; init; } = LlmChatDispatchPhase.Queued;
+
     public DateTimeOffset? TurnAdmittedAtUtc { get; init; }
 
     public DateTimeOffset? ProviderDispatchStartedAtUtc { get; init; }
@@ -110,218 +130,7 @@ public sealed record LlmChatOperation
         LlmChatOperationStatus.Succeeded or
         LlmChatOperationStatus.Failed or
         LlmChatOperationStatus.Cancelled;
-}
 
-internal static class LlmChatOperationTransitions
-{
-    public static LlmChatOperation ClaimDispatch(LlmChatOperation operation)
-    {
-        RequireStatus(operation, LlmChatOperationStatus.Pending);
-        return Advance(operation, LlmChatOperationStatus.Running);
-    }
-
-    public static LlmChatOperation MarkTurnAdmitted(
-        LlmChatOperation operation,
-        DateTimeOffset admittedAtUtc)
-    {
-        if (operation.TurnAdmittedAtUtc is not null)
-        {
-            return operation;
-        }
-
-        RequireStatus(operation, LlmChatOperationStatus.Running);
-        return Advance(operation, operation.Status) with { TurnAdmittedAtUtc = admittedAtUtc };
-    }
-
-    public static LlmChatOperation MarkProviderDispatchStarted(
-        LlmChatOperation operation,
-        DateTimeOffset startedAtUtc)
-    {
-        if (operation.ProviderDispatchStartedAtUtc is not null)
-        {
-            return operation;
-        }
-
-        RequireStatus(operation, LlmChatOperationStatus.Running);
-        if (operation.TurnAdmittedAtUtc is not { } admittedAtUtc || startedAtUtc < admittedAtUtc)
-        {
-            throw new InvalidOperationException("Provider dispatch cannot start before turn admission evidence exists.");
-        }
-
-        return Advance(operation, operation.Status) with { ProviderDispatchStartedAtUtc = startedAtUtc };
-    }
-
-    public static LlmChatOperation MarkProviderDispatchReturned(
-        LlmChatOperation operation,
-        DateTimeOffset returnedAtUtc)
-    {
-        if (operation.ProviderDispatchReturnedAtUtc is not null)
-        {
-            return operation;
-        }
-
-        RequireStatus(
-            operation,
-            LlmChatOperationStatus.Running,
-            LlmChatOperationStatus.CancellationRequested);
-        if (operation.ProviderDispatchStartedAtUtc is not { } startedAtUtc || returnedAtUtc < startedAtUtc)
-        {
-            throw new InvalidOperationException("Provider dispatch return evidence requires an earlier dispatch start.");
-        }
-
-        return Advance(operation, operation.Status) with { ProviderDispatchReturnedAtUtc = returnedAtUtc };
-    }
-
-    public static LlmChatOperation CompleteTranscript(
-        LlmChatOperation operation,
-        DateTimeOffset completedAtUtc,
-        long resultingTranscriptRevision,
-        Guid assistantEntryId)
-    {
-        if (operation.Status == LlmChatOperationStatus.Succeeded)
-        {
-            return operation;
-        }
-
-        RequireStatus(
-            operation,
-            LlmChatOperationStatus.Running,
-            LlmChatOperationStatus.RecoveryRequired);
-        if (assistantEntryId == Guid.Empty || resultingTranscriptRevision <= operation.ExpectedTranscriptRevision)
-        {
-            throw new InvalidOperationException("Transcript completion requires an assistant entry and an advanced revision.");
-        }
-
-        return Advance(operation, LlmChatOperationStatus.Succeeded) with
-        {
-            TranscriptCompletedAtUtc = completedAtUtc,
-            CompletedAtUtc = completedAtUtc,
-            ResultingTranscriptRevision = resultingTranscriptRevision,
-            AssistantEntryId = assistantEntryId,
-            FailureCode = string.Empty
-        };
-    }
-
-    public static LlmChatOperation RequestCancellation(
-        LlmChatOperation operation,
-        DateTimeOffset requestedAtUtc)
-    {
-        if (operation.IsTerminal || operation.Status == LlmChatOperationStatus.RecoveryRequired)
-        {
-            return operation;
-        }
-
-        if (operation.Status == LlmChatOperationStatus.CancellationRequested)
-        {
-            return operation;
-        }
-
-        RequireStatus(
-            operation,
-            LlmChatOperationStatus.Pending,
-            LlmChatOperationStatus.Running);
-        return Advance(operation, LlmChatOperationStatus.CancellationRequested) with
-        {
-            CancellationRequestedAtUtc = requestedAtUtc,
-            CancellationGeneration = checked(operation.CancellationGeneration + 1)
-        };
-    }
-
-    public static LlmChatOperation CompleteCancellation(
-        LlmChatOperation operation,
-        DateTimeOffset completedAtUtc)
-    {
-        if (operation.Status == LlmChatOperationStatus.Cancelled)
-        {
-            return operation;
-        }
-
-        RequireStatus(
-            operation,
-            LlmChatOperationStatus.Pending,
-            LlmChatOperationStatus.Running,
-            LlmChatOperationStatus.CancellationRequested,
-            LlmChatOperationStatus.RecoveryRequired);
-        return Advance(operation, LlmChatOperationStatus.Cancelled) with
-        {
-            CancellationRequestedAtUtc = operation.CancellationRequestedAtUtc ?? completedAtUtc,
-            CompletedAtUtc = completedAtUtc,
-            FailureCode = LlmChatErrorCodes.Cancelled
-        };
-    }
-
-    public static LlmChatOperation CompleteFailure(
-        LlmChatOperation operation,
-        DateTimeOffset completedAtUtc,
-        string failureCode)
-    {
-        if (operation.Status == LlmChatOperationStatus.Failed)
-        {
-            return operation;
-        }
-
-        RequireStatus(
-            operation,
-            LlmChatOperationStatus.Pending,
-            LlmChatOperationStatus.Running,
-            LlmChatOperationStatus.CancellationRequested,
-            LlmChatOperationStatus.RecoveryRequired);
-        return Advance(operation, LlmChatOperationStatus.Failed) with
-        {
-            CompletedAtUtc = completedAtUtc,
-            FailureCode = NormalizeFailureCode(failureCode)
-        };
-    }
-
-    public static LlmChatOperation RequireRecovery(
-        LlmChatOperation operation,
-        string failureCode)
-    {
-        if (operation.Status == LlmChatOperationStatus.RecoveryRequired)
-        {
-            return operation;
-        }
-
-        RequireStatus(
-            operation,
-            LlmChatOperationStatus.Pending,
-            LlmChatOperationStatus.Running,
-            LlmChatOperationStatus.CancellationRequested);
-        return Advance(operation, LlmChatOperationStatus.RecoveryRequired) with
-        {
-            FailureCode = NormalizeFailureCode(failureCode)
-        };
-    }
-
-    private static LlmChatOperation Advance(
-        LlmChatOperation operation,
-        LlmChatOperationStatus status)
-        => operation with
-        {
-            Status = status,
-            ConcurrencyToken = checked(operation.ConcurrencyToken + 1)
-        };
-
-    private static void RequireStatus(
-        LlmChatOperation operation,
-        params LlmChatOperationStatus[] allowed)
-    {
-        if (!allowed.Contains(operation.Status))
-        {
-            throw new InvalidOperationException(
-                $"Operation status '{operation.Status}' does not allow this transition.");
-        }
-    }
-
-    private static string NormalizeFailureCode(string failureCode)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
-        var normalized = failureCode.Trim();
-        if (normalized.Length > 200)
-        {
-            throw new ArgumentException("An operation failure code cannot exceed 200 characters.", nameof(failureCode));
-        }
-
-        return normalized;
-    }
+    public bool HasLiveExecutionLease(DateTimeOffset observedAtUtc)
+        => ExecutionOwnerId is not null && LeaseExpiresAtUtc > observedAtUtc;
 }

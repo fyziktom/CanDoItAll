@@ -18,6 +18,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
@@ -120,6 +121,27 @@ internal sealed class UnfencedLlmChatCommitFence : ILlmChatCommitFence
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default)
         => operation(cancellationToken);
+}
+
+internal sealed class UnfencedDatabaseRuntimeWriteFence : IDatabaseRuntimeWriteFence
+{
+    public static UnfencedDatabaseRuntimeWriteFence Instance { get; } = new();
+
+    public Task<T> ExecuteAsync<T>(
+        DatabaseRuntimeSnapshot expected,
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+        => operation(cancellationToken);
+}
+
+internal sealed class LlmChatTestDbContextFactory(
+    LlmChatsPostgreSqlTestDatabase database) : IDbContextFactory<AppDbContext>
+{
+    public AppDbContext CreateDbContext()
+        => database.CreateDbContext();
+
+    public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(CreateDbContext());
 }
 
 public sealed class LlmChatConversationTransactionIntegrationTests
@@ -272,18 +294,15 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
-            unitOfWork);
+            unitOfWork,
+            new LlmChatOperationScopeAccessor(),
+            TimeProvider.System);
         var operation = CreateOperation(seeded.ConversationId, seeded.TurnId, seeded.Now);
         var admitted = Admit(seeded.Document, seeded.TurnId, seeded.Now.AddSeconds(1));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token =>
         {
             await operationRepository.AdmitAsync(operation, token);
-            var claimed = await operationRepository.TryClaimDispatchAsync(
-                operation.Id,
-                operation.RequestFingerprint,
-                token);
-            Assert.NotNull(claimed);
             await store.ReplaceAsync(admitted, seeded.Document.TranscriptRevision, token);
             await evidenceSink.MarkTurnAdmittedAsync(operation.Id, admitted.UpdatedAtUtc, token);
             throw new InvalidOperationException("Injected failure after atomic admission writes.");
@@ -312,7 +331,9 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
-            unitOfWork);
+            unitOfWork,
+            new LlmChatOperationScopeAccessor(),
+            TimeProvider.System);
         var assistant = new LlmConversationTranscriptEntry(
             Guid.NewGuid(),
             seeded.TurnId,
@@ -359,7 +380,9 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
-            unitOfWork);
+            unitOfWork,
+            new LlmChatOperationScopeAccessor(),
+            TimeProvider.System);
         var compensated = seeded.Document with
         {
             TranscriptRevision = seeded.Document.TranscriptRevision + 1,
@@ -708,14 +731,10 @@ public sealed class LlmChatPersistenceIntegrationTests
 public sealed class LlmChatOperationDispatchClaimIntegrationTests
 {
     [Fact]
-    public async Task Independent_postgresql_repositories_admit_once_and_claim_dispatch_once()
+    public async Task Independent_postgresql_services_admit_once_and_claim_execution_lease_once()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatoperationclaim");
         var conversationId = await SeedConversationAsync(database);
-        await using var firstContext = database.CreateDbContext();
-        await using var secondContext = database.CreateDbContext();
-        var firstRepository = new EfLlmChatOperationRepository(firstContext);
-        var secondRepository = new EfLlmChatOperationRepository(secondContext);
         var operation = new LlmChatOperation(
             new LlmChatOperationId(Guid.NewGuid()),
             conversationId,
@@ -724,26 +743,113 @@ public sealed class LlmChatOperationDispatchClaimIntegrationTests
             0,
             LlmChatOperationStatus.Pending,
             DateTimeOffset.UtcNow,
-            0);
+            0)
+        {
+            TurnAdmittedAtUtc = DateTimeOffset.UtcNow
+        };
 
-        var admissions = await Task.WhenAll(
-            firstRepository.AdmitAsync(operation),
-            secondRepository.AdmitAsync(operation));
+        await using (var seedContext = database.CreateDbContext())
+        {
+            var admission = await new EfLlmChatOperationRepository(seedContext).AdmitAsync(operation);
+            Assert.True(admission.Created);
+        }
 
-        Assert.Single(admissions, admission => admission.Created);
-        Assert.All(admissions, admission => Assert.Equal(operation.RequestFingerprint, admission.Operation.RequestFingerprint));
-
+        var options = new LlmChatExecutionLeaseOptions();
+        await using var firstProvider = CreateExecutionLeaseProvider(database, options);
+        await using var secondProvider = CreateExecutionLeaseProvider(database, options);
+        using var firstScope = firstProvider.CreateScope();
+        using var secondScope = secondProvider.CreateScope();
+        var firstLeaseService = firstScope.ServiceProvider.GetRequiredService<LlmChatExecutionLeaseService>();
+        var secondLeaseService = secondScope.ServiceProvider.GetRequiredService<LlmChatExecutionLeaseService>();
         var claims = await Task.WhenAll(
-            firstRepository.TryClaimDispatchAsync(operation.Id, operation.RequestFingerprint),
-            secondRepository.TryClaimDispatchAsync(operation.Id, operation.RequestFingerprint));
+            firstLeaseService.TryClaimAsync(operation.Id, LlmChatExecutionOwnerId.New()),
+            secondLeaseService.TryClaimAsync(operation.Id, LlmChatExecutionOwnerId.New()));
 
-        var winner = Assert.Single(claims, claim => claim is not null);
-        Assert.Equal(LlmChatOperationStatus.Running, winner!.Status);
-        Assert.Equal(1, winner.ConcurrencyToken);
+        var winner = Assert.Single(claims, claim => claim.Claimed);
+        Assert.Equal(LlmChatOperationStatus.Running, winner.Operation!.Status);
+        Assert.Equal(1, winner.Operation.ConcurrencyToken);
+        Assert.Equal(1, winner.Operation.ExecutionEpoch);
+        await using var readContext = database.CreateDbContext();
+        var firstRepository = new EfLlmChatOperationRepository(readContext);
         var stored = await firstRepository.TryGetAsync(operation.Id);
         Assert.NotNull(stored);
         Assert.Equal(LlmChatOperationStatus.Running, stored.Status);
         Assert.Equal(1, stored.ConcurrencyToken);
+    }
+
+    [Fact]
+    public async Task Remote_cancellation_is_observed_by_the_current_owner_heartbeat()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatremotecancel");
+        var conversationId = await SeedConversationAsync(database);
+        var now = DateTimeOffset.UtcNow;
+        var operation = new LlmChatOperation(
+            LlmChatOperationId.New(),
+            conversationId,
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('c', 64)),
+            0,
+            LlmChatOperationStatus.Pending,
+            now,
+            0)
+        {
+            TurnAdmittedAtUtc = now
+        };
+        await using (var seedContext = database.CreateDbContext())
+        {
+            await new EfLlmChatOperationRepository(seedContext).AdmitAsync(operation);
+        }
+
+        var options = new LlmChatExecutionLeaseOptions();
+        await using var ownerProvider = CreateExecutionLeaseProvider(database, options);
+        using var ownerScope = ownerProvider.CreateScope();
+        var claim = await ownerScope.ServiceProvider
+            .GetRequiredService<LlmChatExecutionLeaseService>()
+            .TryClaimAsync(operation.Id, LlmChatExecutionOwnerId.New());
+        Assert.True(claim.Claimed);
+
+        await using (var remoteContext = database.CreateDbContext())
+        {
+            var remoteRepository = new EfLlmChatOperationRepository(remoteContext);
+            var remoteUnitOfWork = new EfLlmChatUnitOfWork(
+                remoteContext,
+                UnfencedLlmChatCommitFence.Instance);
+            var remoteEvidence = new LlmChatOperationEvidenceService(
+                remoteRepository,
+                new EfLlmChatInvocationRecordRepository(remoteContext),
+                remoteUnitOfWork,
+                new LlmChatOperationScopeAccessor(),
+                TimeProvider.System);
+            await remoteEvidence.RequestCancellationAsync(operation.Id, DateTimeOffset.UtcNow);
+        }
+
+        var heartbeat = new DatabaseProfileLlmChatExecutionLeaseHeartbeatStore(
+            new LlmChatTestDbContextFactory(database),
+            UnfencedDatabaseRuntimeWriteFence.Instance);
+        var observedAt = DateTimeOffset.UtcNow;
+        var observation = await heartbeat.RenewAndObserveAsync(
+            claim.Lease!.Value,
+            new LlmChatRuntimeIdentity(Guid.NewGuid(), "test-runtime", 0),
+            observedAt,
+            observedAt + options.LeaseDuration);
+
+        Assert.True(observation.IsCurrentOwner);
+        Assert.True(observation.CancellationRequested);
+    }
+
+    private static ServiceProvider CreateExecutionLeaseProvider(
+        LlmChatsPostgreSqlTestDatabase database,
+        LlmChatExecutionLeaseOptions options)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(options);
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped(_ => database.CreateDbContext());
+        services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();
+        services.AddScoped<ILlmChatCommitFence>(_ => UnfencedLlmChatCommitFence.Instance);
+        services.AddScoped<ILlmChatUnitOfWork, EfLlmChatUnitOfWork>();
+        services.AddScoped<LlmChatExecutionLeaseService>();
+        return services.BuildServiceProvider();
     }
 
     private static async Task<LlmChatConversationId> SeedConversationAsync(LlmChatsPostgreSqlTestDatabase database)

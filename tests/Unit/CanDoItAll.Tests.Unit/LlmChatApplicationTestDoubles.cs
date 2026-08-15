@@ -300,6 +300,14 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 
+    public Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
     public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
         LlmConversationTurnAdmission admission,
         LlmInvocationResult invocationResult,
@@ -333,4 +341,15 @@ internal sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow()
         => utcNow;
+}
+
+internal sealed class ManualTimeProvider(DateTimeOffset utcNow) : TimeProvider
+{
+    private DateTimeOffset current = utcNow;
+
+    public override DateTimeOffset GetUtcNow()
+        => current;
+
+    public void Advance(TimeSpan duration)
+        => current += duration;
 }

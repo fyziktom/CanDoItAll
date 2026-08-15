@@ -37,6 +37,30 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
+    public async Task<IReadOnlyList<LlmChatOperationId>> ListDispatchCandidatesAsync(
+        DateTimeOffset observedAtUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
+        var ids = await dbContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .Where(row =>
+                (row.Status == LlmChatOperationStatus.Pending ||
+                 row.Status == LlmChatOperationStatus.Running ||
+                 row.Status == LlmChatOperationStatus.CancellationRequested) &&
+                (row.ExecutionOwnerId == null ||
+                 row.LeaseExpiresAtUtc == null ||
+                 row.LeaseExpiresAtUtc <= observedAtUtc))
+            .OrderBy(row => row.StartedAtUtc)
+            .ThenBy(row => row.Id)
+            .Select(row => row.Id)
+            .Take(take)
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return [.. ids.Select(id => new LlmChatOperationId(id))];
+    }
+
     public async Task<LlmChatOperationAdmission> AdmitAsync(
         LlmChatOperation operation,
         CancellationToken cancellationToken = default)
@@ -46,6 +70,8 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
             INSERT INTO "LlmChats_Operations"
                 ("Id", "ConversationId", "Kind", "RequestFingerprint", "ExpectedTranscriptRevision",
                  "Status", "CancellationRequestedAtUtc", "CancellationGeneration", "TurnAdmittedAtUtc",
+                 "ExecutionOwnerId", "ExecutionEpoch", "ClaimedAtUtc", "HeartbeatAtUtc",
+                 "LeaseExpiresAtUtc", "DispatchPhase",
                  "ProviderDispatchStartedAtUtc", "ProviderDispatchReturnedAtUtc",
                  "TranscriptCompletedAtUtc", "StartedAtUtc", "CompletedAtUtc",
                  "ResultingTranscriptRevision", "AssistantEntryId", "FailureCode", "ConcurrencyToken")
@@ -53,7 +79,9 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
                 ({operation.Id.Value}, {operation.ConversationId.Value}, {(int)operation.Kind},
                  {operation.RequestFingerprint.Value}, {operation.ExpectedTranscriptRevision},
                  {(int)operation.Status}, {operation.CancellationRequestedAtUtc}, {operation.CancellationGeneration},
-                 {operation.TurnAdmittedAtUtc},
+                 {operation.TurnAdmittedAtUtc}, {(operation.ExecutionOwnerId == null ? null : operation.ExecutionOwnerId.Value.Value)},
+                 {operation.ExecutionEpoch}, {operation.ClaimedAtUtc}, {operation.HeartbeatAtUtc},
+                 {operation.LeaseExpiresAtUtc}, {(int)operation.DispatchPhase},
                  {operation.ProviderDispatchStartedAtUtc}, {operation.ProviderDispatchReturnedAtUtc},
                  {operation.TranscriptCompletedAtUtc}, {operation.StartedAtUtc}, {operation.CompletedAtUtc},
                  {operation.ResultingTranscriptRevision}, {operation.AssistantEntryId}, {operation.FailureCode},
@@ -63,25 +91,6 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         var stored = await TryGetAsync(operation.Id, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The admitted LLM Chat operation could not be reloaded.");
         return new LlmChatOperationAdmission(stored, inserted == 1);
-    }
-
-    public async Task<LlmChatOperation?> TryClaimDispatchAsync(
-        LlmChatOperationId id,
-        LlmChatRequestFingerprint requestFingerprint,
-        CancellationToken cancellationToken = default)
-    {
-        var affected = await dbContext.Set<LlmChatOperationRow>()
-            .Where(row => row.Id == id.Value &&
-                          row.RequestFingerprint == requestFingerprint.Value &&
-                          row.Status == LlmChatOperationStatus.Pending)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(row => row.Status, LlmChatOperationStatus.Running)
-                .SetProperty(row => row.ConcurrencyToken, row => row.ConcurrencyToken + 1),
-                cancellationToken)
-            .ConfigureAwait(false);
-        return affected == 1
-            ? await TryGetAsync(id, cancellationToken).ConfigureAwait(false)
-            : null;
     }
 
     public async Task<bool> TryReplaceAsync(
@@ -96,6 +105,59 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
                 .SetProperty(row => row.Status, operation.Status)
                 .SetProperty(row => row.CancellationRequestedAtUtc, operation.CancellationRequestedAtUtc)
                 .SetProperty(row => row.CancellationGeneration, operation.CancellationGeneration)
+                .SetProperty(row => row.ExecutionOwnerId, operation.ExecutionOwnerId == null
+                    ? null
+                    : operation.ExecutionOwnerId.Value.Value)
+                .SetProperty(row => row.ExecutionEpoch, operation.ExecutionEpoch)
+                .SetProperty(row => row.ClaimedAtUtc, operation.ClaimedAtUtc)
+                .SetProperty(row => row.HeartbeatAtUtc, operation.HeartbeatAtUtc)
+                .SetProperty(row => row.LeaseExpiresAtUtc, operation.LeaseExpiresAtUtc)
+                .SetProperty(row => row.DispatchPhase, operation.DispatchPhase)
+                .SetProperty(row => row.TurnAdmittedAtUtc, operation.TurnAdmittedAtUtc)
+                .SetProperty(row => row.ProviderDispatchStartedAtUtc, operation.ProviderDispatchStartedAtUtc)
+                .SetProperty(row => row.ProviderDispatchReturnedAtUtc, operation.ProviderDispatchReturnedAtUtc)
+                .SetProperty(row => row.TranscriptCompletedAtUtc, operation.TranscriptCompletedAtUtc)
+                .SetProperty(row => row.CompletedAtUtc, operation.CompletedAtUtc)
+                .SetProperty(row => row.ResultingTranscriptRevision, operation.ResultingTranscriptRevision)
+                .SetProperty(row => row.AssistantEntryId, operation.AssistantEntryId)
+                .SetProperty(row => row.FailureCode, operation.FailureCode)
+                .SetProperty(row => row.ConcurrencyToken, operation.ConcurrencyToken),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return affected == 1;
+    }
+
+    public async Task<bool> TryReplaceOwnedAsync(
+        LlmChatOperation operation,
+        long expectedConcurrencyToken,
+        LlmChatExecutionLeaseIdentity executionLease,
+        DateTimeOffset observedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        if (operation.Id != executionLease.OperationId)
+        {
+            throw new ArgumentException("The execution lease does not identify the operation being replaced.", nameof(executionLease));
+        }
+
+        var affected = await dbContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == operation.Id.Value &&
+                          row.ConcurrencyToken == expectedConcurrencyToken &&
+                          row.ExecutionOwnerId == executionLease.OwnerId.Value &&
+                          row.ExecutionEpoch == executionLease.Epoch &&
+                          row.LeaseExpiresAtUtc > observedAtUtc)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.Status, operation.Status)
+                .SetProperty(row => row.CancellationRequestedAtUtc, operation.CancellationRequestedAtUtc)
+                .SetProperty(row => row.CancellationGeneration, operation.CancellationGeneration)
+                .SetProperty(row => row.ExecutionOwnerId, operation.ExecutionOwnerId == null
+                    ? null
+                    : operation.ExecutionOwnerId.Value.Value)
+                .SetProperty(row => row.ExecutionEpoch, operation.ExecutionEpoch)
+                .SetProperty(row => row.ClaimedAtUtc, operation.ClaimedAtUtc)
+                .SetProperty(row => row.HeartbeatAtUtc, operation.HeartbeatAtUtc)
+                .SetProperty(row => row.LeaseExpiresAtUtc, operation.LeaseExpiresAtUtc)
+                .SetProperty(row => row.DispatchPhase, operation.DispatchPhase)
                 .SetProperty(row => row.TurnAdmittedAtUtc, operation.TurnAdmittedAtUtc)
                 .SetProperty(row => row.ProviderDispatchStartedAtUtc, operation.ProviderDispatchStartedAtUtc)
                 .SetProperty(row => row.ProviderDispatchReturnedAtUtc, operation.ProviderDispatchReturnedAtUtc)

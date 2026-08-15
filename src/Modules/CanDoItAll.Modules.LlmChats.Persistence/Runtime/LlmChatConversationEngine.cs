@@ -173,6 +173,37 @@ public sealed class LlmChatConversationEngine(
             cancellationToken);
     }
 
+    public Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(definitionRevision);
+        return ExecuteAsync(
+            operationId,
+            async token =>
+            {
+                EnsureExecutableDefinition(definition, definitionRevision);
+                EnsureTypedThinkingEffortIsAuthoritative(definitionRevision.Settings);
+                var resolution = await ResolveProviderAsync(definitionRevision, token).ConfigureAwait(false);
+                return await conversationService.ResumeAdmittedTurnAsync(
+                    new LlmConversationAdmittedTurnRequest(
+                        conversationId.Value,
+                        operationId.Value,
+                        resolution.Profile,
+                        resolution.Resolved.Model,
+                        definitionRevision.ResponseFormat,
+                        definitionRevision.Settings,
+                        definitionRevision.Timeout,
+                        operationId.ToString()),
+                    token).ConfigureAwait(false);
+            },
+            cancellationToken);
+    }
+
     public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
         LlmConversationTurnAdmission admission,
         LlmInvocationResult invocationResult,

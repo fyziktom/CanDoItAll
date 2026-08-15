@@ -7,7 +7,9 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 public sealed class LlmChatOperationEvidenceService(
     ILlmChatOperationRepository operationRepository,
     ILlmChatInvocationRecordRepository invocationRepository,
-    ILlmChatUnitOfWork unitOfWork) : ILlmChatOperationEvidenceSink
+    ILlmChatUnitOfWork unitOfWork,
+    ILlmChatOperationScopeAccessor operationScope,
+    TimeProvider timeProvider) : ILlmChatOperationEvidenceSink
 {
     private const int MaximumConcurrencyAttempts = 4;
 
@@ -43,7 +45,7 @@ public sealed class LlmChatOperationEvidenceService(
                 var transitioned = LlmChatOperationTransitions.MarkProviderDispatchReturned(
                     current,
                     record.CompletedAtUtc);
-                if (!await operationRepository.TryReplaceAsync(
+                if (!await TryReplaceAsync(
                         transitioned,
                         current.ConcurrencyToken,
                         transactionCancellationToken).ConfigureAwait(false))
@@ -131,7 +133,7 @@ public sealed class LlmChatOperationEvidenceService(
                     return current;
                 }
 
-                if (!await operationRepository.TryReplaceAsync(
+                if (!await TryReplaceAsync(
                         transitioned,
                         current.ConcurrencyToken,
                         transactionCancellationToken).ConfigureAwait(false))
@@ -155,4 +157,20 @@ public sealed class LlmChatOperationEvidenceService(
         CancellationToken cancellationToken)
         => await operationRepository.TryGetAsync(operationId, cancellationToken).ConfigureAwait(false)
            ?? throw new InvalidOperationException("The LLM Chat operation evidence target does not exist.");
+
+    private Task<bool> TryReplaceAsync(
+        LlmChatOperation operation,
+        long expectedConcurrencyToken,
+        CancellationToken cancellationToken)
+        => operationScope.Current?.ExecutionLease is { } executionLease
+            ? operationRepository.TryReplaceOwnedAsync(
+                operation,
+                expectedConcurrencyToken,
+                executionLease,
+                timeProvider.GetUtcNow(),
+                cancellationToken)
+            : operationRepository.TryReplaceAsync(
+                operation,
+                expectedConcurrencyToken,
+                cancellationToken);
 }

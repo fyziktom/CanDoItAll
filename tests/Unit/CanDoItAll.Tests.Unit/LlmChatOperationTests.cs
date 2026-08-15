@@ -20,7 +20,7 @@ public sealed class LlmChatOperationIdempotencyTests
         var operationId = LlmChatOperationId.New();
         var command = harness.CreateSendCommand(operationId, "hello");
 
-        var first = await harness.Service.SendAsync(command);
+        var first = await harness.SendAndDispatchAsync(command);
         var replay = await harness.Service.SendAsync(command);
 
         Assert.True(first.IsSuccess);
@@ -35,7 +35,7 @@ public sealed class LlmChatOperationIdempotencyTests
     {
         var harness = await LlmChatOperationHarness.CreateAsync();
         var operationId = LlmChatOperationId.New();
-        await harness.Service.SendAsync(harness.CreateSendCommand(operationId, "first"));
+        await harness.SendAndDispatchAsync(harness.CreateSendCommand(operationId, "first"));
 
         var conflict = await harness.Service.SendAsync(harness.CreateSendCommand(operationId, "different"));
 
@@ -49,7 +49,7 @@ public sealed class LlmChatOperationIdempotencyTests
     {
         var harness = await LlmChatOperationHarness.CreateAsync();
         var command = harness.CreateSendCommand(LlmChatOperationId.New(), "hello");
-        var first = await harness.Service.SendAsync(command);
+        var first = await harness.SendAndDispatchAsync(command);
         var conversation = await harness.Conversations.TryGetAsync(harness.ConversationId);
         Assert.NotNull(conversation);
         harness.Conversations.Seed(new LlmChatConversation(
@@ -75,12 +75,27 @@ public sealed class LlmChatOperationIdempotencyTests
 public sealed class LlmChatOperationDispatchClaimTests
 {
     [Fact]
+    public async Task Admission_is_rejected_when_no_dispatcher_executor_is_available()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync(executorAvailable: false);
+        var command = harness.CreateSendCommand(LlmChatOperationId.New(), "hello");
+
+        var result = await harness.Service.SendAsync(command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(LlmChatErrorCodes.DispatcherUnavailable, Assert.Single(result.Errors).Code);
+        Assert.Null(await harness.Operations.TryGetAsync(command.OperationId));
+        Assert.Equal(0, harness.Engine.SendCount);
+    }
+
+    [Fact]
     public async Task Concurrent_same_request_has_one_atomic_dispatch_claim_winner()
     {
         var harness = await LlmChatOperationHarness.CreateAsync(blockDispatch: true);
         var command = harness.CreateSendCommand(LlmChatOperationId.New(), "hello");
 
-        var first = harness.Service.SendAsync(command);
+        var first = await harness.Service.SendAsync(command);
+        var dispatch = harness.DispatchAsync(command.OperationId);
         await harness.Engine.DispatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         var replay = await harness.Service.SendAsync(command);
 
@@ -89,7 +104,9 @@ public sealed class LlmChatOperationDispatchClaimTests
         Assert.Equal(1, harness.Engine.SendCount);
 
         harness.Engine.ReleaseDispatch();
-        Assert.True((await first).IsSuccess);
+        await dispatch;
+        Assert.True(first.IsSuccess);
+        Assert.Equal(LlmChatOperationStatus.Succeeded, (await harness.Service.GetAsync(command.OperationId)).Value!.Operation.Status);
     }
 
     [Fact]
@@ -106,11 +123,111 @@ public sealed class LlmChatOperationDispatchClaimTests
         });
 
         var replay = await harness.Service.SendAsync(harness.CreateSendCommand(operationId, "hello"));
+        await harness.DispatchAsync(operationId);
+        var recovered = await harness.Service.GetAsync(operationId);
 
         Assert.True(replay.IsSuccess);
-        Assert.Equal(LlmChatOperationStatus.RecoveryRequired, replay.Value!.Operation.Status);
+        Assert.Equal(LlmChatOperationStatus.Running, replay.Value!.Operation.Status);
+        Assert.Equal(LlmChatOperationStatus.RecoveryRequired, recovered.Value!.Operation.Status);
         Assert.Equal(0, harness.Engine.SendCount);
     }
+}
+
+public sealed class LlmChatExecutionLeaseTests
+{
+    [Fact]
+    public async Task Live_lease_allows_only_one_owner()
+    {
+        var context = CreateContext();
+
+        var first = await context.Service.TryClaimAsync(context.OperationId, LlmChatExecutionOwnerId.New());
+        var second = await context.Service.TryClaimAsync(context.OperationId, LlmChatExecutionOwnerId.New());
+
+        Assert.True(first.Claimed);
+        Assert.False(second.Claimed);
+        Assert.Equal(1, first.Lease!.Value.Epoch);
+    }
+
+    [Fact]
+    public async Task Expired_pre_dispatch_lease_is_reclaimed_with_a_new_epoch()
+    {
+        var context = CreateContext();
+        var first = await context.Service.TryClaimAsync(context.OperationId, LlmChatExecutionOwnerId.New());
+        context.Time.Advance(TimeSpan.FromSeconds(2));
+
+        var second = await context.Service.TryClaimAsync(context.OperationId, LlmChatExecutionOwnerId.New());
+
+        Assert.True(first.Claimed);
+        Assert.True(second.Claimed);
+        Assert.Equal(2, second.Lease!.Value.Epoch);
+    }
+
+    [Fact]
+    public async Task Expired_post_dispatch_lease_requires_recovery_and_is_not_reclaimed()
+    {
+        var context = CreateContext();
+        var first = await context.Service.TryClaimAsync(context.OperationId, LlmChatExecutionOwnerId.New());
+        var claimed = first.Operation!;
+        var dispatchStarted = claimed with
+        {
+            ProviderDispatchStartedAtUtc = context.Time.GetUtcNow(),
+            DispatchPhase = LlmChatDispatchPhase.ProviderDispatchStarted,
+            ConcurrencyToken = claimed.ConcurrencyToken + 1
+        };
+        Assert.True(await context.Operations.TryReplaceOwnedAsync(
+            dispatchStarted,
+            claimed.ConcurrencyToken,
+            first.Lease!.Value,
+            context.Time.GetUtcNow()));
+        context.Time.Advance(TimeSpan.FromSeconds(2));
+
+        var second = await context.Service.TryClaimAsync(context.OperationId, LlmChatExecutionOwnerId.New());
+
+        Assert.False(second.Claimed);
+        Assert.True(second.Recovered);
+        Assert.Equal(LlmChatOperationStatus.RecoveryRequired, second.Operation!.Status);
+    }
+
+    private static LeaseTestContext CreateContext()
+    {
+        var now = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
+        var time = new ManualTimeProvider(now);
+        var operations = new InMemoryLlmChatOperationRepository();
+        var operationId = LlmChatOperationId.New();
+        operations.Seed(new LlmChatOperation(
+            operationId,
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('e', 64)),
+            1,
+            LlmChatOperationStatus.Pending,
+            now,
+            0)
+        {
+            TurnAdmittedAtUtc = now
+        });
+        var options = new LlmChatExecutionLeaseOptions
+        {
+            PollInterval = TimeSpan.FromMilliseconds(100),
+            HeartbeatInterval = TimeSpan.FromMilliseconds(100),
+            LeaseDuration = TimeSpan.FromSeconds(1)
+        };
+        return new LeaseTestContext(
+            operationId,
+            operations,
+            time,
+            new LlmChatExecutionLeaseService(
+                operations,
+                new InlineLlmChatUnitOfWork(),
+                options,
+                time));
+    }
+
+    private sealed record LeaseTestContext(
+        LlmChatOperationId OperationId,
+        InMemoryLlmChatOperationRepository Operations,
+        ManualTimeProvider Time,
+        LlmChatExecutionLeaseService Service);
 }
 
 public sealed class LlmChatOperationCancellationTests
@@ -120,11 +237,13 @@ public sealed class LlmChatOperationCancellationTests
     {
         var harness = await LlmChatOperationHarness.CreateAsync(blockUntilCancelled: true);
         var operationId = LlmChatOperationId.New();
-        var send = harness.Service.SendAsync(harness.CreateSendCommand(operationId, "hello"));
+        await harness.Service.SendAsync(harness.CreateSendCommand(operationId, "hello"));
+        var dispatch = harness.DispatchAsync(operationId);
         await harness.Engine.DispatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         var requested = await harness.Service.CancelAsync(operationId);
-        var completed = await send;
+        await dispatch;
+        var completed = await harness.Service.GetAsync(operationId);
 
         Assert.True(requested.IsSuccess);
         Assert.NotNull(requested.Value!.Operation.CancellationRequestedAtUtc);
@@ -138,12 +257,14 @@ public sealed class LlmChatOperationCancellationTests
     {
         var harness = await LlmChatOperationHarness.CreateAsync(blockDispatch: true);
         var operationId = LlmChatOperationId.New();
-        var send = harness.Service.SendAsync(harness.CreateSendCommand(operationId, "hello"));
+        await harness.Service.SendAsync(harness.CreateSendCommand(operationId, "hello"));
+        var dispatch = harness.DispatchAsync(operationId);
         await harness.Engine.DispatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         var requested = await harness.Service.CancelAsync(operationId);
         harness.Engine.ReleaseDispatch();
-        var completed = await send;
+        await dispatch;
+        var completed = await harness.Service.GetAsync(operationId);
 
         Assert.True(requested.IsSuccess);
         Assert.True(completed.IsSuccess);
@@ -155,6 +276,34 @@ public sealed class LlmChatOperationCancellationTests
 
 public sealed class LlmChatOperationRecoveryTests
 {
+    [Fact]
+    public async Task Missing_local_registration_does_not_recover_or_abandon_a_live_remote_lease()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync();
+        var operationId = LlmChatOperationId.New();
+        harness.Operations.Seed(harness.CreateOperation(operationId, LlmChatOperationStatus.Running) with
+        {
+            TurnAdmittedAtUtc = harness.Now,
+            ProviderDispatchStartedAtUtc = harness.Now,
+            ExecutionOwnerId = LlmChatExecutionOwnerId.New(),
+            ExecutionEpoch = 1,
+            ClaimedAtUtc = harness.Now,
+            HeartbeatAtUtc = harness.Now,
+            LeaseExpiresAtUtc = harness.Now.AddMinutes(1),
+            DispatchPhase = LlmChatDispatchPhase.ProviderDispatchStarted
+        });
+        harness.Engine.SeedActiveTurn(operationId);
+
+        var reconciled = await harness.Service.ReconcileAsync(operationId);
+        var abandoned = await harness.Service.AbandonActiveTurnAsync(
+            new AbandonLlmChatActiveTurnCommand(harness.ConversationId, operationId));
+
+        Assert.True(reconciled.IsSuccess);
+        Assert.Equal(LlmChatOperationStatus.Running, reconciled.Value!.Operation.Status);
+        Assert.True(abandoned.IsFailure);
+        Assert.Equal(0, harness.Engine.AbandonCount);
+    }
+
     [Fact]
     public async Task Assistant_commit_reconciles_an_unfinished_operation_to_success()
     {
@@ -201,7 +350,7 @@ public sealed class LlmChatOperationRecoveryTests
     }
 
     [Fact]
-    public async Task Crash_before_dispatch_is_failed_without_guessing_or_abandoning_transcript_data()
+    public async Task Crash_before_dispatch_remains_reclaimable_without_guessing_or_abandoning_transcript_data()
     {
         var harness = await LlmChatOperationHarness.CreateAsync();
         var operationId = LlmChatOperationId.New();
@@ -210,7 +359,7 @@ public sealed class LlmChatOperationRecoveryTests
         var reconciled = await harness.Service.ReconcileAsync(operationId);
 
         Assert.True(reconciled.IsSuccess);
-        Assert.Equal(LlmChatOperationStatus.Failed, reconciled.Value!.Operation.Status);
+        Assert.Equal(LlmChatOperationStatus.Running, reconciled.Value!.Operation.Status);
         Assert.Equal(0, harness.Engine.AbandonCount);
     }
 

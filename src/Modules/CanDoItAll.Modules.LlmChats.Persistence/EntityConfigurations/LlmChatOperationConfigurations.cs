@@ -20,6 +20,7 @@ internal sealed class LlmChatOperationConfiguration : IEntityTypeConfiguration<L
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(row => new { row.ConversationId, row.StartedAtUtc });
         builder.HasIndex(row => new { row.Status, row.StartedAtUtc });
+        builder.HasIndex(row => new { row.Status, row.LeaseExpiresAtUtc, row.StartedAtUtc });
     }
 }
 

@@ -134,6 +134,12 @@ internal static class LlmChatPersistenceMapper
             Status = operation.Status,
             CancellationRequestedAtUtc = operation.CancellationRequestedAtUtc,
             CancellationGeneration = operation.CancellationGeneration,
+            ExecutionOwnerId = operation.ExecutionOwnerId?.Value,
+            ExecutionEpoch = operation.ExecutionEpoch,
+            ClaimedAtUtc = operation.ClaimedAtUtc,
+            HeartbeatAtUtc = operation.HeartbeatAtUtc,
+            LeaseExpiresAtUtc = operation.LeaseExpiresAtUtc,
+            DispatchPhase = operation.DispatchPhase,
             TurnAdmittedAtUtc = operation.TurnAdmittedAtUtc,
             ProviderDispatchStartedAtUtc = operation.ProviderDispatchStartedAtUtc,
             ProviderDispatchReturnedAtUtc = operation.ProviderDispatchReturnedAtUtc,
@@ -159,6 +165,14 @@ internal static class LlmChatPersistenceMapper
         {
             CancellationRequestedAtUtc = row.CancellationRequestedAtUtc,
             CancellationGeneration = row.CancellationGeneration,
+            ExecutionOwnerId = row.ExecutionOwnerId is { } ownerId
+                ? new LlmChatExecutionOwnerId(ownerId)
+                : null,
+            ExecutionEpoch = row.ExecutionEpoch,
+            ClaimedAtUtc = row.ClaimedAtUtc,
+            HeartbeatAtUtc = row.HeartbeatAtUtc,
+            LeaseExpiresAtUtc = row.LeaseExpiresAtUtc,
+            DispatchPhase = row.DispatchPhase,
             TurnAdmittedAtUtc = row.TurnAdmittedAtUtc,
             ProviderDispatchStartedAtUtc = row.ProviderDispatchStartedAtUtc,
             ProviderDispatchReturnedAtUtc = row.ProviderDispatchReturnedAtUtc,

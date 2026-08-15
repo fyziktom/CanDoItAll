@@ -90,6 +90,13 @@ public interface ILlmChatConversationEngine
         long expectedTranscriptRevision,
         CancellationToken cancellationToken = default);
 
+    Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        CancellationToken cancellationToken = default);
+
     Task<LlmInvocationResult> InvokeTurnAsync(
         LlmConversationTurnAdmission admission,
         CancellationToken cancellationToken = default);
@@ -144,7 +151,41 @@ public sealed class LlmChatConversationEngineException(
 
 public sealed record LlmChatOperationExecutionContext(
     LlmChatOperationId OperationId,
-    LlmChatRuntimeIdentity RuntimeIdentity);
+    LlmChatRuntimeIdentity RuntimeIdentity)
+{
+    public LlmChatExecutionLeaseIdentity? ExecutionLease { get; init; }
+}
+
+public sealed record LlmChatExecutionLeaseObservation(
+    bool IsCurrentOwner,
+    bool CancellationRequested);
+
+public interface ILlmChatExecutionLeaseHeartbeatStore
+{
+    Task<LlmChatExecutionLeaseObservation> RenewAndObserveAsync(
+        LlmChatExecutionLeaseIdentity lease,
+        LlmChatRuntimeIdentity runtimeIdentity,
+        DateTimeOffset observedAtUtc,
+        DateTimeOffset leaseExpiresAtUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmChatExecutionLeaseObservation> ObserveAsync(
+        LlmChatExecutionLeaseIdentity lease,
+        LlmChatRuntimeIdentity runtimeIdentity,
+        DateTimeOffset observedAtUtc,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ILlmChatOperationDispatchSignal
+{
+    bool HasAvailableExecutor { get; }
+
+    IDisposable RegisterExecutor();
+
+    void Signal();
+
+    ValueTask WaitAsync(TimeSpan maximumDelay, CancellationToken cancellationToken = default);
+}
 
 public interface ILlmChatOperationScopeAccessor
 {

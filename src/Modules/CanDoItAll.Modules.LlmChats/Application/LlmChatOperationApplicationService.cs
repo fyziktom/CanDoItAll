@@ -1,4 +1,3 @@
-using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Ports;
@@ -12,7 +11,7 @@ public sealed class LlmChatOperationApplicationService(
     LlmChatOperationStateMachine stateMachine,
     LlmChatOperationDetailsReader detailsReader,
     ILlmChatOperationCancellationRegistry cancellationRegistry,
-    ILlmChatConversationEngine conversationEngine,
+    ILlmChatOperationDispatchSignal dispatchSignal,
     ILogger<LlmChatOperationApplicationService> logger) : ILlmChatOperationApplicationService
 {
     public async Task<Result<LlmChatOperationDetails>> SendAsync(
@@ -22,6 +21,11 @@ public sealed class LlmChatOperationApplicationService(
         ArgumentNullException.ThrowIfNull(command);
         try
         {
+            if (!dispatchSignal.HasAvailableExecutor)
+            {
+                return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.DispatcherUnavailable());
+            }
+
             var admissionResult = await admissionService.AdmitAsync(command, cancellationToken).ConfigureAwait(false);
             if (admissionResult.IsFailure)
             {
@@ -29,69 +33,20 @@ public sealed class LlmChatOperationApplicationService(
             }
 
             var admission = admissionResult.Value!;
-            if (!admission.Created)
+            if (!admission.Operation.IsTerminal &&
+                admission.Operation.Status != LlmChatOperationStatus.RecoveryRequired)
             {
-                return await stateMachine.ResolveExistingAsync(admission.Operation, cancellationToken)
-                    .ConfigureAwait(false);
+                dispatchSignal.Signal();
             }
 
-            ILlmChatOperationCancellationRegistration registration;
-            try
-            {
-                registration = cancellationRegistry.Register(command.OperationId, cancellationToken);
-            }
-            catch (InvalidOperationException)
-            {
-                var current = await detailsReader.RequireAsync(command.OperationId, cancellationToken)
-                    .ConfigureAwait(false);
-                return await detailsReader.BuildAsync(current, cancellationToken).ConfigureAwait(false);
-            }
-
-            using (registration)
-            {
-                try
-                {
-                    var invocationResult = await conversationEngine.InvokeTurnAsync(
-                        admission.Turn,
-                        registration.CancellationToken).ConfigureAwait(false);
-                    return await stateMachine.FinalizeSuccessAsync(
-                        admission.Turn,
-                        invocationResult,
-                        CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (LlmChatRuntimeProfileChangedException)
-                {
-                    return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.RuntimeProfileChanged());
-                }
-                catch (OperationCanceledException)
-                {
-                    await stateMachine.RequestCancellationAsync(command.OperationId, CancellationToken.None)
-                        .ConfigureAwait(false);
-                    return await stateMachine.ApplyReducerAsync(command.OperationId, null, CancellationToken.None)
-                        .ConfigureAwait(false);
-                }
-                catch (Exception exception) when (TryMapFailureCode(exception, out var failureCode))
-                {
-                    return await stateMachine.ApplyReducerAsync(
-                        command.OperationId,
-                        failureCode,
-                        CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (Exception exception)
-                {
-                    LogUnexpectedFailure(exception, command);
-                    return await stateMachine.ApplyReducerAsync(
-                        command.OperationId,
-                        LlmChatErrorCodes.StorageCorrupted,
-                        CancellationToken.None).ConfigureAwait(false);
-                }
-            }
+            return await stateMachine.ResolveExistingAsync(admission.Operation, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (ArgumentException exception)
         {
             return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
         }
-        catch (Exception exception) when (TryMapFailureCode(exception, out var failureCode))
+        catch (Exception exception) when (LlmChatOperationFailureCodes.TryMap(exception, out var failureCode))
         {
             return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.OperationFailure(failureCode));
         }
@@ -128,15 +83,23 @@ public sealed class LlmChatOperationApplicationService(
         }
 
         cancellationRegistry.RequestCancellation(operationId);
-        return cancellationRegistry.IsRegistered(operationId)
-            ? await detailsReader.BuildAsync(requested, cancellationToken).ConfigureAwait(false)
-            : await stateMachine.ApplyReducerAsync(operationId, null, cancellationToken).ConfigureAwait(false);
+        dispatchSignal.Signal();
+        return await detailsReader.BuildAsync(requested, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<Result<LlmChatOperationDetails>> ReconcileAsync(
+    public async Task<Result<LlmChatOperationDetails>> ReconcileAsync(
         LlmChatOperationId operationId,
         CancellationToken cancellationToken = default)
-        => stateMachine.ReconcileAsync(operationId, cancellationToken);
+    {
+        var result = await stateMachine.ReconcileAsync(operationId, cancellationToken).ConfigureAwait(false);
+        if (result.IsSuccess &&
+            result.Value?.Operation is { IsTerminal: false, Status: not LlmChatOperationStatus.RecoveryRequired })
+        {
+            dispatchSignal.Signal();
+        }
+
+        return result;
+    }
 
     public Task<Result<LlmChatOperationDetails>> AbandonActiveTurnAsync(
         AbandonLlmChatActiveTurnCommand command,
@@ -144,27 +107,6 @@ public sealed class LlmChatOperationApplicationService(
     {
         ArgumentNullException.ThrowIfNull(command);
         return stateMachine.AbandonAsync(command, cancellationToken);
-    }
-
-    private static bool TryMapFailureCode(Exception exception, out string failureCode)
-    {
-        failureCode = exception switch
-        {
-            LlmChatConversationEngineException engineException => engineException.Code,
-            LlmInvocationException { Kind: LlmInvocationFailureKind.InvalidRequest } =>
-                LlmChatErrorCodes.ModelSettingsInvalid,
-            LlmInvocationException { Kind: LlmInvocationFailureKind.DeadlineExceeded } =>
-                LlmChatErrorCodes.DeadlineExceeded,
-            LlmInvocationException => LlmChatErrorCodes.ProviderUnavailable,
-            LlmConversationException { Kind: LlmConversationFailureKind.RevisionConflict } =>
-                LlmChatErrorCodes.TranscriptRevisionConflict,
-            LlmConversationException { Kind: LlmConversationFailureKind.TurnAlreadyActive } =>
-                LlmChatErrorCodes.ActiveTurnConflict,
-            LlmConversationException { Kind: LlmConversationFailureKind.ConcurrencyConflict } =>
-                LlmChatErrorCodes.StorageConflict,
-            _ => string.Empty
-        };
-        return failureCode.Length > 0;
     }
 
     private void LogUnexpectedFailure(Exception exception, SendLlmChatTurnCommand command)

@@ -71,6 +71,43 @@ public readonly record struct LlmChatOperationId
         => Value.ToString("N");
 }
 
+public readonly record struct LlmChatExecutionOwnerId
+{
+    public LlmChatExecutionOwnerId(Guid value)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(value, Guid.Empty);
+        Value = value;
+    }
+
+    public Guid Value { get; }
+
+    public static LlmChatExecutionOwnerId New()
+        => new(Guid.NewGuid());
+
+    public override string ToString()
+        => Value.ToString("N");
+}
+
+public readonly record struct LlmChatExecutionLeaseIdentity
+{
+    public LlmChatExecutionLeaseIdentity(
+        LlmChatOperationId operationId,
+        LlmChatExecutionOwnerId ownerId,
+        long epoch)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(epoch, 1);
+        OperationId = operationId;
+        OwnerId = ownerId;
+        Epoch = epoch;
+    }
+
+    public LlmChatOperationId OperationId { get; }
+
+    public LlmChatExecutionOwnerId OwnerId { get; }
+
+    public long Epoch { get; }
+}
+
 public sealed record LlmChatRuntimeIdentity
 {
     public LlmChatRuntimeIdentity(Guid profileId, string fingerprint, long generation)

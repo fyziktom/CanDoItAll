@@ -83,18 +83,25 @@ public interface ILlmChatOperationRepository
         LlmChatOperationId id,
         CancellationToken cancellationToken = default);
 
-    Task<LlmChatOperationAdmission> AdmitAsync(
-        LlmChatOperation operation,
+    Task<IReadOnlyList<LlmChatOperationId>> ListDispatchCandidatesAsync(
+        DateTimeOffset observedAtUtc,
+        int take,
         CancellationToken cancellationToken = default);
 
-    Task<LlmChatOperation?> TryClaimDispatchAsync(
-        LlmChatOperationId id,
-        LlmChatRequestFingerprint requestFingerprint,
+    Task<LlmChatOperationAdmission> AdmitAsync(
+        LlmChatOperation operation,
         CancellationToken cancellationToken = default);
 
     Task<bool> TryReplaceAsync(
         LlmChatOperation operation,
         long expectedConcurrencyToken,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> TryReplaceOwnedAsync(
+        LlmChatOperation operation,
+        long expectedConcurrencyToken,
+        LlmChatExecutionLeaseIdentity executionLease,
+        DateTimeOffset observedAtUtc,
         CancellationToken cancellationToken = default);
 }
 

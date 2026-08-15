@@ -174,6 +174,46 @@ public sealed class LlmConversationService : ILlmConversationService
                 correlationId: request.CorrelationId));
     }
 
+    public async Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmConversationAdmittedTurnRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var document = await RequireAsync(request.ConversationId, cancellationToken).ConfigureAwait(false);
+        var activeTurn = document.ActiveTurn;
+        if (activeTurn?.TurnId != request.TurnId)
+        {
+            throw new LlmConversationException(
+                LlmConversationFailureKind.TurnNotActive,
+                request.ConversationId);
+        }
+
+        var pendingEntry = document.Entries.SingleOrDefault(entry =>
+            entry.EntryId == activeTurn.PendingUserEntryId &&
+            entry.TurnId == activeTurn.TurnId &&
+            entry.Role == LlmMessageRole.User);
+        if (pendingEntry is null || !document.Provider.Matches(request.Provider, request.Model))
+        {
+            throw new LlmConversationException(
+                LlmConversationFailureKind.StorageCorrupted,
+                request.ConversationId,
+                "The admitted turn no longer matches its pending user entry or provider snapshot.");
+        }
+
+        var window = BuildContextWindow(document, pendingEntry);
+        return new LlmConversationTurnAdmission(
+            document,
+            pendingEntry,
+            new LlmInvocationRequest(
+                request.Provider,
+                document.Provider.Model,
+                window,
+                responseFormat: request.ResponseFormat,
+                settings: request.Settings,
+                timeout: request.Timeout,
+                correlationId: request.CorrelationId));
+    }
+
     public async Task<LlmConversationTurnResult> CompleteTurnAsync(
         LlmConversationTurnAdmission admission,
         LlmInvocationResult invocationResult,

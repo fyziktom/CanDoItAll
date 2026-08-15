@@ -13,7 +13,6 @@ public sealed class LlmChatOperationStateMachine(
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatConversationEngine conversationEngine,
     ILlmChatOperationEvidenceSink evidenceSink,
-    ILlmChatOperationCancellationRegistry cancellationRegistry,
     LlmChatOperationDetailsReader detailsReader,
     TimeProvider timeProvider,
     ILogger<LlmChatOperationStateMachine> logger)
@@ -66,15 +65,7 @@ public sealed class LlmChatOperationStateMachine(
         LlmChatOperation operation,
         CancellationToken cancellationToken)
     {
-        if (operation.IsTerminal ||
-            operation.Status == LlmChatOperationStatus.RecoveryRequired ||
-            cancellationRegistry.IsRegistered(operation.Id) ||
-            operation.ProviderDispatchStartedAtUtc is null)
-        {
-            return await detailsReader.BuildAsync(operation, cancellationToken).ConfigureAwait(false);
-        }
-
-        return await ApplyReducerAsync(operation.Id, null, cancellationToken).ConfigureAwait(false);
+        return await detailsReader.BuildAsync(operation, cancellationToken).ConfigureAwait(false);
     }
 
     internal async Task<Result<LlmChatOperationDetails>> ReconcileAsync(
@@ -87,9 +78,15 @@ public sealed class LlmChatOperationStateMachine(
             return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.OperationNotFound());
         }
 
-        return operation.IsTerminal || cancellationRegistry.IsRegistered(operation.Id)
-            ? await detailsReader.BuildAsync(operation, cancellationToken).ConfigureAwait(false)
-            : await ApplyReducerAsync(operation.Id, null, cancellationToken).ConfigureAwait(false);
+        if (operation.IsTerminal ||
+            operation.Status == LlmChatOperationStatus.RecoveryRequired ||
+            operation.HasLiveExecutionLease(timeProvider.GetUtcNow()) ||
+            operation.ProviderDispatchStartedAtUtc is null)
+        {
+            return await detailsReader.BuildAsync(operation, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await ApplyReducerAsync(operation.Id, null, cancellationToken).ConfigureAwait(false);
     }
 
     internal async Task<Result<LlmChatOperationDetails>> ApplyReducerAsync(
@@ -162,7 +159,7 @@ public sealed class LlmChatOperationStateMachine(
 
                 if (operation.ConversationId != command.ConversationId ||
                     operation.Status != LlmChatOperationStatus.RecoveryRequired ||
-                    cancellationRegistry.IsRegistered(operation.Id))
+                    operation.HasLiveExecutionLease(timeProvider.GetUtcNow()))
                 {
                     return AbandonResult.Invalid;
                 }
