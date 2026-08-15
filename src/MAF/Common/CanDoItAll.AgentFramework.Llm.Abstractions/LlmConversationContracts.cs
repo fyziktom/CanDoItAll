@@ -696,6 +696,11 @@ public sealed record LlmConversationTurnResult(
     LlmConversationTranscriptEntry UserEntry,
     LlmConversationTranscriptEntry AssistantEntry);
 
+public sealed record LlmConversationTurnAdmission(
+    LlmConversationDocument Conversation,
+    LlmConversationTranscriptEntry UserEntry,
+    LlmInvocationRequest InvocationRequest);
+
 /// <summary>
 /// Application service for ordinary multi-turn LLM conversations, layered strictly above
 /// <see cref="ILlmInvocationPort"/>. It owns transcript persistence, conversation metadata, atomic
@@ -724,6 +729,20 @@ public interface ILlmConversationService
     /// </summary>
     Task<LlmConversationTurnResult> SendAsync(
         LlmConversationTurnRequest request, CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmConversationTurnRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationDocument> CompensateTurnAsync(
+        Guid conversationId,
+        Guid turnId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Explicit recovery for a turn orphaned by a crash: removes the pending user entry and clears the

@@ -9,6 +9,7 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 public sealed class LlmChatConversationApplicationService(
     ILlmChatDefinitionRepository definitionRepository,
     ILlmChatConversationRepository conversationRepository,
+    ILlmChatTurnStateRepository turnStateRepository,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatConversationEngine conversationEngine,
     TimeProvider timeProvider) : ILlmChatConversationApplicationService
@@ -136,33 +137,48 @@ public sealed class LlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var current = await conversationRepository.TryGetAsync(command.ConversationId, cancellationToken)
-            .ConfigureAwait(false);
-        if (current is null)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.ConversationNotFound());
-        }
-
-        if (current.ConcurrencyToken != command.ExpectedConcurrencyToken)
-        {
-            return Result<LlmChatConversationDetails>.Failure(Error.Failure(
-                "The LLM Chat conversation changed after it was read.",
-                LlmChatErrorCodes.StorageConflict));
-        }
-
-        var transcript = await conversationEngine.TryGetAsync(current.Id, cancellationToken).ConfigureAwait(false);
-        if (transcript is null)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted());
-        }
-
-        if (current.Status == LlmChatConversationStatus.Archived)
-        {
-            return await BuildDetailsAsync(current, transcript, cancellationToken).ConfigureAwait(false);
-        }
-
         return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
         {
+            var turnState = await turnStateRepository.LockAsync(
+                command.ConversationId,
+                transactionCancellationToken).ConfigureAwait(false);
+            if (!turnState.Exists)
+            {
+                return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.ConversationNotFound());
+            }
+
+            var current = await conversationRepository.TryGetAsync(command.ConversationId, transactionCancellationToken)
+                .ConfigureAwait(false);
+            if (current is null)
+            {
+                return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted());
+            }
+
+            if (current.ConcurrencyToken != command.ExpectedConcurrencyToken)
+            {
+                return Result<LlmChatConversationDetails>.Failure(Error.Failure(
+                    "The LLM Chat conversation changed after it was read.",
+                    LlmChatErrorCodes.StorageConflict));
+            }
+
+            var transcript = await conversationEngine.TryGetAsync(current.Id, transactionCancellationToken)
+                .ConfigureAwait(false);
+            if (transcript is null)
+            {
+                return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted());
+            }
+
+            if (current.Status == LlmChatConversationStatus.Archived)
+            {
+                return await BuildDetailsAsync(current, transcript, transactionCancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (turnState.HasActiveTurn || turnState.HasNonterminalOperation)
+            {
+                return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.ActiveTurnConflict());
+            }
+
             var archived = new LlmChatConversation(
                 current.Id,
                 current.DefinitionId,

@@ -133,6 +133,7 @@ internal static class LlmChatPersistenceMapper
             ExpectedTranscriptRevision = operation.ExpectedTranscriptRevision,
             Status = operation.Status,
             CancellationRequestedAtUtc = operation.CancellationRequestedAtUtc,
+            CancellationGeneration = operation.CancellationGeneration,
             TurnAdmittedAtUtc = operation.TurnAdmittedAtUtc,
             ProviderDispatchStartedAtUtc = operation.ProviderDispatchStartedAtUtc,
             ProviderDispatchReturnedAtUtc = operation.ProviderDispatchReturnedAtUtc,
@@ -157,6 +158,7 @@ internal static class LlmChatPersistenceMapper
             row.ConcurrencyToken)
         {
             CancellationRequestedAtUtc = row.CancellationRequestedAtUtc,
+            CancellationGeneration = row.CancellationGeneration,
             TurnAdmittedAtUtc = row.TurnAdmittedAtUtc,
             ProviderDispatchStartedAtUtc = row.ProviderDispatchStartedAtUtc,
             ProviderDispatchReturnedAtUtc = row.ProviderDispatchReturnedAtUtc,

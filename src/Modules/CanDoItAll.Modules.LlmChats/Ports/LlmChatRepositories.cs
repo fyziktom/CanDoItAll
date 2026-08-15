@@ -79,6 +79,10 @@ public interface ILlmChatOperationRepository
         LlmChatOperationId id,
         CancellationToken cancellationToken = default);
 
+    Task<LlmChatOperation?> TryGetForUpdateAsync(
+        LlmChatOperationId id,
+        CancellationToken cancellationToken = default);
+
     Task<LlmChatOperationAdmission> AdmitAsync(
         LlmChatOperation operation,
         CancellationToken cancellationToken = default);
@@ -97,6 +101,18 @@ public interface ILlmChatOperationRepository
 public sealed record LlmChatOperationAdmission(
     LlmChatOperation Operation,
     bool Created);
+
+public sealed record LlmChatConversationTurnState(
+    bool Exists,
+    bool HasActiveTurn,
+    bool HasNonterminalOperation);
+
+public interface ILlmChatTurnStateRepository
+{
+    Task<LlmChatConversationTurnState> LockAsync(
+        LlmChatConversationId conversationId,
+        CancellationToken cancellationToken = default);
+}
 
 public interface ILlmChatInvocationRecordRepository
 {

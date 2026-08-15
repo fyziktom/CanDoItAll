@@ -115,6 +115,24 @@ public sealed class LlmConversationService : ILlmConversationService
     public async Task<LlmConversationTurnResult> SendAsync(
         LlmConversationTurnRequest request, CancellationToken cancellationToken = default)
     {
+        var admission = await AdmitTurnAsync(request, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var invocationResult = await _invocationPort.InvokeAsync(admission.InvocationRequest, cancellationToken)
+                .ConfigureAwait(false);
+            return await CompleteTurnAsync(admission, invocationResult, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await CompensateAdmittedTurnAsync(admission.Conversation).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    public async Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmConversationTurnRequest request,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(request);
         var document = await RequireAsync(request.ConversationId, cancellationToken).ConfigureAwait(false);
         if (document.ActiveTurn is not null)
@@ -139,73 +157,92 @@ public sealed class LlmConversationService : ILlmConversationService
         }
 
         var snapshot = ResolveTurnSnapshot(document, request);
-        var admitted = await AdmitTurnAsync(document, request, snapshot, cancellationToken).ConfigureAwait(false);
+        var admitted = await PersistAdmissionAsync(document, request, snapshot, cancellationToken)
+            .ConfigureAwait(false);
         var pendingEntry = admitted.Entries[^1];
-        try
-        {
-            var window = BuildContextWindow(admitted, pendingEntry);
-            var invocationResult = await _invocationPort.InvokeAsync(
-                new LlmInvocationRequest(
-                    request.Provider,
-                    snapshot.Model,
-                    window,
-                    responseFormat: request.ResponseFormat,
-                    settings: request.Settings,
-                    timeout: request.Timeout,
-                    correlationId: request.CorrelationId),
-                cancellationToken).ConfigureAwait(false);
-
-            var completedAt = _timeProvider.GetUtcNow();
-            var assistantEntry = new LlmConversationTranscriptEntry(
-                Guid.NewGuid(),
-                pendingEntry.TurnId,
-                LlmMessageRole.Assistant,
-                invocationResult.ResponseText,
-                completedAt,
-                invocationResult.Model,
-                invocationResult.Usage);
-            var completed = new LlmConversationDocument(
-                admitted.ConversationId,
-                admitted.Title,
-                admitted.Provider,
-                admitted.CreatedAtUtc,
-                completedAt,
-                admitted.TranscriptRevision + 1,
-                admitted.Entries.Add(assistantEntry),
-                activeTurn: null,
-                admitted.AccelerationState);
-            var stored = await _store.ReplaceAsync(completed, admitted.TranscriptRevision, cancellationToken)
-                .ConfigureAwait(false);
-            var storedAssistantEntry = stored.Entries[^1];
-            if (storedAssistantEntry.EntryId != assistantEntry.EntryId)
-            {
-                throw new LlmConversationException(
-                    LlmConversationFailureKind.StorageCorrupted,
-                    stored.ConversationId,
-                    "The committed assistant transcript entry could not be reloaded.");
-            }
-
-            return new LlmConversationTurnResult(stored, pendingEntry, storedAssistantEntry);
-        }
-        catch
-        {
-            await CompensateAdmittedTurnAsync(admitted).ConfigureAwait(false);
-            throw;
-        }
+        var window = BuildContextWindow(admitted, pendingEntry);
+        return new LlmConversationTurnAdmission(
+            admitted,
+            pendingEntry,
+            new LlmInvocationRequest(
+                request.Provider,
+                snapshot.Model,
+                window,
+                responseFormat: request.ResponseFormat,
+                settings: request.Settings,
+                timeout: request.Timeout,
+                correlationId: request.CorrelationId));
     }
 
-    public async Task<LlmConversationDocument> AbandonActiveTurnAsync(
-        Guid conversationId, Guid turnId, CancellationToken cancellationToken = default)
+    public async Task<LlmConversationTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(admission);
+        ArgumentNullException.ThrowIfNull(invocationResult);
+        var admitted = admission.Conversation;
+        if (admitted.ActiveTurn?.PendingUserEntryId != admission.UserEntry.EntryId ||
+            admitted.ActiveTurn.TurnId != admission.UserEntry.TurnId)
+        {
+            throw new LlmConversationException(
+                LlmConversationFailureKind.StorageCorrupted,
+                admitted.ConversationId,
+                "The turn admission no longer identifies its pending user entry.");
+        }
+
+        var completedAt = _timeProvider.GetUtcNow();
+        var assistantEntry = new LlmConversationTranscriptEntry(
+            Guid.NewGuid(),
+            admission.UserEntry.TurnId,
+            LlmMessageRole.Assistant,
+            invocationResult.ResponseText,
+            completedAt,
+            invocationResult.Model,
+            invocationResult.Usage);
+        var completed = new LlmConversationDocument(
+            admitted.ConversationId,
+            admitted.Title,
+            admitted.Provider,
+            admitted.CreatedAtUtc,
+            completedAt,
+            admitted.TranscriptRevision + 1,
+            admitted.Entries.Add(assistantEntry),
+            activeTurn: null,
+            admitted.AccelerationState);
+        var stored = await _store.ReplaceAsync(completed, admitted.TranscriptRevision, cancellationToken)
+            .ConfigureAwait(false);
+        var storedAssistantEntry = stored.Entries[^1];
+        if (storedAssistantEntry.EntryId != assistantEntry.EntryId)
+        {
+            throw new LlmConversationException(
+                LlmConversationFailureKind.StorageCorrupted,
+                stored.ConversationId,
+                "The committed assistant transcript entry could not be reloaded.");
+        }
+
+        return new LlmConversationTurnResult(stored, admission.UserEntry, storedAssistantEntry);
+    }
+
+    public async Task<LlmConversationDocument> CompensateTurnAsync(
+        Guid conversationId,
+        Guid turnId,
+        CancellationToken cancellationToken = default)
     {
         var document = await RequireAsync(conversationId, cancellationToken).ConfigureAwait(false);
-        if (document.ActiveTurn is null || document.ActiveTurn.TurnId != turnId)
+        if (document.ActiveTurn?.TurnId != turnId)
         {
             throw new LlmConversationException(LlmConversationFailureKind.TurnNotActive, conversationId);
         }
 
         var recovered = BuildCompensatedDocument(document);
-        return await _store.ReplaceAsync(recovered, document.TranscriptRevision, cancellationToken).ConfigureAwait(false);
+        return await _store.ReplaceAsync(recovered, document.TranscriptRevision, cancellationToken)
+            .ConfigureAwait(false);
     }
+
+    public async Task<LlmConversationDocument> AbandonActiveTurnAsync(
+        Guid conversationId, Guid turnId, CancellationToken cancellationToken = default)
+        => await CompensateTurnAsync(conversationId, turnId, cancellationToken).ConfigureAwait(false);
 
     public async Task DeleteAsync(Guid conversationId, CancellationToken cancellationToken = default)
         => await _store.DeleteAsync(conversationId, cancellationToken).ConfigureAwait(false);
@@ -236,7 +273,7 @@ public sealed class LlmConversationService : ILlmConversationService
         return LlmConversationProviderSnapshot.FromProfile(request.Provider, request.Model);
     }
 
-    private async Task<LlmConversationDocument> AdmitTurnAsync(
+    private async Task<LlmConversationDocument> PersistAdmissionAsync(
         LlmConversationDocument document,
         LlmConversationTurnRequest request,
         LlmConversationProviderSnapshot snapshot,
@@ -291,18 +328,18 @@ public sealed class LlmConversationService : ILlmConversationService
     {
         for (var attempt = 1; attempt <= MaximumCompensationAttempts; attempt++)
         {
-            var current = await _store.TryGetAsync(admitted.ConversationId, CancellationToken.None)
-                .ConfigureAwait(false);
-            if (current?.ActiveTurn is null || current.ActiveTurn.TurnId != admitted.ActiveTurn!.TurnId)
-            {
-                return;
-            }
-
-            var compensated = BuildCompensatedDocument(current);
             try
             {
-                await _store.ReplaceAsync(compensated, current.TranscriptRevision, CancellationToken.None)
+                await CompensateTurnAsync(
+                        admitted.ConversationId,
+                        admitted.ActiveTurn!.TurnId,
+                        CancellationToken.None)
                     .ConfigureAwait(false);
+                return;
+            }
+            catch (LlmConversationException exception)
+                when (exception.Kind == LlmConversationFailureKind.TurnNotActive)
+            {
                 return;
             }
             catch (LlmConversationException exception)

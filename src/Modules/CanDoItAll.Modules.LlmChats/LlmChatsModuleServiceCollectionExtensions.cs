@@ -13,6 +13,9 @@ public static class LlmChatsModuleServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ILlmChatOperationCancellationRegistry, LlmChatOperationCancellationRegistry>();
         services.AddScoped<ILlmChatOperationEvidenceSink, LlmChatOperationEvidenceService>();
+        services.AddScoped<LlmChatOperationAdmissionService>();
+        services.AddScoped<LlmChatOperationStateMachine>();
+        services.AddScoped<LlmChatOperationDetailsReader>();
         services.AddScoped<ILlmChatDefinitionApplicationService, LlmChatDefinitionApplicationService>();
         services.AddScoped<ILlmChatConversationApplicationService, LlmChatConversationApplicationService>();
         services.AddScoped<ILlmChatOperationApplicationService, LlmChatOperationApplicationService>();

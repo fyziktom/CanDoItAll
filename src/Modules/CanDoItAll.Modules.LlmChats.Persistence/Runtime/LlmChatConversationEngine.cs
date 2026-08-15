@@ -10,6 +10,7 @@ namespace CanDoItAll.Modules.LlmChats.Persistence;
 
 public sealed class LlmChatConversationEngine(
     ILlmConversationService conversationService,
+    ILlmInvocationPort invocationPort,
     CanonicalLlmChatProviderResolver providerResolver,
     ILlmChatRuntimeLeaseFactory runtimeLeaseFactory,
     ILlmChatOperationScopeAccessor operationScope) : ILlmChatConversationEngine
@@ -114,6 +115,23 @@ public sealed class LlmChatConversationEngine(
         string userText,
         long expectedTranscriptRevision,
         CancellationToken cancellationToken = default)
+        => SendCoreAsync(
+            conversationId,
+            operationId,
+            definition,
+            definitionRevision,
+            userText,
+            expectedTranscriptRevision,
+            cancellationToken);
+
+    public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(definitionRevision);
@@ -124,7 +142,7 @@ public sealed class LlmChatConversationEngine(
                 EnsureExecutableDefinition(definition, definitionRevision);
                 EnsureTypedThinkingEffortIsAuthoritative(definitionRevision.Settings);
                 var resolution = await ResolveProviderAsync(definitionRevision, token).ConfigureAwait(false);
-                var result = await conversationService.SendAsync(
+                return await conversationService.AdmitTurnAsync(
                     new LlmConversationTurnRequest(
                         conversationId.Value,
                         expectedTranscriptRevision,
@@ -140,6 +158,35 @@ public sealed class LlmChatConversationEngine(
                         TurnId = operationId.ToTurnId()
                     },
                     token).ConfigureAwait(false);
+            },
+            cancellationToken);
+    }
+
+    public Task<LlmInvocationResult> InvokeTurnAsync(
+        LlmConversationTurnAdmission admission,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(admission);
+        return ExecuteAsync(
+            new LlmChatOperationId(admission.UserEntry.TurnId),
+            token => invocationPort.InvokeAsync(admission.InvocationRequest, token),
+            cancellationToken);
+    }
+
+    public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(admission);
+        ArgumentNullException.ThrowIfNull(invocationResult);
+        var operationId = new LlmChatOperationId(admission.UserEntry.TurnId);
+        return ExecuteAsync(
+            operationId,
+            async token =>
+            {
+                var result = await conversationService.CompleteTurnAsync(admission, invocationResult, token)
+                    .ConfigureAwait(false);
                 return new LlmChatConversationEngineTurnResult(
                     Map(result.Conversation),
                     operationId,
@@ -150,6 +197,18 @@ public sealed class LlmChatConversationEngine(
             },
             cancellationToken);
     }
+
+    public Task<LlmChatConversationEngineState> CompensateTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => ExecuteAsync(
+            operationId,
+            async token => Map(await conversationService.CompensateTurnAsync(
+                conversationId.Value,
+                operationId.Value,
+                token).ConfigureAwait(false)),
+            cancellationToken);
 
     public Task<LlmChatConversationTurnEvidence?> InspectTurnAsync(
         LlmChatConversationId conversationId,
@@ -194,6 +253,35 @@ public sealed class LlmChatConversationEngine(
                 operationId.Value,
                 token).ConfigureAwait(false)),
             cancellationToken);
+
+    private async Task<LlmChatConversationEngineTurnResult> SendCoreAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken)
+    {
+        var admission = await AdmitTurnAsync(
+            conversationId,
+            operationId,
+            definition,
+            definitionRevision,
+            userText,
+            expectedTranscriptRevision,
+            cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var invocationResult = await InvokeTurnAsync(admission, cancellationToken).ConfigureAwait(false);
+            return await CompleteTurnAsync(admission, invocationResult, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await CompensateTurnAsync(conversationId, operationId, CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
+    }
 
     private async Task<T> ExecuteAsync<T>(
         LlmChatOperationId operationId,

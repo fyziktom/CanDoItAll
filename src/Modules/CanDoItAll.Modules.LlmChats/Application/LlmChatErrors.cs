@@ -25,6 +25,11 @@ internal static class LlmChatErrors
     public static Error ConversationArchived()
         => Error.Failure("The LLM Chat conversation is archived and read-only.", LlmChatErrorCodes.ConversationArchived);
 
+    public static Error ActiveTurnConflict()
+        => Error.Failure(
+            "The LLM Chat conversation has an active or nonterminal turn.",
+            LlmChatErrorCodes.ActiveTurnConflict);
+
     public static Error OperationNotFound()
         => Error.Failure("The LLM Chat operation was not found.", LlmChatErrorCodes.OperationNotFound);
 
@@ -40,4 +45,7 @@ internal static class LlmChatErrors
 
     public static Error StorageCorrupted()
         => Error.Failure("Required LLM Chat state is missing or inconsistent.", LlmChatErrorCodes.StorageCorrupted);
+
+    public static Error OperationFailure(string code)
+        => Error.Failure("The LLM Chat turn could not be completed.", code);
 }

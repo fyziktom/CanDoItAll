@@ -84,6 +84,8 @@ public sealed record LlmChatOperation
 
     public DateTimeOffset? CancellationRequestedAtUtc { get; init; }
 
+    public long CancellationGeneration { get; init; }
+
     public DateTimeOffset? TurnAdmittedAtUtc { get; init; }
 
     public DateTimeOffset? ProviderDispatchStartedAtUtc { get; init; }
@@ -184,8 +186,7 @@ internal static class LlmChatOperationTransitions
         RequireStatus(
             operation,
             LlmChatOperationStatus.Running,
-            LlmChatOperationStatus.RecoveryRequired,
-            LlmChatOperationStatus.CancellationRequested);
+            LlmChatOperationStatus.RecoveryRequired);
         if (assistantEntryId == Guid.Empty || resultingTranscriptRevision <= operation.ExpectedTranscriptRevision)
         {
             throw new InvalidOperationException("Transcript completion requires an assistant entry and an advanced revision.");
@@ -221,7 +222,8 @@ internal static class LlmChatOperationTransitions
             LlmChatOperationStatus.Running);
         return Advance(operation, LlmChatOperationStatus.CancellationRequested) with
         {
-            CancellationRequestedAtUtc = requestedAtUtc
+            CancellationRequestedAtUtc = requestedAtUtc,
+            CancellationGeneration = checked(operation.CancellationGeneration + 1)
         };
     }
 

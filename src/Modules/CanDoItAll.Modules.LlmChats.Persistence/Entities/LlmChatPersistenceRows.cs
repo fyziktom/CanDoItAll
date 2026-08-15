@@ -192,6 +192,8 @@ internal sealed class LlmChatOperationRow
 
     public DateTimeOffset? CancellationRequestedAtUtc { get; set; }
 
+    public long CancellationGeneration { get; set; }
+
     public DateTimeOffset? TurnAdmittedAtUtc { get; set; }
 
     public DateTimeOffset? ProviderDispatchStartedAtUtc { get; set; }

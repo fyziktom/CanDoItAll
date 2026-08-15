@@ -8,8 +8,7 @@ namespace CanDoItAll.Modules.LlmChats.Persistence;
 public sealed class ProfileFencedLlmConversationStore(
     ILlmConversationStore inner,
     IDatabaseRuntimeState runtimeState,
-    ILlmChatOperationScopeAccessor operationScope,
-    ILlmChatOperationEvidenceSink? evidenceSink = null) : ILlmConversationStore
+    ILlmChatOperationScopeAccessor operationScope) : ILlmConversationStore
 {
     public Task<LlmConversationDocument> CreateAsync(
         LlmConversationDocument document,
@@ -25,22 +24,9 @@ public sealed class ProfileFencedLlmConversationStore(
         LlmConversationDocument document,
         long expectedTranscriptRevision,
         CancellationToken cancellationToken = default)
-        => MutateAsync(async token =>
-        {
-            var stored = await inner.ReplaceAsync(document, expectedTranscriptRevision, token).ConfigureAwait(false);
-            var operationId = operationScope.Current?.OperationId;
-            if (evidenceSink is not null &&
-                operationId is { } currentOperationId &&
-                stored.ActiveTurn?.TurnId == currentOperationId.Value)
-            {
-                await evidenceSink.MarkTurnAdmittedAsync(
-                    currentOperationId,
-                    stored.ActiveTurn.AdmittedAtUtc,
-                    token).ConfigureAwait(false);
-            }
-
-            return stored;
-        }, cancellationToken);
+        => MutateAsync(
+            token => inner.ReplaceAsync(document, expectedTranscriptRevision, token),
+            cancellationToken);
 
     public Task<IReadOnlyList<LlmConversationSummary>> ListAsync(
         CancellationToken cancellationToken = default)

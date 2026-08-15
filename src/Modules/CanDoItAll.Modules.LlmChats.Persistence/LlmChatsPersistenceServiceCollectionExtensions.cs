@@ -28,6 +28,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
         services.AddScoped<ILlmChatConversationRepository, EfLlmChatConversationRepository>();
         services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();
+        services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
         services.AddScoped<ILlmChatUnitOfWork, EfLlmChatUnitOfWork>();
         services.AddScoped<ILlmChatConversationEngine>(CreateConversationEngine);
@@ -53,8 +54,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         ILlmConversationStore conversationStore = new ProfileFencedLlmConversationStore(
             new EfLlmConversationStore(serviceProvider.GetRequiredService<AppDbContext>()),
             runtimeState,
-            operationScope,
-            evidenceSink);
+            operationScope);
         var conversationService = new LlmConversationService(
             invocationPort,
             conversationStore,
@@ -62,6 +62,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             serviceProvider.GetRequiredService<TimeProvider>());
         return new LlmChatConversationEngine(
             conversationService,
+            invocationPort,
             serviceProvider.GetRequiredService<CanonicalLlmChatProviderResolver>(),
             serviceProvider.GetRequiredService<ILlmChatRuntimeLeaseFactory>(),
             operationScope);

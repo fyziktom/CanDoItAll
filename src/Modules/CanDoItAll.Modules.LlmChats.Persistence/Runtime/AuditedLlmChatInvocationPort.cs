@@ -50,9 +50,7 @@ public sealed class AuditedLlmChatInvocationPort(
                 requestedEffort,
                 effectiveEffort,
                 exception.Usage ?? LlmUsage.Zero,
-                exception.Kind == LlmInvocationFailureKind.DeadlineExceeded
-                    ? LlmChatInvocationOutcome.Cancelled
-                    : LlmChatInvocationOutcome.Failed,
+                LlmChatInvocationOutcome.Failed,
                 MapFailureCode(exception.Kind),
                 startedAtUtc).ConfigureAwait(false);
             throw;

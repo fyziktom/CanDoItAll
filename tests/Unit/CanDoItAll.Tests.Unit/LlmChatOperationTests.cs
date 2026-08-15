@@ -3,9 +3,11 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.LlmChats.Ports;
+using System.Reflection;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -39,6 +41,33 @@ public sealed class LlmChatOperationIdempotencyTests
 
         Assert.True(conflict.IsFailure);
         Assert.Equal(LlmChatErrorCodes.OperationIdConflict, Assert.Single(conflict.Errors).Code);
+        Assert.Equal(1, harness.Engine.SendCount);
+    }
+
+    [Fact]
+    public async Task Same_id_and_request_replays_after_the_conversation_is_archived()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync();
+        var command = harness.CreateSendCommand(LlmChatOperationId.New(), "hello");
+        var first = await harness.Service.SendAsync(command);
+        var conversation = await harness.Conversations.TryGetAsync(harness.ConversationId);
+        Assert.NotNull(conversation);
+        harness.Conversations.Seed(new LlmChatConversation(
+            conversation.Id,
+            conversation.DefinitionId,
+            conversation.DefinitionRevision,
+            conversation.Title,
+            LlmChatConversationStatus.Archived,
+            conversation.Origin,
+            conversation.CreatedAtUtc,
+            conversation.UpdatedAtUtc,
+            conversation.ConcurrencyToken + 1));
+
+        var replay = await harness.Service.SendAsync(command);
+
+        Assert.True(first.IsSuccess);
+        Assert.True(replay.IsSuccess);
+        Assert.Equal(LlmChatOperationStatus.Succeeded, replay.Value!.Operation.Status);
         Assert.Equal(1, harness.Engine.SendCount);
     }
 }
@@ -103,6 +132,25 @@ public sealed class LlmChatOperationCancellationTests
         Assert.Equal(LlmChatOperationStatus.Cancelled, completed.Value!.Operation.Status);
         Assert.False(harness.Cancellations.IsRegistered(operationId));
     }
+
+    [Fact]
+    public async Task Cancellation_committed_before_finalization_prevents_success()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync(blockDispatch: true);
+        var operationId = LlmChatOperationId.New();
+        var send = harness.Service.SendAsync(harness.CreateSendCommand(operationId, "hello"));
+        await harness.Engine.DispatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var requested = await harness.Service.CancelAsync(operationId);
+        harness.Engine.ReleaseDispatch();
+        var completed = await send;
+
+        Assert.True(requested.IsSuccess);
+        Assert.True(completed.IsSuccess);
+        Assert.Equal(LlmChatOperationStatus.Cancelled, completed.Value!.Operation.Status);
+        Assert.Null(completed.Value.AssistantMessage);
+        Assert.True(completed.Value.Operation.CancellationGeneration > 0);
+    }
 }
 
 public sealed class LlmChatOperationRecoveryTests
@@ -165,6 +213,105 @@ public sealed class LlmChatOperationRecoveryTests
         Assert.Equal(LlmChatOperationStatus.Failed, reconciled.Value!.Operation.Status);
         Assert.Equal(0, harness.Engine.AbandonCount);
     }
+
+    [Fact]
+    public async Task Failed_compensation_escalates_to_recovery_instead_of_terminal_failure()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync();
+        var operationId = LlmChatOperationId.New();
+        harness.Operations.Seed(harness.CreateOperation(operationId, LlmChatOperationStatus.Running) with
+        {
+            TurnAdmittedAtUtc = harness.Now,
+            ProviderDispatchStartedAtUtc = harness.Now,
+            ProviderDispatchReturnedAtUtc = harness.Now
+        });
+        harness.Engine.SeedActiveTurn(operationId);
+        harness.Engine.FailCompensation = true;
+        await harness.Invocations.AppendAsync(new LlmChatInvocationRecord(
+            operationId,
+            harness.Revision.ProviderProfileId,
+            harness.Revision.ProviderKind,
+            harness.Revision.ProviderName,
+            harness.Revision.Model,
+            harness.Revision.Settings.ThinkingEffort,
+            AgentReasoningEffortLevel.Low,
+            1,
+            LlmUsage.Zero,
+            LlmChatInvocationOutcome.Failed,
+            LlmChatErrorCodes.ProviderUnavailable,
+            harness.Now,
+            harness.Now,
+            operationId.ToString()));
+
+        var reconciled = await harness.Service.ReconcileAsync(operationId);
+
+        Assert.True(reconciled.IsSuccess);
+        Assert.Equal(LlmChatOperationStatus.RecoveryRequired, reconciled.Value!.Operation.Status);
+    }
+}
+
+public sealed class LlmChatOperationReducerTests
+{
+    [Fact]
+    public void Successful_attempt_requires_live_result_to_commit_and_restart_requires_recovery()
+    {
+        var operation = new LlmChatOperation(
+            LlmChatOperationId.New(),
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            1,
+            LlmChatOperationStatus.Running,
+            DateTimeOffset.UtcNow,
+            0);
+        var durable = new LlmChatOperationDurableEvidence(
+            operation,
+            true,
+            false,
+            null,
+            LlmChatInvocationOutcome.Succeeded,
+            string.Empty);
+
+        var restart = LlmChatOperationReducer.Reduce(durable);
+        var live = LlmChatOperationReducer.Reduce(durable with { HasPendingAssistantResult = true });
+
+        Assert.Equal(LlmChatOperationDecisionKind.RequireRecovery, restart.Kind);
+        Assert.Equal(LlmChatOperationDecisionKind.CommitSucceeded, live.Kind);
+    }
+}
+
+public sealed class LlmChatOperationTransitionRegressionTests
+{
+    [Fact]
+    public void Committed_cancellation_cannot_transition_to_succeeded()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var operation = new LlmChatOperation(
+            LlmChatOperationId.New(),
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('d', 64)),
+            1,
+            LlmChatOperationStatus.CancellationRequested,
+            now,
+            0)
+        {
+            CancellationRequestedAtUtc = now
+        };
+
+        var transitions = typeof(LlmChatOperation).Assembly.GetType(
+            "CanDoItAll.Modules.LlmChats.Operations.LlmChatOperationTransitions",
+            throwOnError: true)!;
+        var completeTranscript = transitions.GetMethod(
+            "CompleteTranscript",
+            BindingFlags.Public | BindingFlags.Static)!;
+
+        var exception = Assert.Throws<TargetInvocationException>(() => completeTranscript.Invoke(
+            null,
+            [operation, now.AddSeconds(1), 3L, Guid.NewGuid()]));
+
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
+    }
 }
 
 public sealed class LlmChatInvocationAuditTests
@@ -204,5 +351,23 @@ public sealed class LlmChatInvocationAuditTests
         var record = Assert.Single(await context.Invocations.ListAsync(context.OperationId));
         Assert.Equal(requested, record.RequestedThinkingEffort);
         Assert.Equal(expectedEffective, record.EffectiveThinkingEffort);
+    }
+
+    [Fact]
+    public async Task Deadline_is_a_failed_attempt_for_both_direct_and_recovery_reduction()
+    {
+        var context = LlmChatInvocationAuditHarness.Create(
+            requestedEffort: null,
+            invoke: request => throw new LlmInvocationException(
+                LlmInvocationFailureKind.DeadlineExceeded,
+                request.Provider.Name,
+                request.Model,
+                request.CorrelationId));
+
+        await Assert.ThrowsAsync<LlmInvocationException>(() => context.InvokeAsync());
+
+        var record = Assert.Single(await context.Invocations.ListAsync(context.OperationId));
+        Assert.Equal(LlmChatInvocationOutcome.Failed, record.Outcome);
+        Assert.Equal(LlmChatErrorCodes.DeadlineExceeded, record.FailureCode);
     }
 }

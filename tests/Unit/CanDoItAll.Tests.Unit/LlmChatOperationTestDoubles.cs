@@ -27,6 +27,11 @@ internal sealed class InMemoryLlmChatOperationRepository : ILlmChatOperationRepo
         }
     }
 
+    public Task<LlmChatOperation?> TryGetForUpdateAsync(
+        LlmChatOperationId id,
+        CancellationToken cancellationToken = default)
+        => TryGetAsync(id, cancellationToken);
+
     public Task<LlmChatOperationAdmission> AdmitAsync(
         LlmChatOperation operation,
         CancellationToken cancellationToken = default)
@@ -143,6 +148,8 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
 
     public int AbandonCount { get; private set; }
 
+    public bool FailCompensation { get; set; }
+
     public Task<LlmChatConversationEngineState> CreateAsync(
         LlmChatConversationId conversationId,
         LlmChatDefinitionRevision definitionRevision,
@@ -190,30 +197,125 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         long expectedTranscriptRevision,
         CancellationToken cancellationToken = default)
     {
+        var admission = await AdmitTurnAsync(
+            conversationId,
+            operationId,
+            definition,
+            definitionRevision,
+            userText,
+            expectedTranscriptRevision,
+            cancellationToken);
+        try
+        {
+            var result = await InvokeTurnAsync(admission, cancellationToken);
+            return await CompleteTurnAsync(admission, result, cancellationToken);
+        }
+        catch
+        {
+            await CompensateTurnAsync(conversationId, operationId, CancellationToken.None);
+            throw;
+        }
+    }
+
+    public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+    {
+        var now = timeProvider.GetUtcNow();
+        var provider = ProviderRuntimeTestData.CreateProvider();
+        var userEntry = new LlmConversationTranscriptEntry(
+            Guid.NewGuid(),
+            operationId.Value,
+            LlmMessageRole.User,
+            userText,
+            now);
+        var document = new LlmConversationDocument(
+            conversationId.Value,
+            "Conversation",
+            LlmConversationProviderSnapshot.FromProfile(provider, definitionRevision.Model),
+            now,
+            now,
+            expectedTranscriptRevision + 1,
+            [userEntry],
+            new LlmConversationActiveTurn(
+                operationId.Value,
+                userEntry.EntryId,
+                now,
+                expectedTranscriptRevision + 1));
+        var state = new LlmChatConversationEngineState(
+            conversationId,
+            document.TranscriptRevision,
+            true,
+            now,
+            now);
+        states[conversationId] = state;
+        turnEvidence[operationId] = new LlmChatConversationTurnEvidence(state, operationId, true, null);
+        return Task.FromResult(new LlmConversationTurnAdmission(
+            document,
+            userEntry,
+            new LlmInvocationRequest(
+                provider,
+                definitionRevision.Model,
+                [new LlmMessage(LlmMessageRole.User, userText)],
+                settings: definitionRevision.Settings,
+                correlationId: operationId.ToString())));
+    }
+
+    public async Task<LlmInvocationResult> InvokeTurnAsync(
+        LlmConversationTurnAdmission admission,
+        CancellationToken cancellationToken = default)
+    {
+        var operationId = new LlmChatOperationId(admission.UserEntry.TurnId);
         SendCount++;
         var now = timeProvider.GetUtcNow();
-        await evidence.MarkTurnAdmittedAsync(operationId, now, cancellationToken);
         await evidence.MarkProviderDispatchStartedAsync(operationId, now, cancellationToken);
         DispatchStarted.TrySetResult(true);
-        if (blockUntilCancelled)
+        try
         {
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-        }
+            if (blockUntilCancelled)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
 
-        if (blockDispatch)
+            if (blockDispatch)
+            {
+                await releaseDispatch.Task;
+            }
+        }
+        catch (OperationCanceledException)
         {
-            await releaseDispatch.Task.WaitAsync(cancellationToken);
+            await evidence.RecordInvocationAsync(new LlmChatInvocationRecord(
+                operationId,
+                admission.InvocationRequest.Provider.Id,
+                admission.InvocationRequest.Provider.Kind,
+                admission.InvocationRequest.Provider.Name,
+                admission.InvocationRequest.Model,
+                admission.InvocationRequest.Settings?.ThinkingEffort,
+                admission.InvocationRequest.Settings?.ThinkingEffort ?? AgentReasoningEffortLevel.Low,
+                1,
+                LlmUsage.Zero,
+                LlmChatInvocationOutcome.Cancelled,
+                LlmChatErrorCodes.Cancelled,
+                now,
+                timeProvider.GetUtcNow(),
+                operationId.ToString()), CancellationToken.None);
+            throw;
         }
 
         var usage = new LlmUsage(2, 1);
         await evidence.RecordInvocationAsync(new LlmChatInvocationRecord(
             operationId,
-            definitionRevision.ProviderProfileId,
-            definitionRevision.ProviderKind,
-            definitionRevision.ProviderName,
-            definitionRevision.Model,
-            definitionRevision.Settings.ThinkingEffort,
-            definitionRevision.Settings.ThinkingEffort ?? AgentReasoningEffortLevel.Low,
+            admission.InvocationRequest.Provider.Id,
+            admission.InvocationRequest.Provider.Kind,
+            admission.InvocationRequest.Provider.Name,
+            admission.InvocationRequest.Model,
+            admission.InvocationRequest.Settings?.ThinkingEffort,
+            admission.InvocationRequest.Settings?.ThinkingEffort ?? AgentReasoningEffortLevel.Low,
             1,
             usage,
             LlmChatInvocationOutcome.Succeeded,
@@ -221,10 +323,22 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
             now,
             now,
             operationId.ToString()), cancellationToken);
+        return new LlmInvocationResult(admission.InvocationRequest.Model, "answer", usage);
+    }
+
+    public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default)
+    {
+        var operationId = new LlmChatOperationId(admission.UserEntry.TurnId);
+        var conversationId = new LlmChatConversationId(admission.Conversation.ConversationId);
+        var now = timeProvider.GetUtcNow();
         var current = states[conversationId];
         var updated = current with
         {
-            TranscriptRevision = expectedTranscriptRevision + 2,
+            TranscriptRevision = admission.Conversation.TranscriptRevision + 1,
+            HasActiveTurn = false,
             UpdatedAtUtc = now
         };
         states[conversationId] = updated;
@@ -233,14 +347,51 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
             updated,
             operationId,
             false,
-            new LlmChatAssistantTurnEvidence(assistantEntryId, "answer", definitionRevision.Model, usage, now));
-        return new LlmChatConversationEngineTurnResult(
+            new LlmChatAssistantTurnEvidence(
+                assistantEntryId,
+                invocationResult.ResponseText,
+                invocationResult.Model,
+                invocationResult.Usage,
+                now));
+        return Task.FromResult(new LlmChatConversationEngineTurnResult(
             updated,
             operationId,
             assistantEntryId,
-            "answer",
-            definitionRevision.Model,
-            usage);
+            invocationResult.ResponseText,
+            invocationResult.Model,
+            invocationResult.Usage));
+    }
+
+    public Task<LlmChatConversationEngineState> CompensateTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+    {
+        if (FailCompensation)
+        {
+            throw new InvalidOperationException("Injected compensation failure.");
+        }
+
+        var evidenceResult = turnEvidence.GetValueOrDefault(operationId);
+        if (evidenceResult?.HasExactActiveTurn != true)
+        {
+            throw new InvalidOperationException("The exact operation turn is not active.");
+        }
+
+        AbandonCount++;
+        var updated = evidenceResult.State with
+        {
+            TranscriptRevision = evidenceResult.State.TranscriptRevision + 1,
+            HasActiveTurn = false,
+            UpdatedAtUtc = timeProvider.GetUtcNow()
+        };
+        states[conversationId] = updated;
+        turnEvidence[operationId] = evidenceResult with
+        {
+            State = updated,
+            HasExactActiveTurn = false
+        };
+        return Task.FromResult(updated);
     }
 
     public Task<LlmChatConversationTurnEvidence?> InspectTurnAsync(
@@ -263,28 +414,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,
         CancellationToken cancellationToken = default)
-    {
-        var evidenceResult = turnEvidence.GetValueOrDefault(operationId);
-        if (evidenceResult?.HasExactActiveTurn != true)
-        {
-            throw new InvalidOperationException("The exact operation turn is not active.");
-        }
-
-        AbandonCount++;
-        var updated = evidenceResult.State with
-        {
-            TranscriptRevision = evidenceResult.State.TranscriptRevision + 1,
-            HasActiveTurn = false,
-            UpdatedAtUtc = timeProvider.GetUtcNow()
-        };
-        states[conversationId] = updated;
-        turnEvidence[operationId] = evidenceResult with
-        {
-            State = updated,
-            HasExactActiveTurn = false
-        };
-        return Task.FromResult(updated);
-    }
+        => CompensateTurnAsync(conversationId, operationId, cancellationToken);
 
     public void SeedConversation(LlmChatConversationId conversationId)
     {
@@ -329,6 +459,7 @@ internal sealed class LlmChatOperationHarness
         DateTimeOffset now,
         LlmChatConversationId conversationId,
         LlmChatDefinitionRevision revision,
+        InMemoryLlmChatConversationRepository conversations,
         InMemoryLlmChatOperationRepository operations,
         InMemoryLlmChatInvocationRecordRepository invocations,
         EvidenceAwareLlmChatConversationEngine engine,
@@ -338,6 +469,7 @@ internal sealed class LlmChatOperationHarness
         Now = now;
         ConversationId = conversationId;
         Revision = revision;
+        Conversations = conversations;
         Operations = operations;
         Invocations = invocations;
         Engine = engine;
@@ -350,6 +482,8 @@ internal sealed class LlmChatOperationHarness
     public LlmChatConversationId ConversationId { get; }
 
     public LlmChatDefinitionRevision Revision { get; }
+
+    public InMemoryLlmChatConversationRepository Conversations { get; }
 
     public InMemoryLlmChatOperationRepository Operations { get; }
 
@@ -399,21 +533,38 @@ internal sealed class LlmChatOperationHarness
             blockUntilCancelled);
         engine.SeedConversation(conversationId);
         var cancellations = new LlmChatOperationCancellationRegistry();
-        var service = new LlmChatOperationApplicationService(
+        var details = new LlmChatOperationDetailsReader(operations, invocations, engine);
+        var admission = new LlmChatOperationAdmissionService(
             definitions,
             conversations,
+            operations,
+            new StubLlmChatTurnStateRepository(),
+            unitOfWork,
+            engine,
+            evidence,
+            timeProvider);
+        var stateMachine = new LlmChatOperationStateMachine(
             operations,
             invocations,
             unitOfWork,
             engine,
             evidence,
             cancellations,
+            details,
             timeProvider,
+            NullLogger<LlmChatOperationStateMachine>.Instance);
+        var service = new LlmChatOperationApplicationService(
+            admission,
+            stateMachine,
+            details,
+            cancellations,
+            engine,
             NullLogger<LlmChatOperationApplicationService>.Instance);
         return new LlmChatOperationHarness(
             now,
             conversationId,
             revision,
+            conversations,
             operations,
             invocations,
             engine,

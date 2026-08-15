@@ -29,6 +29,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var service = new LlmChatConversationApplicationService(
             definitions,
             conversations,
+            new StubLlmChatTurnStateRepository(),
             new InlineLlmChatUnitOfWork(),
             engine,
             new FixedTimeProvider(Now));
@@ -76,6 +77,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var service = new LlmChatConversationApplicationService(
             definitions,
             new InMemoryLlmChatConversationRepository(),
+            new StubLlmChatTurnStateRepository(),
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatConversationEngine(),
             new FixedTimeProvider(Now));
@@ -111,8 +113,31 @@ public sealed class LlmChatConversationApplicationServiceTests
         Assert.Contains(rename.Errors, error => error.Code == LlmChatErrorCodes.ConversationArchived);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Archive_rejects_active_or_nonterminal_turn_state(
+        bool hasActiveTurn,
+        bool hasNonterminalOperation)
+    {
+        var harness = await CreateActiveHarnessAsync(hasActiveTurn, hasNonterminalOperation);
+        var created = await harness.Service.CreateAsync(new CreateLlmChatConversationCommand(
+            harness.DefinitionId,
+            "Customer refund",
+            LlmChatConversationOrigin.Api));
+
+        var archived = await harness.Service.ArchiveAsync(new ArchiveLlmChatConversationCommand(
+            created.Value!.Conversation.Id,
+            created.Value.Conversation.ConcurrencyToken));
+
+        Assert.True(archived.IsFailure);
+        Assert.Contains(archived.Errors, error => error.Code == LlmChatErrorCodes.ActiveTurnConflict);
+    }
+
     private static async Task<(LlmChatConversationApplicationService Service, LlmChatDefinitionId DefinitionId)>
-        CreateActiveHarnessAsync()
+        CreateActiveHarnessAsync(
+            bool hasActiveTurn = false,
+            bool hasNonterminalOperation = false)
     {
         var definitions = new InMemoryLlmChatDefinitionRepository();
         var definitionService = new LlmChatDefinitionApplicationService(
@@ -128,6 +153,9 @@ public sealed class LlmChatConversationApplicationServiceTests
         var service = new LlmChatConversationApplicationService(
             definitions,
             new InMemoryLlmChatConversationRepository(),
+            new StubLlmChatTurnStateRepository(
+                hasActiveTurn: hasActiveTurn,
+                hasNonterminalOperation: hasNonterminalOperation),
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatConversationEngine(),
             new FixedTimeProvider(Now));

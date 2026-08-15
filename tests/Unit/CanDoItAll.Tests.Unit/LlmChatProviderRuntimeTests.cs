@@ -214,14 +214,16 @@ public sealed class LlmChatRuntimeFenceTests
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             return new LlmInvocationResult(request.Model, "must not commit", LlmUsage.Zero);
         });
+        var fencedInvocation = new ProfileFencedLlmChatInvocationPort(invocation, state, scope);
         var generic = new LlmConversationService(
-            new ProfileFencedLlmChatInvocationPort(invocation, state, scope),
+            fencedInvocation,
             store,
             new RecencyBoundedContextWindowPolicy(),
             TimeProvider.System);
         var provider = ProviderRuntimeTestData.CreateProvider();
         var engine = new LlmChatConversationEngine(
             generic,
+            fencedInvocation,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications),
             scope);
@@ -342,13 +344,15 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             ProviderRuntimeTestData.CapturedRequest = request;
             return Task.FromResult(new LlmInvocationResult(request.Model, "answer", new LlmUsage(2, 3)));
         });
+        var fenced = new ProfileFencedLlmChatInvocationPort(capture, state, scope);
         var generic = new LlmConversationService(
-            new ProfileFencedLlmChatInvocationPort(capture, state, scope),
+            fenced,
             new InMemoryLlmConversationStore(),
             new RecencyBoundedContextWindowPolicy(),
             TimeProvider.System);
         var engine = new LlmChatConversationEngine(
             generic,
+            fenced,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications),
             scope);
@@ -388,17 +392,19 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
         var notifications = new TestDatabaseSwitchNotificationService();
         var scope = new LlmChatOperationScopeAccessor();
         var invocationCount = 0;
-        var generic = new LlmConversationService(
-            new DelegatingInvocationPort((_, _) =>
+        var invocation = new DelegatingInvocationPort((_, _) =>
             {
                 invocationCount++;
                 return Task.FromResult(new LlmInvocationResult("model-fast", "answer", LlmUsage.Zero));
-            }),
+            });
+        var generic = new LlmConversationService(
+            invocation,
             new InMemoryLlmConversationStore(),
             new RecencyBoundedContextWindowPolicy(),
             TimeProvider.System);
         var engine = new LlmChatConversationEngine(
             generic,
+            invocation,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications),
             scope);

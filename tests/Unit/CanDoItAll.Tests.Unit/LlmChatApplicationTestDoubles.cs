@@ -139,6 +139,9 @@ internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversati
         conversations[conversation.Id] = conversation;
         return Task.CompletedTask;
     }
+
+    public void Seed(LlmChatConversation conversation)
+        => conversations[conversation.Id] = conversation;
 }
 
 internal sealed class InlineLlmChatUnitOfWork : ILlmChatUnitOfWork
@@ -147,6 +150,20 @@ internal sealed class InlineLlmChatUnitOfWork : ILlmChatUnitOfWork
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default)
         => operation(cancellationToken);
+}
+
+internal sealed class StubLlmChatTurnStateRepository(
+    bool exists = true,
+    bool hasActiveTurn = false,
+    bool hasNonterminalOperation = false) : ILlmChatTurnStateRepository
+{
+    public Task<LlmChatConversationTurnState> LockAsync(
+        LlmChatConversationId conversationId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new LlmChatConversationTurnState(
+            exists,
+            hasActiveTurn,
+            hasNonterminalOperation));
 }
 
 internal sealed class StubLlmChatProviderResolver : ILlmChatProviderResolver
@@ -267,6 +284,33 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
             definitionRevision.Model,
             LlmUsage.Zero));
     }
+
+    public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmInvocationResult> InvokeTurnAsync(
+        LlmConversationTurnAdmission admission,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatConversationEngineState> CompensateTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
 
     public Task<LlmChatConversationTurnEvidence?> InspectTurnAsync(
         LlmChatConversationId conversationId,

@@ -81,6 +81,29 @@ public interface ILlmChatConversationEngine
         long expectedTranscriptRevision,
         CancellationToken cancellationToken = default);
 
+    Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmInvocationResult> InvokeTurnAsync(
+        LlmConversationTurnAdmission admission,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmChatConversationEngineState> CompensateTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default);
+
     Task<LlmChatConversationTurnEvidence?> InspectTurnAsync(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,

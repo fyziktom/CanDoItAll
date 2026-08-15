@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
@@ -243,6 +244,258 @@ public sealed class LlmChatConversationTransactionIntegrationTests
             now,
             now,
             0);
+}
+
+public sealed class LlmChatTurnTransactionIntegrationTests
+{
+    [Fact]
+    public async Task Admission_rolls_back_claim_pending_message_active_turn_and_evidence_together()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatadmissionatomic");
+        await using var dbContext = database.CreateDbContext();
+        var seeded = await SeedConversationAsync(dbContext, admitted: false);
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var store = new EfLlmConversationStore(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var evidenceSink = new LlmChatOperationEvidenceService(
+            operationRepository,
+            invocationRepository,
+            unitOfWork);
+        var operation = CreateOperation(seeded.ConversationId, seeded.TurnId, seeded.Now);
+        var admitted = Admit(seeded.Document, seeded.TurnId, seeded.Now.AddSeconds(1));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token =>
+        {
+            await operationRepository.AdmitAsync(operation, token);
+            var claimed = await operationRepository.TryClaimDispatchAsync(
+                operation.Id,
+                operation.RequestFingerprint,
+                token);
+            Assert.NotNull(claimed);
+            await store.ReplaceAsync(admitted, seeded.Document.TranscriptRevision, token);
+            await evidenceSink.MarkTurnAdmittedAsync(operation.Id, admitted.UpdatedAtUtc, token);
+            throw new InvalidOperationException("Injected failure after atomic admission writes.");
+        }));
+
+        dbContext.ChangeTracker.Clear();
+        Assert.False(await dbContext.Set<LlmChatOperationRow>().AnyAsync(row => row.Id == seeded.TurnId));
+        Assert.False(await dbContext.Set<LlmChatMessageRow>().AnyAsync(row => row.ConversationId == seeded.ConversationId));
+        var transcript = await dbContext.Set<LlmChatTranscriptRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.ConversationId == seeded.ConversationId);
+        Assert.Equal(0, transcript.TranscriptRevision);
+        Assert.Null(transcript.ActiveTurnId);
+    }
+
+    [Fact]
+    public async Task Success_finalization_rolls_back_assistant_usage_and_terminal_status_together()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatsuccessatomic");
+        await using var dbContext = database.CreateDbContext();
+        var seeded = await SeedConversationAsync(dbContext, admitted: true);
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var store = new EfLlmConversationStore(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var evidenceSink = new LlmChatOperationEvidenceService(
+            operationRepository,
+            invocationRepository,
+            unitOfWork);
+        var assistant = new LlmConversationTranscriptEntry(
+            Guid.NewGuid(),
+            seeded.TurnId,
+            LlmMessageRole.Assistant,
+            "answer",
+            seeded.Now.AddSeconds(2),
+            "model",
+            new LlmUsage(5, 3, 1));
+        var completed = seeded.Document with
+        {
+            TranscriptRevision = seeded.Document.TranscriptRevision + 1,
+            UpdatedAtUtc = assistant.CreatedAtUtc,
+            Entries = seeded.Document.Entries.Add(assistant),
+            ActiveTurn = null
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token =>
+        {
+            await operationRepository.TryGetForUpdateAsync(new LlmChatOperationId(seeded.TurnId), token);
+            await store.ReplaceAsync(completed, seeded.Document.TranscriptRevision, token);
+            await evidenceSink.CompleteTranscriptAsync(
+                new LlmChatOperationId(seeded.TurnId),
+                completed.UpdatedAtUtc,
+                completed.TranscriptRevision,
+                assistant.EntryId,
+                token);
+            throw new InvalidOperationException("Injected failure after atomic success writes.");
+        }));
+
+        await AssertAdmittedAndNonterminalAsync(dbContext, seeded, LlmChatOperationStatus.Running);
+        Assert.False(await dbContext.Set<LlmChatMessageRow>().AnyAsync(row => row.EntryId == assistant.EntryId));
+    }
+
+    [Fact]
+    public async Task Failure_compensation_rolls_back_turn_clear_and_terminal_failure_together()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcompensationatomic");
+        await using var dbContext = database.CreateDbContext();
+        var seeded = await SeedConversationAsync(dbContext, admitted: true);
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
+        var store = new EfLlmConversationStore(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var evidenceSink = new LlmChatOperationEvidenceService(
+            operationRepository,
+            invocationRepository,
+            unitOfWork);
+        var compensated = seeded.Document with
+        {
+            TranscriptRevision = seeded.Document.TranscriptRevision + 1,
+            UpdatedAtUtc = seeded.Now.AddSeconds(2),
+            Entries = [],
+            ActiveTurn = null
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token =>
+        {
+            await operationRepository.TryGetForUpdateAsync(new LlmChatOperationId(seeded.TurnId), token);
+            await store.ReplaceAsync(compensated, seeded.Document.TranscriptRevision, token);
+            await evidenceSink.CompleteFailureAsync(
+                new LlmChatOperationId(seeded.TurnId),
+                compensated.UpdatedAtUtc,
+                LlmChatErrorCodes.ProviderUnavailable,
+                token);
+            throw new InvalidOperationException("Injected failure after atomic compensation writes.");
+        }));
+
+        await AssertAdmittedAndNonterminalAsync(dbContext, seeded, LlmChatOperationStatus.Running);
+    }
+
+    private static async Task AssertAdmittedAndNonterminalAsync(
+        AppDbContext dbContext,
+        SeededTurn seeded,
+        LlmChatOperationStatus expectedStatus)
+    {
+        dbContext.ChangeTracker.Clear();
+        var transcript = await dbContext.Set<LlmChatTranscriptRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.ConversationId == seeded.ConversationId);
+        var operation = await dbContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == seeded.TurnId);
+        Assert.Equal(seeded.Document.TranscriptRevision, transcript.TranscriptRevision);
+        Assert.Equal(seeded.TurnId, transcript.ActiveTurnId);
+        Assert.Equal(expectedStatus, operation.Status);
+        Assert.Null(operation.CompletedAtUtc);
+    }
+
+    private static async Task<SeededTurn> SeedConversationAsync(AppDbContext dbContext, bool admitted)
+    {
+        var definitionId = Guid.NewGuid();
+        var conversationId = Guid.NewGuid();
+        var turnId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var original = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
+        var document = admitted ? Admit(original, turnId, now.AddSeconds(1)) : original;
+        dbContext.Add(new LlmChatDefinitionRow
+        {
+            Id = definitionId,
+            Name = "Atomic turn",
+            Summary = "",
+            AvatarImageUrl = "",
+            Status = LlmChatDefinitionStatus.Active,
+            CurrentRevision = 1,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = 0
+        });
+        dbContext.Add(LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(
+            definitionId,
+            1,
+            AgentReasoningEffortLevel.Low,
+            now));
+        dbContext.Add(new LlmChatConversationRow
+        {
+            Id = conversationId,
+            DefinitionId = definitionId,
+            DefinitionRevision = 1,
+            Title = document.Title,
+            Status = LlmChatConversationStatus.Active,
+            Origin = LlmChatConversationOrigin.Api,
+            CreatedAtUtc = document.CreatedAtUtc,
+            UpdatedAtUtc = document.UpdatedAtUtc,
+            ConcurrencyToken = 0
+        });
+        dbContext.Add(LlmConversationPersistenceMapper.ToRow(document));
+        for (var index = 0; index < document.Entries.Length; index++)
+        {
+            dbContext.Add(LlmConversationPersistenceMapper.ToRow(
+                conversationId,
+                index + 1,
+                document.Entries[index]));
+        }
+
+        if (admitted)
+        {
+            var operation = CreateOperation(conversationId, turnId, now) with
+            {
+                Status = LlmChatOperationStatus.Running,
+                TurnAdmittedAtUtc = document.UpdatedAtUtc,
+                ProviderDispatchStartedAtUtc = document.UpdatedAtUtc,
+                ProviderDispatchReturnedAtUtc = document.UpdatedAtUtc.AddMilliseconds(1),
+                ConcurrencyToken = 2
+            };
+            dbContext.Add(LlmChatPersistenceMapper.ToRow(operation));
+        }
+
+        await dbContext.SaveChangesAsync();
+        return new SeededTurn(conversationId, turnId, now, document);
+    }
+
+    private static LlmConversationDocument Admit(
+        LlmConversationDocument original,
+        Guid turnId,
+        DateTimeOffset admittedAtUtc)
+    {
+        var user = new LlmConversationTranscriptEntry(
+            Guid.NewGuid(),
+            turnId,
+            LlmMessageRole.User,
+            "pending",
+            admittedAtUtc);
+        return original with
+        {
+            TranscriptRevision = original.TranscriptRevision + 1,
+            UpdatedAtUtc = admittedAtUtc,
+            Entries = original.Entries.Add(user),
+            ActiveTurn = new LlmConversationActiveTurn(
+                turnId,
+                user.EntryId,
+                admittedAtUtc,
+                original.TranscriptRevision + 1)
+        };
+    }
+
+    private static LlmChatOperation CreateOperation(
+        Guid conversationId,
+        Guid turnId,
+        DateTimeOffset startedAtUtc)
+        => new(
+            new LlmChatOperationId(turnId),
+            new LlmChatConversationId(conversationId),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('c', 64)),
+            0,
+            LlmChatOperationStatus.Pending,
+            startedAtUtc,
+            0);
+
+    private sealed record SeededTurn(
+        Guid ConversationId,
+        Guid TurnId,
+        DateTimeOffset Now,
+        LlmConversationDocument Document);
 }
 
 public sealed class LlmChatCanonicalTitleMigrationIntegrationTests

@@ -20,6 +20,23 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
+    public async Task<LlmChatOperation?> TryGetForUpdateAsync(
+        LlmChatOperationId id,
+        CancellationToken cancellationToken = default)
+    {
+        var row = await dbContext.Set<LlmChatOperationRow>()
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "LlmChats_Operations"
+                WHERE "Id" = {id.Value}
+                FOR UPDATE
+                """)
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
+    }
+
     public async Task<LlmChatOperationAdmission> AdmitAsync(
         LlmChatOperation operation,
         CancellationToken cancellationToken = default)
@@ -28,14 +45,15 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         var inserted = await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "LlmChats_Operations"
                 ("Id", "ConversationId", "Kind", "RequestFingerprint", "ExpectedTranscriptRevision",
-                 "Status", "CancellationRequestedAtUtc", "TurnAdmittedAtUtc",
+                 "Status", "CancellationRequestedAtUtc", "CancellationGeneration", "TurnAdmittedAtUtc",
                  "ProviderDispatchStartedAtUtc", "ProviderDispatchReturnedAtUtc",
                  "TranscriptCompletedAtUtc", "StartedAtUtc", "CompletedAtUtc",
                  "ResultingTranscriptRevision", "AssistantEntryId", "FailureCode", "ConcurrencyToken")
             VALUES
                 ({operation.Id.Value}, {operation.ConversationId.Value}, {(int)operation.Kind},
                  {operation.RequestFingerprint.Value}, {operation.ExpectedTranscriptRevision},
-                 {(int)operation.Status}, {operation.CancellationRequestedAtUtc}, {operation.TurnAdmittedAtUtc},
+                 {(int)operation.Status}, {operation.CancellationRequestedAtUtc}, {operation.CancellationGeneration},
+                 {operation.TurnAdmittedAtUtc},
                  {operation.ProviderDispatchStartedAtUtc}, {operation.ProviderDispatchReturnedAtUtc},
                  {operation.TranscriptCompletedAtUtc}, {operation.StartedAtUtc}, {operation.CompletedAtUtc},
                  {operation.ResultingTranscriptRevision}, {operation.AssistantEntryId}, {operation.FailureCode},
@@ -77,6 +95,7 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(row => row.Status, operation.Status)
                 .SetProperty(row => row.CancellationRequestedAtUtc, operation.CancellationRequestedAtUtc)
+                .SetProperty(row => row.CancellationGeneration, operation.CancellationGeneration)
                 .SetProperty(row => row.TurnAdmittedAtUtc, operation.TurnAdmittedAtUtc)
                 .SetProperty(row => row.ProviderDispatchStartedAtUtc, operation.ProviderDispatchStartedAtUtc)
                 .SetProperty(row => row.ProviderDispatchReturnedAtUtc, operation.ProviderDispatchReturnedAtUtc)
@@ -89,6 +108,46 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
                 cancellationToken)
             .ConfigureAwait(false);
         return affected == 1;
+    }
+}
+
+public sealed class EfLlmChatTurnStateRepository(AppDbContext dbContext) : ILlmChatTurnStateRepository
+{
+    public async Task<LlmChatConversationTurnState> LockAsync(
+        LlmChatConversationId conversationId,
+        CancellationToken cancellationToken = default)
+    {
+        var conversation = await dbContext.Set<LlmChatConversationRow>()
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "LlmChats_Conversations"
+                WHERE "Id" = {conversationId.Value}
+                FOR UPDATE
+                """)
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (conversation is null)
+        {
+            return new(false, false, false);
+        }
+
+        var hasActiveTurn = await dbContext.Set<LlmChatTranscriptRow>()
+            .AsNoTracking()
+            .AnyAsync(
+                row => row.ConversationId == conversationId.Value && row.ActiveTurnId != null,
+                cancellationToken)
+            .ConfigureAwait(false);
+        var hasNonterminalOperation = await dbContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .AnyAsync(
+                row => row.ConversationId == conversationId.Value &&
+                       row.Status != LlmChatOperationStatus.Succeeded &&
+                       row.Status != LlmChatOperationStatus.Failed &&
+                       row.Status != LlmChatOperationStatus.Cancelled,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return new(true, hasActiveTurn, hasNonterminalOperation);
     }
 }
 
