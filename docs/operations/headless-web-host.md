@@ -21,20 +21,20 @@ The host requires the matching .NET 10 ASP.NET Core runtime, PostgreSQL 16, writ
 
 ## Publish
 
-Publish outside the repository. Installation artifacts use the pinned package graph, so
-pass `UseLocalCanDoItAllLibraries=false` to both restore and publish. Restore separately
-for each target RID. Do not add self-contained, trimming, single-file, or Native AOT
-properties to these commands:
+Publish outside the repository. Installation artifacts use the sibling Components and
+FileTools source graph, so keep `UseLocalCanDoItAllLibraries=true` for both restore and
+publish and record both dependency commits. Restore separately for each target RID. Do
+not add self-contained, trimming, single-file, or Native AOT properties to these commands:
 
 ```text
-dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r linux-x64 -p:UseLocalCanDoItAllLibraries=false
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r linux-x64 --self-contained false --no-restore -o /absolute/artifacts/linux-x64 -p:UseLocalCanDoItAllLibraries=false
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r linux-x64 -p:UseLocalCanDoItAllLibraries=true
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r linux-x64 --self-contained false --no-restore -o /absolute/artifacts/linux-x64 -p:UseLocalCanDoItAllLibraries=true
 
-dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r osx-x64 -p:UseLocalCanDoItAllLibraries=false
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-x64 --self-contained false --no-restore -o /absolute/artifacts/osx-x64 -p:UseLocalCanDoItAllLibraries=false
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r osx-x64 -p:UseLocalCanDoItAllLibraries=true
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-x64 --self-contained false --no-restore -o /absolute/artifacts/osx-x64 -p:UseLocalCanDoItAllLibraries=true
 
-dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r osx-arm64 -p:UseLocalCanDoItAllLibraries=false
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-arm64 --self-contained false --no-restore -o /absolute/artifacts/osx-arm64 -p:UseLocalCanDoItAllLibraries=false
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -r osx-arm64 -p:UseLocalCanDoItAllLibraries=true
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj -c Release -r osx-arm64 --self-contained false --no-restore -o /absolute/artifacts/osx-arm64 -p:UseLocalCanDoItAllLibraries=true
 ```
 
 On Windows use an absolute directory outside the checkout and `-r win-x64` on both

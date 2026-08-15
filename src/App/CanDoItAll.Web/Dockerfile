@@ -10,9 +10,11 @@ FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_SDK_VERSION} AS build
 WORKDIR /source
 
 COPY . .
+COPY --from=components . /CanDoItAll.Components
+COPY --from=filetools . /CanDoItAll.FileTools
 RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
     dotnet restore "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" \
-    /p:UseLocalCanDoItAllLibraries=false
+    /p:UseLocalCanDoItAllLibraries=true
 
 RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
     dotnet publish "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj" \
@@ -20,7 +22,7 @@ RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
     --output /app/publish \
     --no-restore \
     /p:UseAppHost=false \
-    /p:UseLocalCanDoItAllLibraries=false
+    /p:UseLocalCanDoItAllLibraries=true
 
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 ARG BUILD_DATE

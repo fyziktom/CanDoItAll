@@ -23,9 +23,10 @@ dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Categ
 
 `/m:1` avoids `bin` and `obj` contention when local MCP or watch processes are active. A developer with an isolated workspace may increase parallelism, but the result must still come from the same configuration and filter.
 
-Those commands use sibling source projects. For the clean-checkout package graph used by
-CI and Docker, pass `-p:UseLocalCanDoItAllLibraries=false` to restore, build, and test.
-Keep the dependency mode identical for the whole gate.
+Those commands use sibling source projects. CI checks out Components and FileTools at the
+pinned commits declared in its workflow, and Docker receives the same repositories as
+named build contexts. Keep source roots and commits identical for the whole gate; do not
+substitute an unpublished package graph for any command.
 
 The filter intentionally excludes:
 

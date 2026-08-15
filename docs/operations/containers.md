@@ -24,6 +24,10 @@ database is reachable only through the internal Compose network. Change
 the ignored `.secrets/db-password` value before using a shared host; Compose grants that
 file only to the app and database services as a read-only secret.
 
+The image build requires `CanDoItAll.Components` and `CanDoItAll.FileTools` beside this
+repository. Compose passes both directories as named build contexts, and the Dockerfile
+builds against their direct project references rather than NuGet substitutes.
+
 PostgreSQL reads `POSTGRES_PASSWORD_FILE` only while initializing an empty `db-data`
 volume. Replacing `.secrets/db-password` does **not** rotate the role password in an
 existing database. It can instead make a recreated app use a password that PostgreSQL

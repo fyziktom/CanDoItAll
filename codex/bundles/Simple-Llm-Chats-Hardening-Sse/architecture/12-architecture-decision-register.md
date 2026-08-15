@@ -14,6 +14,7 @@
 | ADR-H10 | Turn admission returns 202; SSE reuses generic writer/profile stream | Locked by SB09 |
 | ADR-H11 | API origin is server-owned and scopes are read/manage/execute | Locked by SB10 |
 | ADR-H12 | UI/context/chatbot deployment remain later bundles | Locked |
+| ADR-H13 | Current validation and deployment builds use pinned sibling Components and FileTools source projects | Reopened SB11 correction |
 
 ## SB01 implementation record
 
@@ -81,3 +82,12 @@ while definition responses and failure paths omit system prompts and raw excepti
 Conversation-create idempotency is deferred until `LlmChatDeployment` owns the external client and
 participant/session namespace needed to scope caller keys safely. No dormant deployment, participant,
 channel, moderation, quota, or retention fields were added to definitions or internal conversations.
+
+## SB11 source dependency correction
+
+`Directory.Build.targets` remains the single build-graph adapter: it removes matching CanDoItAll
+package declarations and adds direct project references from the configured sibling repository roots.
+Current local, CI, portability, headless-publish, and Docker gates all use that source mode. Hosted jobs
+pin and check out the exact Components and FileTools commits beside the application repository; Docker
+passes both as named contexts. Package metadata remains in project files for future distribution, but
+an unavailable package feed is not a fallback or prerequisite for the current release gate.

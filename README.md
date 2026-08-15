@@ -89,17 +89,23 @@ dotnet restore ./CanDoItAll.slnx \
   -p:CanDoItAllFileToolsRepositoryRoot=/source/CanDoItAll.FileTools
 ```
 
-Clean-checkout, CI, Docker, and reproducible artifact builds use the pinned NuGet graph
-instead. Select that mode explicitly and consistently:
+CI checks out the Components and FileTools repositories at the commits declared in
+`.github/workflows/ci.yml`, places all three repositories beside each other, and uses the
+same direct project-reference graph. Docker receives those sibling repositories as named
+build contexts. Reproducible local validation must record the three source commits and
+keep the repository roots identical across restore, build, test, and publish.
 
 ```text
-dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false
-dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=false /m:1
+git -C ../CanDoItAll.Components rev-parse HEAD
+git -C ../CanDoItAll.FileTools rev-parse HEAD
+dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
 ```
 
-Do not switch modes between restore and build. The package versions are centralized in
-[`Directory.Build.props`](Directory.Build.props); `false` is an intentional package build,
-not a silent fallback for missing sibling repositories.
+Do not substitute unavailable NuGet packages for the current sibling-source contract.
+The package declarations remain the portable project metadata, while
+[`Directory.Build.targets`](Directory.Build.targets) removes matching declarations and
+adds direct project references for the active build graph.
 
 ## Install An Instance
 

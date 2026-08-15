@@ -45,9 +45,10 @@ templates. Start with `docs/operations/installing-instances.md`, then use
 
 Local development uses sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` project
 references by default. Their roots can be overridden with
-`CanDoItAllComponentsRepositoryRoot` and `CanDoItAllFileToolsRepositoryRoot`. Hosted CI,
-Docker, and release validation must select the reproducible package graph explicitly with
-`UseLocalCanDoItAllLibraries=false`.
+`CanDoItAllComponentsRepositoryRoot` and `CanDoItAllFileToolsRepositoryRoot`. Hosted CI
+pins and checks out both repositories; Docker receives them as named build contexts; and
+release validation records their exact commits. All current gates keep
+`UseLocalCanDoItAllLibraries=true`.
 
 The runtime portability gate uses `tools/Validation/RuntimePortabilityCatalog.json` as its
 versioned class/FQN/count contract. Create the one Release build and durable identity stamp

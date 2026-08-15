@@ -13,10 +13,13 @@
     Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
     <Error
       Condition="!Exists('$(CanDoItAllComponentsRepositoryRoot)\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj')"
-      Text="Local development requires the CanDoItAll.Components source repository at '$(CanDoItAllComponentsRepositoryRoot)'. Set UseLocalCanDoItAllLibraries=false only for an intentional package build." />
+      Text="The current build requires the CanDoItAll.Components source repository at '$(CanDoItAllComponentsRepositoryRoot)'. Configure CanDoItAllComponentsRepositoryRoot when the repositories are not siblings." />
     <Error
       Condition="!Exists('$(CanDoItAllFileToolsRepositoryRoot)\src\CanDoItAll.FileTools.Abstractions\CanDoItAll.FileTools.Abstractions.csproj')"
-      Text="Local development requires the CanDoItAll.FileTools source repository at '$(CanDoItAllFileToolsRepositoryRoot)'. Set UseLocalCanDoItAllLibraries=false only for an intentional package build." />
+      Text="The current build requires the CanDoItAll.FileTools source repository at '$(CanDoItAllFileToolsRepositoryRoot)'. Configure CanDoItAllFileToolsRepositoryRoot when the repositories are not siblings." />
+    <Error
+      Condition="!Exists('$(CanDoItAllFileToolsRepositoryRoot)\src\CanDoItAll.FileTools.FileInteraction.Spreadsheet\CanDoItAll.FileTools.FileInteraction.Spreadsheet.csproj')"
+      Text="The FileTools source checkout does not contain the required FileInteraction.Spreadsheet project at '$(CanDoItAllFileToolsRepositoryRoot)'." />
   </Target>
 
   <Target Name="ValidateCanDoItAllLibraryMode" BeforeTargets="CollectPackageReferences;PrepareForBuild">

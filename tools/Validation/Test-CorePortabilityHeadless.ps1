@@ -11,7 +11,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $OutputRoot,
 
-    [switch] $UseLocalCanDoItAllLibraries,
+    [bool] $UseLocalCanDoItAllLibraries = $true,
 
     [switch] $RetainRuntimeFiles
 )
@@ -72,7 +72,7 @@ $runtimeRoot = Join-Path $workRootPath $(if ($IsWindows) { 'r' } else { 'runtime
 $publishLogPath = Join-Path $outputRootPath 'publish.log'
 $webProjectPath = Join-Path $repositoryRoot 'src\App\CanDoItAll.Web\CanDoItAll.Web.csproj'
 $playwrightProjectPath = Join-Path $repositoryRoot 'tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj'
-$useLocalLibraries = $UseLocalCanDoItAllLibraries.IsPresent.ToString().ToLowerInvariant()
+$useLocalLibraries = $UseLocalCanDoItAllLibraries.ToString().ToLowerInvariant()
 
 function Get-SanitizedLog {
     param([string] $Value)

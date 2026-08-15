@@ -165,6 +165,44 @@ def main() -> int:
     web_api = source_root / "App" / "CanDoItAll.Web" / "Api"
     composition = source_root / "App" / "CanDoItAll.Composition"
 
+    build_targets = read_text(repo / "Directory.Build.targets")
+    ci_workflow = read_text(repo / ".github" / "workflows" / "ci.yml")
+    compose_model = read_text(repo / "compose.yaml")
+    dockerfile = read_text(repo / "src" / "App" / "CanDoItAll.Web" / "Dockerfile")
+    require_marker(
+        errors,
+        build_targets,
+        "CanDoItAll.FileTools.FileInteraction.Spreadsheet",
+        "Spreadsheet sibling-source mapping",
+    )
+    require_marker(
+        errors,
+        build_targets,
+        "_LocalCanDoItAllFileToolsPackage->'$(CanDoItAllFileToolsRepositoryRoot)",
+        "FileTools project-reference transformation",
+    )
+    for marker, description in (
+        ("repository: fysiktom/CanDoItAll.Components", "pinned Components CI checkout"),
+        ("repository: fysiktom/CanDoItAll.FileTools", "pinned FileTools CI checkout"),
+        ("UseLocalCanDoItAllLibraries=true", "CI sibling-source dependency mode"),
+    ):
+        require_marker(errors, ci_workflow, marker, description)
+    if "UseLocalCanDoItAllLibraries=false" in ci_workflow:
+        errors.append("CI must not replace the current sibling-source graph with packages.")
+    for marker, description in (
+        ("components: ../CanDoItAll.Components", "Components Docker build context"),
+        ("filetools: ../CanDoItAll.FileTools", "FileTools Docker build context"),
+    ):
+        require_marker(errors, compose_model, marker, description)
+    for marker, description in (
+        ("COPY --from=components . /CanDoItAll.Components", "Components image source"),
+        ("COPY --from=filetools . /CanDoItAll.FileTools", "FileTools image source"),
+        ("UseLocalCanDoItAllLibraries=true", "image sibling-source dependency mode"),
+    ):
+        require_marker(errors, dockerfile, marker, description)
+    if "UseLocalCanDoItAllLibraries=false" in dockerfile:
+        errors.append("The application image must not restore CanDoItAll sibling packages.")
+
     for project, forbidden, label in (
         (product, FORBIDDEN_PRODUCT_REFERENCES, "product"),
         (persistence, FORBIDDEN_PERSISTENCE_REFERENCES, "persistence"),

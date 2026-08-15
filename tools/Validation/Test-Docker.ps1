@@ -220,6 +220,11 @@ if (-not (Test-Path -LiteralPath $dockerfilePath -PathType Leaf)) {
 if ($findings.Count -eq 0) {
     $composeContent = Get-Content -LiteralPath $composePath -Raw
     Test-ComposePolicy -ComposeContent $composeContent -Findings $findings
+    if ($composeContent -notmatch '(?m)^\s+components:\s+\.\./CanDoItAll\.Components\s*$' -or
+        $composeContent -notmatch '(?m)^\s+filetools:\s+\.\./CanDoItAll\.FileTools\s*$') {
+        Add-Finding -Findings $findings -Message "The application image build must receive both sibling source repositories as named contexts."
+    }
+
     if ($RunNegativeFixtures) {
         Test-ComposeNegativeFixtures -ComposeContent $composeContent
     }
@@ -242,6 +247,12 @@ if (Test-Path -LiteralPath $dockerfilePath -PathType Leaf) {
 
     if ($dockerfileContent -notmatch '(?m)^ENTRYPOINT\s+\["dotnet",\s*"CanDoItAll\.Web\.dll"\]\s*$') {
         Add-Finding -Findings $findings -Message "The application Dockerfile must use the JSON-form web entry point."
+    }
+
+    if ($dockerfileContent -notmatch '(?m)^COPY --from=components \. /CanDoItAll\.Components\s*$' -or
+        $dockerfileContent -notmatch '(?m)^COPY --from=filetools \. /CanDoItAll\.FileTools\s*$' -or
+        $dockerfileContent -match 'UseLocalCanDoItAllLibraries=false') {
+        Add-Finding -Findings $findings -Message "The application Dockerfile must build against the sibling Components and FileTools project graph."
     }
 }
 
