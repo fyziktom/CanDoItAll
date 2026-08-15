@@ -1,14 +1,14 @@
 # Execution progress
 
-Bundle state: **Executing — SB05 completed, SB06 unlocked**
+Bundle state: **Executing — CP1 Ready, SB07 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
 | SB00 baseline sync and proof reconciliation | Completed | `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; focused comparison classified all 19 |
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
 | SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
-| SB06 backend checkpoint | Ready | Must review the complete backend chain and declare CP1 Ready before streaming |
-| SB07–SB10 streaming and API hardening | Locked | Sequential after CP1 |
+| SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
+| SB07–SB10 streaming and API hardening | SB07 Ready | Sequential from the proven CP1 backend head |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
 | SB12 documentation and guards | Locked | After CP2 |
 | SB13 final stable gate and CI | Locked | Final work unit only |
@@ -113,3 +113,20 @@ The executor must refresh these values before changing production source.
   concrete lifecycle, compile, translation, and fixture defects; no broad test lane ran
 - proof: `proof/SB05/manifest.md`
 - progression: SB06 Ready
+
+## SB06 backend hardening checkpoint
+
+- implementation commit: `a820b867fcf34cd07a93d201a9ffc492c243e647`
+- checkpoint: every CP1 canonical model, operation lifecycle, runtime/profile, scalability, and
+  architecture row is Ready
+- cleanup: removed the public engine `SendAsync`/private `SendCoreAsync` bypass; only the durable
+  dispatcher-owned executor invokes the provider
+- focused results: current-head Unit 87/87; current-head LLM Chat Integration 22/22, including
+  PostgreSQL transaction, database-transfer, profile, lease, request-lifetime, and bounded-query cases
+- build/model: Unit and Integration builds pass with 0 warnings/errors; EF reports no pending changes
+- architecture: CodeAnalytics `snap-20260815041852-376a68b7`; six scoped projects, zero cycles,
+  zero diagnostics, no error findings or production partial expansion
+- deviations: corrected Unit fixture and sandbox-only Integration lock failures required bounded reruns;
+  one deliberate interface-removal build exposed three test callers before final clean builds
+- proof: `proof/SB06/manifest.md`; `reviews/CP1-BACKEND-HARDENING.md`
+- progression: CP1 Ready; SB07 unlocked

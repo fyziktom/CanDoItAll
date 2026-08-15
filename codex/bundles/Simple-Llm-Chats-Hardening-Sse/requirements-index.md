@@ -6,22 +6,22 @@ Status: prepared. Closure fields are filled during execution.
 |---|---|---|---|
 | RQ-001 | Synchronize simple-chats with the latest development baseline before hardening proof. | SB00, SB13 | SB00 satisfied at `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; SB13 immutable-head confirmation pending |
 | RQ-002 | Replace stale or commitless proof with evidence tied to the actual implementation head and classify the prior 19 failures. | SB00, SB13 | SB00 satisfied: 19/19 classified, original commit reconciled; SB13 final-head closure pending |
-| RQ-003 | Maintain one canonical writable owner for conversation title and transcript metadata. | SB01, SB06 | SB01 satisfied at `689f2b5368bf6fdba7fad24dfa6fa4dee9b4abfc`; SB06 checkpoint pending |
-| RQ-004 | Create and rename conversation state atomically without orphan or divergent rows. | SB01, SB06 | SB01 satisfied by real-PostgreSQL failure injection; SB06 checkpoint pending |
-| RQ-005 | Commit operation claim, pending user message, active turn, and admission evidence atomically. | SB02, SB06 | SB02 pass at `be36fedb2ce329af6021cd2330eb6162d8ef2db4`; SB06 checkpoint pending |
-| RQ-006 | Commit assistant finalization or exact failure compensation atomically with operation state and usage evidence. | SB02, SB06, SB08 | SB02 transcript/operation/usage pass; SB08 lifecycle-event integration and SB06 checkpoint pending |
-| RQ-007 | Escalate unresolved compensation to RecoveryRequired; never leave a live active turn behind a terminal failure. | SB02, SB06 | SB02 pass with rollback and compensation-exhaustion proof; SB06 pending |
-| RQ-008 | A durable cancellation request committed before semantic completion must prevent Succeeded. | SB02, SB06, SB08 | SB02 pass with monotonic cancellation and red/green proof; SB08/SB06 pending |
-| RQ-009 | Resolve idempotent replay by operation identity/fingerprint before mutable lifecycle validation. | SB02, SB06 | SB02 pass including replay after archive; SB06 pending |
-| RQ-010 | Conversation archive must not race an active turn or nonterminal operation. | SB02, SB06 | SB02 pass with conversation row lock and active/nonterminal rejection; SB06 pending |
-| RQ-011 | Fence every public use case from first read through final commit/return to one database profile identity and generation. | SB03, SB06 | SB03 pass at `96f054905eecd33e04228e7837ae7850e3eeeeb4`; SB06 checkpoint pending |
-| RQ-012 | A profile switch must prevent old-generation writes and produce deterministic retained evidence. | SB03, SB06 | SB03 pass with atomic switch/write ordering and retained provider usage; SB06 checkpoint pending |
-| RQ-013 | Use durable cross-instance execution ownership with claim, heartbeat, expiry, and release. | SB04, SB06 | SB04 pass at `7389daff6c21a4568895e514debe110434908d67`; SB06 checkpoint pending |
-| RQ-014 | Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone. | SB04, SB06, SB08 | SB04 durable heartbeat/cancellation pass; SB06/SB08 pending |
-| RQ-015 | Execute admitted operations independently from the initiating HTTP request through an available dispatcher. | SB04, SB06 | SB04 detached request-lifetime and availability pass; SB06 pending |
-| RQ-016 | Never automatically redispatch when durable evidence says a provider dispatch may have started. | SB02, SB04, SB06 | SB02 reducer and SB04 fail-closed lease pass; SB06 pending |
-| RQ-017 | Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries. | SB05, SB06 | SB05 pass at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` with deterministic keysets and constant PostgreSQL command counts; SB06 checkpoint pending |
-| RQ-018 | Build provider context windows from bounded database reads rather than full transcript materialization. | SB05, SB06 | SB05 pass with a 2,000-message transcript producing a 12-message context from three bounded SQL commands; SB06 checkpoint pending |
+| RQ-003 | Maintain one canonical writable owner for conversation title and transcript metadata. | SB01, SB06 | Closed at CP1 `a820b867fcf34cd07a93d201a9ffc492c243e647`; canonical ownership and current-head PostgreSQL union pass |
+| RQ-004 | Create and rename conversation state atomically without orphan or divergent rows. | SB01, SB06 | Closed at CP1 with current-head transaction and failure-injection proof |
+| RQ-005 | Commit operation claim, pending user message, active turn, and admission evidence atomically. | SB02, SB06 | Closed at CP1 with current-head admission transaction proof |
+| RQ-006 | Commit assistant finalization or exact failure compensation atomically with operation state and usage evidence. | SB02, SB06, SB08 | CP1 backend invariant passes; SB08 lifecycle-event integration pending |
+| RQ-007 | Escalate unresolved compensation to RecoveryRequired; never leave a live active turn behind a terminal failure. | SB02, SB06 | Closed at CP1 with reducer, rollback, and compensation-exhaustion proof |
+| RQ-008 | A durable cancellation request committed before semantic completion must prevent Succeeded. | SB02, SB06, SB08 | CP1 cancellation invariant passes; SB08 streaming lifecycle integration pending |
+| RQ-009 | Resolve idempotent replay by operation identity/fingerprint before mutable lifecycle validation. | SB02, SB06 | Closed at CP1 with Unit and real-host idempotency proof |
+| RQ-010 | Conversation archive must not race an active turn or nonterminal operation. | SB02, SB06 | Closed at CP1 with locked archive-exclusion proof |
+| RQ-011 | Fence every public use case from first read through final commit/return to one database profile identity and generation. | SB03, SB06 | Closed at CP1 with corrected read-owner composition and current-head profile proof |
+| RQ-012 | A profile switch must prevent old-generation writes and produce deterministic retained evidence. | SB03, SB06 | Closed at CP1 with current-head PostgreSQL retained-evidence proof |
+| RQ-013 | Use durable cross-instance execution ownership with claim, heartbeat, expiry, and release. | SB04, SB06 | Closed at CP1 with current-head two-host lease proof |
+| RQ-014 | Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone. | SB04, SB06, SB08 | CP1 durable cancellation invariant passes; SB08 streaming lifecycle integration pending |
+| RQ-015 | Execute admitted operations independently from the initiating HTTP request through an available dispatcher. | SB04, SB06 | Closed at CP1; inline engine path removed and request-detachment proof passes |
+| RQ-016 | Never automatically redispatch when durable evidence says a provider dispatch may have started. | SB02, SB04, SB06 | Closed at CP1 with fail-closed lease/recovery proof |
+| RQ-017 | Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries. | SB05, SB06 | Closed at CP1 with current-head 2,000-message query-count proof |
+| RQ-018 | Build provider context windows from bounded database reads rather than full transcript materialization. | SB05, SB06 | Closed at CP1 with bounded 12-message context over 2,000 canonical entries |
 | RQ-019 | Provide an additive provider-neutral incremental LLM invocation port without breaking existing non-streaming callers. | SB07, SB11 | Pending |
 | RQ-020 | Implement true incremental streaming for OpenAI, Azure OpenAI, and Ollama, with a deterministic fallback policy. | SB07, SB11 | Pending |
 | RQ-021 | Retry a stream only before its first emitted delta and never after partial output is externally visible. | SB07, SB11 | Pending |
