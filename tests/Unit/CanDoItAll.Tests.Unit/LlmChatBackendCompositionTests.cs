@@ -64,6 +64,7 @@ public sealed class LlmChatBackendCompositionTests
     {
         var notifications = new TestDatabaseSwitchNotificationService();
         var factory = new DatabaseProfileLlmChatRuntimeLeaseFactory(
+            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
             new MutableDatabaseRuntimeState(ProviderRuntimeTestData.RuntimeIdentity),
             notifications);
         var lease = await factory.AcquireAsync();
@@ -86,6 +87,9 @@ public sealed class LlmChatBackendCompositionTests
         services.AddSingleton<IDbContextFactory<AppDbContext>>(new TestDbContextFactory(options));
         services.AddSingleton<IDatabaseRuntimeState>(
             new MutableDatabaseRuntimeState(ProviderRuntimeTestData.RuntimeIdentity));
+        services.AddSingleton<IDatabaseRuntimeWriteFence, TestDatabaseRuntimeWriteFence>();
+        services.AddSingleton<ICanonicalRuntimeDatabase>(
+            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity));
         services.AddSingleton<IDatabaseSwitchNotificationService, TestDatabaseSwitchNotificationService>();
         services.AddSingleton<IProviderRuntimeProfileSource>(new StaticProviderSource(providerProfile));
         services.AddSingleton(CreateInterfaceProxy<IProviderRuntimeDescriptorStore>());

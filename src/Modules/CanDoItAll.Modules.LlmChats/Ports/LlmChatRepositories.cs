@@ -130,6 +130,13 @@ public interface ILlmChatUnitOfWork
         CancellationToken cancellationToken = default);
 }
 
+public interface ILlmChatCommitFence
+{
+    Task<T> ExecuteAsync<T>(
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default);
+}
+
 public interface ILlmChatOperationEvidenceSink
 {
     Task<LlmChatOperation> MarkTurnAdmittedAsync(

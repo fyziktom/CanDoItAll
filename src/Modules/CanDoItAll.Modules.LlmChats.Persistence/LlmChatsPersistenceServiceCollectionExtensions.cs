@@ -30,6 +30,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();
         services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
+        services.AddScoped<ILlmChatCommitFence, DatabaseProfileLlmChatCommitFence>();
         services.AddScoped<ILlmChatUnitOfWork, EfLlmChatUnitOfWork>();
         services.AddScoped<ILlmChatConversationEngine>(CreateConversationEngine);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IDatabaseTransferHandler, LlmChatsDatabaseTransferHandler>());

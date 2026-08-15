@@ -61,10 +61,7 @@ public sealed class LlmChatOperationApplicationService(
                 }
                 catch (LlmChatRuntimeProfileChangedException)
                 {
-                    return await stateMachine.RequireRecoveryAsync(
-                        command.OperationId,
-                        LlmChatErrorCodes.RuntimeProfileChanged,
-                        CancellationToken.None).ConfigureAwait(false);
+                    return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.RuntimeProfileChanged());
                 }
                 catch (OperationCanceledException)
                 {

@@ -13,6 +13,7 @@ using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
+using CanDoItAll.Modules.LlmChats.Ports;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -111,6 +112,16 @@ public sealed class EfLlmConversationStoreIntegrationTests
     private sealed record StoreOutcome(LlmConversationDocument? Document, Exception? Exception);
 }
 
+internal sealed class UnfencedLlmChatCommitFence : ILlmChatCommitFence
+{
+    public static UnfencedLlmChatCommitFence Instance { get; } = new();
+
+    public Task<T> ExecuteAsync<T>(
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+        => operation(cancellationToken);
+}
+
 public sealed class LlmChatConversationTransactionIntegrationTests
 {
     [Fact]
@@ -122,7 +133,7 @@ public sealed class LlmChatConversationTransactionIntegrationTests
         var conversationId = Guid.NewGuid();
         var repository = new EfLlmChatConversationRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var transcript = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId) with
         {
             Title = "Atomic create"
@@ -154,7 +165,7 @@ public sealed class LlmChatConversationTransactionIntegrationTests
         var conversationId = Guid.NewGuid();
         var repository = new EfLlmChatConversationRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var originalTranscript = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId) with
         {
             Title = "Original"
@@ -257,7 +268,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
         var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
@@ -297,7 +308,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
         var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
@@ -344,7 +355,7 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var operationRepository = new EfLlmChatOperationRepository(dbContext);
         var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
@@ -621,7 +632,7 @@ public sealed class LlmChatPersistenceIntegrationTests
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatrevisions");
         await using var dbContext = database.CreateDbContext();
         var repository = new EfLlmChatDefinitionRepository(dbContext);
-        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
         var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
         var now = DateTimeOffset.UtcNow;
         var firstRevision = CreateRevision(definitionId, 1, AgentReasoningEffortLevel.None, now);

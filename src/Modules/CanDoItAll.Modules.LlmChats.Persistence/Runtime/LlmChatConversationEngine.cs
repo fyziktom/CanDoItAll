@@ -288,6 +288,11 @@ public sealed class LlmChatConversationEngine(
         Func<CancellationToken, Task<T>> execute,
         CancellationToken cancellationToken)
     {
+        if (operationScope.Current is not null)
+        {
+            return await execute(cancellationToken).ConfigureAwait(false);
+        }
+
         await using var lease = await runtimeLeaseFactory.AcquireAsync(cancellationToken).ConfigureAwait(false);
         EnsureCurrent(lease);
         using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity));

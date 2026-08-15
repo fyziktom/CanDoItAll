@@ -181,7 +181,10 @@ public sealed class LlmChatRuntimeFenceTests
         var initial = ProviderRuntimeTestData.RuntimeIdentity;
         var state = new MutableDatabaseRuntimeState(initial);
         var notifications = new TestDatabaseSwitchNotificationService();
-        var factory = new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications);
+        var factory = new DatabaseProfileLlmChatRuntimeLeaseFactory(
+            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(initial),
+            state,
+            notifications);
         await using var lease = await factory.AcquireAsync();
 
         state.Change(initial with { Generation = initial.Generation + 1 });
@@ -225,7 +228,10 @@ public sealed class LlmChatRuntimeFenceTests
             generic,
             fencedInvocation,
             ProviderRuntimeTestData.CreateResolver(provider),
-            new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications),
+            new DatabaseProfileLlmChatRuntimeLeaseFactory(
+                ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(initial),
+                state,
+                notifications),
             scope);
         var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
         var revision = ProviderRuntimeTestData.CreateRevision(definitionId, 1, provider, null);
@@ -354,7 +360,10 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             generic,
             fenced,
             ProviderRuntimeTestData.CreateResolver(provider),
-            new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications),
+            new DatabaseProfileLlmChatRuntimeLeaseFactory(
+                ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
+                state,
+                notifications),
             scope);
         var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
         var revision = ProviderRuntimeTestData.CreateRevision(
@@ -406,7 +415,10 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             generic,
             invocation,
             ProviderRuntimeTestData.CreateResolver(provider),
-            new DatabaseProfileLlmChatRuntimeLeaseFactory(state, notifications),
+            new DatabaseProfileLlmChatRuntimeLeaseFactory(
+                ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
+                state,
+                notifications),
             scope);
         var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
         var revision = ProviderRuntimeTestData.CreateRevision(definitionId, 1, provider, null);
@@ -435,6 +447,9 @@ internal static class ProviderRuntimeTestData
         4);
 
     public static LlmInvocationRequest? CapturedRequest { get; set; }
+
+    public static ICanonicalRuntimeDatabase CreateCanonicalRuntimeDatabase(DatabaseRuntimeSnapshot snapshot)
+        => new TestCanonicalRuntimeDatabase(snapshot);
 
     public static ProviderProfile CreateProvider(string name = "Provider")
         => new(
@@ -534,6 +549,33 @@ internal static class ProviderRuntimeTestData
         public Task<ProviderProfile?> GetProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
             => Task.FromResult(provider.Id == providerId ? provider : null);
     }
+}
+
+internal sealed class TestCanonicalRuntimeDatabase(DatabaseRuntimeSnapshot snapshot) : ICanonicalRuntimeDatabase
+{
+    public ResolvedDatabaseProfile Profile { get; } = new(
+        new DatabaseProfileRecord
+        {
+            Id = snapshot.ActiveProfileId!.Value,
+            DisplayName = "Test canonical database",
+            Runtime = new DatabaseProfileRuntimeMetadata
+            {
+                Fingerprint = snapshot.ActiveFingerprint!
+            }
+        },
+        DatabaseProfileResolutionSource.ExplicitOverride,
+        "test-connection");
+
+    public long Generation { get; } = snapshot.Generation;
+}
+
+internal sealed class TestDatabaseRuntimeWriteFence : IDatabaseRuntimeWriteFence
+{
+    public Task<T> ExecuteAsync<T>(
+        DatabaseRuntimeSnapshot expected,
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+        => operation(cancellationToken);
 }
 
 internal sealed class MutableDatabaseRuntimeState(DatabaseRuntimeSnapshot snapshot) : IDatabaseRuntimeState

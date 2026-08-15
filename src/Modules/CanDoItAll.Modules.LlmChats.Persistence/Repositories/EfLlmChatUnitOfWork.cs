@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.LlmChats.Persistence.Repositories;
 
-public sealed class EfLlmChatUnitOfWork(AppDbContext dbContext) : ILlmChatUnitOfWork
+public sealed class EfLlmChatUnitOfWork(
+    AppDbContext dbContext,
+    ILlmChatCommitFence commitFence) : ILlmChatUnitOfWork
 {
     public async Task<T> ExecuteAsync<T>(
         Func<CancellationToken, Task<T>> operation,
@@ -19,12 +21,15 @@ public sealed class EfLlmChatUnitOfWork(AppDbContext dbContext) : ILlmChatUnitOf
             return nestedResult;
         }
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var result = await operation(cancellationToken).ConfigureAwait(false);
-        await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return result;
+        return await commitFence.ExecuteAsync(async fenceCancellationToken =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(fenceCancellationToken)
+                .ConfigureAwait(false);
+            var result = await operation(fenceCancellationToken).ConfigureAwait(false);
+            await SaveChangesAsync(fenceCancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(fenceCancellationToken).ConfigureAwait(false);
+            return result;
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     private Task<int> SaveChangesAsync(CancellationToken cancellationToken)

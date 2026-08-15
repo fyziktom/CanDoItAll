@@ -1,3 +1,4 @@
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Ports;
@@ -6,20 +7,20 @@ using CanDoItAll.SharedKernel;
 namespace CanDoItAll.Modules.LlmChats.Persistence;
 
 public sealed class DatabaseProfileLlmChatRuntimeLeaseFactory(
+    ICanonicalRuntimeDatabase canonicalRuntimeDatabase,
     IDatabaseRuntimeState runtimeState,
     IDatabaseSwitchNotificationService notificationService) : ILlmChatRuntimeLeaseFactory
 {
     public ValueTask<ILlmChatRuntimeLease> AcquireAsync(CancellationToken cancellationToken = default)
     {
-        var snapshot = runtimeState.GetSnapshot();
-        if (snapshot.ActiveProfileId is not { } profileId ||
-            string.IsNullOrWhiteSpace(snapshot.ActiveFingerprint))
-        {
-            throw new LlmChatRuntimeProfileChangedException();
-        }
+        var canonicalProfile = canonicalRuntimeDatabase.Profile.Profile;
+        var identity = new LlmChatRuntimeIdentity(
+            canonicalProfile.Id,
+            canonicalProfile.Runtime.Fingerprint,
+            canonicalRuntimeDatabase.Generation);
 
         var lease = new DatabaseProfileLlmChatRuntimeLease(
-            new LlmChatRuntimeIdentity(profileId, snapshot.ActiveFingerprint, snapshot.Generation),
+            identity,
             runtimeState,
             notificationService,
             cancellationToken);

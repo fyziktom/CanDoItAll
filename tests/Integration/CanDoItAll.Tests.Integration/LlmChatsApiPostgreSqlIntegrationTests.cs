@@ -12,6 +12,7 @@ using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
+using CanDoItAll.Modules.LlmChats.Ports;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -196,37 +197,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         var afterCancellation = await GetJsonAsync(
             host.Client,
             $"/api/llm-conversations/{defaultConversationId:D}");
-        var recoveryOperationId = Guid.Parse("72000000-0000-0000-0000-000000000008");
-        var recoverySend = host.Client.PostAsJsonAsync(
-            $"/api/llm-conversations/{defaultConversationId:D}/turns",
-            CreateTurnBody(
-                recoveryOperationId,
-                afterCancellation.GetProperty("transcriptRevision").GetInt64(),
-                "profile switch in flight"));
-        await invocationPort.WaitUntilStartedAsync(ControllableLlmChatInvocationPort.ProfileSwitchKey);
-        PublishProfileSwitch(host);
-        invocationPort.ReleaseProfileSwitch();
-        using (var recoveryResponse = await recoverySend)
-        {
-            Assert.Equal(HttpStatusCode.Conflict, recoveryResponse.StatusCode);
-            Assert.Contains(LlmChatErrorCodes.RuntimeProfileChanged, await recoveryResponse.Content.ReadAsStringAsync());
-        }
-        var recoveryOperation = await GetJsonAsync(
-            host.Client,
-            $"/api/llm-chat-operations/{recoveryOperationId:D}");
-        Assert.Equal("recoveryRequired", recoveryOperation.GetProperty("status").GetString());
-
-        using (var abandon = await host.Client.PostAsync(
-                   $"/api/llm-conversations/{defaultConversationId:D}" +
-                   $"/active-turns/{recoveryOperationId:D}/abandon",
-                   null))
-        {
-            Assert.Equal(HttpStatusCode.OK, abandon.StatusCode);
-        }
-        var afterRecovery = await GetJsonAsync(
-            host.Client,
-            $"/api/llm-conversations/{defaultConversationId:D}");
-        Assert.False(afterRecovery.GetProperty("hasActiveTurn").GetBoolean());
+        var afterRecovery = afterCancellation;
 
         using (var rename = await host.Client.PatchAsJsonAsync(
                    $"/api/llm-conversations/{defaultConversationId:D}/title",
@@ -265,11 +236,70 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             noneOperationId,
             deepOperationId,
             providerFailureOperationId,
-            cancellationOperationId,
-            recoveryOperationId);
+            cancellationOperationId);
         Assert.DoesNotContain(
             Directory.EnumerateFiles(host.RootPath, "*", SearchOption.AllDirectories),
             path => Path.GetFileName(path).Contains("llmchat", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Profile_switch_before_finalization_retains_committed_usage_and_blocks_later_writes()
+    {
+        var provider = CreateProvider();
+        var invocationPort = new ControllableLlmChatInvocationPort();
+        var finalizationBarrier = new LlmChatFinalizationBarrier();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: services =>
+            {
+                ConfigureProviderBoundary(services, provider, invocationPort);
+                DecorateConversationEngine(services, finalizationBarrier);
+            });
+        Assert.Equal(TestDatabaseProviderKind.PostgreSql, host.ActiveProfile.Provider);
+
+        var definition = await CreateDefinitionAsync(host.Client, FastModel, thinkingEffort: null);
+        var definitionId = definition.GetProperty("id").GetGuid();
+        definition = await ChangeDefinitionStatusAsync(host.Client, definitionId, "activate", definition);
+        var conversation = await CreateConversationAsync(host.Client, definitionId, "Profile fence conversation");
+        var conversationId = conversation.GetProperty("id").GetGuid();
+        var operationId = Guid.Parse("72000000-0000-0000-0000-000000000008");
+        var send = host.Client.PostAsJsonAsync(
+            $"/api/llm-conversations/{conversationId:D}/turns",
+            CreateTurnBody(
+                operationId,
+                conversation.GetProperty("transcriptRevision").GetInt64(),
+                "profile switch before finalization"));
+        await finalizationBarrier.WaitAsync();
+
+        PublishProfileSwitch(host);
+        finalizationBarrier.Release();
+
+        using (var response = await send)
+        {
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            Assert.Contains(LlmChatErrorCodes.RuntimeProfileChanged, await response.Content.ReadAsStringAsync());
+        }
+
+        var factory = host.App.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await factory.CreateDbContextAsync();
+        var operation = await dbContext.Set<LlmChatOperationRow>().SingleAsync(row => row.Id == operationId);
+        var audit = await dbContext.Set<LlmChatInvocationRecordRow>().SingleAsync(row => row.OperationId == operationId);
+        var transcript = await dbContext.Set<LlmChatTranscriptRow>().SingleAsync(row => row.ConversationId == conversationId);
+        Assert.Equal(LlmChatOperationStatus.Running, operation.Status);
+        Assert.NotNull(operation.ProviderDispatchReturnedAtUtc);
+        Assert.Equal(LlmChatInvocationOutcome.Succeeded, audit.Outcome);
+        Assert.Equal(10, audit.InputTokens);
+        Assert.Equal(4, audit.OutputTokens);
+        Assert.Equal(1, audit.CachedInputTokens);
+        Assert.Equal(operationId, transcript.ActiveTurnId);
+        Assert.False(await dbContext.Set<LlmChatMessageRow>().AnyAsync(row =>
+            row.ConversationId == conversationId &&
+            row.TurnId == operationId &&
+            row.Role == LlmMessageRole.Assistant));
+
+        using var staleQuery = await host.Client.GetAsync($"/api/llm-chat-operations/{operationId:D}");
+        Assert.Equal(HttpStatusCode.Conflict, staleQuery.StatusCode);
+        Assert.Contains(LlmChatErrorCodes.RuntimeProfileChanged, await staleQuery.Content.ReadAsStringAsync());
     }
 
     private static void ConfigureProviderBoundary(
@@ -281,6 +311,22 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         services.RemoveAll<ILlmInvocationPort>();
         services.AddSingleton<IProviderRuntimeProfileSource>(new StaticProviderSource(provider));
         services.AddSingleton<ILlmInvocationPort>(invocationPort);
+    }
+
+    private static void DecorateConversationEngine(
+        IServiceCollection services,
+        LlmChatFinalizationBarrier barrier)
+    {
+        var descriptor = services.Last(item => item.ServiceType == typeof(ILlmChatConversationEngine));
+        var factory = descriptor.ImplementationFactory
+            ?? throw new InvalidOperationException("The LLM Chat conversation engine must use its scoped factory.");
+        services.Remove(descriptor);
+        services.Add(ServiceDescriptor.Describe(
+            typeof(ILlmChatConversationEngine),
+            serviceProvider => new BarrierLlmChatConversationEngine(
+                (ILlmChatConversationEngine)factory(serviceProvider),
+                barrier),
+            descriptor.Lifetime));
     }
 
     private static ProviderProfile CreateProvider()
@@ -585,8 +631,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         Guid noneOperationId,
         Guid deepOperationId,
         Guid providerFailureOperationId,
-        Guid cancellationOperationId,
-        Guid recoveryOperationId)
+        Guid cancellationOperationId)
     {
         var factory = host.App.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
@@ -640,12 +685,6 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             null,
             AgentReasoningEffortLevel.Low,
             LlmChatInvocationOutcome.Cancelled);
-        AssertAudit(
-            audits[recoveryOperationId],
-            null,
-            AgentReasoningEffortLevel.Low,
-            LlmChatInvocationOutcome.Succeeded);
-
         var operations = await dbContext.Set<LlmChatOperationRow>()
             .AsNoTracking()
             .ToDictionaryAsync(row => row.Id);
@@ -653,10 +692,6 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         Assert.Equal(LlmChatOperationStatus.Succeeded, operations[secondOperationId].Status);
         Assert.Equal(LlmChatOperationStatus.Failed, operations[providerFailureOperationId].Status);
         Assert.Equal(LlmChatOperationStatus.Cancelled, operations[cancellationOperationId].Status);
-        Assert.Equal(LlmChatOperationStatus.Failed, operations[recoveryOperationId].Status);
-        Assert.Equal(
-            LlmChatErrorCodes.RuntimeProfileChanged,
-            operations[recoveryOperationId].FailureCode);
         Assert.False(await dbContext.Set<LlmChatTranscriptRow>()
             .AnyAsync(row => row.ActiveTurnId != null));
     }
@@ -756,4 +791,122 @@ internal sealed class ControllableLlmChatInvocationPort : ILlmInvocationPort
                 key,
                 static _ => new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously))
             .TrySetResult(true);
+}
+
+internal sealed class LlmChatFinalizationBarrier
+{
+    private readonly TaskCompletionSource<bool> reached =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> released =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Task WaitAsync()
+        => reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+    public async Task WaitForReleaseAsync()
+    {
+        reached.TrySetResult(true);
+        await released.Task.ConfigureAwait(false);
+    }
+
+    public void Release()
+        => released.TrySetResult(true);
+}
+
+internal sealed class BarrierLlmChatConversationEngine(
+    ILlmChatConversationEngine inner,
+    LlmChatFinalizationBarrier barrier) : ILlmChatConversationEngine
+{
+    public Task<LlmChatConversationEngineState> CreateAsync(
+        LlmChatConversationId conversationId,
+        LlmChatDefinitionRevision definitionRevision,
+        string title,
+        CancellationToken cancellationToken = default)
+        => inner.CreateAsync(conversationId, definitionRevision, title, cancellationToken);
+
+    public Task<LlmChatConversationEngineState?> TryGetAsync(
+        LlmChatConversationId conversationId,
+        CancellationToken cancellationToken = default)
+        => inner.TryGetAsync(conversationId, cancellationToken);
+
+    public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
+        LlmChatConversationId conversationId,
+        int take,
+        int offset,
+        CancellationToken cancellationToken = default)
+        => inner.TryGetTranscriptPageAsync(conversationId, take, offset, cancellationToken);
+
+    public Task<LlmChatConversationEngineState> RenameAsync(
+        LlmChatConversationId conversationId,
+        string title,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+        => inner.RenameAsync(conversationId, title, expectedTranscriptRevision, cancellationToken);
+
+    public Task<LlmChatConversationEngineTurnResult> SendAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+        => inner.SendAsync(
+            conversationId,
+            operationId,
+            definition,
+            definitionRevision,
+            userText,
+            expectedTranscriptRevision,
+            cancellationToken);
+
+    public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        LlmChatDefinition definition,
+        LlmChatDefinitionRevision definitionRevision,
+        string userText,
+        long expectedTranscriptRevision,
+        CancellationToken cancellationToken = default)
+        => inner.AdmitTurnAsync(
+            conversationId,
+            operationId,
+            definition,
+            definitionRevision,
+            userText,
+            expectedTranscriptRevision,
+            cancellationToken);
+
+    public async Task<LlmInvocationResult> InvokeTurnAsync(
+        LlmConversationTurnAdmission admission,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await inner.InvokeTurnAsync(admission, cancellationToken).ConfigureAwait(false);
+        await barrier.WaitForReleaseAsync().ConfigureAwait(false);
+        return result;
+    }
+
+    public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default)
+        => inner.CompleteTurnAsync(admission, invocationResult, cancellationToken);
+
+    public Task<LlmChatConversationEngineState> CompensateTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => inner.CompensateTurnAsync(conversationId, operationId, cancellationToken);
+
+    public Task<LlmChatConversationTurnEvidence?> InspectTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => inner.InspectTurnAsync(conversationId, operationId, cancellationToken);
+
+    public Task<LlmChatConversationEngineState> AbandonActiveTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => inner.AbandonActiveTurnAsync(conversationId, operationId, cancellationToken);
 }

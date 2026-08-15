@@ -48,4 +48,9 @@ internal static class LlmChatErrors
 
     public static Error OperationFailure(string code)
         => Error.Failure("The LLM Chat turn could not be completed.", code);
+
+    public static Error RuntimeProfileChanged()
+        => Error.Failure(
+            "The active database profile changed during the LLM Chat operation.",
+            LlmChatErrorCodes.RuntimeProfileChanged);
 }

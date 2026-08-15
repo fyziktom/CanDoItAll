@@ -13,12 +13,16 @@ public static class LlmChatsModuleServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ILlmChatOperationCancellationRegistry, LlmChatOperationCancellationRegistry>();
         services.AddScoped<ILlmChatOperationEvidenceSink, LlmChatOperationEvidenceService>();
+        services.AddScoped<LlmChatProfileScopeRunner>();
         services.AddScoped<LlmChatOperationAdmissionService>();
         services.AddScoped<LlmChatOperationStateMachine>();
         services.AddScoped<LlmChatOperationDetailsReader>();
-        services.AddScoped<ILlmChatDefinitionApplicationService, LlmChatDefinitionApplicationService>();
-        services.AddScoped<ILlmChatConversationApplicationService, LlmChatConversationApplicationService>();
-        services.AddScoped<ILlmChatOperationApplicationService, LlmChatOperationApplicationService>();
+        services.AddScoped<LlmChatDefinitionApplicationService>();
+        services.AddScoped<LlmChatConversationApplicationService>();
+        services.AddScoped<LlmChatOperationApplicationService>();
+        services.AddScoped<ILlmChatDefinitionApplicationService, ProfileScopedLlmChatDefinitionApplicationService>();
+        services.AddScoped<ILlmChatConversationApplicationService, ProfileScopedLlmChatConversationApplicationService>();
+        services.AddScoped<ILlmChatOperationApplicationService, ProfileScopedLlmChatOperationApplicationService>();
         return services;
     }
 }
