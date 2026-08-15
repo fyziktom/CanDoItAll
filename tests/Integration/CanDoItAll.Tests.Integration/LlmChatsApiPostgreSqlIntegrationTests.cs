@@ -248,6 +248,38 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
     }
 
     [Fact]
+    public async Task ConversationApi_PersistsServerOwnedApiOriginAndRejectsSpoofedOrigin()
+    {
+        var provider = CreateProvider();
+        var invocationPort = new ControllableLlmChatInvocationPort();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: services => ConfigureProviderBoundary(services, provider, invocationPort));
+        Assert.Equal(TestDatabaseProviderKind.PostgreSql, host.ActiveProfile.Provider);
+        var definition = await CreateDefinitionAsync(host.Client, FastModel, thinkingEffort: null);
+        var definitionId = definition.GetProperty("id").GetGuid();
+        definition = await ChangeDefinitionStatusAsync(host.Client, definitionId, "activate", definition);
+        var route = $"/api/llm-chats/{definitionId:D}/conversations";
+
+        using var spoofed = await host.Client.PostAsJsonAsync(route, new
+        {
+            title = "Spoofed PostgreSQL origin",
+            origin = "application"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, spoofed.StatusCode);
+
+        var created = await CreateConversationAsync(host.Client, definitionId, "Stored API origin");
+        Assert.Equal("api", created.GetProperty("origin").GetString());
+
+        var factory = host.App.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await factory.CreateDbContextAsync();
+        var stored = await dbContext.Set<LlmChatConversationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == created.GetProperty("id").GetGuid());
+        Assert.Equal(LlmChatConversationOrigin.Api, stored.Origin);
+    }
+
+    [Fact]
     public async Task Profile_switch_before_finalization_retains_committed_usage_and_blocks_later_writes()
     {
         var provider = CreateProvider();
