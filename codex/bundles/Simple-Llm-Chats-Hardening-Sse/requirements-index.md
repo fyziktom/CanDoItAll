@@ -22,14 +22,14 @@ Status: prepared. Closure fields are filled during execution.
 | RQ-016 | Never automatically redispatch when durable evidence says a provider dispatch may have started. | SB02, SB04, SB06 | Closed at CP1 with fail-closed lease/recovery proof |
 | RQ-017 | Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries. | SB05, SB06 | Closed at CP1 with current-head 2,000-message query-count proof |
 | RQ-018 | Build provider context windows from bounded database reads rather than full transcript materialization. | SB05, SB06 | Closed at CP1 with bounded 12-message context over 2,000 canonical entries |
-| RQ-019 | Provide an additive provider-neutral incremental LLM invocation port without breaking existing non-streaming callers. | SB07, SB11 | Pending |
-| RQ-020 | Implement true incremental streaming for OpenAI, Azure OpenAI, and Ollama, with a deterministic fallback policy. | SB07, SB11 | Pending |
-| RQ-021 | Retry a stream only before its first emitted delta and never after partial output is externally visible. | SB07, SB11 | Pending |
+| RQ-019 | Provide an additive provider-neutral incremental LLM invocation port without breaking existing non-streaming callers. | SB07, SB11 | SB07 satisfied at `4212914dd52415c00d12e9d33b35aaad34260531`; SB11 cross-platform confirmation pending |
+| RQ-020 | Implement true incremental streaming for OpenAI, Azure OpenAI, and Ollama, with a deterministic fallback policy. | SB07, SB11 | SB07 three-driver fragmented protocol and completed-fallback proof passes; SB11 confirmation pending |
+| RQ-021 | Retry a stream only before its first emitted delta and never after partial output is externally visible. | SB07, SB11 | SB07 retry-before-delta and one-call partial-failure proof passes; SB11 confirmation pending |
 | RQ-022 | Persist a bounded per-operation event journal with monotonic sequence and durable replay authority. | SB08, SB11 | Pending |
 | RQ-023 | Expose SSE with Last-Event-ID/after replay, gaps, heartbeat, anti-buffering, profile lifetime, and terminal closure. | SB09, SB11 | Pending |
 | RQ-024 | SSE/client disconnect must not cancel the durable operation; explicit cancellation remains authoritative. | SB09, SB11 | Pending |
 | RQ-025 | Turn start must return 202 Accepted promptly with operation, status, and event links. | SB09, SB11 | Pending |
-| RQ-026 | Audit actual provider attempts with deterministic outcomes shared by direct and recovery reducers. | SB02, SB07, SB08, SB11 | SB02 direct/restart outcome parity pass; streaming attempt granularity and downstream proof pending |
+| RQ-026 | Audit actual provider attempts with deterministic outcomes shared by direct and recovery reducers. | SB02, SB07, SB08, SB11 | SB02 parity plus SB07 monotonic streaming attempt/outcome/usage audit pass; SB08 downstream journal integration and SB11 confirmation pending |
 | RQ-027 | Conversation origin is server-owned and cannot be spoofed by an HTTP client. | SB10, SB11 | Pending |
 | RQ-028 | Enforce LLM Chat read/manage/execute API scopes when bearer authorization is enabled. | SB10, SB11 | Pending |
 | RQ-029 | Do not expose prompts, system instructions, credentials, raw provider payloads, or raw provider errors through logs/API/SSE. | SB08, SB09, SB10, SB11 | Pending |

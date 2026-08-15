@@ -2,69 +2,130 @@
   "schemaVersion": 1,
   "subbundle": "SB07",
   "title": "Provider-neutral streaming contracts and drivers",
-  "state": "Locked",
+  "state": "Completed",
   "proofTier": "Governed",
   "repository": "fyziktom/CanDoItAll",
   "branch": "simple-chats",
-  "implementationCommit": "",
-  "dependencyMode": "",
-  "host": "",
-  "database": "",
+  "implementationCommit": "4212914dd52415c00d12e9d33b35aaad34260531",
+  "dependencyMode": "local sibling source projects",
+  "host": "Microsoft Windows 10.0.26200 x64; .NET SDK 10.0.303",
+  "database": "not used; no schema or persisted lifecycle change in SB07",
   "requirements": [
     "RQ-019",
     "RQ-020",
     "RQ-021",
     "RQ-026"
   ],
-  "commands": [],
-  "sourceAssertions": [],
-  "behavioralCases": [],
-  "negativeCases": [],
+  "commands": [
+    {
+      "command": "historical streaming-owner source guard at 3159b4c",
+      "exitCode": 1,
+      "result": "expected red: no ILlmStreamingInvocationPort, provider streaming capability, or streaming adapter exists"
+    },
+    {
+      "command": "dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -nologo -v:minimal -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName~ProviderBackedLlmInvocationAdapterTests|FullyQualifiedName~ProviderBackedLlmStreamingInvocationAdapterTests|FullyQualifiedName~ProviderStreamingDriverTests|FullyQualifiedName~ConcreteProviderDriverTests|FullyQualifiedName~LlmChatInvocationAuditTests\"",
+      "exitCode": 0,
+      "result": "86 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "dotnet build src/Modules/CanDoItAll.Modules.LlmChats.Persistence/CanDoItAll.Modules.LlmChats.Persistence.csproj --no-restore -nologo -v:minimal -p:UseLocalCanDoItAllLibraries=true",
+      "exitCode": 0,
+      "result": "0 warnings, 0 errors"
+    },
+    {
+      "command": "CodeAnalytics five-project streaming boundary snapshot",
+      "exitCode": 0,
+      "result": "snap-20260815044741-aec583b3; 0 cycles, 0 blocking errors, 0 error findings, 0 open questions"
+    }
+  ],
+  "sourceAssertions": [
+    "ILlmInvocationPort and its completed-response implementation remain available and compatible; streaming is additive.",
+    "Provider wire framing stays in concrete provider drivers and no Web/SSE/provider-wire type crosses ILlmStreamingInvocationPort.",
+    "OpenAI, Azure OpenAI, and Ollama implement IProviderStreamingChatCompletionDriver through the existing ChatCompletion capability.",
+    "The adapter selects incremental delivery only when the profile and driver permit it; otherwise a completed driver uses CompletedFallback.",
+    "RetryScheduled is false after any accepted delta, and the provider dispatch is not reissued.",
+    "Each actual dispatch emits one started ordinal and one deterministic terminal outcome consumed by durable audit.",
+    "No new production partial class, forbidden reference, or dependency cycle exists."
+  ],
+  "behavioralCases": [
+    "fragmented OpenAI Chat Completions SSE preserves UTF-8 text and completion usage",
+    "OpenAI Responses streams public output while filtering reasoning text",
+    "Azure OpenAI streams through the same provider-neutral update hierarchy",
+    "fragmented Ollama NDJSON ignores thinking and requires done=true",
+    "completed-only driver emits one delta and one completion labelled CompletedFallback",
+    "provider failure retries before a delta and uses monotonic ordinals",
+    "provider failure after a delta is terminal with exactly one provider call",
+    "empty response retries once and preserves aggregate plus attempt-local usage",
+    "deadline is terminal without retry and caller cancellation remains cooperative",
+    "durable audit stores distinct ordinal/outcome/usage rows for failed and successful attempts"
+  ],
+  "negativeCases": [
+    "SB06 has no provider-neutral streaming owner or true incremental driver path",
+    "malformed provider frames return a stable failure without copying the raw frame",
+    "hidden provider reasoning is not emitted as a text delta",
+    "partial visible output cannot be silently spliced with a retry",
+    "abandoned enumeration cancels its bounded producer rather than leaking a dispatch lane"
+  ],
   "acceptance": [
     {
       "criterion": "Existing ILlmInvocationPort callers remain source- and behavior-compatible.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "The unchanged completed adapter suite is included in the final 86/86 union; ILlmStreamingInvocationPort is a separate additive registration."
     },
     {
       "criterion": "OpenAI, Azure OpenAI, and Ollama produce incremental text through one provider-neutral contract.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "Fragmented protocol tests prove OpenAI Chat Completions/Responses, Azure OpenAI, and Ollama yield ProviderChatTextDelta plus ProviderChatCompleted through one adapter contract."
     },
     {
       "criterion": "A non-incremental supported driver uses a deterministic single-delta fallback or typed unsupported result.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "The completed-only driver test yields exactly AttemptStarted, one delta, and Completed, both labelled CompletedFallback."
     },
     {
       "criterion": "No automatic retry occurs after the first emitted delta.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "StreamAsync_never_retries_after_a_delta_is_visible proves one call followed by a terminal failed update; retry is guarded by !emittedDelta."
     },
     {
       "criterion": "Every actual provider dispatch attempt receives a distinct monotonic audit ordinal and deterministic outcome.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "The retry test proves ordinals 1 and 2; Streaming_audit_records_each_actual_attempt_with_its_own_usage_and_ordinal proves two distinct durable rows and attempt-local usage."
     },
     {
       "criterion": "Streaming failures expose no credentials, raw frames, or raw provider errors.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "Malformed-frame, raw-provider-secret, and hidden-reasoning tests prove public updates/messages contain no raw frames, provider detail, credential, or reasoning text."
     }
   ],
   "architecture": {
-    "owner": "",
-    "dependencyDirection": "",
-    "cycleCheck": "",
-    "partialClassCheck": "",
-    "oldPathRemoval": ""
+    "owner": "Llm.Abstractions owns neutral updates; Providers owns wire parsing; Llm.ProviderRuntime owns dispatch/retry/fallback/bounds; LlmChats.Persistence owns operation attempt audit",
+    "dependencyDirection": "provider-neutral contracts -> provider/runtime adapters -> product persistence audit; no Web/SSE reverse dependency",
+    "cycleCheck": "CodeAnalytics snap-20260815044741-aec583b3: five scoped projects, zero cycles, zero blocking/error findings",
+    "partialClassCheck": "pass; no new production partial class",
+    "oldPathRemoval": "the completed-only port remains intentionally compatible; the old shallow limitation is superseded by true ResponseHeadersRead provider enumeration, not wrapped completed output"
   },
-  "bugs": [],
-  "deviations": [],
-  "knownGaps": [],
+  "bugs": [
+    "A bounded channel bridge was required so the task-based provider runtime retains its dispatch lane throughout asynchronous enumeration.",
+    "Attempt-local usage was separated from aggregate retry usage before durable audit.",
+    "Runtime preparation failures are now sanitized without creating a false provider-attempt row.",
+    "SupportsStreaming=false now forces deterministic completed fallback."
+  ],
+  "deviations": [
+    "Five focused test commands exceeded the normal four-command budget. One command failed at compile because the new direct logging-abstractions reference required restore; after the first final union, review found runtime-preparation sanitization and profile fallback defects, so one additional identical focused union was run at the final implementation head. No broad test lane ran.",
+    "The first sandboxed project restore could not read the user NuGet configuration; the unchanged authorized restore succeeded. No package version changed.",
+    "Three affected build commands were used and all passed with zero warnings/errors."
+  ],
+  "knownGaps": [
+    "SB08 must connect the proven streaming/audit updates to a bounded durable event journal and operation finalization.",
+    "SSE transport, disconnect behavior, and Last-Event-ID replay remain locked to SB09.",
+    "Cross-platform focused proof remains owned by SB11."
+  ],
   "progression": {
-    "decision": "",
-    "reason": "",
-    "unlocks": []
+    "decision": "Ready",
+    "reason": "The additive provider-neutral stream and three true incremental drivers pass the current-head 86-case compatibility union, affected build, redaction/retry/audit negatives, and five-project architecture gate at 4212914dd52415c00d12e9d33b35aaad34260531.",
+    "unlocks": [
+      "SB08"
+    ]
   }
 }

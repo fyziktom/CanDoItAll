@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — CP1 Ready, SB07 unlocked**
+Bundle state: **Executing — SB07 complete, SB08 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -8,7 +8,7 @@ Bundle state: **Executing — CP1 Ready, SB07 unlocked**
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
 | SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
 | SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
-| SB07–SB10 streaming and API hardening | SB07 Ready | Sequential from the proven CP1 backend head |
+| SB07–SB10 streaming and API hardening | SB07 Completed; SB08 Ready | Sequential from the proven provider-neutral streaming head |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
 | SB12 documentation and guards | Locked | After CP2 |
 | SB13 final stable gate and CI | Locked | Final work unit only |
@@ -130,3 +130,21 @@ The executor must refresh these values before changing production source.
   one deliberate interface-removal build exposed three test callers before final clean builds
 - proof: `proof/SB06/manifest.md`; `reviews/CP1-BACKEND-HARDENING.md`
 - progression: CP1 Ready; SB07 unlocked
+
+## SB07 provider-neutral streaming contracts and drivers
+
+- implementation commit: `4212914dd52415c00d12e9d33b35aaad34260531`
+- ownership: Llm.Abstractions owns neutral immutable updates; Providers owns SSE/NDJSON parsing;
+  Llm.ProviderRuntime owns bounded dispatch/retry/fallback; LlmChats.Persistence owns attempt audit
+- protocol: OpenAI Chat Completions/Responses and Azure OpenAI stream SSE; Ollama streams NDJSON;
+  completed-only support yields one delta/completion labelled `CompletedFallback`
+- retry/audit: retry is possible only before the first accepted delta; every real dispatch has a
+  monotonic ordinal, deterministic terminal outcome, and attempt-local durable usage
+- focused results: final current-head compatibility union 86/86; affected Persistence build passes
+  with 0 warnings/errors
+- architecture: CodeAnalytics `snap-20260815044741-aec583b3`; five scoped projects, zero cycles,
+  zero blocking/error findings, no open questions or production partial expansion
+- deviation: five focused test commands were needed after one restore-related compile failure and a
+  final architecture-review correction; no unfiltered or solution-wide test ran
+- proof: `proof/SB07/manifest.md`
+- progression: SB08 Ready
