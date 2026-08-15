@@ -189,6 +189,15 @@ public static class ServerSentEventResponseWriter
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
+        finally
+        {
+            if (streamLifetime.IsCancellationRequested &&
+                !context.RequestAborted.IsCancellationRequested &&
+                context.Response.HasStarted)
+            {
+                await context.Response.CompleteAsync();
+            }
+        }
     }
 
     public static async Task WriteEventAsync<T>(

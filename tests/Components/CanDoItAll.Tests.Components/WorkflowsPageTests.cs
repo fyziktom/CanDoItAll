@@ -342,6 +342,9 @@ public sealed class WorkflowsPageTests
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForAssertion(
+            () => Assert.Empty(cut.FindAll("[data-testid='workflows-loading']")),
+            TimeSpan.FromSeconds(10));
         racingCatalog.Delay(firstDefinition.Id, secondDefinition.Id);
 
         var firstSelection = cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
