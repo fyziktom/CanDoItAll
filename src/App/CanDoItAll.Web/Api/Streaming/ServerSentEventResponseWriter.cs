@@ -114,17 +114,17 @@ public static class ServerSentEventResponseWriter
                 context.RequestAborted,
                 streamLifetime)
             : null;
-        var cancellationToken = lifetime?.Token ?? context.RequestAborted;
+        var streamCancellationToken = lifetime?.Token ?? context.RequestAborted;
         try
         {
-            await context.Response.StartAsync(cancellationToken);
-            await context.Response.Body.FlushAsync(cancellationToken);
+            await context.Response.StartAsync(context.RequestAborted);
+            await context.Response.Body.FlushAsync(context.RequestAborted);
             using var heartbeatTimer = new PeriodicTimer(stream.HeartbeatInterval);
             Task<bool>? pendingHeartbeat = null;
-            while (!cancellationToken.IsCancellationRequested)
+            while (!streamCancellationToken.IsCancellationRequested)
             {
                 BoundedReplayReadResult<T> result;
-                var read = stream.ReadAsync(afterExclusive, cancellationToken);
+                var read = stream.ReadAsync(afterExclusive, streamCancellationToken);
                 if (read.IsCompletedSuccessfully)
                 {
                     result = read.Result;
@@ -135,7 +135,7 @@ public static class ServerSentEventResponseWriter
                     while (!pendingRead.IsCompleted)
                     {
                         pendingHeartbeat ??= heartbeatTimer
-                            .WaitForNextTickAsync(cancellationToken)
+                            .WaitForNextTickAsync(streamCancellationToken)
                             .AsTask();
                         if (await Task.WhenAny(pendingRead, pendingHeartbeat) == pendingRead)
                         {
@@ -148,20 +148,30 @@ public static class ServerSentEventResponseWriter
                         }
 
                         pendingHeartbeat = null;
-                        await WriteHeartbeatAsync(context.Response, cancellationToken);
+                        await WriteHeartbeatAsync(context.Response, context.RequestAborted);
                     }
 
                     result = await pendingRead;
                 }
 
+                if (streamCancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 if (result.Gap is not null)
                 {
-                    await WriteGapAsync(context.Response, result.Gap, cancellationToken);
+                    await WriteGapAsync(context.Response, result.Gap, context.RequestAborted);
                     afterExclusive = result.Gap.ResumeAfterSequence;
                 }
 
                 foreach (var entry in result.Events)
                 {
+                    if (streamCancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     afterExclusive = entry.Sequence;
                     if (filter(entry.Value))
                     {
@@ -172,7 +182,7 @@ public static class ServerSentEventResponseWriter
                             entry.Sequence,
                             eventName,
                             entry.Value,
-                            cancellationToken);
+                            context.RequestAborted);
                         if (terminalPredicate(entry.Value))
                         {
                             return;
@@ -186,7 +196,7 @@ public static class ServerSentEventResponseWriter
                 }
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (streamCancellationToken.IsCancellationRequested)
         {
         }
         finally

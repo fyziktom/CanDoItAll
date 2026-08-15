@@ -328,6 +328,34 @@ public sealed class ApiStreamingTransportTests
     }
 
     [Fact]
+    public async Task Streaming_writer_finishes_an_in_progress_frame_before_profile_switch_closes_the_response()
+    {
+        var context = new DefaultHttpContext();
+        await using var body = new BlockingFirstWriteStream();
+        using var switchedProfile = new CancellationTokenSource();
+        context.Response.Body = body;
+        var stream = CreateStream();
+        stream.Publish("visible");
+
+        var writing = ServerSentEventResponseWriter.WriteAsync(
+            context,
+            stream,
+            "test.changed",
+            _ => true,
+            switchedProfile.Token);
+        await body.WaitForFirstWriteAsync();
+
+        switchedProfile.Cancel();
+        body.ReleaseWrite();
+        await writing.WaitAsync(TimeSpan.FromSeconds(10));
+
+        body.Position = 0;
+        var output = await new StreamReader(body, Encoding.UTF8).ReadToEndAsync();
+        Assert.Contains("event: test.changed", output, StringComparison.Ordinal);
+        Assert.Contains("data: \"visible\"\n\n", output, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Streaming_writer_emits_typed_public_envelopes_and_closes_at_terminal_event()
     {
         var now = DateTimeOffset.UtcNow;
@@ -515,6 +543,34 @@ public sealed class ApiStreamingTransportTests
 
         public void Dispose()
         {
+        }
+    }
+
+    private sealed class BlockingFirstWriteStream : MemoryStream
+    {
+        private readonly TaskCompletionSource firstWriteStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource writeRelease = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private int writeStarted;
+
+        public Task WaitForFirstWriteAsync()
+            => firstWriteStarted.Task;
+
+        public void ReleaseWrite()
+            => writeRelease.TrySetResult();
+
+        public override async ValueTask WriteAsync(
+            ReadOnlyMemory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref writeStarted, 1) == 0)
+            {
+                firstWriteStarted.TrySetResult();
+                await writeRelease.Task.WaitAsync(cancellationToken);
+            }
+
+            await base.WriteAsync(buffer, cancellationToken);
         }
     }
 

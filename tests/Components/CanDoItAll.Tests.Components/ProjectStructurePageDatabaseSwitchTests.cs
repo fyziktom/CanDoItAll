@@ -329,7 +329,8 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             .First(button => button.TextContent.Contains("Open projects", StringComparison.Ordinal))
             .Click();
 
-        Assert.EndsWith("/projects", navigation.Uri, StringComparison.OrdinalIgnoreCase);
+        cut.WaitForAssertion(() =>
+            Assert.EndsWith("/projects", navigation.Uri, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
