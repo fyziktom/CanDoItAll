@@ -6,7 +6,7 @@ Repository-specific engineering tools are grouped by purpose:
 |---|---|
 | `App` | Local development manager |
 | `dev` | PostgreSQL preparation, Tailwind watch, plugin packaging, and bounded development resets |
-| `install` | Installed web app publishing and its isolated PostgreSQL setup |
+| `install` | Installed web app publishing, its isolated PostgreSQL setup, and focused MCP artifact installation |
 | `Diagnostics` | Focused runtime and provider probes |
 | `ollama` | Local Ollama model and probe support |
 | `prompt_library` | Prompt component-library generation |
@@ -35,6 +35,19 @@ project. Neither installed-database path uses the repository's development `comp
 
 `tools/Install-CanDoItAllWebApp.ps1` is retained only as a compatibility wrapper for the
 former script location.
+
+Install a locally built CodeAnalytics MCP only after supplying a maintained protocol
+smoke request:
+
+```powershell
+& .\tools\install\Install-CanDoItAllCodeAnalyticsMcp.ps1 `
+    -McpRepositoryRoot ..\CanDoItAll.Mcp `
+    -SmokeRequestPath <path-to-test-impact-request.json>
+```
+
+The installer publishes to a unique staging directory, runs the MCP tool harness before
+and after switching, stops only exact owned CodeAnalytics executable paths, and retains
+the prior install for recovery. Use `-WhatIf` before a real cutover.
 
 Framework-dependent Unix artifacts use `tools/install/unix/install-candoitall-web.sh`.
 It installs immutable releases and switches a validated release-id state file without
