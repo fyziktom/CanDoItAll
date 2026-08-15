@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — SB10 complete, SB11 unlocked**
+Bundle state: **Executing — SB11 and CP2 complete, SB12 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -9,8 +9,8 @@ Bundle state: **Executing — SB10 complete, SB11 unlocked**
 | SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
 | SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
 | SB07–SB10 streaming and API hardening | Completed | Durable streaming/SSE plus exact external-client security contract proven |
-| SB11 focused behavioral proof | Ready | Must declare CP2 Ready |
-| SB12 documentation and guards | Locked | After CP2 |
+| SB11 focused behavioral proof | Completed | Linux package-mode provider/PostgreSQL/HTTP/SSE proof at `4ec4d2694d980d52936b4679ae676a0624d5c6fb` |
+| SB12 documentation and guards | Ready | CP2 Ready; final cleanup/guard pass only |
 | SB13 final stable gate and CI | Locked | Final work unit only |
 | FINAL release decision | Locked | UI/shared-component bundles remain blocked |
 
@@ -206,3 +206,23 @@ The executor must refresh these values before changing production source.
   current turn admission remains the validated caller-operation-ID retry boundary
 - proof: `proof/SB10/manifest.md`
 - progression: SB11 Ready
+
+## SB11 focused PostgreSQL, HTTP, SSE, and portability proof
+
+- implementation commit: `4ec4d2694d980d52936b4679ae676a0624d5c6fb`
+- host/dependency mode: Ubuntu 24.04.4 x64, .NET SDK 10.0.302, package references with
+  `UseLocalCanDoItAllLibraries=false`
+- provider proof: Linux Unit semantic union produced 105 passes with one isolated-output fixture
+  failure; the explicit-root repair then passed exactly 1/1
+- PostgreSQL/HTTP/SSE proof: consolidated focused Integration union passed 43/43 against PostgreSQL 16,
+  including transactions, leases, migration/transfer, 202 admission, delta, real endpoint heartbeat,
+  reconnect, gap, disconnect, cancellation, terminal closure, scopes, origin, and redaction
+- build: full Web package-reference graph passed on Linux with 0 warnings/errors after the exact clean
+  sibling Spreadsheet source was packed into a container-only 0.1.18 feed
+- release prerequisite: nuget.org-only cold restore is red until
+  `CanDoItAll.FileTools.FileInteraction.Spreadsheet` 0.1.18 is published or an equivalent reviewed
+  dependency-source correction is committed; SB13 must enforce this honestly
+- architecture: CodeAnalytics `snap-20260815080824-3b5bd776`; four scoped projects, zero cycles or
+  blocking errors, unchanged production ownership/direction, and no production source change in SB11
+- proof: `proof/SB11/manifest.md`; `reviews/CP2-STREAMING-API.md`
+- progression: CP2 Ready; SB12 unlocked

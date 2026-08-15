@@ -1,7 +1,7 @@
 {
   "bundleId": "simple-llm-chats-hardening-sse",
   "status": "Executing",
-  "currentGate": "SB11",
+  "currentGate": "SB12",
   "subbundles": {
     "SB00": "Completed",
     "SB01": "Completed",
@@ -14,17 +14,17 @@
     "SB08": "Completed",
     "SB09": "Completed",
     "SB10": "Completed",
-    "SB11": "Ready",
-    "SB12": "NotStarted",
+    "SB11": "Completed",
+    "SB12": "Ready",
     "SB13": "NotStarted"
   },
   "checkpoints": {
     "CP0": "Pass",
     "CP1": "Pass",
-    "CP2": "Locked",
+    "CP2": "Pass",
     "FINAL": "Locked"
   },
   "reviewedFeatureCommit": "16b6aa4b60dc88a6134dd6c9c9e634c064ac5847",
-  "validatedImplementationCommit": "ebb8deae5f2deb0a379875fecf853ea8fc423be7",
-  "currentSubbundle": "SB11"
+  "validatedImplementationCommit": "4ec4d2694d980d52936b4679ae676a0624d5c6fb",
+  "currentSubbundle": "SB12"
 }

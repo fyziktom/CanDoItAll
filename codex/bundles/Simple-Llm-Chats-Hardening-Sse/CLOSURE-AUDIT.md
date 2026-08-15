@@ -29,7 +29,7 @@ listed in `analysis/01-findings-register.md` and then produce fresh proof tied t
 | Actual head matches proof head | Pending | |
 | All prior 19 failures classified | Pending | |
 | CP1 backend hardening Ready | Pending | |
-| CP2 streaming/API Ready | Pending | |
+| CP2 streaming/API Ready | Pass | `reviews/CP2-STREAMING-API.md`; Linux proof at `4ec4d2694d980d52936b4679ae676a0624d5c6fb` |
 | Stable filtered Release gate passed | Pending | |
 | CI portability matrix passed | Pending | |
 | Architecture review passed | Pending | |
