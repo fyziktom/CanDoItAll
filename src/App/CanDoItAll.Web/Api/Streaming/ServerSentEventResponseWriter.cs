@@ -115,6 +115,7 @@ public static class ServerSentEventResponseWriter
                 streamLifetime)
             : null;
         var streamCancellationToken = lifetime?.Token ?? context.RequestAborted;
+        Task<BoundedReplayReadResult<T>>? pendingRead = null;
         try
         {
             await context.Response.StartAsync(context.RequestAborted);
@@ -131,7 +132,7 @@ public static class ServerSentEventResponseWriter
                 }
                 else
                 {
-                    var pendingRead = read.AsTask();
+                    pendingRead = read.AsTask();
                     while (!pendingRead.IsCompleted)
                     {
                         pendingHeartbeat ??= heartbeatTimer
@@ -152,6 +153,7 @@ public static class ServerSentEventResponseWriter
                     }
 
                     result = await pendingRead;
+                    pendingRead = null;
                 }
 
                 if (streamCancellationToken.IsCancellationRequested)
@@ -198,6 +200,12 @@ public static class ServerSentEventResponseWriter
         }
         catch (OperationCanceledException) when (streamCancellationToken.IsCancellationRequested)
         {
+            if (pendingRead is not null)
+            {
+                await DrainReadAfterCancellationAsync(
+                    pendingRead,
+                    streamCancellationToken);
+            }
         }
         finally
         {
@@ -207,6 +215,19 @@ public static class ServerSentEventResponseWriter
             {
                 await context.Response.CompleteAsync();
             }
+        }
+    }
+
+    private static async Task DrainReadAfterCancellationAsync<T>(
+        Task<BoundedReplayReadResult<T>> pendingRead,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await pendingRead.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
     }
 

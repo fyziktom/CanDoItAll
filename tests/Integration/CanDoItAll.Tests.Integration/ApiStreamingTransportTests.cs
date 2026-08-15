@@ -356,6 +356,31 @@ public sealed class ApiStreamingTransportTests
     }
 
     [Fact]
+    public async Task Streaming_writer_drains_an_in_progress_read_before_profile_switch_releases_the_request_scope()
+    {
+        var context = new DefaultHttpContext();
+        await using var body = new MemoryStream();
+        using var switchedProfile = new CancellationTokenSource();
+        context.Response.Body = body;
+        var stream = new DelayedCancellationReader();
+
+        var writing = ServerSentEventResponseWriter.WriteAsync(
+            context,
+            stream,
+            "test.changed",
+            _ => true,
+            switchedProfile.Token);
+        await stream.WaitForReadAsync();
+
+        switchedProfile.Cancel();
+        await stream.WaitForCancellationAsync();
+        Assert.False(writing.IsCompleted);
+
+        stream.ReleaseRead();
+        await writing.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
     public async Task Streaming_writer_emits_typed_public_envelopes_and_closes_at_terminal_event()
     {
         var now = DateTimeOffset.UtcNow;
@@ -571,6 +596,46 @@ public sealed class ApiStreamingTransportTests
             }
 
             await base.WriteAsync(buffer, cancellationToken);
+        }
+    }
+
+    private sealed class DelayedCancellationReader : IBoundedReplayEventReader<string>
+    {
+        private readonly TaskCompletionSource readStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource cancellationObserved = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource readRelease = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TimeSpan HeartbeatInterval => TimeSpan.FromHours(1);
+
+        public Task WaitForReadAsync()
+            => readStarted.Task;
+
+        public Task WaitForCancellationAsync()
+            => cancellationObserved.Task;
+
+        public void ReleaseRead()
+            => readRelease.TrySetResult();
+
+        public async ValueTask<BoundedReplayReadResult<string>> ReadAsync(
+            long afterExclusive,
+            CancellationToken cancellationToken)
+        {
+            readStarted.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                cancellationObserved.TrySetResult();
+                await readRelease.Task;
+                throw;
+            }
+
+            throw new InvalidOperationException("The controlled read must be cancelled.");
         }
     }
 
