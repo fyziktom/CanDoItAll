@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureAgentRuntimeToolProviderArchitectureTests
 {

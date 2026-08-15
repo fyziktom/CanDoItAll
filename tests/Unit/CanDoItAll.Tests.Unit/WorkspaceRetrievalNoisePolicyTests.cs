@@ -1,6 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceRetrievalNoisePolicyTests
 {

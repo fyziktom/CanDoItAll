@@ -4,7 +4,7 @@ using CanDoItAll.Memory.Mcp;
 using CanDoItAll.Modules.Memory.Services;
 using static CanDoItAll.Tests.Components.MemoryProviderProfileEditorTestData;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class MemoryProviderProfileEditorRoundTripTests
 {

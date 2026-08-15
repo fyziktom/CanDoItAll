@@ -1,4 +1,4 @@
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class CrossPlatformCiWorkflowTests
 {
@@ -70,8 +70,13 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("Remove-Item -LiteralPath .secrets/db-password", workflow, StringComparison.Ordinal);
 
         string buildTargets = File.ReadAllText(Path.Combine(repositoryRoot, "Directory.Build.targets"));
-        Assert.Contains("CanDoItAll.FileTools.FileInteraction.Spreadsheet", buildTargets, StringComparison.Ordinal);
-        Assert.Contains("_LocalCanDoItAllFileToolsPackage->'$(CanDoItAllFileToolsRepositoryRoot)", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("Exclude=\"CanDoItAll.Components.*\"", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("Exclude=\"CanDoItAll.FileTools.*\"", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAllLocalLibrary", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("ValidateResolvedLocalCanDoItAllLibraryReferences", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("_UnconvertedCanDoItAllLibraryPackage", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("_MissingCanDoItAllLocalProject", buildTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("WithMetadataValue('Identity'", buildTargets, StringComparison.Ordinal);
 
         string compose = File.ReadAllText(Path.Combine(repositoryRoot, "compose.yaml"));
         Assert.Contains("components: ../CanDoItAll.Components", compose, StringComparison.Ordinal);

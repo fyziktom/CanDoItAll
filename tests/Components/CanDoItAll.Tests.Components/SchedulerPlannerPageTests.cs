@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed class SchedulerPlannerPageTests
 {

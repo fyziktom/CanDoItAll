@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.Tests.Unit" />
     <Using Include="Xunit" />
   </ItemGroup>
 

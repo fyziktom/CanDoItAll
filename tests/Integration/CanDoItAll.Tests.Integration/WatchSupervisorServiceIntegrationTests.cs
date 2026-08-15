@@ -7,7 +7,7 @@ using CanDoItAll.Manager;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "ManagerPortability")]
 [Trait("Category", "UnixRuntimePortability")]

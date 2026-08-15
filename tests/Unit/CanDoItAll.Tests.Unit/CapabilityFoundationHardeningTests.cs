@@ -9,7 +9,7 @@ using CanDoItAll.AgentFramework.Skills.Abstractions;
 using CanDoItAll.AgentFramework.Tools;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CapabilityFoundationHardeningTests
 {

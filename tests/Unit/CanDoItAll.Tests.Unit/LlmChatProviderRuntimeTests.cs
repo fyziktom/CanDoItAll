@@ -13,7 +13,7 @@ using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.LlmChats.Ports;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 public sealed class ProviderRuntimeContractOwnershipTests
 {

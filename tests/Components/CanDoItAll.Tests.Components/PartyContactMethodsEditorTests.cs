@@ -3,7 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class PartyContactMethodsEditorTests {
     [Fact]

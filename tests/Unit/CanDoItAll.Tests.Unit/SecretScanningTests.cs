@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class SecretScanningTests
 {

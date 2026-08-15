@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureProcessStartEstimateCalculatorTests
 {

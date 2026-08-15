@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutputHelper output)
 {

@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafRuntimeResponseAssemblerUsageTests
 {

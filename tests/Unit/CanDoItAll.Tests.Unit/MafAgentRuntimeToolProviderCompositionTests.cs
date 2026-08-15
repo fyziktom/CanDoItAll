@@ -19,7 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using McpToolName = CanDoItAll.AgentFramework.Capabilities.Abstractions.McpToolName;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafAgentRuntimeToolProviderCompositionTests
 {

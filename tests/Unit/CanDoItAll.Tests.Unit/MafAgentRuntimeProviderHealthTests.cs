@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafAgentRuntimeProviderHealthTests
 {

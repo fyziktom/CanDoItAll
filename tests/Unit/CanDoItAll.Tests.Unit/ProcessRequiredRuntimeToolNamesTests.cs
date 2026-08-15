@@ -4,7 +4,7 @@ using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRequiredRuntimeToolNamesTests
 {

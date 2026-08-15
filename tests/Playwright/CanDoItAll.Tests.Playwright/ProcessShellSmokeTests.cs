@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class ProcessShellSmokeTests

@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectManagerSummaryWorkflowQueryTests
 {

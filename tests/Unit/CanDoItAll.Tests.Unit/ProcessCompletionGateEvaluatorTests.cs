@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessCompletionGateEvaluatorTests
 {

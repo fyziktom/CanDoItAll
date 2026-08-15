@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Tests.Support;
 using Xunit.Abstractions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "FileSystemPortability")]
 public sealed class FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests(

@@ -4,7 +4,7 @@ using CanDoItAll.Manager;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 [Trait("Category", "FileSystemPortability")]
 [Trait("Category", "UnixRuntimePortability")]

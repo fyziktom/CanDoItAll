@@ -1,6 +1,6 @@
 using CanDoItAll.Processes.Application;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRunArtifactRootPolicyTests
 {

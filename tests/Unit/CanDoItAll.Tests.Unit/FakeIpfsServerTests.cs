@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using System.Text;
 using CanDoItAll.Tests.Support;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class FakeIpfsServerTests
 {

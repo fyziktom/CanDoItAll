@@ -5,7 +5,7 @@ using CanDoItAll.Modules.AgentFramework;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderRuntimeProfileSnapshotServiceTests
 {

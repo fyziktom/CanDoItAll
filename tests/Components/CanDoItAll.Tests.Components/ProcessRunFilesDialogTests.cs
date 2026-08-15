@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed class ProcessRunFilesDialogTests
 {

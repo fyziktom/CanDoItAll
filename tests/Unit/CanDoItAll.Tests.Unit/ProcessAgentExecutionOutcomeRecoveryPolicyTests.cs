@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 /// <summary>
 /// Direct unit coverage for <see cref="ProcessAgentExecutionOutcomeRecoveryPolicy"/> (SB13): the success path and

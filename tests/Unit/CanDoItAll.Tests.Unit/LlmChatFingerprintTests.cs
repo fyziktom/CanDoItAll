@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.LlmChats.Common;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 public sealed class LlmChatFingerprintTests
 {

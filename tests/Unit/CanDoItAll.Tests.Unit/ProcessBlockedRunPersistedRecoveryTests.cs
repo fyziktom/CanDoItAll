@@ -11,7 +11,7 @@ using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessBlockedRunPersistedRecoveryTests

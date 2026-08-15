@@ -6,7 +6,7 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Http;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class WorkflowApiIntegrationTests
 {

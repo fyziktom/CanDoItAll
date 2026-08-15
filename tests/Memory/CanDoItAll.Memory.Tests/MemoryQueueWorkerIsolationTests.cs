@@ -2,7 +2,7 @@ using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Runtime;
 
 public sealed class MemoryQueueWorkerIsolationTests
 {

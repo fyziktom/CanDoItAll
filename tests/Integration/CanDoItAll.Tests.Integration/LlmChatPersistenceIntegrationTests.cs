@@ -26,7 +26,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.LlmChats;
 
 public sealed class EfLlmConversationStoreIntegrationTests
 {

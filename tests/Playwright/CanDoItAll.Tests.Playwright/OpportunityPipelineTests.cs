@@ -1,7 +1,7 @@
 using CanDoItAll.Modules.CrmHr;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Quarantined;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class OpportunityPipelineTests

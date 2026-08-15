@@ -4,7 +4,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Processes;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRunFilesCoordinatorTests
 {

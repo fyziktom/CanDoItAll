@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class ProjectManagedStorageDeletionTests

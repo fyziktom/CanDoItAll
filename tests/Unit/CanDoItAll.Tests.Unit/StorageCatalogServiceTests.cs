@@ -5,7 +5,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 [Trait("Category", "UnixPortabilityCore")]

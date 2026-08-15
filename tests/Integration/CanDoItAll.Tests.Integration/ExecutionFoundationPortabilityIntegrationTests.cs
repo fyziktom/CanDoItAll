@@ -4,7 +4,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Git;
 using CanDoItAll.Infrastructure;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ExecutionFoundationPortabilityIntegrationTests

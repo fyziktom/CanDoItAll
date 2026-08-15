@@ -1,6 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Memory.SourceGateway;
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Memory;
 
 public sealed class MemorySourceSnapshotTests
 {

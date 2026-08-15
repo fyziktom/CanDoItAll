@@ -88,7 +88,11 @@ Without that set, keep the operation on its existing UI or HTTP boundary.
 Runtime-tool changes should include the owning provider tests and:
 
 ```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
+dotnet build src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj --configuration Release
+dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
+dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~MafAgentRuntimeToolProviderCompositionTests"
 ```
 
-Then run the stable gate in [Testing](testing.md).
+State the expected discovery count before the first command and reject zero or drifted
+discovery. Run the [broad stable gate](testing.md#broad-stable-gate) only for CI,
+release/merge closure, a frozen checkpoint, or a named invalidation trigger.

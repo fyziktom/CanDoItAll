@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 using WorkspaceProviderProfile =
     CanDoItAll.Modules.Workspace.ProviderProfile;

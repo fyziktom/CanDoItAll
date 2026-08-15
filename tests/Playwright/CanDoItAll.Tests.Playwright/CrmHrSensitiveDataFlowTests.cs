@@ -3,7 +3,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Flows;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class CrmHrSensitiveDataFlowTests

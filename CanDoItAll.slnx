@@ -131,30 +131,8 @@
     <Project Path="src/plugins/Implementations/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj" />
     <Project Path="src/plugins/Implementations/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj" />
   </Folder>
-  <Folder Name="/tests/Support/">
-    <Project Path="tests/Support/CanDoItAll.DurableFileWriter.TestHost/CanDoItAll.DurableFileWriter.TestHost.csproj" />
-    <Project Path="tests/Support/CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj" />
-  </Folder>
-  <Folder Name="/tests/Unit/">
-    <Project Path="tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
-  </Folder>
   <Folder Name="/src/MAF/Memory/">
     <Project Path="src/MAF/Memory/CanDoItAll.AgentFramework.Memory/CanDoItAll.AgentFramework.Memory.csproj" />
-  </Folder>
-  <Folder Name="/tests/Memory/">
-    <Project Path="tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj" />
-  </Folder>
-  <Folder Name="/tests/MAF/">
-    <Project Path="tests/MAF/CanDoItAll.AgentFramework.Memory.Tests/CanDoItAll.AgentFramework.Memory.Tests.csproj" />
-  </Folder>
-  <Folder Name="/tests/Integration/">
-    <Project Path="tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
-  </Folder>
-  <Folder Name="/tests/Components/">
-    <Project Path="tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
-  </Folder>
-  <Folder Name="/tests/Playwright/">
-    <Project Path="tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj" />
   </Folder>
   <Folder Name="/tools/App/">
     <Project Path="tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />

@@ -5,7 +5,7 @@ using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.LlmChats.Ports;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 public sealed class LlmChatDurableStreamEventTests
 {

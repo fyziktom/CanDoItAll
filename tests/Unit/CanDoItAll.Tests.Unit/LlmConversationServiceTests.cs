@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Llm.Conversations;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 /// <summary>
 /// SB15: behavior of the ordinary LLM conversation application service. The application transcript is

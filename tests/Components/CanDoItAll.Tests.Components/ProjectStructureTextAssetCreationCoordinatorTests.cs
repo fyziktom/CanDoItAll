@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTextAssetCreationCoordinatorTests
 {

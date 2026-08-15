@@ -1,6 +1,6 @@
 using CanDoItAll.Memory.Abstractions;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Contracts;
 
 public sealed class MemoryOperationResultExtensionTests
 {

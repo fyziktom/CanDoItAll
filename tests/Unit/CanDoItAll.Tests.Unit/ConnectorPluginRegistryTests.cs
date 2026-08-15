@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Plugins;
 
 public sealed class ConnectorPluginRegistryTests
 {

@@ -4,7 +4,7 @@ using CanDoItAll.Composition;
 using Microsoft.Extensions.DependencyInjection;
 using RuntimeCapabilitiesPage = CanDoItAll.Web.Components.Pages.RuntimeCapabilities;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class RuntimeCapabilitiesPageTests
 {

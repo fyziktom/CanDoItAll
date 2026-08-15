@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Projects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class RecruitmentLifecycleIntegrationTests
 {

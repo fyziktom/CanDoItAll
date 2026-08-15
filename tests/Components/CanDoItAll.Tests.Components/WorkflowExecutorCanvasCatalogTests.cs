@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowExecutorCanvasCatalogTests
 {

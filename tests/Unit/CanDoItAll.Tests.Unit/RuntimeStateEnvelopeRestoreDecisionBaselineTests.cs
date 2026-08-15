@@ -5,7 +5,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using System.Text.Json;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Failing-first characterization: restore eligibility must be decided against

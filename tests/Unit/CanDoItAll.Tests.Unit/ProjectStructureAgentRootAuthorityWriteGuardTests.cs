@@ -6,7 +6,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposable
 {

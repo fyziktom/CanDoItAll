@@ -4,7 +4,7 @@ using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 public sealed class LlmChatConversationApplicationServiceTests
 {

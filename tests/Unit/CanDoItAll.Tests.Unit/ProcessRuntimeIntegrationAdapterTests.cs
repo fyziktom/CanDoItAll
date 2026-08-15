@@ -20,7 +20,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessRuntimeIntegrationAdapterTests

@@ -3,7 +3,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 public sealed partial class AppSmokeTests
 {

@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowArtifactContentStorePortabilityTests
 {

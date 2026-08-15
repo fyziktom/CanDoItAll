@@ -10,7 +10,7 @@ using CanDoItAll.Memory.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Providers;
 
 public sealed class AgentMemoryProviderEndToEndTests
 {

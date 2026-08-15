@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class MemoryProviderUiSurfacePageTests
 {

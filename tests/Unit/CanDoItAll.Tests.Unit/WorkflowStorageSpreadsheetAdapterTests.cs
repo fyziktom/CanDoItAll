@@ -6,7 +6,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tools.Documents;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowStorageSpreadsheetAdapterTests
 {

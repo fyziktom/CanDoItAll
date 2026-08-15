@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Characterizes the policy-driven <see cref="MafFinalizerToolFactory"/> contract for all finalizers. Strictly

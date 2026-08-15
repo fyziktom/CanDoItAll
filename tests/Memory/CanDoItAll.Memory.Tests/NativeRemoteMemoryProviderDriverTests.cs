@@ -7,7 +7,7 @@ using CanDoItAll.Memory.Drivers.CognitiveMemory;
 using CanDoItAll.Memory.Http;
 using CanDoItAll.Memory.Protocol.Http;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Providers;
 
 public sealed class NativeRemoteMemoryProviderDriverTests
 {

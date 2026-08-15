@@ -8,7 +8,7 @@ using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentApiPublicProjectionIntegrationTests
 {

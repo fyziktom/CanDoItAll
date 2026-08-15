@@ -9,7 +9,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.LlmChats;
 
 public sealed class LlmChatsTurnApiIntegrationTests
 {

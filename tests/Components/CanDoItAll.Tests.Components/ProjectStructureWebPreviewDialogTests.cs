@@ -2,7 +2,7 @@ using Bunit;
 using CanDoItAll.Modules.Workbench.Pages;
 using Microsoft.AspNetCore.Components;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureWebPreviewDialogTests
 {

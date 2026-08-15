@@ -4,7 +4,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.Playwright;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 public sealed partial class AppSmokeTests
 {

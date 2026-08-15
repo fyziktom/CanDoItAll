@@ -6,7 +6,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Api;
 
 public sealed class ApiAccessAuthorizationIntegrationTests
 {

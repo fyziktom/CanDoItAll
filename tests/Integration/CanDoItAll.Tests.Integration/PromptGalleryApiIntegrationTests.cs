@@ -9,7 +9,7 @@ using CanDoItAll.Modules.Prompts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class PromptGalleryApiIntegrationTests
 {

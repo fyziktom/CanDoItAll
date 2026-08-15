@@ -9,6 +9,7 @@ using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.LlmChats.Ports;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Unit.LlmChats;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;

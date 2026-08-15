@@ -2523,15 +2523,17 @@ def build_toolbox_components() -> list[ComponentDefinition]:
             name="Toolbox: Run Unit Tests in Docker",
             group="toolbox-snippets",
             block_kind="Testing",
-            summary="Short insert that forces unit tests to run in Docker with cache-aware resource usage.",
+            summary="Runs the affected unit-test selection in Docker with cache-aware resource usage.",
             template="""
             ## Unit Tests in Docker
-            You must run the unit test suite inside Docker before declaring this work done.
+            Run the narrow affected unit-test selection inside Docker before declaring this work done.
 
             Requirements:
             - use {{docker_compose_file_or_dockerfile}} if available, otherwise create the smallest viable temporary test container,
             - reuse package, image, and layer caches whenever possible to reduce network transfer and save mobile data,
-            - print the exact Docker command, target test projects, and result summary,
+            - use a stable FQN, namespace/topic, or trait filter and verify expected discovery,
+            - print the exact Docker command, target test project, filter, expected and actual discovery, and result summary,
+            - run an unfiltered project or solution only for an explicit release/CI request or named cross-cutting invalidation trigger,
             - if Docker validation is blocked, say so clearly and fall back to the nearest reproducible local command without pretending Docker passed.
             """,
             tags=stable_tags("toolbox", "docker", "unit-tests", "mobile-data"),
@@ -2545,15 +2547,17 @@ def build_toolbox_components() -> list[ComponentDefinition]:
             name="Toolbox: Run Integration Tests in Docker",
             group="toolbox-snippets",
             block_kind="Testing",
-            summary="Short insert that forces integration or API tests to run in Docker.",
+            summary="Runs the affected integration or API test selection in Docker.",
             template="""
             ## Integration Tests in Docker
-            Run the integration or contract test suite inside Docker.
+            Run the narrow affected integration or contract-test selection inside Docker.
 
             Requirements:
             - start only the dependencies the tests truly need,
             - use persistent caches and volumes where safe to reduce repeated downloads,
-            - record the exact command and the services started,
+            - use a stable FQN, namespace/topic, or trait filter and verify expected discovery,
+            - record the exact command, filter, expected and actual discovery, and services started,
+            - run an unfiltered project or solution only for an explicit release/CI request or named cross-cutting invalidation trigger,
             - if external dependencies make Docker validation impossible here, explain the blocker and the closest fallback.
             """,
             tags=stable_tags("toolbox", "docker", "integration-tests"),
@@ -2567,16 +2571,18 @@ def build_toolbox_components() -> list[ComponentDefinition]:
             name="Toolbox: Run UI Tests in Docker",
             group="toolbox-snippets",
             block_kind="Testing",
-            summary="Short insert that forces Playwright or browser UI tests to run in Docker.",
+            summary="Runs the affected Playwright or browser cases in Docker.",
             template="""
             ## UI Tests in Docker
-            Run the UI or Playwright suite inside Docker.
+            Run the narrow UI or Playwright case selection inside Docker.
 
             Requirements:
             - install only the browsers and system dependencies actually needed,
             - capture screenshots, traces, or reports for failures,
             - reuse browser and package caches where possible to save bandwidth,
-            - include the exact command and artifact locations in the final output.
+            - use a stable FQN, namespace/topic, or trait filter and verify expected discovery,
+            - include the exact command, filter, expected and actual discovery, and artifact locations in the final output,
+            - run the unfiltered browser project only for an explicit release/CI request or named cross-cutting invalidation trigger.
             """,
             tags=stable_tags("toolbox", "docker", "playwright", "ui-tests", "mobile-data"),
             prompt_types=["implementation", "bugfix", "ui", "testing", "validation"],

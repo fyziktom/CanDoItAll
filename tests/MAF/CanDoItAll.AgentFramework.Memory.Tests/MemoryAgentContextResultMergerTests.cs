@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Memory.Context;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 
-namespace CanDoItAll.AgentFramework.Memory.Tests;
+namespace CanDoItAll.AgentFramework.Memory.Tests.Context;
 
 public sealed class MemoryAgentContextResultMergerTests
 {

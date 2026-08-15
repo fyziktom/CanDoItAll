@@ -3,7 +3,7 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Readiness;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class RuntimeDeploymentSupportTests
 {

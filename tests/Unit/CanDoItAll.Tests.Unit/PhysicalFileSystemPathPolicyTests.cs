@@ -1,7 +1,7 @@
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class PhysicalFileSystemPathPolicyTests

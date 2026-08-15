@@ -1,6 +1,6 @@
 using CanDoItAll.AgentFramework.Persistence;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentFrameworkPersistenceIntegrationTests
 {

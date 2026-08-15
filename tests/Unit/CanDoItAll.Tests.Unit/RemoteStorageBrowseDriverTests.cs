@@ -5,7 +5,7 @@ using System.Net;
 using System.Text;
 using Xunit.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class RemoteStorageBrowseDriverTests(ITestOutputHelper output)
 {

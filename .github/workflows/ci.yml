@@ -91,23 +91,28 @@ jobs:
 
       - name: Restore with sibling source dependencies
         shell: pwsh
-        run: dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true
+        run: |
+          dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true
+          dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx -p:UseLocalCanDoItAllLibraries=true
+          dotnet restore ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx -p:UseLocalCanDoItAllLibraries=true
 
       - name: Build
         shell: pwsh
-        run: >-
-          ./tools/Validation/Test-RuntimePortability.ps1
-          -Configuration Release
-          -ResultsDirectory "${{ runner.temp }}/test-results"
-          -UseLocalCanDoItAllLibraries $true
-          -BuildOnly
+        run: |
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+          ./tools/Validation/Test-RuntimePortability.ps1 `
+            -Configuration Release `
+            -ResultsDirectory "${{ runner.temp }}/test-results" `
+            -UseLocalCanDoItAllLibraries $true `
+            -BuildOnly
 
       - name: Run stable test gate
         shell: pwsh
         env:
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
-          dotnet test ./CanDoItAll.slnx --configuration Release --no-build
+          dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore
           --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           --logger "trx;LogFilePrefix=stable-${{ matrix.name }}"
           --results-directory "${{ runner.temp }}/test-results"

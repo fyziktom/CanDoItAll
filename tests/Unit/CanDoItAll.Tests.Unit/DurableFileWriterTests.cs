@@ -3,7 +3,7 @@ using System.Diagnostics;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class DurableFileWriterTests
 {

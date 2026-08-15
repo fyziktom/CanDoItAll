@@ -9,7 +9,7 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceProductFilesystemCompletionGateContributionTests
 {

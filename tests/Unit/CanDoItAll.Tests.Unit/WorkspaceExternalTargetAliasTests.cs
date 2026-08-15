@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceExternalTargetAliasTests : IDisposable
 {

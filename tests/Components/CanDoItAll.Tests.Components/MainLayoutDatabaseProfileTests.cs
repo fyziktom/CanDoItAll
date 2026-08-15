@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using WebMainLayout = CanDoItAll.Web.Components.Layout.MainLayout;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class MainLayoutDatabaseProfileTests
 {

@@ -6,7 +6,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class WorkflowRuntimePersistenceLifecycleTests
 {

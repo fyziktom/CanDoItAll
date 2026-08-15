@@ -1,6 +1,6 @@
 using CanDoItAll.Processes.Contracts;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessAcceptanceCriteriaModelsTests
 {

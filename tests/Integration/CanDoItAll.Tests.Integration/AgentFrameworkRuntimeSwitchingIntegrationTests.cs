@@ -3,11 +3,12 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Tests.Integration.Persistence;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
 {

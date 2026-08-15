@@ -2,7 +2,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Tests.Support;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspacePathResolverGuardTests
 {

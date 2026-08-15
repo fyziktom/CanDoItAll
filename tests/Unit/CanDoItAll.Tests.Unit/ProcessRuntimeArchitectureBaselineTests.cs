@@ -5,7 +5,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessRuntimeArchitectureBaselineTests

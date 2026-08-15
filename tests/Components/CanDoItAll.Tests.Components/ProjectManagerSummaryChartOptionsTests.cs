@@ -1,7 +1,7 @@
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectManagerSummaryChartOptionsTests
 {

@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Manager;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Processes;
 
 [Trait("Category", "ManagerPortability")]
 [Trait("Category", "UnixRuntimePortability")]

@@ -9,7 +9,7 @@ using CanDoItAll.McpTestHost;
 using CanDoItAll.Modules.AgentFramework;
 using System.Diagnostics;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 [Collection("B04 environment")]
 [Trait("Category", "UnixRuntimePortability")]

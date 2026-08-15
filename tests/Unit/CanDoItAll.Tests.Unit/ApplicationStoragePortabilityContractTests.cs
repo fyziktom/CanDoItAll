@@ -1,7 +1,7 @@
 using CanDoItAll.Infrastructure;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 [Trait("Category", "UnixPortabilityCore")]
 [Trait("Category", "UnixRuntimePortability")]

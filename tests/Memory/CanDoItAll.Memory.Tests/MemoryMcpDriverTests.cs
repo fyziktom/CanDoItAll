@@ -6,7 +6,7 @@ using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Providers;
 
 public sealed class MemoryMcpDriverTests
 {

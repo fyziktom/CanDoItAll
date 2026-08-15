@@ -1,7 +1,7 @@
 using System.Net;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureExternalAssetSourcePolicyTests
 {

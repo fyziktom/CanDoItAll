@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Manager;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class ManagerProcessRecoveryServiceTests
 {

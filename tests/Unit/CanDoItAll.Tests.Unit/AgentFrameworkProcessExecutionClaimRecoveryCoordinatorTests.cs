@@ -20,7 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests

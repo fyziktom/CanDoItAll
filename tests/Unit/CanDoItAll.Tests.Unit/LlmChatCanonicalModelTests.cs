@@ -5,7 +5,7 @@ using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
 using CanDoItAll.Modules.LlmChats.Operations;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 public sealed class LlmChatCanonicalModelTests
 {

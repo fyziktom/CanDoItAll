@@ -6,7 +6,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Runtime;
 
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class SecretPortabilityIntegrationTests

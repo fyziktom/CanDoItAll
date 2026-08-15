@@ -6,7 +6,7 @@ using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class OpenAiChatCompletionsCompatibilityChatClientTests
 {

@@ -40,7 +40,9 @@ This repository does not own:
 | [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
 | [`Templates`](Templates/README.md) | Repository-owned runtime seed and template packs |
 
-`CanDoItAll.slnx` is the canonical solution.
+`CanDoItAll.slnx` is the canonical product solution. Test projects are intentionally
+kept out of that build graph and have suite-specific entry points under
+[`tests/Solutions`](tests/Solutions).
 
 LLM Chats currently exposes an asynchronous backend/API contract: turn admission returns a durable
 operation, a hosted dispatcher owns provider execution, and clients follow status or replayable SSE.
@@ -151,13 +153,32 @@ Compose, copy `compose.override.yaml.example` to ignored `compose.override.yaml`
 
 ## Build And Test
 
-The following commands use the default sibling-source dependency mode. They are identical
-on Windows, Linux, and macOS when run in PowerShell 7:
+The following commands use the default sibling-source dependency mode. A normal product
+build does not compile the test suites:
 
 ```powershell
 dotnet restore ./CanDoItAll.slnx
 dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+```
+
+During local or bundle work, build the affected production project and run only the
+owning topic or exact test. Confirm discovery before treating the result as proof. This
+example expects exactly one discovered test case:
+
+```powershell
+$testFilter = "FullyQualifiedName=CanDoItAll.Tests.Unit.AgentFramework.OpenAiRequestCompatibilityPolicyTests.Luna_chat_completions_function_tools_require_explicit_none"
+$expectedDiscovery = 1
+
+dotnet build ./src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj --configuration Release /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter $testFilter /m:1
+# Verify that discovery reports $expectedDiscovery test case before executing it.
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter $testFilter /m:1
+```
+
+Run the documentation validator when maintained documentation or source-truth claims
+change:
+
+```powershell
 ./tools/Validation/Test-Documentation.ps1
 ```
 
@@ -168,10 +189,12 @@ changes:
 ./tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1
 ```
 
-The filtered command is the routine repository gate. Environment-dependent and extended
-test lanes are documented in [Testing](docs/testing.md). GitHub CI runs the package-mode
-stable and actual-host portability gates on Windows x64, Ubuntu x64, and macOS arm64, plus
-the Linux container gate.
+The broad stable gate is reserved for CI, release or merge closure, a frozen checkpoint,
+or an invalidation trigger explicitly named by the work plan. It is not a routine
+per-change or per-subbundle loop. Suite entry points, filters, discovery rules, and
+environment-dependent lanes are documented in [Testing](docs/testing.md). GitHub CI runs
+the sibling-source stable and actual-host portability gates on Windows x64, Ubuntu x64,
+and macOS arm64, plus the Linux container gate.
 
 ## Containers
 

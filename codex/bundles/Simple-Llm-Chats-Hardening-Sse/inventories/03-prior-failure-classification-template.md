@@ -28,8 +28,8 @@ The two focused commands selected 16 test methods and executed 19 cases because
 | 15 | `CanDoItAll.Tests.Components.ProjectStructurePageDatabaseSwitchTests.Late_previous_project_reload_cannot_replace_the_current_project_surface` | Fail | Fail | Baseline | Same | Unrelated Project Structure component failure; do not change in this backend bundle. |
 | 16 | `CanDoItAll.Tests.Components.ProjectStructurePageDatabaseSwitchTests.Missing_project_routes_render_a_safe_structure_recovery_state` | Fail | Fail | Baseline | Same | Unrelated Project Structure component failure; do not change in this backend bundle. |
 | 17 | `CanDoItAll.Tests.Components.ProjectStructurePageSimpleMutationTests.Edit_dialog_updates_runtime_node_without_structure_reload` | Pass | Pass | EnvironmentSensitive | Same | Prior broad-run-only failure; preserve as stable-gate coverage. |
-| 18 | `CanDoItAll.Tests.Unit.ProcessTemplateCompatibilityHistoryTests.Shipped_artifact_templates_declare_semantic_acceptance_contract` | Pass | Pass | EnvironmentSensitive | Same | Prior isolated-artifact-layout failure; preserve as stable-gate coverage. |
-| 19 | `CanDoItAll.Tests.Unit.ProjectStructureAgentRuntimeToolProviderArchitectureTests.Provider_stays_below_the_post_extraction_line_ceiling` | Fail | Fail | Baseline | Same | Unrelated baseline line-ceiling failure; do not expand its provider in this bundle. |
+| 18 | `CanDoItAll.Tests.Unit.Processes.ProcessTemplateCompatibilityHistoryTests.Shipped_artifact_templates_declare_semantic_acceptance_contract` | Pass | Pass | EnvironmentSensitive | Same | Prior isolated-artifact-layout failure; preserve as stable-gate coverage. |
+| 19 | `CanDoItAll.Tests.Unit.Projects.ProjectStructureAgentRuntimeToolProviderArchitectureTests.Provider_stays_below_the_post_extraction_line_ceiling` | Fail | Fail | Baseline | Same | Unrelated baseline line-ceiling failure; do not expand its provider in this bundle. |
 
 Summary: 8 Baseline, 7 EnvironmentSensitive, 4 ObsoleteAfterSync, 0 BranchInduced, 0 Unresolved.
 

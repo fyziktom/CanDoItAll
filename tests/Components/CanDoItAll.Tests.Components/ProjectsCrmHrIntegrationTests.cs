@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class ProjectsCrmHrIntegrationTests
 {

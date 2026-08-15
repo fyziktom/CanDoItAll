@@ -9,7 +9,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class FileInteractionZoomPanRendererTests
 {

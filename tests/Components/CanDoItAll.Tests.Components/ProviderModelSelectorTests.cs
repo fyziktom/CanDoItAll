@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.AspNetCore.Components;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ProviderModelSelectorTests
 {

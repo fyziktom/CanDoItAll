@@ -1,7 +1,7 @@
 using CanDoItAll.SharedKernel;
 using CanDoItAll.FileTools.Integration;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class LogicalPathTests

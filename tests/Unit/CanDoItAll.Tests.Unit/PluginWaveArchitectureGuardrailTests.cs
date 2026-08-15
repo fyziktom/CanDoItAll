@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Plugins;
 
 public sealed class PluginWaveArchitectureGuardrailTests
 {

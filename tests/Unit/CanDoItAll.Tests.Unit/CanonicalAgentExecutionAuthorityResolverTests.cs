@@ -10,7 +10,7 @@ using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Canonical authority resolution: durable agent configuration decides

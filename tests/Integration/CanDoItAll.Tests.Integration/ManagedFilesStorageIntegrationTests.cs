@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Persistence;
 
 [Trait("Category", "FileSystemPortability")]
 [Trait("Category", "UnixPortabilityCore")]

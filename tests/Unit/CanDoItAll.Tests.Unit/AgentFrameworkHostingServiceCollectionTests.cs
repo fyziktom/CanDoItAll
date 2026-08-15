@@ -8,7 +8,7 @@ using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class AgentFrameworkHostingServiceCollectionTests

@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
 {

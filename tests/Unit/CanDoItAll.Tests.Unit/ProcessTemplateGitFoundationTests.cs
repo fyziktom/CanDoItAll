@@ -3,7 +3,7 @@ using CanDoItAll.Git;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessTemplateGitFoundationTests
 {

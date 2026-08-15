@@ -83,18 +83,18 @@ function Get-TrxProof {
 }
 
 $unitClasses = @(
-    'CanDoItAll.Tests.Unit.AgentFrameworkHostingServiceCollectionTests',
-    'CanDoItAll.Tests.Unit.AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests',
-    'CanDoItAll.Tests.Unit.AgentFrameworkWorkspaceProcessLeaseCleanupTests',
-    'CanDoItAll.Tests.Unit.ApplicationStoragePortabilityContractTests',
-    'CanDoItAll.Tests.Unit.DotNetSolutionSetupRuntimeExecutorTests',
-    'CanDoItAll.Tests.Unit.ProcessBlockedRunPersistedRecoveryTests',
-    'CanDoItAll.Tests.Unit.ProcessesModuleHostedWorkerRegistrationTests',
-    'CanDoItAll.Tests.Unit.ProcessLaunchExecutorResolverTests',
-    'CanDoItAll.Tests.Unit.ProcessLaunchPromptTests',
-    'CanDoItAll.Tests.Unit.ProcessRuntimeArchitectureBaselineTests',
-    'CanDoItAll.Tests.Unit.ProcessRuntimeIntegrationAdapterTests',
-    'CanDoItAll.Tests.Unit.WorkspaceRuntimePluginScriptArgumentTests'
+    'CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkHostingServiceCollectionTests',
+    'CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests',
+    'CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkWorkspaceProcessLeaseCleanupTests',
+    'CanDoItAll.Tests.Unit.Storage.ApplicationStoragePortabilityContractTests',
+    'CanDoItAll.Tests.Unit.Processes.DotNetSolutionSetupRuntimeExecutorTests',
+    'CanDoItAll.Tests.Unit.Processes.ProcessBlockedRunPersistedRecoveryTests',
+    'CanDoItAll.Tests.Unit.Processes.ProcessesModuleHostedWorkerRegistrationTests',
+    'CanDoItAll.Tests.Unit.Processes.ProcessLaunchExecutorResolverTests',
+    'CanDoItAll.Tests.Unit.Processes.ProcessLaunchPromptTests',
+    'CanDoItAll.Tests.Unit.Processes.ProcessRuntimeArchitectureBaselineTests',
+    'CanDoItAll.Tests.Unit.Processes.ProcessRuntimeIntegrationAdapterTests',
+    'CanDoItAll.Tests.Unit.AgentFramework.WorkspaceRuntimePluginScriptArgumentTests'
 )
 $integrationClasses = @(
     'CanDoItAll.Tests.Integration.CapsuleCatalogServiceIntegrationTests',

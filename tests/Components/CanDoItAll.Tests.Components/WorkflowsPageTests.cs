@@ -30,7 +30,7 @@ using WorkflowFailureKind = CanDoItAll.AgentFramework.Workflows.Abstractions.Wor
 using WorkflowFailureRetryability = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureRetryability;
 using WorkflowFailureSourceContext = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureSourceContext;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowsPageTests
 {

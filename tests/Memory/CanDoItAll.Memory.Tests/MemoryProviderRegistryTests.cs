@@ -1,7 +1,7 @@
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Providers;
 
 public sealed class MemoryProviderRegistryTests
 {
