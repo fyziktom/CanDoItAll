@@ -3,7 +3,8 @@
 ## Purpose
 
 Application and domain boundary for reusable LLM Chat definitions, immutable revisions, pinned
-conversations, durable turn operations, reconciliation, cancellation, and invocation audit.
+conversations, durable turn operations, execution leases, reconciliation, cancellation, streaming
+events, and invocation audit.
 
 ## Project Type
 
@@ -26,4 +27,12 @@ explicit `None` disables reasoning only when supported by the selected model. Un
 explicit error. No duplicate provider catalog or effort enum belongs here.
 
 Persistence and provider invocation are implemented by `CanDoItAll.Modules.LlmChats.Persistence`.
-HTTP transport belongs to `CanDoItAll.Web`. See [LLM Chats Backend API](../../../docs/llm-chats-api.md).
+Hosted dispatcher lifetime belongs to `CanDoItAll.Composition`; HTTP and SSE transport belong to
+`CanDoItAll.Web`. Turn admission persists canonical state and signals dispatch but never awaits provider
+I/O. The operation journal is the replay authority; transient event signals only wake readers after a
+commit.
+
+No LLM Chat definition or conversation carries dormant tenant, participant, channel, moderation, quota,
+retention, residency, legal-hold, or human-handoff fields. Those concerns belong to a later deployment
+aggregate. See [LLM Chats Backend API](../../../docs/llm-chats-api.md) and
+[LLM Chats architecture and future handoffs](../../../docs/architecture/llm-chats-boundary-and-handoffs.md).

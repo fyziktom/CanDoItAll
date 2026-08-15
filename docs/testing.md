@@ -56,15 +56,24 @@ This proof must create and read linked records through `/api/crm-hr`; direct ser
 
 Use the same pattern for other API families: choose the narrowest real-host test slice first, then run the stable solution gate.
 
-For LLM Chats, the focused real-host slice keeps Web, application, provider resolution, EF stores, and
-PostgreSQL real while replacing only the live external provider boundary:
+For LLM Chats, the focused real-host slice keeps Web, hosted dispatch, application behavior, provider
+resolution, EF stores, SSE transport, and PostgreSQL real while replacing only the live external
+provider boundary:
 
 ```powershell
 dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~LlmChatsApiPostgreSqlIntegrationTests"
 ```
 
 Use the focused migration and `LlmChatsDatabaseTransferIntegrationTests` cases when changing schema or
-transfer behavior. The routine stable Release gate remains the final repository-wide proof.
+transfer behavior. Use a `FullyQualifiedName~LlmChat` filter for the narrow owning Unit or Integration
+project while iterating; do not run an unfiltered project merely to validate one LLM Chat change. The
+routine stable Release gate remains the single final repository-wide proof.
+
+The LLM Chat event-stream slice verifies `202 Accepted` before slow-provider completion, durable lease
+dispatch, replay, `Last-Event-ID`/`after`, gap signaling, heartbeats, terminal closure, disconnect
+independence, explicit cancellation, server-owned origin, exact authorization scopes, and redaction.
+Do not replace it with an in-memory endpoint test when changing HTTP, SSE, migration, or multi-host
+ownership behavior.
 
 ## Browser Gate
 

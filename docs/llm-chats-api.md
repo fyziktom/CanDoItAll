@@ -12,10 +12,13 @@ definition revision. A conversation pins the current revision when it is created
 edits do not change existing conversations. Definitions can be activated, suspended, reactivated, and
 archived; conversations can be renamed and archived.
 
-The canonical transcript is PostgreSQL state. A turn appends one user entry and one assistant entry,
-with an explicit active-turn marker between admission and completion. The runtime uses the application
-database-profile generation as a lease fence: a profile switch cancels in-flight work and requires an
-explicit recovery decision when provider dispatch may have occurred.
+The canonical transcript is PostgreSQL state. Turn admission atomically creates the durable operation,
+active-turn state, user message, and first operation event. The HTTP request then returns `202 Accepted`;
+it never owns the provider call. A hosted dispatcher claims pending work through a renewable database
+lease, executes it outside the admission transaction, and persists the assistant result and terminal
+operation state atomically. Expired leases are recoverable by another host. The runtime also uses the
+application database-profile generation as a fence: a profile switch cancels in-flight work and requires
+an explicit recovery decision when provider dispatch may have occurred.
 
 ## Provider And Thinking-Effort Options
 
@@ -56,6 +59,7 @@ All routes are under `/api`:
 | `POST /llm-conversations/{conversationId}/archive` | Concurrency-checked archive |
 | `POST /llm-conversations/{conversationId}/turns` | Retry-safe turn admission and execution |
 | `GET /llm-chat-operations/{operationId}` | Durable operation status, result, and invocation evidence |
+| `GET /llm-chat-operations/{operationId}/events` | Durable replay followed by live SSE until terminal state |
 | `POST /llm-chat-operations/{operationId}/cancel` | Durable cancellation request plus local live-call signal |
 | `POST /llm-conversations/{conversationId}/active-turns/{turnId}/abandon` | Exact recovery after the live owner has drained |
 
@@ -71,21 +75,44 @@ same committed operation/result without another provider dispatch, message, or a
 the ID with a different fingerprint returns `operation-id-conflict`. A stale transcript revision returns
 `transcript-revision-conflict`.
 
-Inline completion returns `200`; admitted or running work returns `202` with `Location` pointing to the
-operation resource. Failures use stable Problem Details codes, the operation ID when applicable, and a
-typed retryability flag. Raw provider exceptions, credentials, endpoints, and paths are not returned.
+Successful turn admission always returns `202` with `Location` pointing to the operation resource and
+links for status and events. Admission fails with `503` when no dispatcher is registered, rather than
+accepting work that cannot progress. Failures use stable Problem Details codes, the operation ID when
+applicable, and a typed retryability flag. Raw provider exceptions, credentials, endpoints, paths,
+system instructions, and prompts are not returned.
+
+## Operation Event Stream
+
+`GET /api/llm-chat-operations/{operationId}/events` uses the shared Web SSE writer. Event IDs are the
+operation journal's monotonically increasing sequences. Reconnect with `Last-Event-ID` or the `after`
+query parameter; when both are present they must contain the same non-negative value. The server first
+replays retained committed events, emits `stream.gap` with the operation status URL when the cursor is
+outside retained history, then follows new committed events. Heartbeat comments keep an idle stream
+alive, buffering is disabled, and the connection closes after the terminal event is delivered.
+
+The `candoitall.llm-chat-operation-event.v1` envelope exposes accepted/claimed, provider-attempt,
+response-delta/completed, cancellation, success, failure, and recovery-required events. Deltas become
+canonical transcript content only when the success transaction commits. A client disconnect stops only
+that response; it does not cancel or redispatch the durable operation. Cancellation requires the
+operation cancel route. Bearer credentials are accepted through the normal authorization header or the
+host's canonical cookie flow, never an SSE query parameter.
 
 ## Persistence, Transfer, And Operations
 
-Eight `LlmChats_*` PostgreSQL tables own definitions, immutable revisions, tags, conversations,
-transcripts, messages, operations, and invocation audit. The schema is part of the normal PostgreSQL
-migration path and the canonical database-transfer export/import graph. No file-backed chat store is
-registered in production.
+Nine `LlmChats_*` PostgreSQL tables own definitions, immutable revisions, tags, conversations,
+transcripts, messages, operations, invocation audit, and the durable operation-event journal. The
+schema, lease/cancellation metadata, retention behavior, event sequences, model snapshot, and canonical
+database-transfer export/import graph move together through the normal PostgreSQL migration path. No
+file-backed chat store is registered in production.
 
-The API follows the Web host's canonical authorization policy. The checked-in trusted-local profile may
-leave bearer authorization disabled; any remotely reachable deployment must enable the canonical API
-authorization configuration before exposing these routes.
+The API follows the Web host's canonical authorization policy. When bearer authorization is enabled,
+routes require the exact `api.llm-chats.read`, `api.llm-chats.manage`, or `api.llm-chats.execute` scope;
+the broad `api` scope is not an LLM Chat super-scope. HTTP conversation creation accepts no origin field
+and always persists `Api` origin. The checked-in trusted-local profile may leave bearer authorization
+disabled; any remotely reachable deployment must enable the canonical API authorization configuration
+before exposing these routes.
 
-Focused verification is documented in [Testing](testing.md). UI, streaming, public chatbot deployment,
-retrieval/RAG, moderation, external participants, and multi-instance background dispatch are explicitly
-deferred to later bundles.
+Focused verification is documented in [Testing](testing.md). UI, shared-component isolation, Project
+Structure context, public chatbot deployment, retrieval/RAG, moderation, and external participants are
+explicitly deferred. Their ownership boundaries are recorded in
+[LLM Chats architecture and future handoffs](architecture/llm-chats-boundary-and-handoffs.md).

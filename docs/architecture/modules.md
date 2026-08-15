@@ -11,7 +11,7 @@ first-party agent tool provider for that bounded area.
 | [CRM/HR](../../src/Modules/CanDoItAll.Modules.CrmHr/README.md) | Parties, accounts, opportunities, workforce, recruiting, skills, staffing, and agent/person relationships |
 | [Memory](../../src/Modules/CanDoItAll.Modules.Memory/README.md) | Memory provider configuration, operations, diagnostics, and user-facing Memory surfaces |
 | [Plugins](../../src/Modules/CanDoItAll.Modules.Plugins/README.md) | Plugin catalog, installation, activation, grants, OAuth, settings, and logs |
-| [LLM Chats](../../src/Modules/CanDoItAll.Modules.LlmChats/README.md) | Reusable chat definitions, immutable revisions, pinned conversations, durable operations, and provider-neutral invocation |
+| [LLM Chats](../../src/Modules/CanDoItAll.Modules.LlmChats/README.md) | Backend-only chat definitions, pinned conversations, durable dispatch, replayable SSE events, and provider-neutral invocation |
 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md) | Process definition, launch, monitoring, recovery, assignments, and process UI |
 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md) | Project portfolio, hierarchy, phases, files, planning, and project-facing services |
 | [Prompts](../../src/Modules/CanDoItAll.Modules.Prompts/README.md) | Prompt catalog, versions, assets, and curation surfaces |
@@ -41,3 +41,7 @@ The ordinary multi-turn LLM conversation foundation under `src/MAF/Common` is no
 LLM Chats persistence adapter constructs it only inside the scoped product engine, paired with canonical
 PostgreSQL state and profile-generation fencing. Other products must opt in through their own explicit
 composition boundary rather than publishing the generic service globally.
+
+LLM Chats is the current exception to the general module expectation that a module owns pages: it is a
+backend/API product until its separate UI handoff is implemented. See
+[LLM Chats boundary and future handoffs](llm-chats-boundary-and-handoffs.md).

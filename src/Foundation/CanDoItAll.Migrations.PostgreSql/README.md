@@ -36,6 +36,19 @@ Create new migrations through the normal EF workflow and append them after the b
 Do not edit an applied migration. Back up authoritative data before applying schema
 changes.
 
+The LLM Chats schema is an append-only migration chain:
+
+- `20260814163458_AddLlmChats` creates definitions, revisions, tags, conversations, transcripts,
+  messages, operations, and invocation audit.
+- `20260815002135_CanonicalizeLlmChatConversationMetadata` aligns transcript metadata with canonical
+  conversation state.
+- `20260815005922_AddLlmChatCancellationGeneration` adds durable cancellation fencing.
+- `20260815023403_AddLlmChatExecutionLeases` adds recoverable multi-host dispatch ownership.
+- `20260815051653_AddLlmChatOperationEvents` adds the durable replay journal and retention indexes.
+
+The model snapshot and database-transfer contract must represent the same final shape. Never remove or
+rename an applied migration to make a pending-model check pass.
+
 ## Migration Validation
 
 The focused integration tests require the repository's PostgreSQL test service:

@@ -34,13 +34,18 @@ This repository does not own:
 |---|---|
 | [`CanDoItAll.Web`](src/App/CanDoItAll.Web/README.md) | Blazor host, HTTP API, OpenAPI, and runtime endpoints |
 | [`CanDoItAll.Composition`](src/App/CanDoItAll.Composition/README.md) | Dependency injection and application runtime composition |
-| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules |
+| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules, including the backend-only LLM Chats product |
 | [`src/Processes`](src/Processes/README.md) | Durable process model, execution, projections, and persistence |
 | [`src/Memory`](src/Memory/README.md) | Provider-neutral Memory contracts, drivers, and persistence |
 | [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
 | [`Templates`](Templates/README.md) | Repository-owned runtime seed and template packs |
 
 `CanDoItAll.slnx` is the canonical solution.
+
+LLM Chats currently exposes an asynchronous backend/API contract: turn admission returns a durable
+operation, a hosted dispatcher owns provider execution, and clients follow status or replayable SSE.
+It intentionally has no Razor, floating-chat, agent, tool, skill, MCP, or Project Structure integration.
+See [LLM Chats backend API](docs/llm-chats-api.md).
 
 ## Requirements
 
