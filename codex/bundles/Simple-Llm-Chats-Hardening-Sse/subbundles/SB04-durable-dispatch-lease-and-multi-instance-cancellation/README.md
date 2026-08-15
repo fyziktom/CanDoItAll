@@ -1,6 +1,6 @@
 # SB04 — Durable dispatch lease and multi-instance cancellation
 
-Status: **Locked**  
+Status: **Completed**
 Proof tier: **Governed**  
 Depends on: **SB03**
 
@@ -103,12 +103,12 @@ Follow `test-budget.json` and `plan/04-test-budget-and-gates.md`. During this wo
 
 ## Acceptance checklist
 
-- [ ] Only one instance can hold an execution lease for an operation at a time.
-- [ ] A client disconnect after admission does not cancel the durable operation.
-- [ ] Explicit cancellation reaches a local owner and is observed cross-instance within the configured bound.
-- [ ] Local registry absence never recovers or abandons another instance's live operation.
-- [ ] Expired pre-dispatch work may be reclaimed, while expired post-dispatch work becomes RecoveryRequired.
-- [ ] A host without an available dispatcher cannot falsely accept unexecutable work.
+- [x] Only one instance can hold an execution lease for an operation at a time.
+- [x] A client disconnect after admission does not cancel the durable operation.
+- [x] Explicit cancellation reaches a local owner and is observed cross-instance within the configured bound.
+- [x] Local registry absence never recovers or abandons another instance's live operation.
+- [x] Expired pre-dispatch work may be reclaimed, while expired post-dispatch work becomes RecoveryRequired.
+- [x] A host without an available dispatcher cannot falsely accept unexecutable work.
 
 ## Reopen triggers
 
@@ -118,7 +118,7 @@ Follow `test-budget.json` and `plan/04-test-budget-and-gates.md`. During this wo
 
 ## Progression decision
 
-Unlock SB05 after this work unit passes, unless a checkpoint applies.
+SB04 passed at `7389daff6c21a4568895e514debe110434908d67`; SB05 is unlocked.
 
 Update `SESSION-HANDOFF.md`, `proof-manifest.json`, root `EXECUTION-PROGRESS.md`,
 `requirements-index.md`, and traceability before moving forward.

@@ -1,12 +1,12 @@
 # Execution progress
 
-Bundle state: **Executing — SB03 completed, SB04 unlocked**
+Bundle state: **Executing — SB04 completed, SB05 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
 | SB00 baseline sync and proof reconciliation | Completed | `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; focused comparison classified all 19 |
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
-| SB01–SB05 backend hardening | SB04 Ready | SB03 completed at `96f054905eecd33e04228e7837ae7850e3eeeeb4`; sequential through SB05 |
+| SB01–SB05 backend hardening | SB05 Ready | SB04 completed at `7389daff6c21a4568895e514debe110434908d67`; SB05 is the remaining backend implementation unit |
 | SB06 backend checkpoint | Locked | Must declare CP1 Ready |
 | SB07–SB10 streaming and API hardening | Locked | Sequential after CP1 |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
@@ -81,3 +81,18 @@ The executor must refresh these values before changing production source.
 - architecture: CodeAnalytics `snap-20260815020112-e34a58a8`; no new project cycle, forbidden dependency, public bypass, or production partial expansion
 - proof: `proof/SB03/manifest.md`
 - progression: SB04 Ready
+
+## SB04 durable dispatch lease and multi-instance cancellation
+
+- implementation commit: `7389daff6c21a4568895e514debe110434908d67`
+- ownership: application lease service/dispatcher/executor own dispatch protocol; persistence owns atomic
+  lease heartbeat/observation; composition only hosts the loop
+- protocol: HTTP atomically admits and signals; the dispatcher claims owner/epoch, polls durably,
+  heartbeats, observes remote cancellation, and fails closed to RecoveryRequired after uncertain dispatch
+- focused results: pre-SB04 request-lifetime regression 0/1 expected red; final Unit 15/15;
+  two-provider PostgreSQL lease/cancellation 2/2; real-host request-disconnect API 1/1
+- build/model: affected build 0 warnings/errors; EF reports no pending model changes
+- architecture: CodeAnalytics `snap-20260815030209-a236038a`; four scoped projects, zero cycles,
+  zero diagnostics, no blocking errors or production partial expansion
+- proof: `proof/SB04/manifest.md`
+- progression: SB05 Ready

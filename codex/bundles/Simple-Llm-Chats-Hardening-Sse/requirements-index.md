@@ -16,10 +16,10 @@ Status: prepared. Closure fields are filled during execution.
 | RQ-010 | Conversation archive must not race an active turn or nonterminal operation. | SB02, SB06 | SB02 pass with conversation row lock and active/nonterminal rejection; SB06 pending |
 | RQ-011 | Fence every public use case from first read through final commit/return to one database profile identity and generation. | SB03, SB06 | SB03 pass at `96f054905eecd33e04228e7837ae7850e3eeeeb4`; SB06 checkpoint pending |
 | RQ-012 | A profile switch must prevent old-generation writes and produce deterministic retained evidence. | SB03, SB06 | SB03 pass with atomic switch/write ordering and retained provider usage; SB06 checkpoint pending |
-| RQ-013 | Use durable cross-instance execution ownership with claim, heartbeat, expiry, and release. | SB04, SB06 | Pending |
-| RQ-014 | Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone. | SB04, SB06, SB08 | Pending |
-| RQ-015 | Execute admitted operations independently from the initiating HTTP request through an available dispatcher. | SB04, SB06 | Pending |
-| RQ-016 | Never automatically redispatch when durable evidence says a provider dispatch may have started. | SB02, SB04, SB06 | SB02 reducer pass; SB04 durable lease/dispatcher and SB06 pending |
+| RQ-013 | Use durable cross-instance execution ownership with claim, heartbeat, expiry, and release. | SB04, SB06 | SB04 pass at `7389daff6c21a4568895e514debe110434908d67`; SB06 checkpoint pending |
+| RQ-014 | Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone. | SB04, SB06, SB08 | SB04 durable heartbeat/cancellation pass; SB06/SB08 pending |
+| RQ-015 | Execute admitted operations independently from the initiating HTTP request through an available dispatcher. | SB04, SB06 | SB04 detached request-lifetime and availability pass; SB06 pending |
+| RQ-016 | Never automatically redispatch when durable evidence says a provider dispatch may have started. | SB02, SB04, SB06 | SB02 reducer and SB04 fail-closed lease pass; SB06 pending |
 | RQ-017 | Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries. | SB05, SB06 | Pending |
 | RQ-018 | Build provider context windows from bounded database reads rather than full transcript materialization. | SB05, SB06 | Pending |
 | RQ-019 | Provide an additive provider-neutral incremental LLM invocation port without breaking existing non-streaming callers. | SB07, SB11 | Pending |
