@@ -1,13 +1,13 @@
 # Execution progress
 
-Bundle state: **Executing — SB04 completed, SB05 unlocked**
+Bundle state: **Executing — SB05 completed, SB06 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
 | SB00 baseline sync and proof reconciliation | Completed | `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; focused comparison classified all 19 |
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
-| SB01–SB05 backend hardening | SB05 Ready | SB04 completed at `7389daff6c21a4568895e514debe110434908d67`; SB05 is the remaining backend implementation unit |
-| SB06 backend checkpoint | Locked | Must declare CP1 Ready |
+| SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
+| SB06 backend checkpoint | Ready | Must review the complete backend chain and declare CP1 Ready before streaming |
 | SB07–SB10 streaming and API hardening | Locked | Sequential after CP1 |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
 | SB12 documentation and guards | Locked | After CP2 |
@@ -96,3 +96,20 @@ The executor must refresh these values before changing production source.
   zero diagnostics, no blocking errors or production partial expansion
 - proof: `proof/SB04/manifest.md`
 - progression: SB05 Ready
+
+## SB05 bounded transcript queries and pagination
+
+- implementation commit: `e88987c2018adcf9118d49109eb8d4e3d3eb2c12`
+- ownership: application read contracts define projections; EF read/turn stores own bounded SQL;
+  Web owns only opaque cursor transport
+- protocol: definition/conversation collections use updated-at/id keysets; transcript pages use
+  canonical sequence; provider context reads system entries plus the newest bounded non-system range
+- focused results: pre-SB05 source guard expected red; final Unit 42/42; direct 2,000-message PostgreSQL
+  query-count test 1/1
+- build: Persistence and Integration affected builds pass with 0 warnings/errors; no schema change
+- architecture: CodeAnalytics `snap-20260815034954-c4aa2a0f`; four scoped projects, zero cycles,
+  zero diagnostics, no error findings or production partial expansion
+- deviation: six focused test attempts exceeded the normal four-command budget while resolving
+  concrete lifecycle, compile, translation, and fixture defects; no broad test lane ran
+- proof: `proof/SB05/manifest.md`
+- progression: SB06 Ready

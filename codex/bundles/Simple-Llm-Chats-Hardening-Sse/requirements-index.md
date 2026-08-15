@@ -20,8 +20,8 @@ Status: prepared. Closure fields are filled during execution.
 | RQ-014 | Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone. | SB04, SB06, SB08 | SB04 durable heartbeat/cancellation pass; SB06/SB08 pending |
 | RQ-015 | Execute admitted operations independently from the initiating HTTP request through an available dispatcher. | SB04, SB06 | SB04 detached request-lifetime and availability pass; SB06 pending |
 | RQ-016 | Never automatically redispatch when durable evidence says a provider dispatch may have started. | SB02, SB04, SB06 | SB02 reducer and SB04 fail-closed lease pass; SB06 pending |
-| RQ-017 | Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries. | SB05, SB06 | Pending |
-| RQ-018 | Build provider context windows from bounded database reads rather than full transcript materialization. | SB05, SB06 | Pending |
+| RQ-017 | Use bounded SQL/keyset read models for collection and transcript pagination without N+1 queries. | SB05, SB06 | SB05 pass at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` with deterministic keysets and constant PostgreSQL command counts; SB06 checkpoint pending |
+| RQ-018 | Build provider context windows from bounded database reads rather than full transcript materialization. | SB05, SB06 | SB05 pass with a 2,000-message transcript producing a 12-message context from three bounded SQL commands; SB06 checkpoint pending |
 | RQ-019 | Provide an additive provider-neutral incremental LLM invocation port without breaking existing non-streaming callers. | SB07, SB11 | Pending |
 | RQ-020 | Implement true incremental streaming for OpenAI, Azure OpenAI, and Ollama, with a deterministic fallback policy. | SB07, SB11 | Pending |
 | RQ-021 | Retry a stream only before its first emitted delta and never after partial output is externally visible. | SB07, SB11 | Pending |
