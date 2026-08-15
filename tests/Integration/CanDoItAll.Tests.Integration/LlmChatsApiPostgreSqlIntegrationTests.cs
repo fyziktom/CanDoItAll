@@ -518,7 +518,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         var replayJson = replayDocument.RootElement.GetRawText();
         Assert.DoesNotContain("Review the supplied design carefully.", replayJson, StringComparison.Ordinal);
         Assert.DoesNotContain("stream reconnect proof", replayJson, StringComparison.Ordinal);
-        Assert.DoesNotContain("SB09_PROVIDER_KEY", replayJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_PROVIDER_KEY", replayJson, StringComparison.Ordinal);
         Assert.DoesNotContain("provider.invalid", replayJson, StringComparison.OrdinalIgnoreCase);
 
         using (var conflictingCursor = new HttpRequestMessage(HttpMethod.Get, $"{eventsUrl}?after=1"))
@@ -728,10 +728,10 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
     private static ProviderProfile CreateProvider()
         => new(
             ProviderId,
-            "SB09 private provider",
+            "Private chat provider",
             ProviderKind.AzureOpenAi,
             "https://provider.invalid",
-            "SB09_PROVIDER_KEY",
+            "PRIVATE_PROVIDER_KEY",
             FastModel,
             ProviderTransportKind.Responses,
             true,
@@ -787,7 +787,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             "low",
             models[FastModel].GetProperty("thinkingEffort").GetProperty("providerDefault").GetString());
         var json = options.GetRawText();
-        Assert.DoesNotContain("SB09_PROVIDER_KEY", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_PROVIDER_KEY", json, StringComparison.Ordinal);
         Assert.DoesNotContain("provider.invalid", json, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -881,7 +881,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         long? expectedConcurrencyToken)
         => new
         {
-            name = "SB09 architecture assistant",
+            name = "Architecture assistant",
             summary = "Real PostgreSQL API proof",
             avatarImageUrl = string.Empty,
             systemPrompt = "Review the supplied design carefully.",
@@ -894,8 +894,8 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
                 modelParameterConfiguration = new { maxOutputTokens = 200 },
                 timeoutSeconds = 20
             },
-            tags = new[] { "sb09", "architecture" },
-            revisionReason = $"SB09 {model} {thinkingEffort ?? "provider-default"}",
+            tags = new[] { "streaming-api", "architecture" },
+            revisionReason = $"API {model} {thinkingEffort ?? "provider-default"}",
             expectedConcurrencyToken
         };
 
@@ -1034,12 +1034,12 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         var switched = new DatabaseProfileRecord
         {
             Id = Guid.Parse("73000000-0000-0000-0000-000000000001"),
-            DisplayName = "SB09 switched profile",
+            DisplayName = "Switched profile",
             ProviderKind = current.Profile.ProviderKind,
             SourceKind = current.Profile.SourceKind,
             Runtime = new DatabaseProfileRuntimeMetadata
             {
-                Fingerprint = $"{current.Profile.Runtime.Fingerprint}-sb09-switch"
+                Fingerprint = $"{current.Profile.Runtime.Fingerprint}-profile-switch"
             }
         };
         runtimeState.PublishRestartObserved(

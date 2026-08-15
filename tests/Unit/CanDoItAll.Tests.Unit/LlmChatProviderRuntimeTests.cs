@@ -674,6 +674,9 @@ internal sealed class TestDatabaseSwitchNotificationService : IDatabaseSwitchNot
 
     public int SubscriberCount => changed?.GetInvocationList().Length ?? 0;
 
+    public EventHandler<DatabaseProfileChangedNotification> CaptureSubscriber()
+        => changed ?? throw new InvalidOperationException("A database-profile subscriber is required.");
+
     public void Publish(DatabaseProfileChangedNotification notification)
         => changed?.Invoke(this, notification);
 }

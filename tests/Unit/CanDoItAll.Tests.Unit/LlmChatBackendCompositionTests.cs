@@ -75,6 +75,31 @@ public sealed class LlmChatBackendCompositionTests
         Assert.Equal(0, notifications.SubscriberCount);
     }
 
+    [Fact]
+    public async Task Runtime_lease_ignores_a_profile_notification_captured_before_disposal()
+    {
+        var notifications = new TestDatabaseSwitchNotificationService();
+        var factory = new DatabaseProfileLlmChatRuntimeLeaseFactory(
+            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
+            new MutableDatabaseRuntimeState(ProviderRuntimeTestData.RuntimeIdentity),
+            notifications);
+        var lease = await factory.AcquireAsync();
+        var capturedSubscriber = notifications.CaptureSubscriber();
+
+        await lease.DisposeAsync();
+
+        var identity = ProviderRuntimeTestData.RuntimeIdentity;
+        var exception = Record.Exception(() => capturedSubscriber(
+            notifications,
+            new DatabaseProfileChangedNotification(
+                identity.ActiveProfileId,
+                identity.ActiveFingerprint,
+                identity.ActiveProfileId!.Value,
+                identity.ActiveFingerprint!,
+                identity.Generation + 1)));
+        Assert.Null(exception);
+    }
+
     private static ServiceCollection CreateProfileServices(bool useExistingInvocationPort)
     {
         var services = new ServiceCollection();
@@ -91,7 +116,7 @@ public sealed class LlmChatBackendCompositionTests
         services.AddSingleton<ICanonicalRuntimeDatabase>(
             ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity));
         services.AddSingleton<IDatabaseSwitchNotificationService, TestDatabaseSwitchNotificationService>();
-        services.AddSingleton<IProviderRuntimeProfileSource>(new StaticProviderSource(providerProfile));
+        services.AddScoped<IProviderRuntimeProfileSource>(_ => new StaticProviderSource(providerProfile));
         services.AddSingleton(CreateInterfaceProxy<IProviderRuntimeDescriptorStore>());
         services.AddSingleton(CreateInterfaceProxy<IProviderRuntimePool>());
         if (useExistingInvocationPort)

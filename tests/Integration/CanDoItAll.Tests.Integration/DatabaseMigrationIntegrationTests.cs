@@ -235,6 +235,7 @@ public sealed class MigrationBootstrapIntegrationTests
             "LlmChats_Definitions",
             "LlmChats_InvocationRecords",
             "LlmChats_Messages",
+            "LlmChats_OperationEvents",
             "LlmChats_Operations",
             "LlmChats_Transcripts"
         ];

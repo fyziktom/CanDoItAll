@@ -46,4 +46,6 @@ Before final evidence artifacts or a governed outcome, read at least one represe
 
 If a command fails, inspect stdout, stderr, receipts, and the concrete project files before retrying. Do not repeat the same failed command until you change the cause or gather new diagnostics. Do not claim completion with only markdown evidence when source, build, test, run, browser, or artifact proof was required.
 
+When writing xUnit tests, include a visible `using Xunit;` or project-level global using before using xUnit attributes or assertions.
+
 Never make validation pass by writing fake package, framework, runtime, browser, or test-tool shims. Do not define local `Microsoft.VisualStudio.TestTools.UnitTesting`, `Xunit`, `NUnit.Framework`, browser API, or ASP.NET Core replacement namespaces/classes to satisfy compilation. Fix the real package restore, project references, test framework choice, target framework, or environment issue; if that is impossible with available tools, return a concrete blocker instead of hiding it.

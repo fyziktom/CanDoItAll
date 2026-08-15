@@ -1995,6 +1995,9 @@ public sealed class ProjectStructureAgentIntegrationTests
                 IncludeLaunchPlan: true,
                 RequestedBy: "integration-test"),
             DefaultAgent);
+        Assert.True(
+            parent.RunId.HasValue,
+            $"Parent launch stage '{parent.Stage}' did not create a run. {string.Join(" | ", parent.Warnings)}");
         var parentAssignments = await assignmentStore.LoadByRunAsync(new ProcessRunId(parent.RunId!.Value));
         var parentAssignment = Assert.Single(parentAssignments, item => item.StepKey == "prepare-solution-skeleton");
         var parentState = await stateStore.LoadAsync(new ProcessRunId(parent.RunId.Value));
@@ -4501,8 +4504,8 @@ public sealed class ProjectStructureAgentIntegrationTests
 
             if (runtimeLauncher.IsAvailable)
             {
-                Assert.Equal(externalRoot, auditedNode.ActionCapabilities.RuntimeWorkingDirectory);
-                Assert.Contains(projectPath, auditedNode.ActionCapabilities.RuntimeDisplayCommand, StringComparison.Ordinal);
+                Assert.Empty(auditedNode.ActionCapabilities.RuntimeWorkingDirectory);
+                Assert.Empty(auditedNode.ActionCapabilities.RuntimeDisplayCommand);
             }
         }
         finally

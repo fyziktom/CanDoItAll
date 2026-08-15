@@ -23,8 +23,8 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.TryAddSingleton<ILlmConversationContextWindowPolicy, RecencyBoundedContextWindowPolicy>();
         services.TryAddSingleton<ILlmChatRuntimeLeaseFactory, DatabaseProfileLlmChatRuntimeLeaseFactory>();
         services.TryAddSingleton<ILlmChatOperationScopeAccessor, LlmChatOperationScopeAccessor>();
-        services.TryAddSingleton<CanonicalLlmChatProviderResolver>();
-        services.TryAddSingleton<ILlmChatProviderResolver>(serviceProvider =>
+        services.TryAddScoped<CanonicalLlmChatProviderResolver>();
+        services.TryAddScoped<ILlmChatProviderResolver>(serviceProvider =>
             serviceProvider.GetRequiredService<CanonicalLlmChatProviderResolver>());
         services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
         services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();

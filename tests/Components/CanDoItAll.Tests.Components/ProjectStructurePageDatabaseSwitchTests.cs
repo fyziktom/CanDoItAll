@@ -367,19 +367,16 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
     [Fact]
     public async Task Late_previous_project_reload_cannot_replace_the_current_project_surface()
     {
-        var referenceDataProvider = new DelayedFirstImageProviderReferenceDataProvider();
-        await using var harness = await ComponentTestHarness.CreateAsync(services =>
-        {
-            services.RemoveAll<IAgentReferenceDataProvider>();
-            services.AddSingleton<IAgentReferenceDataProvider>(referenceDataProvider);
-        });
+        await using var harness = await ComponentTestHarness.CreateAsync(RegisterDelayedDbContextFactory);
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var firstProjectId = await CreateProjectAsync(projectsService, "First delayed project");
         var secondProjectId = await CreateProjectAsync(projectsService, "Second current project");
+        var delayedFactory = harness.Context.Services.GetRequiredService<DelayedFirstDbContextFactory>();
+        delayedFactory.Arm();
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, firstProjectId));
 
-        await referenceDataProvider.WaitForFirstImageProviderRequestAsync();
+        await delayedFactory.WaitForFirstDelayedRequestAsync();
         cut.Render(parameters => parameters.Add(page => page.ProjectId, secondProjectId));
 
         try
@@ -388,7 +385,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
         }
         finally
         {
-            referenceDataProvider.ReleaseFirstImageProviderRequest();
+            delayedFactory.ReleaseFirstDelayedRequest();
         }
 
         await Task.Yield();
@@ -500,38 +497,77 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             []);
     }
 
-    private sealed class DelayedFirstImageProviderReferenceDataProvider : IAgentReferenceDataProvider
+    private static void RegisterDelayedDbContextFactory(IServiceCollection services)
     {
-        private readonly TaskCompletionSource firstImageProviderRequest = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource releaseFirstImageProviderRequest = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        private int imageProviderRequestCount;
+        var descriptor = services.Last(candidate =>
+            candidate.ServiceType == typeof(IDbContextFactory<AppDbContext>));
+        services.Remove(descriptor);
+        services.Add(new ServiceDescriptor(
+            typeof(DelayedFirstDbContextFactory),
+            serviceProvider => new DelayedFirstDbContextFactory(
+                (IDbContextFactory<AppDbContext>)CreateService(serviceProvider, descriptor)),
+            descriptor.Lifetime));
+        services.Add(new ServiceDescriptor(
+            typeof(IDbContextFactory<AppDbContext>),
+            serviceProvider => serviceProvider.GetRequiredService<DelayedFirstDbContextFactory>(),
+            descriptor.Lifetime));
+    }
 
-        public Task WaitForFirstImageProviderRequestAsync()
-            => firstImageProviderRequest.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        public void ReleaseFirstImageProviderRequest()
-            => releaseFirstImageProviderRequest.TrySetResult();
-
-        public async Task<AgentReferenceDataSnapshot> GetAsync(
-            AgentReferenceDataRequest request,
-            CancellationToken cancellationToken = default)
+    private static object CreateService(IServiceProvider serviceProvider, ServiceDescriptor descriptor)
+    {
+        if (descriptor.ImplementationInstance is not null)
         {
-            if (request.ProviderPurpose == ProviderProfilePurpose.ImageGeneration &&
-                Interlocked.Increment(ref imageProviderRequestCount) == 1)
+            return descriptor.ImplementationInstance;
+        }
+
+        if (descriptor.ImplementationFactory is not null)
+        {
+            return descriptor.ImplementationFactory(serviceProvider);
+        }
+
+        if (descriptor.ImplementationType is not null)
+        {
+            return ActivatorUtilities.GetServiceOrCreateInstance(
+                serviceProvider,
+                descriptor.ImplementationType);
+        }
+
+        throw new InvalidOperationException(
+            $"Service descriptor for '{descriptor.ServiceType}' does not expose an implementation.");
+    }
+
+    private sealed class DelayedFirstDbContextFactory(
+        IDbContextFactory<AppDbContext> innerFactory) : IDbContextFactory<AppDbContext>
+    {
+        private readonly TaskCompletionSource firstDelayedRequest = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource releaseFirstDelayedRequest = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private int armed;
+        private int delayedRequestCount;
+
+        public void Arm()
+            => Interlocked.Exchange(ref armed, 1);
+
+        public Task WaitForFirstDelayedRequestAsync()
+            => firstDelayedRequest.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        public void ReleaseFirstDelayedRequest()
+            => releaseFirstDelayedRequest.TrySetResult();
+
+        public AppDbContext CreateDbContext()
+            => innerFactory.CreateDbContext();
+
+        public async Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        {
+            if (Volatile.Read(ref armed) != 0 &&
+                Interlocked.Increment(ref delayedRequestCount) == 1)
             {
-                firstImageProviderRequest.TrySetResult();
-                await releaseFirstImageProviderRequest.Task.WaitAsync(cancellationToken);
+                firstDelayedRequest.TrySetResult();
+                await releaseFirstDelayedRequest.Task.WaitAsync(cancellationToken);
             }
 
-            return new AgentReferenceDataSnapshot(
-                request.Sections,
-                [],
-                [],
-                new Dictionary<Guid, ProviderProfile>(),
-                DateTimeOffset.UtcNow,
-                TimeSpan.Zero);
+            return await innerFactory.CreateDbContextAsync(cancellationToken);
         }
     }
 }

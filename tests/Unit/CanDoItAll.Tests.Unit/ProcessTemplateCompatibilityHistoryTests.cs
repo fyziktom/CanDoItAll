@@ -733,8 +733,14 @@ public sealed class ProcessTemplateCompatibilityHistoryTests
     public void Shipped_artifact_templates_declare_semantic_acceptance_contract()
     {
         var root = ProcessTemplatePackLoader.FindPackRoot();
-        var files = Directory.GetFiles(Path.Combine(root, "processes"), "*.json", SearchOption.AllDirectories)
-            .Where(file => file.Contains($"{Path.DirectorySeparatorChar}artifacts{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        var files = Directory.GetFiles(
+                Path.Combine(root, "processes"),
+                "*.json",
+                SearchOption.AllDirectories)
+            .Where(file => string.Equals(
+                Path.GetFileName(Path.GetDirectoryName(file)),
+                "artifacts",
+                StringComparison.Ordinal))
             .ToArray();
 
         Assert.Equal(20, files.Length);

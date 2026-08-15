@@ -39,7 +39,8 @@ internal sealed class DatabaseProfileLlmChatRuntimeLease : ILlmChatRuntimeLease
     private readonly IDatabaseRuntimeState runtimeState;
     private readonly IDatabaseSwitchNotificationService notificationService;
     private readonly CancellationTokenSource cancellationSource;
-    private int disposed;
+    private readonly object lifecycleGate = new();
+    private bool disposed;
 
     public DatabaseProfileLlmChatRuntimeLease(
         LlmChatRuntimeIdentity identity,
@@ -73,17 +74,31 @@ internal sealed class DatabaseProfileLlmChatRuntimeLease : ILlmChatRuntimeLease
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        lock (lifecycleGate)
         {
-            return;
-        }
+            if (disposed)
+            {
+                return;
+            }
 
-        notificationService.Changed -= OnProfileChanged;
-        cancellationSource.Dispose();
+            disposed = true;
+            notificationService.Changed -= OnProfileChanged;
+            cancellationSource.Dispose();
+        }
     }
 
     private void OnProfileChanged(object? sender, DatabaseProfileChangedNotification notification)
-        => cancellationSource.Cancel();
+    {
+        lock (lifecycleGate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            cancellationSource.Cancel();
+        }
+    }
 }
 
 internal static class LlmChatRuntimeFence
