@@ -212,15 +212,18 @@ public sealed class LlmChatExecutionLeaseTests
             HeartbeatInterval = TimeSpan.FromMilliseconds(100),
             LeaseDuration = TimeSpan.FromSeconds(1)
         };
+        var unitOfWork = new InlineLlmChatUnitOfWork();
+        var scope = new LlmChatOperationScopeAccessor();
         return new LeaseTestContext(
             operationId,
             operations,
             time,
             new LlmChatExecutionLeaseService(
                 operations,
-                new InlineLlmChatUnitOfWork(),
+                unitOfWork,
                 options,
-                time));
+                time,
+                LlmChatOperationEventTestFactory.Create(operations, unitOfWork, scope, time)));
     }
 
     private sealed record LeaseTestContext(
@@ -271,6 +274,28 @@ public sealed class LlmChatOperationCancellationTests
         Assert.Equal(LlmChatOperationStatus.Cancelled, completed.Value!.Operation.Status);
         Assert.Null(completed.Value.AssistantMessage);
         Assert.True(completed.Value.Operation.CancellationGeneration > 0);
+    }
+}
+
+public sealed class LlmChatStreamingOperationPipelineTests
+{
+    [Fact]
+    public async Task Partial_provider_failure_compensates_turn_without_committing_assistant_message()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync(failAfterPartial: true);
+        var operationId = LlmChatOperationId.New();
+
+        var result = await harness.SendAndDispatchAsync(
+            harness.CreateSendCommand(operationId, "hello"));
+        var turn = await harness.Engine.InspectTurnAsync(harness.ConversationId, operationId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(LlmChatOperationStatus.Failed, result.Value!.Operation.Status);
+        Assert.Equal(LlmChatErrorCodes.ProviderUnavailable, result.Value.Operation.FailureCode);
+        Assert.NotNull(turn);
+        Assert.False(turn.HasExactActiveTurn);
+        Assert.Null(turn.Assistant);
+        Assert.Equal(1, harness.Engine.AbandonCount);
     }
 }
 
@@ -486,12 +511,15 @@ public sealed class LlmChatInvocationAuditTests
         });
         var invocations = new InMemoryLlmChatInvocationRecordRepository();
         var scope = new LlmChatOperationScopeAccessor();
+        var unitOfWork = new InlineLlmChatUnitOfWork();
+        var timeProvider = new FixedTimeProvider(now.AddSeconds(3));
         var evidence = new LlmChatOperationEvidenceService(
             operations,
             invocations,
-            new InlineLlmChatUnitOfWork(),
+            unitOfWork,
             scope,
-            new FixedTimeProvider(now.AddSeconds(3)));
+            timeProvider,
+            LlmChatOperationEventTestFactory.Create(operations, unitOfWork, scope, timeProvider));
         var failedUsage = new LlmUsage(2, 1);
         var successfulUsage = new LlmUsage(3, 2, 1);
         var inner = new SequenceStreamingInvocationPort(

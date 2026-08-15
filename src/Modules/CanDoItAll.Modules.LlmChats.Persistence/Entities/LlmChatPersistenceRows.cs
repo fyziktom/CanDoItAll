@@ -261,3 +261,34 @@ internal sealed class LlmChatInvocationRecordRow
 
     public string CorrelationId { get; set; } = string.Empty;
 }
+
+internal sealed class LlmChatOperationEventRow
+{
+    public Guid OperationId { get; set; }
+
+    public long Sequence { get; set; }
+
+    public LlmChatOperationEventKind Kind { get; set; }
+
+    public LlmChatOperationStatus? Status { get; set; }
+
+    public int? AttemptOrdinal { get; set; }
+
+    public LlmChatInvocationOutcome? InvocationOutcome { get; set; }
+
+    public LlmStreamingDeliveryMode? DeliveryMode { get; set; }
+
+    public string Text { get; set; } = string.Empty;
+
+    public string Model { get; set; } = string.Empty;
+
+    public string FailureCode { get; set; } = string.Empty;
+
+    public int? InputTokens { get; set; }
+
+    public int? OutputTokens { get; set; }
+
+    public int? CachedInputTokens { get; set; }
+
+    public DateTimeOffset OccurredAtUtc { get; set; }
+}

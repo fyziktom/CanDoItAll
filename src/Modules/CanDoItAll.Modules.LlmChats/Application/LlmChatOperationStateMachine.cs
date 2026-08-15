@@ -44,6 +44,8 @@ public sealed class LlmChatOperationStateMachine(
                     turn.State.UpdatedAtUtc,
                     turn.State.TranscriptRevision,
                     turn.AssistantEntryId,
+                    turn.Model,
+                    turn.Usage,
                     token).ConfigureAwait(false);
             }, cancellationToken).ConfigureAwait(false);
             return await detailsReader.BuildAsync(operation, cancellationToken).ConfigureAwait(false);
@@ -272,6 +274,8 @@ public sealed class LlmChatOperationStateMachine(
                     assistant.CreatedAtUtc,
                     evidence.State.TranscriptRevision,
                     assistant.EntryId,
+                    assistant.Model,
+                    assistant.Usage,
                     cancellationToken).ConfigureAwait(false);
             }
             case LlmChatOperationDecisionKind.CompensateAndFail:

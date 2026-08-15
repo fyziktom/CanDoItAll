@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Runtime.CompilerServices;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.LlmChats.Common;
@@ -10,11 +11,11 @@ namespace CanDoItAll.Modules.LlmChats.Persistence;
 
 public sealed class LlmChatConversationEngine(
     ILlmConversationService conversationService,
-    ILlmInvocationPort invocationPort,
     ILlmChatConversationReadStore readStore,
     CanonicalLlmChatProviderResolver providerResolver,
     ILlmChatRuntimeLeaseFactory runtimeLeaseFactory,
-    ILlmChatOperationScopeAccessor operationScope) : ILlmChatConversationEngine
+    ILlmChatOperationScopeAccessor operationScope,
+    ILlmStreamingInvocationPort? streamingInvocationPort = null) : ILlmChatConversationEngine
 {
     private readonly ILlmChatProviderExecutionResolver executionResolver = providerResolver;
 
@@ -133,15 +134,38 @@ public sealed class LlmChatConversationEngine(
             cancellationToken);
     }
 
-    public Task<LlmInvocationResult> InvokeTurnAsync(
+    public async IAsyncEnumerable<LlmStreamingUpdate> StreamTurnAsync(
         LlmConversationTurnAdmission admission,
-        CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(admission);
-        return ExecuteAsync(
-            new LlmChatOperationId(admission.UserEntry.TurnId),
-            token => invocationPort.InvokeAsync(admission.InvocationRequest, token),
-            cancellationToken);
+        var streamingPort = streamingInvocationPort
+            ?? throw new InvalidOperationException("An LLM Chat streaming invocation port is required.");
+        if (operationScope.Current is not null)
+        {
+            await foreach (var update in streamingPort
+                .StreamAsync(admission.InvocationRequest, cancellationToken)
+                .ConfigureAwait(false))
+            {
+                yield return update;
+            }
+
+            yield break;
+        }
+
+        var operationId = new LlmChatOperationId(admission.UserEntry.TurnId);
+        await using var lease = await runtimeLeaseFactory.AcquireAsync(cancellationToken).ConfigureAwait(false);
+        EnsureCurrent(lease);
+        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity));
+        await foreach (var update in streamingPort
+            .StreamAsync(admission.InvocationRequest, lease.CancellationToken)
+            .ConfigureAwait(false))
+        {
+            EnsureCurrent(lease);
+            yield return update;
+        }
+
+        EnsureCurrent(lease);
     }
 
     public Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(

@@ -12,6 +12,7 @@ public sealed class LlmChatOperationExecutor(
     ILlmChatExecutionLeaseHeartbeatStore heartbeatStore,
     ILlmChatOperationCancellationRegistry cancellationRegistry,
     ILlmChatOperationScopeAccessor operationScope,
+    LlmChatStreamingPipeline streamingPipeline,
     LlmChatOperationStateMachine stateMachine,
     LlmChatExecutionLeaseOptions options,
     TimeProvider timeProvider,
@@ -114,8 +115,9 @@ public sealed class LlmChatOperationExecutor(
                 definition,
                 revision,
                 registration.CancellationToken).ConfigureAwait(false);
-            var invocationResult = await conversationEngine.InvokeTurnAsync(
-                admission,
+            var invocationResult = await streamingPipeline.ConsumeAsync(
+                operation.Id,
+                conversationEngine.StreamTurnAsync(admission, registration.CancellationToken),
                 registration.CancellationToken).ConfigureAwait(false);
             await stateMachine.FinalizeSuccessAsync(
                 admission,

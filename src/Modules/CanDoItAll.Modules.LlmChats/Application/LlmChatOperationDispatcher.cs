@@ -10,6 +10,7 @@ public sealed class LlmChatOperationDispatcher(
     LlmChatProfileScopeRunner profileScopeRunner,
     LlmChatExecutionLeaseService leaseService,
     LlmChatOperationExecutor executor,
+    LlmChatOperationEventRetentionService eventRetention,
     LlmChatExecutionLeaseOptions options,
     TimeProvider timeProvider,
     ILogger<LlmChatOperationDispatcher> logger)
@@ -22,6 +23,7 @@ public sealed class LlmChatOperationDispatcher(
             LlmChatOperationId.New(),
             async token =>
             {
+                await eventRetention.ApplyIfDueAsync(token).ConfigureAwait(false);
                 var candidates = await operationReadStore.ListDispatchCandidatesAsync(
                     timeProvider.GetUtcNow(),
                     options.CandidateBatchSize,

@@ -1,3 +1,6 @@
+using System.Text;
+using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,13 +15,14 @@ internal sealed record LlmChatsTransferDocument(
     IReadOnlyList<LlmChatTranscriptRow> Transcripts,
     IReadOnlyList<LlmChatMessageRow> Messages,
     IReadOnlyList<LlmChatOperationRow> Operations,
-    IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords)
+    IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords,
+    IReadOnlyList<LlmChatOperationEventRow> OperationEvents)
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     public int RecordCount =>
         Definitions.Count + Revisions.Count + Tags.Count + Conversations.Count + Transcripts.Count +
-        Messages.Count + Operations.Count + InvocationRecords.Count;
+        Messages.Count + Operations.Count + InvocationRecords.Count + OperationEvents.Count;
 
     public static async Task<LlmChatsTransferDocument> LoadAsync(
         DbContext dbContext,
@@ -32,7 +36,8 @@ internal sealed record LlmChatsTransferDocument(
             await dbContext.Set<LlmChatTranscriptRow>().AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false),
             await dbContext.Set<LlmChatMessageRow>().AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false),
             await dbContext.Set<LlmChatOperationRow>().AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false),
-            await dbContext.Set<LlmChatInvocationRecordRow>().AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false));
+            await dbContext.Set<LlmChatInvocationRecordRow>().AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false),
+            await dbContext.Set<LlmChatOperationEventRow>().AsNoTracking().ToArrayAsync(cancellationToken).ConfigureAwait(false));
 
     public void ValidateForImport()
     {
@@ -49,6 +54,7 @@ internal sealed record LlmChatsTransferDocument(
         EnsureUnique(Messages.Select(row => row.EntryId), "message entry id");
         EnsureUnique(Operations.Select(row => row.Id), "operation id");
         EnsureUnique(InvocationRecords.Select(row => (row.OperationId, row.Ordinal)), "invocation ordinal");
+        EnsureUnique(OperationEvents.Select(row => (row.OperationId, row.Sequence)), "operation event sequence");
 
         var definitionIds = Definitions.Select(row => row.Id).ToHashSet();
         var revisionIds = Revisions.Select(row => (row.DefinitionId, row.Revision)).ToHashSet();
@@ -92,9 +98,19 @@ internal sealed record LlmChatsTransferDocument(
         }
 
         if (Operations.Any(row => !conversationIds.Contains(row.ConversationId)) ||
-            InvocationRecords.Any(row => !operationIds.Contains(row.OperationId)))
+            InvocationRecords.Any(row => !operationIds.Contains(row.OperationId)) ||
+            OperationEvents.Any(row => !operationIds.Contains(row.OperationId)))
         {
             throw new InvalidDataException("An LLM Chat operation or invocation record is detached from its parent.");
+        }
+
+        if (OperationEvents.Any(row => row.Sequence < 1 || !IsValidEvent(row)) ||
+            OperationEvents.GroupBy(row => row.OperationId).Any(group =>
+                group.OrderBy(row => row.Sequence)
+                    .Zip(group.OrderBy(row => row.Sequence).Skip(1), (left, right) => right.Sequence <= left.Sequence)
+                    .Any(invalid => invalid)))
+        {
+            throw new InvalidDataException("An LLM Chat operation contains an invalid event journal.");
         }
 
         if (Operations.Any(row =>
@@ -118,11 +134,13 @@ internal sealed record LlmChatsTransferDocument(
         await dbContext.AddRangeAsync(Messages, cancellationToken).ConfigureAwait(false);
         await dbContext.AddRangeAsync(Operations, cancellationToken).ConfigureAwait(false);
         await dbContext.AddRangeAsync(InvocationRecords, cancellationToken).ConfigureAwait(false);
+        await dbContext.AddRangeAsync(OperationEvents, cancellationToken).ConfigureAwait(false);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task ClearAsync(DbContext dbContext, CancellationToken cancellationToken)
     {
+        await dbContext.Set<LlmChatOperationEventRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await dbContext.Set<LlmChatInvocationRecordRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await dbContext.Set<LlmChatOperationRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await dbContext.Set<LlmChatMessageRow>().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
@@ -140,5 +158,62 @@ internal sealed record LlmChatsTransferDocument(
         {
             throw new InvalidDataException($"The LLM Chats transfer contains a duplicate {label}.");
         }
+    }
+
+    private static bool IsValidEvent(LlmChatOperationEventRow row)
+    {
+        if (!Enum.IsDefined(row.Kind) ||
+            Encoding.UTF8.GetByteCount(row.Text) > 8 * 1024 ||
+            (!string.IsNullOrEmpty(row.FailureCode) &&
+             !row.FailureCode.StartsWith(LlmChatErrorCodes.Prefix, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        var hasUsage = row.InputTokens is not null && row.OutputTokens is not null;
+        return row.Kind switch
+        {
+            LlmChatOperationEventKind.StateChanged =>
+                row.Status is { } status &&
+                row.AttemptOrdinal is null &&
+                row.InvocationOutcome is null &&
+                row.DeliveryMode is null &&
+                row.Text.Length == 0 &&
+                (status == LlmChatOperationStatus.Succeeded
+                    ? row.Model.Length > 0 && hasUsage && row.FailureCode.Length == 0
+                    : status is LlmChatOperationStatus.Failed or LlmChatOperationStatus.Cancelled
+                        ? row.Model.Length == 0 && hasUsage && row.FailureCode.Length > 0
+                        : status == LlmChatOperationStatus.RecoveryRequired
+                            ? row.Model.Length == 0 && !hasUsage && row.FailureCode.Length > 0
+                        : row.Model.Length == 0 && !hasUsage && row.FailureCode.Length == 0),
+            LlmChatOperationEventKind.AttemptStarted =>
+                row.Status is null &&
+                row.AttemptOrdinal > 0 &&
+                row.InvocationOutcome is null &&
+                row.DeliveryMode is not null &&
+                row.Text.Length == 0 &&
+                row.Model.Length > 0 &&
+                row.FailureCode.Length == 0 &&
+                !hasUsage,
+            LlmChatOperationEventKind.AttemptFinished =>
+                row.Status is null &&
+                row.AttemptOrdinal > 0 &&
+                row.InvocationOutcome is { } outcome &&
+                row.DeliveryMode is null &&
+                row.Text.Length == 0 &&
+                row.Model.Length == 0 &&
+                hasUsage &&
+                ((outcome == LlmChatInvocationOutcome.Succeeded) == (row.FailureCode.Length == 0)),
+            LlmChatOperationEventKind.TextDelta =>
+                row.Status is null &&
+                row.AttemptOrdinal > 0 &&
+                row.InvocationOutcome is null &&
+                row.DeliveryMode is null &&
+                row.Text.Length > 0 &&
+                row.Model.Length == 0 &&
+                row.FailureCode.Length == 0 &&
+                !hasUsage,
+            _ => false
+        };
     }
 }

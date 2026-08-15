@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -21,6 +22,7 @@ internal sealed class LlmChatOperationConfiguration : IEntityTypeConfiguration<L
         builder.HasIndex(row => new { row.ConversationId, row.StartedAtUtc });
         builder.HasIndex(row => new { row.Status, row.StartedAtUtc });
         builder.HasIndex(row => new { row.Status, row.LeaseExpiresAtUtc, row.StartedAtUtc });
+        builder.HasIndex(row => new { row.Status, row.CompletedAtUtc });
     }
 }
 
@@ -39,5 +41,26 @@ internal sealed class LlmChatInvocationRecordConfiguration : IEntityTypeConfigur
             .HasForeignKey(row => row.OperationId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(row => new { row.ProviderProfileId, row.StartedAtUtc });
+    }
+}
+
+internal sealed class LlmChatOperationEventConfiguration : IEntityTypeConfiguration<LlmChatOperationEventRow>
+{
+    public void Configure(EntityTypeBuilder<LlmChatOperationEventRow> builder)
+    {
+        builder.ToTable("LlmChats_OperationEvents");
+        builder.HasKey(row => new { row.OperationId, row.Sequence });
+        builder.Property(row => row.Text).HasMaxLength(8 * 1024).IsRequired();
+        builder.Property(row => row.Model)
+            .HasMaxLength(LlmChatOperationStateChangedEvent.MaximumModelLength)
+            .IsRequired();
+        builder.Property(row => row.FailureCode)
+            .HasMaxLength(LlmChatOperationStateChangedEvent.MaximumFailureCodeLength)
+            .IsRequired();
+        builder.HasOne<LlmChatOperationRow>()
+            .WithMany()
+            .HasForeignKey(row => row.OperationId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(row => row.OccurredAtUtc);
     }
 }

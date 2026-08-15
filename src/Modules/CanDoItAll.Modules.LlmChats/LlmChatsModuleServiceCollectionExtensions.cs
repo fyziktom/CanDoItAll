@@ -12,11 +12,19 @@ public static class LlmChatsModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(new LlmChatExecutionLeaseOptions());
+        var streamingOptions = new LlmChatStreamingOptions();
+        streamingOptions.Validate();
+        services.TryAddSingleton(streamingOptions);
+        services.TryAddSingleton<ILlmChatOperationEventSignal, LlmChatOperationEventSignal>();
+        services.TryAddSingleton<LlmChatOperationEventRetentionSchedule>();
         services.TryAddSingleton<LlmChatOperationDispatchSignal>();
         services.TryAddSingleton<ILlmChatOperationDispatchSignal>(provider =>
             provider.GetRequiredService<LlmChatOperationDispatchSignal>());
         services.TryAddSingleton<ILlmChatOperationCancellationRegistry, LlmChatOperationCancellationRegistry>();
         services.AddScoped<ILlmChatOperationEvidenceSink, LlmChatOperationEvidenceService>();
+        services.AddScoped<LlmChatOperationEventJournal>();
+        services.AddScoped<LlmChatStreamingPipeline>();
+        services.AddScoped<LlmChatOperationEventRetentionService>();
         services.AddScoped<LlmChatProfileScopeRunner>();
         services.AddScoped<LlmChatOperationAdmissionService>();
         services.AddScoped<LlmChatOperationStateMachine>();

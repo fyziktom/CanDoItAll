@@ -27,72 +27,119 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
             capabilityResolver.ResolveProviderDefaultThinkingEffort(request.Provider, request.Model);
         LlmStreamingAttemptStarted? activeAttempt = null;
         Exception? streamFailure = null;
-        await using (var enumerator = inner.StreamAsync(request, cancellationToken)
-            .GetAsyncEnumerator(cancellationToken))
+        try
         {
-            while (true)
+            await using (var enumerator = inner.StreamAsync(request, cancellationToken)
+                .GetAsyncEnumerator(cancellationToken))
             {
-                bool moved;
-                try
+                while (true)
                 {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    bool moved;
+                    try
+                    {
+                        moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception exception)
+                    {
+                        streamFailure = exception;
+                        break;
+                    }
+
+                    if (!moved)
+                    {
+                        break;
+                    }
+
+                    var update = enumerator.Current;
+                    switch (update)
+                    {
+                        case LlmStreamingAttemptStarted started:
+                            activeAttempt = started;
+                            await evidenceSink.MarkProviderDispatchStartedAsync(
+                                operationId,
+                                started,
+                                cancellationToken).ConfigureAwait(false);
+                            break;
+                        case LlmStreamingCompleted completed:
+                            await RecordAsync(
+                                request,
+                                operationId,
+                                requestedEffort,
+                                effectiveEffort,
+                                completed.AttemptOrdinal,
+                                completed.AttemptUsage,
+                                LlmChatInvocationOutcome.Succeeded,
+                                string.Empty,
+                                RequireStartedAt(activeAttempt, completed.AttemptOrdinal),
+                                completed.CompletedAtUtc).ConfigureAwait(false);
+                            activeAttempt = null;
+                            break;
+                        case LlmStreamingFailed failed:
+                            await RecordAsync(
+                                request,
+                                operationId,
+                                requestedEffort,
+                                effectiveEffort,
+                                failed.AttemptOrdinal,
+                                failed.AttemptUsage,
+                                LlmChatInvocationOutcome.Failed,
+                                AuditedLlmChatInvocationPort.MapFailureCode(failed.FailureKind),
+                                RequireStartedAt(activeAttempt, failed.AttemptOrdinal),
+                                failed.CompletedAtUtc).ConfigureAwait(false);
+                            activeAttempt = null;
+                            break;
+                    }
+
+                    yield return update;
                 }
-                catch (Exception exception)
+            }
+
+            if (streamFailure is OperationCanceledException)
+            {
+                if (activeAttempt is not null)
                 {
-                    streamFailure = exception;
-                    break;
+                    await RecordAsync(
+                        request,
+                        operationId,
+                        requestedEffort,
+                        effectiveEffort,
+                        activeAttempt.AttemptOrdinal,
+                        LlmUsage.Zero,
+                        LlmChatInvocationOutcome.Cancelled,
+                        LlmChatErrorCodes.Cancelled,
+                        activeAttempt.StartedAtUtc,
+                        timeProvider.GetUtcNow()).ConfigureAwait(false);
+                    activeAttempt = null;
                 }
 
-                if (!moved)
-                {
-                    break;
-                }
+                throw streamFailure;
+            }
 
-                var update = enumerator.Current;
-                switch (update)
-                {
-                    case LlmStreamingAttemptStarted started:
-                        activeAttempt = started;
-                        await evidenceSink.MarkProviderDispatchStartedAsync(
-                            operationId,
-                            started.StartedAtUtc,
-                            cancellationToken).ConfigureAwait(false);
-                        break;
-                    case LlmStreamingCompleted completed:
-                        await RecordAsync(
-                            request,
-                            operationId,
-                            requestedEffort,
-                            effectiveEffort,
-                            completed.AttemptOrdinal,
-                            completed.AttemptUsage,
-                            LlmChatInvocationOutcome.Succeeded,
-                            string.Empty,
-                            RequireStartedAt(activeAttempt, completed.AttemptOrdinal),
-                            completed.CompletedAtUtc).ConfigureAwait(false);
-                        activeAttempt = null;
-                        break;
-                    case LlmStreamingFailed failed:
-                        await RecordAsync(
-                            request,
-                            operationId,
-                            requestedEffort,
-                            effectiveEffort,
-                            failed.AttemptOrdinal,
-                            failed.AttemptUsage,
-                            LlmChatInvocationOutcome.Failed,
-                            AuditedLlmChatInvocationPort.MapFailureCode(failed.FailureKind),
-                            RequireStartedAt(activeAttempt, failed.AttemptOrdinal),
-                            failed.CompletedAtUtc).ConfigureAwait(false);
-                        activeAttempt = null;
-                        break;
-                }
-
-                yield return update;
+            if (activeAttempt is not null)
+            {
+                var completedAtUtc = timeProvider.GetUtcNow();
+                await RecordAsync(
+                    request,
+                    operationId,
+                    requestedEffort,
+                    effectiveEffort,
+                    activeAttempt.AttemptOrdinal,
+                    LlmUsage.Zero,
+                    LlmChatInvocationOutcome.Failed,
+                    LlmChatErrorCodes.ProviderUnavailable,
+                    activeAttempt.StartedAtUtc,
+                    completedAtUtc).ConfigureAwait(false);
+                var failedAttemptOrdinal = activeAttempt.AttemptOrdinal;
+                activeAttempt = null;
+                yield return new LlmStreamingFailed(
+                    failedAttemptOrdinal,
+                    LlmInvocationFailureKind.ProviderFailure,
+                    LlmUsage.Zero,
+                    false,
+                    completedAtUtc);
             }
         }
-
-        if (streamFailure is OperationCanceledException)
+        finally
         {
             if (activeAttempt is not null)
             {
@@ -103,35 +150,15 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                     effectiveEffort,
                     activeAttempt.AttemptOrdinal,
                     LlmUsage.Zero,
-                    LlmChatInvocationOutcome.Cancelled,
-                    LlmChatErrorCodes.Cancelled,
+                    cancellationToken.IsCancellationRequested
+                        ? LlmChatInvocationOutcome.Cancelled
+                        : LlmChatInvocationOutcome.Failed,
+                    cancellationToken.IsCancellationRequested
+                        ? LlmChatErrorCodes.Cancelled
+                        : LlmChatErrorCodes.ProviderUnavailable,
                     activeAttempt.StartedAtUtc,
                     timeProvider.GetUtcNow()).ConfigureAwait(false);
             }
-
-            throw streamFailure;
-        }
-
-        if (activeAttempt is not null)
-        {
-            var completedAtUtc = timeProvider.GetUtcNow();
-            await RecordAsync(
-                request,
-                operationId,
-                requestedEffort,
-                effectiveEffort,
-                activeAttempt.AttemptOrdinal,
-                LlmUsage.Zero,
-                LlmChatInvocationOutcome.Failed,
-                LlmChatErrorCodes.ProviderUnavailable,
-                activeAttempt.StartedAtUtc,
-                completedAtUtc).ConfigureAwait(false);
-            yield return new LlmStreamingFailed(
-                activeAttempt.AttemptOrdinal,
-                LlmInvocationFailureKind.ProviderFailure,
-                LlmUsage.Zero,
-                false,
-                completedAtUtc);
         }
     }
 

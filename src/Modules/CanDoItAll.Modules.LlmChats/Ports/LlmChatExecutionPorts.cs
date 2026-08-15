@@ -88,7 +88,7 @@ public interface ILlmChatConversationEngine
         LlmChatDefinitionRevision definitionRevision,
         CancellationToken cancellationToken = default);
 
-    Task<LlmInvocationResult> InvokeTurnAsync(
+    IAsyncEnumerable<LlmStreamingUpdate> StreamTurnAsync(
         LlmConversationTurnAdmission admission,
         CancellationToken cancellationToken = default);
 

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Ports;
@@ -9,7 +10,8 @@ public sealed class LlmChatOperationEvidenceService(
     ILlmChatInvocationRecordRepository invocationRepository,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatOperationScopeAccessor operationScope,
-    TimeProvider timeProvider) : ILlmChatOperationEvidenceSink
+    TimeProvider timeProvider,
+    LlmChatOperationEventJournal eventJournal) : ILlmChatOperationEvidenceSink
 {
     private const int MaximumConcurrencyAttempts = 4;
 
@@ -20,16 +22,19 @@ public sealed class LlmChatOperationEvidenceService(
         => UpdateAsync(
             operationId,
             operation => LlmChatOperationTransitions.MarkTurnAdmitted(operation, admittedAtUtc),
+            null,
             cancellationToken);
 
     public Task<LlmChatOperation> MarkProviderDispatchStartedAsync(
         LlmChatOperationId operationId,
-        DateTimeOffset startedAtUtc,
+        LlmStreamingAttemptStarted attempt,
         CancellationToken cancellationToken = default)
         => UpdateAsync(
             operationId,
-            operation => LlmChatOperationTransitions.MarkProviderDispatchStarted(operation, startedAtUtc),
-            cancellationToken);
+            operation => LlmChatOperationTransitions.MarkProviderDispatchStarted(operation, attempt.StartedAtUtc),
+            (operation, token) => eventJournal.AppendAttemptStartedAsync(operation.Id, attempt, token),
+            cancellationToken,
+            appendWhenUnchanged: true);
 
     public async Task<LlmChatOperation> RecordInvocationAsync(
         LlmChatInvocationRecord record,
@@ -54,6 +59,8 @@ public sealed class LlmChatOperationEvidenceService(
                 }
 
                 await invocationRepository.AppendAsync(record, transactionCancellationToken).ConfigureAwait(false);
+                await eventJournal.AppendAttemptFinishedAsync(record, transactionCancellationToken)
+                    .ConfigureAwait(false);
                 return await RequireAsync(record.OperationId, transactionCancellationToken).ConfigureAwait(false);
             }, cancellationToken).ConfigureAwait(false);
             if (updated is not null)
@@ -70,6 +77,8 @@ public sealed class LlmChatOperationEvidenceService(
         DateTimeOffset completedAtUtc,
         long resultingTranscriptRevision,
         Guid assistantEntryId,
+        string model,
+        LlmUsage usage,
         CancellationToken cancellationToken = default)
         => UpdateAsync(
             operationId,
@@ -78,6 +87,7 @@ public sealed class LlmChatOperationEvidenceService(
                 completedAtUtc,
                 resultingTranscriptRevision,
                 assistantEntryId),
+            (operation, token) => eventJournal.AppendStateChangedAsync(operation, model, usage, token),
             cancellationToken);
 
     public Task<LlmChatOperation> RequestCancellationAsync(
@@ -87,6 +97,7 @@ public sealed class LlmChatOperationEvidenceService(
         => UpdateAsync(
             operationId,
             operation => LlmChatOperationTransitions.RequestCancellation(operation, requestedAtUtc),
+            (operation, token) => eventJournal.AppendStateChangedAsync(operation, cancellationToken: token),
             cancellationToken);
 
     public Task<LlmChatOperation> CompleteCancellationAsync(
@@ -96,6 +107,7 @@ public sealed class LlmChatOperationEvidenceService(
         => UpdateAsync(
             operationId,
             operation => LlmChatOperationTransitions.CompleteCancellation(operation, completedAtUtc),
+            StateEventAppender(),
             cancellationToken);
 
     public Task<LlmChatOperation> CompleteFailureAsync(
@@ -106,6 +118,7 @@ public sealed class LlmChatOperationEvidenceService(
         => UpdateAsync(
             operationId,
             operation => LlmChatOperationTransitions.CompleteFailure(operation, completedAtUtc, failureCode),
+            StateEventAppender(),
             cancellationToken);
 
     public Task<LlmChatOperation> RequireRecoveryAsync(
@@ -115,12 +128,28 @@ public sealed class LlmChatOperationEvidenceService(
         => UpdateAsync(
             operationId,
             operation => LlmChatOperationTransitions.RequireRecovery(operation, failureCode),
+            (operation, token) => eventJournal.AppendStateChangedAsync(
+                operation,
+                cancellationToken: token),
             cancellationToken);
+
+    private Func<LlmChatOperation, CancellationToken, Task<LlmChatOperationEvent>> StateEventAppender()
+        => async (operation, token) =>
+        {
+            var records = await invocationRepository.ListAsync(operation.Id, token).ConfigureAwait(false);
+            var usage = records.Aggregate(LlmUsage.Zero, (total, record) => total.Add(record.Usage));
+            return await eventJournal.AppendStateChangedAsync(
+                operation,
+                usage: usage,
+                cancellationToken: token).ConfigureAwait(false);
+        };
 
     private async Task<LlmChatOperation> UpdateAsync(
         LlmChatOperationId operationId,
         Func<LlmChatOperation, LlmChatOperation> transition,
-        CancellationToken cancellationToken)
+        Func<LlmChatOperation, CancellationToken, Task<LlmChatOperationEvent>>? appendEvent,
+        CancellationToken cancellationToken,
+        bool appendWhenUnchanged = false)
     {
         for (var attempt = 1; attempt <= MaximumConcurrencyAttempts; attempt++)
         {
@@ -130,6 +159,11 @@ public sealed class LlmChatOperationEvidenceService(
                 var transitioned = transition(current);
                 if (ReferenceEquals(transitioned, current) || transitioned == current)
                 {
+                    if (appendWhenUnchanged && appendEvent is not null)
+                    {
+                        await appendEvent(current, transactionCancellationToken).ConfigureAwait(false);
+                    }
+
                     return current;
                 }
 
@@ -139,6 +173,11 @@ public sealed class LlmChatOperationEvidenceService(
                         transactionCancellationToken).ConfigureAwait(false))
                 {
                     return null;
+                }
+
+                if (appendEvent is not null)
+                {
+                    await appendEvent(transitioned, transactionCancellationToken).ConfigureAwait(false);
                 }
 
                 return await RequireAsync(operationId, transactionCancellationToken).ConfigureAwait(false);

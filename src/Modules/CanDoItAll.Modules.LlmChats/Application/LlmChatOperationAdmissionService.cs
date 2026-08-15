@@ -16,7 +16,8 @@ public sealed class LlmChatOperationAdmissionService(
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatConversationEngine conversationEngine,
     ILlmChatOperationEvidenceSink evidenceSink,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    LlmChatOperationEventJournal eventJournal)
 {
     internal Task<Result<LlmChatSendAdmission>> AdmitAsync(
         SendLlmChatTurnCommand command,
@@ -93,6 +94,9 @@ public sealed class LlmChatOperationAdmissionService(
                     ? Result<LlmChatSendAdmission>.Success(new(operationAdmission.Operation, false))
                     : Result<LlmChatSendAdmission>.Failure(LlmChatErrors.OperationIdConflict());
             }
+
+            await eventJournal.AppendStateChangedAsync(operationAdmission.Operation, cancellationToken: token)
+                .ConfigureAwait(false);
 
             await conversationEngine.AdmitTurnAsync(
                 conversation.Id,

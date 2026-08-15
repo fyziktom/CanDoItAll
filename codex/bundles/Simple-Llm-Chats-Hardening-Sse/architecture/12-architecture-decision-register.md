@@ -41,3 +41,17 @@ enforce bounded `Take` operations before materialization. `ILlmConversationTurnS
 turn boundary; its EF adapter reads state, system entries, and only the newest bounded non-system range.
 Web owns opaque cursor transport, not ordering policy. Command repositories no longer expose collection
 queries, and no second persistence truth was introduced.
+
+## SB08 implementation record
+
+The operation event journal is an append-only child of the durable operation and assigns each sequence
+under the operation row lock. State, attempt, transcript, and terminal evidence share the existing
+scoped unit of work; local stream wakeups are published only after the outer commit. Text deltas require
+the current execution lease, are UTF-8 bounded, and flush on size, natural boundary, or the configured
+time window. They remain replay evidence and become canonical transcript content only when terminal
+success commits.
+
+Database transfer schema version 5 includes operation events because they are retained durable audit and
+replay data. Import validates parent ownership, sequence uniqueness, event variants, bounded UTF-8 text,
+and stable redacted failure codes. Cleanup deletes only journals belonging to terminal operations older
+than the configured retention boundary; active and nonterminal journals are never removed.

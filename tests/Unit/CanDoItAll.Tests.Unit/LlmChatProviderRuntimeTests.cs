@@ -218,6 +218,10 @@ public sealed class LlmChatRuntimeFenceTests
             return new LlmInvocationResult(request.Model, "must not commit", LlmUsage.Zero);
         });
         var fencedInvocation = new ProfileFencedLlmChatInvocationPort(invocation, state, scope);
+        var fencedStreaming = new ProfileFencedLlmChatStreamingInvocationPort(
+            new DelegatingStreamingInvocationPort((_, token) => BlockUntilCancelled(dispatchStarted, token)),
+            state,
+            scope);
         var generic = new LlmConversationService(
             fencedInvocation,
             store,
@@ -226,14 +230,14 @@ public sealed class LlmChatRuntimeFenceTests
         var provider = ProviderRuntimeTestData.CreateProvider();
         var engine = new LlmChatConversationEngine(
             generic,
-            fencedInvocation,
             UnavailableLlmChatConversationReadStore.Instance,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(
                 ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(initial),
                 state,
                 notifications),
-            scope);
+            scope,
+            fencedStreaming);
         var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
         var revision = ProviderRuntimeTestData.CreateRevision(definitionId, 1, provider, null);
         var definition = ProviderRuntimeTestData.CreateDefinition(
@@ -250,7 +254,7 @@ public sealed class LlmChatRuntimeFenceTests
             revision,
             "hello",
             created.TranscriptRevision);
-        var send = engine.InvokeTurnAsync(admission);
+        var send = DrainAsync(engine.StreamTurnAsync(admission));
         await dispatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         state.Change(initial with { Generation = initial.Generation + 1 });
@@ -265,6 +269,22 @@ public sealed class LlmChatRuntimeFenceTests
         var stored = await innerStore.TryGetAsync(conversationId.Value);
         Assert.NotNull(stored);
         Assert.DoesNotContain(stored.Entries, entry => entry.Role == LlmMessageRole.Assistant);
+    }
+
+    private static async Task DrainAsync(IAsyncEnumerable<LlmStreamingUpdate> updates)
+    {
+        await foreach (var _ in updates)
+        {
+        }
+    }
+
+    private static async IAsyncEnumerable<LlmStreamingUpdate> BlockUntilCancelled(
+        TaskCompletionSource<bool> dispatchStarted,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        dispatchStarted.TrySetResult(true);
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        yield break;
     }
 
     [Fact]
@@ -354,6 +374,7 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             return Task.FromResult(new LlmInvocationResult(request.Model, "answer", new LlmUsage(2, 3)));
         });
         var fenced = new ProfileFencedLlmChatInvocationPort(capture, state, scope);
+        var streaming = new DelegatingStreamingInvocationPort((request, _) => CaptureStream(request));
         var generic = new LlmConversationService(
             fenced,
             new InMemoryLlmConversationStore(),
@@ -361,14 +382,14 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             TimeProvider.System);
         var engine = new LlmChatConversationEngine(
             generic,
-            fenced,
             UnavailableLlmChatConversationReadStore.Instance,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(
                 ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
                 state,
                 notifications),
-            scope);
+            scope,
+            streaming);
         var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
         var revision = ProviderRuntimeTestData.CreateRevision(
             definitionId,
@@ -389,12 +410,55 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             revision,
             "hello",
             created.TranscriptRevision);
-        var result = await engine.InvokeTurnAsync(admission);
+        var result = await CollectResultAsync(engine.StreamTurnAsync(admission));
         await engine.CompleteTurnAsync(admission, result);
 
         Assert.NotNull(ProviderRuntimeTestData.CapturedRequest);
         Assert.Equal("model-fast", ProviderRuntimeTestData.CapturedRequest.Model);
         Assert.Equal(AgentReasoningEffortLevel.None, ProviderRuntimeTestData.CapturedRequest.Settings!.ThinkingEffort);
+    }
+
+    private static async IAsyncEnumerable<LlmStreamingUpdate> CaptureStream(LlmInvocationRequest request)
+    {
+        ProviderRuntimeTestData.CapturedRequest = request;
+        var now = DateTimeOffset.UtcNow;
+        await Task.Yield();
+        yield return new LlmStreamingAttemptStarted(
+            1,
+            request.Provider.Id,
+            request.Provider.Kind,
+            request.Model,
+            LlmStreamingDeliveryMode.Incremental,
+            now);
+        yield return new LlmStreamingTextDelta(1, "answer", 1);
+        yield return new LlmStreamingCompleted(
+            1,
+            request.Model,
+            "stop",
+            new LlmUsage(2, 3),
+            LlmStreamingDeliveryMode.Incremental,
+            now.AddMilliseconds(1));
+    }
+
+    private static async Task<LlmInvocationResult> CollectResultAsync(IAsyncEnumerable<LlmStreamingUpdate> updates)
+    {
+        var text = new System.Text.StringBuilder();
+        LlmStreamingCompleted? completed = null;
+        await foreach (var update in updates)
+        {
+            switch (update)
+            {
+                case LlmStreamingTextDelta delta:
+                    text.Append(delta.Delta);
+                    break;
+                case LlmStreamingCompleted terminal:
+                    completed = terminal;
+                    break;
+            }
+        }
+
+        Assert.NotNull(completed);
+        return new LlmInvocationResult(completed.Model, text.ToString(), completed.Usage);
     }
 
     [Theory]
@@ -419,7 +483,6 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
             TimeProvider.System);
         var engine = new LlmChatConversationEngine(
             generic,
-            invocation,
             UnavailableLlmChatConversationReadStore.Instance,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(

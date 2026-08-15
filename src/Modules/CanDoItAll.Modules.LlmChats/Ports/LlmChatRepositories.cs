@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
@@ -176,6 +177,47 @@ public interface ILlmChatUnitOfWork
     Task<T> ExecuteAsync<T>(
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default);
+
+    void RegisterPostCommit(Action callback);
+}
+
+public sealed record LlmChatOperationEventPage(
+    LlmChatOperation Operation,
+    IReadOnlyList<LlmChatOperationEvent> Events,
+    long? EarliestRetainedSequence);
+
+public interface ILlmChatOperationEventRepository
+{
+    Task<LlmChatOperationEvent> AppendAsync(
+        LlmChatOperationId operationId,
+        Func<long, LlmChatOperationEvent> createEvent,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmChatOperationEventPage?> ListAfterAsync(
+        LlmChatOperationId operationId,
+        long afterSequence,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    Task<int> DeleteExpiredTerminalEventsAsync(
+        DateTimeOffset completedBeforeUtc,
+        int take,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ILlmChatOperationEventSignal
+{
+    void Publish(
+        LlmChatRuntimeIdentity runtimeIdentity,
+        LlmChatOperationId operationId,
+        long sequence);
+
+    ValueTask WaitAsync(
+        LlmChatRuntimeIdentity runtimeIdentity,
+        LlmChatOperationId operationId,
+        long afterSequence,
+        TimeSpan maximumDelay,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ILlmChatCommitFence
@@ -194,7 +236,7 @@ public interface ILlmChatOperationEvidenceSink
 
     Task<LlmChatOperation> MarkProviderDispatchStartedAsync(
         LlmChatOperationId operationId,
-        DateTimeOffset startedAtUtc,
+        LlmStreamingAttemptStarted attempt,
         CancellationToken cancellationToken = default);
 
     Task<LlmChatOperation> RecordInvocationAsync(
@@ -206,6 +248,8 @@ public interface ILlmChatOperationEvidenceSink
         DateTimeOffset completedAtUtc,
         long resultingTranscriptRevision,
         Guid assistantEntryId,
+        string model,
+        LlmUsage usage,
         CancellationToken cancellationToken = default);
 
     Task<LlmChatOperation> RequestCancellationAsync(

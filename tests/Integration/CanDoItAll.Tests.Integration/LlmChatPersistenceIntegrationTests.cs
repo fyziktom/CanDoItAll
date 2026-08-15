@@ -139,6 +139,24 @@ internal sealed class UnfencedDatabaseRuntimeWriteFence : IDatabaseRuntimeWriteF
         => operation(cancellationToken);
 }
 
+internal static class LlmChatIntegrationEventJournalFactory
+{
+    public static LlmChatOperationEventJournal Create(
+        AppDbContext dbContext,
+        ILlmChatOperationRepository operationRepository,
+        ILlmChatUnitOfWork unitOfWork,
+        ILlmChatOperationScopeAccessor operationScope,
+        TimeProvider timeProvider)
+        => new(
+            operationRepository,
+            new EfLlmChatOperationEventRepository(dbContext),
+            unitOfWork,
+            new LlmChatOperationEventSignal(timeProvider),
+            operationScope,
+            new LlmChatStreamingOptions(),
+            timeProvider);
+}
+
 internal sealed class LlmChatTestDbContextFactory(
     LlmChatsPostgreSqlTestDatabase database) : IDbContextFactory<AppDbContext>
 {
@@ -296,12 +314,19 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var operationScope = new LlmChatOperationScopeAccessor();
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
             unitOfWork,
-            new LlmChatOperationScopeAccessor(),
-            TimeProvider.System);
+            operationScope,
+            TimeProvider.System,
+            LlmChatIntegrationEventJournalFactory.Create(
+                dbContext,
+                operationRepository,
+                unitOfWork,
+                operationScope,
+                TimeProvider.System));
         var operation = CreateOperation(seeded.ConversationId, seeded.TurnId, seeded.Now);
         var admitted = Admit(seeded.Document, seeded.TurnId, seeded.Now.AddSeconds(1));
 
@@ -333,12 +358,19 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var operationScope = new LlmChatOperationScopeAccessor();
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
             unitOfWork,
-            new LlmChatOperationScopeAccessor(),
-            TimeProvider.System);
+            operationScope,
+            TimeProvider.System,
+            LlmChatIntegrationEventJournalFactory.Create(
+                dbContext,
+                operationRepository,
+                unitOfWork,
+                operationScope,
+                TimeProvider.System));
         var assistant = new LlmConversationTranscriptEntry(
             Guid.NewGuid(),
             seeded.TurnId,
@@ -364,6 +396,8 @@ public sealed class LlmChatTurnTransactionIntegrationTests
                 completed.UpdatedAtUtc,
                 completed.TranscriptRevision,
                 assistant.EntryId,
+                assistant.Model,
+                assistant.Usage!,
                 token);
             throw new InvalidOperationException("Injected failure after atomic success writes.");
         }));
@@ -382,12 +416,19 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         var invocationRepository = new EfLlmChatInvocationRecordRepository(dbContext);
         var store = new EfLlmConversationStore(dbContext);
         var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var operationScope = new LlmChatOperationScopeAccessor();
         var evidenceSink = new LlmChatOperationEvidenceService(
             operationRepository,
             invocationRepository,
             unitOfWork,
-            new LlmChatOperationScopeAccessor(),
-            TimeProvider.System);
+            operationScope,
+            TimeProvider.System,
+            LlmChatIntegrationEventJournalFactory.Create(
+                dbContext,
+                operationRepository,
+                unitOfWork,
+                operationScope,
+                TimeProvider.System));
         var compensated = seeded.Document with
         {
             TranscriptRevision = seeded.Document.TranscriptRevision + 1,
@@ -535,6 +576,183 @@ public sealed class LlmChatTurnTransactionIntegrationTests
         Guid TurnId,
         DateTimeOffset Now,
         LlmConversationDocument Document);
+}
+
+public sealed class LlmChatOperationEventJournalIntegrationTests
+{
+    [Fact]
+    public async Task Event_signal_occurs_only_after_commit_and_rollback_publishes_nothing()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchateventcommit");
+        await using var dbContext = database.CreateDbContext();
+        var now = DateTimeOffset.UtcNow;
+        var operation = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Pending, now);
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var operationScope = new LlmChatOperationScopeAccessor();
+        var signal = new TrackingLlmChatOperationEventSignal();
+        var journal = new LlmChatOperationEventJournal(
+            operationRepository,
+            new EfLlmChatOperationEventRepository(dbContext),
+            unitOfWork,
+            signal,
+            operationScope,
+            new LlmChatStreamingOptions(),
+            TimeProvider.System);
+        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(
+            operation.Id,
+            new LlmChatRuntimeIdentity(Guid.NewGuid(), "journal-test", 1)));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token =>
+        {
+            await journal.AppendStateChangedAsync(operation, cancellationToken: token);
+            Assert.Equal(0, signal.PublishCount);
+            throw new InvalidOperationException("Injected rollback.");
+        }));
+        Assert.Equal(0, signal.PublishCount);
+        dbContext.ChangeTracker.Clear();
+        Assert.False(await dbContext.Set<LlmChatOperationEventRow>().AnyAsync());
+
+        await unitOfWork.ExecuteAsync(async token =>
+        {
+            await journal.AppendStateChangedAsync(operation, cancellationToken: token);
+            Assert.Equal(0, signal.PublishCount);
+            return true;
+        });
+        Assert.Equal(1, signal.PublishCount);
+
+        await using var secondContext = database.CreateDbContext();
+        var secondRepository = new EfLlmChatOperationEventRepository(secondContext);
+        var replay = await secondRepository.ListAfterAsync(operation.Id, 0, 10);
+        Assert.NotNull(replay);
+        Assert.Single(replay.Events);
+        Assert.Equal(1, replay.Events[0].Sequence);
+    }
+
+    [Fact]
+    public async Task Concurrent_instances_allocate_unique_monotonic_operation_sequences()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchateventsequence");
+        var now = DateTimeOffset.UtcNow;
+        LlmChatOperation operation;
+        await using (var seedContext = database.CreateDbContext())
+        {
+            operation = await SeedOperationAsync(seedContext, LlmChatOperationStatus.Pending, now);
+        }
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
+        {
+            await using var context = database.CreateDbContext();
+            var operationRepository = new EfLlmChatOperationRepository(context);
+            var unitOfWork = new EfLlmChatUnitOfWork(context, UnfencedLlmChatCommitFence.Instance);
+            var scope = new LlmChatOperationScopeAccessor();
+            var journal = LlmChatIntegrationEventJournalFactory.Create(
+                context,
+                operationRepository,
+                unitOfWork,
+                scope,
+                TimeProvider.System);
+            await journal.AppendStateChangedAsync(operation);
+        }));
+
+        await using var readContext = database.CreateDbContext();
+        var replay = await new EfLlmChatOperationEventRepository(readContext)
+            .ListAfterAsync(operation.Id, 0, 20);
+        Assert.NotNull(replay);
+        Assert.Equal(Enumerable.Range(1, 8).Select(value => (long)value), replay.Events.Select(item => item.Sequence));
+    }
+
+    [Fact]
+    public async Task Retention_deletes_only_expired_terminal_journals_and_preserves_active_events()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchateventretention");
+        await using var dbContext = database.CreateDbContext();
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var terminal = await SeedOperationAsync(
+            dbContext,
+            LlmChatOperationStatus.Succeeded,
+            now.AddDays(-8));
+        var active = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Running, now.AddDays(-30));
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var scope = new LlmChatOperationScopeAccessor();
+        var options = new LlmChatStreamingOptions { EventRetention = TimeSpan.FromDays(7) };
+        var journal = new LlmChatOperationEventJournal(
+            operationRepository,
+            new EfLlmChatOperationEventRepository(dbContext),
+            unitOfWork,
+            new LlmChatOperationEventSignal(new FixedIntegrationTimeProvider(now)),
+            scope,
+            options,
+            new FixedIntegrationTimeProvider(now));
+        await journal.AppendStateChangedAsync(terminal, "model", LlmUsage.Zero);
+        await journal.AppendStateChangedAsync(active);
+
+        var deleted = await journal.DeleteExpiredTerminalEventsAsync();
+
+        Assert.Equal(1, deleted);
+        var repository = new EfLlmChatOperationEventRepository(dbContext);
+        Assert.Empty((await repository.ListAfterAsync(terminal.Id, 0, 10))!.Events);
+        Assert.Single((await repository.ListAfterAsync(active.Id, 0, 10))!.Events);
+    }
+
+    private static async Task<LlmChatOperation> SeedOperationAsync(
+        AppDbContext dbContext,
+        LlmChatOperationStatus status,
+        DateTimeOffset now)
+    {
+        var conversationId = Guid.NewGuid();
+        var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);
+        dbContext.Add(LlmConversationPersistenceMapper.ToRow(document));
+        await dbContext.SaveChangesAsync();
+        var operation = new LlmChatOperation(
+            LlmChatOperationId.New(),
+            new LlmChatConversationId(conversationId),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            0,
+            status,
+            now,
+            0)
+        {
+            CompletedAtUtc = status is
+                LlmChatOperationStatus.Succeeded or
+                LlmChatOperationStatus.Failed or
+                LlmChatOperationStatus.Cancelled
+                    ? now
+                    : null,
+            ResultingTranscriptRevision = status == LlmChatOperationStatus.Succeeded ? 1 : null,
+            AssistantEntryId = status == LlmChatOperationStatus.Succeeded ? Guid.NewGuid() : null
+        };
+        await new EfLlmChatOperationRepository(dbContext).AdmitAsync(operation);
+        return operation;
+    }
+
+    private sealed class TrackingLlmChatOperationEventSignal : ILlmChatOperationEventSignal
+    {
+        public int PublishCount { get; private set; }
+
+        public void Publish(
+            LlmChatRuntimeIdentity runtimeIdentity,
+            LlmChatOperationId operationId,
+            long sequence)
+            => PublishCount++;
+
+        public ValueTask WaitAsync(
+            LlmChatRuntimeIdentity runtimeIdentity,
+            LlmChatOperationId operationId,
+            long afterSequence,
+            TimeSpan maximumDelay,
+            CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+    }
+
+    private sealed class FixedIntegrationTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow()
+            => now;
+    }
 }
 
 public sealed class LlmChatCanonicalTitleMigrationIntegrationTests
@@ -1096,12 +1314,19 @@ public sealed class LlmChatOperationDispatchClaimIntegrationTests
             var remoteUnitOfWork = new EfLlmChatUnitOfWork(
                 remoteContext,
                 UnfencedLlmChatCommitFence.Instance);
+            var remoteScope = new LlmChatOperationScopeAccessor();
             var remoteEvidence = new LlmChatOperationEvidenceService(
                 remoteRepository,
                 new EfLlmChatInvocationRecordRepository(remoteContext),
                 remoteUnitOfWork,
-                new LlmChatOperationScopeAccessor(),
-                TimeProvider.System);
+                remoteScope,
+                TimeProvider.System,
+                LlmChatIntegrationEventJournalFactory.Create(
+                    remoteContext,
+                    remoteRepository,
+                    remoteUnitOfWork,
+                    remoteScope,
+                    TimeProvider.System));
             await remoteEvidence.RequestCancellationAsync(operation.Id, DateTimeOffset.UtcNow);
         }
 
@@ -1128,8 +1353,13 @@ public sealed class LlmChatOperationDispatchClaimIntegrationTests
         services.AddSingleton(TimeProvider.System);
         services.AddScoped(_ => database.CreateDbContext());
         services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();
+        services.AddScoped<ILlmChatOperationEventRepository, EfLlmChatOperationEventRepository>();
+        services.AddSingleton<ILlmChatOperationScopeAccessor, LlmChatOperationScopeAccessor>();
+        services.AddSingleton<ILlmChatOperationEventSignal, LlmChatOperationEventSignal>();
+        services.AddSingleton(new LlmChatStreamingOptions());
         services.AddScoped<ILlmChatCommitFence>(_ => UnfencedLlmChatCommitFence.Instance);
         services.AddScoped<ILlmChatUnitOfWork, EfLlmChatUnitOfWork>();
+        services.AddScoped<LlmChatOperationEventJournal>();
         services.AddScoped<LlmChatExecutionLeaseService>();
         return services.BuildServiceProvider();
     }
@@ -1196,7 +1426,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var result = await handler.TransferAsync(context);
 
         Assert.True(result.Success, result.Message);
-        Assert.True(result.RecordsCopied >= 8);
+        Assert.True(result.RecordsCopied >= 9);
         Assert.True(await targetContext.Set<LlmChatDefinitionRow>().AnyAsync(row => row.Id == seeded.DefinitionId));
         Assert.Equal(2, await targetContext.Set<LlmChatDefinitionRevisionRow>().CountAsync(row => row.DefinitionId == seeded.DefinitionId));
         Assert.True(await targetContext.Set<LlmChatDefinitionTagRow>().AnyAsync(row => row.DefinitionId == seeded.DefinitionId));
@@ -1208,6 +1438,12 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         Assert.Equal(seeded.OperationId, audit.OperationId);
         Assert.Equal(AgentReasoningEffortLevel.None, audit.RequestedThinkingEffort);
         Assert.Equal(AgentReasoningEffortLevel.Medium, audit.EffectiveThinkingEffort);
+        var operationEvent = Assert.Single(await targetContext.Set<LlmChatOperationEventRow>()
+            .AsNoTracking()
+            .ToArrayAsync());
+        Assert.Equal(seeded.OperationId, operationEvent.OperationId);
+        Assert.Equal(1, operationEvent.Sequence);
+        Assert.Equal(LlmChatOperationEventKind.StateChanged, operationEvent.Kind);
     }
 
     private static async Task<SeededGraph> SeedCompleteGraphAsync(LlmChatsPostgreSqlTestDatabase database)
@@ -1288,6 +1524,18 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             StartedAtUtc = now,
             CompletedAtUtc = now.AddSeconds(1),
             CorrelationId = "transfer-test"
+        });
+        context.Add(new LlmChatOperationEventRow
+        {
+            OperationId = operationId,
+            Sequence = 1,
+            Kind = LlmChatOperationEventKind.StateChanged,
+            Status = LlmChatOperationStatus.Succeeded,
+            Model = "model",
+            InputTokens = 10,
+            OutputTokens = 4,
+            CachedInputTokens = 2,
+            OccurredAtUtc = now.AddSeconds(1)
         });
         await context.SaveChangesAsync();
         return new SeededGraph(definitionId, conversationId, operationId);

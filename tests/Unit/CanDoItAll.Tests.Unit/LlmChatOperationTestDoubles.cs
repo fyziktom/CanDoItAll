@@ -29,6 +29,16 @@ internal sealed class SequenceStreamingInvocationPort(IReadOnlyList<LlmStreaming
     }
 }
 
+internal sealed class DelegatingStreamingInvocationPort(
+    Func<LlmInvocationRequest, CancellationToken, IAsyncEnumerable<LlmStreamingUpdate>> stream)
+    : ILlmStreamingInvocationPort
+{
+    public IAsyncEnumerable<LlmStreamingUpdate> StreamAsync(
+        LlmInvocationRequest request,
+        CancellationToken cancellationToken = default)
+        => stream(request, cancellationToken);
+}
+
 internal sealed class InMemoryLlmChatOperationRepository : ILlmChatOperationRepository
 {
     private readonly object gate = new();
@@ -259,7 +269,8 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
     ILlmChatOperationEvidenceSink evidence,
     TimeProvider timeProvider,
     bool blockDispatch,
-    bool blockUntilCancelled) : ILlmChatConversationEngine
+    bool blockUntilCancelled,
+    bool failAfterPartial) : ILlmChatConversationEngine
 {
     private readonly Dictionary<LlmChatConversationId, LlmChatConversationEngineState> states = [];
     private readonly Dictionary<LlmChatOperationId, LlmChatConversationTurnEvidence> turnEvidence = [];
@@ -374,14 +385,22 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
             ? admission
             : throw new InvalidOperationException("The admitted turn does not exist."));
 
-    public async Task<LlmInvocationResult> InvokeTurnAsync(
+    public async IAsyncEnumerable<LlmStreamingUpdate> StreamTurnAsync(
         LlmConversationTurnAdmission admission,
-        CancellationToken cancellationToken = default)
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var operationId = new LlmChatOperationId(admission.UserEntry.TurnId);
         SendCount++;
         var now = timeProvider.GetUtcNow();
-        await evidence.MarkProviderDispatchStartedAsync(operationId, now, cancellationToken);
+        var started = new LlmStreamingAttemptStarted(
+            1,
+            admission.InvocationRequest.Provider.Id,
+            admission.InvocationRequest.Provider.Kind,
+            admission.InvocationRequest.Model,
+            LlmStreamingDeliveryMode.Incremental,
+            now);
+        await evidence.MarkProviderDispatchStartedAsync(operationId, started, cancellationToken);
+        yield return started;
         DispatchStarted.TrySetResult(true);
         try
         {
@@ -415,6 +434,33 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
             throw;
         }
 
+        if (failAfterPartial)
+        {
+            yield return new LlmStreamingTextDelta(1, "partial answer", 1);
+            await evidence.RecordInvocationAsync(new LlmChatInvocationRecord(
+                operationId,
+                admission.InvocationRequest.Provider.Id,
+                admission.InvocationRequest.Provider.Kind,
+                admission.InvocationRequest.Provider.Name,
+                admission.InvocationRequest.Model,
+                admission.InvocationRequest.Settings?.ThinkingEffort,
+                admission.InvocationRequest.Settings?.ThinkingEffort ?? AgentReasoningEffortLevel.Low,
+                1,
+                LlmUsage.Zero,
+                LlmChatInvocationOutcome.Failed,
+                LlmChatErrorCodes.ProviderUnavailable,
+                now,
+                timeProvider.GetUtcNow(),
+                operationId.ToString()), cancellationToken);
+            yield return new LlmStreamingFailed(
+                1,
+                LlmInvocationFailureKind.ProviderFailure,
+                LlmUsage.Zero,
+                false,
+                timeProvider.GetUtcNow());
+            yield break;
+        }
+
         var usage = new LlmUsage(2, 1);
         await evidence.RecordInvocationAsync(new LlmChatInvocationRecord(
             operationId,
@@ -431,7 +477,14 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
             now,
             now,
             operationId.ToString()), cancellationToken);
-        return new LlmInvocationResult(admission.InvocationRequest.Model, "answer", usage);
+        yield return new LlmStreamingTextDelta(1, "answer", 1);
+        yield return new LlmStreamingCompleted(
+            1,
+            admission.InvocationRequest.Model,
+            "stop",
+            usage,
+            LlmStreamingDeliveryMode.Incremental,
+            timeProvider.GetUtcNow());
     }
 
     public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
@@ -624,7 +677,8 @@ internal sealed class LlmChatOperationHarness
     public static async Task<LlmChatOperationHarness> CreateAsync(
         bool blockDispatch = false,
         bool blockUntilCancelled = false,
-        bool executorAvailable = true)
+        bool executorAvailable = true,
+        bool failAfterPartial = false)
     {
         var now = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
         var timeProvider = new FixedTimeProvider(now);
@@ -653,17 +707,28 @@ internal sealed class LlmChatOperationHarness
         var invocations = new InMemoryLlmChatInvocationRecordRepository();
         var unitOfWork = new InlineLlmChatUnitOfWork();
         var operationScope = new LlmChatOperationScopeAccessor();
+        var streamingOptions = new LlmChatStreamingOptions();
+        var eventJournal = new LlmChatOperationEventJournal(
+            operations,
+            new InMemoryLlmChatOperationEventRepository(operations),
+            unitOfWork,
+            new NoopLlmChatOperationEventSignal(),
+            operationScope,
+            streamingOptions,
+            timeProvider);
         var evidence = new LlmChatOperationEvidenceService(
             operations,
             invocations,
             unitOfWork,
             operationScope,
-            timeProvider);
+            timeProvider,
+            eventJournal);
         var engine = new EvidenceAwareLlmChatConversationEngine(
             evidence,
             timeProvider,
             blockDispatch,
-            blockUntilCancelled);
+            blockUntilCancelled,
+            failAfterPartial);
         engine.SeedConversation(conversationId);
         var cancellations = new LlmChatOperationCancellationRegistry();
         var details = new LlmChatOperationDetailsReader(
@@ -678,7 +743,8 @@ internal sealed class LlmChatOperationHarness
             unitOfWork,
             engine,
             evidence,
-            timeProvider);
+            timeProvider,
+            eventJournal);
         var stateMachine = new LlmChatOperationStateMachine(
             operations,
             invocations,
@@ -709,6 +775,11 @@ internal sealed class LlmChatOperationHarness
             operations,
             unitOfWork,
             options,
+            timeProvider,
+            eventJournal);
+        var streamingPipeline = new LlmChatStreamingPipeline(
+            eventJournal,
+            streamingOptions,
             timeProvider);
         var executor = new LlmChatOperationExecutor(
             definitions,
@@ -717,6 +788,7 @@ internal sealed class LlmChatOperationHarness
             new InMemoryLlmChatExecutionLeaseHeartbeatStore(operations),
             cancellations,
             operationScope,
+            streamingPipeline,
             stateMachine,
             options,
             timeProvider,
@@ -832,12 +904,15 @@ internal sealed class LlmChatInvocationAuditHarness
         });
         var invocations = new InMemoryLlmChatInvocationRecordRepository();
         var scope = new LlmChatOperationScopeAccessor();
+        var unitOfWork = new InlineLlmChatUnitOfWork();
+        var timeProvider = new FixedTimeProvider(now);
         var evidence = new LlmChatOperationEvidenceService(
             operations,
             invocations,
-            new InlineLlmChatUnitOfWork(),
+            unitOfWork,
             scope,
-            new FixedTimeProvider(now));
+            timeProvider,
+            LlmChatOperationEventTestFactory.Create(operations, unitOfWork, scope, timeProvider));
         var inner = new DelegatingInvocationPort((request, cancellationToken) =>
             Task.FromResult(invoke(request)));
         var port = new AuditedLlmChatInvocationPort(

@@ -23,7 +23,16 @@ public sealed class AuditedLlmChatInvocationPort(
             ?? throw new InvalidOperationException("An LLM Chat operation scope is required for invocation audit.");
         cancellationToken.ThrowIfCancellationRequested();
         var startedAtUtc = timeProvider.GetUtcNow();
-        await evidenceSink.MarkProviderDispatchStartedAsync(operationId, startedAtUtc, cancellationToken)
+        await evidenceSink.MarkProviderDispatchStartedAsync(
+                operationId,
+                new LlmStreamingAttemptStarted(
+                    1,
+                    request.Provider.Id,
+                    request.Provider.Kind,
+                    request.Model,
+                    LlmStreamingDeliveryMode.CompletedFallback,
+                    startedAtUtc),
+                cancellationToken)
             .ConfigureAwait(false);
         var requestedEffort = request.Settings?.ThinkingEffort;
         var effectiveEffort = requestedEffort ??

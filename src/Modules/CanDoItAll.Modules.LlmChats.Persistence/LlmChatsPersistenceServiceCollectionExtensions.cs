@@ -34,6 +34,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.AddScoped<ILlmChatOperationReadStore, EfLlmChatOperationReadStore>();
         services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
+        services.AddScoped<ILlmChatOperationEventRepository, EfLlmChatOperationEventRepository>();
         services.AddScoped<ILlmChatCommitFence, DatabaseProfileLlmChatCommitFence>();
         services.AddSingleton<ILlmChatExecutionLeaseHeartbeatStore,
             DatabaseProfileLlmChatExecutionLeaseHeartbeatStore>();
@@ -58,6 +59,16 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             invocationPort,
             runtimeState,
             operationScope);
+        ILlmStreamingInvocationPort streamingInvocationPort = new AuditedLlmChatStreamingInvocationPort(
+            serviceProvider.GetRequiredService<ILlmStreamingInvocationPort>(),
+            evidenceSink,
+            serviceProvider.GetRequiredService<IProviderModelCapabilityResolver>(),
+            operationScope,
+            serviceProvider.GetRequiredService<TimeProvider>());
+        streamingInvocationPort = new ProfileFencedLlmChatStreamingInvocationPort(
+            streamingInvocationPort,
+            runtimeState,
+            operationScope);
         var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
         var conversationStore = new ProfileFencedLlmConversationStore(
             new EfLlmConversationStore(dbContext),
@@ -72,10 +83,10 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             serviceProvider.GetRequiredService<TimeProvider>());
         return new LlmChatConversationEngine(
             conversationService,
-            invocationPort,
             serviceProvider.GetRequiredService<ILlmChatConversationReadStore>(),
             serviceProvider.GetRequiredService<CanonicalLlmChatProviderResolver>(),
             serviceProvider.GetRequiredService<ILlmChatRuntimeLeaseFactory>(),
-            operationScope);
+            operationScope,
+            streamingInvocationPort);
     }
 }

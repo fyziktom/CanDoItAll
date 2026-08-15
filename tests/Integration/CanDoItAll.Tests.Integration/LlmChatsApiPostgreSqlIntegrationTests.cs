@@ -960,13 +960,19 @@ internal sealed class BarrierLlmChatConversationEngine(
             expectedTranscriptRevision,
             cancellationToken);
 
-    public async Task<LlmInvocationResult> InvokeTurnAsync(
+    public async IAsyncEnumerable<LlmStreamingUpdate> StreamTurnAsync(
         LlmConversationTurnAdmission admission,
-        CancellationToken cancellationToken = default)
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var result = await inner.InvokeTurnAsync(admission, cancellationToken).ConfigureAwait(false);
-        await barrier.WaitForReleaseAsync().ConfigureAwait(false);
-        return result;
+        await foreach (var update in inner.StreamTurnAsync(admission, cancellationToken).ConfigureAwait(false))
+        {
+            if (update is LlmStreamingCompleted)
+            {
+                await barrier.WaitForReleaseAsync().ConfigureAwait(false);
+            }
+
+            yield return update;
+        }
     }
 
     public Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(

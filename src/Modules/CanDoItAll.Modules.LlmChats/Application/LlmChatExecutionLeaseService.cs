@@ -8,7 +8,8 @@ public sealed class LlmChatExecutionLeaseService(
     ILlmChatOperationRepository operationRepository,
     ILlmChatUnitOfWork unitOfWork,
     LlmChatExecutionLeaseOptions options,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    LlmChatOperationEventJournal eventJournal)
 {
     public Task<LlmChatExecutionClaimResult> TryClaimAsync(
         LlmChatOperationId operationId,
@@ -36,6 +37,8 @@ public sealed class LlmChatExecutionLeaseService(
                     operation,
                     LlmChatErrorCodes.OperationRecoveryRequired);
                 await ReplaceRequiredAsync(operation, recovery, token).ConfigureAwait(false);
+                await eventJournal.AppendStateChangedAsync(recovery, cancellationToken: token)
+                    .ConfigureAwait(false);
                 return new LlmChatExecutionClaimResult(recovery, null, Recovered: true);
             }
 
@@ -45,6 +48,12 @@ public sealed class LlmChatExecutionLeaseService(
                 now,
                 now + options.LeaseDuration);
             await ReplaceRequiredAsync(operation, claimed, token).ConfigureAwait(false);
+            if (claimed.Status == LlmChatOperationStatus.Running &&
+                operation.Status != LlmChatOperationStatus.Running)
+            {
+                await eventJournal.AppendStateChangedAsync(claimed, cancellationToken: token)
+                    .ConfigureAwait(false);
+            }
             return new LlmChatExecutionClaimResult(
                 claimed,
                 new LlmChatExecutionLeaseIdentity(claimed.Id, ownerId, claimed.ExecutionEpoch),

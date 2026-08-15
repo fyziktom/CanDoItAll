@@ -4,6 +4,7 @@ using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
+using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Ports;
 using CanDoItAll.SharedKernel;
 
@@ -231,6 +232,101 @@ internal sealed class InlineLlmChatUnitOfWork : ILlmChatUnitOfWork
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default)
         => operation(cancellationToken);
+
+    public void RegisterPostCommit(Action callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        callback();
+    }
+}
+
+internal sealed class InMemoryLlmChatOperationEventRepository(
+    InMemoryLlmChatOperationRepository operations) : ILlmChatOperationEventRepository
+{
+    private readonly Dictionary<LlmChatOperationId, List<LlmChatOperationEvent>> events = [];
+
+    public async Task<LlmChatOperationEvent> AppendAsync(
+        LlmChatOperationId operationId,
+        Func<long, LlmChatOperationEvent> createEvent,
+        CancellationToken cancellationToken = default)
+    {
+        if (await operations.TryGetAsync(operationId, cancellationToken) is null)
+        {
+            throw new InvalidOperationException("The operation does not exist.");
+        }
+
+        var journal = events.GetValueOrDefault(operationId);
+        if (journal is null)
+        {
+            journal = [];
+            events.Add(operationId, journal);
+        }
+
+        var appended = createEvent(journal.Count == 0 ? 1 : checked(journal[^1].Sequence + 1));
+        journal.Add(appended);
+        return appended;
+    }
+
+    public async Task<LlmChatOperationEventPage?> ListAfterAsync(
+        LlmChatOperationId operationId,
+        long afterSequence,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var operation = await operations.TryGetAsync(operationId, cancellationToken);
+        if (operation is null)
+        {
+            return null;
+        }
+
+        var journal = events.GetValueOrDefault(operationId) ?? [];
+        return new LlmChatOperationEventPage(
+            operation,
+            [.. journal.Where(item => item.Sequence > afterSequence).Take(take)],
+            journal.Count == 0 ? null : journal[0].Sequence);
+    }
+
+    public Task<int> DeleteExpiredTerminalEventsAsync(
+        DateTimeOffset completedBeforeUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
+}
+
+internal sealed class NoopLlmChatOperationEventSignal : ILlmChatOperationEventSignal
+{
+    public void Publish(
+        LlmChatRuntimeIdentity runtimeIdentity,
+        LlmChatOperationId operationId,
+        long sequence)
+    {
+    }
+
+    public ValueTask WaitAsync(
+        LlmChatRuntimeIdentity runtimeIdentity,
+        LlmChatOperationId operationId,
+        long afterSequence,
+        TimeSpan maximumDelay,
+        CancellationToken cancellationToken = default)
+        => ValueTask.CompletedTask;
+}
+
+internal static class LlmChatOperationEventTestFactory
+{
+    public static LlmChatOperationEventJournal Create(
+        InMemoryLlmChatOperationRepository operations,
+        ILlmChatUnitOfWork unitOfWork,
+        ILlmChatOperationScopeAccessor operationScope,
+        TimeProvider timeProvider,
+        LlmChatStreamingOptions? options = null)
+        => new(
+            operations,
+            new InMemoryLlmChatOperationEventRepository(operations),
+            unitOfWork,
+            new NoopLlmChatOperationEventSignal(),
+            operationScope,
+            options ?? new LlmChatStreamingOptions(),
+            timeProvider);
 }
 
 internal sealed class StubLlmChatTurnStateRepository(
@@ -339,7 +435,7 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 
-    public Task<LlmInvocationResult> InvokeTurnAsync(
+    public IAsyncEnumerable<LlmStreamingUpdate> StreamTurnAsync(
         LlmConversationTurnAdmission admission,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
