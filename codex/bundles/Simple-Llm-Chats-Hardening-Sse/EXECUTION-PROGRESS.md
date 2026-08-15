@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — SB11 and CP2 complete, SB12 unlocked**
+Bundle state: **Executing — SB12 complete, SB13 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -10,8 +10,8 @@ Bundle state: **Executing — SB11 and CP2 complete, SB12 unlocked**
 | SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
 | SB07–SB10 streaming and API hardening | Completed | Durable streaming/SSE plus exact external-client security contract proven |
 | SB11 focused behavioral proof | Completed | Linux package-mode provider/PostgreSQL/HTTP/SSE proof at `4ec4d2694d980d52936b4679ae676a0624d5c6fb` |
-| SB12 documentation and guards | Ready | CP2 Ready; final cleanup/guard pass only |
-| SB13 final stable gate and CI | Locked | Final work unit only |
+| SB12 documentation and guards | Completed | Source-truth docs and executable boundaries pass at `58265975e868731e25e39d4bf9109f6010d68127` |
+| SB13 final stable gate and CI | Ready | Final work unit only; package-feed prerequisite retained |
 | FINAL release decision | Locked | UI/shared-component bundles remain blocked |
 
 ## Execution rules
@@ -226,3 +226,20 @@ The executor must refresh these values before changing production source.
   blocking errors, unchanged production ownership/direction, and no production source change in SB11
 - proof: `proof/SB11/manifest.md`; `reviews/CP2-STREAMING-API.md`
 - progression: CP2 Ready; SB12 unlocked
+
+## SB12 documentation, guards, and dead-path cleanup
+
+- implementation commit: `58265975e868731e25e39d4bf9109f6010d68127`
+- source audit: no production cleanup remained; the independent canonical transcript context and
+  request-owned provider call had already been removed, and post-commit work is limited to notifying
+  readers after event-journal commit
+- documentation: root/API/testing/module/persistence/migration/architecture source truth now describes
+  durable 202 admission, hosted lease dispatch, replayable SSE, nine tables, and exact authorization/origin
+- handoffs: shared components, UI/floating surface, Project Structure context, and enterprise
+  `LlmChatDeployment` each have a separate named future owner and constraints
+- guards: dependency direction, no agent-execution/tool/skill/MCP leakage, no UI/Razor diff, no dormant
+  deployment fields, server-owned origin, scoped transcript context, hosted dispatch, and shared SSE reuse
+- validation: 181 maintained Markdown files; architecture, SSE, bundle, traceability, test-policy, and
+  diff checks all pass; no production/test source changed, so no affected build or focused test ran
+- proof: `proof/SB12/manifest.md`
+- progression: SB13 Ready; the unpublished Spreadsheet package/feed prerequisite remains mandatory

@@ -30,6 +30,7 @@ listed in `analysis/01-findings-register.md` and then produce fresh proof tied t
 | All prior 19 failures classified | Pending | |
 | CP1 backend hardening Ready | Pending | |
 | CP2 streaming/API Ready | Pass | `reviews/CP2-STREAMING-API.md`; Linux proof at `4ec4d2694d980d52936b4679ae676a0624d5c6fb` |
+| SB12 documentation/scope guards | Pass | `proof/SB12/manifest.md`; implementation `58265975e868731e25e39d4bf9109f6010d68127` |
 | Stable filtered Release gate passed | Pending | |
 | CI portability matrix passed | Pending | |
 | Architecture review passed | Pending | |

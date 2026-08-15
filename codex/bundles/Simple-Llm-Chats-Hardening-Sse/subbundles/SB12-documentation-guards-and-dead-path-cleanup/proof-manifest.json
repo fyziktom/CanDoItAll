@@ -2,68 +2,139 @@
   "schemaVersion": 1,
   "subbundle": "SB12",
   "title": "Documentation, guards, and dead-path cleanup",
-  "state": "Locked",
+  "state": "Completed",
   "proofTier": "Behavioral",
   "repository": "fyziktom/CanDoItAll",
   "branch": "simple-chats",
-  "implementationCommit": "",
-  "dependencyMode": "",
-  "host": "",
-  "database": "",
+  "implementationCommit": "58265975e868731e25e39d4bf9109f6010d68127",
+  "dependencyMode": "documentation and source guards only; no restore, build, or dependency graph change",
+  "host": "Microsoft Windows 10.0.26200 x64; PowerShell 7; Python 3",
+  "database": "not used by SB12; current PostgreSQL behavior is inherited from governed SB11 proof",
   "requirements": [
     "RQ-032",
     "RQ-033",
     "RQ-035"
   ],
-  "commands": [],
-  "sourceAssertions": [],
-  "behavioralCases": [],
-  "negativeCases": [],
+  "commands": [
+    {
+      "command": "./tools/Validation/Test-Documentation.ps1",
+      "exitCode": 0,
+      "result": "Documentation validation passed for 181 maintained Markdown files"
+    },
+    {
+      "command": "python codex/bundles/Simple-Llm-Chats-Hardening-Sse/scripts/check_architecture_boundaries.py --repo-root .",
+      "exitCode": 0,
+      "result": "Implemented LLM Chat architecture boundary checks passed"
+    },
+    {
+      "command": "python codex/bundles/Simple-Llm-Chats-Hardening-Sse/scripts/check_sse_contract.py --repo-root .",
+      "exitCode": 0,
+      "result": "Streaming/SSE source contract check passed"
+    },
+    {
+      "command": "python codex/bundles/Simple-Llm-Chats-Hardening-Sse/scripts/check_test_policy.py --bundle-root codex/bundles/Simple-Llm-Chats-Hardening-Sse",
+      "exitCode": 0,
+      "result": "Test-policy validation passed; SB12 records no test or build command"
+    },
+    {
+      "command": "python codex/bundles/Simple-Llm-Chats-Hardening-Sse/scripts/validate_bundle.py --bundle-root codex/bundles/Simple-Llm-Chats-Hardening-Sse --stage executing",
+      "exitCode": 0,
+      "result": "Bundle validation passed: 14 subbundles and 35 requirements"
+    },
+    {
+      "command": "python codex/bundles/Simple-Llm-Chats-Hardening-Sse/scripts/check_traceability.py --bundle-root codex/bundles/Simple-Llm-Chats-Hardening-Sse",
+      "exitCode": 0,
+      "result": "Traceability passed: 35 requirements and 17 findings"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "No whitespace errors"
+    },
+    {
+      "command": "python codex/bundles/Simple-Llm-Chats-Hardening-Sse/scripts/generate_checksums.py --bundle-root codex/bundles/Simple-Llm-Chats-Hardening-Sse",
+      "exitCode": 0,
+      "result": "Wrote 246 current bundle checksums; all validators passed again afterward"
+    }
+  ],
+  "sourceAssertions": [
+    "SB12 changes no production C# or test source and adds no Razor, shared-component, floating-chat, or Project Structure integration.",
+    "EfLlmConversationStore uses the scoped AppDbContext and contains no IDbContextFactory or CreateDbContextAsync path.",
+    "LlmChatOperationApplicationService signals durable dispatch and contains no direct conversation-engine provider execution.",
+    "Composition registers the hosted dispatcher and Web turn admission returns 202 Accepted.",
+    "Post-commit behavior is limited to waking event readers after committed journal writes; no evidence persistence callback exists.",
+    "LlmChatOperationsApi reuses the sole production ServerSentEventResponseWriter and contains no endpoint-local SSE writer.",
+    "Product and persistence have no forbidden Web/UI/agent-execution/tool/skill/MCP dependency, global generic-conversation activation, production partial, or dormant deployment field.",
+    "HTTP conversation creation accepts no origin and supplies LlmChatConversationOrigin.Api server-side."
+  ],
+  "behavioralCases": [
+    "authoritative API documentation describes durable 202 admission, hosted lease dispatch, status polling, and replayable SSE",
+    "SSE documentation covers committed event IDs, Last-Event-ID/after consistency, gaps, heartbeat, terminal closure, and disconnect independence",
+    "persistence and migration documentation covers nine LLM Chat tables, append-only migrations, model snapshot, retention, and database transfer",
+    "architecture documentation assigns shared components, UI/floating surfaces, Project Structure context, and enterprise channels to separate future owners"
+  ],
+  "negativeCases": [
+    "reviewed feature source contains direct conversationEngine.SendAsync in the request-owned operation service; current source and guard reject it",
+    "reviewed feature source contains IDbContextFactory/CreateDbContextAsync in EfLlmConversationStore; current source and guard reject it",
+    "changed-path guard rejects Razor/UI and floating-agent-chat changes since reviewed feature commit 16b6aa4b60dc88a6134dd6c9c9e634c064ac5847",
+    "deployment-field guard rejects pre-staged tenant, participant, channel, moderation, quota, retention, residency, legal-hold, and handoff fields",
+    "test-policy guard rejects unfiltered Unit/Integration, pre-SB13 solution tests, and forbidden lanes"
+  ],
   "acceptance": [
     {
       "criterion": "No production path uses the independent-context UoW or synchronous request-owned provider execution.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "Current-source guard requires scoped AppDbContext storage plus hosted dispatch/202 admission and rejects the exact shallow markers found at reviewed feature commit 16b6aa4b60dc88a6134dd6c9c9e634c064ac5847."
     },
     {
       "criterion": "No Razor, floating-chat, shared-component, Project Structure context, or UI integration was added.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "The architecture guard scans all production UI files and the complete changed-path set since the reviewed feature baseline; it passes at the implementation commit."
     },
     {
       "criterion": "Executable guards enforce dependency direction and prevent agent/tool/skill/MCP leakage.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "The strengthened guard checks project/source dependency tokens, service location, generic activation, Web persistence leakage, UI files, partials, and reverse provider dependencies."
     },
     {
       "criterion": "Authoritative docs accurately describe asynchronous operation and SSE contracts.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "Root, API, testing, module, persistence, migration, and architecture docs now describe the implemented contract and pass the 181-file documentation validator."
     },
     {
       "criterion": "Future UI, context, and enterprise deployment bundles have explicit ownership handoffs.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "docs/architecture/llm-chats-boundary-and-handoffs.md names four separate owners and constraints without dormant product fields."
     },
     {
       "criterion": "All proof and closure records reference the actual implementation head.",
-      "satisfied": false,
-      "evidence": ""
+      "satisfied": true,
+      "evidence": "SB12 proof, progression, requirements, and traceability reference 58265975e868731e25e39d4bf9109f6010d68127."
     }
   ],
   "architecture": {
-    "owner": "",
-    "dependencyDirection": "",
-    "cycleCheck": "",
-    "partialClassCheck": "",
-    "oldPathRemoval": ""
+    "owner": "Unchanged: product owns durable rules/events, Persistence owns EF/provider adapters, Composition owns hosted dispatch lifetime, and Web owns HTTP/SSE transport",
+    "dependencyDirection": "Guarded product <- persistence and product <- Web composition/transport direction with no Web/UI/agent-execution/tool/skill/MCP reverse dependency",
+    "cycleCheck": "No production source changed; governed SB11 CodeAnalytics snapshot snap-20260815080824-3b5bd776 remains current with zero cycles/blocking errors",
+    "partialClassCheck": "pass; the strengthened guard rejects every production LLM Chat partial class",
+    "oldPathRemoval": "pass; reviewed request-owned provider execution and independent transcript context markers are absent, while replacement dispatcher/scoped-context owners are required"
   },
-  "bugs": [],
-  "deviations": [],
-  "knownGaps": [],
+  "bugs": [
+    "Source-truth API documentation still described inline 200 responses, eight tables, and deferred streaming/multi-instance dispatch after the implementation had changed.",
+    "The prepared architecture guard did not enforce old execution/context removal, complete UI diff, deployment-field absence, server-owned origin, or sole shared-SSE reuse."
+  ],
+  "deviations": [
+    "No affected build or focused test ran because SB12 changed only Markdown and Python guard logic; documentation and source validators are the owning proof and the single broad gate remains reserved for SB13."
+  ],
+  "knownGaps": [
+    "SB13 cold CI restore remains blocked unless CanDoItAll.FileTools.FileInteraction.Spreadsheet 0.1.18 is available on the configured feed or an equivalent reviewed dependency-source fix is committed.",
+    "SB13 owns the one stable filtered solution gate, Windows/Linux/macOS CI matrix, checksum closure, and release decision."
+  ],
   "progression": {
-    "decision": "",
-    "reason": "",
-    "unlocks": []
+    "decision": "Ready",
+    "reason": "Documentation and executable ownership guards pass at 58265975e868731e25e39d4bf9109f6010d68127 with no production/UI change and no test-budget consumption.",
+    "unlocks": [
+      "SB13"
+    ]
   }
 }
