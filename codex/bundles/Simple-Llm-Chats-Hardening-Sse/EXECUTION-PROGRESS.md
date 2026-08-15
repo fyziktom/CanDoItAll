@@ -1,12 +1,12 @@
 # Execution progress
 
-Bundle state: **Executing — SB01 completed, SB02 unlocked**
+Bundle state: **Executing — SB02 completed, SB03 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
 | SB00 baseline sync and proof reconciliation | Completed | `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; focused comparison classified all 19 |
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
-| SB01–SB05 backend hardening | SB02 Ready | SB01 completed at `689f2b5368bf6fdba7fad24dfa6fa4dee9b4abfc`; sequential through SB05 |
+| SB01–SB05 backend hardening | SB03 Ready | SB02 completed at `be36fedb2ce329af6021cd2330eb6162d8ef2db4`; sequential through SB05 |
 | SB06 backend checkpoint | Locked | Must declare CP1 Ready |
 | SB07–SB10 streaming and API hardening | Locked | Sequential after CP1 |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
@@ -59,3 +59,14 @@ The executor must refresh these values before changing production source.
 - architecture: CodeAnalytics `snap-20260815002601-d665d970`, zero cycles/diagnostics/open questions/Error findings
 - proof: `proof/SB01/manifest.md`
 - progression: SB02 Ready
+
+## SB02 atomic turn state machine and recovery
+
+- implementation commit: `be36fedb2ce329af6021cd2330eb6162d8ef2db4`
+- ownership: transactional admission service, state machine, details reader, and pure reducer behind a thin facade
+- protocol: provider I/O outside transactions; admission, success, and exact compensation each commit atomically
+- focused results: old-source cancellation regression 0/1 expected red; final Unit 19/19 plus regression 1/1; PostgreSQL 4/4; real-host API 1/1
+- build/model: affected builds 0 warnings/errors; EF reports no pending model changes
+- architecture: CodeAnalytics `snap-20260815011610-d209545b`, zero cycles/errors/warnings/open questions after splitting the initial 643-line orchestrator
+- proof: `proof/SB02/manifest.md`
+- progression: SB03 Ready

@@ -1,6 +1,6 @@
 # SB02 — Atomic turn state machine and recovery
 
-Status: **Ready**
+Status: **Completed**
 Proof tier: **Governed**  
 Depends on: **SB01**
 
