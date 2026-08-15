@@ -55,3 +55,17 @@ Database transfer schema version 5 includes operation events because they are re
 replay data. Import validates parent ownership, sequence uniqueness, event variants, bounded UTF-8 text,
 and stable redacted failure codes. Cleanup deletes only journals belonging to terminal operations older
 than the configured retention boundary; active and nonterminal journals are never removed.
+
+## SB09 implementation record
+
+Turn admission is an asynchronous command-resource contract: every successful new or replayed request
+returns 202 with one canonical operation Location and status/events/cancel links. The product-owned
+`LlmChatOperationEventStreamSession` captures one runtime profile lease, pages the durable journal, and
+uses the local operation signal only for bounded wake-up latency. It has no Web or provider-dispatch
+dependency. Persistence remains the replay authority.
+
+Web maps normalized journal events into versioned typed envelopes and adapts them to the existing
+`ServerSentEventResponseWriter`. The generic writer continues to own cursor parsing, heartbeats,
+anti-buffering, disconnect handling, and profile-lifetime cancellation; its additive selectors provide
+per-event names and immediate terminal closure. The SSE projection never dispatches or cancels an
+operation, and disconnecting it only disposes the read lease.

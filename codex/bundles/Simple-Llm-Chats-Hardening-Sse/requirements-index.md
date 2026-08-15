@@ -26,13 +26,13 @@ Status: prepared. Closure fields are filled during execution.
 | RQ-020 | Implement true incremental streaming for OpenAI, Azure OpenAI, and Ollama, with a deterministic fallback policy. | SB07, SB11 | SB07 three-driver fragmented protocol and completed-fallback proof passes; SB11 confirmation pending |
 | RQ-021 | Retry a stream only before its first emitted delta and never after partial output is externally visible. | SB07, SB11 | SB07 retry-before-delta and one-call partial-failure proof passes; SB11 confirmation pending |
 | RQ-022 | Persist a bounded per-operation event journal with monotonic sequence and durable replay authority. | SB08, SB11 | SB08 PostgreSQL sequence/replay/bounds pass; SB11 focused confirmation pending |
-| RQ-023 | Expose SSE with Last-Event-ID/after replay, gaps, heartbeat, anti-buffering, profile lifetime, and terminal closure. | SB09, SB11 | Pending |
-| RQ-024 | SSE/client disconnect must not cancel the durable operation; explicit cancellation remains authoritative. | SB09, SB11 | Pending |
-| RQ-025 | Turn start must return 202 Accepted promptly with operation, status, and event links. | SB09, SB11 | Pending |
+| RQ-023 | Expose SSE with Last-Event-ID/after replay, gaps, heartbeat, anti-buffering, profile lifetime, and terminal closure. | SB09, SB11 | SB09 durable PostgreSQL replay/gap/terminal and shared-transport proof passes at `4c71bfa8857d1228e5cb5e23fac44c9746954dfc`; SB11 portability confirmation pending |
+| RQ-024 | SSE/client disconnect must not cancel the durable operation; explicit cancellation remains authoritative. | SB09, SB11 | SB09 disconnect/reconnect succeeds without redispatch while explicit cancel is durably streamed; SB11 confirmation pending |
+| RQ-025 | Turn start must return 202 Accepted promptly with operation, status, and event links. | SB09, SB11 | SB09 slow-provider real-host admission returns 202 with Location/status/events/cancel metadata; SB11 confirmation pending |
 | RQ-026 | Audit actual provider attempts with deterministic outcomes shared by direct and recovery reducers. | SB02, SB07, SB08, SB11 | SB02/SB07 attempt audit plus SB08 same-transaction event journal integration pass; SB11 confirmation pending |
 | RQ-027 | Conversation origin is server-owned and cannot be spoofed by an HTTP client. | SB10, SB11 | Pending |
 | RQ-028 | Enforce LLM Chat read/manage/execute API scopes when bearer authorization is enabled. | SB10, SB11 | Pending |
-| RQ-029 | Do not expose prompts, system instructions, credentials, raw provider payloads, or raw provider errors through logs/API/SSE. | SB08, SB09, SB10, SB11 | SB08 normalized journal/redaction pass; HTTP/SSE/security proof remains SB09–SB11 |
+| RQ-029 | Do not expose prompts, system instructions, credentials, raw provider payloads, or raw provider errors through logs/API/SSE. | SB08, SB09, SB10, SB11 | SB08 journal plus SB09 typed HTTP/SSE projection and provider-secret negative proof pass; authorization/external-client confirmation remains SB10–SB11 |
 | RQ-030 | Keep EF migration, model snapshot, retention, and database-transfer behavior consistent with the hardened schema. | SB01, SB08, SB11 | SB01 plus SB08 migration/model/retention/transfer pass; SB11 focused confirmation pending |
 | RQ-031 | Keep implementation portable and prove affected behavior on Linux plus the final Windows/Linux/macOS CI matrix. | SB11, SB13 | Pending |
 | RQ-032 | Do not implement UI, shared-component refactoring, floating chat, or Project Structure context in this bundle. | SB12 | Pending |

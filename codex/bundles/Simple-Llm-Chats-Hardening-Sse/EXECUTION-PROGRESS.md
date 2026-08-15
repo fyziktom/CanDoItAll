@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — SB08 complete, SB09 unlocked**
+Bundle state: **Executing — SB09 complete, SB10 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -8,7 +8,7 @@ Bundle state: **Executing — SB08 complete, SB09 unlocked**
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
 | SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
 | SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
-| SB07–SB10 streaming and API hardening | SB07–SB08 Completed; SB09 Ready | Sequential from the proven durable streaming journal head |
+| SB07–SB10 streaming and API hardening | SB07–SB09 Completed; SB10 Ready | Sequential from the proven durable asynchronous SSE head |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
 | SB12 documentation and guards | Locked | After CP2 |
 | SB13 final stable gate and CI | Locked | Final work unit only |
@@ -168,3 +168,23 @@ The executor must refresh these values before changing production source.
   test lane ran
 - proof: `proof/SB08/manifest.md`
 - progression: SB09 Ready
+
+## SB09 asynchronous turn API and SSE
+
+- implementation commit: `4c71bfa8857d1228e5cb5e23fac44c9746954dfc`
+- ownership: LlmChats application owns a profile-fenced durable event stream session; Persistence owns
+  authoritative SQL pages/ranges; Web owns typed envelope projection and shared SSE transport
+- protocol: every successful turn admission/replay returns 202 with canonical links; Last-Event-ID or
+  `after` resumes durable sequence replay; gaps are explicit; disconnect is observational; only explicit
+  cancellation mutates operation state; success/failure/cancel/recovery events close the stream
+- focused results: expected-red old-source metadata failure; affected Web build 0 warnings/errors;
+  focused current-head aggregate 22/22 (20 union passes plus exact corrected pair 2/2)
+- PostgreSQL proof: slow-provider 202, delta disconnect/reconnect without duplicate text or redispatch,
+  retained-history gap/status recovery, explicit cancellation, provider failure, and terminal closure
+- architecture: CodeAnalytics `snap-20260815064713-4eb8c3ec`; three scoped projects, zero cycles,
+  diagnostics, or open questions; no reverse Web dependency, production partial, or execution-owned SSE
+- deviation: six filtered test attempts exceeded the normal four-command budget by two due one sandbox
+  denial, the required expected-red run, two compile-only namespace repairs, and an exact correction rerun;
+  no unfiltered or solution-wide test lane ran
+- proof: `proof/SB09/manifest.md`
+- progression: SB10 Ready
