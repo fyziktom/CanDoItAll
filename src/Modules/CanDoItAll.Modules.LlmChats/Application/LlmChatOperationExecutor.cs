@@ -147,10 +147,10 @@ public sealed class LlmChatOperationExecutor(
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Unexpected dispatched LLM Chat failure for operation {OperationId} and conversation {ConversationId}.",
+                "Unexpected dispatched LLM Chat failure for operation {OperationId} and conversation {ConversationId}. FailureType={FailureType}.",
                 operation.Id.Value,
-                operation.ConversationId.Value);
+                operation.ConversationId.Value,
+                exception.GetType().FullName);
             await stateMachine.ApplyReducerAsync(
                 operation.Id,
                 LlmChatErrorCodes.StorageCorrupted,

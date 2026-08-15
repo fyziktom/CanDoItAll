@@ -41,8 +41,7 @@ internal sealed record LlmChatExpectedConcurrencyApiRequest(long? ExpectedConcur
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record CreateLlmChatConversationApiRequest(
-    string Title,
-    LlmChatConversationOrigin Origin = LlmChatConversationOrigin.Api);
+    string Title);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record RenameLlmChatConversationApiRequest(
@@ -73,9 +72,6 @@ internal sealed record LlmChatDefinitionApiResponse(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc)
 {
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? SystemPrompt { get; init; }
-
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public LlmChatModelSettingsApiResponse? ModelSettings { get; init; }
 

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
@@ -8,6 +9,7 @@ using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Conversations;
 using CanDoItAll.Modules.LlmChats.Definitions;
 using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -51,6 +53,13 @@ public sealed class LlmChatsDefinitionApiIntegrationTests
         Assert.DoesNotContain("credential", safeJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("endpoint", safeJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("configuration", safeJson, StringComparison.OrdinalIgnoreCase);
+
+        using var definitionResponse = await host.Client.GetAsync(
+            $"/api/llm-chats/{StubLlmChatDefinitionApplicationService.DefinitionId.Value:D}");
+        Assert.Equal(HttpStatusCode.OK, definitionResponse.StatusCode);
+        var definitionJson = await definitionResponse.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("systemPrompt", definitionJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("Review carefully.", definitionJson, StringComparison.Ordinal);
 
         using var invalidResponse = await host.Client.PostAsJsonAsync("/api/llm-chats", new
         {
@@ -103,6 +112,17 @@ public sealed class LlmChatsDefinitionApiIntegrationTests
         Assert.Contains("ListLlmChatProviderOptions", openApi, StringComparison.Ordinal);
         Assert.Contains("thinkingEffort", openApi, StringComparison.Ordinal);
         Assert.Contains("providerDefault", openApi, StringComparison.Ordinal);
+        using var openApiJson = JsonDocument.Parse(openApi);
+        var schemas = openApiJson.RootElement
+            .GetProperty("components")
+            .GetProperty("schemas");
+        Assert.True(schemas
+            .GetProperty("LlmChatOperationApiResponse")
+            .GetProperty("properties")
+            .TryGetProperty("schema", out _));
+        Assert.False(schemas.TryGetProperty("LlmChatOperation", out _));
+        Assert.False(schemas.TryGetProperty("LlmChatConversation", out _));
+        Assert.False(schemas.TryGetProperty("LlmChatDefinitionRevision", out _));
     }
 
     [Fact]
@@ -140,8 +160,7 @@ public sealed class LlmChatsConversationApiIntegrationTests
             $"/api/llm-chats/{StubLlmChatDefinitionApplicationService.DefinitionId.Value}/conversations",
             new
             {
-                title = "Review Linux architecture",
-                origin = "api"
+                title = "Review Linux architecture"
             });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         using var created = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
@@ -165,6 +184,140 @@ public sealed class LlmChatsConversationApiIntegrationTests
             .GetProperty("messages")[0]
             .GetProperty("content")
             .GetString());
+    }
+
+    [Fact]
+    public async Task ConversationApi_OwnsApiOriginAndRejectsClientOriginSpoofing()
+    {
+        var conversations = new StubLlmChatConversationApplicationService();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: collection =>
+            {
+                collection.RemoveAll<ILlmChatConversationApplicationService>();
+                collection.AddSingleton<ILlmChatConversationApplicationService>(conversations);
+            },
+            useInMemoryDatabase: true);
+        var route =
+            $"/api/llm-chats/{StubLlmChatDefinitionApplicationService.DefinitionId.Value:D}/conversations";
+
+        using var spoofed = await host.Client.PostAsJsonAsync(route, new
+        {
+            title = "Spoofed origin",
+            origin = "application"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, spoofed.StatusCode);
+        Assert.Null(conversations.LastCreateCommand);
+
+        using var created = await host.Client.PostAsJsonAsync(route, new
+        {
+            title = "Server-owned origin"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(LlmChatConversationOrigin.Api, conversations.LastCreateCommand?.Origin);
+    }
+}
+
+public sealed class LlmChatsSecurityApiIntegrationTests
+{
+    [Fact]
+    public async Task AuthorizationEnabledHost_EnforcesDistinctScopesAndAuthenticatesSseOnlyThroughBearerHeader()
+    {
+        var operations = new StubLlmChatOperationApplicationService();
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: true,
+            configureServices: collection =>
+            {
+                collection.RemoveAll<ILlmChatDefinitionApplicationService>();
+                collection.RemoveAll<ILlmChatConversationApplicationService>();
+                collection.RemoveAll<ILlmChatOperationApplicationService>();
+                collection.AddSingleton<ILlmChatDefinitionApplicationService, StubLlmChatDefinitionApplicationService>();
+                collection.AddSingleton<ILlmChatConversationApplicationService, StubLlmChatConversationApplicationService>();
+                collection.AddSingleton<ILlmChatOperationApplicationService>(operations);
+            },
+            useInMemoryDatabase: true);
+        var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
+        var conversationRoute =
+            $"/api/llm-chats/{StubLlmChatDefinitionApplicationService.DefinitionId.Value:D}/conversations";
+        var turnRoute =
+            $"/api/llm-conversations/{StubLlmChatOperationApplicationService.ConversationId.Value:D}/turns";
+        var operationId = Guid.Parse("60000000-0000-0000-0000-000000000001");
+
+        SetBearerToken(host, IssueToken(tokenService, ApiAccessScopeNames.Api));
+        using var broadApiScope = await host.Client.GetAsync("/api/llm-chats");
+        Assert.Equal(HttpStatusCode.Forbidden, broadApiScope.StatusCode);
+
+        SetBearerToken(host, IssueToken(tokenService, ApiAccessScopeNames.ReadLlmChats));
+        using var readDefinitions = await host.Client.GetAsync("/api/llm-chats");
+        using var readCannotManage = await host.Client.PostAsJsonAsync(conversationRoute, new
+        {
+            title = "Denied manage"
+        });
+        using var readCannotExecute = await host.Client.PostAsJsonAsync(turnRoute, new
+        {
+            operationId,
+            expectedTranscriptRevision = StubLlmChatOperationApplicationService.TranscriptRevision,
+            message = "Denied execute"
+        });
+        Assert.Equal(HttpStatusCode.OK, readDefinitions.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, readCannotManage.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, readCannotExecute.StatusCode);
+
+        var readToken = IssueToken(tokenService, ApiAccessScopeNames.ReadLlmChats);
+        SetBearerToken(host, readToken);
+        using var bearerSse = await host.Client.GetAsync(
+            $"/api/llm-chat-operations/{Guid.NewGuid():D}/events");
+        Assert.Equal(HttpStatusCode.NotFound, bearerSse.StatusCode);
+
+        host.Client.DefaultRequestHeaders.Authorization = null;
+        using var queryTokenSse = await host.Client.GetAsync(
+            $"/api/llm-chat-operations/{Guid.NewGuid():D}/events?access_token={Uri.EscapeDataString(readToken.Token)}");
+        Assert.Equal(HttpStatusCode.Unauthorized, queryTokenSse.StatusCode);
+
+        SetBearerToken(host, IssueToken(tokenService, ApiAccessScopeNames.ManageLlmChats));
+        using var managed = await host.Client.PostAsJsonAsync(conversationRoute, new
+        {
+            title = "Managed conversation"
+        });
+        using var manageCannotRead = await host.Client.GetAsync("/api/llm-chats");
+        Assert.Equal(HttpStatusCode.Created, managed.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, manageCannotRead.StatusCode);
+
+        SetBearerToken(host, IssueToken(tokenService, ApiAccessScopeNames.ExecuteLlmChats));
+        using var executed = await host.Client.PostAsJsonAsync(turnRoute, new
+        {
+            operationId,
+            expectedTranscriptRevision = StubLlmChatOperationApplicationService.TranscriptRevision,
+            message = "Execute turn"
+        });
+        using var executeCannotRead = await host.Client.GetAsync(
+            $"/api/llm-chat-operations/{operationId:D}");
+        using var cancelled = await host.Client.PostAsync(
+            $"/api/llm-chat-operations/{operationId:D}/cancel",
+            null);
+        Assert.Equal(HttpStatusCode.Accepted, executed.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, executeCannotRead.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, cancelled.StatusCode);
+    }
+
+    private static ApiTokenIssueResult IssueToken(
+        IApiTokenService tokenService,
+        string scope)
+        => tokenService.IssueToken(new ApiTokenIssueRequest
+        {
+            Subject = $"llm-chat-{scope}",
+            DisplayName = "LLM Chat API acceptance client",
+            Scopes = [scope]
+        });
+
+    private static void SetBearerToken(
+        ApiTestHost host,
+        ApiTokenIssueResult token)
+    {
+        host.Client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(token.TokenType, token.Token);
     }
 }
 
@@ -253,10 +406,15 @@ internal sealed class StubLlmChatConversationApplicationService : ILlmChatConver
     private static readonly LlmChatConversationId ConversationId = new(new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
     private static readonly DateTimeOffset Now = new(2026, 8, 14, 0, 0, 0, TimeSpan.Zero);
 
+    public CreateLlmChatConversationCommand? LastCreateCommand { get; private set; }
+
     public Task<Result<LlmChatConversationDetails>> CreateAsync(
         CreateLlmChatConversationCommand command,
         CancellationToken cancellationToken = default)
-        => Task.FromResult(Result<LlmChatConversationDetails>.Success(CreateDetails(command.Title)));
+    {
+        LastCreateCommand = command;
+        return Task.FromResult(Result<LlmChatConversationDetails>.Success(CreateDetails(command.Title)));
+    }
 
     public Task<Result<LlmChatConversationDetails>> RenameAsync(
         RenameLlmChatConversationCommand command,

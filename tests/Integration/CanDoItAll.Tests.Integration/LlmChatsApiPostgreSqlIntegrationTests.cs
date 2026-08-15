@@ -876,7 +876,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
     {
         using var response = await client.PostAsJsonAsync(
             $"/api/llm-chats/{definitionId:D}/conversations",
-            new { title, origin = "api" });
+            new { title });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return await ReadJsonAsync(response);
     }

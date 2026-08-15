@@ -69,3 +69,15 @@ Web maps normalized journal events into versioned typed envelopes and adapts the
 anti-buffering, disconnect handling, and profile-lifetime cancellation; its additive selectors provide
 per-event names and immediate terminal closure. The SSE projection never dispatches or cancels an
 operation, and disconnecting it only disposes the read lease.
+
+## SB10 implementation record
+
+Web-owned transport DTOs and endpoint metadata enforce the exact `api.llm-chats.read`,
+`api.llm-chats.manage`, and `api.llm-chats.execute` scopes only when bearer authorization is enabled;
+the broad `api` scope is not an LLM Chat super-scope. HTTP conversation creation has no origin field and
+always supplies `Api`. The versioned operation/SSE envelopes expose stable product state and links,
+while definition responses and failure paths omit system prompts and raw exception content.
+
+Conversation-create idempotency is deferred until `LlmChatDeployment` owns the external client and
+participant/session namespace needed to scope caller keys safely. No dormant deployment, participant,
+channel, moderation, quota, or retention fields were added to definitions or internal conversations.

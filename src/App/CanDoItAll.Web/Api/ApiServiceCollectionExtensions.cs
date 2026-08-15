@@ -14,6 +14,7 @@ using CanDoItAll.Modules.LlmChats.Definitions;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Web.Infrastructure;
 using CanDoItAll.Web.Api.Streaming;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
@@ -95,6 +96,18 @@ public static class ApiServiceCollectionExtensions
                         context.User,
                         ApiAccessScopeNames.WriteProjectStructure));
             });
+            AddExactScopePolicy(
+                options,
+                ApiAuthorizationPolicies.ReadLlmChats,
+                ApiAccessScopeNames.ReadLlmChats);
+            AddExactScopePolicy(
+                options,
+                ApiAuthorizationPolicies.ManageLlmChats,
+                ApiAccessScopeNames.ManageLlmChats);
+            AddExactScopePolicy(
+                options,
+                ApiAuthorizationPolicies.ExecuteLlmChats,
+                ApiAccessScopeNames.ExecuteLlmChats);
         });
         services.AddHttpContextAccessor();
         services.Replace(ServiceDescriptor.Singleton<IWorkflowEventSink, WorkflowApiEventSink>());
@@ -149,6 +162,19 @@ public static class ApiServiceCollectionExtensions
             });
 
         return services;
+    }
+
+    private static void AddExactScopePolicy(
+        AuthorizationOptions options,
+        string policyName,
+        string scopeName)
+    {
+        options.AddPolicy(policyName, policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireAssertion(context =>
+                ApiAuthorizationPolicies.HasScope(context.User, scopeName));
+        });
     }
 
     internal static IServiceCollection ConfigureAgentApiJson(

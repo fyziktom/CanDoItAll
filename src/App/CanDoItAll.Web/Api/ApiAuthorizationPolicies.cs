@@ -15,6 +15,12 @@ internal static class ApiAuthorizationPolicies
 
     public const string WriteProjectStructure = "Api.ProjectStructure.Write";
 
+    public const string ReadLlmChats = "Api.LlmChats.Read";
+
+    public const string ManageLlmChats = "Api.LlmChats.Manage";
+
+    public const string ExecuteLlmChats = "Api.LlmChats.Execute";
+
     public static bool HasScope(ClaimsPrincipal principal, string requiredScope)
     {
         ArgumentNullException.ThrowIfNull(principal);

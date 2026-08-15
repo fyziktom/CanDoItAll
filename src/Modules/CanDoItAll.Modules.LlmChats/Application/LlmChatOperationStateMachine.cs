@@ -53,9 +53,9 @@ public sealed class LlmChatOperationStateMachine(
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Failed to atomically finalize LLM Chat operation {OperationId}.",
-                operationId.Value);
+                "Failed to atomically finalize LLM Chat operation {OperationId}. FailureType={FailureType}.",
+                operationId.Value,
+                exception.GetType().FullName);
             return await RequireRecoveryAsync(
                 operationId,
                 LlmChatErrorCodes.OperationRecoveryRequired,
@@ -116,9 +116,9 @@ public sealed class LlmChatOperationStateMachine(
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Failed to atomically reduce LLM Chat operation {OperationId}; recovery is required.",
-                operationId.Value);
+                "Failed to atomically reduce LLM Chat operation {OperationId}; recovery is required. FailureType={FailureType}.",
+                operationId.Value,
+                exception.GetType().FullName);
             return await RequireRecoveryAsync(
                 operationId,
                 LlmChatErrorCodes.OperationRecoveryRequired,
@@ -204,10 +204,10 @@ public sealed class LlmChatOperationStateMachine(
         catch (Exception exception)
         {
             logger.LogError(
-                exception,
-                "Failed to atomically abandon LLM Chat operation {OperationId} for conversation {ConversationId}.",
+                "Failed to atomically abandon LLM Chat operation {OperationId} for conversation {ConversationId}. FailureType={FailureType}.",
                 command.TurnId.Value,
-                command.ConversationId.Value);
+                command.ConversationId.Value,
+                exception.GetType().FullName);
             return await RequireRecoveryAsync(
                 command.TurnId,
                 LlmChatErrorCodes.OperationRecoveryRequired,

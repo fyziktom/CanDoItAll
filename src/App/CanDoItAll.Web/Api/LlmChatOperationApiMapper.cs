@@ -11,6 +11,7 @@ internal static class LlmChatOperationApiMapper
         var operation = details.Operation;
         var assistant = details.AssistantMessage;
         return new LlmChatOperationApiResponse(
+            LlmChatOperationApiSchemas.Operation,
             operation.Id.Value,
             operation.ConversationId.Value,
             operation.Status,

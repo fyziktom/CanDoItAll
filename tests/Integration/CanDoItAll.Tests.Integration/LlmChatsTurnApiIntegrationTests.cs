@@ -32,6 +32,9 @@ public sealed class LlmChatsTurnApiIntegrationTests
             "/api/llm-chat-operations/10000000-0000-0000-0000-000000000001",
             accepted.Headers.Location?.OriginalString);
         using var acceptedJson = JsonDocument.Parse(await accepted.Content.ReadAsStringAsync());
+        Assert.Equal(
+            "candoitall.llm-chat-operation.v1",
+            acceptedJson.RootElement.GetProperty("schema").GetString());
         Assert.Equal("running", acceptedJson.RootElement.GetProperty("status").GetString());
 
         using var stale = await host.Client.PostAsJsonAsync(
@@ -125,7 +128,11 @@ public sealed class LlmChatsIdempotencyApiIntegrationTests
             firstJson.RootElement.GetProperty("requestFingerprint").GetString(),
             retryJson.RootElement.GetProperty("requestFingerprint").GetString());
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
-        Assert.Contains(LlmChatErrorCodes.OperationIdConflict, await conflict.Content.ReadAsStringAsync());
+        var conflictBody = await conflict.Content.ReadAsStringAsync();
+        Assert.Contains(LlmChatErrorCodes.OperationIdConflict, conflictBody);
+        Assert.DoesNotContain("requestFingerprint", conflictBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Review this design.", conflictBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("A different paid request.", conflictBody, StringComparison.Ordinal);
         Assert.Equal(1, service.ProviderDispatchCount);
     }
 }

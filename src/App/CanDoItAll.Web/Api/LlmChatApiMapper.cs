@@ -154,7 +154,6 @@ internal static class LlmChatApiMapper
 
         return response with
         {
-            SystemPrompt = details.Revision.SystemPrompt,
             ModelSettings = new LlmChatModelSettingsApiResponse(
                 details.Revision.Settings.Temperature,
                 ParseJson(details.Revision.Settings.ModelParameterConfigurationJson, JsonValueKind.Object),

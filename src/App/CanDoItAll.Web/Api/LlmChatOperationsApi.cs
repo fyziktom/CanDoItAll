@@ -19,7 +19,7 @@ internal static class LlmChatOperationsApi
         conversations.MapPost("/{conversationId:guid}/turns", SendTurnAsync)
             .WithName("SendLlmChatTurn")
             .WithDescription(
-                "Admits one retry-safe turn. operationId is the mandatory idempotency identity and expectedTranscriptRevision is the optimistic transcript token.")
+                "Admits one retry-safe turn. Retry the same logical request with the same operationId and identical body; use a new operationId only for an intentionally distinct turn. expectedTranscriptRevision is the optimistic transcript token.")
             .Accepts<SendLlmChatTurnApiRequest>("application/json")
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status202Accepted)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
@@ -27,7 +27,8 @@ internal static class LlmChatOperationsApi
             .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
             .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
             .Produces<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)
-            .Produces<ProblemDetails>(StatusCodes.Status504GatewayTimeout);
+            .Produces<ProblemDetails>(StatusCodes.Status504GatewayTimeout)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ExecuteLlmChats);
         conversations.MapPost(
                 "/{conversationId:guid}/active-turns/{turnId:guid}/abandon",
                 AbandonActiveTurnAsync)
@@ -37,7 +38,8 @@ internal static class LlmChatOperationsApi
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ExecuteLlmChats);
 
         var operations = api.MapGroup("/llm-chat-operations")
             .WithTags("LLM Chat Operations")
@@ -46,24 +48,27 @@ internal static class LlmChatOperationsApi
             .WithName("GetLlmChatOperation")
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
-            .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+            .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         operations.MapGet("/{operationId:guid}/events", StreamOperationEventsAsync)
             .WithName("StreamLlmChatOperationEvents")
             .WithDescription(
-                "Replays durable operation events after Last-Event-ID or the after query cursor and follows committed updates until a terminal operation event.")
+                "Replays durable operation events after Last-Event-ID or the after query cursor and follows committed updates until a terminal operation event. Bearer credentials are accepted only through the normal Authorization header, never query parameters.")
             .Produces<string>(
                 StatusCodes.Status200OK,
                 contentType: ServerSentEventResponseWriter.ContentType)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         operations.MapPost("/{operationId:guid}/cancel", CancelOperationAsync)
             .WithName("CancelLlmChatOperation")
             .WithDescription("Durably requests cancellation and signals a live in-process provider call when owned here.")
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status202Accepted)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
-            .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+            .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ExecuteLlmChats);
         return api;
     }
 

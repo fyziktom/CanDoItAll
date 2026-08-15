@@ -10,6 +10,7 @@ internal sealed record SendLlmChatTurnApiRequest(
     string Message);
 
 internal sealed record LlmChatOperationApiResponse(
+    string Schema,
     Guid OperationId,
     Guid ConversationId,
     LlmChatOperationStatus Status,
@@ -40,4 +41,9 @@ internal static class LlmChatOperationApiRoutes
 
     public static string Cancel(Guid operationId)
         => $"/api/llm-chat-operations/{operationId:D}/cancel";
+}
+
+internal static class LlmChatOperationApiSchemas
+{
+    public const string Operation = "candoitall.llm-chat-operation.v1";
 }

@@ -117,8 +117,8 @@ public sealed class LlmChatOperationApplicationService(
 
     private void LogUnexpectedFailure(Exception exception, SendLlmChatTurnCommand command)
         => logger.LogError(
-            exception,
-            "Unexpected LLM Chat send failure for operation {OperationId} and conversation {ConversationId}.",
+            "Unexpected LLM Chat send failure for operation {OperationId} and conversation {ConversationId}. FailureType={FailureType}.",
             command.OperationId.Value,
-            command.ConversationId.Value);
+            command.ConversationId.Value,
+            exception.GetType().FullName);
 }

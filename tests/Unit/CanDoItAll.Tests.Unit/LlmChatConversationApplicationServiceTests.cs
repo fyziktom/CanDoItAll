@@ -11,7 +11,7 @@ public sealed class LlmChatConversationApplicationServiceTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-08-14T12:00:00Z");
 
     [Fact]
-    public async Task Create_pins_the_exact_current_active_revision_and_shared_transcript_id()
+    public async Task Create_pins_the_exact_current_active_revision_and_preserves_trusted_application_origin()
     {
         var definitions = new InMemoryLlmChatDefinitionRepository();
         var definitionService = new LlmChatDefinitionApplicationService(
@@ -39,10 +39,11 @@ public sealed class LlmChatConversationApplicationServiceTests
         var result = await service.CreateAsync(new CreateLlmChatConversationCommand(
             activeDefinition.Value!.Definition.Id,
             "Customer refund",
-            LlmChatConversationOrigin.Api));
+            LlmChatConversationOrigin.Application));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(activeDefinition.Value.Definition.CurrentRevision, result.Value!.Conversation.DefinitionRevision);
+        Assert.Equal(LlmChatConversationOrigin.Application, result.Value.Conversation.Origin);
         var engineCreate = Assert.Single(engine.Created);
         Assert.Equal(result.Value.Conversation.Id, engineCreate.Id);
         Assert.Equal(result.Value.Conversation.DefinitionRevision, engineCreate.Revision.Revision);

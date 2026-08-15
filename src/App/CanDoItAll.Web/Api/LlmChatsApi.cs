@@ -18,21 +18,25 @@ internal static class LlmChatsApi
             .WithName("ListLlmChatProviderOptions")
             .Produces<LlmChatProviderOptionApiResponse[]>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
-            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         definitions.MapGet(string.Empty, ListDefinitionsAsync)
             .WithName("ListLlmChatDefinitions")
             .Produces<LlmChatApiPage<LlmChatDefinitionApiResponse>>(StatusCodes.Status200OK)
-            .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
+            .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         definitions.MapPost(string.Empty, CreateDefinitionAsync)
             .WithName("CreateLlmChatDefinition")
             .Accepts<LlmChatDefinitionMutationApiRequest>("application/json")
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status201Created)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
-            .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity);
+            .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         definitions.MapGet("/{definitionId:guid}", GetDefinitionAsync)
             .WithName("GetLlmChatDefinition")
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status200OK)
-            .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+            .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         definitions.MapPut("/{definitionId:guid}", UpdateDefinitionAsync)
             .WithName("UpdateLlmChatDefinition")
             .Accepts<LlmChatDefinitionMutationApiRequest>("application/json")
@@ -40,17 +44,21 @@ internal static class LlmChatsApi
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
             .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
-            .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity);
-        MapDefinitionStatus(definitions, "activate", LlmChatDefinitionStatus.Active, "ActivateLlmChatDefinition");
-        MapDefinitionStatus(definitions, "suspend", LlmChatDefinitionStatus.Suspended, "SuspendLlmChatDefinition");
-        MapDefinitionStatus(definitions, "archive", LlmChatDefinitionStatus.Archived, "ArchiveLlmChatDefinition");
+            .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
+        MapDefinitionStatus(definitions, api, "activate", LlmChatDefinitionStatus.Active, "ActivateLlmChatDefinition");
+        MapDefinitionStatus(definitions, api, "suspend", LlmChatDefinitionStatus.Suspended, "SuspendLlmChatDefinition");
+        MapDefinitionStatus(definitions, api, "archive", LlmChatDefinitionStatus.Archived, "ArchiveLlmChatDefinition");
         definitions.MapPost("/{definitionId:guid}/conversations", CreateConversationAsync)
             .WithName("CreateLlmChatConversation")
+            .WithDescription(
+                "Creates an API-origin conversation. Creation is not idempotent; callers must not blindly retry an ambiguous response.")
             .Accepts<CreateLlmChatConversationApiRequest>("application/json")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status201Created)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
 
         var conversations = api.MapGroup("/llm-conversations")
             .WithTags("LLM Chat Conversations")
@@ -58,30 +66,35 @@ internal static class LlmChatsApi
         conversations.MapGet(string.Empty, ListConversationsAsync)
             .WithName("ListLlmChatConversations")
             .Produces<LlmChatApiPage<LlmChatConversationApiResponse>>(StatusCodes.Status200OK)
-            .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
+            .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         conversations.MapGet("/{conversationId:guid}", GetConversationAsync)
             .WithName("GetLlmChatConversation")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status200OK)
-            .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+            .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         conversations.MapPatch("/{conversationId:guid}/title", RenameConversationAsync)
             .WithName("RenameLlmChatConversation")
             .Accepts<RenameLlmChatConversationApiRequest>("application/json")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         conversations.MapPost("/{conversationId:guid}/archive", ArchiveConversationAsync)
             .WithName("ArchiveLlmChatConversation")
             .Accepts<LlmChatExpectedConcurrencyApiRequest>("application/json")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         return api;
     }
 
     private static void MapDefinitionStatus(
         RouteGroupBuilder definitions,
+        IEndpointRouteBuilder endpoints,
         string route,
         LlmChatDefinitionStatus status,
         string operationName)
@@ -105,7 +118,8 @@ internal static class LlmChatsApi
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(endpoints, ApiAuthorizationPolicies.ManageLlmChats);
 
     private static async Task<IResult> ListProviderOptionsAsync(
         ILlmChatProviderResolver resolver,
@@ -301,7 +315,7 @@ internal static class LlmChatsApi
             new CreateLlmChatConversationCommand(
                 new LlmChatDefinitionId(definitionId),
                 request.Title,
-                request.Origin),
+                LlmChatConversationOrigin.Api),
             cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
         {
