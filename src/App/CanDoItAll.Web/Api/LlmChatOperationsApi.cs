@@ -2,7 +2,10 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
+using CanDoItAll.Web.Api.Streaming;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Web.Api;
 
@@ -18,7 +21,6 @@ internal static class LlmChatOperationsApi
             .WithDescription(
                 "Admits one retry-safe turn. operationId is the mandatory idempotency identity and expectedTranscriptRevision is the optimistic transcript token.")
             .Accepts<SendLlmChatTurnApiRequest>("application/json")
-            .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status202Accepted)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
@@ -45,6 +47,16 @@ internal static class LlmChatOperationsApi
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+        operations.MapGet("/{operationId:guid}/events", StreamOperationEventsAsync)
+            .WithName("StreamLlmChatOperationEvents")
+            .WithDescription(
+                "Replays durable operation events after Last-Event-ID or the after query cursor and follows committed updates until a terminal operation event.")
+            .Produces<string>(
+                StatusCodes.Status200OK,
+                contentType: ServerSentEventResponseWriter.ContentType)
+            .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
         operations.MapPost("/{operationId:guid}/cancel", CancelOperationAsync)
             .WithName("CancelLlmChatOperation")
             .WithDescription("Durably requests cancellation and signals a live in-process provider call when owned here.")
@@ -75,16 +87,37 @@ internal static class LlmChatOperationsApi
 
         var details = result.Value!;
         var location = SetOperationLocation(response, details.Operation.Id);
-        return details.Operation.Status switch
+        return Results.Accepted(location, LlmChatOperationApiMapper.ToResponse(details));
+    }
+
+    private static async Task StreamOperationEventsAsync(
+        Guid operationId,
+        HttpContext context,
+        LlmChatOperationEventStreamSessionFactory streamSessionFactory,
+        IOptions<ApiAccessOptions> apiOptions)
+    {
+        if (!TryCreateOperationId(operationId, out var id, out var error))
         {
-            LlmChatOperationStatus.Succeeded => Results.Ok(LlmChatOperationApiMapper.ToResponse(details)),
-            LlmChatOperationStatus.Pending or
-            LlmChatOperationStatus.Running or
-            LlmChatOperationStatus.CancellationRequested => Results.Accepted(
-                location,
-                LlmChatOperationApiMapper.ToResponse(details)),
-            _ => LlmChatApiResults.FromOperationFailure(details.Operation)
-        };
+            await error!.ExecuteAsync(context);
+            return;
+        }
+
+        var opened = await streamSessionFactory.OpenAsync(id, context.RequestAborted).ConfigureAwait(false);
+        if (opened.IsFailure)
+        {
+            await LlmChatApiResults.FromFailure(opened.Errors, operationId).ExecuteAsync(context);
+            return;
+        }
+
+        await using var session = opened.Value!;
+        var reader = new LlmChatOperationEventReplayReader(session, apiOptions.Value.ServerSentEvents);
+        await ServerSentEventResponseWriter.WriteAsync(
+            context,
+            reader,
+            static item => item.EventKind,
+            static item => item.IsTerminal,
+            session.ProfileLifetime,
+            LlmChatErrorCodes.StreamCursorInvalid);
     }
 
     private static async Task<IResult> GetOperationAsync(
@@ -230,7 +263,7 @@ internal static class LlmChatOperationsApi
 
     private static string SetOperationLocation(HttpResponse response, LlmChatOperationId operationId)
     {
-        var location = $"/api/llm-chat-operations/{operationId.Value:D}";
+        var location = LlmChatOperationApiRoutes.Status(operationId.Value);
         response.Headers.Location = location;
         return location;
     }

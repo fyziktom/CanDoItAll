@@ -13,8 +13,14 @@ internal sealed record LlmChatOperationApiResponse(
     Guid OperationId,
     Guid ConversationId,
     LlmChatOperationStatus Status,
+    string RequestFingerprint,
+    bool Replayed,
     long ExpectedTranscriptRevision,
     long? ResultingTranscriptRevision,
+    long LastEventSequence,
+    string StatusUrl,
+    string EventsUrl,
+    string CancelUrl,
     LlmChatMessageApiResponse? AssistantMessage,
     LlmChatOperationFailureApiResponse? Failure,
     DateTimeOffset StartedAtUtc,
@@ -23,3 +29,15 @@ internal sealed record LlmChatOperationApiResponse(
 internal sealed record LlmChatOperationFailureApiResponse(
     string Code,
     bool Retryable);
+
+internal static class LlmChatOperationApiRoutes
+{
+    public static string Status(Guid operationId)
+        => $"/api/llm-chat-operations/{operationId:D}";
+
+    public static string Events(Guid operationId)
+        => $"/api/llm-chat-operations/{operationId:D}/events";
+
+    public static string Cancel(Guid operationId)
+        => $"/api/llm-chat-operations/{operationId:D}/cancel";
+}

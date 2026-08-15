@@ -33,31 +33,67 @@ public static class ServerSentEventResponseWriter
         response.HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
     }
 
-    public static async Task WriteAsync<T>(
+    public static Task WriteAsync<T>(
         HttpContext context,
         IBoundedReplayEventReader<T> stream,
         string eventName,
         Func<T, bool> filter)
-    {
-        await WriteAsync(
+        => WriteAsync(
             context,
             stream,
             eventName,
             filter,
             CancellationToken.None);
-    }
 
-    public static async Task WriteAsync<T>(
+    public static Task WriteAsync<T>(
         HttpContext context,
         IBoundedReplayEventReader<T> stream,
         string eventName,
         Func<T, bool> filter,
         CancellationToken streamLifetime)
     {
+        ValidateEventName(eventName);
+        return WriteCoreAsync(
+            context,
+            stream,
+            filter,
+            _ => eventName,
+            static _ => false,
+            streamLifetime,
+            InvalidCursorCode);
+    }
+
+    public static Task WriteAsync<T>(
+        HttpContext context,
+        IBoundedReplayEventReader<T> stream,
+        Func<T, string> eventNameSelector,
+        Func<T, bool> terminalPredicate,
+        CancellationToken streamLifetime,
+        string invalidCursorCode)
+        => WriteCoreAsync(
+            context,
+            stream,
+            static _ => true,
+            eventNameSelector,
+            terminalPredicate,
+            streamLifetime,
+            invalidCursorCode);
+
+    private static async Task WriteCoreAsync<T>(
+        HttpContext context,
+        IBoundedReplayEventReader<T> stream,
+        Func<T, bool> filter,
+        Func<T, string> eventNameSelector,
+        Func<T, bool> terminalPredicate,
+        CancellationToken streamLifetime,
+        string invalidCursorCode)
+    {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(filter);
-        ValidateEventName(eventName);
+        ArgumentNullException.ThrowIfNull(eventNameSelector);
+        ArgumentNullException.ThrowIfNull(terminalPredicate);
+        ArgumentException.ThrowIfNullOrWhiteSpace(invalidCursorCode);
 
         if (!ServerSentEventCursor.TryResolve(
                 context.Request,
@@ -67,7 +103,7 @@ public static class ServerSentEventResponseWriter
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsJsonAsync(
                 new ApiErrorResponse(
-                    [new ApiErrorItem(InvalidCursorCode, cursorError!, ErrorSeverity.Error)]),
+                    [new ApiErrorItem(invalidCursorCode, cursorError!, ErrorSeverity.Error)]),
                 context.RequestAborted);
             return;
         }
@@ -129,13 +165,24 @@ public static class ServerSentEventResponseWriter
                     afterExclusive = entry.Sequence;
                     if (filter(entry.Value))
                     {
+                        var eventName = eventNameSelector(entry.Value);
+                        ValidateEventName(eventName);
                         await WriteEventAsync(
                             context.Response,
                             entry.Sequence,
                             eventName,
                             entry.Value,
                             cancellationToken);
+                        if (terminalPredicate(entry.Value))
+                        {
+                            return;
+                        }
                     }
+                }
+
+                if (result.IsCompleted)
+                {
+                    return;
                 }
             }
         }

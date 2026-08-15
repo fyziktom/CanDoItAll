@@ -734,7 +734,8 @@ internal sealed class LlmChatOperationHarness
         var details = new LlmChatOperationDetailsReader(
             operations,
             new InMemoryLlmChatOperationReadStore(operations, invocations),
-            engine);
+            engine,
+            eventJournal);
         var admission = new LlmChatOperationAdmissionService(
             definitions,
             conversations,

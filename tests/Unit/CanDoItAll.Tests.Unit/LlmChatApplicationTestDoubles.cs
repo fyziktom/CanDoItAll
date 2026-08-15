@@ -283,7 +283,26 @@ internal sealed class InMemoryLlmChatOperationEventRepository(
         return new LlmChatOperationEventPage(
             operation,
             [.. journal.Where(item => item.Sequence > afterSequence).Take(take)],
-            journal.Count == 0 ? null : journal[0].Sequence);
+            journal.Count == 0 ? null : journal[0].Sequence,
+            journal.Count == 0 ? 0 : journal[^1].Sequence,
+            journal.OfType<LlmChatOperationTextDeltaEvent>()
+                .Where(item => item.Sequence <= afterSequence)
+                .Sum(item => item.Text.Length));
+    }
+
+    public async Task<long?> TryGetLatestSequenceAsync(
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+    {
+        if (await operations.TryGetAsync(operationId, cancellationToken) is null)
+        {
+            return null;
+        }
+
+        var journal = events.GetValueOrDefault(operationId);
+        return journal is null || journal.Count == 0
+            ? 0
+            : journal[^1].Sequence;
     }
 
     public Task<int> DeleteExpiredTerminalEventsAsync(

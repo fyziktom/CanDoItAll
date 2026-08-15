@@ -67,15 +67,15 @@ public sealed class LlmChatsTurnApiIntegrationTests
                 expectedTranscriptRevision = StubLlmChatOperationApplicationService.TranscriptRevision,
                 message = "provider-failure"
             });
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, providerFailure.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, providerFailure.StatusCode);
         using var failureJson = JsonDocument.Parse(await providerFailure.Content.ReadAsStringAsync());
         Assert.Equal(
             LlmChatErrorCodes.ProviderUnavailable,
-            failureJson.RootElement.GetProperty("code").GetString());
+            failureJson.RootElement.GetProperty("failure").GetProperty("code").GetString());
         Assert.Equal(
             Guid.Parse("10000000-0000-0000-0000-000000000004"),
             failureJson.RootElement.GetProperty("operationId").GetGuid());
-        Assert.True(failureJson.RootElement.GetProperty("retryable").GetBoolean());
+        Assert.True(failureJson.RootElement.GetProperty("failure").GetProperty("retryable").GetBoolean());
         Assert.DoesNotContain("provider-secret", failureJson.RootElement.GetRawText(), StringComparison.Ordinal);
     }
 
@@ -115,9 +115,15 @@ public sealed class LlmChatsIdempotencyApiIntegrationTests
             message = "A different paid request."
         });
 
-        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
-        Assert.Equal(await first.Content.ReadAsStringAsync(), await retry.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, retry.StatusCode);
+        using var firstJson = JsonDocument.Parse(await first.Content.ReadAsStringAsync());
+        using var retryJson = JsonDocument.Parse(await retry.Content.ReadAsStringAsync());
+        Assert.False(firstJson.RootElement.GetProperty("replayed").GetBoolean());
+        Assert.True(retryJson.RootElement.GetProperty("replayed").GetBoolean());
+        Assert.Equal(
+            firstJson.RootElement.GetProperty("requestFingerprint").GetString(),
+            retryJson.RootElement.GetProperty("requestFingerprint").GetString());
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
         Assert.Contains(LlmChatErrorCodes.OperationIdConflict, await conflict.Content.ReadAsStringAsync());
         Assert.Equal(1, service.ProviderDispatchCount);
@@ -216,7 +222,7 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
         if (operations.TryGetValue(command.OperationId, out var existing))
         {
             return commands[command.OperationId] == command
-                ? Success(existing)
+                ? Success(existing with { Replayed = true })
                 : Failure(LlmChatErrorCodes.OperationIdConflict);
         }
 

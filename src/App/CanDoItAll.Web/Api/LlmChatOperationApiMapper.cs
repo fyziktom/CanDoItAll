@@ -14,8 +14,14 @@ internal static class LlmChatOperationApiMapper
             operation.Id.Value,
             operation.ConversationId.Value,
             operation.Status,
+            operation.RequestFingerprint.Value,
+            details.Replayed,
             operation.ExpectedTranscriptRevision,
             operation.ResultingTranscriptRevision,
+            details.LastEventSequence,
+            LlmChatOperationApiRoutes.Status(operation.Id.Value),
+            LlmChatOperationApiRoutes.Events(operation.Id.Value),
+            LlmChatOperationApiRoutes.Cancel(operation.Id.Value),
             assistant is null
                 ? null
                 : new LlmChatMessageApiResponse(

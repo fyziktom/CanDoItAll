@@ -39,8 +39,14 @@ public sealed class LlmChatOperationApplicationService(
                 dispatchSignal.Signal();
             }
 
-            return await stateMachine.ResolveExistingAsync(admission.Operation, cancellationToken)
+            var details = await stateMachine.ResolveExistingAsync(admission.Operation, cancellationToken)
                 .ConfigureAwait(false);
+            return details.IsSuccess
+                ? Result<LlmChatOperationDetails>.Success(details.Value! with
+                {
+                    Replayed = !admission.Created
+                })
+                : details;
         }
         catch (ArgumentException exception)
         {

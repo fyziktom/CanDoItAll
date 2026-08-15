@@ -25,6 +25,7 @@ public static class LlmChatErrorCodes
     public const string DeadlineExceeded = Prefix + "deadline-exceeded";
     public const string ProviderUnavailable = Prefix + "provider-unavailable";
     public const string StreamLimitExceeded = Prefix + "stream-limit-exceeded";
+    public const string StreamCursorInvalid = Prefix + "stream-cursor-invalid";
     public const string StorageConflict = Prefix + "storage-conflict";
     public const string StorageCorrupted = Prefix + "storage-corrupted";
 }

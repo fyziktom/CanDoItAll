@@ -184,7 +184,9 @@ public interface ILlmChatUnitOfWork
 public sealed record LlmChatOperationEventPage(
     LlmChatOperation Operation,
     IReadOnlyList<LlmChatOperationEvent> Events,
-    long? EarliestRetainedSequence);
+    long? EarliestRetainedSequence,
+    long LatestSequence,
+    int TextCharactersThroughCursor);
 
 public interface ILlmChatOperationEventRepository
 {
@@ -197,6 +199,10 @@ public interface ILlmChatOperationEventRepository
         LlmChatOperationId operationId,
         long afterSequence,
         int take,
+        CancellationToken cancellationToken = default);
+
+    Task<long?> TryGetLatestSequenceAsync(
+        LlmChatOperationId operationId,
         CancellationToken cancellationToken = default);
 
     Task<int> DeleteExpiredTerminalEventsAsync(

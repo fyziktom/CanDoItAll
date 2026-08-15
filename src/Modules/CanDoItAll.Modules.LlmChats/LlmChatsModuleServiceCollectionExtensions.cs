@@ -23,6 +23,7 @@ public static class LlmChatsModuleServiceCollectionExtensions
         services.TryAddSingleton<ILlmChatOperationCancellationRegistry, LlmChatOperationCancellationRegistry>();
         services.AddScoped<ILlmChatOperationEvidenceSink, LlmChatOperationEvidenceService>();
         services.AddScoped<LlmChatOperationEventJournal>();
+        services.AddScoped<LlmChatOperationEventStreamSessionFactory>();
         services.AddScoped<LlmChatStreamingPipeline>();
         services.AddScoped<LlmChatOperationEventRetentionService>();
         services.AddScoped<LlmChatProfileScopeRunner>();

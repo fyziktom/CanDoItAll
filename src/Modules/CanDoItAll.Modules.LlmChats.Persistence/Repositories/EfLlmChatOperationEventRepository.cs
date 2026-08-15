@@ -64,15 +64,37 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
             .Take(take)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        var earliest = await dbContext.Set<LlmChatOperationEventRow>()
+        var range = await dbContext.Set<LlmChatOperationEventRow>()
             .Where(row => row.OperationId == operationId.Value)
-            .MinAsync(row => (long?)row.Sequence, cancellationToken)
+            .GroupBy(static _ => 1)
+            .Select(group => new
+            {
+                Earliest = group.Min(row => row.Sequence),
+                Latest = group.Max(row => row.Sequence)
+            })
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var textCharactersThroughCursor = await dbContext.Set<LlmChatOperationEventRow>()
+            .Where(row =>
+                row.OperationId == operationId.Value &&
+                row.Sequence <= afterSequence &&
+                row.Kind == LlmChatOperationEventKind.TextDelta)
+            .SumAsync(row => row.Text.Length, cancellationToken)
             .ConfigureAwait(false);
         return new(
             LlmChatPersistenceMapper.ToDomain(operationRow),
             [.. rows.Select(ToDomain)],
-            earliest);
+            range?.Earliest,
+            range?.Latest ?? 0,
+            textCharactersThroughCursor);
     }
+
+    public Task<long?> TryGetLatestSequenceAsync(
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => dbContext.Set<LlmChatOperationEventRow>()
+            .Where(row => row.OperationId == operationId.Value)
+            .MaxAsync(row => (long?)row.Sequence, cancellationToken);
 
     public async Task<int> DeleteExpiredTerminalEventsAsync(
         DateTimeOffset completedBeforeUtc,

@@ -1,7 +1,11 @@
 using System.Text;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -321,6 +325,93 @@ public sealed class ApiStreamingTransportTests
             switchedProfile.Token);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Streaming_writer_emits_typed_public_envelopes_and_closes_at_terminal_event()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var operation = new LlmChatOperation(
+            LlmChatOperationId.New(),
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            0,
+            LlmChatOperationStatus.Succeeded,
+            now,
+            0) with
+        {
+            CompletedAtUtc = now
+        };
+        var stream = new BoundedReplayEventStream<LlmChatOperationEventApiResponse>(
+            replayCapacity: 8,
+            maxBatchSize: 4,
+            heartbeatInterval: TimeSpan.FromSeconds(1));
+        stream.Publish(LlmChatOperationEventApiMapper.ToResponse(
+            operation,
+            new LlmChatOperationTextDeltaEvent(operation.Id, 1, 1, "visible", now),
+            aggregateCharacterCount: 7));
+        stream.Publish(LlmChatOperationEventApiMapper.ToResponse(
+            operation,
+            new LlmChatOperationStateChangedEvent(
+                operation.Id,
+                2,
+                LlmChatOperationStatus.Succeeded,
+                now,
+                "",
+                "model",
+                new LlmUsage(1, 1)),
+            aggregateCharacterCount: 7));
+        stream.Publish(LlmChatOperationEventApiMapper.ToResponse(
+            operation,
+            new LlmChatOperationTextDeltaEvent(operation.Id, 3, 1, "unreachable", now),
+            aggregateCharacterCount: 18));
+        var context = new DefaultHttpContext();
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+
+        await ServerSentEventResponseWriter.WriteAsync(
+            context,
+            stream,
+            static item => item.EventKind,
+            static item => item.IsTerminal,
+            CancellationToken.None,
+            LlmChatErrorCodes.StreamCursorInvalid);
+
+        body.Position = 0;
+        var output = await new StreamReader(body, Encoding.UTF8).ReadToEndAsync();
+        Assert.Contains("event: llm.response.delta", output, StringComparison.Ordinal);
+        Assert.Contains("event: llm.operation.succeeded", output, StringComparison.Ordinal);
+        Assert.Contains("\"schema\":\"candoitall.llm-chat-operation-event.v1\"", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"eventName\"", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"isTerminal\"", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("unreachable", output, StringComparison.Ordinal);
+
+        foreach (var terminalStatus in new[]
+                 {
+                     LlmChatOperationStatus.Succeeded,
+                     LlmChatOperationStatus.Failed,
+                     LlmChatOperationStatus.Cancelled,
+                     LlmChatOperationStatus.RecoveryRequired
+                 })
+        {
+            var terminal = LlmChatOperationEventApiMapper.ToResponse(
+                operation,
+                new LlmChatOperationStateChangedEvent(
+                    operation.Id,
+                    4,
+                    terminalStatus,
+                    now,
+                    terminalStatus == LlmChatOperationStatus.Succeeded
+                        ? ""
+                        : LlmChatErrorCodes.OperationRecoveryRequired,
+                    terminalStatus == LlmChatOperationStatus.Succeeded ? "model" : "",
+                    terminalStatus == LlmChatOperationStatus.RecoveryRequired
+                        ? null
+                        : new LlmUsage(1, 1)),
+                aggregateCharacterCount: 7);
+            Assert.True(terminal.IsTerminal);
+        }
     }
 
     [Fact]

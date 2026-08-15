@@ -108,6 +108,11 @@ public sealed class LlmChatOperationEventJournal(
         return eventRepository.ListAfterAsync(operationId, afterSequence, take, cancellationToken);
     }
 
+    public Task<long?> TryGetLatestSequenceAsync(
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => eventRepository.TryGetLatestSequenceAsync(operationId, cancellationToken);
+
     public ValueTask WaitAsync(
         LlmChatOperationId operationId,
         long afterSequence,

@@ -26,7 +26,12 @@ public sealed record LlmChatAssistantMessage(
 public sealed record LlmChatOperationDetails(
     LlmChatOperation Operation,
     LlmChatAssistantMessage? AssistantMessage,
-    IReadOnlyList<LlmChatInvocationRecord> Invocations);
+    IReadOnlyList<LlmChatInvocationRecord> Invocations)
+{
+    public bool Replayed { get; init; }
+
+    public long LastEventSequence { get; init; }
+}
 
 public interface ILlmChatOperationApplicationService
 {
