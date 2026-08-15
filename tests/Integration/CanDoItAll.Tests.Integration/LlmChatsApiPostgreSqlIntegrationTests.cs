@@ -473,6 +473,7 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             firstDeltaSequence = Assert.IsType<long>(firstDelta.Id);
             using var deltaDocument = JsonDocument.Parse(firstDelta.Data);
             Assert.Equal("First ", deltaDocument.RootElement.GetProperty("payload").GetProperty("text").GetString());
+            await ReadHeartbeatAsync(reader).WaitAsync(TimeSpan.FromSeconds(10));
         }
 
         invocationPort.ReleaseStreamReconnect();
@@ -648,6 +649,19 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
                 return frame;
             }
         }
+    }
+
+    private static async Task ReadHeartbeatAsync(StreamReader reader)
+    {
+        while (await reader.ReadLineAsync() is { } line)
+        {
+            if (line.StartsWith(": heartbeat ", StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        throw new EndOfStreamException("The SSE stream closed before a heartbeat was received.");
     }
 
     private static async Task<IReadOnlyList<SseFrame>> ReadToEndAsync(StreamReader reader)
