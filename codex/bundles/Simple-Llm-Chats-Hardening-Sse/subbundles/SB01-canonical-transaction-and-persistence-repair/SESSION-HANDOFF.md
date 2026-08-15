@@ -1,15 +1,15 @@
 # Session handoff — SB01
 
-State: **Locked**
+State: **Ready**
 
 ## Entry checklist
 
-- [ ] Root bundle status read
-- [ ] Dependencies complete and proof trusted
-- [ ] Actual repository/branch/head recorded
-- [ ] Current source and nearby tests inspected
-- [ ] Test budget understood
-- [ ] Database/dependency mode recorded
+- [x] Root bundle status read
+- [x] Dependencies complete and proof trusted
+- [x] Actual repository/branch/head recorded
+- [x] Current source and nearby tests inspected
+- [x] Test budget understood
+- [x] Database/dependency mode recorded
 
 ## Work performed
 

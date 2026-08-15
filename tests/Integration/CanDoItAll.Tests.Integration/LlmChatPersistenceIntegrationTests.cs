@@ -14,6 +14,9 @@ using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -23,10 +26,13 @@ public sealed class EfLlmConversationStoreIntegrationTests
     public async Task Independent_stores_apply_one_cross_process_cas_winner()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatstorecas");
-        var firstStore = new EfLlmConversationStore(database.CreateFactory());
-        var secondStore = new EfLlmConversationStore(database.CreateFactory());
+        await using var firstContext = database.CreateDbContext();
+        await using var secondContext = database.CreateDbContext();
+        var firstStore = new EfLlmConversationStore(firstContext);
+        var secondStore = new EfLlmConversationStore(secondContext);
         var conversationId = Guid.NewGuid();
         var original = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(firstContext, original);
         await firstStore.CreateAsync(original);
 
         var first = AdmitTurn(original, Guid.NewGuid(), "first");
@@ -47,9 +53,11 @@ public sealed class EfLlmConversationStoreIntegrationTests
     public async Task Compensation_removes_only_the_exact_pending_entry()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatstorecompensation");
-        var store = new EfLlmConversationStore(database.CreateFactory());
+        await using var dbContext = database.CreateDbContext();
+        var store = new EfLlmConversationStore(dbContext);
         var conversationId = Guid.NewGuid();
         var original = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, original);
         await store.CreateAsync(original);
         var admitted = AdmitTurn(original, Guid.NewGuid(), "pending");
         await store.ReplaceAsync(admitted, 0);
@@ -100,6 +108,256 @@ public sealed class EfLlmConversationStoreIntegrationTests
     }
 
     private sealed record StoreOutcome(LlmConversationDocument? Document, Exception? Exception);
+}
+
+public sealed class LlmChatConversationTransactionIntegrationTests
+{
+    [Fact]
+    public async Task Create_rolls_back_product_and_transcript_when_the_command_fails_after_store_flush()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcreateatomic");
+        await using var dbContext = database.CreateDbContext();
+        var definitionId = await SeedDefinitionAsync(dbContext);
+        var conversationId = Guid.NewGuid();
+        var repository = new EfLlmChatConversationRepository(dbContext);
+        var store = new EfLlmConversationStore(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var transcript = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId) with
+        {
+            Title = "Atomic create"
+        };
+        var conversation = CreateConversation(
+            conversationId,
+            definitionId,
+            transcript.Title,
+            transcript.CreatedAtUtc);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async cancellationToken =>
+        {
+            await repository.CreateAsync(conversation, cancellationToken);
+            await store.CreateAsync(transcript, cancellationToken);
+            throw new InvalidOperationException("Injected failure after transcript persistence.");
+        }));
+
+        dbContext.ChangeTracker.Clear();
+        Assert.False(await dbContext.Set<LlmChatConversationRow>().AnyAsync(row => row.Id == conversationId));
+        Assert.False(await dbContext.Set<LlmChatTranscriptRow>().AnyAsync(row => row.ConversationId == conversationId));
+    }
+
+    [Fact]
+    public async Task Rename_rolls_back_product_and_transcript_when_the_command_fails_after_store_flush()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatrenameatomic");
+        await using var dbContext = database.CreateDbContext();
+        var definitionId = await SeedDefinitionAsync(dbContext);
+        var conversationId = Guid.NewGuid();
+        var repository = new EfLlmChatConversationRepository(dbContext);
+        var store = new EfLlmConversationStore(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext);
+        var originalTranscript = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId) with
+        {
+            Title = "Original"
+        };
+        var originalConversation = CreateConversation(
+            conversationId,
+            definitionId,
+            originalTranscript.Title,
+            originalTranscript.CreatedAtUtc);
+        dbContext.Add(LlmConversationPersistenceMapper.ToRow(originalTranscript));
+        await repository.CreateAsync(originalConversation);
+        await dbContext.SaveChangesAsync();
+
+        var renamedAt = originalTranscript.UpdatedAtUtc.AddSeconds(1);
+        var renamedConversation = new LlmChatConversation(
+            originalConversation.Id,
+            originalConversation.DefinitionId,
+            originalConversation.DefinitionRevision,
+            "Renamed",
+            originalConversation.Status,
+            originalConversation.Origin,
+            originalConversation.CreatedAtUtc,
+            renamedAt,
+            1);
+        var renamedTranscript = originalTranscript with
+        {
+            Title = renamedConversation.Title,
+            UpdatedAtUtc = renamedAt,
+            TranscriptRevision = 1
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async cancellationToken =>
+        {
+            await repository.ReplaceAsync(renamedConversation, 0, cancellationToken);
+            await store.ReplaceAsync(renamedTranscript, 0, cancellationToken);
+            throw new InvalidOperationException("Injected failure after transcript persistence.");
+        }));
+
+        dbContext.ChangeTracker.Clear();
+        var storedConversation = await dbContext.Set<LlmChatConversationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == conversationId);
+        var storedTranscript = await dbContext.Set<LlmChatTranscriptRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.ConversationId == conversationId);
+        Assert.Equal("Original", storedConversation.Title);
+        Assert.Equal(0, storedTranscript.TranscriptRevision);
+    }
+
+    private static async Task<Guid> SeedDefinitionAsync(AppDbContext dbContext)
+    {
+        var definitionId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        dbContext.Add(new LlmChatDefinitionRow
+        {
+            Id = definitionId,
+            Name = "Atomic conversation",
+            Summary = "",
+            AvatarImageUrl = "",
+            Status = LlmChatDefinitionStatus.Active,
+            CurrentRevision = 1,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = 0
+        });
+        dbContext.Add(LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(
+            definitionId,
+            1,
+            AgentReasoningEffortLevel.None,
+            now));
+        await dbContext.SaveChangesAsync();
+        return definitionId;
+    }
+
+    private static LlmChatConversation CreateConversation(
+        Guid conversationId,
+        Guid definitionId,
+        string title,
+        DateTimeOffset now)
+        => new(
+            new LlmChatConversationId(conversationId),
+            new LlmChatDefinitionId(definitionId),
+            new LlmChatDefinitionRevisionNumber(1),
+            title,
+            LlmChatConversationStatus.Active,
+            LlmChatConversationOrigin.Api,
+            now,
+            now,
+            0);
+}
+
+public sealed class LlmChatCanonicalTitleMigrationIntegrationTests
+{
+    private const string PreviousMigrationId = "20260814163458_AddLlmChats";
+
+    [Fact]
+    public async Task Migration_preserves_the_canonical_conversation_title_and_removes_the_duplicate_column()
+    {
+        await using var database = LlmChatsPostgreSqlTestDatabase.CreateUnmigrated("llmchattitlemigration");
+        await using var dbContext = database.CreateDbContext();
+        var migrator = dbContext.Database.GetService<IMigrator>();
+        await migrator.MigrateAsync(PreviousMigrationId);
+        var conversationId = await SeedPreviousSchemaAsync(dbContext, "Canonical", "Canonical");
+
+        await migrator.MigrateAsync();
+
+        var title = await dbContext.Database.SqlQueryRaw<string>(
+                """SELECT "Title" AS "Value" FROM "LlmChats_Conversations" WHERE "Id" = {0}""",
+                conversationId)
+            .SingleAsync();
+        var duplicateColumnCount = await dbContext.Database.SqlQueryRaw<int>(
+                """
+                SELECT COUNT(*)::integer AS "Value"
+                FROM information_schema.columns
+                WHERE table_name = 'LlmChats_Transcripts'
+                  AND column_name IN ('Title', 'CreatedAtUtc', 'UpdatedAtUtc')
+                """)
+            .SingleAsync();
+        Assert.Equal("Canonical", title);
+        Assert.Equal(0, duplicateColumnCount);
+    }
+
+    [Fact]
+    public async Task Migration_fails_closed_when_existing_title_copies_disagree()
+    {
+        await using var database = LlmChatsPostgreSqlTestDatabase.CreateUnmigrated("llmchattitleconflict");
+        await using var dbContext = database.CreateDbContext();
+        var migrator = dbContext.Database.GetService<IMigrator>();
+        await migrator.MigrateAsync(PreviousMigrationId);
+        await SeedPreviousSchemaAsync(dbContext, "Canonical", "Divergent");
+
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => migrator.MigrateAsync());
+
+        Assert.Contains("Cannot canonicalize LLM Chat titles", exception.MessageText, StringComparison.Ordinal);
+    }
+
+    private static async Task<Guid> SeedPreviousSchemaAsync(
+        AppDbContext dbContext,
+        string conversationTitle,
+        string transcriptTitle)
+    {
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            ALTER TABLE "LlmChats_Transcripts"
+                ALTER COLUMN "Title" SET DEFAULT '',
+                ALTER COLUMN "CreatedAtUtc" SET DEFAULT CURRENT_TIMESTAMP,
+                ALTER COLUMN "UpdatedAtUtc" SET DEFAULT CURRENT_TIMESTAMP;
+            """);
+        var definitionId = Guid.NewGuid();
+        var conversationId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        dbContext.Add(new LlmChatDefinitionRow
+        {
+            Id = definitionId,
+            Name = "Title migration",
+            Summary = "",
+            AvatarImageUrl = "",
+            Status = LlmChatDefinitionStatus.Active,
+            CurrentRevision = 1,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = 0
+        });
+        dbContext.Add(LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(
+            definitionId,
+            1,
+            AgentReasoningEffortLevel.None,
+            now));
+        dbContext.Add(new LlmChatTranscriptRow
+        {
+            ConversationId = conversationId,
+            ProviderId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            ProviderName = "Provider",
+            ProviderKind = ProviderKind.OpenAi,
+            Model = "model",
+            TranscriptRevision = 0,
+            EntryCount = 0
+        });
+        dbContext.Add(new LlmChatConversationRow
+        {
+            Id = conversationId,
+            DefinitionId = definitionId,
+            DefinitionRevision = 1,
+            Title = conversationTitle,
+            Status = LlmChatConversationStatus.Active,
+            Origin = LlmChatConversationOrigin.Api,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = 0
+        });
+        await dbContext.SaveChangesAsync();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """UPDATE "LlmChats_Transcripts" SET "Title" = {0} WHERE "ConversationId" = {1};""",
+            transcriptTitle,
+            conversationId);
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            ALTER TABLE "LlmChats_Transcripts"
+                ALTER COLUMN "Title" DROP DEFAULT,
+                ALTER COLUMN "CreatedAtUtc" DROP DEFAULT,
+                ALTER COLUMN "UpdatedAtUtc" DROP DEFAULT;
+            """);
+        return conversationId;
+    }
 }
 
 public sealed class LlmChatPersistenceIntegrationTests
@@ -419,11 +677,14 @@ internal sealed class LlmChatsPostgreSqlTestDatabase : IAsyncDisposable
         return database;
     }
 
+    public static LlmChatsPostgreSqlTestDatabase CreateUnmigrated(string key)
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        return new LlmChatsPostgreSqlTestDatabase(PostgresTestDatabaseLease.Create(key));
+    }
+
     public AppDbContext CreateDbContext()
         => new(lease.CreateAppDbContextOptions());
-
-    public IDbContextFactory<AppDbContext> CreateFactory()
-        => new LlmChatTestDbContextFactory(lease.CreateAppDbContextOptions());
 
     public ValueTask DisposeAsync()
         => lease.DisposeAsync();
@@ -470,25 +731,52 @@ internal sealed class LlmChatsPostgreSqlTestDatabase : IAsyncDisposable
             Reason = "test"
         };
 
+    public static void SeedConversationRoot(
+        AppDbContext dbContext,
+        LlmConversationDocument document)
+    {
+        var definitionId = Guid.NewGuid();
+        dbContext.Add(new LlmChatDefinitionRow
+        {
+            Id = definitionId,
+            Name = "Store integration",
+            Summary = "",
+            AvatarImageUrl = "",
+            Status = LlmChatDefinitionStatus.Active,
+            CurrentRevision = 1,
+            CreatedAtUtc = document.CreatedAtUtc,
+            UpdatedAtUtc = document.UpdatedAtUtc,
+            ConcurrencyToken = 0
+        });
+        dbContext.Add(CreateRevisionRow(
+            definitionId,
+            1,
+            AgentReasoningEffortLevel.None,
+            document.CreatedAtUtc));
+        dbContext.Add(new LlmChatConversationRow
+        {
+            Id = document.ConversationId,
+            DefinitionId = definitionId,
+            DefinitionRevision = 1,
+            Title = document.Title,
+            Status = LlmChatConversationStatus.Active,
+            Origin = LlmChatConversationOrigin.Api,
+            CreatedAtUtc = document.CreatedAtUtc,
+            UpdatedAtUtc = document.UpdatedAtUtc,
+            ConcurrencyToken = 0
+        });
+    }
+
     public static LlmChatTranscriptRow CreateTranscriptRow(Guid conversationId, DateTimeOffset now)
         => new()
         {
             ConversationId = conversationId,
-            Title = "Transferred conversation",
             ProviderId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             ProviderName = "Provider",
             ProviderKind = ProviderKind.OpenAi,
             Model = "model",
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now,
             TranscriptRevision = 1,
             EntryCount = 1
         };
 
-    private sealed class LlmChatTestDbContextFactory(DbContextOptions<AppDbContext> options)
-        : IDbContextFactory<AppDbContext>
-    {
-        public AppDbContext CreateDbContext()
-            => new(options);
-    }
 }

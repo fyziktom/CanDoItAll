@@ -7,7 +7,6 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
 using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
 using CanDoItAll.Modules.LlmChats.Ports;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -52,7 +51,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             runtimeState,
             operationScope);
         ILlmConversationStore conversationStore = new ProfileFencedLlmConversationStore(
-            new EfLlmConversationStore(serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>()),
+            new EfLlmConversationStore(serviceProvider.GetRequiredService<AppDbContext>()),
             runtimeState,
             operationScope,
             evidenceSink);

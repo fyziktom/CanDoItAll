@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.LlmChats.Persistence;
 
-public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbContextFactory)
+public sealed class EfLlmConversationStore(AppDbContext dbContext)
     : ILlmConversationStore
 {
     public async Task<LlmConversationDocument> CreateAsync(
@@ -13,8 +13,9 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(document);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false)
+            : null;
         dbContext.Add(LlmConversationPersistenceMapper.ToRow(document));
         for (var index = 0; index < document.Entries.Length; index++)
         {
@@ -24,7 +25,11 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return await RequireStoredAsync(dbContext, document.ConversationId, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -41,7 +46,6 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
         Guid conversationId,
         CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         return await LoadAsync(dbContext, conversationId, cancellationToken).ConfigureAwait(false);
     }
 
@@ -59,8 +63,9 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
                 "A replacement document must advance the transcript revision.");
         }
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false)
+            : null;
         var existing = await LoadAsync(dbContext, document.ConversationId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -78,12 +83,10 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
             .Where(row => row.ConversationId == document.ConversationId &&
                           row.TranscriptRevision == expectedTranscriptRevision)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(row => row.Title, incoming.Title)
                 .SetProperty(row => row.ProviderId, incoming.ProviderId)
                 .SetProperty(row => row.ProviderName, incoming.ProviderName)
                 .SetProperty(row => row.ProviderKind, incoming.ProviderKind)
                 .SetProperty(row => row.Model, incoming.Model)
-                .SetProperty(row => row.UpdatedAtUtc, incoming.UpdatedAtUtc)
                 .SetProperty(row => row.TranscriptRevision, incoming.TranscriptRevision)
                 .SetProperty(row => row.EntryCount, incoming.EntryCount)
                 .SetProperty(row => row.ActiveTurnId, incoming.ActiveTurnId)
@@ -107,6 +110,20 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
         if (affected != 1)
         {
             throw ConcurrencyConflict(document.ConversationId, null, expectedTranscriptRevision);
+        }
+
+        var conversationAffected = await dbContext.Set<LlmChatConversationRow>()
+            .Where(row => row.Id == document.ConversationId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.UpdatedAtUtc, document.UpdatedAtUtc),
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (conversationAffected != 1)
+        {
+            throw new LlmConversationException(
+                LlmConversationFailureKind.StorageCorrupted,
+                document.ConversationId,
+                "The canonical conversation metadata row could not be updated.");
         }
 
         switch (delta)
@@ -138,7 +155,11 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
                 break;
         }
 
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         return await RequireStoredAsync(dbContext, document.ConversationId, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -146,28 +167,27 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
     public async Task<IReadOnlyList<LlmConversationSummary>> ListAsync(
         CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-        return await dbContext.Set<LlmChatTranscriptRow>()
-            .AsNoTracking()
-            .OrderByDescending(row => row.UpdatedAtUtc)
-            .ThenBy(row => row.ConversationId)
-            .Select(row => new LlmConversationSummary(
-                row.ConversationId,
-                row.Title,
-                row.ProviderName,
-                row.Model,
-                row.CreatedAtUtc,
-                row.UpdatedAtUtc,
-                row.TranscriptRevision,
-                row.EntryCount,
-                row.ActiveTurnId != null))
+        return await (
+                from transcript in dbContext.Set<LlmChatTranscriptRow>().AsNoTracking()
+                join conversation in dbContext.Set<LlmChatConversationRow>().AsNoTracking()
+                    on transcript.ConversationId equals conversation.Id
+                orderby conversation.UpdatedAtUtc descending, transcript.ConversationId
+                select new LlmConversationSummary(
+                    transcript.ConversationId,
+                    conversation.Title,
+                    transcript.ProviderName,
+                    transcript.Model,
+                    conversation.CreatedAtUtc,
+                    conversation.UpdatedAtUtc,
+                    transcript.TranscriptRevision,
+                    transcript.EntryCount,
+                    transcript.ActiveTurnId != null))
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async Task DeleteAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var affected = await dbContext.Set<LlmChatTranscriptRow>()
@@ -194,11 +214,21 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
         Guid conversationId,
         CancellationToken cancellationToken)
     {
-        var transcript = await dbContext.Set<LlmChatTranscriptRow>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(row => row.ConversationId == conversationId, cancellationToken)
+        var state = await (
+                from transcript in dbContext.Set<LlmChatTranscriptRow>().AsNoTracking()
+                join conversation in dbContext.Set<LlmChatConversationRow>().AsNoTracking()
+                    on transcript.ConversationId equals conversation.Id
+                where transcript.ConversationId == conversationId
+                select new
+                {
+                    Transcript = transcript,
+                    conversation.Title,
+                    conversation.CreatedAtUtc,
+                    conversation.UpdatedAtUtc
+                })
+            .SingleOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
-        if (transcript is null)
+        if (state is null)
         {
             return null;
         }
@@ -209,7 +239,12 @@ public sealed class EfLlmConversationStore(IDbContextFactory<AppDbContext> dbCon
             .OrderBy(row => row.Sequence)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        return LlmConversationPersistenceMapper.ToDocument(transcript, messages);
+        return LlmConversationPersistenceMapper.ToDocument(
+            state.Transcript,
+            state.Title,
+            state.CreatedAtUtc,
+            state.UpdatedAtUtc,
+            messages);
     }
 
     private static async Task<LlmConversationDocument> RequireStoredAsync(

@@ -14,7 +14,7 @@ internal sealed record LlmChatsTransferDocument(
     IReadOnlyList<LlmChatOperationRow> Operations,
     IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public int RecordCount =>
         Definitions.Count + Revisions.Count + Tags.Count + Conversations.Count + Transcripts.Count +

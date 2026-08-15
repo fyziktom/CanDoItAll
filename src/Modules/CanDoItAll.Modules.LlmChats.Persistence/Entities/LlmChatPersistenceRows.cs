@@ -106,8 +106,6 @@ internal sealed class LlmChatTranscriptRow
 {
     public Guid ConversationId { get; set; }
 
-    public string Title { get; set; } = string.Empty;
-
     public Guid ProviderId { get; set; }
 
     public string ProviderName { get; set; } = string.Empty;
@@ -115,10 +113,6 @@ internal sealed class LlmChatTranscriptRow
     public ProviderKind ProviderKind { get; set; }
 
     public string Model { get; set; } = string.Empty;
-
-    public DateTimeOffset CreatedAtUtc { get; set; }
-
-    public DateTimeOffset UpdatedAtUtc { get; set; }
 
     public long TranscriptRevision { get; set; }
 

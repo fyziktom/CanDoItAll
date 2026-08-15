@@ -45,11 +45,6 @@ public sealed class LlmChatConversationApplicationService(
             {
                 var id = LlmChatConversationId.New();
                 var title = LlmChatConversationTitlePolicy.Normalize(command.Title);
-                var transcript = await conversationEngine.CreateAsync(
-                    id,
-                    revision,
-                    title,
-                    transactionCancellationToken).ConfigureAwait(false);
                 var now = timeProvider.GetUtcNow();
                 var conversation = new LlmChatConversation(
                     id,
@@ -62,6 +57,11 @@ public sealed class LlmChatConversationApplicationService(
                     now,
                     0);
                 await conversationRepository.CreateAsync(conversation, transactionCancellationToken).ConfigureAwait(false);
+                var transcript = await conversationEngine.CreateAsync(
+                    id,
+                    revision,
+                    title,
+                    transactionCancellationToken).ConfigureAwait(false);
                 return Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
                     conversation,
                     definition.Name,
@@ -103,11 +103,6 @@ public sealed class LlmChatConversationApplicationService(
             return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
             {
                 var title = LlmChatConversationTitlePolicy.Normalize(command.Title);
-                var transcript = await conversationEngine.RenameAsync(
-                    current.Id,
-                    title,
-                    command.ExpectedTranscriptRevision,
-                    transactionCancellationToken).ConfigureAwait(false);
                 var updated = new LlmChatConversation(
                     current.Id,
                     current.DefinitionId,
@@ -121,6 +116,11 @@ public sealed class LlmChatConversationApplicationService(
                 await conversationRepository.ReplaceAsync(
                     updated,
                     command.ExpectedConcurrencyToken,
+                    transactionCancellationToken).ConfigureAwait(false);
+                var transcript = await conversationEngine.RenameAsync(
+                    current.Id,
+                    title,
+                    command.ExpectedTranscriptRevision,
                     transactionCancellationToken).ConfigureAwait(false);
                 return await BuildDetailsAsync(updated, transcript, transactionCancellationToken).ConfigureAwait(false);
             }, cancellationToken).ConfigureAwait(false);

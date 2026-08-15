@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "subbundle": "SB01",
   "title": "Canonical transaction and persistence repair",
-  "state": "Locked",
+  "state": "Ready",
   "proofTier": "Governed",
   "repository": "fyziktom/CanDoItAll",
   "branch": "simple-chats",

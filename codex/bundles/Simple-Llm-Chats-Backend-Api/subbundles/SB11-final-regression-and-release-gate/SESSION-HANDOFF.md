@@ -5,7 +5,7 @@ Status: Blocked — final merge decision is Not Ready
 ## Baseline
 
 - starting commit: `c0117109c6ef6166d1d8b1b42d75e7f4af83c5ee` plus completed SB00-SB10 working tree
-- ending commit/working-tree state: final working tree after SB11; no commit created
+- ending implementation state: materialized by commit `16b6aa4b60dc88a6134dd6c9c9e634c064ac5847` after the original commitless SB11 run
 - executor/session: Codex bundle workflow
 - date: 2026-08-14
 
@@ -67,3 +67,11 @@ Status: Blocked — final merge decision is Not Ready
 
 - next subbundle/checkpoint: FINAL
 - unlock decision: blocked; final merge verdict is Not Ready
+
+## Follow-up provenance reconciliation
+
+The `Simple-Llm-Chats-Hardening-Sse` SB00 work synchronized development at
+`eb6be3ea38075b442d24976655f5c45ac08bd6b5` into comparison head
+`5522880cbf3101ed54c216ab74cac3b8ff2bade0`, then reran only the exact 19 prior cases on both heads.
+That durable follow-up proof supersedes the stale/commitless provenance here without rewriting this
+handoff's historical gate result.

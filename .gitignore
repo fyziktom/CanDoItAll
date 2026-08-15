@@ -19,6 +19,8 @@ evidence/
 proof/
 !codex/bundles/unix-merge-readiness-followup/proof/
 !codex/bundles/unix-merge-readiness-followup/proof/**
+!codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/
+!codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/**
 *.nupkg
 *.snupkg
 *.binlog

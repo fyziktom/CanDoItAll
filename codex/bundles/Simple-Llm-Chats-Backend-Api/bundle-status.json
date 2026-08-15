@@ -1,5 +1,7 @@
 {
   "bundleId": "simple-llm-chats-backend-api",
+  "implementationCommit": "16b6aa4b60dc88a6134dd6c9c9e634c064ac5847",
+  "provenanceReconciledBy": "Simple-Llm-Chats-Hardening-Sse/SB00@5522880cbf3101ed54c216ab74cac3b8ff2bade0",
   "status": "Blocked",
   "currentGate": "FINAL",
   "subbundles": {

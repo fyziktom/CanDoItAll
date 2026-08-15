@@ -2,6 +2,10 @@
 
 Status: Completed with Not Ready verdict
 
+Implementation provenance reconciled: the original working-tree implementation was materialized by
+commit `16b6aa4b60dc88a6134dd6c9c9e634c064ac5847`. Follow-up SB00 comparison/proof head:
+`5522880cbf3101ed54c216ab74cac3b8ff2bade0`.
+
 ## Original requirements
 
 | Requirements | Closure state | Evidence |
@@ -47,3 +51,6 @@ Windows/Ubuntu/macOS CI matrix is ready but has not run and is not claimed as pa
 ## Final verdict
 
 - Not Ready. LLM Chat focused implementation proof is green, but the stable repository gate is red.
+
+This remains the historical original-bundle verdict. The follow-up bundle owns the synchronized
+baseline classification and subsequent release decision.

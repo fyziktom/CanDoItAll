@@ -1,12 +1,13 @@
 # Final merge decision
 
-Status: Not Ready
+Status: Historical Not Ready verdict — implementation provenance reconciled by the follow-up bundle
 
 ## Baseline and final state
 
 - prepared baseline: `c0117109c6ef6166d1d8b1b42d75e7f4af83c5ee`
-- execution baseline: same HEAD plus sequential SB00-SB10 working tree evidence
-- final HEAD: `c0117109c6ef6166d1d8b1b42d75e7f4af83c5ee`; no commit created
+- execution baseline: `c0117109c6ef6166d1d8b1b42d75e7f4af83c5ee` plus sequential SB00-SB11 working-tree evidence
+- actual implementation commit: `16b6aa4b60dc88a6134dd6c9c9e634c064ac5847` (`phase1`), which materialized that working tree after the original run
+- follow-up synchronized comparison head: `5522880cbf3101ed54c216ab74cac3b8ff2bade0`, containing development `eb6be3ea38075b442d24976655f5c45ac08bd6b5`
 - dependency mode: local sibling source projects for all local Release-gate commands
 - operating systems directly tested: Windows
 - CI matrix result: configured for Windows/Ubuntu/macOS and statically ready; not executed
@@ -52,3 +53,8 @@ Status: Not Ready
 
 The LLM Chat backend/API implementation and its focused proof are green, but the repository-wide merge
 gate is red and the bundle contract does not allow the executor to accept unrelated baseline failures.
+
+This is the historical verdict of the original run. The follow-up hardening bundle's SB00 evidence
+classifies the same 19 cases on synchronized development and feature heads: 8 Baseline,
+7 EnvironmentSensitive, 4 ObsoleteAfterSync, 0 BranchInduced, and 0 Unresolved. Its CP0 decision, not
+this historical decision, governs the follow-up work.

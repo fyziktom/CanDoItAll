@@ -1,6 +1,6 @@
 # SB01 — Canonical transaction and persistence repair
 
-Status: **Locked**  
+Status: **Ready**
 Proof tier: **Governed**  
 Depends on: **SB00**
 

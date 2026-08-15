@@ -59,3 +59,19 @@ may generalize small reusable capabilities if necessary, but must not move produ
 - `EfLlmConversationStore`: remove independent command contexts or reduce to a read/compatibility adapter.
 - `AuditedLlmChatInvocationPort`: replace post-hoc approximate audit with actual dispatch-attempt events.
 - `LlmChatOperationsApi`: stop awaiting inference inline; become admission/status/cancel transport.
+
+## SB00 synchronized refresh
+
+The feature branch now contains development commit `eb6be3ea38075b442d24976655f5c45ac08bd6b5`
+through merge head `5522880cbf3101ed54c216ab74cac3b8ff2bade0`. The merge changed documentation
+only, so the owners and dependency direction above remain current.
+
+CodeAnalytics snapshot `snap-20260814234111-c9c24513` scopes Composition,
+Migrations.PostgreSql, Modules.LlmChats, Modules.LlmChats.Persistence, and Web:
+
+- 5 projects, 483 types, 3,235 members, and 21 service registrations;
+- 0 dependency cycles, diagnostics, open questions, or Error findings;
+- 153 advisory complexity findings (30 Warning, 123 Info) to be reduced by the governed subbundles,
+  not hidden behind new partials or transport-owned behavior.
+
+No production source, project reference, partial declaration, or runtime ownership changed in SB00.

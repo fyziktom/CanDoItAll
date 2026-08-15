@@ -4,8 +4,8 @@ Status: prepared. Closure fields are filled during execution.
 
 | ID | Requirement | Primary owner | Closure |
 |---|---|---|---|
-| RQ-001 | Synchronize simple-chats with the latest development baseline before hardening proof. | SB00, SB13 | Pending |
-| RQ-002 | Replace stale or commitless proof with evidence tied to the actual implementation head and classify the prior 19 failures. | SB00, SB13 | Pending |
+| RQ-001 | Synchronize simple-chats with the latest development baseline before hardening proof. | SB00, SB13 | SB00 satisfied at `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; SB13 immutable-head confirmation pending |
+| RQ-002 | Replace stale or commitless proof with evidence tied to the actual implementation head and classify the prior 19 failures. | SB00, SB13 | SB00 satisfied: 19/19 classified, original commit reconciled; SB13 final-head closure pending |
 | RQ-003 | Maintain one canonical writable owner for conversation title and transcript metadata. | SB01, SB06 | Pending |
 | RQ-004 | Create and rename conversation state atomically without orphan or divergent rows. | SB01, SB06 | Pending |
 | RQ-005 | Commit operation claim, pending user message, active turn, and admission evidence atomically. | SB02, SB06 | Pending |
@@ -37,5 +37,5 @@ Status: prepared. Closure fields are filled during execution.
 | RQ-031 | Keep implementation portable and prove affected behavior on Linux plus the final Windows/Linux/macOS CI matrix. | SB11, SB13 | Pending |
 | RQ-032 | Do not implement UI, shared-component refactoring, floating chat, or Project Structure context in this bundle. | SB12 | Pending |
 | RQ-033 | Preserve a clean future LlmChatDeployment boundary for enterprise chatbot channels without dormant deployment fields now. | SB10, SB12 | Pending |
-| RQ-034 | Run the expensive stable solution gate and CI matrix once, only at the immutable final head. | SB00, SB13 | Pending |
-| RQ-035 | Use filtered affected-scope tests throughout; forbid repeated full Unit/Integration/Solution suites before the final gate. | SB00, SB12, SB13 | Pending |
+| RQ-034 | Run the expensive stable solution gate and CI matrix once, only at the immutable final head. | SB00, SB13 | SB00 preserved single-shot gate; SB13 execution pending |
+| RQ-035 | Use filtered affected-scope tests throughout; forbid repeated full Unit/Integration/Solution suites before the final gate. | SB00, SB12, SB13 | SB00 satisfied with two exact 19-case commands; ongoing through SB13 |

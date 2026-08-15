@@ -12,13 +12,10 @@ internal static class LlmConversationPersistenceMapper
         var row = new LlmChatTranscriptRow
         {
             ConversationId = document.ConversationId,
-            Title = document.Title,
             ProviderId = document.Provider.ProviderId,
             ProviderName = document.Provider.ProviderName,
             ProviderKind = document.Provider.ProviderKind,
             Model = document.Provider.Model,
-            CreatedAtUtc = document.CreatedAtUtc,
-            UpdatedAtUtc = document.UpdatedAtUtc,
             TranscriptRevision = document.TranscriptRevision,
             EntryCount = document.Entries.Length
         };
@@ -45,6 +42,9 @@ internal static class LlmConversationPersistenceMapper
 
     public static LlmConversationDocument ToDocument(
         LlmChatTranscriptRow transcript,
+        string title,
+        DateTimeOffset createdAtUtc,
+        DateTimeOffset updatedAtUtc,
         IReadOnlyList<LlmChatMessageRow> messages)
     {
         if (messages.Count != transcript.EntryCount)
@@ -89,10 +89,10 @@ internal static class LlmConversationPersistenceMapper
                 transcript.Model);
             return new LlmConversationDocument(
                 transcript.ConversationId,
-                transcript.Title,
+                title,
                 provider,
-                transcript.CreatedAtUtc,
-                transcript.UpdatedAtUtc,
+                createdAtUtc,
+                updatedAtUtc,
                 transcript.TranscriptRevision,
                 entries.MoveToImmutable(),
                 ToActiveTurn(transcript),

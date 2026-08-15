@@ -32,7 +32,6 @@ internal sealed class LlmChatTranscriptConfiguration : IEntityTypeConfiguration<
     {
         builder.ToTable("LlmChats_Transcripts");
         builder.HasKey(row => row.ConversationId);
-        builder.Property(row => row.Title).HasMaxLength(LlmConversationDocument.MaximumTitleLength).IsRequired();
         builder.Property(row => row.ProviderName).HasMaxLength(LlmConversationProviderSnapshot.MaximumNameLength).IsRequired();
         builder.Property(row => row.Model).HasMaxLength(LlmConversationProviderSnapshot.MaximumModelLength).IsRequired();
         builder.Property(row => row.TranscriptRevision).IsConcurrencyToken();
@@ -44,7 +43,6 @@ internal sealed class LlmChatTranscriptConfiguration : IEntityTypeConfiguration<
         builder.Property(row => row.AccelerationStrategyId).HasMaxLength(LlmConversationAccelerationEnvelope.MaximumStrategyIdLength);
         builder.Property(row => row.AccelerationProviderName).HasMaxLength(LlmConversationProviderSnapshot.MaximumNameLength);
         builder.Property(row => row.AccelerationModel).HasMaxLength(LlmConversationProviderSnapshot.MaximumModelLength);
-        builder.HasIndex(row => row.UpdatedAtUtc);
     }
 }
 
