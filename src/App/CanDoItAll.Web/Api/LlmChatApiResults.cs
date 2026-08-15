@@ -160,18 +160,98 @@ internal static class LlmChatApiResults
 
 internal static class LlmChatApiCursorCodec
 {
-    private const string Prefix = "v1:";
+    private const int Version = 2;
 
-    public static string Encode(int offset)
+    public static string Encode(LlmChatDefinitionCursor cursor)
+        => Encode(CursorKind.Definition, cursor.UpdatedAtUtc.UtcTicks, cursor.DefinitionId.Value);
+
+    public static string Encode(LlmChatConversationCursor cursor)
+        => Encode(CursorKind.Conversation, cursor.UpdatedAtUtc.UtcTicks, cursor.ConversationId.Value);
+
+    public static string Encode(LlmChatTranscriptCursor cursor)
+        => Encode(CursorKind.Transcript, cursor.Sequence, null);
+
+    public static bool TryDecodeDefinition(string? cursor, out LlmChatDefinitionCursor? position)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-        var bytes = Encoding.UTF8.GetBytes($"{Prefix}{offset.ToString(CultureInfo.InvariantCulture)}");
-        return WebEncoders.Base64UrlEncode(bytes);
+        position = null;
+        if (!TryDecode(cursor, CursorKind.Definition, out var value, out var id))
+        {
+            return false;
+        }
+
+        if (id is { } definitionId)
+        {
+            if (!IsValidUtcTicks(value))
+            {
+                return false;
+            }
+
+            position = new LlmChatDefinitionCursor(
+                new DateTimeOffset(value, TimeSpan.Zero),
+                new LlmChatDefinitionId(definitionId));
+        }
+
+        return true;
     }
 
-    public static bool TryDecode(string? cursor, out int offset)
+    public static bool TryDecodeConversation(string? cursor, out LlmChatConversationCursor? position)
     {
-        offset = 0;
+        position = null;
+        if (!TryDecode(cursor, CursorKind.Conversation, out var value, out var id))
+        {
+            return false;
+        }
+
+        if (id is { } conversationId)
+        {
+            if (!IsValidUtcTicks(value))
+            {
+                return false;
+            }
+
+            position = new LlmChatConversationCursor(
+                new DateTimeOffset(value, TimeSpan.Zero),
+                new LlmChatConversationId(conversationId));
+        }
+
+        return true;
+    }
+
+    public static bool TryDecodeTranscript(string? cursor, out LlmChatTranscriptCursor? position)
+    {
+        position = null;
+        if (!TryDecode(cursor, CursorKind.Transcript, out var value, out _))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            position = new LlmChatTranscriptCursor(value);
+        }
+
+        return true;
+    }
+
+    private static string Encode(CursorKind kind, long value, Guid? id)
+    {
+        var payload = string.Join(
+            ':',
+            Version.ToString(CultureInfo.InvariantCulture),
+            ((int)kind).ToString(CultureInfo.InvariantCulture),
+            value.ToString(CultureInfo.InvariantCulture),
+            id?.ToString("N") ?? string.Empty);
+        return WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(payload));
+    }
+
+    private static bool TryDecode(
+        string? cursor,
+        CursorKind expectedKind,
+        out long value,
+        out Guid? id)
+    {
+        value = 0;
+        id = null;
         if (string.IsNullOrWhiteSpace(cursor))
         {
             return true;
@@ -179,14 +259,44 @@ internal static class LlmChatApiCursorCodec
 
         try
         {
-            var value = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(cursor));
-            return value.StartsWith(Prefix, StringComparison.Ordinal) &&
-                   int.TryParse(value[Prefix.Length..], NumberStyles.None, CultureInfo.InvariantCulture, out offset) &&
-                   offset >= 0;
+            var fields = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(cursor)).Split(':');
+            if (fields.Length != 4 ||
+                !int.TryParse(fields[0], NumberStyles.None, CultureInfo.InvariantCulture, out var version) ||
+                version != Version ||
+                !int.TryParse(fields[1], NumberStyles.None, CultureInfo.InvariantCulture, out var rawKind) ||
+                rawKind != (int)expectedKind ||
+                !long.TryParse(fields[2], NumberStyles.None, CultureInfo.InvariantCulture, out value) ||
+                value < 1)
+            {
+                return false;
+            }
+
+            if (expectedKind == CursorKind.Transcript)
+            {
+                return fields[3].Length == 0;
+            }
+
+            if (!Guid.TryParseExact(fields[3], "N", out var parsedId) || parsedId == Guid.Empty)
+            {
+                return false;
+            }
+
+            id = parsedId;
+            return true;
         }
-        catch (FormatException)
+        catch (Exception exception) when (exception is FormatException or ArgumentOutOfRangeException)
         {
             return false;
         }
+    }
+
+    private static bool IsValidUtcTicks(long value)
+        => value >= DateTimeOffset.MinValue.UtcTicks && value <= DateTimeOffset.MaxValue.UtcTicks;
+
+    private enum CursorKind
+    {
+        Definition = 1,
+        Conversation = 2,
+        Transcript = 3
     }
 }

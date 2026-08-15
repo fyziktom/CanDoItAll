@@ -20,39 +20,6 @@ public sealed class EfLlmChatConversationRepository(AppDbContext dbContext) : IL
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
-    public async Task<IReadOnlyList<LlmChatConversation>> ListAsync(
-        int take,
-        LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        return await ListPageAsync(take, 0, definitionId, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task<IReadOnlyList<LlmChatConversation>> ListPageAsync(
-        int take,
-        int offset,
-        LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-        var query = dbContext.Set<LlmChatConversationRow>().AsNoTracking();
-        if (definitionId is { } id)
-        {
-            query = query.Where(item => item.DefinitionId == id.Value);
-        }
-
-        var rows = await query
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenBy(item => item.Id)
-            .Skip(offset)
-            .Take(take)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return [.. rows.Select(LlmChatPersistenceMapper.ToDomain)];
-    }
-
     public Task CreateAsync(LlmChatConversation conversation, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(conversation);

@@ -11,6 +11,7 @@ namespace CanDoItAll.Modules.LlmChats.Persistence;
 public sealed class LlmChatConversationEngine(
     ILlmConversationService conversationService,
     ILlmInvocationPort invocationPort,
+    ILlmChatConversationReadStore readStore,
     CanonicalLlmChatProviderResolver providerResolver,
     ILlmChatRuntimeLeaseFactory runtimeLeaseFactory,
     ILlmChatOperationScopeAccessor operationScope) : ILlmChatConversationEngine
@@ -48,47 +49,34 @@ public sealed class LlmChatConversationEngine(
             LlmChatOperationId.New(),
             async token =>
             {
-                var document = await conversationService.TryGetAsync(conversationId.Value, token)
+                var conversation = await readStore.TryGetAsync(conversationId, token)
                     .ConfigureAwait(false);
-                return document is null ? null : Map(document);
+                return conversation?.Transcript;
             },
             cancellationToken);
 
     public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
         LlmChatConversationId conversationId,
         int take,
-        int offset,
+        LlmChatTranscriptCursor? cursor,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
         return ExecuteAsync(
             LlmChatOperationId.New(),
             async token =>
             {
-                var document = await conversationService.TryGetAsync(conversationId.Value, token)
+                var page = await readStore.TryGetTranscriptPageAsync(conversationId, take, cursor, token)
                     .ConfigureAwait(false);
-                if (document is null)
+                if (page is null)
                 {
                     return null;
                 }
 
-                var entries = document.Entries
-                    .Skip(offset)
-                    .Take(checked(take + 1))
-                    .ToArray();
-                var hasMore = entries.Length > take;
                 return new LlmChatTranscriptPage(
-                    Map(document),
-                    [.. entries.Take(take).Select(entry => new LlmChatTranscriptEntry(
-                        entry.EntryId,
-                        entry.TurnId,
-                        entry.Role,
-                        entry.Text,
-                        entry.CreatedAtUtc,
-                        entry.Model,
-                        entry.Usage))],
-                    hasMore ? checked(offset + take) : null);
+                    page.Conversation.Transcript,
+                    page.Entries,
+                    page.NextCursor);
             },
             cancellationToken);
     }
@@ -247,30 +235,7 @@ public sealed class LlmChatConversationEngine(
         CancellationToken cancellationToken = default)
         => ExecuteAsync(
             operationId,
-            async token =>
-            {
-                var document = await conversationService.TryGetAsync(conversationId.Value, token)
-                    .ConfigureAwait(false);
-                if (document is null)
-                {
-                    return null;
-                }
-
-                var assistant = document.Entries.SingleOrDefault(entry =>
-                    entry.TurnId == operationId.Value && entry.Role == LlmMessageRole.Assistant);
-                return new LlmChatConversationTurnEvidence(
-                    Map(document),
-                    operationId,
-                    document.ActiveTurn?.TurnId == operationId.Value,
-                    assistant is null
-                        ? null
-                        : new LlmChatAssistantTurnEvidence(
-                            assistant.EntryId,
-                            assistant.Text,
-                            assistant.Model,
-                            assistant.Usage ?? LlmUsage.Zero,
-                            assistant.CreatedAtUtc));
-            },
+            token => readStore.TryInspectTurnAsync(conversationId, operationId, token),
             cancellationToken);
 
     public Task<LlmChatConversationEngineState> AbandonActiveTurnAsync(

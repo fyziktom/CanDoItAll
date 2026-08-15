@@ -16,6 +16,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var definitions = new InMemoryLlmChatDefinitionRepository();
         var definitionService = new LlmChatDefinitionApplicationService(
             definitions,
+            definitions,
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatProviderResolver(),
             new FixedTimeProvider(Now));
@@ -29,6 +30,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var service = new LlmChatConversationApplicationService(
             definitions,
             conversations,
+            new StubLlmChatConversationReadStore(),
             new StubLlmChatTurnStateRepository(),
             new InlineLlmChatUnitOfWork(),
             engine,
@@ -56,6 +58,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var definitions = new InMemoryLlmChatDefinitionRepository();
         var definitionService = new LlmChatDefinitionApplicationService(
             definitions,
+            definitions,
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatProviderResolver(),
             new FixedTimeProvider(Now));
@@ -77,6 +80,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var service = new LlmChatConversationApplicationService(
             definitions,
             new InMemoryLlmChatConversationRepository(),
+            new StubLlmChatConversationReadStore(),
             new StubLlmChatTurnStateRepository(),
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatConversationEngine(),
@@ -142,6 +146,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var definitions = new InMemoryLlmChatDefinitionRepository();
         var definitionService = new LlmChatDefinitionApplicationService(
             definitions,
+            definitions,
             new InlineLlmChatUnitOfWork(),
             new StubLlmChatProviderResolver(),
             new FixedTimeProvider(Now));
@@ -153,6 +158,7 @@ public sealed class LlmChatConversationApplicationServiceTests
         var service = new LlmChatConversationApplicationService(
             definitions,
             new InMemoryLlmChatConversationRepository(),
+            new StubLlmChatConversationReadStore(),
             new StubLlmChatTurnStateRepository(
                 hasActiveTurn: hasActiveTurn,
                 hasNonterminalOperation: hasNonterminalOperation),

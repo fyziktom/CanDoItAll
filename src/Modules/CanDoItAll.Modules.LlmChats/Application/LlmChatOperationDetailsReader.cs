@@ -7,14 +7,14 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 
 public sealed class LlmChatOperationDetailsReader(
     ILlmChatOperationRepository operationRepository,
-    ILlmChatInvocationRecordRepository invocationRepository,
+    ILlmChatOperationReadStore readStore,
     ILlmChatConversationEngine conversationEngine)
 {
     internal async Task<Result<LlmChatOperationDetails>> GetAsync(
         LlmChatOperationId operationId,
         CancellationToken cancellationToken)
     {
-        var operation = await operationRepository.TryGetAsync(operationId, cancellationToken).ConfigureAwait(false);
+        var operation = await readStore.TryGetAsync(operationId, cancellationToken).ConfigureAwait(false);
         return operation is null
             ? Result<LlmChatOperationDetails>.Failure(LlmChatErrors.OperationNotFound())
             : await BuildAsync(operation, cancellationToken).ConfigureAwait(false);
@@ -24,11 +24,24 @@ public sealed class LlmChatOperationDetailsReader(
         LlmChatOperation operation,
         CancellationToken cancellationToken)
     {
+        var model = await readStore.TryGetAsync(operation.Id, cancellationToken).ConfigureAwait(false);
+        if (model is null)
+        {
+            return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.OperationNotFound());
+        }
+
+        return await BuildAsync(model, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Result<LlmChatOperationDetails>> BuildAsync(
+        LlmChatOperationReadModel model,
+        CancellationToken cancellationToken)
+    {
+        var operation = model.Operation;
         var evidence = await conversationEngine.InspectTurnAsync(
             operation.ConversationId,
             operation.Id,
             cancellationToken).ConfigureAwait(false);
-        var invocations = await invocationRepository.ListAsync(operation.Id, cancellationToken).ConfigureAwait(false);
         var assistant = evidence?.Assistant is { } item
             ? new LlmChatAssistantMessage(
                 item.EntryId,
@@ -38,7 +51,7 @@ public sealed class LlmChatOperationDetailsReader(
                 item.Usage,
                 item.CreatedAtUtc)
             : null;
-        return Result<LlmChatOperationDetails>.Success(new(operation, assistant, invocations));
+        return Result<LlmChatOperationDetails>.Success(new(operation, assistant, model.Invocations));
     }
 
     internal async Task<LlmChatOperation> RequireAsync(

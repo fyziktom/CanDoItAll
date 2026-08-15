@@ -121,6 +121,29 @@ internal sealed class InMemoryLlmChatOperationRepository : ILlmChatOperationRepo
     }
 }
 
+internal sealed class InMemoryLlmChatOperationReadStore(
+    InMemoryLlmChatOperationRepository operations,
+    InMemoryLlmChatInvocationRecordRepository invocations) : ILlmChatOperationReadStore
+{
+    public async Task<LlmChatOperationReadModel?> TryGetAsync(
+        LlmChatOperationId id,
+        CancellationToken cancellationToken = default)
+    {
+        var operation = await operations.TryGetAsync(id, cancellationToken);
+        return operation is null
+            ? null
+            : new LlmChatOperationReadModel(
+                operation,
+                await invocations.ListAsync(id, cancellationToken));
+    }
+
+    public Task<IReadOnlyList<LlmChatOperationId>> ListDispatchCandidatesAsync(
+        DateTimeOffset observedAtUtc,
+        int take,
+        CancellationToken cancellationToken = default)
+        => operations.ListDispatchCandidatesAsync(observedAtUtc, take, cancellationToken);
+}
+
 internal sealed class InMemoryLlmChatInvocationRecordRepository : ILlmChatInvocationRecordRepository
 {
     private readonly object gate = new();
@@ -257,11 +280,10 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
     public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
         LlmChatConversationId conversationId,
         int take,
-        int offset,
+        LlmChatTranscriptCursor? cursor,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
         var state = states.GetValueOrDefault(conversationId);
         return Task.FromResult(state is null
             ? null
@@ -657,7 +679,10 @@ internal sealed class LlmChatOperationHarness
             blockUntilCancelled);
         engine.SeedConversation(conversationId);
         var cancellations = new LlmChatOperationCancellationRegistry();
-        var details = new LlmChatOperationDetailsReader(operations, invocations, engine);
+        var details = new LlmChatOperationDetailsReader(
+            operations,
+            new InMemoryLlmChatOperationReadStore(operations, invocations),
+            engine);
         var admission = new LlmChatOperationAdmissionService(
             definitions,
             conversations,

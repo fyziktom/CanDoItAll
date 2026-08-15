@@ -37,30 +37,6 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
-    public async Task<IReadOnlyList<LlmChatOperationId>> ListDispatchCandidatesAsync(
-        DateTimeOffset observedAtUtc,
-        int take,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        var ids = await dbContext.Set<LlmChatOperationRow>()
-            .AsNoTracking()
-            .Where(row =>
-                (row.Status == LlmChatOperationStatus.Pending ||
-                 row.Status == LlmChatOperationStatus.Running ||
-                 row.Status == LlmChatOperationStatus.CancellationRequested) &&
-                (row.ExecutionOwnerId == null ||
-                 row.LeaseExpiresAtUtc == null ||
-                 row.LeaseExpiresAtUtc <= observedAtUtc))
-            .OrderBy(row => row.StartedAtUtc)
-            .ThenBy(row => row.Id)
-            .Select(row => row.Id)
-            .Take(take)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return [.. ids.Select(id => new LlmChatOperationId(id))];
-    }
-
     public async Task<LlmChatOperationAdmission> AdmitAsync(
         LlmChatOperation operation,
         CancellationToken cancellationToken = default)

@@ -27,46 +27,43 @@ public sealed record LlmChatConversationQuery
     public LlmChatConversationQuery(
         int take = 50,
         LlmChatDefinitionId? definitionId = null,
-        int offset = 0)
+        LlmChatConversationCursor? cursor = null)
     {
         if (take is < 1 or > MaximumTake)
         {
             throw new ArgumentOutOfRangeException(nameof(take), take, $"Take must be between 1 and {MaximumTake}.");
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-
         Take = take;
         DefinitionId = definitionId;
-        Offset = offset;
+        Cursor = cursor;
     }
 
     public int Take { get; }
 
     public LlmChatDefinitionId? DefinitionId { get; }
 
-    public int Offset { get; }
+    public LlmChatConversationCursor? Cursor { get; }
 }
 
 public sealed record LlmChatTranscriptQuery
 {
     public const int MaximumTake = 100;
 
-    public LlmChatTranscriptQuery(int take = 50, int offset = 0)
+    public LlmChatTranscriptQuery(int take = 50, LlmChatTranscriptCursor? cursor = null)
     {
         if (take is < 1 or > MaximumTake)
         {
             throw new ArgumentOutOfRangeException(nameof(take), take, $"Take must be between 1 and {MaximumTake}.");
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
         Take = take;
-        Offset = offset;
+        Cursor = cursor;
     }
 
     public int Take { get; }
 
-    public int Offset { get; }
+    public LlmChatTranscriptCursor? Cursor { get; }
 }
 
 public sealed record LlmChatConversationDetails(
@@ -74,7 +71,7 @@ public sealed record LlmChatConversationDetails(
     string DefinitionName,
     LlmChatConversationEngineState Transcript,
     IReadOnlyList<LlmChatTranscriptEntry>? Messages = null,
-    int? NextMessageOffset = null)
+    LlmChatTranscriptCursor? NextMessageCursor = null)
 {
     public IReadOnlyList<LlmChatTranscriptEntry> TranscriptMessages => Messages ?? [];
 }
@@ -106,7 +103,7 @@ public interface ILlmChatConversationApplicationService
         LlmChatConversationQuery query,
         CancellationToken cancellationToken = default);
 
-    Task<Result<LlmChatPage<LlmChatConversationDetails>>> ListPageAsync(
+    Task<Result<LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>>> ListPageAsync(
         LlmChatConversationQuery query,
         CancellationToken cancellationToken = default);
 }

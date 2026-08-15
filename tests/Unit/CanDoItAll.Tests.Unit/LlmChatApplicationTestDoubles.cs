@@ -9,7 +9,9 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit;
 
-internal sealed class InMemoryLlmChatDefinitionRepository : ILlmChatDefinitionRepository
+internal sealed class InMemoryLlmChatDefinitionRepository :
+    ILlmChatDefinitionRepository,
+    ILlmChatDefinitionReadStore
 {
     private readonly Dictionary<LlmChatDefinitionId, LlmChatDefinition> definitions = [];
     private readonly Dictionary<(LlmChatDefinitionId Id, int Revision), LlmChatDefinitionRevision> revisions = [];
@@ -89,6 +91,57 @@ internal sealed class InMemoryLlmChatDefinitionRepository : ILlmChatDefinitionRe
 
         return Task.CompletedTask;
     }
+
+    async Task<LlmChatDefinitionReadModel?> ILlmChatDefinitionReadStore.TryGetAsync(
+        LlmChatDefinitionId id,
+        CancellationToken cancellationToken)
+    {
+        var definition = await TryGetAsync(id, cancellationToken);
+        if (definition is null)
+        {
+            return null;
+        }
+
+        var revision = await TryGetRevisionAsync(id, definition.CurrentRevision, cancellationToken);
+        return revision is null
+            ? null
+            : new LlmChatDefinitionReadModel(
+                definition,
+                revision,
+                await ListTagsAsync(id, cancellationToken));
+    }
+
+    public async Task<LlmChatPage<LlmChatDefinitionReadModel, LlmChatDefinitionCursor>> ListPageAsync(
+        int take,
+        LlmChatDefinitionCursor? cursor,
+        LlmChatDefinitionStatus? status,
+        CancellationToken cancellationToken = default)
+    {
+        var ordered = definitions.Values
+            .Where(item => status is null || item.Status == status)
+            .Where(item => cursor is not { } position ||
+                           item.UpdatedAtUtc < position.UpdatedAtUtc ||
+                           item.UpdatedAtUtc == position.UpdatedAtUtc &&
+                           item.Id.Value.CompareTo(position.DefinitionId.Value) > 0)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenBy(item => item.Id.Value)
+            .Take(checked(take + 1))
+            .ToArray();
+        var pageDefinitions = ordered.Take(take).ToArray();
+        var items = new List<LlmChatDefinitionReadModel>(pageDefinitions.Length);
+        foreach (var definition in pageDefinitions)
+        {
+            items.Add(new LlmChatDefinitionReadModel(
+                definition,
+                revisions[(definition.Id, definition.CurrentRevision.Value)],
+                tags.GetValueOrDefault(definition.Id, [])));
+        }
+
+        LlmChatDefinitionCursor? next = ordered.Length > take && pageDefinitions.Length > 0
+            ? new LlmChatDefinitionCursor(pageDefinitions[^1].UpdatedAtUtc, pageDefinitions[^1].Id)
+            : null;
+        return new LlmChatPage<LlmChatDefinitionReadModel, LlmChatDefinitionCursor>(items, next);
+    }
 }
 
 internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversationRepository
@@ -142,6 +195,34 @@ internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversati
 
     public void Seed(LlmChatConversation conversation)
         => conversations[conversation.Id] = conversation;
+}
+
+internal sealed class StubLlmChatConversationReadStore : ILlmChatConversationReadStore
+{
+    public Task<LlmChatConversationReadModel?> TryGetAsync(
+        LlmChatConversationId id,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatPage<LlmChatConversationReadModel, LlmChatConversationCursor>> ListPageAsync(
+        int take,
+        LlmChatConversationCursor? cursor,
+        LlmChatDefinitionId? definitionId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(
+        LlmChatConversationId id,
+        int take,
+        LlmChatTranscriptCursor? cursor,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatConversationTurnEvidence?> TryInspectTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
 }
 
 internal sealed class InlineLlmChatUnitOfWork : ILlmChatUnitOfWork
@@ -224,7 +305,7 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
     public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
         LlmChatConversationId conversationId,
         int take,
-        int offset,
+        LlmChatTranscriptCursor? cursor,
         CancellationToken cancellationToken = default)
     {
         var state = states.GetValueOrDefault(conversationId);

@@ -499,6 +499,60 @@ public interface ILlmConversationStore
     Task DeleteAsync(Guid conversationId, CancellationToken cancellationToken = default);
 }
 
+public sealed record LlmConversationTurnSnapshot(
+    Guid ConversationId,
+    string Title,
+    LlmConversationProviderSnapshot Provider,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    long TranscriptRevision,
+    int EntryCount,
+    ImmutableArray<LlmConversationTranscriptEntry> ContextEntries,
+    LlmConversationActiveTurn? ActiveTurn,
+    LlmConversationAccelerationEnvelope? AccelerationState);
+
+public sealed record LlmConversationTurnAdmissionWrite(
+    LlmConversationTurnSnapshot Current,
+    LlmConversationProviderSnapshot Provider,
+    LlmConversationTranscriptEntry UserEntry,
+    LlmConversationActiveTurn ActiveTurn,
+    LlmConversationAccelerationEnvelope? AccelerationState,
+    DateTimeOffset UpdatedAtUtc,
+    int MaximumContextMessages);
+
+public sealed record LlmConversationTurnCompletionWrite(
+    Guid ConversationId,
+    Guid TurnId,
+    Guid PendingUserEntryId,
+    long ExpectedTranscriptRevision,
+    int ExpectedEntryCount,
+    LlmConversationTranscriptEntry AssistantEntry,
+    DateTimeOffset UpdatedAtUtc,
+    int MaximumContextMessages);
+
+public interface ILlmConversationTurnStore
+{
+    Task<LlmConversationTurnSnapshot?> TryGetAsync(
+        Guid conversationId,
+        int maximumContextMessages,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnSnapshot> AdmitAsync(
+        LlmConversationTurnAdmissionWrite write,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnSnapshot> CompleteAsync(
+        LlmConversationTurnCompletionWrite write,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnSnapshot> CompensateAsync(
+        Guid conversationId,
+        Guid turnId,
+        DateTimeOffset updatedAtUtc,
+        int maximumContextMessages,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>Input for context-window selection: the canonical entries plus hard outbound bounds.</summary>
 public sealed record LlmConversationContextWindowRequest
 {
@@ -748,7 +802,8 @@ public sealed record LlmConversationAdmittedTurnRequest
 public sealed record LlmConversationTurnAdmission(
     LlmConversationDocument Conversation,
     LlmConversationTranscriptEntry UserEntry,
-    LlmInvocationRequest InvocationRequest);
+    LlmInvocationRequest InvocationRequest,
+    int PersistedEntryCount = 0);
 
 /// <summary>
 /// Application service for ordinary multi-turn LLM conversations, layered strictly above

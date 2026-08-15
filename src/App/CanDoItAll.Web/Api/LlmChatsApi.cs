@@ -138,7 +138,7 @@ internal static class LlmChatsApi
         var page = result.Value!;
         return Results.Ok(new LlmChatApiPage<LlmChatDefinitionApiResponse>(
             [.. page.Items.Select(LlmChatApiMapper.ToListResponse)],
-            page.NextOffset is { } next ? LlmChatApiCursorCodec.Encode(next) : null));
+            page.NextCursor is { } next ? LlmChatApiCursorCodec.Encode(next) : null));
     }
 
     private static async Task<IResult> CreateDefinitionAsync(
@@ -260,7 +260,7 @@ internal static class LlmChatsApi
         ILlmChatConversationApplicationService service,
         CancellationToken cancellationToken)
     {
-        if (!LlmChatApiCursorCodec.TryDecode(cursor, out var offset))
+        if (!LlmChatApiCursorCodec.TryDecodeConversation(cursor, out var position))
         {
             return LlmChatApiResults.InvalidRequest("The conversation cursor is invalid.");
         }
@@ -271,7 +271,7 @@ internal static class LlmChatsApi
             query = new LlmChatConversationQuery(
                 take ?? 50,
                 definitionId is { } id ? new LlmChatDefinitionId(id) : null,
-                offset);
+                position);
         }
         catch (ArgumentOutOfRangeException)
         {
@@ -287,7 +287,7 @@ internal static class LlmChatsApi
         var page = result.Value!;
         return Results.Ok(new LlmChatApiPage<LlmChatConversationApiResponse>(
             [.. page.Items.Select(LlmChatApiMapper.ToResponse)],
-            page.NextOffset is { } next ? LlmChatApiCursorCodec.Encode(next) : null));
+            page.NextCursor is { } next ? LlmChatApiCursorCodec.Encode(next) : null));
     }
 
     private static async Task<IResult> CreateConversationAsync(
@@ -323,7 +323,7 @@ internal static class LlmChatsApi
         ILlmChatConversationApplicationService service,
         CancellationToken cancellationToken)
     {
-        if (!LlmChatApiCursorCodec.TryDecode(messageCursor, out var offset))
+        if (!LlmChatApiCursorCodec.TryDecodeTranscript(messageCursor, out var position))
         {
             return LlmChatApiResults.InvalidRequest("The transcript message cursor is invalid.");
         }
@@ -331,7 +331,7 @@ internal static class LlmChatsApi
         LlmChatTranscriptQuery query;
         try
         {
-            query = new LlmChatTranscriptQuery(messageTake ?? 50, offset);
+            query = new LlmChatTranscriptQuery(messageTake ?? 50, position);
         }
         catch (ArgumentOutOfRangeException)
         {
@@ -418,7 +418,7 @@ internal static class LlmChatsApi
     {
         query = null;
         error = null;
-        if (!LlmChatApiCursorCodec.TryDecode(cursor, out var offset))
+        if (!LlmChatApiCursorCodec.TryDecodeDefinition(cursor, out var position))
         {
             error = LlmChatApiResults.InvalidRequest("The definition cursor is invalid.");
             return false;
@@ -440,7 +440,7 @@ internal static class LlmChatsApi
 
         try
         {
-            query = new LlmChatDefinitionQuery(take == 0 ? 50 : take, parsedStatus, offset);
+            query = new LlmChatDefinitionQuery(take == 0 ? 50 : take, parsedStatus, position);
             return true;
         }
         catch (ArgumentOutOfRangeException)

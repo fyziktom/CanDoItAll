@@ -7,6 +7,7 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 
 public sealed class LlmChatDefinitionApplicationService(
     ILlmChatDefinitionRepository repository,
+    ILlmChatDefinitionReadStore readStore,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatProviderResolver providerResolver,
     TimeProvider timeProvider) : ILlmChatDefinitionApplicationService
@@ -183,23 +184,10 @@ public sealed class LlmChatDefinitionApplicationService(
         LlmChatDefinitionId definitionId,
         CancellationToken cancellationToken = default)
     {
-        var definition = await repository.TryGetAsync(definitionId, cancellationToken).ConfigureAwait(false);
-        if (definition is null)
-        {
-            return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.DefinitionNotFound());
-        }
-
-        var revision = await repository.TryGetRevisionAsync(
-            definition.Id,
-            definition.CurrentRevision,
-            cancellationToken).ConfigureAwait(false);
-        if (revision is null)
-        {
-            return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.StorageCorrupted());
-        }
-
-        var tags = await repository.ListTagsAsync(definition.Id, cancellationToken).ConfigureAwait(false);
-        return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(definition, revision, tags));
+        var definition = await readStore.TryGetAsync(definitionId, cancellationToken).ConfigureAwait(false);
+        return definition is null
+            ? Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.DefinitionNotFound())
+            : Result<LlmChatDefinitionDetails>.Success(Map(definition));
     }
 
     public async Task<Result<IReadOnlyList<LlmChatDefinitionDetails>>> ListAsync(
@@ -207,59 +195,28 @@ public sealed class LlmChatDefinitionApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var definitions = await repository
-            .ListPageAsync(query.Take, query.Offset, query.Status, cancellationToken)
+        var page = await readStore
+            .ListPageAsync(query.Take, query.Cursor, query.Status, cancellationToken)
             .ConfigureAwait(false);
-        var details = new List<LlmChatDefinitionDetails>(definitions.Count);
-        foreach (var definition in definitions)
-        {
-            var revision = await repository.TryGetRevisionAsync(
-                definition.Id,
-                definition.CurrentRevision,
-                cancellationToken).ConfigureAwait(false);
-            if (revision is null)
-            {
-                return Result<IReadOnlyList<LlmChatDefinitionDetails>>.Failure(LlmChatErrors.StorageCorrupted());
-            }
-
-            var tags = await repository.ListTagsAsync(definition.Id, cancellationToken).ConfigureAwait(false);
-            details.Add(new LlmChatDefinitionDetails(definition, revision, tags));
-        }
-
-        return Result<IReadOnlyList<LlmChatDefinitionDetails>>.Success(details);
+        return Result<IReadOnlyList<LlmChatDefinitionDetails>>.Success([.. page.Items.Select(Map)]);
     }
 
-    public async Task<Result<LlmChatPage<LlmChatDefinitionDetails>>> ListPageAsync(
+    public async Task<Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>> ListPageAsync(
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var requested = new LlmChatDefinitionQuery(query.Take, query.Status, query.Offset);
-        var definitions = await repository
-            .ListPageAsync(checked(query.Take + 1), query.Offset, query.Status, cancellationToken)
+        var page = await readStore
+            .ListPageAsync(query.Take, query.Cursor, query.Status, cancellationToken)
             .ConfigureAwait(false);
-        var hasMore = definitions.Count > query.Take;
-        var pageDefinitions = definitions.Take(query.Take).ToArray();
-        var details = new List<LlmChatDefinitionDetails>(pageDefinitions.Length);
-        foreach (var definition in pageDefinitions)
-        {
-            var revision = await repository.TryGetRevisionAsync(
-                definition.Id,
-                definition.CurrentRevision,
-                cancellationToken).ConfigureAwait(false);
-            if (revision is null)
-            {
-                return Result<LlmChatPage<LlmChatDefinitionDetails>>.Failure(LlmChatErrors.StorageCorrupted());
-            }
-
-            var tags = await repository.ListTagsAsync(definition.Id, cancellationToken).ConfigureAwait(false);
-            details.Add(new LlmChatDefinitionDetails(definition, revision, tags));
-        }
-
-        return Result<LlmChatPage<LlmChatDefinitionDetails>>.Success(new LlmChatPage<LlmChatDefinitionDetails>(
-            details,
-            hasMore ? checked(requested.Offset + requested.Take) : null));
+        return Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Success(
+            new LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>(
+                [.. page.Items.Select(Map)],
+                page.NextCursor));
     }
+
+    private static LlmChatDefinitionDetails Map(LlmChatDefinitionReadModel model)
+        => new(model.Definition, model.Revision, model.Tags);
 
     private static LlmChatDefinitionRevision CreateRevision(
         LlmChatDefinitionId id,

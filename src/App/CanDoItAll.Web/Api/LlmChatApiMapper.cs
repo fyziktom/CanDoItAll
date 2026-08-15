@@ -108,7 +108,7 @@ internal static class LlmChatApiMapper
                         usage.OutputTokens,
                         usage.CachedInputTokens)
                     : null))],
-            NextMessageCursor = details.NextMessageOffset is { } next
+            NextMessageCursor = details.NextMessageCursor is { } next
                 ? LlmChatApiCursorCodec.Encode(next)
                 : null
         };

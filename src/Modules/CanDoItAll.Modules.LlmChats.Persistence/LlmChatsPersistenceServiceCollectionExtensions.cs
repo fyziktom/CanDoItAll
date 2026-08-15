@@ -6,6 +6,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
 using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
+using CanDoItAll.Modules.LlmChats.Persistence.ReadModels;
 using CanDoItAll.Modules.LlmChats.Ports;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -26,8 +27,11 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.TryAddSingleton<ILlmChatProviderResolver>(serviceProvider =>
             serviceProvider.GetRequiredService<CanonicalLlmChatProviderResolver>());
         services.AddScoped<ILlmChatDefinitionRepository, EfLlmChatDefinitionRepository>();
+        services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();
         services.AddScoped<ILlmChatConversationRepository, EfLlmChatConversationRepository>();
+        services.AddScoped<ILlmChatConversationReadStore, EfLlmChatConversationReadStore>();
         services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();
+        services.AddScoped<ILlmChatOperationReadStore, EfLlmChatOperationReadStore>();
         services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
         services.AddScoped<ILlmChatCommitFence, DatabaseProfileLlmChatCommitFence>();
@@ -54,18 +58,22 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             invocationPort,
             runtimeState,
             operationScope);
-        ILlmConversationStore conversationStore = new ProfileFencedLlmConversationStore(
-            new EfLlmConversationStore(serviceProvider.GetRequiredService<AppDbContext>()),
+        var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
+        var conversationStore = new ProfileFencedLlmConversationStore(
+            new EfLlmConversationStore(dbContext),
+            new EfLlmConversationTurnStore(dbContext),
             runtimeState,
             operationScope);
         var conversationService = new LlmConversationService(
             invocationPort,
+            conversationStore,
             conversationStore,
             serviceProvider.GetRequiredService<ILlmConversationContextWindowPolicy>(),
             serviceProvider.GetRequiredService<TimeProvider>());
         return new LlmChatConversationEngine(
             conversationService,
             invocationPort,
+            serviceProvider.GetRequiredService<ILlmChatConversationReadStore>(),
             serviceProvider.GetRequiredService<CanonicalLlmChatProviderResolver>(),
             serviceProvider.GetRequiredService<ILlmChatRuntimeLeaseFactory>(),
             operationScope);

@@ -38,7 +38,7 @@ internal sealed class ProfileScopedLlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
         => ExecuteAsync(token => inner.ListAsync(query, token), cancellationToken);
 
-    public Task<Result<LlmChatPage<LlmChatConversationDetails>>> ListPageAsync(
+    public Task<Result<LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>>> ListPageAsync(
         LlmChatConversationQuery query,
         CancellationToken cancellationToken = default)
         => ExecuteAsync(token => inner.ListPageAsync(query, token), cancellationToken);

@@ -25,7 +25,7 @@ public sealed record LlmChatTranscriptEntry(
 public sealed record LlmChatTranscriptPage(
     LlmChatConversationEngineState State,
     IReadOnlyList<LlmChatTranscriptEntry> Entries,
-    int? NextOffset);
+    LlmChatTranscriptCursor? NextCursor);
 
 public sealed record LlmChatConversationEngineTurnResult(
     LlmChatConversationEngineState State,
@@ -63,7 +63,7 @@ public interface ILlmChatConversationEngine
     Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
         LlmChatConversationId conversationId,
         int take,
-        int offset,
+        LlmChatTranscriptCursor? cursor,
         CancellationToken cancellationToken = default);
 
     Task<LlmChatConversationEngineState> RenameAsync(

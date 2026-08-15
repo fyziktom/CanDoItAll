@@ -61,23 +61,7 @@ internal static class LlmConversationPersistenceMapper
                 throw StorageCorrupted(transcript.ConversationId, "Transcript message ordering is invalid.");
             }
 
-            var hasAnyUsage = message.InputTokens.HasValue || message.OutputTokens.HasValue || message.CachedInputTokens.HasValue;
-            var hasCompleteUsage = message.InputTokens.HasValue && message.OutputTokens.HasValue && message.CachedInputTokens.HasValue;
-            if (hasAnyUsage != hasCompleteUsage)
-            {
-                throw StorageCorrupted(transcript.ConversationId, "Transcript message usage is incomplete.");
-            }
-
-            entries.Add(new LlmConversationTranscriptEntry(
-                message.EntryId,
-                message.TurnId,
-                message.Role,
-                message.Text,
-                message.CreatedAtUtc,
-                message.Model,
-                hasCompleteUsage
-                    ? new LlmUsage(message.InputTokens!.Value, message.OutputTokens!.Value, message.CachedInputTokens!.Value)
-                    : null));
+            entries.Add(ToEntry(message));
         }
 
         try
@@ -137,7 +121,28 @@ internal static class LlmConversationPersistenceMapper
         row.AccelerationPayloadJson = acceleration?.PayloadJson;
     }
 
-    private static LlmConversationActiveTurn? ToActiveTurn(LlmChatTranscriptRow row)
+    public static LlmConversationTranscriptEntry ToEntry(LlmChatMessageRow message)
+    {
+        var hasAnyUsage = message.InputTokens.HasValue || message.OutputTokens.HasValue || message.CachedInputTokens.HasValue;
+        var hasCompleteUsage = message.InputTokens.HasValue && message.OutputTokens.HasValue && message.CachedInputTokens.HasValue;
+        if (hasAnyUsage != hasCompleteUsage)
+        {
+            throw StorageCorrupted(message.ConversationId, "Transcript message usage is incomplete.");
+        }
+
+        return new LlmConversationTranscriptEntry(
+            message.EntryId,
+            message.TurnId,
+            message.Role,
+            message.Text,
+            message.CreatedAtUtc,
+            message.Model,
+            hasCompleteUsage
+                ? new LlmUsage(message.InputTokens!.Value, message.OutputTokens!.Value, message.CachedInputTokens!.Value)
+                : null);
+    }
+
+    public static LlmConversationActiveTurn? ToActiveTurn(LlmChatTranscriptRow row)
     {
         if (row.ActiveTurnId is null && row.PendingUserEntryId is null && row.TurnAdmittedAtUtc is null &&
             row.TurnAdmittedRevision is null && row.CompensationProviderId is null)
@@ -171,7 +176,7 @@ internal static class LlmConversationPersistenceMapper
         return new LlmConversationActiveTurn(turnId, pendingEntryId, admittedAt, admittedRevision, compensation);
     }
 
-    private static LlmConversationAccelerationEnvelope? ToAcceleration(
+    public static LlmConversationAccelerationEnvelope? ToAcceleration(
         LlmChatTranscriptRow row,
         bool compensation)
     {

@@ -227,6 +227,7 @@ public sealed class LlmChatRuntimeFenceTests
         var engine = new LlmChatConversationEngine(
             generic,
             fencedInvocation,
+            UnavailableLlmChatConversationReadStore.Instance,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(
                 ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(initial),
@@ -359,6 +360,7 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
         var engine = new LlmChatConversationEngine(
             generic,
             fenced,
+            UnavailableLlmChatConversationReadStore.Instance,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(
                 ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
@@ -414,6 +416,7 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
         var engine = new LlmChatConversationEngine(
             generic,
             invocation,
+            UnavailableLlmChatConversationReadStore.Instance,
             ProviderRuntimeTestData.CreateResolver(provider),
             new DatabaseProfileLlmChatRuntimeLeaseFactory(
                 ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(ProviderRuntimeTestData.RuntimeIdentity),
@@ -615,6 +618,36 @@ internal sealed class DelegatingInvocationPort(
         LlmInvocationRequest request,
         CancellationToken cancellationToken = default)
         => invoke(request, cancellationToken);
+}
+
+internal sealed class UnavailableLlmChatConversationReadStore : ILlmChatConversationReadStore
+{
+    public static UnavailableLlmChatConversationReadStore Instance { get; } = new();
+
+    public Task<LlmChatConversationReadModel?> TryGetAsync(
+        LlmChatConversationId id,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatPage<LlmChatConversationReadModel, LlmChatConversationCursor>> ListPageAsync(
+        int take,
+        LlmChatConversationCursor? cursor,
+        LlmChatDefinitionId? definitionId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(
+        LlmChatConversationId id,
+        int take,
+        LlmChatTranscriptCursor? cursor,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task<LlmChatConversationTurnEvidence?> TryInspectTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
 }
 
 internal sealed class DelegatingChatDriver(

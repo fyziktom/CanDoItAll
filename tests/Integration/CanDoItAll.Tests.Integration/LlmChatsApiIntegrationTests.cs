@@ -206,13 +206,13 @@ internal sealed class StubLlmChatDefinitionApplicationService : ILlmChatDefiniti
         => Task.FromResult(Result<IReadOnlyList<LlmChatDefinitionDetails>>.Success(
             [CreateDetails(new LlmModelSettings { ThinkingEffort = AgentReasoningEffortLevel.High })]));
 
-    public async Task<Result<LlmChatPage<LlmChatDefinitionDetails>>> ListPageAsync(
+    public async Task<Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>> ListPageAsync(
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default)
     {
         var result = await ListAsync(query, cancellationToken);
-        return Result<LlmChatPage<LlmChatDefinitionDetails>>.Success(
-            new LlmChatPage<LlmChatDefinitionDetails>(result.Value!, null));
+        return Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Success(
+            new LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>(result.Value!, null));
     }
 
     private static LlmChatDefinitionDetails CreateDetails(LlmModelSettings settings)
@@ -301,13 +301,13 @@ internal sealed class StubLlmChatConversationApplicationService : ILlmChatConver
         => Task.FromResult(Result<IReadOnlyList<LlmChatConversationDetails>>.Success(
             [CreateDetails("Review Linux architecture")]));
 
-    public async Task<Result<LlmChatPage<LlmChatConversationDetails>>> ListPageAsync(
+    public async Task<Result<LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>>> ListPageAsync(
         LlmChatConversationQuery query,
         CancellationToken cancellationToken = default)
     {
         var result = await ListAsync(query, cancellationToken);
-        return Result<LlmChatPage<LlmChatConversationDetails>>.Success(
-            new LlmChatPage<LlmChatConversationDetails>(result.Value!, null));
+        return Result<LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>>.Success(
+            new LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>(result.Value!, null));
     }
 
     private static LlmChatConversationDetails CreateDetails(string title)

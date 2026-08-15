@@ -45,7 +45,7 @@ public sealed record LlmChatDefinitionQuery
     public LlmChatDefinitionQuery(
         int take = 50,
         LlmChatDefinitionStatus? status = null,
-        int offset = 0)
+        LlmChatDefinitionCursor? cursor = null)
     {
         if (take is < 1 or > MaximumTake)
         {
@@ -57,18 +57,16 @@ public sealed record LlmChatDefinitionQuery
             throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown definition status.");
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-
         Take = take;
         Status = status;
-        Offset = offset;
+        Cursor = cursor;
     }
 
     public int Take { get; }
 
     public LlmChatDefinitionStatus? Status { get; }
 
-    public int Offset { get; }
+    public LlmChatDefinitionCursor? Cursor { get; }
 }
 
 public sealed record LlmChatDefinitionDetails(
@@ -101,7 +99,7 @@ public interface ILlmChatDefinitionApplicationService
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default);
 
-    Task<Result<LlmChatPage<LlmChatDefinitionDetails>>> ListPageAsync(
+    Task<Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>> ListPageAsync(
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default);
 }

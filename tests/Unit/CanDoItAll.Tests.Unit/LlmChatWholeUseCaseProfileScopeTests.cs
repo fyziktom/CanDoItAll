@@ -123,19 +123,6 @@ internal sealed class SwitchingConversationRepository(
         return result;
     }
 
-    public Task<IReadOnlyList<LlmChatConversation>> ListAsync(
-        int take,
-        LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
-        => inner.ListAsync(take, definitionId, cancellationToken);
-
-    public Task<IReadOnlyList<LlmChatConversation>> ListPageAsync(
-        int take,
-        int offset,
-        LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
-        => inner.ListPageAsync(take, offset, definitionId, cancellationToken);
-
     public Task CreateAsync(
         LlmChatConversation conversation,
         CancellationToken cancellationToken = default)

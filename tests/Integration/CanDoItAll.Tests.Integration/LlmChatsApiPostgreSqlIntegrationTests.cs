@@ -932,9 +932,9 @@ internal sealed class BarrierLlmChatConversationEngine(
     public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
         LlmChatConversationId conversationId,
         int take,
-        int offset,
+        LlmChatTranscriptCursor? cursor,
         CancellationToken cancellationToken = default)
-        => inner.TryGetTranscriptPageAsync(conversationId, take, offset, cancellationToken);
+        => inner.TryGetTranscriptPageAsync(conversationId, take, cursor, cancellationToken);
 
     public Task<LlmChatConversationEngineState> RenameAsync(
         LlmChatConversationId conversationId,

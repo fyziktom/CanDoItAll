@@ -34,39 +34,6 @@ public sealed class EfLlmChatDefinitionRepository(AppDbContext dbContext) : ILlm
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
-    public async Task<IReadOnlyList<LlmChatDefinition>> ListAsync(
-        int take,
-        LlmChatDefinitionStatus? status,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        return await ListPageAsync(take, 0, status, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async Task<IReadOnlyList<LlmChatDefinition>> ListPageAsync(
-        int take,
-        int offset,
-        LlmChatDefinitionStatus? status,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-        var query = dbContext.Set<LlmChatDefinitionRow>().AsNoTracking();
-        if (status is { } value)
-        {
-            query = query.Where(item => item.Status == value);
-        }
-
-        var rows = await query
-            .OrderBy(item => item.Name)
-            .ThenBy(item => item.Id)
-            .Skip(offset)
-            .Take(take)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return [.. rows.Select(LlmChatPersistenceMapper.ToDomain)];
-    }
-
     public async Task<IReadOnlyList<string>> ListTagsAsync(
         LlmChatDefinitionId id,
         CancellationToken cancellationToken = default)

@@ -1,5 +1,8 @@
 using System.Collections.Immutable;
+using System.Collections.Concurrent;
+using System.Data.Common;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Llm.Conversations;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -13,10 +16,12 @@ using CanDoItAll.Modules.LlmChats.Persistence;
 using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
+using CanDoItAll.Modules.LlmChats.Persistence.ReadModels;
 using CanDoItAll.Modules.LlmChats.Ports;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -726,6 +731,283 @@ public sealed class LlmChatPersistenceIntegrationTests
             new LlmResponseFormat(true, "{\"type\":\"object\"}", "response", "response schema"),
             createdAtUtc,
             "test");
+}
+
+public sealed class LlmChatBoundedReadModelIntegrationTests
+{
+    [Fact]
+    public async Task Large_transcript_and_collection_reads_remain_keyset_bounded_with_constant_query_counts()
+    {
+        const int messageCount = 2_000;
+        const int contextLimit = 12;
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatboundedreads");
+        var seeded = await SeedAsync(database, messageCount);
+        var interceptor = new QueryCommandInterceptor();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(database.ConnectionString)
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+
+        var definitionStore = new EfLlmChatDefinitionReadStore(dbContext);
+        var definitions = await definitionStore.ListPageAsync(10, null, null);
+
+        Assert.Equal(10, definitions.Items.Count);
+        Assert.NotNull(definitions.NextCursor);
+        Assert.Equal(2, interceptor.Commands.Count);
+        Assert.All(definitions.Items, item => Assert.Equal(item.Definition.CurrentRevision, item.Revision.Revision));
+
+        interceptor.Clear();
+        var nextDefinitions = await definitionStore.ListPageAsync(10, definitions.NextCursor, null);
+
+        Assert.Equal(10, nextDefinitions.Items.Count);
+        Assert.Empty(definitions.Items.Select(item => item.Definition.Id)
+            .Intersect(nextDefinitions.Items.Select(item => item.Definition.Id)));
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
+        var conversationStore = new EfLlmChatConversationReadStore(dbContext);
+        var conversations = await conversationStore.ListPageAsync(10, null, null);
+
+        Assert.Single(conversations.Items);
+        Assert.Equal(messageCount, conversations.Items[0].Transcript.TranscriptRevision);
+        Assert.Single(interceptor.Commands);
+
+        interceptor.Clear();
+        var transcript = await conversationStore.TryGetTranscriptPageAsync(seeded.ConversationId, 25, null);
+
+        Assert.NotNull(transcript);
+        Assert.Equal(25, transcript.Entries.Count);
+        Assert.NotNull(transcript.NextCursor);
+        Assert.Equal(seeded.SystemEntryId, transcript.Entries[0].EntryId);
+        Assert.Equal(2, interceptor.Commands.Count);
+        Assert.Contains(interceptor.Commands, command =>
+            command.CommandText.Contains("LlmChats_Messages", StringComparison.Ordinal) &&
+            command.CommandText.Contains("LIMIT", StringComparison.OrdinalIgnoreCase));
+
+        interceptor.Clear();
+        var provider = CreateProvider(seeded.ProviderId);
+        var conversationService = new LlmConversationService(
+            new NotInvokedLlmInvocationPort(),
+            new EfLlmConversationStore(dbContext),
+            new EfLlmConversationTurnStore(dbContext),
+            new RecencyBoundedContextWindowPolicy(),
+            TimeProvider.System,
+            new LlmConversationServiceOptions
+            {
+                MaximumContextWindowMessages = contextLimit
+            });
+        var admission = await conversationService.ResumeAdmittedTurnAsync(
+            new LlmConversationAdmittedTurnRequest(
+                seeded.ConversationId.Value,
+                seeded.PendingTurnId,
+                provider,
+                "model"));
+
+        Assert.Equal(contextLimit, admission.InvocationRequest.Messages.Count());
+        Assert.Equal(LlmMessageRole.System, admission.InvocationRequest.Messages[0].Role);
+        Assert.Equal("pending", admission.InvocationRequest.Messages[^1].Text);
+        Assert.Equal(messageCount, admission.PersistedEntryCount);
+        Assert.Equal(3, interceptor.Commands.Count);
+        Assert.Equal(2, interceptor.Commands.Count(command =>
+            command.CommandText.Contains("LlmChats_Messages", StringComparison.Ordinal)));
+        Assert.All(
+            interceptor.Commands.Where(command => command.CommandText.Contains("LlmChats_Messages", StringComparison.Ordinal)),
+            command => Assert.Contains("LIMIT", command.CommandText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static async Task<SeededBoundedConversation> SeedAsync(
+        LlmChatsPostgreSqlTestDatabase database,
+        int messageCount)
+    {
+        await using var dbContext = database.CreateDbContext();
+        var now = DateTimeOffset.UtcNow;
+        var providerId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var definitionIds = Enumerable.Range(0, 24).Select(_ => Guid.NewGuid()).ToArray();
+        for (var index = 0; index < definitionIds.Length; index++)
+        {
+            var definitionId = definitionIds[index];
+            var updatedAt = now.AddMinutes(-index);
+            dbContext.Add(new LlmChatDefinitionRow
+            {
+                Id = definitionId,
+                Name = $"Definition {index:D2}",
+                Summary = "Summary",
+                AvatarImageUrl = "",
+                Status = LlmChatDefinitionStatus.Active,
+                CurrentRevision = 1,
+                CreatedAtUtc = updatedAt,
+                UpdatedAtUtc = updatedAt,
+                ConcurrencyToken = 0
+            });
+            var revision = LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(
+                definitionId,
+                1,
+                AgentReasoningEffortLevel.None,
+                updatedAt);
+            revision.SettingsFingerprint = LlmChatFingerprints.CreateSettings(
+                revision.ProviderProfileId,
+                revision.ProviderKind,
+                revision.Model,
+                new LlmModelSettings(revision.Temperature, revision.ModelParameterConfigurationJson)
+                {
+                    ThinkingEffort = revision.ThinkingEffort
+                }).Value;
+            dbContext.Add(revision);
+            dbContext.Add(new LlmChatDefinitionTagRow
+            {
+                DefinitionId = definitionId,
+                Tag = $"tag-{index:D2}"
+            });
+        }
+
+        var conversationId = LlmChatConversationId.New();
+        var pendingTurnId = Guid.NewGuid();
+        var pendingEntryId = Guid.NewGuid();
+        var systemEntryId = Guid.NewGuid();
+        dbContext.Add(new LlmChatConversationRow
+        {
+            Id = conversationId.Value,
+            DefinitionId = definitionIds[0],
+            DefinitionRevision = 1,
+            Title = "Large transcript",
+            Status = LlmChatConversationStatus.Active,
+            Origin = LlmChatConversationOrigin.Api,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            ConcurrencyToken = 0
+        });
+        dbContext.Add(new LlmChatTranscriptRow
+        {
+            ConversationId = conversationId.Value,
+            ProviderId = providerId,
+            ProviderName = "Provider",
+            ProviderKind = ProviderKind.OpenAi,
+            Model = "model",
+            TranscriptRevision = messageCount,
+            EntryCount = messageCount,
+            ActiveTurnId = pendingTurnId,
+            PendingUserEntryId = pendingEntryId,
+            TurnAdmittedAtUtc = now,
+            TurnAdmittedRevision = messageCount
+        });
+        dbContext.Add(new LlmChatMessageRow
+        {
+            EntryId = systemEntryId,
+            ConversationId = conversationId.Value,
+            Sequence = 1,
+            TurnId = Guid.NewGuid(),
+            Role = LlmMessageRole.System,
+            Text = "System",
+            CreatedAtUtc = now.AddMinutes(-messageCount),
+            Model = ""
+        });
+        for (var sequence = 2; sequence < messageCount; sequence++)
+        {
+            var turnNumber = (sequence - 2) / 2;
+            var turnId = DeterministicGuid(turnNumber + 1);
+            var assistant = sequence % 2 != 0;
+            dbContext.Add(new LlmChatMessageRow
+            {
+                EntryId = Guid.NewGuid(),
+                ConversationId = conversationId.Value,
+                Sequence = sequence,
+                TurnId = turnId,
+                Role = assistant ? LlmMessageRole.Assistant : LlmMessageRole.User,
+                Text = $"message-{sequence:D4}",
+                CreatedAtUtc = now.AddSeconds(sequence - messageCount),
+                Model = assistant ? "model" : "",
+                InputTokens = assistant ? 1 : null,
+                OutputTokens = assistant ? 1 : null,
+                CachedInputTokens = assistant ? 0 : null
+            });
+        }
+
+        dbContext.Add(new LlmChatMessageRow
+        {
+            EntryId = pendingEntryId,
+            ConversationId = conversationId.Value,
+            Sequence = messageCount,
+            TurnId = pendingTurnId,
+            Role = LlmMessageRole.User,
+            Text = "pending",
+            CreatedAtUtc = now,
+            Model = ""
+        });
+        await dbContext.SaveChangesAsync();
+        return new SeededBoundedConversation(
+            conversationId,
+            providerId,
+            pendingTurnId,
+            systemEntryId);
+    }
+
+    private static ProviderProfile CreateProvider(Guid providerId)
+        => new(
+            providerId,
+            "Provider",
+            ProviderKind.OpenAi,
+            "https://example.invalid/v1",
+            "TEST_API_KEY",
+            "model",
+            ProviderTransportKind.ChatCompletions,
+            IsEnabled: true,
+            SupportsStreaming: false,
+            SupportsTools: false,
+            PreferFrameworkManagedChatHistory: true,
+            SupportsBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            Notes: "",
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: ["model"]);
+
+    private static Guid DeterministicGuid(int value)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        BitConverter.TryWriteBytes(bytes, value);
+        return new Guid(bytes);
+    }
+
+    private sealed class NotInvokedLlmInvocationPort : ILlmInvocationPort
+    {
+        public Task<LlmInvocationResult> InvokeAsync(
+            LlmInvocationRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("The bounded context proof must not invoke a provider.");
+    }
+
+    private sealed record CapturedCommand(string CommandText);
+
+    private sealed class QueryCommandInterceptor : DbCommandInterceptor
+    {
+        private readonly ConcurrentQueue<CapturedCommand> commands = new();
+
+        public IReadOnlyList<CapturedCommand> Commands => commands.ToArray();
+
+        public void Clear()
+        {
+            while (commands.TryDequeue(out _))
+            {
+            }
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            commands.Enqueue(new CapturedCommand(command.CommandText));
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed record SeededBoundedConversation(
+        LlmChatConversationId ConversationId,
+        Guid ProviderId,
+        Guid PendingTurnId,
+        Guid SystemEntryId);
 }
 
 public sealed class LlmChatOperationDispatchClaimIntegrationTests

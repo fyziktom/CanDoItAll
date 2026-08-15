@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.LlmChats.Application;
 
 public sealed class LlmChatOperationDispatcher(
-    ILlmChatOperationRepository operationRepository,
+    ILlmChatOperationReadStore operationReadStore,
     LlmChatProfileScopeRunner profileScopeRunner,
     LlmChatExecutionLeaseService leaseService,
     LlmChatOperationExecutor executor,
@@ -22,7 +22,7 @@ public sealed class LlmChatOperationDispatcher(
             LlmChatOperationId.New(),
             async token =>
             {
-                var candidates = await operationRepository.ListDispatchCandidatesAsync(
+                var candidates = await operationReadStore.ListDispatchCandidatesAsync(
                     timeProvider.GetUtcNow(),
                     options.CandidateBatchSize,
                     token).ConfigureAwait(false);

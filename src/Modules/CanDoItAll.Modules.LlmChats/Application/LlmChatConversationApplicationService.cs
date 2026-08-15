@@ -9,6 +9,7 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 public sealed class LlmChatConversationApplicationService(
     ILlmChatDefinitionRepository definitionRepository,
     ILlmChatConversationRepository conversationRepository,
+    ILlmChatConversationReadStore readStore,
     ILlmChatTurnStateRepository turnStateRepository,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatConversationEngine conversationEngine,
@@ -201,17 +202,10 @@ public sealed class LlmChatConversationApplicationService(
         LlmChatConversationId conversationId,
         CancellationToken cancellationToken = default)
     {
-        var conversation = await conversationRepository.TryGetAsync(conversationId, cancellationToken)
-            .ConfigureAwait(false);
-        if (conversation is null)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.ConversationNotFound());
-        }
-
-        var transcript = await conversationEngine.TryGetAsync(conversation.Id, cancellationToken).ConfigureAwait(false);
-        return transcript is null
-            ? Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted())
-            : await BuildDetailsAsync(conversation, transcript, cancellationToken).ConfigureAwait(false);
+        var conversation = await readStore.TryGetAsync(conversationId, cancellationToken).ConfigureAwait(false);
+        return conversation is null
+            ? Result<LlmChatConversationDetails>.Failure(LlmChatErrors.ConversationNotFound())
+            : Result<LlmChatConversationDetails>.Success(Map(conversation));
     }
 
     public async Task<Result<LlmChatConversationDetails>> GetAsync(
@@ -220,33 +214,22 @@ public sealed class LlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(transcriptQuery);
-        var conversation = await conversationRepository.TryGetAsync(conversationId, cancellationToken)
-            .ConfigureAwait(false);
-        if (conversation is null)
+        var transcript = await readStore.TryGetTranscriptPageAsync(
+            conversationId,
+            transcriptQuery.Take,
+            transcriptQuery.Cursor,
+            cancellationToken).ConfigureAwait(false);
+        if (transcript is null)
         {
             return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.ConversationNotFound());
         }
 
-        var transcript = await conversationEngine.TryGetTranscriptPageAsync(
-            conversation.Id,
-            transcriptQuery.Take,
-            transcriptQuery.Offset,
-            cancellationToken).ConfigureAwait(false);
-        if (transcript is null)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted());
-        }
-
-        var definition = await definitionRepository.TryGetAsync(conversation.DefinitionId, cancellationToken)
-            .ConfigureAwait(false);
-        return definition is null
-            ? Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted())
-            : Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
-                conversation,
-                definition.Name,
-                transcript.State,
-                transcript.Entries,
-                transcript.NextOffset));
+        return Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
+            transcript.Conversation.Conversation,
+            transcript.Conversation.DefinitionName,
+            transcript.Conversation.Transcript,
+            transcript.Entries,
+            transcript.NextCursor));
     }
 
     public async Task<Result<IReadOnlyList<LlmChatConversationDetails>>> ListAsync(
@@ -254,62 +237,28 @@ public sealed class LlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var conversations = await conversationRepository
-            .ListPageAsync(query.Take, query.Offset, query.DefinitionId, cancellationToken)
+        var page = await readStore
+            .ListPageAsync(query.Take, query.Cursor, query.DefinitionId, cancellationToken)
             .ConfigureAwait(false);
-        var details = new List<LlmChatConversationDetails>(conversations.Count);
-        foreach (var conversation in conversations)
-        {
-            var transcript = await conversationEngine.TryGetAsync(conversation.Id, cancellationToken).ConfigureAwait(false);
-            if (transcript is null)
-            {
-                return Result<IReadOnlyList<LlmChatConversationDetails>>.Failure(LlmChatErrors.StorageCorrupted());
-            }
-
-            var detail = await BuildDetailsAsync(conversation, transcript, cancellationToken).ConfigureAwait(false);
-            if (detail.IsFailure)
-            {
-                return Result<IReadOnlyList<LlmChatConversationDetails>>.Failure(detail.Errors);
-            }
-
-            details.Add(detail.Value!);
-        }
-
-        return Result<IReadOnlyList<LlmChatConversationDetails>>.Success(details);
+        return Result<IReadOnlyList<LlmChatConversationDetails>>.Success([.. page.Items.Select(Map)]);
     }
 
-    public async Task<Result<LlmChatPage<LlmChatConversationDetails>>> ListPageAsync(
+    public async Task<Result<LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>>> ListPageAsync(
         LlmChatConversationQuery query,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var conversations = await conversationRepository
-            .ListPageAsync(checked(query.Take + 1), query.Offset, query.DefinitionId, cancellationToken)
+        var page = await readStore
+            .ListPageAsync(query.Take, query.Cursor, query.DefinitionId, cancellationToken)
             .ConfigureAwait(false);
-        var hasMore = conversations.Count > query.Take;
-        var pageConversations = conversations.Take(query.Take).ToArray();
-        var details = new List<LlmChatConversationDetails>(pageConversations.Length);
-        foreach (var conversation in pageConversations)
-        {
-            var transcript = await conversationEngine.TryGetAsync(conversation.Id, cancellationToken).ConfigureAwait(false);
-            if (transcript is null)
-            {
-                return Result<LlmChatPage<LlmChatConversationDetails>>.Failure(LlmChatErrors.StorageCorrupted());
-            }
-
-            var detail = await BuildDetailsAsync(conversation, transcript, cancellationToken).ConfigureAwait(false);
-            if (detail.IsFailure)
-            {
-                return Result<LlmChatPage<LlmChatConversationDetails>>.Failure(detail.Errors);
-            }
-
-            details.Add(detail.Value!);
-        }
-
-        return Result<LlmChatPage<LlmChatConversationDetails>>.Success(new LlmChatPage<LlmChatConversationDetails>(
-            details,
-            hasMore ? checked(query.Offset + query.Take) : null));
+        return Result<LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>>.Success(
+            new LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>(
+                [.. page.Items.Select(Map)],
+                page.NextCursor));
     }
+
+    private static LlmChatConversationDetails Map(LlmChatConversationReadModel model)
+        => new(model.Conversation, model.DefinitionName, model.Transcript);
 
     private async Task<Result<LlmChatConversationDetails>> BuildDetailsAsync(
         LlmChatConversation conversation,
