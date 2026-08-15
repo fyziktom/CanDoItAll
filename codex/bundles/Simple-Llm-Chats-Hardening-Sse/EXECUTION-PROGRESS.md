@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — SB12 complete, SB13 unlocked**
+Bundle state: **Blocked — SB13 package preflight failed; FINAL Not Ready**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -11,8 +11,8 @@ Bundle state: **Executing — SB12 complete, SB13 unlocked**
 | SB07–SB10 streaming and API hardening | Completed | Durable streaming/SSE plus exact external-client security contract proven |
 | SB11 focused behavioral proof | Completed | Linux package-mode provider/PostgreSQL/HTTP/SSE proof at `4ec4d2694d980d52936b4679ae676a0624d5c6fb` |
 | SB12 documentation and guards | Completed | Source-truth docs and executable boundaries pass at `58265975e868731e25e39d4bf9109f6010d68127` |
-| SB13 final stable gate and CI | Ready | Final work unit only; package-feed prerequisite retained |
-| FINAL release decision | Locked | UI/shared-component bundles remain blocked |
+| SB13 final stable gate and CI | Blocked | Exact Spreadsheet 0.1.18 package is absent from nuget.org; single-shot gate remains unused |
+| FINAL release decision | Not Ready | Named package-publication blocker remains; no dependent work unlocked |
 
 ## Execution rules
 
@@ -243,3 +243,20 @@ The executor must refresh these values before changing production source.
   diff checks all pass; no production/test source changed, so no affected build or focused test ran
 - proof: `proof/SB12/manifest.md`
 - progression: SB13 Ready; the unpublished Spreadsheet package/feed prerequisite remains mandatory
+
+## SB13 final stable gate, CI matrix, and release decision
+
+- candidate: clean SB12 proof head `dea90cfd4cc77e60f1a7d07a2dc16d44165840f9`; last production
+  implementation remains `58265975e868731e25e39d4bf9109f6010d68127`
+- dependency mode: package references with `UseLocalCanDoItAllLibraries=false`; nuget.org is the only
+  configured source and the graph pins `CanDoItAll.FileTools.FileInteraction.Spreadsheet` 0.1.18
+- preflight: the official NuGet flat-container endpoint returns HTTP 404; clean sibling source exists
+  at `c95dd07208a6d48724443317cdc6cfe67a13020a`, but its CI packs without publishing and no NuGet
+  credential is configured
+- static validation: documentation, architecture, SSE, bundle, traceability, test-policy, checksums,
+  JSON, and diff checks pass on the immutable candidate
+- budget: no SB13 restore, Release solution build, stable filtered solution test, pending-model command,
+  or hosted Windows/Linux/macOS matrix was run; each single-shot budget remains unused
+- proof: `proof/SB13/manifest.md`; `reviews/FINAL-RELEASE-DECISION.md`
+- progression: Blocked; publish the exact package or approve a dependency-source/feed correction, then
+  resume the final gate exactly once; UI and all dependent work remain locked
