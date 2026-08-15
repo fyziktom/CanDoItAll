@@ -1,6 +1,6 @@
 # SB01 — Canonical transaction and persistence repair
 
-Status: **Ready**
+Status: **Completed**
 Proof tier: **Governed**  
 Depends on: **SB00**
 
@@ -101,11 +101,11 @@ Follow `test-budget.json` and `plan/04-test-budget-and-gates.md`. During this wo
 
 ## Acceptance checklist
 
-- [ ] Conversation title and transcript metadata have exactly one canonical writable owner.
-- [ ] Conversation creation commits product binding and transcript root together or commits neither.
-- [ ] Conversation rename updates the canonical title once and cannot leave divergent rows.
-- [ ] No production conversation store creates a second AppDbContext inside an active product command.
-- [ ] Migration and transfer payloads preserve the repaired canonical model.
+- [x] Conversation title and transcript metadata have exactly one canonical writable owner.
+- [x] Conversation creation commits product binding and transcript root together or commits neither.
+- [x] Conversation rename updates the canonical title once and cannot leave divergent rows.
+- [x] No production conversation store creates a second AppDbContext inside an active product command.
+- [x] Migration and transfer payloads preserve the repaired canonical model.
 
 ## Reopen triggers
 

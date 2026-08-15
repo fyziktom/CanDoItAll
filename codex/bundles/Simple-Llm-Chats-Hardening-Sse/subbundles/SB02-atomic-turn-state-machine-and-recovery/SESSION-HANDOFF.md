@@ -1,6 +1,6 @@
 # Session handoff — SB02
 
-State: **Locked**
+State: **Ready**
 
 ## Entry checklist
 

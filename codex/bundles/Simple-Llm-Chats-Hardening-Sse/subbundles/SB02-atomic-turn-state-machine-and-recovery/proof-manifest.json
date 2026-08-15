@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "subbundle": "SB02",
   "title": "Atomic turn state machine and recovery",
-  "state": "Locked",
+  "state": "Ready",
   "proofTier": "Governed",
   "repository": "fyziktom/CanDoItAll",
   "branch": "simple-chats",

@@ -1,12 +1,12 @@
 # Execution progress
 
-Bundle state: **Executing — CP0 Ready, SB01 unlocked**
+Bundle state: **Executing — SB01 completed, SB02 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
 | SB00 baseline sync and proof reconciliation | Completed | `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; focused comparison classified all 19 |
-| CP0 baseline/proof review | Ready | No BranchInduced or Unresolved cases; SB01 unlocked |
-| SB01–SB05 backend hardening | SB01 Ready | Sequential after CP0 |
+| CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
+| SB01–SB05 backend hardening | SB02 Ready | SB01 completed at `689f2b5368bf6fdba7fad24dfa6fa4dee9b4abfc`; sequential through SB05 |
 | SB06 backend checkpoint | Locked | Must declare CP1 Ready |
 | SB07–SB10 streaming and API hardening | Locked | Sequential after CP1 |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
@@ -48,3 +48,14 @@ The executor must refresh these values before changing production source.
 - classification: 8 Baseline, 7 EnvironmentSensitive, 4 ObsoleteAfterSync, 0 BranchInduced, 0 Unresolved
 - proof: `proof/SB00/manifest.md`
 - progression: CP0 Ready; SB01 unlocked
+
+## SB01 canonical transaction and persistence repair
+
+- implementation commit: `689f2b5368bf6fdba7fad24dfa6fa4dee9b4abfc`
+- ownership: conversation row owns title/timestamps; transcript row owns revision/active-turn state
+- transaction: scoped `AppDbContext`; no store-created context inside product commands
+- focused results: old-source atomicity 0 passed/2 failed; final PostgreSQL 7/7; application unit 5/5
+- build/model: Web Debug build 0 warnings/errors; EF reports no pending model changes
+- architecture: CodeAnalytics `snap-20260815002601-d665d970`, zero cycles/diagnostics/open questions/Error findings
+- proof: `proof/SB01/manifest.md`
+- progression: SB02 Ready
