@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — SB07 complete, SB08 unlocked**
+Bundle state: **Executing — SB08 complete, SB09 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -8,7 +8,7 @@ Bundle state: **Executing — SB07 complete, SB08 unlocked**
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
 | SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
 | SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
-| SB07–SB10 streaming and API hardening | SB07 Completed; SB08 Ready | Sequential from the proven provider-neutral streaming head |
+| SB07–SB10 streaming and API hardening | SB07–SB08 Completed; SB09 Ready | Sequential from the proven durable streaming journal head |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
 | SB12 documentation and guards | Locked | After CP2 |
 | SB13 final stable gate and CI | Locked | Final work unit only |
@@ -148,3 +148,23 @@ The executor must refresh these values before changing production source.
   final architecture-review correction; no unfiltered or solution-wide test ran
 - proof: `proof/SB07/manifest.md`
 - progression: SB08 Ready
+
+## SB08 durable stream event journal and pipeline
+
+- implementation commit: `e543e7bdd3de97e8f52db9d7df182f462b317742`
+- ownership: product/application owns immutable events, lease-checked coalescing/bounds, retention policy,
+  and post-commit signaling; Persistence owns PostgreSQL sequence locking, mapping, cleanup, migration,
+  and transfer schema v5
+- protocol: state/attempt events join their outer transaction; text deltas require the current execution
+  lease and flush by size, natural boundary, UTF-8 limit, or time; only successful finalization creates
+  canonical assistant content
+- focused results: final current-head LLM Chat Unit union 61/61; PostgreSQL journal/turn/transfer union
+  7/7; EF reports no pending model changes
+- architecture: CodeAnalytics `snap-20260815060048-09276cd1`; two scoped projects, zero cycles,
+  diagnostics, blocking/error findings, or open questions; one documented nonblocking existing
+  engine-file size warning; no production partial/Web dependency or completed-only engine bypass
+- deviation: nineteen filtered test attempts and four affected builds exceeded the normal budgets while
+  resolving compile, fixture, timing, bypass, and recovery-state defects; no unfiltered or solution-wide
+  test lane ran
+- proof: `proof/SB08/manifest.md`
+- progression: SB09 Ready
