@@ -329,43 +329,6 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
         return Task.FromResult(renamed);
     }
 
-    public Task<LlmChatConversationEngineTurnResult> SendAsync(
-        LlmChatConversationId conversationId,
-        LlmChatOperationId operationId,
-        LlmChatDefinition definition,
-        LlmChatDefinitionRevision definitionRevision,
-        string userText,
-        long expectedTranscriptRevision,
-        CancellationToken cancellationToken = default)
-    {
-        var current = states[conversationId];
-        Assert.Equal(expectedTranscriptRevision, current.TranscriptRevision);
-        var updated = current with
-        {
-            TranscriptRevision = current.TranscriptRevision + 2,
-            UpdatedAtUtc = current.UpdatedAtUtc.AddMinutes(1)
-        };
-        states[conversationId] = updated;
-        var assistantEntryId = Guid.NewGuid();
-        turnEvidence[operationId] = new LlmChatConversationTurnEvidence(
-            updated,
-            operationId,
-            false,
-            new LlmChatAssistantTurnEvidence(
-                assistantEntryId,
-                "answer",
-                definitionRevision.Model,
-                LlmUsage.Zero,
-                updated.UpdatedAtUtc));
-        return Task.FromResult(new LlmChatConversationEngineTurnResult(
-            updated,
-            operationId,
-            assistantEntryId,
-            "answer",
-            definitionRevision.Model,
-            LlmUsage.Zero));
-    }
-
     public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,

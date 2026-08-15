@@ -943,23 +943,6 @@ internal sealed class BarrierLlmChatConversationEngine(
         CancellationToken cancellationToken = default)
         => inner.RenameAsync(conversationId, title, expectedTranscriptRevision, cancellationToken);
 
-    public Task<LlmChatConversationEngineTurnResult> SendAsync(
-        LlmChatConversationId conversationId,
-        LlmChatOperationId operationId,
-        LlmChatDefinition definition,
-        LlmChatDefinitionRevision definitionRevision,
-        string userText,
-        long expectedTranscriptRevision,
-        CancellationToken cancellationToken = default)
-        => inner.SendAsync(
-            conversationId,
-            operationId,
-            definition,
-            definitionRevision,
-            userText,
-            expectedTranscriptRevision,
-            cancellationToken);
-
     public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,

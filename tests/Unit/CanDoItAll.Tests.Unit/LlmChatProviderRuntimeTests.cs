@@ -242,13 +242,15 @@ public sealed class LlmChatRuntimeFenceTests
             LlmChatDefinitionStatus.Active);
         var conversationId = LlmChatConversationId.New();
         var created = await engine.CreateAsync(conversationId, revision, "title");
-        var send = engine.SendAsync(
+        var operationId = LlmChatOperationId.New();
+        var admission = await engine.AdmitTurnAsync(
             conversationId,
-            LlmChatOperationId.New(),
+            operationId,
             definition,
             revision,
             "hello",
             created.TranscriptRevision);
+        var send = engine.InvokeTurnAsync(admission);
         await dispatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         state.Change(initial with { Generation = initial.Generation + 1 });
@@ -380,13 +382,15 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
         var conversationId = LlmChatConversationId.New();
         var created = await engine.CreateAsync(conversationId, revision, "title");
 
-        await engine.SendAsync(
+        var admission = await engine.AdmitTurnAsync(
             conversationId,
             LlmChatOperationId.New(),
             definition,
             revision,
             "hello",
             created.TranscriptRevision);
+        var result = await engine.InvokeTurnAsync(admission);
+        await engine.CompleteTurnAsync(admission, result);
 
         Assert.NotNull(ProviderRuntimeTestData.CapturedRequest);
         Assert.Equal("model-fast", ProviderRuntimeTestData.CapturedRequest.Model);
@@ -429,7 +433,7 @@ public sealed class LlmChatDefinitionRevisionExecutionTests
         var conversationId = LlmChatConversationId.New();
         var created = await engine.CreateAsync(conversationId, revision, "title");
 
-        var exception = await Assert.ThrowsAsync<LlmChatConversationEngineException>(() => engine.SendAsync(
+        var exception = await Assert.ThrowsAsync<LlmChatConversationEngineException>(() => engine.AdmitTurnAsync(
             conversationId,
             LlmChatOperationId.New(),
             definition,

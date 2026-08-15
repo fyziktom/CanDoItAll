@@ -297,35 +297,6 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException();
 
-    public async Task<LlmChatConversationEngineTurnResult> SendAsync(
-        LlmChatConversationId conversationId,
-        LlmChatOperationId operationId,
-        LlmChatDefinition definition,
-        LlmChatDefinitionRevision definitionRevision,
-        string userText,
-        long expectedTranscriptRevision,
-        CancellationToken cancellationToken = default)
-    {
-        var admission = await AdmitTurnAsync(
-            conversationId,
-            operationId,
-            definition,
-            definitionRevision,
-            userText,
-            expectedTranscriptRevision,
-            cancellationToken);
-        try
-        {
-            var result = await InvokeTurnAsync(admission, cancellationToken);
-            return await CompleteTurnAsync(admission, result, cancellationToken);
-        }
-        catch
-        {
-            await CompensateTurnAsync(conversationId, operationId, CancellationToken.None);
-            throw;
-        }
-    }
-
     public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,

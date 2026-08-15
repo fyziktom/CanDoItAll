@@ -72,15 +72,6 @@ public interface ILlmChatConversationEngine
         long expectedTranscriptRevision,
         CancellationToken cancellationToken = default);
 
-    Task<LlmChatConversationEngineTurnResult> SendAsync(
-        LlmChatConversationId conversationId,
-        LlmChatOperationId operationId,
-        LlmChatDefinition definition,
-        LlmChatDefinitionRevision definitionRevision,
-        string userText,
-        long expectedTranscriptRevision,
-        CancellationToken cancellationToken = default);
-
     Task<LlmConversationTurnAdmission> AdmitTurnAsync(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,

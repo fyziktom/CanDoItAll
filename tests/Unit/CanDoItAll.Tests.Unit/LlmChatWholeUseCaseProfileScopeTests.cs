@@ -39,7 +39,7 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
             ProviderRuntimeTestData.CreateProvider(),
             null);
         await definitions.CreateAsync(definition, revision);
-        conversations.Seed(new LlmChatConversation(
+        var conversation = new LlmChatConversation(
             conversationId,
             definitionId,
             new LlmChatDefinitionRevisionNumber(1),
@@ -48,8 +48,9 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
             LlmChatConversationOrigin.Api,
             now,
             now,
-            0));
-        await engine.CreateAsync(conversationId, revision, "Conversation");
+            0);
+        conversations.Seed(conversation);
+        var transcript = await engine.CreateAsync(conversationId, revision, "Conversation");
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -57,8 +58,9 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
         services.AddSingleton<ILlmChatRuntimeLeaseFactory>(leaseFactory);
         services.AddSingleton<ILlmChatOperationScopeAccessor, LlmChatOperationScopeAccessor>();
         services.AddSingleton<ILlmChatDefinitionRepository>(definitions);
-        services.AddSingleton<ILlmChatConversationRepository>(new SwitchingConversationRepository(
-            conversations,
+        services.AddSingleton<ILlmChatConversationRepository>(conversations);
+        services.AddSingleton<ILlmChatConversationReadStore>(new SwitchingConversationReadStore(
+            new LlmChatConversationReadModel(conversation, definition.Name, transcript),
             () => runtimeLease.IsCurrent = false));
         services.AddSingleton<ILlmChatTurnStateRepository>(new StubLlmChatTurnStateRepository());
         services.AddSingleton<ILlmChatUnitOfWork>(new InlineLlmChatUnitOfWork());
@@ -110,27 +112,37 @@ internal sealed class MutableLlmChatRuntimeLease : ILlmChatRuntimeLease
         => ValueTask.CompletedTask;
 }
 
-internal sealed class SwitchingConversationRepository(
-    ILlmChatConversationRepository inner,
-    Action switchProfile) : ILlmChatConversationRepository
+internal sealed class SwitchingConversationReadStore(
+    LlmChatConversationReadModel model,
+    Action switchProfile) : ILlmChatConversationReadStore
 {
-    public async Task<LlmChatConversation?> TryGetAsync(
+    public Task<LlmChatConversationReadModel?> TryGetAsync(
         LlmChatConversationId id,
         CancellationToken cancellationToken = default)
     {
-        var result = await inner.TryGetAsync(id, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        LlmChatConversationReadModel? result = id == model.Conversation.Id ? model : null;
         switchProfile();
-        return result;
+        return Task.FromResult(result);
     }
 
-    public Task CreateAsync(
-        LlmChatConversation conversation,
+    public Task<LlmChatPage<LlmChatConversationReadModel, LlmChatConversationCursor>> ListPageAsync(
+        int take,
+        LlmChatConversationCursor? cursor,
+        LlmChatDefinitionId? definitionId,
         CancellationToken cancellationToken = default)
-        => inner.CreateAsync(conversation, cancellationToken);
+        => throw new NotSupportedException();
 
-    public Task ReplaceAsync(
-        LlmChatConversation conversation,
-        long expectedConcurrencyToken,
+    public Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(
+        LlmChatConversationId id,
+        int take,
+        LlmChatTranscriptCursor? cursor,
         CancellationToken cancellationToken = default)
-        => inner.ReplaceAsync(conversation, expectedConcurrencyToken, cancellationToken);
+        => throw new NotSupportedException();
+
+    public Task<LlmChatConversationTurnEvidence?> TryInspectTurnAsync(
+        LlmChatConversationId conversationId,
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
 }

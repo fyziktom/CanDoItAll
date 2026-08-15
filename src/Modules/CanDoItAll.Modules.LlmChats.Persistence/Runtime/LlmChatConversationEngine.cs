@@ -95,23 +95,6 @@ public sealed class LlmChatConversationEngine(
                 token).ConfigureAwait(false)),
             cancellationToken);
 
-    public Task<LlmChatConversationEngineTurnResult> SendAsync(
-        LlmChatConversationId conversationId,
-        LlmChatOperationId operationId,
-        LlmChatDefinition definition,
-        LlmChatDefinitionRevision definitionRevision,
-        string userText,
-        long expectedTranscriptRevision,
-        CancellationToken cancellationToken = default)
-        => SendCoreAsync(
-            conversationId,
-            operationId,
-            definition,
-            definitionRevision,
-            userText,
-            expectedTranscriptRevision,
-            cancellationToken);
-
     public Task<LlmConversationTurnAdmission> AdmitTurnAsync(
         LlmChatConversationId conversationId,
         LlmChatOperationId operationId,
@@ -249,35 +232,6 @@ public sealed class LlmChatConversationEngine(
                 operationId.Value,
                 token).ConfigureAwait(false)),
             cancellationToken);
-
-    private async Task<LlmChatConversationEngineTurnResult> SendCoreAsync(
-        LlmChatConversationId conversationId,
-        LlmChatOperationId operationId,
-        LlmChatDefinition definition,
-        LlmChatDefinitionRevision definitionRevision,
-        string userText,
-        long expectedTranscriptRevision,
-        CancellationToken cancellationToken)
-    {
-        var admission = await AdmitTurnAsync(
-            conversationId,
-            operationId,
-            definition,
-            definitionRevision,
-            userText,
-            expectedTranscriptRevision,
-            cancellationToken).ConfigureAwait(false);
-        try
-        {
-            var invocationResult = await InvokeTurnAsync(admission, cancellationToken).ConfigureAwait(false);
-            return await CompleteTurnAsync(admission, invocationResult, cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            await CompensateTurnAsync(conversationId, operationId, CancellationToken.None).ConfigureAwait(false);
-            throw;
-        }
-    }
 
     private async Task<T> ExecuteAsync<T>(
         LlmChatOperationId operationId,
