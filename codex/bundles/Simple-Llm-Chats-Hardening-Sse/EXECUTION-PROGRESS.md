@@ -1,6 +1,6 @@
 # Execution progress
 
-Bundle state: **Executing — SB09 complete, SB10 unlocked**
+Bundle state: **Executing — SB10 complete, SB11 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
@@ -8,8 +8,8 @@ Bundle state: **Executing — SB09 complete, SB10 unlocked**
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
 | SB01–SB05 backend hardening | Completed | SB05 completed at `e88987c2018adcf9118d49109eb8d4e3d3eb2c12` |
 | SB06 backend checkpoint | Completed | CP1 Ready at `a820b867fcf34cd07a93d201a9ffc492c243e647` |
-| SB07–SB10 streaming and API hardening | SB07–SB09 Completed; SB10 Ready | Sequential from the proven durable asynchronous SSE head |
-| SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
+| SB07–SB10 streaming and API hardening | Completed | Durable streaming/SSE plus exact external-client security contract proven |
+| SB11 focused behavioral proof | Ready | Must declare CP2 Ready |
 | SB12 documentation and guards | Locked | After CP2 |
 | SB13 final stable gate and CI | Locked | Final work unit only |
 | FINAL release decision | Locked | UI/shared-component bundles remain blocked |
@@ -188,3 +188,21 @@ The executor must refresh these values before changing production source.
   no unfiltered or solution-wide test lane ran
 - proof: `proof/SB09/manifest.md`
 - progression: SB10 Ready
+
+## SB10 API security and external-client contract
+
+- implementation commit: `ebb8deae5f2deb0a379875fecf853ea8fc423be7`
+- ownership: Workspace owns scope names; Web owns exact policy/route metadata, server-owned HTTP
+  provenance, and versioned transport; product preserves trusted provenance and stable failures
+- security: exact read/manage/execute scopes reject broad `api`; trusted-local auth-disabled behavior is
+  unchanged; SSE accepts Authorization header credentials and rejects query JWTs
+- redaction: definition reads omit system prompt; idempotency conflict omits both bodies/fingerprint;
+  product logging retains safe IDs/type only and never logs raw exception objects
+- focused results: expected-red 0/1; final real-host API union 12/12; product origin 1/1; PostgreSQL
+  persisted-origin 1/1; final Web build 0 warnings/errors
+- architecture: CodeAnalytics `snap-20260815072303-363bd134`; four scoped projects, zero cycles or
+  blocking diagnostics; no partial expansion, reverse dependency, or dormant deployment model
+- decision: conversation-create idempotency waits for the future deployment-scoped external identity;
+  current turn admission remains the validated caller-operation-ID retry boundary
+- proof: `proof/SB10/manifest.md`
+- progression: SB11 Ready

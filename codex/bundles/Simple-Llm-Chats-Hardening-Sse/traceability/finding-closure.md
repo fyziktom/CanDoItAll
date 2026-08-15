@@ -17,5 +17,5 @@
 | F-013 — Conversation and transcript reads are unbounded or in-memory paged | High | SB05 | `subbundles/SB05-bounded-transcript-queries-and-pagination/proof-manifest.json` | Pending |
 | F-014 — Archive can race active work | High | SB02 | `subbundles/SB02-atomic-turn-state-machine-and-recovery/proof-manifest.json` | Closed by row-locked active/nonterminal archive exclusion |
 | F-015 — Provider contracts and drivers have no true streaming path | High | SB07 | `subbundles/SB07-provider-neutral-streaming-contracts-and-drivers/proof-manifest.json` | Pending |
-| F-016 — HTTP origin is caller-controlled and dedicated LLM scopes are missing | Medium | SB10 | `subbundles/SB10-api-security-and-external-client-contract/proof-manifest.json` | Pending |
+| F-016 — HTTP origin is caller-controlled and dedicated LLM scopes are missing | Medium | SB10 | `subbundles/SB10-api-security-and-external-client-contract/proof-manifest.json` | Closed at `ebb8deae5f2deb0a379875fecf853ea8fc423be7`: title-only request plus persisted Api origin and exact read/manage/execute policies pass |
 | F-017 — Committed closure and branch provenance are not release-ready | High | SB00 | `subbundles/SB00-baseline-sync-and-proof-reconciliation/proof-manifest.json` | Pending |
