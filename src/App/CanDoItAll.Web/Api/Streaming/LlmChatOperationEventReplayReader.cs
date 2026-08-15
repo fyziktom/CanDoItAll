@@ -15,11 +15,24 @@ internal sealed class LlmChatOperationEventReplayReader(
         long afterExclusive,
         CancellationToken cancellationToken)
     {
-        var page = await session.ReadAsync(
-            afterExclusive,
-            Math.Min(options.MaxBatchSize, session.MaximumPageSize),
-            options.HeartbeatInterval,
-            cancellationToken).ConfigureAwait(false);
+        LlmChatOperationEventPage page;
+        try
+        {
+            page = await session.ReadAsync(
+                afterExclusive,
+                Math.Min(options.MaxBatchSize, session.MaximumPageSize),
+                options.HeartbeatInterval,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (LlmChatRuntimeProfileChangedException exception)
+            when (session.ProfileLifetime.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(
+                "The LLM Chat event stream's runtime profile changed.",
+                exception,
+                session.ProfileLifetime);
+        }
+
         var aggregateCharacterCount = page.TextCharactersThroughCursor;
         var events = new List<SequencedServerEvent<LlmChatOperationEventApiResponse>>(page.Events.Count);
         foreach (var operationEvent in page.Events)
