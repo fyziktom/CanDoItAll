@@ -13,6 +13,22 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit;
 
+internal sealed class SequenceStreamingInvocationPort(IReadOnlyList<LlmStreamingUpdate> updates)
+    : ILlmStreamingInvocationPort
+{
+    public async IAsyncEnumerable<LlmStreamingUpdate> StreamAsync(
+        LlmInvocationRequest request,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await Task.Yield();
+        foreach (var update in updates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return update;
+        }
+    }
+}
+
 internal sealed class InMemoryLlmChatOperationRepository : ILlmChatOperationRepository
 {
     private readonly object gate = new();

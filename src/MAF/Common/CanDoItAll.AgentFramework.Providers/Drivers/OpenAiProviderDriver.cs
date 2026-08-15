@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
@@ -12,6 +13,7 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
     IProviderHealthDriver,
     IProviderModelCatalogDriver,
     IProviderChatCompletionDriver,
+    IProviderStreamingChatCompletionDriver,
     IProviderImageGenerationDriver,
     IProviderSpeechToTextDriver,
     IProviderTextToSpeechDriver
@@ -169,6 +171,104 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         {
             CachedInputTokens = ProviderDriverProtocol.ReadChatCompletionsCachedTokens(usage)
         };
+    }
+
+    public ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Provider.Transport is ProviderTransportKind.ChatCompletions or ProviderTransportKind.Responses
+            ? ProviderChatStreamingMode.Incremental
+            : ProviderChatStreamingMode.Unsupported;
+    }
+
+    public async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamChatAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var updates = request.Provider.Transport switch
+        {
+            ProviderTransportKind.ChatCompletions => StreamChatCompletionsAsync(request, cancellationToken),
+            ProviderTransportKind.Responses => StreamResponseAsync(request, cancellationToken),
+            _ => throw new InvalidOperationException(
+                $"Unsupported transport '{request.Provider.Transport}' for provider '{request.Provider.Name}'.")
+        };
+        await foreach (var update in updates.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamChatCompletionsAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var credential = ResolveCredential(request.Provider);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildEndpoint(request.Provider, "chat/completions"));
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.ApiKey);
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = request.Model,
+            ["messages"] = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
+            ["stream"] = true,
+            ["stream_options"] = new Dictionary<string, object> { ["include_usage"] = true }
+        };
+        ProviderDriverProtocol.AddOpenAiChatCompletionModelParameters(payload, request);
+        ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
+        ProviderDriverProtocol.AddOpenAiChatCompletionResponseFormat(payload, request);
+        httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
+        using var response = await httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            "OpenAI chat completion",
+            cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await foreach (var update in ProviderStreamingProtocol.ReadOpenAiChatCompletionsAsync(
+            stream,
+            request.Model,
+            cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamResponseAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var credential = ResolveCredential(request.Provider);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildEndpoint(request.Provider, "responses"));
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.ApiKey);
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = request.Model,
+            ["input"] = ProviderDriverProtocol.BuildOpenAiResponsesInput(request),
+            ["stream"] = true,
+            ["store"] = false
+        };
+        ProviderDriverProtocol.AddOpenAiResponsesModelParameters(payload, request);
+        ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
+        ProviderDriverProtocol.AddOpenAiResponsesResponseFormat(payload, request);
+        httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
+        using var response = await httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            "OpenAI response",
+            cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await foreach (var update in ProviderStreamingProtocol.ReadOpenAiResponsesAsync(
+            stream,
+            request.Model,
+            cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
     }
 
     private async Task<ProviderChatCompletionResult> CompleteResponseAsync(

@@ -348,3 +348,161 @@ public interface ILlmInvocationPort
 {
     Task<LlmInvocationResult> InvokeAsync(LlmInvocationRequest request, CancellationToken cancellationToken = default);
 }
+
+public enum LlmStreamingDeliveryMode
+{
+    Incremental,
+    CompletedFallback
+}
+
+public abstract record LlmStreamingUpdate
+{
+    protected LlmStreamingUpdate(int attemptOrdinal)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(attemptOrdinal, 1);
+        AttemptOrdinal = attemptOrdinal;
+    }
+
+    public int AttemptOrdinal { get; }
+}
+
+public sealed record LlmStreamingAttemptStarted : LlmStreamingUpdate
+{
+    public LlmStreamingAttemptStarted(
+        int attemptOrdinal,
+        Guid providerId,
+        ProviderKind providerKind,
+        string model,
+        LlmStreamingDeliveryMode deliveryMode,
+        DateTimeOffset startedAtUtc) : base(attemptOrdinal)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(providerId, Guid.Empty);
+        if (!Enum.IsDefined(providerKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(providerKind), providerKind, "Unknown provider kind.");
+        }
+
+        if (!Enum.IsDefined(deliveryMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(deliveryMode), deliveryMode, "Unknown streaming delivery mode.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        ProviderId = providerId;
+        ProviderKind = providerKind;
+        Model = model.Trim();
+        DeliveryMode = deliveryMode;
+        StartedAtUtc = startedAtUtc;
+    }
+
+    public Guid ProviderId { get; }
+
+    public ProviderKind ProviderKind { get; }
+
+    public string Model { get; }
+
+    public LlmStreamingDeliveryMode DeliveryMode { get; }
+
+    public DateTimeOffset StartedAtUtc { get; }
+}
+
+public sealed record LlmStreamingTextDelta : LlmStreamingUpdate
+{
+    public LlmStreamingTextDelta(
+        int attemptOrdinal,
+        string delta,
+        long? providerSequence = null) : base(attemptOrdinal)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(delta);
+        if (providerSequence is < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(providerSequence), providerSequence, "Provider sequence must be positive.");
+        }
+
+        Delta = delta;
+        ProviderSequence = providerSequence;
+    }
+
+    public string Delta { get; }
+
+    public long? ProviderSequence { get; }
+}
+
+public sealed record LlmStreamingCompleted : LlmStreamingUpdate
+{
+    public LlmStreamingCompleted(
+        int attemptOrdinal,
+        string model,
+        string finishReason,
+        LlmUsage usage,
+        LlmStreamingDeliveryMode deliveryMode,
+        DateTimeOffset completedAtUtc) : base(attemptOrdinal)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        ArgumentException.ThrowIfNullOrWhiteSpace(finishReason);
+        ArgumentNullException.ThrowIfNull(usage);
+        if (!Enum.IsDefined(deliveryMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(deliveryMode), deliveryMode, "Unknown streaming delivery mode.");
+        }
+
+        Model = model.Trim();
+        FinishReason = finishReason.Trim();
+        Usage = usage;
+        AttemptUsage = usage;
+        DeliveryMode = deliveryMode;
+        CompletedAtUtc = completedAtUtc;
+    }
+
+    public string Model { get; }
+
+    public string FinishReason { get; }
+
+    public LlmUsage Usage { get; }
+
+    public LlmUsage AttemptUsage { get; init; }
+
+    public LlmStreamingDeliveryMode DeliveryMode { get; }
+
+    public DateTimeOffset CompletedAtUtc { get; }
+}
+
+public sealed record LlmStreamingFailed : LlmStreamingUpdate
+{
+    public LlmStreamingFailed(
+        int attemptOrdinal,
+        LlmInvocationFailureKind failureKind,
+        LlmUsage usage,
+        bool retryScheduled,
+        DateTimeOffset completedAtUtc) : base(attemptOrdinal)
+    {
+        if (!Enum.IsDefined(failureKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(failureKind), failureKind, "Unknown invocation failure kind.");
+        }
+
+        ArgumentNullException.ThrowIfNull(usage);
+        FailureKind = failureKind;
+        Usage = usage;
+        AttemptUsage = usage;
+        RetryScheduled = retryScheduled;
+        CompletedAtUtc = completedAtUtc;
+    }
+
+    public LlmInvocationFailureKind FailureKind { get; }
+
+    public LlmUsage Usage { get; }
+
+    public LlmUsage AttemptUsage { get; init; }
+
+    public bool RetryScheduled { get; }
+
+    public DateTimeOffset CompletedAtUtc { get; }
+}
+
+public interface ILlmStreamingInvocationPort
+{
+    IAsyncEnumerable<LlmStreamingUpdate> StreamAsync(
+        LlmInvocationRequest request,
+        CancellationToken cancellationToken = default);
+}

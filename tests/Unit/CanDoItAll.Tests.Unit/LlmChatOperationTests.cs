@@ -466,6 +466,105 @@ public sealed class LlmChatOperationTransitionRegressionTests
 public sealed class LlmChatInvocationAuditTests
 {
     [Fact]
+    public async Task Streaming_audit_records_each_actual_attempt_with_its_own_usage_and_ordinal()
+    {
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var provider = ProviderRuntimeTestData.CreateProvider();
+        var operationId = LlmChatOperationId.New();
+        var operations = new InMemoryLlmChatOperationRepository();
+        operations.Seed(new LlmChatOperation(
+            operationId,
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('b', 64)),
+            1,
+            LlmChatOperationStatus.Running,
+            now,
+            0)
+        {
+            TurnAdmittedAtUtc = now
+        });
+        var invocations = new InMemoryLlmChatInvocationRecordRepository();
+        var scope = new LlmChatOperationScopeAccessor();
+        var evidence = new LlmChatOperationEvidenceService(
+            operations,
+            invocations,
+            new InlineLlmChatUnitOfWork(),
+            scope,
+            new FixedTimeProvider(now.AddSeconds(3)));
+        var failedUsage = new LlmUsage(2, 1);
+        var successfulUsage = new LlmUsage(3, 2, 1);
+        var inner = new SequenceStreamingInvocationPort(
+        [
+            new LlmStreamingAttemptStarted(
+                1,
+                provider.Id,
+                provider.Kind,
+                "model-fast",
+                LlmStreamingDeliveryMode.Incremental,
+                now),
+            new LlmStreamingFailed(
+                1,
+                LlmInvocationFailureKind.ProviderFailure,
+                failedUsage,
+                true,
+                now.AddSeconds(1)) { AttemptUsage = failedUsage },
+            new LlmStreamingAttemptStarted(
+                2,
+                provider.Id,
+                provider.Kind,
+                "model-fast",
+                LlmStreamingDeliveryMode.Incremental,
+                now.AddSeconds(1)),
+            new LlmStreamingTextDelta(2, "answer", 1),
+            new LlmStreamingCompleted(
+                2,
+                "model-fast",
+                "stop",
+                failedUsage.Add(successfulUsage),
+                LlmStreamingDeliveryMode.Incremental,
+                now.AddSeconds(2)) { AttemptUsage = successfulUsage }
+        ]);
+        var port = new AuditedLlmChatStreamingInvocationPort(
+            inner,
+            evidence,
+            new ProviderModelCapabilityResolver(),
+            scope,
+            new FixedTimeProvider(now.AddSeconds(3)));
+        var request = new LlmInvocationRequest(
+            provider,
+            "model-fast",
+            [new LlmMessage(LlmMessageRole.User, "hello")],
+            correlationId: operationId.ToString());
+        using var operation = scope.Push(new LlmChatOperationExecutionContext(
+            operationId,
+            new LlmChatRuntimeIdentity(
+                ProviderRuntimeTestData.RuntimeIdentity.ActiveProfileId!.Value,
+                ProviderRuntimeTestData.RuntimeIdentity.ActiveFingerprint!,
+                ProviderRuntimeTestData.RuntimeIdentity.Generation)));
+
+        await foreach (var _ in port.StreamAsync(request))
+        {
+        }
+
+        var records = await invocations.ListAsync(operationId);
+        Assert.Collection(
+            records,
+            record =>
+            {
+                Assert.Equal(1, record.Ordinal);
+                Assert.Equal(LlmChatInvocationOutcome.Failed, record.Outcome);
+                Assert.Equal(failedUsage, record.Usage);
+            },
+            record =>
+            {
+                Assert.Equal(2, record.Ordinal);
+                Assert.Equal(LlmChatInvocationOutcome.Succeeded, record.Outcome);
+                Assert.Equal(successfulUsage, record.Usage);
+            });
+    }
+
+    [Fact]
     public async Task Failed_provider_usage_is_retained_outside_the_transcript()
     {
         var context = LlmChatInvocationAuditHarness.Create(

@@ -95,7 +95,7 @@ public sealed class AuditedLlmChatInvocationPort(
             timeProvider.GetUtcNow(),
             request.CorrelationId), CancellationToken.None);
 
-    private static string MapFailureCode(LlmInvocationFailureKind failureKind)
+    internal static string MapFailureCode(LlmInvocationFailureKind failureKind)
         => failureKind switch
         {
             LlmInvocationFailureKind.InvalidRequest => LlmChatErrorCodes.ModelSettingsInvalid,

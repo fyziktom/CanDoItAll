@@ -11,6 +11,7 @@ public static class LlmProviderRuntimeServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton<ILlmInvocationPort, ProviderBackedLlmInvocationAdapter>();
+        services.TryAddSingleton<ILlmStreamingInvocationPort, ProviderBackedLlmStreamingInvocationAdapter>();
         return services;
     }
 }
