@@ -1,12 +1,12 @@
 # Execution progress
 
-Bundle state: **Executing — SB02 completed, SB03 unlocked**
+Bundle state: **Executing — SB03 completed, SB04 unlocked**
 
 | Work unit | State | Progression |
 |---|---|---|
 | SB00 baseline sync and proof reconciliation | Completed | `5522880cbf3101ed54c216ab74cac3b8ff2bade0`; focused comparison classified all 19 |
 | CP0 baseline/proof review | Pass | No BranchInduced or Unresolved cases; SB01 unlocked |
-| SB01–SB05 backend hardening | SB03 Ready | SB02 completed at `be36fedb2ce329af6021cd2330eb6162d8ef2db4`; sequential through SB05 |
+| SB01–SB05 backend hardening | SB04 Ready | SB03 completed at `96f054905eecd33e04228e7837ae7850e3eeeeb4`; sequential through SB05 |
 | SB06 backend checkpoint | Locked | Must declare CP1 Ready |
 | SB07–SB10 streaming and API hardening | Locked | Sequential after CP1 |
 | SB11 focused behavioral proof | Locked | Must declare CP2 Ready |
@@ -70,3 +70,14 @@ The executor must refresh these values before changing production source.
 - architecture: CodeAnalytics `snap-20260815011610-d209545b`, zero cycles/errors/warnings/open questions after splitting the initial 643-line orchestrator
 - proof: `proof/SB02/manifest.md`
 - progression: SB03 Ready
+
+## SB03 whole-use-case profile fencing
+
+- implementation commit: `96f054905eecd33e04228e7837ae7850e3eeeeb4`
+- ownership: internal public-interface decorators capture one immutable runtime identity before the first application read; persistence owns the atomic commit fence
+- protocol: switch publication and LLM Chat transaction commit are total-ordered; an old host cannot acquire the new profile identity or commit after switch publication
+- focused results: pre-SB03 public-use-case regression 0/1 expected red; final Unit 12/12; real-host PostgreSQL profile-switch API 1/1
+- retained evidence: provider dispatch audit and usage remain durable while finalization is rejected with `RuntimeProfileChanged`; no assistant message is committed
+- architecture: CodeAnalytics `snap-20260815020112-e34a58a8`; no new project cycle, forbidden dependency, public bypass, or production partial expansion
+- proof: `proof/SB03/manifest.md`
+- progression: SB04 Ready

@@ -14,8 +14,8 @@ Status: prepared. Closure fields are filled during execution.
 | RQ-008 | A durable cancellation request committed before semantic completion must prevent Succeeded. | SB02, SB06, SB08 | SB02 pass with monotonic cancellation and red/green proof; SB08/SB06 pending |
 | RQ-009 | Resolve idempotent replay by operation identity/fingerprint before mutable lifecycle validation. | SB02, SB06 | SB02 pass including replay after archive; SB06 pending |
 | RQ-010 | Conversation archive must not race an active turn or nonterminal operation. | SB02, SB06 | SB02 pass with conversation row lock and active/nonterminal rejection; SB06 pending |
-| RQ-011 | Fence every public use case from first read through final commit/return to one database profile identity and generation. | SB03, SB06 | Pending |
-| RQ-012 | A profile switch must prevent old-generation writes and produce deterministic retained evidence. | SB03, SB06 | Pending |
+| RQ-011 | Fence every public use case from first read through final commit/return to one database profile identity and generation. | SB03, SB06 | SB03 pass at `96f054905eecd33e04228e7837ae7850e3eeeeb4`; SB06 checkpoint pending |
+| RQ-012 | A profile switch must prevent old-generation writes and produce deterministic retained evidence. | SB03, SB06 | SB03 pass with atomic switch/write ordering and retained provider usage; SB06 checkpoint pending |
 | RQ-013 | Use durable cross-instance execution ownership with claim, heartbeat, expiry, and release. | SB04, SB06 | Pending |
 | RQ-014 | Support bounded cross-instance cancellation and never infer liveness from an in-memory registry alone. | SB04, SB06, SB08 | Pending |
 | RQ-015 | Execute admitted operations independently from the initiating HTTP request through an available dispatcher. | SB04, SB06 | Pending |

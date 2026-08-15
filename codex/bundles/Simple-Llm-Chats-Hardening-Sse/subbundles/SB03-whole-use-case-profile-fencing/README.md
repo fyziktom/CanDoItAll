@@ -1,6 +1,6 @@
 # SB03 — Whole-use-case profile fencing
 
-Status: **Locked**  
+Status: **Completed**
 Proof tier: **Governed**  
 Depends on: **SB02**
 
@@ -99,11 +99,11 @@ Follow `test-budget.json` and `plan/04-test-budget-and-gates.md`. During this wo
 
 ## Acceptance checklist
 
-- [ ] Every public LLM Chat application operation captures profile identity before its first read.
-- [ ] All repositories, provider resolution, transcript commands, and audit writes use the captured operation scope.
-- [ ] A profile switch prevents every subsequent old-generation durable commit.
-- [ ] A switch during provider execution yields deterministic non-success or RecoveryRequired with retained usage evidence.
-- [ ] No current-profile DbContext or provider lease is cached across operations.
+- [x] Every public LLM Chat application operation captures profile identity before its first read.
+- [x] All repositories, provider resolution, transcript commands, and audit writes use the captured operation scope.
+- [x] A profile switch prevents every subsequent old-generation durable commit.
+- [x] A switch during provider execution yields deterministic non-success or RecoveryRequired with retained usage evidence.
+- [x] No current-profile DbContext or provider lease is cached across operations.
 
 ## Reopen triggers
 

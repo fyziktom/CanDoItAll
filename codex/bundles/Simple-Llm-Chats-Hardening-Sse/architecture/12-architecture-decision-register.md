@@ -5,7 +5,7 @@
 | ADR-H01 | One writable canonical conversation/transcript metadata owner | Implemented by SB01 |
 | ADR-H02 | Product cross-table invariants use explicit single-context commands | Implemented by SB01 |
 | ADR-H03 | Operation transition/recovery uses one pure reducer | Locked by SB02 |
-| ADR-H04 | Whole application use case is profile-generation fenced | Locked by SB03 |
+| ADR-H04 | Whole application use case is profile-generation fenced | Implemented by SB03 |
 | ADR-H05 | Provider execution is claimed durably and detached from HTTP request | Locked by SB04 |
 | ADR-H06 | Long transcript/list queries use read models and keyset paging | Locked by SB05 |
 | ADR-H07 | Streaming is additive; completed invocation remains supported | Locked by SB07 |
@@ -22,3 +22,13 @@
 active-turn state. `EfLlmConversationStore` joins the canonical conversation metadata for reads and
 participates in the scoped `AppDbContext` transaction for writes. No ambient transaction or nested
 context is used.
+
+## SB03 implementation record
+
+Every public LLM Chat application interface is registered through an internal profile-scoped decorator.
+`LlmChatProfileScopeRunner` acquires the immutable canonical host identity before invoking application
+behavior and keeps it through the authoritative return. `EfLlmChatUnitOfWork` commits only through
+`DatabaseProfileLlmChatCommitFence`; the shared runtime state total-orders profile-switch publication
+and durable commits. Provider and transcript adapters consume the same operation scope. No service
+re-resolves the current profile after admission, and a restarted host cannot be mistaken for the old
+host's newly selected profile.
