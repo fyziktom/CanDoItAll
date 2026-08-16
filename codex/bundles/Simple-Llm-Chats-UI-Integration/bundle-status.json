@@ -1,0 +1,16 @@
+{
+  "bundleId": "Simple-Llm-Chats-UI-Integration",
+  "stage": "prepared",
+  "executionState": "not-started",
+  "validationState": "preparation-passed",
+  "reviewVerdict": "ready-after-mandatory-hardening",
+  "reviewedHead": "f61795c1cf6c6ccd9dcc8daae7c30caf82b901bc",
+  "simpleChatUiActivationAllowed": false,
+  "simpleChatUiActivationUnlockCheckpoint": "CP1",
+  "floatingIntegrationAllowed": false,
+  "floatingIntegrationUnlockCheckpoint": "CP2",
+  "targetFinalState": "awaiting-user-simple-chat-ui-verification",
+  "completedSubbundles": [],
+  "currentSubbundle": "SB01",
+  "blockedBy": []
+}
