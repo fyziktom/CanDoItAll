@@ -1,0 +1,28 @@
+{
+  "subbundleId": "SB06",
+  "status": "pending",
+  "proofTier": "Behavioral",
+  "repositoryBaseSha": null,
+  "repositoryHeadSha": null,
+  "sharedInfoHashes": {},
+  "changedFilesAndRangesPath": null,
+  "codeAnalytics": {
+    "snapshotIds": [],
+    "workspaceHealth": [],
+    "impactedTestsRequestPath": null,
+    "impactedTestsResponsePath": null,
+    "requiredSelectors": [],
+    "conditionalSelectors": [],
+    "promotionDecisions": []
+  },
+  "builds": [],
+  "tests": [],
+  "browserProof": [],
+  "sourceGuards": [],
+  "dependencyProof": [],
+  "semanticInvariantsPath": null,
+  "requirementsClosed": [],
+  "requirementsReopened": [],
+  "checkpointDecision": null,
+  "notes": []
+}

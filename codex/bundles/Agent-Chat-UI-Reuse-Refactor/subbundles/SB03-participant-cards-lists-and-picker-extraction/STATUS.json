@@ -1,0 +1,25 @@
+{
+  "subbundleId": "SB03",
+  "title": "Participant cards, compact lists, and picker extraction",
+  "status": "pending",
+  "proofTier": "Behavioral",
+  "dependsOn": [
+    "SB02"
+  ],
+  "checkpoint": null,
+  "ownedRequirements": [
+    "UIR-020",
+    "UIR-021",
+    "UIR-022",
+    "UIR-023",
+    "UIR-024",
+    "UIR-025",
+    "UIR-026",
+    "UIR-073",
+    "UIR-075",
+    "UIR-077"
+  ],
+  "executionBaseSha": null,
+  "candidateHeadSha": null,
+  "progressionDecision": null
+}

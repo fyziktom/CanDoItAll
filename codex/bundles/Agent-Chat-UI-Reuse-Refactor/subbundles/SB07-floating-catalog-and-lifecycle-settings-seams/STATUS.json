@@ -1,0 +1,25 @@
+{
+  "subbundleId": "SB07",
+  "title": "Floating catalog and lifecycle-settings seams",
+  "status": "pending",
+  "proofTier": "Behavioral",
+  "dependsOn": [
+    "SB06"
+  ],
+  "checkpoint": "CP3",
+  "ownedRequirements": [
+    "UIR-055",
+    "UIR-060",
+    "UIR-061",
+    "UIR-062",
+    "UIR-063",
+    "UIR-064",
+    "UIR-073",
+    "UIR-075",
+    "UIR-077",
+    "UIR-078"
+  ],
+  "executionBaseSha": null,
+  "candidateHeadSha": null,
+  "progressionDecision": null
+}

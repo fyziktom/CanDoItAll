@@ -1,0 +1,14 @@
+{
+  "bundleId": "candoitall-agent-chat-ui-reuse-refactor-phase-1",
+  "stage": "prepared",
+  "executionState": "not-started",
+  "validationState": "prepared-valid",
+  "currentSubbundle": null,
+  "nextSubbundle": "SB01",
+  "completedSubbundles": [],
+  "blockedSubbundles": [],
+  "lastKnownRepositoryHead": "eca249942211d9d8839f3e0da9b1997b7d652684",
+  "targetTerminalState": "awaiting-user-agent-chat-regression",
+  "simpleChatUiActivationAllowed": false,
+  "updatedAtUtc": "2026-08-16T10:08:41Z"
+}

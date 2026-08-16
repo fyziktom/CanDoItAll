@@ -1,0 +1,26 @@
+{
+  "subbundleId": "SB05",
+  "title": "Conversation workspace, transcript, and composer extraction",
+  "status": "pending",
+  "proofTier": "Governed",
+  "dependsOn": [
+    "SB04"
+  ],
+  "checkpoint": "CP2",
+  "ownedRequirements": [
+    "UIR-040",
+    "UIR-041",
+    "UIR-042",
+    "UIR-043",
+    "UIR-044",
+    "UIR-045",
+    "UIR-046",
+    "UIR-073",
+    "UIR-075",
+    "UIR-077",
+    "UIR-078"
+  ],
+  "executionBaseSha": null,
+  "candidateHeadSha": null,
+  "progressionDecision": null
+}

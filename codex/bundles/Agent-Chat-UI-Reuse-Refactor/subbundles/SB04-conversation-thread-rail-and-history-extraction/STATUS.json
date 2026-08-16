@@ -1,0 +1,22 @@
+{
+  "subbundleId": "SB04",
+  "title": "Conversation thread rail and history extraction",
+  "status": "pending",
+  "proofTier": "Behavioral",
+  "dependsOn": [
+    "SB03"
+  ],
+  "checkpoint": null,
+  "ownedRequirements": [
+    "UIR-030",
+    "UIR-031",
+    "UIR-032",
+    "UIR-033",
+    "UIR-073",
+    "UIR-075",
+    "UIR-077"
+  ],
+  "executionBaseSha": null,
+  "candidateHeadSha": null,
+  "progressionDecision": null
+}
