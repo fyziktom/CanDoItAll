@@ -1,0 +1,4 @@
+Command: rg -n 'AgentFramework|LlmChats|DbContext|EntityFramework|Persistence|IServiceProvider|GetRequiredService|GetService|ProviderProfile|LlmModelSettings|AgentDefinition|ChatMessageRecord' src/UI/CanDoItAll.Conversations.Components --glob '!README.md'
+StartedUtc: 2026-08-16T11:03:09.0767047+00:00
+Result: no forbidden neutral-source matches.
+ExitCode: 0

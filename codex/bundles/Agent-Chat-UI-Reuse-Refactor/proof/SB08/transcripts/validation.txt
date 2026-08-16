@@ -1,0 +1,40 @@
+SB08 governed validation transcript
+Working directory: C:\repositories\CanDoItAll
+Repository HEAD: bca2c286d32c48ba0283a8f606f6cc5c8639afca
+Run time: 2026-08-16T14:30:48Z
+
+[UIR-SB08-01] Repository boundary
+Command: python codex/bundles/Agent-Chat-UI-Reuse-Refactor/scripts/check_repo_boundaries.py C:\repositories\CanDoItAll --base-sha bca2c286d32c48ba0283a8f606f6cc5c8639afca
+Exit code: 0
+Output: Repository boundary guard passed.
+
+[UIR-SB08-01] Cross-consumer focused regression
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --no-build -nologo -v:minimal --filter "FullyQualifiedName~ContextualAgentWorkspaceWindowsFailureTests|FullyQualifiedName~ProcessWorkspaceShellTests|FullyQualifiedName~AgentPanelSelectionFailClosedTests|FullyQualifiedName~FloatingAgentChatHostLifecycleTests|FullyQualifiedName~FloatingAgentChatSettingsPanelTests"
+Expected discovery: 81
+Exit code: 0
+Output: Passed 81, failed 0, skipped 0, total 81, duration 5 s.
+
+[UIR-SB08-01] Analyzer-required Components suite — evidence reuse
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --no-build -nologo -v:minimal
+Source discovery: 922
+Runtime discovery: 990
+Exit code: 0
+Output: Passed 990, failed 0, skipped 0, duration 13m48s.
+Reuse basis: this run completed in SB07 after the final production change. No source, test, build configuration or dependency input changed before SB08 closure. Source record: bundle://proof/SB07/manifest.json.
+
+[UIR-SB08-02] Processes consumer build
+Command: dotnet build src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj --no-restore -nologo -v:minimal
+Exit code: 0
+Output: Build succeeded, 0 warnings, 0 errors, elapsed 00:00:23.68.
+
+[UIR-SB08-02] CodeAnalytics architecture snapshot
+Tool: code_analytics_snapshot_build
+Snapshot: snap-20260816142006-84a4f698
+Correlation: code-analytics_fd6e453a316245cf9116fd356ee53c12
+Result: healthy, 4 projects, 755 types, 7557 members, no blocking errors.
+
+[UIR-SB08-03] Neutral and phase scans
+Commands: rg forbidden Agent/LlmChats/backend/service-location/stub patterns under the changed presentation boundary.
+Result: zero matches. rg exit code 1 is the expected zero-match result.
+
+Execution-safe checksum, traceability, test-policy and phase-exclusion validators are rerun after durable status updates and recorded by the final SB08 closure.

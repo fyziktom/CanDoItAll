@@ -1,0 +1,14 @@
+{
+  "behaviorIntent": "mixed contract/shape and behavior-preserving extraction",
+  "changedFilesAndRangesPath": "proof/SB04/changed-files-and-ranges.json",
+  "testWorkspaces": [
+    {
+      "name": "Components",
+      "path": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj"
+    }
+  ],
+  "contextOnlyPaths": [
+    "tests/Components/CanDoItAll.Tests.Components/AgentChatModalTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs"
+  ]
+}

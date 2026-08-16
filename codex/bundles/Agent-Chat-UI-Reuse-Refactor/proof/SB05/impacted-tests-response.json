@@ -1,0 +1,22 @@
+{
+  "subbundleId": "SB05",
+  "correlationId": "code-analytics_5d6b1928e10840439013b1f1f7041188",
+  "result": {
+    "isComplete": false,
+    "confidence": "Low",
+    "fallbackKind": "AllSuppliedSuites",
+    "requiredSelection": "All supplied suites / Components",
+    "selectedSourceTestCount": 908,
+    "workspaceHealthy": true,
+    "workspaceProjectCount": 1,
+    "sourceTestCount": 908
+  },
+  "reason": "Razor, CSS, project-file, newly generated contract, and reflection/expression-dispatch edges are conservatively unresolved by the analyzer.",
+  "promotionDecision": "Retain the already-approved single broad Components gate for SB09. Run the direct SB05 owner/facade set immediately.",
+  "focusedExecution": {
+    "selector": "ConversationWorkspaceComponentsTests|ChatWorkspacePanelTests|AgentChatModalTests|AgentChatPanelResponsivenessTests",
+    "discovered": 31,
+    "passed": 31,
+    "failed": 0
+  }
+}

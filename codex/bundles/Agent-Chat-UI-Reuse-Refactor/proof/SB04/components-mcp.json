@@ -1,0 +1,25 @@
+{
+  "configuredTransportResult": "Transport closed",
+  "transport": "manual stdio fallback",
+  "server": "CanDoItAll.Mcp.Components 1.0.0.0",
+  "protocolVersion": "2025-06-18",
+  "queries": [
+    {
+      "tool": "components_recommend",
+      "correlationId": "corr_47b57e7d7b5947c9bbf895c7da39bd89",
+      "decision": "The query returned no direct component recommendation. Retain the established BaseLib composition and use explicit state hierarchy rather than adding a new shell abstraction."
+    },
+    {
+      "tool": "component_usage_examples",
+      "component": "TextBox",
+      "correlationId": "corr_a0ff211a727448bb88085f3aef087a89",
+      "decision": "Use typed Value/ValueChanged binding in the neutral rail and keep the existing immediate-search behavior."
+    },
+    {
+      "tool": "component_usage_examples",
+      "component": "SurfaceCard",
+      "correlationId": "corr_30c31f07d0dc4ed49025c42afd9b48a9",
+      "result": "No curated examples; existing proven product composition was retained."
+    }
+  ]
+}

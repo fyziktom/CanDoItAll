@@ -1,0 +1,14 @@
+{
+  "sharedInfoRepository": "C:\\repositories\\CanDoItAll.SharedInfo",
+  "sharedInfoCommit": "7b7808e8591d7219f40826cf0e5624e182981d90",
+  "skills": {
+    "apply-candoitall-shared-standards": "3fde8e60c37a04800ea6f2e5e1578f3d8b36ecb67f88d59591a3fadb4a4efe5b",
+    "candoitall-bundle-execution": "4d5882aeaab4c9af6b3d45f275a4d6605a52c90e310774a37b62afcf6668b719",
+    "candoitall-bundle-validator": "8b2c6c19cd537614cf2b04470f81a7cc27cefabc23ea04e561acea3caf1ce25d",
+    "candoitall-bundle-workflow": "d61e9e21ad565a9f79d3e1588ab58e0cf8793b6fa88b5a357e848d6db1a7c493",
+    "candoitall-codeanalytics-mcp": "79b9af577d81e3c6cfbf4925ae6edbda361ff978a7e88b9b7b12ddb74ce6da9b",
+    "candoitall-components-mcp": "5585fac7422c04991af8ee4a87b4db488628d097cf184a927b951c61ef15f202",
+    "candoitall-subbundle-validator": "3ffe7fda4a5c8899217ef5a405ab45f3b680cd5f33dbf39ea0d6d716a5ba08af",
+    "csharp-architecture-governor": "372da71f4051f6d2ff6303c57ae60ff396a92e9d5006aa973ca5882a13fd6bc8"
+  }
+}

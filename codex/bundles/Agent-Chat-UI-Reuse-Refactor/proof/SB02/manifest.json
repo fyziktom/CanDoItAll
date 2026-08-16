@@ -1,0 +1,24 @@
+{
+  "subbundleId": "SB02",
+  "status": "completed",
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "repositoryHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "productionRenderingChanged": false,
+  "artifacts": [
+    { "path": "proof/SB02/architecture-change-record.md", "sha256": "5f212da62e965fea0147c84808a0c111b6beac60949bad89a7911396177e6c56" },
+    { "path": "proof/SB02/dependency-before-after.md", "sha256": "9737c2bd5e0a42d017b2f877b4743109f38b15ebe645910ac1bae610038f973d" },
+    { "path": "proof/SB02/changed-files-and-ranges.json", "sha256": "19e81c7fa517ab2d0f47858cb962c26780863d645d1be1fdfdbc35587c80f479" },
+    { "path": "proof/SB02/impacted-tests-request.json", "sha256": "b91aad6031c938e257811631b1d6713e8ee390344f86d24aeeeaa6a80c8c6c94" },
+    { "path": "proof/SB02/impacted-tests-response.json", "sha256": "4b17cce7544492faec8f8903324f5ba46c4a01e8db3272a3d6dfb5fde9b348c3" },
+    { "path": "proof/SB02/components-mcp.json", "sha256": "86fb92b230de062e1243f16cb05dbf533d87913d3128529e9de4d4d45083a49b" },
+    { "path": "proof/SB02/semantic-invariants.md", "sha256": "7277b78b7b80b54cda0cd0741500488d43ad6fe4e09612386860e50b3cf4bf1a" },
+    { "path": "proof/SB02/transcripts/neutral-project-build.txt", "sha256": "716d14159ad592c457eaa1bcea0a2ed693fef1f2307d79f8e7f8e81e5eb6a3a0" },
+    { "path": "proof/SB02/transcripts/agent-components-build.txt", "sha256": "c59f331977d24882a788421ca35d9f5d713c062853e581695aa033828e56e5a6" },
+    { "path": "proof/SB02/transcripts/neutral-tests-discovery.txt", "sha256": "830626e9425f740cbc8e2e0b49434d485276291d9e1a00e346224e208e1cf003" },
+    { "path": "proof/SB02/transcripts/neutral-tests-run.txt", "sha256": "4b4b6e8e970b6a87a725b7bbd0ed6adeca5fc5dec8f19c9c264f027a7fd781d9" },
+    { "path": "proof/SB02/transcripts/repository-boundary-guard.txt", "sha256": "3ccca600b2a50530e052d4f4e81a91339edcd8e49d029ed15fc3afe209dae6a6" },
+    { "path": "proof/SB02/transcripts/neutral-source-scan.txt", "sha256": "d2e92edeae99e85d3ae6e48d9f9394dc44b4a5fee7865f1600ae8b31788319e6" }
+  ],
+  "checkpointDecision": "CP1 pass-to-SB03",
+  "broadGatePromotion": "Run the Components workspace once in SB09 after focused proof."
+}

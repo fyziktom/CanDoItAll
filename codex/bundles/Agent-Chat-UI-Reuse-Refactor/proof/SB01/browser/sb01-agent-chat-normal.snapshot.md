@@ -1,0 +1,172 @@
+- generic [ref=f1e258] [box=0,0,1920,1080]:
+  - complementary [ref=f1e259] [box=16,8,76,1064]:
+    - generic [ref=f1e260] [box=27,19,54,1042]:
+      - generic [ref=f1e261] [box=27,19,54,40]:
+        - generic [ref=f1e262] [box=27,19,54,40]:
+          - generic [ref=f1e263] [box=34,19,40,40]: apps
+          - generic [ref=f1e265] [box=54,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=f1e266] [box=69,25,28,28]:
+          - generic [ref=f1e267] [box=73,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=f1e268] [box=27,67,54,783]:
+        - button "Dashboard" [ref=f1e270] [box=32,71,44,44]:
+          - generic [ref=f1e271] [box=34,73,40,40]: dashboard
+        - button "Projects" [ref=f1e274] [box=32,121,44,44]:
+          - generic [ref=f1e275] [box=34,123,40,40]: folder_open
+        - button "Collaboration" [ref=f1e278] [box=32,171,44,44]:
+          - generic [ref=f1e279] [box=34,173,40,40]: forum
+          - generic [ref=f1e281] [box=56,173,18,16]: "90"
+        - button "CRM / HR" [ref=f1e283] [box=32,221,44,44]:
+          - generic [ref=f1e284] [box=34,223,40,40]: groups
+        - button "Agents" [ref=f1e287] [box=32,271,44,44]:
+          - generic [ref=f1e288] [box=34,273,40,40]: smart_toy
+        - button "Workflows" [ref=f1e291] [box=32,321,44,44]:
+          - generic [ref=f1e292] [box=34,323,40,40]: account_tree
+        - button "Processes" [ref=f1e295] [box=32,371,44,44]:
+          - generic [ref=f1e296] [box=34,373,40,40]: account_tree
+        - button "Live Processes" [ref=f1e299] [box=32,421,44,44]:
+          - generic [ref=f1e300] [box=34,423,40,40]: monitor_heart
+        - button "Memory Providers" [ref=f1e303] [box=32,471,44,44]:
+          - generic [ref=f1e304] [box=34,473,40,40]: psychology
+        - button "Resources" [ref=f1e307] [box=32,521,44,44]:
+          - generic [ref=f1e308] [box=34,523,40,40]: inventory_2
+        - button "Plugins" [ref=f1e311] [box=32,571,44,44]:
+          - generic [ref=f1e312] [box=34,573,40,40]: extension
+        - button "Prompt Gallery" [ref=f1e315] [box=32,621,44,44]:
+          - generic [ref=f1e316] [box=34,623,40,40]: library_books
+        - button "Test Lab" [ref=f1e319] [box=32,671,44,44]:
+          - generic [ref=f1e320] [box=34,673,40,40]: science
+        - button "More pages" [ref=f1e323] [box=32,721,44,44]:
+          - generic [ref=f1e324] [box=34,723,40,40]: expand_less
+      - generic [ref=f1e327] [box=27,867,54,194]:
+        - button "Agent chats" [ref=f1e329] [box=27,867,54,44]:
+          - generic [ref=f1e330] [box=36,871,36,36]: smart_toy
+        - button "Settings" [ref=f1e334] [box=27,917,54,44]:
+          - generic [ref=f1e335] [box=36,921,36,36]: settings
+        - button "Runtime capabilities" [ref=f1e339] [box=27,967,54,44]:
+          - generic [ref=f1e340] [box=36,971,36,36]: health_and_safety
+        - button "Switch Database" [ref=f1e344] [box=27,1017,54,44]:
+          - generic [ref=f1e345] [box=36,1021,36,36]: storage
+  - main [ref=f1e348] [box=100,8,1804,1064]:
+    - generic [ref=f1e349] [box=100,8,1804,42]:
+      - generic [ref=f1e352] [box=100,8,1764,38]:
+        - tablist "Open workspace tabs" [ref=f1e353] [box=100,8,1487,38]:
+          - tab "Dashboard" [ref=f1e355] [box=111,17,721,20]:
+            - generic [ref=f1e357] [box=176,17,20,20]: push_pin
+          - tab "Agents" [selected] [ref=f1e360] [box=858,19,721,16]
+        - textbox "Search tabs" [ref=f1e363] [box=1595,10,269,34]
+      - button "Workspace status" [ref=f1e367] [cursor=pointer] [box=1872,13,32,32]:
+        - generic [ref=f1e368] [box=1886,23,3,11]: i
+    - generic [ref=f1e371] [box=125,83,1754,964]:
+      - generic [ref=f1e373] [box=125,83,1739,70]:
+        - generic [ref=f1e374] [box=125,83,1539,70]:
+          - generic [ref=f1e375] [box=125,83,1021,70]:
+            - paragraph [ref=f1e376] [box=125,89,119,15]: AgentFramework
+            - heading "Integrated technical agent runtime" [active] [level=1] [ref=f1e377] [box=254,83,299,28]
+            - paragraph [ref=f1e378] [box=125,121,896,32]: This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.
+          - generic [ref=f1e379] [box=1158,92,506,52]:
+            - generic [ref=f1e380] [box=1158,92,127,22]: 28 technical agents
+            - generic [ref=f1e383] [box=1292,92,83,22]: 6 providers
+            - generic [ref=f1e386] [box=1384,92,129,22]: 28 bound resources
+            - generic [ref=f1e389] [box=1521,92,104,22]: 127 capabilities
+            - generic [ref=f1e392] [box=1158,122,89,22]: 1 active runs
+            - generic [ref=f1e395] [box=1255,122,89,22]: 6 failed runs
+        - generic [ref=f1e398] [box=1672,100,192,36]:
+          - button "Open HR Agent" [ref=f1e400] [box=1672,100,36,36]:
+            - img "HR Agent" [ref=f1e402] [box=1674,102,32,32]
+          - button "Show AgentFramework shell help" [ref=f1e404] [cursor=pointer] [box=1716,110,16,16]:
+            - generic [ref=f1e405] [box=1722,113,4,10]: "?"
+          - button "Open CRM / HR agents" [ref=f1e407] [box=1740,100,36,36]:
+            - generic [ref=f1e408] [box=1748,108,20,20]: groups
+            - generic [ref=f1e409] [box=1758,117,1,1]: groups
+          - button "Open workflows" [ref=f1e411] [box=1784,100,36,36]:
+            - generic [ref=f1e412] [box=1792,108,20,20]: account_tree
+            - generic [ref=f1e413] [box=1802,117,1,1]: flow
+          - button "Open processes" [ref=f1e415] [box=1828,100,36,36]:
+            - generic [ref=f1e416] [box=1836,108,20,20]: account_tree
+            - generic [ref=f1e417] [box=1846,117,1,1]: flow
+      - generic [ref=f1e419] [box=125,169,1739,42]:
+        - generic [ref=f1e421] [box=125,169,1134,42]:
+          - button "Overview" [ref=f1e422] [box=125,169,99,42]
+          - button "Agents28" [ref=f1e423] [box=232,169,122,42]
+          - button "Providers6" [ref=f1e424] [box=362,169,131,42]
+          - button "Voice" [ref=f1e425] [box=501,169,72,42]
+          - button "Floating chat" [ref=f1e426] [box=581,169,125,42]
+          - button "Chat" [ref=f1e427] [box=714,169,67,42]
+          - button "Capabilities127" [ref=f1e428] [box=789,169,159,42]
+          - button "Governance1" [ref=f1e429] [box=956,169,148,42]
+          - button "Diagnostics6" [ref=f1e430] [box=1112,169,147,42]
+        - button "Load default agents and providers" [ref=f1e432] [box=1828,172,36,36]:
+          - generic [ref=f1e433] [box=1836,180,20,20]: sync
+          - generic [ref=f1e434] [box=1846,189,1,1]: cloud sync
+      - generic [ref=f1e438] [box=125,227,1739,760]:
+        - article [ref=f1e439] [box=125,227,420,760]:
+          - generic [ref=f1e441] [box=146,248,378,238]:
+            - generic [ref=f1e442] [box=146,248,277,64]:
+              - generic [ref=f1e443] [box=146,248,277,24]:
+                - paragraph [ref=f1e444] [box=146,248,103,24]: Agent threads
+                - button "Show agent thread help" [ref=f1e446] [cursor=pointer] [box=257,252,16,16]:
+                  - generic [ref=f1e447] [box=263,255,4,10]: "?"
+              - generic [ref=f1e448] [box=146,280,277,32]:
+                - img ".NET Application Developer" [ref=f1e449] [box=146,280,32,32]
+                - generic [ref=f1e450] [box=187,288,236,16]: "Selected agent: .NET Application Developer"
+            - generic [ref=f1e451] [box=431,248,93,238]:
+              - button "Switch Agent" [ref=f1e452] [box=431,248,93,114]:
+                - generic [ref=f1e453] [box=444,295,20,20]: sync
+              - button "Refresh" [ref=f1e455] [box=431,370,78,42]
+              - button "New thread" [ref=f1e457] [box=431,420,93,66]
+          - generic [ref=f1e460] [box=146,519,359,235]:
+            - textbox "Search agent threads" [ref=f1e461] [box=146,519,359,43]:
+              - /placeholder: Search threads
+            - generic [ref=f1e463] [box=163,590,325,146]:
+              - generic [ref=f1e464] [box=163,590,325,30]:
+                - paragraph [ref=f1e465] [box=163,590,56,15]: Threads
+                - generic [ref=f1e466] [box=438,590,50,30]: 1 of 1
+              - button "New exploration thread 13.08 10:13 Empty thread No messages yet." [ref=f1e467] [cursor=pointer] [box=163,628,325,108]:
+                - generic [ref=f1e468] [box=178,642,294,23]:
+                  - generic [ref=f1e469] [box=178,642,213,18]: New exploration thread
+                  - generic [ref=f1e470] [box=400,642,72,23]: 13.08 10:13
+                - generic [ref=f1e471] [box=178,674,294,19]: Empty thread
+                - generic [ref=f1e472] [box=178,704,294,19]: No messages yet.
+        - article [ref=f1e474] [box=561,227,1303,760]:
+          - generic [ref=f1e476] [box=582,248,1261,42]:
+            - generic [ref=f1e477] [box=582,249,1087,40]:
+              - img ".NET Application Developer" [ref=f1e478] [box=582,249,40,40]
+              - generic [ref=f1e479] [box=632,254,553,30]:
+                - generic [ref=f1e480] [box=832,254,353,30]:
+                  - generic [ref=f1e481] [box=832,254,55,30]: Ready
+                  - generic [ref=f1e482] [box=893,254,98,30]: Auto Approve
+                  - generic [ref=f1e483] [box=997,254,84,30]: 0 messages
+                  - generic [ref=f1e484] [box=1087,254,109,30]: 13.08.2026 10:13
+                - generic [ref=f1e487] [box=632,254,182,30]:
+                  - paragraph [ref=f1e488] [box=632,260,146,18]: New exploration thread
+                  - button "Edit Title" [ref=f1e489] [box=784,254,30,30]:
+                    - generic [ref=f1e490] [box=789,259,20,20]: edit
+                    - generic [ref=f1e491] [box=798,268,1,1]: edit
+            - button "Runtime details" [disabled] [ref=f1e493] [box=1680,248,163,42]:
+              - generic [ref=f1e494] [box=1693,259,20,20]: terminal
+          - generic [ref=f1e497] [box=582,307,1242,132]:
+            - paragraph [ref=f1e498] [box=599,328,1208,16]: Conversation
+            - heading "This thread is ready for the first prompt" [level=3] [ref=f1e499] [box=599,350,1208,24]
+            - paragraph [ref=f1e500] [box=867,378,672,40]: Use the composer below to ask for a plan, a status update, or an actual working answer from the selected agent.
+          - generic [ref=f1e505] [box=582,840,1261,125]:
+            - textbox "Ask for a plan, a diagnosis, or a concrete next step." [ref=f1e506] [box=582,840,1106,125]
+            - generic [ref=f1e507] [box=1694,840,149,125]:
+              - button "Insert from prompt gallery" [ref=f1e508] [box=1694,840,46,38]:
+                - generic [ref=f1e509] [box=1707,849,20,20]: library_books
+                - generic [ref=f1e510] [box=1716,859,1,1]: library books
+              - generic "Attach image file" [ref=f1e511] [cursor=pointer] [box=1745,840,40,34]: image
+              - button "Attach workspace artifact" [ref=f1e513] [box=1797,840,46,38]:
+                - generic [ref=f1e514] [box=1810,849,20,20]: add
+                - generic [ref=f1e515] [box=1820,859,1,1]: add
+              - button "Send prompt" [ref=f1e516] [box=1694,884,46,38]:
+                - generic [ref=f1e517] [box=1707,893,20,20]: send
+                - generic [ref=f1e518] [box=1716,903,1,1]: send
+              - button "Start voice recording" [disabled] [ref=f1e519] [box=1745,884,46,38]:
+                - generic [ref=f1e520] [box=1758,893,20,20]: mic
+                - generic [ref=f1e521] [box=1768,903,1,1]: mic
+              - button "Speak latest assistant message" [disabled] [ref=f1e522] [box=1797,884,46,38]:
+                - generic [ref=f1e523] [box=1810,893,20,20]: volume_up
+                - generic [ref=f1e524] [box=1820,903,1,1]: volume up
+              - button "Toggle audio mode" [disabled] [ref=f1e525] [box=1694,928,46,38]:
+                - generic [ref=f1e526] [box=1707,937,20,20]: hearing
+                - generic [ref=f1e527] [box=1716,946,1,1]: hearing

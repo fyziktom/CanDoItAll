@@ -1,0 +1,22 @@
+{
+  "subbundleId": "SB06",
+  "behaviorIntent": "Unknown",
+  "repositoryRootPath": "C:\\repositories\\CanDoItAll",
+  "changes": "12 SB06 production files with explicit one-based full changed ranges; see changed-files-and-ranges.json",
+  "contextOnlyPaths": [
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentThinkingEffortSettings.razor",
+    "tests/Components/CanDoItAll.Tests.Components/ProviderModelSelectorTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogAvatarGenerationTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogCapabilityTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogDeletionTests.cs"
+  ],
+  "testWorkspaces": [
+    {
+      "name": "Components",
+      "path": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj"
+    }
+  ],
+  "maxSelectors": 30,
+  "maxReasonPaths": 12,
+  "maxVisitedMembers": 5000
+}
