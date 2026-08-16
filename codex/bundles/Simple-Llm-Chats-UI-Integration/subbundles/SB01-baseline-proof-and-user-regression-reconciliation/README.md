@@ -2,9 +2,11 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `hardening`
 - Proof tier: `Standard`
+
+Closure evidence: `../../proof/SB01/manifest.md` and `../../proof/SB01/execution-report.md`.
 
 ## Objective
 
