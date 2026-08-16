@@ -2,7 +2,7 @@
 
 ## Status
 
-`pending`
+`completed`
 
 ## Proof tier
 
@@ -116,13 +116,13 @@ For every production change in this subbundle:
 
 ## Acceptance checklist
 
-- [ ] Floating presentation seam is neutral.
-- [ ] Host services/coordinator/context/handles remain Agent-owned.
-- [ ] No mixed catalog/filter appears.
-- [ ] No Add context feature appears.
-- [ ] Retention/capacity and prepared-Agent settings behave as before.
-- [ ] Overlay parity passes.
-- [ ] CP3 passes.
+- [x] Floating presentation seam is neutral.
+- [x] Host services/coordinator/context/handles remain Agent-owned.
+- [x] No mixed catalog/filter appears.
+- [x] No Add context feature appears.
+- [x] Retention/capacity and prepared-Agent settings behave as before.
+- [x] Overlay parity passes.
+- [x] CP3 passes.
 
 ## Do not do
 

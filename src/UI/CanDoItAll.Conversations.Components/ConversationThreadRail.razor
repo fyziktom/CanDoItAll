@@ -1,0 +1,109 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="conversation-thread-rail">
+    <Stack GapScale="LayoutGap.Medium">
+        @if (HeaderActions is not null)
+        {
+            <div class="conversation-thread-rail__actions">
+                @HeaderActions
+            </div>
+        }
+
+        <TextBox Value="@searchText"
+                 ValueChanged="HandleSearchChangedAsync"
+                 Placeholder="@Text.SearchPlaceholder"
+                 Immediate="true"
+                 Class="agents-chat-thread-search"
+                 aria-label="@Text.SearchAriaLabel"
+                 data-testid="@SearchTestId" />
+
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <Split Gap="LayoutGap.Small">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="@Text.Eyebrow" />
+                    <StatusBadge Tone="info" Text="@($"{visibleThreads.Count} of {Threads.Count}")" />
+                </Split>
+
+                @if (IsLoading)
+                {
+                    <TextBlock TextStyle="TextStyle.Body2" Value="@Text.LoadingText" />
+                }
+                else if (!string.IsNullOrWhiteSpace(ErrorText))
+                {
+                    <EmptyState Eyebrow="@Text.ErrorEyebrow"
+                                Title="Unable to load threads"
+                                Description="@ErrorText" />
+                }
+                else if (visibleThreads.Count == 0)
+                {
+                    <TextBlock TextStyle="TextStyle.Body2" Value="@ResolveEmptyText()" />
+                }
+                else
+                {
+                    @foreach (var thread in visibleThreads)
+                    {
+                        <ConversationThreadListItem Thread="@thread"
+                                                    Selected="@Selected"
+                                                    Actions="@ThreadActions" />
+                    }
+                }
+            </Stack>
+        </SurfaceCard>
+    </Stack>
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ConversationThreadPresentation> Threads { get; set; } = [];
+
+    [Parameter]
+    public ConversationThreadRailText Text { get; set; } = new();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string? ErrorText { get; set; }
+
+    [Parameter]
+    public string SearchTestId { get; set; } = "agent-thread-search";
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> Selected { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment<ConversationThreadPresentation>? ThreadActions { get; set; }
+
+    private string searchText = string.Empty;
+    private IReadOnlyList<ConversationThreadPresentation> visibleThreads = [];
+
+    protected override void OnParametersSet()
+    {
+        RefreshVisibleThreads();
+    }
+
+    private Task HandleSearchChangedAsync(string? value)
+    {
+        searchText = value ?? string.Empty;
+        RefreshVisibleThreads();
+        return Task.CompletedTask;
+    }
+
+    private void RefreshVisibleThreads()
+    {
+        visibleThreads = Threads
+            .Where(MatchesSearch)
+            .OrderByDescending(thread => thread.UpdatedAtUtc)
+            .ToArray();
+    }
+
+    private bool MatchesSearch(ConversationThreadPresentation thread)
+        => string.IsNullOrWhiteSpace(searchText) ||
+           thread.SearchText.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+
+    private string ResolveEmptyText()
+        => Threads.Count > 0 ? Text.NoMatchesText : Text.EmptyText;
+}

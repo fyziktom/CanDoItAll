@@ -1,0 +1,34 @@
+<textarea @attributes='AdditionalAttributes.WithClass("rz-input w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800")'
+          value="@Value"
+          placeholder="@Placeholder"
+          readonly="@ReadOnly"
+          rows="@Rows"
+          @oninput="OnInputAsync"
+          @onchange="OnInputAsync"></textarea>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    [Parameter]
+    public int Rows { get; set; } = 4;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private async Task OnInputAsync(ChangeEventArgs args)
+    {
+        var next = args.Value?.ToString();
+        Value = next;
+        await ValueChanged.InvokeAsync(next);
+    }
+}

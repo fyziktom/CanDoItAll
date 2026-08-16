@@ -1,0 +1,70 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="conversation-active-list"
+     role="list"
+     aria-label="@AriaLabel"
+     data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+        @foreach (var item in Items)
+        {
+            <SurfaceCard @key="item.Key"
+                         Soft="true"
+                         Class="conversation-active-list__card"
+                         role="listitem"
+                         data-testid="@ResolveItemTestId(item.Key)">
+                <Split Gap="LayoutGap.Small">
+                    <Stack GapScale="LayoutGap.XSmall">
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@item.DisplayName" />
+                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                            @foreach (var badge in item.Badges)
+                            {
+                                <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                             Text="@badge.Text"
+                                             Icon="@badge.Icon"
+                                             data-testid="@badge.TestId" />
+                            }
+                        </Cluster>
+                    </Stack>
+                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                        <Button Text="Open"
+                                Icon="open_in_new"
+                                Size="ButtonSize.Small"
+                                Disabled="@item.IsVisible"
+                                Click="@(() => OpenRequested.InvokeAsync(item.Key))"
+                                data-testid="@ResolveActionTestId(item.Key, "open")" />
+                        <Button Text="Stop"
+                                Icon="stop_circle"
+                                Size="ButtonSize.Small"
+                                ButtonStyle="ButtonStyle.Danger"
+                                Disabled="@(!item.CanStop)"
+                                Click="@(() => StopRequested.InvokeAsync(item.Key))"
+                                data-testid="@ResolveActionTestId(item.Key, "stop")" />
+                    </Cluster>
+                </Split>
+            </SurfaceCard>
+        }
+    </Stack>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConversationActiveItemPresentation> Items { get; set; } = [];
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Active conversations";
+
+    [Parameter]
+    public string TestId { get; set; } = "conversation-active-list";
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> OpenRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> StopRequested { get; set; }
+
+    private string ResolveItemTestId(ConversationPresentationKey key)
+        => $"{TestId}-{key.Value}";
+
+    private string ResolveActionTestId(ConversationPresentationKey key, string action)
+        => $"{ResolveItemTestId(key)}-{action}";
+}

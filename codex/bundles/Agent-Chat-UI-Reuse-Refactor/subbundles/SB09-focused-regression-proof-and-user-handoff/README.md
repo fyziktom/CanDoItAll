@@ -2,7 +2,7 @@
 
 ## Status
 
-`pending`
+`completed`
 
 ## Proof tier
 
@@ -122,15 +122,15 @@ For every production change in this subbundle:
 
 ## Acceptance checklist
 
-- [ ] All checkpoints pass.
-- [ ] Every required selector ran with expected nonzero discovery.
-- [ ] Affected builds and guards pass.
-- [ ] Final browser proof is inspected.
-- [ ] Broad gate decision is explicit and compliant.
-- [ ] Manual checklist is complete.
-- [ ] No phase exclusion was violated.
-- [ ] Status is awaiting-user-agent-chat-regression.
-- [ ] Simple Chat UI remains blocked pending user approval.
+- [x] All checkpoints pass.
+- [x] Every required selector ran with expected nonzero discovery.
+- [x] Affected builds and guards pass.
+- [x] Final browser proof is inspected.
+- [x] Broad gate decision is explicit and compliant.
+- [x] Manual checklist is complete.
+- [x] No phase exclusion was violated.
+- [x] Status is awaiting-user-agent-chat-regression.
+- [x] Simple Chat UI remains blocked pending user approval.
 
 ## Do not do
 
@@ -138,6 +138,10 @@ For every production change in this subbundle:
 - Do not begin a new bundle automatically.
 - Do not run broad tests by habit.
 - Do not hide unrelated failures; classify them and record whether they block or reopen.
+
+## Completion result
+
+CP5 passes with three classified, unrelated Stable findings in untouched LlmChats integration tests. The affected Components suite passed 990/990. Real main and floating Agent sends, floating lifecycle, unchanged identity/runtime save, and the Process Manager chat consumer passed through Playwright with zero console warnings or errors. The bundle stops at `awaiting-user-agent-chat-regression`.
 
 ## Proof manifest
 
@@ -149,3 +153,4 @@ Update `proof-manifest.json` in this subbundle and create the referenced reposit
 - Reopen earlier work when later evidence invalidates it.
 - When checkpoint `CP5` applies, record pass/reopen/repair/block before continuing.
 - Do not start a later subbundle automatically when the gate is blocked.
+- Final decision: `pass-awaiting-user-agent-chat-regression`.

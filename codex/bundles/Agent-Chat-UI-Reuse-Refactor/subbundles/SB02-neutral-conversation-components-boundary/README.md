@@ -2,7 +2,7 @@
 
 ## Status
 
-`pending`
+`completed`
 
 ## Proof tier
 
@@ -120,13 +120,13 @@ For every production change in this subbundle:
 
 ## Acceptance checklist
 
-- [ ] Preferred project or justified fallback exists and compiles.
-- [ ] Neutral source and csproj contain no forbidden dependency.
-- [ ] Before/after graph proves no cycle.
-- [ ] Neutral presentation primitives use opaque keys and no backend entities.
-- [ ] Direct tests do not construct the Agent runtime.
-- [ ] Existing production Agent rendering is unchanged.
-- [ ] CP1 passes.
+- [x] Preferred project or justified fallback exists and compiles.
+- [x] Neutral source and csproj contain no forbidden dependency.
+- [x] Before/after graph proves no cycle.
+- [x] Neutral presentation primitives use opaque keys and no backend entities.
+- [x] Direct tests do not construct the Agent runtime.
+- [x] Existing production Agent rendering is unchanged.
+- [x] CP1 passes.
 
 ## Do not do
 

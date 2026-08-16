@@ -80,6 +80,10 @@
     white-space: nowrap;
 }
 
+.conversation-thread-history-list__actions {
+    margin-top: 0.4rem;
+}
+
 @media (max-width: 640px) {
     .agent-thread-history-dialog__row {
         grid-template-columns: minmax(0, 1fr);

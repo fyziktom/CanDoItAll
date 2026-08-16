@@ -1,0 +1,7 @@
+.chat-conversation-flow {
+    flex: 1 1 auto;
+    margin-top: 0.45rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}

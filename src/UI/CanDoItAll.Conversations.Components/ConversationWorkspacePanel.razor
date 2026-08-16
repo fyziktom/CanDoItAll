@@ -1,0 +1,24 @@
+<WorkspacePanel Class="flex h-full min-h-0 flex-col overflow-hidden"
+                data-testid="@TestId">
+    @Header
+    @Transcript
+    @MiddleContent
+    @Composer
+</WorkspacePanel>
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment Header { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment Transcript { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? MiddleContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment Composer { get; set; } = default!;
+
+    [Parameter]
+    public string TestId { get; set; } = "chat-workspace-panel";
+}

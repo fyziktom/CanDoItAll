@@ -1,6 +1,24 @@
 # User Agent Chat regression handoff
 
-Codex must replace placeholders with exact routes, data setup, and known environment constraints.
+## Exact setup
+
+1. From `C:\repositories\CanDoItAll`, start `src/App/CanDoItAll.Web/CanDoItAll.Web.csproj` with the normal local database and configured Agent providers.
+2. Use a large desktop viewport, preferably 1600 × 1000 or larger.
+3. Primary Agent Chat: `/agents?tab=chat`.
+4. Floating Agent chats: use the left-shell `Agent chats` action.
+5. Agent identity/runtime settings: `/agents?tab=agents` and open an Agent editor.
+6. Floating lifecycle/preparation settings: `/agents?tab=floating-chat`.
+7. Process consumer: `/processes`, select an existing definition, then select `Manager chat`.
+
+Unchecked items below are the user's live regression/approval checklist. Codex automation already confirmed:
+
+- [x] Main `.NET Application Developer` exact response `MAIN AGENT CHAT OK`.
+- [x] Floating Delivery QA Observer exact response `FINAL FLOATING AGENT CHAT OK`.
+- [x] Floating detach/follow, hide/keep-active, reopen persistence, history, stop, and zero-active state.
+- [x] Prompt Gallery opens and lists canonical items; unavailable voice state is explicit.
+- [x] Identity/provider/model load and unchanged settings save through the Agent editor.
+- [x] Process Manager chat loads the shared conversation workspace and composer.
+- [x] Browser console reports 0 errors and 0 warnings at 1600 × 1000.
 
 ## Catalog and Agent selection
 
@@ -78,3 +96,8 @@ User result:
 - [ ] issues found; reopen Phase 1
 
 Notes:
+
+- Voice recording requires a configured browser/audio provider.
+- Approval prompts, retry/error recovery, concurrency, destructive settings, and attachment sends require suitable live scenarios and should be exercised against disposable data.
+- The final Stable gate recorded three unrelated failures in untouched LlmChats integration tests; the affected Components suite passed 990/990. See `proof/SB09/final-test-execution.json`.
+- Simple Chat UI remains inactive until the approval checkbox above is explicitly selected by the user.

@@ -1,0 +1,71 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="conversation-thread-list-item">
+    <button type="button"
+            class="@ResolveClass()"
+            aria-label="@Thread.SelectLabel"
+            aria-pressed="@(Thread.IsSelected ? "true" : "false")"
+            aria-busy="@(Thread.IsBusy ? "true" : "false")"
+            disabled="@(Thread.IsDisabled || Thread.IsBusy)"
+            @onclick="HandleSelectAsync"
+            data-testid="@TestId">
+        <span class="agents-chat-thread-card__header">
+            <span class="agents-chat-thread-card__title">@Thread.Title</span>
+            <span class="agents-chat-thread-card__date">@Thread.UpdatedAtDisplay</span>
+        </span>
+
+        <span class="agents-chat-thread-card__meta">@Thread.Metadata</span>
+
+        <TooltipTarget Text="@Thread.TooltipText"
+                       Position="TooltipPosition.RightTop"
+                       TriggerClass="agents-chat-thread-card__preview-trigger"
+                       TestId="@PreviewTooltipTestId">
+            <span class="agents-chat-thread-card__preview">@Thread.Preview</span>
+        </TooltipTarget>
+
+        @if (Thread.Badges.Count > 0)
+        {
+            <span class="agents-chat-thread-card__badges">
+                @foreach (var badge in Thread.Badges)
+                {
+                    <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                 Text="@badge.Text"
+                                 title="@badge.AccessibleDescription"
+                                 data-testid="@badge.TestId" />
+                }
+            </span>
+        }
+    </button>
+
+    @if (Actions is not null)
+    {
+        <div class="conversation-thread-list-item__actions">
+            @Actions(Thread)
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversationThreadPresentation Thread { get; set; } = default!;
+
+    [Parameter]
+    public string TestId { get; set; } = "agent-thread-card";
+
+    [Parameter]
+    public string PreviewTooltipTestId { get; set; } = "agent-thread-preview-tooltip";
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> Selected { get; set; }
+
+    [Parameter]
+    public RenderFragment<ConversationThreadPresentation>? Actions { get; set; }
+
+    private Task HandleSelectAsync()
+        => Selected.InvokeAsync(Thread.Key);
+
+    private string ResolveClass()
+        => CssClassBuilder.Join(
+            "agents-chat-thread-card",
+            Thread.IsSelected ? "agents-chat-thread-card--selected" : null);
+}

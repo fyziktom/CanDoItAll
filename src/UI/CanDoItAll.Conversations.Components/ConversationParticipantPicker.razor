@@ -1,0 +1,130 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+@if (Participants.Count == 0)
+{
+    <EmptyState Eyebrow="@Text.EmptyEyebrow"
+                Title="@Text.EmptyTitle"
+                Description="@Text.EmptyDescription" />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+        <div class="conversation-participant-picker__filters">
+            <TextBox Value="@searchText"
+                     ValueChanged="HandleSearchChangedAsync"
+                     Placeholder="@Text.SearchPlaceholder"
+                     Immediate="true"
+                     Class="conversation-participant-picker__search"
+                     aria-label="@Text.SearchAriaLabel"
+                     data-testid="@SearchTestId" />
+
+            <TagEditor Value="@tagFilters"
+                       ValueChanged="HandleTagFiltersChangedAsync"
+                       Suggestions="@AvailableFilterTags"
+                       Placeholder="@Text.TagPlaceholder"
+                       MaxTags="6"
+                       TestId="@TagFilterTestId"
+                       InputTestId="@TagFilterInputTestId" />
+        </div>
+
+        <Split Gap="LayoutGap.Small">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="info" Text="@($"{FilteredParticipants.Count} of {Participants.Count} {Text.ItemNoun}")" />
+                @if (tagFilters.Count > 0)
+                {
+                    <StatusBadge Tone="neutral" Text="@($"{tagFilters.Count} tag filter(s)")" />
+                }
+            </Cluster>
+            @if (FilteredParticipants.Any(item => item.IsFavorite))
+            {
+                <StatusBadge Tone="warning" Text="@Text.FavoritesFirstLabel" />
+            }
+        </Split>
+
+        @if (FilteredParticipants.Count == 0)
+        {
+            <EmptyState Eyebrow="@Text.NoMatchesEyebrow"
+                        Title="@Text.NoMatchesTitle"
+                        Description="@Text.NoMatchesDescription" />
+        }
+        else
+        {
+            <Grid Gap="LayoutGap.Medium"
+                  ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))"
+                  Class="w-full">
+                @foreach (var participant in FilteredParticipants)
+                {
+                    <div @key="participant.Key">
+                        @ParticipantTemplate(participant)
+                    </div>
+                }
+            </Grid>
+        }
+    </Stack>
+}
+
+@code {
+    private IReadOnlyList<string> tagFilters = [];
+    private string searchText = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConversationParticipantPresentation> Participants { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public ConversationParticipantPickerText Text { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<ConversationParticipantPresentation> ParticipantTemplate { get; set; } = default!;
+
+    [Parameter]
+    public string SearchTestId { get; set; } = "conversation-participant-picker-search";
+
+    [Parameter]
+    public string TagFilterTestId { get; set; } = "conversation-participant-picker-tags";
+
+    [Parameter]
+    public string TagFilterInputTestId { get; set; } = "conversation-participant-picker-tags-input";
+
+    private IReadOnlyList<string> AvailableFilterTags
+        => Participants
+            .SelectMany(item => item.Tags)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<ConversationParticipantPresentation> FilteredParticipants
+        => Participants
+            .Where(MatchesSearch)
+            .Where(MatchesTagFilters)
+            .OrderByDescending(item => item.IsFavorite)
+            .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private Task HandleSearchChangedAsync(string? value)
+    {
+        searchText = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTagFiltersChangedAsync(IReadOnlyList<string> value)
+    {
+        tagFilters = value
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return Task.CompletedTask;
+    }
+
+    private bool MatchesSearch(ConversationParticipantPresentation participant)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return true;
+        }
+
+        return participant.SearchText.Contains(searchText.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool MatchesTagFilters(ConversationParticipantPresentation participant)
+        => tagFilters.Count == 0 || tagFilters.All(filter => participant.Tags.Contains(filter, StringComparer.OrdinalIgnoreCase));
+}

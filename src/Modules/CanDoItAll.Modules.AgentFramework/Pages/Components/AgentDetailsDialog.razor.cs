@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
@@ -99,6 +100,12 @@ public partial class AgentDetailsDialog
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
 
+    private IReadOnlyList<ConversationProviderOption> RuntimeProviderOptions
+        => AgentProviderPresentationMapper.Map(providers);
+
+    private ConversationPresentationKey? SelectedRuntimeProviderKey
+        => AgentProviderPresentationMapper.ToPresentationKey(editorModel.ProviderProfileId);
+
     private bool HasIncompatibleThinkingEffortOverride
     {
         get
@@ -146,6 +153,19 @@ public partial class AgentDetailsDialog
         .OrderByDescending(provider => provider.IsEnabled)
         .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    private IReadOnlyList<ConversationProviderOption> ImageGenerationProviderPresentationOptions
+        => AgentProviderPresentationMapper.Map(ImageGenerationProviderOptions);
+
+    private ConversationPresentationKey? SelectedImageGenerationProviderKey
+        => AgentProviderPresentationMapper.ToPresentationKey(
+            editorModel.ImageGenerationAccess.PreferredProviderProfileId);
+
+    private ConversationAvatarPresentation IdentityAvatar => new(
+        ResolveAvatarAltText(),
+        editorModel.AvatarImageUrl,
+        ResolveAvatarFallbackText(),
+        ResolveAvatarSeed());
 
     private IReadOnlyList<string> VisibleTagSuggestions => agents
         .SelectMany(agent => agent.Tags)
@@ -1298,6 +1318,33 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
+    private Task HandleNameChangedAsync(string? value)
+    {
+        editorModel.Name = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRoleChangedAsync(string? value)
+    {
+        editorModel.RoleTitle = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSummaryChangedAsync(string? value)
+    {
+        editorModel.Summary = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInstructionsChangedAsync(string? value)
+    {
+        editorModel.Instructions = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRuntimeProviderPresentationChangedAsync(ConversationPresentationKey? key)
+        => HandleRuntimeProviderChangedAsync(AgentProviderPresentationMapper.ToProviderId(key));
+
     private Task HandleRuntimeProviderChangedAsync(Guid? providerId)
     {
         editorModel.ProviderProfileId = providerId;
@@ -1394,6 +1441,9 @@ public partial class AgentDetailsDialog
         editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
         return Task.CompletedTask;
     }
+
+    private Task HandleImageGenerationProviderPresentationChangedAsync(ConversationPresentationKey? key)
+        => HandleImageGenerationProviderChangedAsync(AgentProviderPresentationMapper.ToProviderId(key));
 
     private Task HandleImageGenerationModelChangedAsync(string? model)
     {

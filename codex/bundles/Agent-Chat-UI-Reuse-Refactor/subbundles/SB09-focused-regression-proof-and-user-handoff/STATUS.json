@@ -1,7 +1,7 @@
 {
   "subbundleId": "SB09",
   "title": "Focused regression proof and user handoff",
-  "status": "pending",
+  "status": "completed",
   "proofTier": "Governed",
   "dependsOn": [
     "SB08"
@@ -25,7 +25,7 @@
     "UIR-081",
     "UIR-082"
   ],
-  "executionBaseSha": null,
-  "candidateHeadSha": null,
-  "progressionDecision": null
+  "executionBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "candidateHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "progressionDecision": "pass-awaiting-user-agent-chat-regression"
 }

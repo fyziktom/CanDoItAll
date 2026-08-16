@@ -1,0 +1,76 @@
+<div class="chat-composer-panel">
+    <FormField>
+        <div class="chat-composer">
+            <ConversationPromptTextArea @key="ComposerKey"
+                                        Value="@DraftPrompt"
+                                        ValueChanged="HandleDraftChangedAsync"
+                                        Rows="@Rows"
+                                        Placeholder="@Placeholder"
+                                        class="chat-composer__textarea"
+                                        data-testid="@PromptTestId" />
+            <div class="chat-composer__tools">
+                @LeadingActions
+                <Button Icon="send"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Disabled="@IsSendDisabled"
+                        IsBusy="@IsBusy"
+                        Class="chat-composer__icon-button"
+                        Click="@SendRequested"
+                        aria-label="@SendAriaLabel"
+                        title="@SendAriaLabel"
+                        data-testid="@SendTestId" />
+                @TrailingActions
+            </div>
+        </div>
+    </FormField>
+
+    @Footer
+</div>
+
+@code {
+    [Parameter]
+    public string DraftPrompt { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> DraftPromptChanged { get; set; }
+
+    [Parameter]
+    public EventCallback SendRequested { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public bool IsSendDisabled { get; set; }
+
+    [Parameter]
+    public int ComposerKey { get; set; }
+
+    [Parameter]
+    public int Rows { get; set; } = 2;
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Ask for a plan, a diagnosis, or a concrete next step.";
+
+    [Parameter]
+    public string PromptTestId { get; set; } = "chat-prompt-input";
+
+    [Parameter]
+    public string SendTestId { get; set; } = "chat-send-button";
+
+    [Parameter]
+    public string SendAriaLabel { get; set; } = "Send prompt";
+
+    [Parameter]
+    public RenderFragment? LeadingActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? TrailingActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    private Task HandleDraftChangedAsync(string? value)
+        => DraftPromptChanged.InvokeAsync(value ?? string.Empty);
+}

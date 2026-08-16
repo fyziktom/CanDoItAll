@@ -1,0 +1,57 @@
+<div class="conversation-floating-catalog">
+    <Tabs SelectedIndex="@SelectedIndex"
+          SelectedIndexChanged="@SelectedIndexChanged"
+          AriaLabel="@AriaLabel"
+          Variant="TabsVariant.WorkspaceSecondary"
+          RenderMode="TabRenderMode.Server"
+          FillHeight="true"
+          PanelOverflowMode="TabsPanelOverflowMode.Hidden">
+        <TabsItem Text="@PrimaryText" Icon="@PrimaryIcon">
+            <div class="conversation-floating-catalog__panel"
+                 data-testid="@PrimaryPanelTestId">
+                @PrimaryContent
+            </div>
+        </TabsItem>
+        <TabsItem Text="@ActiveText" Icon="@ActiveIcon">
+            <div class="conversation-floating-catalog__panel"
+                 data-testid="@ActivePanelTestId">
+                @ActiveContent
+            </div>
+        </TabsItem>
+    </Tabs>
+</div>
+
+@code {
+    [Parameter]
+    public int SelectedIndex { get; set; }
+
+    [Parameter]
+    public EventCallback<int> SelectedIndexChanged { get; set; }
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Conversation catalog";
+
+    [Parameter, EditorRequired]
+    public string PrimaryText { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string PrimaryIcon { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? PrimaryPanelTestId { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment PrimaryContent { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public string ActiveText { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ActiveIcon { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ActivePanelTestId { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ActiveContent { get; set; } = default!;
+}

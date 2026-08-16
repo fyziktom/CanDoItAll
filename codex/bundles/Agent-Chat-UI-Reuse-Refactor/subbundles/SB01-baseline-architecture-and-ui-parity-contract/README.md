@@ -2,7 +2,7 @@
 
 ## Status
 
-`pending`
+`completed`
 
 ## Proof tier
 
@@ -122,13 +122,13 @@ For every production change in this subbundle:
 
 ## Acceptance checklist
 
-- [ ] Live execution base and SharedInfo hashes are durable.
-- [ ] CodeAnalytics snapshot health is trustworthy.
-- [ ] All direct consumers and owner tests are inventoried.
-- [ ] Current dependency direction and cycles are recorded.
-- [ ] Representative UI baseline is captured and inspected.
-- [ ] No production source is changed.
-- [ ] CP0 records pass, repair, or block.
+- [x] Live execution base and SharedInfo hashes are durable.
+- [x] CodeAnalytics snapshot health is trustworthy.
+- [x] All direct consumers and owner tests are inventoried.
+- [x] Current dependency direction and cycles are recorded.
+- [x] Representative UI baseline is captured and inspected.
+- [x] No production source is changed.
+- [x] CP0 records pass, repair, or block.
 
 ## Do not do
 

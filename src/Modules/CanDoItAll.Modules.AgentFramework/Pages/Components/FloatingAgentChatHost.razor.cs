@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.OverlayLib;
+using CanDoItAll.Conversations.Components.Presentation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -63,6 +64,11 @@ public partial class FloatingAgentChatHost
     private AgentChatContextSnapshot? CurrentContext => currentContext;
 
     private IReadOnlyList<AgentDefinition> VisibleAgents => visibleAgents;
+
+    private IReadOnlyList<ConversationActiveItemPresentation> ActiveChatItems
+        => State.ActiveChats
+            .Select(AgentActiveChatPresentationMapper.Map)
+            .ToArray();
 
     private AgentDefinition? ResolveFocusedAgent(Guid agentId)
         => agents.FirstOrDefault(agent => agent.Id == agentId);
@@ -409,8 +415,11 @@ public partial class FloatingAgentChatHost
         }
     }
 
-    private void ShowChat(AgentChatHandleId handleId)
-        => Coordinator.ShowChat(handleId);
+    private Task RequestCloseFromPresentationAsync(ConversationPresentationKey key)
+        => RequestCloseAsync(AgentActiveChatPresentationMapper.ResolveHandleId(key));
+
+    private void ShowChat(ConversationPresentationKey key)
+        => Coordinator.ShowChat(AgentActiveChatPresentationMapper.ResolveHandleId(key));
 
     private bool MatchesSearch(AgentDefinition agent)
     {
@@ -543,22 +552,6 @@ public partial class FloatingAgentChatHost
 
     private static string BuildChatWindowId(AgentChatHandleId handleId)
         => $"floating-agent-chat-{handleId}";
-
-    private static string ResolveRunStateLabel(ActiveAgentChatRunState runState)
-        => runState switch
-        {
-            ActiveAgentChatRunState.Running => "Running",
-            ActiveAgentChatRunState.AwaitingApproval => "Awaiting approval",
-            _ => "Ready"
-        };
-
-    private static string ResolveRunStateTone(ActiveAgentChatRunState runState)
-        => runState switch
-        {
-            ActiveAgentChatRunState.Running => "info",
-            ActiveAgentChatRunState.AwaitingApproval => "warning",
-            _ => "success"
-        };
 
     private void HandleConversationBindingsChanged(object? sender, EventArgs eventArgs)
     {

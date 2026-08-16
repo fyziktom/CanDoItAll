@@ -1,28 +1,57 @@
 {
   "subbundleId": "SB07",
-  "status": "pending",
+  "status": "completed",
   "proofTier": "Behavioral",
-  "repositoryBaseSha": null,
-  "repositoryHeadSha": null,
-  "sharedInfoHashes": {},
-  "changedFilesAndRangesPath": null,
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "repositoryHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "sharedInfoHashes": { "path": "proof/SB01/sharedinfo-hashes.json" },
+  "changedFilesAndRangesPath": "proof/SB07/changed-files-and-ranges.json",
   "codeAnalytics": {
-    "snapshotIds": [],
-    "workspaceHealth": [],
-    "impactedTestsRequestPath": null,
-    "impactedTestsResponsePath": null,
-    "requiredSelectors": [],
+    "snapshotIds": ["snap-20260816133136-acdf4779", "snap-20260816134719-acdf4779"],
+    "workspaceHealth": [
+      "Components: healthy, 1 test project, 922 source tests",
+      "Scoped production snapshot: healthy, 3 projects, no blocking diagnostics"
+    ],
+    "impactedTestsRequestPath": "proof/SB07/impacted-tests-request.json",
+    "impactedTestsResponsePath": "proof/SB07/impacted-tests-response.json",
+    "requiredSelectors": ["AllSuppliedSuites: Components (executed 990 runtime cases)"],
     "conditionalSelectors": [],
-    "promotionDecisions": []
+    "promotionDecisions": ["Executed the conservative required Components selector; no conditional selector was returned."]
   },
-  "builds": [],
-  "tests": [],
-  "browserProof": [],
-  "sourceGuards": [],
-  "dependencyProof": [],
-  "semanticInvariantsPath": null,
-  "requirementsClosed": [],
+  "builds": [
+    "CanDoItAll.Conversations.Components: pass, 0 warnings/errors",
+    "CanDoItAll.AgentFramework.Components: pass, 0 warnings/errors",
+    "CanDoItAll.Modules.AgentFramework: pass, 0 warnings/errors"
+  ],
+  "tests": [
+    "Neutral floating components and Agent mapper: 8/8",
+    "Floating Agent settings owner: 1/1",
+    "All Components: 990/990"
+  ],
+  "browserProof": [
+    "proof/SB07/browser-parity.md",
+    "proof/SB07/browser/CP3-state.json",
+    "proof/SB07/browser/CP3-console.txt",
+    "proof/SB07/browser/sb07-floating-active-list.png",
+    "proof/SB07/browser/sb07-floating-settings.png"
+  ],
+  "sourceGuards": [
+    "repository boundary: pass",
+    "phase exclusions: pass",
+    "test policy: pass",
+    "neutral forbidden-source scan: pass",
+    "partial/service-location/source-switch review: pass"
+  ],
+  "dependencyProof": [
+    "proof/SB07/architecture-change-record.md",
+    "before snap-20260816133136-acdf4779; after snap-20260816134719-acdf4779; no new cycles"
+  ],
+  "semanticInvariantsPath": "proof/SB07/semantic-invariants.md",
+  "requirementsClosed": ["UIR-055", "UIR-060", "UIR-061", "UIR-062", "UIR-063", "UIR-064", "UIR-073", "UIR-075", "UIR-077", "UIR-078"],
   "requirementsReopened": [],
-  "checkpointDecision": null,
-  "notes": []
+  "checkpointDecision": "pass-to-SB08",
+  "notes": [
+    "Components MCP evidence: proof/SB07/components-mcp.json",
+    "The isolated Web process and Playwright browser were stopped after CP3 proof."
+  ]
 }

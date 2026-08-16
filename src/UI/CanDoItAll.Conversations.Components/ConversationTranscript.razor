@@ -1,0 +1,47 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="chat-conversation-flow" style="scrollbar-gutter:stable;">
+    @if (EmptyState is not null)
+    {
+        <EmptyState Eyebrow="@EmptyState.Eyebrow"
+                    Title="@EmptyState.Title"
+                    Description="@EmptyState.Description" />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium">
+            @foreach (var message in Messages)
+            {
+                <ConversationMessageBubble @key="message.Key.Value"
+                                           Message="@message" />
+            }
+
+            @AfterMessages
+
+            @if (PendingMessage is not null)
+            {
+                <ConversationMessageBubble @key="PendingMessage.Key.Value"
+                                           Message="@PendingMessage" />
+            }
+
+            @AfterPendingMessage
+        </Stack>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ConversationMessagePresentation> Messages { get; set; } = [];
+
+    [Parameter]
+    public ConversationMessagePresentation? PendingMessage { get; set; }
+
+    [Parameter]
+    public ConversationEmptyStatePresentation? EmptyState { get; set; }
+
+    [Parameter]
+    public RenderFragment? AfterMessages { get; set; }
+
+    [Parameter]
+    public RenderFragment? AfterPendingMessage { get; set; }
+}

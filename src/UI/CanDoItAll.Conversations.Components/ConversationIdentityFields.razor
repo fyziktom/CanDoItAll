@@ -1,0 +1,202 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<Stack GapScale="LayoutGap.Large" Class="@Class" data-testid="@TestId">
+    <FormRow Split="@ShowRole">
+        <FormField Text="@NameLabel">
+            <TextBox Value="@Name"
+                     ValueChanged="NameChanged"
+                     Disabled="@Disabled"
+                     data-testid="@NameTestId" />
+            @if (NameValidation is not null)
+            {
+                @NameValidation
+            }
+        </FormField>
+
+        @if (ShowRole)
+        {
+            <FormField Text="@RoleLabel">
+                <TextBox Value="@Role"
+                         ValueChanged="RoleChanged"
+                         Disabled="@Disabled"
+                         data-testid="@RoleTestId" />
+                @if (RoleValidation is not null)
+                {
+                    @RoleValidation
+                }
+            </FormField>
+        }
+    </FormRow>
+
+    @if (Avatar is not null)
+    {
+        <SurfaceCard Soft="true"
+                     Class="conversation-identity-fields__avatar-summary"
+                     data-testid="@AvatarTestId">
+            <Stack Orientation="Orientation.Horizontal"
+                   AlignItems="AlignItems.Center"
+                   JustifyContent="JustifyContent.SpaceBetween"
+                   GapScale="LayoutGap.Medium">
+                <Stack Orientation="Orientation.Horizontal"
+                       AlignItems="AlignItems.Center"
+                       GapScale="LayoutGap.Medium">
+                    <Avatar Alt="@Avatar.Alt"
+                            ImageUrl="@Avatar.ImageUrl"
+                            FallbackText="@Avatar.FallbackText"
+                            DefaultImageSeed="@Avatar.Seed"
+                            Size="AvatarSize.Large"
+                            Shape="AvatarShape.Rounded" />
+                    <Stack GapScale="LayoutGap.XSmall">
+                        <span class="cda-field-label">@AvatarLabel</span>
+                        @if (!string.IsNullOrWhiteSpace(AvatarStatus))
+                        {
+                            <strong>@AvatarStatus</strong>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(AvatarDescription))
+                        {
+                            <small class="text-sm text-slate-600">@AvatarDescription</small>
+                        }
+                    </Stack>
+                </Stack>
+                @if (AvatarActions is not null)
+                {
+                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
+                        @AvatarActions
+                    </Cluster>
+                }
+            </Stack>
+        </SurfaceCard>
+    }
+
+    @if (AdditionalFields is not null)
+    {
+        @AdditionalFields
+    }
+
+    <FormField Text="@SummaryLabel" Class="conversation-identity-fields__full-field">
+        <TextArea Value="@Summary"
+                  ValueChanged="SummaryChanged"
+                  Size="TextAreaSize.Standard"
+                  Disabled="@Disabled"
+                  Class="conversation-identity-fields__summary"
+                  data-testid="@SummaryTestId" />
+        @if (SummaryValidation is not null)
+        {
+            @SummaryValidation
+        }
+    </FormField>
+
+    <FormField Text="@InstructionsLabel" Class="conversation-identity-fields__full-field">
+        @if (!string.IsNullOrWhiteSpace(InstructionsDescription))
+        {
+            <p class="mb-2 text-sm leading-6 text-slate-600">@InstructionsDescription</p>
+        }
+        <TextArea Value="@Instructions"
+                  ValueChanged="InstructionsChanged"
+                  Size="TextAreaSize.Extended"
+                  Disabled="@Disabled"
+                  Class="conversation-identity-fields__instructions"
+                  data-testid="@InstructionsTestId" />
+        @if (InstructionsValidation is not null)
+        {
+            @InstructionsValidation
+        }
+    </FormField>
+</Stack>
+
+@code {
+    [Parameter]
+    public string? Name { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> NameChanged { get; set; }
+
+    [Parameter]
+    public string? Role { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> RoleChanged { get; set; }
+
+    [Parameter]
+    public string? Summary { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> SummaryChanged { get; set; }
+
+    [Parameter]
+    public string? Instructions { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> InstructionsChanged { get; set; }
+
+    [Parameter]
+    public ConversationAvatarPresentation? Avatar { get; set; }
+
+    [Parameter]
+    public RenderFragment? AvatarActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? AdditionalFields { get; set; }
+
+    [Parameter]
+    public RenderFragment? NameValidation { get; set; }
+
+    [Parameter]
+    public RenderFragment? RoleValidation { get; set; }
+
+    [Parameter]
+    public RenderFragment? SummaryValidation { get; set; }
+
+    [Parameter]
+    public RenderFragment? InstructionsValidation { get; set; }
+
+    [Parameter]
+    public string NameLabel { get; set; } = "Name";
+
+    [Parameter]
+    public string? RoleLabel { get; set; } = "Role";
+
+    [Parameter]
+    public string SummaryLabel { get; set; } = "Summary";
+
+    [Parameter]
+    public string InstructionsLabel { get; set; } = "Instructions";
+
+    [Parameter]
+    public string? InstructionsDescription { get; set; }
+
+    [Parameter]
+    public string AvatarLabel { get; set; } = "Avatar";
+
+    [Parameter]
+    public string? AvatarStatus { get; set; }
+
+    [Parameter]
+    public string? AvatarDescription { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public string? NameTestId { get; set; }
+
+    [Parameter]
+    public string? RoleTestId { get; set; }
+
+    [Parameter]
+    public string? AvatarTestId { get; set; }
+
+    [Parameter]
+    public string? SummaryTestId { get; set; }
+
+    [Parameter]
+    public string? InstructionsTestId { get; set; }
+
+    private bool ShowRole => !string.IsNullOrWhiteSpace(RoleLabel);
+}

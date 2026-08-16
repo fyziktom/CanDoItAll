@@ -1,0 +1,48 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="chat-panel-header">
+    <div class="chat-panel-header__row">
+        <div class="chat-panel-header__identity">
+            <Avatar Alt="@Presentation.Avatar.Alt"
+                    ImageUrl="@Presentation.Avatar.ImageUrl"
+                    FallbackText="@Presentation.Avatar.FallbackText"
+                    DefaultImageSeed="@Presentation.Avatar.Seed"
+                    Size="AvatarSize.Medium"
+                    Shape="AvatarShape.Rounded" />
+
+            <div class="chat-panel-header__main">
+                <div class="chat-panel-header__meta">
+                    @foreach (var badge in Presentation.Badges)
+                    {
+                        <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                     Text="@badge.Text"
+                                     title="@badge.AccessibleDescription"
+                                     data-testid="@badge.TestId" />
+                    }
+                </div>
+
+                <div class="chat-panel-header__title-row">
+                    @TitleContent
+                </div>
+            </div>
+        </div>
+
+        @if (Actions is not null)
+        {
+            <div class="chat-panel-header__actions">
+                @Actions
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversationHeaderPresentation Presentation { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment TitleContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+}

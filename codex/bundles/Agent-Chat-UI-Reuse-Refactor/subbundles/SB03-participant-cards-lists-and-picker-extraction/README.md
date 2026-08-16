@@ -2,7 +2,7 @@
 
 ## Status
 
-`pending`
+`completed`
 
 ## Proof tier
 
@@ -117,13 +117,13 @@ For every production change in this subbundle:
 
 ## Acceptance checklist
 
-- [ ] Neutral components have no Agent type.
-- [ ] Agent public facades remain callable.
-- [ ] AgentCatalogPanel and switcher behavior is unchanged.
-- [ ] Agent-only semantics are supplied by adapters or slots.
-- [ ] Opaque keys work.
-- [ ] Owner and impacted tests pass.
-- [ ] No Simple Chat production reference appears.
+- [x] Neutral components have no Agent type.
+- [x] Agent public facades remain callable.
+- [x] AgentCatalogPanel and switcher behavior is unchanged.
+- [x] Agent-only semantics are supplied by adapters or slots.
+- [x] Opaque keys work.
+- [x] Owner and focused impacted tests pass; analyzer-required broad gate is promoted to SB09.
+- [x] No Simple Chat production reference appears.
 
 ## Do not do
 

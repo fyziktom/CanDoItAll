@@ -10,7 +10,6 @@
     backdrop-filter: none;
 }
 
-.floating-agent-chat-host ::deep .floating-agent-chat-host__catalog-body,
 .floating-agent-chat-host ::deep .floating-agent-chat-host__chat-body,
 .floating-agent-chat-host__chat-content {
     display: flex;
@@ -23,32 +22,4 @@
 .floating-agent-chat-host__chat-content {
     flex-direction: column;
     gap: 0.5rem;
-}
-
-.floating-agent-chat-host ::deep .floating-agent-chat-host__catalog-body > .cad-tabs {
-    flex: 1 1 auto;
-    min-height: 0;
-    width: 100%;
-}
-
-.floating-agent-chat-host__catalog-tab {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 0.75rem;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.floating-agent-chat-host__active-list {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 0.25rem;
-    scrollbar-gutter: stable;
-}
-
-.floating-agent-chat-host ::deep .floating-agent-chat-host__active-card {
-    min-width: 0;
 }

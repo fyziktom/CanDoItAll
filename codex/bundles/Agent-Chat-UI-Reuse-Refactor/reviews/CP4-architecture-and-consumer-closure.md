@@ -2,36 +2,38 @@
 
 ## Consumers
 
-- [ ] AgentChatPanel
-- [ ] FloatingAgentChatHost
-- [ ] AgentCatalogPanel
-- [ ] AgentSwitchDialog
-- [ ] AgentDetailsDialog
-- [ ] ContextualAgentWorkspaceWindows
-- [ ] ProcessWorkspaceShell
-- [ ] every additional live reference discovered in SB01
+- [x] AgentChatPanel
+- [x] FloatingAgentChatHost
+- [x] AgentCatalogPanel
+- [x] AgentSwitchDialog
+- [x] AgentDetailsDialog
+- [x] ContextualAgentWorkspaceWindows
+- [x] ProcessWorkspaceShell
+- [x] every additional live reference discovered in SB01
 
 ## Architecture
 
-- [ ] before/after project graph
-- [ ] no cycles or wrong direction
-- [ ] no forbidden neutral dependency
-- [ ] no duplicate presentation implementation
-- [ ] compatibility facades are thin and purposeful
-- [ ] no new partial expansion
-- [ ] neutral behavior has independent tests
-- [ ] architecture review gate passes
+- [x] before/after project graph
+- [x] no cycles or wrong direction
+- [x] no forbidden neutral dependency
+- [x] no duplicate presentation implementation
+- [x] compatibility facades are thin and purposeful
+- [x] no new partial expansion
+- [x] neutral behavior has independent tests
+- [x] architecture review gate passes
 
 ## Phase exclusions
 
-- [ ] no LlmChats production UI reference
-- [ ] no mixed catalog/filter
-- [ ] no context capture
-- [ ] no API/SSE client
-- [ ] no backend changes
+- [x] no LlmChats production UI reference
+- [x] no mixed catalog/filter
+- [x] no context capture
+- [x] no API/SSE client
+- [x] no backend changes
 
 ## Decision
 
-- [ ] pass to SB09
+- [x] pass to SB09
 - [ ] reopen an implementation subbundle
 - [ ] repair bundle
+
+Evidence: `proof/SB08/manifest.md`, `proof/SB08/consumer-migration.md`, `proof/SB08/architecture-review.md`, fresh cross-consumer 81/81, and the unchanged analyzer-required Components 990/990 run.

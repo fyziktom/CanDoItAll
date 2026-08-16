@@ -1,71 +1,14 @@
-<article class="@ResolveContainerClass()"
-         role="listitem"
-         aria-busy="@(IsBusy ? "true" : "false")"
-         data-testid="@ShellTestId">
-    <button type="button"
-            class="agent-compact-list-item__select"
-            aria-label="@($"Select {displayName}")"
-            aria-pressed="@(IsSelected ? "true" : "false")"
-            @onclick="HandleSelectAsync"
-            @ondblclick="HandleDoubleClickAsync"
-            data-testid="@SelectTestId">
-        <Avatar Alt="@displayName"
-                ImageUrl="@Agent.AvatarImageUrl"
-                FallbackText="@avatarFallbackText"
-                DefaultImageSeed="@avatarSeed"
-                Size="AvatarSize.Small"
-                Shape="AvatarShape.Rounded" />
-
-        <span class="agent-compact-list-item__copy">
-            <TooltipTarget Text="@detailsText"
-                           Position="TooltipPosition.LeftTop"
-                           TriggerClass="agent-compact-list-item__name-trigger"
-                           TabIndex="-1">
-                <span class="agent-compact-list-item__name">@displayName</span>
-            </TooltipTarget>
-            <span class="agent-compact-list-item__role">@roleTitle</span>
-            <span class="agent-compact-list-item__meta">
-                <StatusBadge Tone="@(IsBusy ? "neutral" : "info")"
-                             Text="@(IsBusy ? "Preparing" : workloadLabel)" />
-                <span class="agent-compact-list-item__model">@modelLabel</span>
-            </span>
-        </span>
-    </button>
-
-    <div class="agent-compact-list-item__actions">
-        @if (NewChatRequested.HasDelegate)
-        {
-            <TooltipTarget Text="@($"Start a new chat with {displayName}")"
-                           Position="TooltipPosition.Bottom"
-                           TestId="@ResolveTooltipTestId(NewChatTestId)">
-                <Button Class="cda-button--quick agent-compact-list-item__action"
-                        Icon="add_comment"
-                        Size="ButtonSize.Small"
-                        Disabled="@IsBusy"
-                        aria-label="@($"Start a new chat with {displayName}")"
-                        data-testid="@NewChatTestId"
-                        Click="HandleNewChatAsync" />
-            </TooltipTarget>
-        }
-        @if (HistoryRequested.HasDelegate)
-        {
-            <TooltipTarget Text="@($"Open chat history for {displayName}")"
-                           Position="TooltipPosition.Bottom"
-                           TestId="@ResolveTooltipTestId(HistoryTestId)">
-                <Button Class="cda-button--quick agent-compact-list-item__action"
-                        Icon="history"
-                        Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
-                        Disabled="@IsBusy"
-                        aria-label="@($"Open chat history for {displayName}")"
-                        data-testid="@HistoryTestId"
-                        Click="HandleHistoryAsync" />
-            </TooltipTarget>
-        }
-    </div>
-</article>
+<ConversationParticipantCompactListItem Item="@item"
+                                        Class="@Class"
+                                        Selected="@(_ => Selected.InvokeAsync(Agent))"
+                                        DoubleClicked="@(_ => DoubleClicked.InvokeAsync(Agent))"
+                                        ActionRequested="HandleActionRequestedAsync" />
 
 @code {
+    private static readonly ConversationPresentationKey NewChatActionKey = new("new-chat");
+    private static readonly ConversationPresentationKey HistoryActionKey = new("history");
+    private ConversationParticipantCompactItemPresentation item = default!;
+
     [Parameter, EditorRequired]
     public AgentDefinition Agent { get; set; } = default!;
 
@@ -102,75 +45,54 @@
     [Parameter]
     public EventCallback<AgentDefinition> HistoryRequested { get; set; }
 
-    private string displayName = "Agent";
-    private string roleTitle = "Technical agent";
-    private string modelLabel = "No model configured";
-    private string workloadLabel = string.Empty;
-    private string avatarSeed = "Agent";
-    private string avatarFallbackText = "AG";
-    private string detailsText = string.Empty;
-
     protected override void OnParametersSet()
     {
-        displayName = string.IsNullOrWhiteSpace(Agent.Name) ? "Agent" : Agent.Name.Trim();
-        roleTitle = string.IsNullOrWhiteSpace(Agent.RoleTitle) ? "Technical agent" : Agent.RoleTitle.Trim();
-        modelLabel = string.IsNullOrWhiteSpace(Agent.Model) ? "No model configured" : Agent.Model.Trim();
-        workloadLabel = AgentWorkloadDisplay.ResolveLabel(Agent.Workload);
-        avatarSeed = !string.IsNullOrWhiteSpace(Agent.Name)
-            ? Agent.Name
-            : !string.IsNullOrWhiteSpace(Agent.RoleTitle)
-                ? Agent.RoleTitle
-                : "Agent";
-        avatarFallbackText = BuildInitials(avatarSeed);
-        detailsText = BuildDetailsText();
+        var actions = new List<ParticipantActionPresentation>();
+        if (NewChatRequested.HasDelegate)
+        {
+            actions.Add(new(
+                NewChatActionKey,
+                $"Start a new chat with {ResolveDisplayName()}",
+                "add_comment",
+                NewChatTestId,
+                IsBusy));
+        }
+
+        if (HistoryRequested.HasDelegate)
+        {
+            actions.Add(new(
+                HistoryActionKey,
+                $"Open chat history for {ResolveDisplayName()}",
+                "history",
+                HistoryTestId,
+                IsBusy,
+                ParticipantActionStyle.Light));
+        }
+
+        item = AgentParticipantPresentationMapper.MapCompactItem(
+            Agent,
+            IsSelected,
+            IsBusy,
+            ShellTestId,
+            SelectTestId,
+            actions);
     }
 
-    private Task HandleSelectAsync()
-        => Selected.InvokeAsync(Agent);
-
-    private Task HandleDoubleClickAsync()
-        => DoubleClicked.InvokeAsync(Agent);
-
-    private Task HandleNewChatAsync()
-        => NewChatRequested.InvokeAsync(Agent);
-
-    private Task HandleHistoryAsync()
-        => HistoryRequested.InvokeAsync(Agent);
-
-    private string ResolveContainerClass()
+    private Task HandleActionRequestedAsync(ParticipantActionRequest request)
     {
-        return CssClassBuilder.Join(
-            "agent-compact-list-item",
-            IsSelected ? "agent-compact-list-item--selected" : null,
-            IsBusy ? "agent-compact-list-item--busy" : null,
-            Class);
+        if (request.ActionKey == NewChatActionKey)
+        {
+            return NewChatRequested.InvokeAsync(Agent);
+        }
+
+        if (request.ActionKey == HistoryActionKey)
+        {
+            return HistoryRequested.InvokeAsync(Agent);
+        }
+
+        throw new InvalidOperationException($"Unsupported participant action '{request.ActionKey}'.");
     }
 
-    private string BuildDetailsText()
-    {
-        var tags = Agent.Tags
-            .Where(tag => !AgentSpecialTags.IsFavorite(tag))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        var tagText = tags.Length == 0
-            ? "No visible tags"
-            : $"Tags: {string.Join(", ", tags)}";
-
-        return $"{roleTitle}. {modelLabel}. {workloadLabel}. {tagText}.";
-    }
-
-    private static string BuildInitials(string value)
-    {
-        var segments = value
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Take(2)
-            .ToArray();
-        return segments.Length == 0
-            ? "AG"
-            : string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
-    }
-
-    private static string? ResolveTooltipTestId(string? actionTestId)
-        => string.IsNullOrWhiteSpace(actionTestId) ? null : $"{actionTestId}-tooltip";
+    private string ResolveDisplayName()
+        => string.IsNullOrWhiteSpace(Agent.Name) ? "Agent" : Agent.Name.Trim();
 }

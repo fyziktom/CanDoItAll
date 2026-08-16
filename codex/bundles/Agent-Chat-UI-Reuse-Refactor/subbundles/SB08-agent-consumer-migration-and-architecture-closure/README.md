@@ -2,7 +2,7 @@
 
 ## Status
 
-`pending`
+`completed`
 
 ## Proof tier
 
@@ -115,14 +115,14 @@ For every production change in this subbundle:
 
 ## Acceptance checklist
 
-- [ ] All live consumers are migrated or intentionally retain a documented compatibility facade.
-- [ ] No duplicate presentation owner remains.
-- [ ] Neutral project remains source-neutral.
-- [ ] No cycle or wrong dependency appears.
-- [ ] Old large types lost real responsibility.
-- [ ] No new partial expansion or service locator.
-- [ ] Cross-consumer impacted proof passes.
-- [ ] CP4 passes.
+- [x] All live consumers are migrated or intentionally retain a documented compatibility facade.
+- [x] No duplicate presentation owner remains.
+- [x] Neutral project remains source-neutral.
+- [x] No cycle or wrong dependency appears.
+- [x] Old large types lost real responsibility.
+- [x] No new partial expansion or service locator.
+- [x] Cross-consumer impacted proof passes.
+- [x] CP4 passes.
 
 ## Do not do
 

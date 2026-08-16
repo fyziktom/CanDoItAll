@@ -1,10 +1,9 @@
-<textarea @attributes='AdditionalAttributes.WithClass("rz-input w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800")'
-          value="@Value"
-          placeholder="@Placeholder"
-          readonly="@ReadOnly"
-          rows="@Rows"
-          @oninput="OnInputAsync"
-          @onchange="OnInputAsync"></textarea>
+<ConversationPromptTextArea Value="@Value"
+                            ValueChanged="@ValueChanged"
+                            Placeholder="@Placeholder"
+                            ReadOnly="@ReadOnly"
+                            Rows="@Rows"
+                            @attributes="AdditionalAttributes" />
 
 @code {
     [Parameter]
@@ -25,10 +24,4 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private async Task OnInputAsync(ChangeEventArgs args)
-    {
-        var next = args.Value?.ToString();
-        Value = next;
-        await ValueChanged.InvokeAsync(next);
-    }
 }

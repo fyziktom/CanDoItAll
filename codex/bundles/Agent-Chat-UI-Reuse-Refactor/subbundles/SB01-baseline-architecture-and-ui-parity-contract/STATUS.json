@@ -1,7 +1,7 @@
 {
   "subbundleId": "SB01",
   "title": "Baseline, architecture inventory, and UI parity contract",
-  "status": "pending",
+  "status": "completed",
   "proofTier": "Governed",
   "dependsOn": [],
   "checkpoint": "CP0",
@@ -15,7 +15,7 @@
     "UIR-072",
     "UIR-078"
   ],
-  "executionBaseSha": null,
-  "candidateHeadSha": null,
-  "progressionDecision": null
+  "executionBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "candidateHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "progressionDecision": "pass-to-SB02"
 }

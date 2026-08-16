@@ -25,6 +25,10 @@
     box-shadow: inset 0 0 0 1px rgb(56 189 248 / 0.4);
 }
 
+.agent-selection-card--busy {
+    opacity: 0.82;
+}
+
 .agent-selection-card--compact {
     min-height: 13rem;
 }
@@ -52,6 +56,10 @@
     padding: 1rem;
     text-align: left;
     width: 100%;
+}
+
+.agent-selection-card__select:disabled {
+    cursor: not-allowed;
 }
 
 .agent-selection-card__actions {
