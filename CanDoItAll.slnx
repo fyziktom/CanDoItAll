@@ -96,6 +96,7 @@
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.LlmChats/CanDoItAll.Modules.LlmChats.csproj" />
+    <Project Path="src/Modules/CanDoItAll.Modules.LlmChats.Ui/CanDoItAll.Modules.LlmChats.Ui.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.LlmChats.Persistence/CanDoItAll.Modules.LlmChats.Persistence.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />

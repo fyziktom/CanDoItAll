@@ -63,6 +63,7 @@ builder.Services.AddCanDoItAllRuntimeModules(
 builder.Services.AddCanDoItAllDashboard();
 builder.Services.AddCanDoItAllFileToolsStoragePlacementRevision();
 builder.Services.AddCanDoItAllApi(builder.Configuration);
+builder.Services.AddCanDoItAllLlmChatsUi();
 builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
 builder.Services.AddScoped<IWorkbenchStateStore, BrowserWorkspaceStateStore>();

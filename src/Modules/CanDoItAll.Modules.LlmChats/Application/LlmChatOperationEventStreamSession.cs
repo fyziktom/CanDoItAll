@@ -5,11 +5,31 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.LlmChats.Application;
 
+public interface ILlmChatOperationEventSessionSource
+{
+    ValueTask<Result<ILlmChatOperationEventSession>> OpenAsync(
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ILlmChatOperationEventSession : IAsyncDisposable
+{
+    CancellationToken ProfileLifetime { get; }
+
+    int MaximumPageSize { get; }
+
+    ValueTask<LlmChatOperationEventPage> ReadAsync(
+        long afterSequence,
+        int take,
+        TimeSpan maximumWait,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class LlmChatOperationEventStreamSessionFactory(
     ILlmChatRuntimeLeaseFactory runtimeLeaseFactory,
     ILlmChatOperationScopeAccessor operationScope,
     LlmChatOperationEventJournal eventJournal,
-    LlmChatStreamingOptions options)
+    LlmChatStreamingOptions options) : ILlmChatOperationEventSessionSource
 {
     public async ValueTask<Result<LlmChatOperationEventStreamSession>> OpenAsync(
         LlmChatOperationId operationId,
@@ -64,9 +84,19 @@ public sealed class LlmChatOperationEventStreamSessionFactory(
             throw new LlmChatRuntimeProfileChangedException();
         }
     }
+
+    async ValueTask<Result<ILlmChatOperationEventSession>> ILlmChatOperationEventSessionSource.OpenAsync(
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken)
+    {
+        var result = await OpenAsync(operationId, cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess
+            ? Result<ILlmChatOperationEventSession>.Success(result.Value!)
+            : Result<ILlmChatOperationEventSession>.Failure(result.Errors);
+    }
 }
 
-public sealed class LlmChatOperationEventStreamSession : IAsyncDisposable
+public sealed class LlmChatOperationEventStreamSession : ILlmChatOperationEventSession
 {
     private readonly LlmChatOperationId operationId;
     private readonly ILlmChatRuntimeLease runtimeLease;

@@ -25,6 +25,8 @@ public static class LlmChatsModuleServiceCollectionExtensions
         services.AddScoped<ILlmChatOperationEvidenceSink, LlmChatOperationEvidenceService>();
         services.AddScoped<LlmChatOperationEventJournal>();
         services.AddScoped<LlmChatOperationEventStreamSessionFactory>();
+        services.AddScoped<ILlmChatOperationEventSessionSource>(provider =>
+            provider.GetRequiredService<LlmChatOperationEventStreamSessionFactory>());
         services.AddScoped<LlmChatStreamingConsumerState>();
         services.AddScoped<LlmChatStreamingPipeline>();
         services.AddScoped<LlmChatOperationEventRetentionService>();

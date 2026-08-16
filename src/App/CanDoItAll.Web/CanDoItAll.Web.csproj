@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.LlmChats\CanDoItAll.Modules.LlmChats.csproj" />
+    <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.LlmChats.Ui\CanDoItAll.Modules.LlmChats.Ui.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
