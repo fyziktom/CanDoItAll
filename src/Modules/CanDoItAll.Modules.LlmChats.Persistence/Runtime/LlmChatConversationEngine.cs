@@ -385,7 +385,9 @@ public sealed class LlmChatConversationEngine(
         => new(
             new LlmChatConversationId(document.ConversationId),
             document.TranscriptRevision,
-            document.ActiveTurn is not null,
+            document.ActiveTurn is { } activeTurn
+                ? new LlmChatOperationId(activeTurn.TurnId)
+                : null,
             document.CreatedAtUtc,
             document.UpdatedAtUtc);
 }

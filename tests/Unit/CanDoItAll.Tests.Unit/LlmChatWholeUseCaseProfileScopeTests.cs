@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 public sealed class LlmChatWholeUseCaseProfileScopeTests
 {
     [Fact]
-    public async Task Profile_switch_after_first_read_rejects_authoritative_return()
+    public async Task Profile_switch_after_first_read_rejects_active_operation_projection()
     {
         var definitionId = LlmChatDefinitionId.New();
         var conversationId = LlmChatConversationId.New();
@@ -51,6 +51,9 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
             0);
         conversations.Seed(conversation);
         var transcript = await engine.CreateAsync(conversationId, revision, "Conversation");
+        var operationId = LlmChatOperationId.New();
+        engine.SeedActiveTurn(conversationId, operationId);
+        transcript = transcript with { ActiveOperationId = operationId };
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -74,6 +77,7 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
 
         Assert.True(leaseFactory.Acquired);
         Assert.True(result.IsFailure);
+        Assert.Null(result.Value);
         Assert.Equal(LlmChatErrorCodes.RuntimeProfileChanged, Assert.Single(result.Errors).Code);
         Assert.Null(scope.ServiceProvider.GetRequiredService<ILlmChatOperationScopeAccessor>().Current);
     }
@@ -101,6 +105,8 @@ internal sealed class MutableLlmChatRuntimeLease : ILlmChatRuntimeLease
 
     public bool IsCurrent { get; set; } = true;
 
+    public int DisposeCount { get; private set; }
+
     public Result EnsureCurrent()
         => IsCurrent
             ? Result.Success()
@@ -109,7 +115,10 @@ internal sealed class MutableLlmChatRuntimeLease : ILlmChatRuntimeLease
                 LlmChatErrorCodes.RuntimeProfileChanged));
 
     public ValueTask DisposeAsync()
-        => ValueTask.CompletedTask;
+    {
+        DisposeCount++;
+        return ValueTask.CompletedTask;
+    }
 }
 
 internal sealed class SwitchingConversationReadStore(

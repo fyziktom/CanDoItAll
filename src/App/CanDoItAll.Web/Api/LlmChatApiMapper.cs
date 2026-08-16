@@ -118,7 +118,10 @@ internal static class LlmChatApiMapper
             details.Transcript.HasActiveTurn,
             details.Conversation.ConcurrencyToken,
             details.Conversation.CreatedAtUtc,
-            details.Conversation.UpdatedAtUtc);
+            details.Conversation.UpdatedAtUtc)
+        {
+            ActiveOperationId = details.ActiveOperationId?.Value
+        };
         if (details.Messages is null)
         {
             return response;

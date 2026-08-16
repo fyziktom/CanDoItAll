@@ -753,7 +753,7 @@ internal sealed class PostgreSqlReconciliationConversationEngine(AppDbContext db
         return new(
             conversationId,
             transcript.TranscriptRevision,
-            false,
+            null,
             conversation.CreatedAtUtc,
             conversation.UpdatedAtUtc);
     }
@@ -870,6 +870,6 @@ internal sealed class DeterministicConversationEngine(AppDbContext dbContext) : 
     private static LlmChatConversationEngineState State(LlmChatConversationId conversationId, long revision)
     {
         var now = DateTimeOffset.UtcNow;
-        return new LlmChatConversationEngineState(conversationId, revision, false, now, now);
+        return new LlmChatConversationEngineState(conversationId, revision, null, now, now);
     }
 }

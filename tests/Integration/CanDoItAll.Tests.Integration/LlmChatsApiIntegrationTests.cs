@@ -184,6 +184,33 @@ public sealed class LlmChatsConversationApiIntegrationTests
             .GetProperty("messages")[0]
             .GetProperty("content")
             .GetString());
+        Assert.False(detail.RootElement.TryGetProperty("activeOperationId", out _));
+    }
+
+    [Fact]
+    public async Task ConversationApi_ExposesExactActiveOperationIdAdditively()
+    {
+        var operationId = LlmChatOperationId.New();
+        var conversations = new StubLlmChatConversationApplicationService
+        {
+            ActiveOperationId = operationId
+        };
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: collection =>
+            {
+                collection.RemoveAll<ILlmChatConversationApplicationService>();
+                collection.AddSingleton<ILlmChatConversationApplicationService>(conversations);
+            },
+            useInMemoryDatabase: true);
+
+        using var response = await host.Client.GetAsync(
+            $"/api/llm-conversations/{StubLlmChatConversationApplicationService.ConversationId.Value:D}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.GetProperty("hasActiveTurn").GetBoolean());
+        Assert.Equal(operationId.Value, body.RootElement.GetProperty("activeOperationId").GetGuid());
     }
 
     [Fact]
@@ -403,10 +430,12 @@ internal sealed class StubLlmChatDefinitionApplicationService : ILlmChatDefiniti
 
 internal sealed class StubLlmChatConversationApplicationService : ILlmChatConversationApplicationService
 {
-    private static readonly LlmChatConversationId ConversationId = new(new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
+    public static readonly LlmChatConversationId ConversationId = new(new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
     private static readonly DateTimeOffset Now = new(2026, 8, 14, 0, 0, 0, TimeSpan.Zero);
 
     public CreateLlmChatConversationCommand? LastCreateCommand { get; private set; }
+
+    public LlmChatOperationId? ActiveOperationId { get; init; }
 
     public Task<Result<LlmChatConversationDetails>> CreateAsync(
         CreateLlmChatConversationCommand command,
@@ -468,7 +497,7 @@ internal sealed class StubLlmChatConversationApplicationService : ILlmChatConver
             new LlmChatPage<LlmChatConversationDetails, LlmChatConversationCursor>(result.Value!, null));
     }
 
-    private static LlmChatConversationDetails CreateDetails(string title)
+    private LlmChatConversationDetails CreateDetails(string title)
     {
         var conversation = new LlmChatConversation(
             ConversationId,
@@ -483,7 +512,7 @@ internal sealed class StubLlmChatConversationApplicationService : ILlmChatConver
         return new LlmChatConversationDetails(
             conversation,
             "Architecture assistant",
-            new LlmChatConversationEngineState(ConversationId, 5, false, Now, Now));
+            new LlmChatConversationEngineState(ConversationId, 5, ActiveOperationId, Now, Now));
     }
 }
 

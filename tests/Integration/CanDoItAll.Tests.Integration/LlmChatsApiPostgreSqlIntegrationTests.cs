@@ -309,6 +309,16 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
         Assert.Equal(HttpStatusCode.Accepted, send.StatusCode);
         await finalizationBarrier.WaitAsync();
 
+        using var activeConversationResponse = await host.Client.GetAsync(
+            $"/api/llm-conversations/{conversationId:D}");
+        Assert.Equal(HttpStatusCode.OK, activeConversationResponse.StatusCode);
+        using var activeConversation = JsonDocument.Parse(
+            await activeConversationResponse.Content.ReadAsStringAsync());
+        Assert.True(activeConversation.RootElement.GetProperty("hasActiveTurn").GetBoolean());
+        Assert.Equal(
+            operationId,
+            activeConversation.RootElement.GetProperty("activeOperationId").GetGuid());
+
         await using var ownerScope = host.App.Services.CreateAsyncScope();
         var openedSession = await ownerScope.ServiceProvider
             .GetRequiredService<LlmChatOperationEventStreamSessionFactory>()
@@ -415,6 +425,13 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             $"/api/llm-chat-operations/{operationId:D}");
         Assert.Equal("succeeded", completed.GetProperty("status").GetString());
         Assert.Equal(JsonValueKind.Object, completed.GetProperty("assistantMessage").ValueKind);
+        using var completedConversationResponse = await host.Client.GetAsync(
+            $"/api/llm-conversations/{conversationId:D}");
+        Assert.Equal(HttpStatusCode.OK, completedConversationResponse.StatusCode);
+        using var completedConversation = JsonDocument.Parse(
+            await completedConversationResponse.Content.ReadAsStringAsync());
+        Assert.False(completedConversation.RootElement.GetProperty("hasActiveTurn").GetBoolean());
+        Assert.False(completedConversation.RootElement.TryGetProperty("activeOperationId", out _));
     }
 
     [Fact]

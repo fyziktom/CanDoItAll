@@ -9,9 +9,12 @@ namespace CanDoItAll.Modules.LlmChats.Ports;
 public sealed record LlmChatConversationEngineState(
     LlmChatConversationId ConversationId,
     long TranscriptRevision,
-    bool HasActiveTurn,
+    LlmChatOperationId? ActiveOperationId,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public bool HasActiveTurn => ActiveOperationId.HasValue;
+}
 
 public sealed record LlmChatTranscriptEntry(
     Guid EntryId,

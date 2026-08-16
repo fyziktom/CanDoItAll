@@ -321,7 +321,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         CancellationToken cancellationToken = default)
     {
         var now = timeProvider.GetUtcNow();
-        var state = new LlmChatConversationEngineState(conversationId, 1, false, now, now);
+        var state = new LlmChatConversationEngineState(conversationId, 1, null, now, now);
         states[conversationId] = state;
         return Task.FromResult(state);
     }
@@ -384,7 +384,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         var state = new LlmChatConversationEngineState(
             conversationId,
             document.TranscriptRevision,
-            true,
+            operationId,
             now,
             now);
         states[conversationId] = state;
@@ -535,7 +535,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         var updated = current with
         {
             TranscriptRevision = admission.Conversation.TranscriptRevision + 1,
-            HasActiveTurn = false,
+            ActiveOperationId = null,
             UpdatedAtUtc = now
         };
         states[conversationId] = updated;
@@ -579,7 +579,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         var updated = evidenceResult.State with
         {
             TranscriptRevision = evidenceResult.State.TranscriptRevision + 1,
-            HasActiveTurn = false,
+            ActiveOperationId = null,
             UpdatedAtUtc = timeProvider.GetUtcNow()
         };
         states[conversationId] = updated;
@@ -616,7 +616,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
     public void SeedConversation(LlmChatConversationId conversationId)
     {
         var now = timeProvider.GetUtcNow();
-        states[conversationId] = new LlmChatConversationEngineState(conversationId, 1, false, now, now);
+        states[conversationId] = new LlmChatConversationEngineState(conversationId, 1, null, now, now);
     }
 
     public void SeedAssistantEvidence(LlmChatOperationId operationId, string text)
@@ -624,7 +624,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         var state = states.Values.Single() with
         {
             TranscriptRevision = 3,
-            HasActiveTurn = false
+            ActiveOperationId = null
         };
         states[state.ConversationId] = state;
         turnEvidence[operationId] = new LlmChatConversationTurnEvidence(
@@ -641,7 +641,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
 
     public void SeedActiveTurn(LlmChatOperationId operationId)
     {
-        var state = states.Values.Single() with { HasActiveTurn = true };
+        var state = states.Values.Single() with { ActiveOperationId = operationId };
         states[state.ConversationId] = state;
         turnEvidence[operationId] = new LlmChatConversationTurnEvidence(state, operationId, true, null);
     }

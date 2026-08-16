@@ -406,7 +406,7 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
     {
         Created.Add((conversationId, definitionRevision, title));
         var now = definitionRevision.CreatedAtUtc.AddMinutes(1);
-        var state = new LlmChatConversationEngineState(conversationId, 1, false, now, now);
+        var state = new LlmChatConversationEngineState(conversationId, 1, null, now, now);
         states.Add(conversationId, state);
         return Task.FromResult(state);
     }
@@ -415,6 +415,9 @@ internal sealed class StubLlmChatConversationEngine : ILlmChatConversationEngine
         LlmChatConversationId conversationId,
         CancellationToken cancellationToken = default)
         => Task.FromResult(states.GetValueOrDefault(conversationId));
+
+    public void SeedActiveTurn(LlmChatConversationId conversationId, LlmChatOperationId operationId)
+        => states[conversationId] = states[conversationId] with { ActiveOperationId = operationId };
 
     public Task<LlmChatTranscriptPage?> TryGetTranscriptPageAsync(
         LlmChatConversationId conversationId,

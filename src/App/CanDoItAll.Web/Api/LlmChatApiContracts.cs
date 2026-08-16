@@ -131,6 +131,9 @@ internal sealed record LlmChatConversationApiResponse(
     DateTimeOffset UpdatedAtUtc)
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? ActiveOperationId { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<LlmChatMessageApiResponse>? Messages { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

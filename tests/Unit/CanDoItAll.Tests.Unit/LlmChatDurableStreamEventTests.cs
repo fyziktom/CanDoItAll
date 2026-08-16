@@ -373,6 +373,46 @@ public sealed class LlmChatDurableStreamEventTests
     }
 
     [Fact]
+    public async Task Event_session_disposal_releases_follower_lease_without_requesting_operation_cancellation()
+    {
+        var now = new DateTimeOffset(2026, 8, 16, 12, 0, 0, TimeSpan.Zero);
+        var operationId = LlmChatOperationId.New();
+        var operations = new InMemoryLlmChatOperationRepository();
+        operations.Seed(new LlmChatOperation(
+            operationId,
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            0,
+            LlmChatOperationStatus.Running,
+            now,
+            0));
+        var lease = new MutableLlmChatRuntimeLease();
+        var scope = new LlmChatOperationScopeAccessor();
+        var options = new LlmChatStreamingOptions();
+        var factory = new LlmChatOperationEventStreamSessionFactory(
+            new TestLlmChatRuntimeLeaseFactory(lease),
+            scope,
+            LlmChatOperationEventTestFactory.Create(
+                operations,
+                new InlineLlmChatUnitOfWork(),
+                scope,
+                new FixedTimeProvider(now),
+                options),
+            options);
+
+        var opened = await factory.OpenAsync(operationId);
+        Assert.True(opened.IsSuccess);
+        await opened.Value!.DisposeAsync();
+
+        var operation = await operations.TryGetAsync(operationId);
+        Assert.NotNull(operation);
+        Assert.Equal(LlmChatOperationStatus.Running, operation.Status);
+        Assert.Equal(0, operation.CancellationGeneration);
+        Assert.Equal(1, lease.DisposeCount);
+    }
+
+    [Fact]
     public void Retention_schedule_evicts_old_profile_generations()
     {
         var schedule = new LlmChatOperationEventRetentionSchedule();

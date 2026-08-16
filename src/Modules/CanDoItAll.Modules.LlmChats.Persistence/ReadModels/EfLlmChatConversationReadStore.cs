@@ -158,7 +158,9 @@ public sealed class EfLlmChatConversationReadStore(AppDbContext dbContext) : ILl
             new LlmChatConversationEngineState(
                 new LlmChatConversationId(row.Conversation.Id),
                 row.Transcript.TranscriptRevision,
-                row.Transcript.ActiveTurnId != null,
+                row.Transcript.ActiveTurnId is { } activeTurnId
+                    ? new LlmChatOperationId(activeTurnId)
+                    : null,
                 row.Conversation.CreatedAtUtc,
                 row.Conversation.UpdatedAtUtc));
 

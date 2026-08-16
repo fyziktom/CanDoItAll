@@ -1,5 +1,6 @@
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Conversations;
+using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Ports;
 using CanDoItAll.SharedKernel;
 
@@ -73,6 +74,8 @@ public sealed record LlmChatConversationDetails(
     IReadOnlyList<LlmChatTranscriptEntry>? Messages = null,
     LlmChatTranscriptCursor? NextMessageCursor = null)
 {
+    public LlmChatOperationId? ActiveOperationId => Transcript.ActiveOperationId;
+
     public IReadOnlyList<LlmChatTranscriptEntry> TranscriptMessages => Messages ?? [];
 }
 

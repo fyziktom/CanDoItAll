@@ -59,6 +59,36 @@ public sealed class EfLlmConversationStoreIntegrationTests
     }
 
     [Fact]
+    public async Task Conversation_read_projection_exposes_only_its_exact_active_operation_id()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatactiveprojection");
+        await using var dbContext = database.CreateDbContext();
+        var store = new EfLlmConversationStore(dbContext);
+        var firstConversationId = Guid.NewGuid();
+        var secondConversationId = Guid.NewGuid();
+        var operationId = Guid.NewGuid();
+        var first = LlmChatsPostgreSqlTestDatabase.CreateDocument(firstConversationId);
+        var second = LlmChatsPostgreSqlTestDatabase.CreateDocument(secondConversationId);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, first);
+        await store.CreateAsync(first);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, second);
+        await store.CreateAsync(second);
+        await store.ReplaceAsync(AdmitTurn(first, operationId, "pending"), first.TranscriptRevision);
+        dbContext.ChangeTracker.Clear();
+        var readStore = new EfLlmChatConversationReadStore(dbContext);
+
+        var active = await readStore.TryGetAsync(new LlmChatConversationId(firstConversationId));
+        var unrelated = await readStore.TryGetAsync(new LlmChatConversationId(secondConversationId));
+
+        Assert.NotNull(active);
+        Assert.Equal(new LlmChatOperationId(operationId), active.Transcript.ActiveOperationId);
+        Assert.True(active.Transcript.HasActiveTurn);
+        Assert.NotNull(unrelated);
+        Assert.Null(unrelated.Transcript.ActiveOperationId);
+        Assert.False(unrelated.Transcript.HasActiveTurn);
+    }
+
+    [Fact]
     public async Task Compensation_removes_only_the_exact_pending_entry()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatstorecompensation");

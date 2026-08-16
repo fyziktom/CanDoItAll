@@ -359,6 +359,81 @@ public sealed class LlmChatRuntimeFenceTests
     }
 }
 
+public sealed class LlmChatActiveOperationProjectionTests
+{
+    [Fact]
+    public async Task Active_operation_id_is_exact_conversation_scoped_and_cleared_by_all_terminal_paths()
+    {
+        var provider = ProviderRuntimeTestData.CreateProvider();
+        var store = new InMemoryLlmConversationStore();
+        var conversationService = new LlmConversationService(
+            new DelegatingInvocationPort((request, _) => Task.FromResult(
+                new LlmInvocationResult(request.Model, "answer", LlmUsage.Zero))),
+            store,
+            new RecencyBoundedContextWindowPolicy(),
+            TimeProvider.System);
+        var engine = new LlmChatConversationEngine(
+            conversationService,
+            UnavailableLlmChatConversationReadStore.Instance,
+            ProviderRuntimeTestData.CreateResolver(provider),
+            new TestLlmChatRuntimeLeaseFactory(new MutableLlmChatRuntimeLease()),
+            new LlmChatOperationScopeAccessor());
+        var definitionId = LlmChatDefinitionId.New();
+        var revision = ProviderRuntimeTestData.CreateRevision(definitionId, 1, provider, null);
+        var definition = ProviderRuntimeTestData.CreateDefinition(
+            definitionId,
+            1,
+            LlmChatDefinitionStatus.Active);
+        var firstConversationId = LlmChatConversationId.New();
+        var secondConversationId = LlmChatConversationId.New();
+        var first = await engine.CreateAsync(firstConversationId, revision, "first");
+        var second = await engine.CreateAsync(secondConversationId, revision, "second");
+        var completedOperationId = LlmChatOperationId.New();
+
+        var completedAdmission = await engine.AdmitTurnAsync(
+            firstConversationId,
+            completedOperationId,
+            definition,
+            revision,
+            "complete",
+            first.TranscriptRevision);
+
+        Assert.Equal(completedOperationId.Value, completedAdmission.Conversation.ActiveTurn?.TurnId);
+        Assert.Null(second.ActiveOperationId);
+        Assert.False(second.HasActiveTurn);
+
+        var completed = await engine.CompleteTurnAsync(
+            completedAdmission,
+            new LlmInvocationResult("model-fast", "answer", LlmUsage.Zero));
+        Assert.Null(completed.State.ActiveOperationId);
+        Assert.False(completed.State.HasActiveTurn);
+
+        var compensatedOperationId = LlmChatOperationId.New();
+        await engine.AdmitTurnAsync(
+            firstConversationId,
+            compensatedOperationId,
+            definition,
+            revision,
+            "compensate",
+            completed.State.TranscriptRevision);
+        var compensated = await engine.CompensateTurnAsync(firstConversationId, compensatedOperationId);
+        Assert.Null(compensated.ActiveOperationId);
+        Assert.False(compensated.HasActiveTurn);
+
+        var abandonedOperationId = LlmChatOperationId.New();
+        await engine.AdmitTurnAsync(
+            firstConversationId,
+            abandonedOperationId,
+            definition,
+            revision,
+            "abandon",
+            compensated.TranscriptRevision);
+        var abandoned = await engine.AbandonActiveTurnAsync(firstConversationId, abandonedOperationId);
+        Assert.Null(abandoned.ActiveOperationId);
+        Assert.False(abandoned.HasActiveTurn);
+    }
+}
+
 public sealed class LlmChatDefinitionRevisionExecutionTests
 {
     [Fact]
