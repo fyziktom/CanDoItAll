@@ -13,8 +13,9 @@
   "completedSubbundles": [
     "SB01",
     "SB02",
-    "SB03"
+    "SB03",
+    "SB04"
   ],
-  "currentSubbundle": "SB04",
+  "currentSubbundle": "SB05",
   "blockedBy": []
 }
