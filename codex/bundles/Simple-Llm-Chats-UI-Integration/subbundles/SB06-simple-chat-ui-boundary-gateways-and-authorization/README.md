@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `ui`
 - Proof tier: `Behavioral`
 
@@ -53,10 +53,10 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] UI project builds/tests without Web/Persistence/Agent runtime references.
-- [ ] Gateways and reducer are independently testable.
-- [ ] Authorization facade differentiates read/manage/execute.
-- [ ] No route/navigation is advertised.
+- [x] UI project builds/tests without Web/Persistence/Agent runtime references.
+- [x] Gateways and reducer are independently testable.
+- [x] Authorization facade differentiates read/manage/execute.
+- [x] No route/navigation is advertised.
 
 ## Validation Depth
 

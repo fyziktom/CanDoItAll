@@ -15,8 +15,9 @@
     "SB02",
     "SB03",
     "SB04",
-    "SB05"
+    "SB05",
+    "SB06"
   ],
-  "currentSubbundle": "SB06",
+  "currentSubbundle": "SB07",
   "blockedBy": []
 }
