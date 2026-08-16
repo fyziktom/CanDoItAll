@@ -12,8 +12,9 @@
   "targetFinalState": "awaiting-user-simple-chat-ui-verification",
   "completedSubbundles": [
     "SB01",
-    "SB02"
+    "SB02",
+    "SB03"
   ],
-  "currentSubbundle": "SB03",
+  "currentSubbundle": "SB04",
   "blockedBy": []
 }

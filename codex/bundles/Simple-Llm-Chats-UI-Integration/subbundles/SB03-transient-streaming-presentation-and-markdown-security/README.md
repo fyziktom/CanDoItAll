@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `hardening`
 - Proof tier: `Behavioral`
 
@@ -50,10 +50,10 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] Pending User and Streaming Assistant can coexist.
-- [ ] Role-driven layout stays correct for transient messages.
-- [ ] javascript/data/vbscript and encoded hostile URI cases are inert.
-- [ ] Agent transcript/composer regression tests pass.
+- [x] Pending User and Streaming Assistant can coexist.
+- [x] Role-driven layout stays correct for transient messages.
+- [x] javascript/data/vbscript and encoded hostile URI cases are inert.
+- [x] Agent transcript/composer regression tests pass.
 
 ## Validation Depth
 
