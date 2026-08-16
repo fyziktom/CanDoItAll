@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `checkpoint`
 - Proof tier: `Governed`
 
@@ -48,10 +48,10 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] All targeted hardening tests pass with expected discovery.
-- [ ] Agent settings/chat/context/floating browser smoke passes.
-- [ ] Architecture gate passes with no cycles.
-- [ ] No Simple Chat route/catalog item exists before CP1.
+- [x] All targeted hardening tests pass with expected discovery.
+- [x] Agent settings/chat/context/floating browser smoke passes.
+- [x] Architecture gate passes with no new cycles.
+- [x] No Simple Chat route/catalog item exists before CP1.
 
 ## Validation Depth
 
