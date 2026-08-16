@@ -81,7 +81,7 @@ See `plan/01-phase-plan.md` for the authoritative dependency and invalidation ma
 
 - Bundle preparation status: `Prepared`
 - Bundle readiness gate: `Pass`
-- Execution status: `Not started`
-- Subbundle gate review: `Not started`
-- Final closure gate: `Not started`
+- Execution status: `Blocked at SB10 entry — SB01 through SB09 and CP0 through CP3 passed; the application candidate is not yet a commit and same-commit three-OS CI cannot be dispatched without commit/push authority`
+- Subbundle gate review: `SB01 Pass; SB02 Pass; SB03 Pass; SB04/CP1 Pass; SB05 Pass; SB06 Pass; SB07 Pass; SB08 Pass; CP2 Pass; SB09/CP3 Pass; SB10 Blocked before broad execution`
+- Final closure gate: `Blocked — broad Stable remains deliberately unrun until a frozen application commit and CI authority exist`
 - Browser validation analytics: `N/A — backend only`

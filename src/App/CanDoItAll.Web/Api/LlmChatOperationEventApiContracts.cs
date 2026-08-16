@@ -24,6 +24,7 @@ internal sealed record LlmChatOperationEventPayloadApiResponse(
     int? AggregateCharacterCount = null,
     string? Model = null,
     LlmStreamingDeliveryMode? DeliveryMode = null,
+    string? FinishReason = null,
     LlmChatInvocationOutcome? Outcome = null,
     LlmChatUsageApiResponse? Usage = null,
     string? FailureCode = null,

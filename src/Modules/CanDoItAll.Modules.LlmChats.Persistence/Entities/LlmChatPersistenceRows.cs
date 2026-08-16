@@ -224,6 +224,8 @@ internal sealed class LlmChatOperationRow
 
     public string FailureCode { get; set; } = string.Empty;
 
+    public long LastEventSequence { get; set; }
+
     public long ConcurrencyToken { get; set; }
 }
 
@@ -244,6 +246,10 @@ internal sealed class LlmChatInvocationRecordRow
     public AgentReasoningEffortLevel? RequestedThinkingEffort { get; set; }
 
     public AgentReasoningEffortLevel? EffectiveThinkingEffort { get; set; }
+
+    public LlmStreamingDeliveryMode DeliveryMode { get; set; }
+
+    public string FinishReason { get; set; } = string.Empty;
 
     public int InputTokens { get; set; }
 
@@ -277,6 +283,8 @@ internal sealed class LlmChatOperationEventRow
     public LlmChatInvocationOutcome? InvocationOutcome { get; set; }
 
     public LlmStreamingDeliveryMode? DeliveryMode { get; set; }
+
+    public string FinishReason { get; set; } = string.Empty;
 
     public string Text { get; set; } = string.Empty;
 

@@ -170,15 +170,40 @@ public sealed record LlmChatOperationAttemptFinishedEvent : LlmChatOperationEven
         LlmChatOperationId operationId,
         long sequence,
         int attemptOrdinal,
+        string model,
+        string finishReason,
+        LlmStreamingDeliveryMode deliveryMode,
         LlmChatInvocationOutcome outcome,
         LlmUsage usage,
         DateTimeOffset occurredAtUtc,
         string failureCode = "") : base(operationId, sequence, occurredAtUtc)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(attemptOrdinal, 1);
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        if (model.Length > LlmChatOperationStateChangedEvent.MaximumModelLength)
+        {
+            throw new ArgumentException("An event model is too long.", nameof(model));
+        }
+
+        if (!Enum.IsDefined(deliveryMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(deliveryMode), deliveryMode, "Unknown delivery mode.");
+        }
+
         if (!Enum.IsDefined(outcome))
         {
             throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown invocation outcome.");
+        }
+
+        var normalizedFinishReason = finishReason?.Trim() ?? string.Empty;
+        if (normalizedFinishReason.Length > LlmChatInvocationRecord.MaximumFinishReasonLength)
+        {
+            throw new ArgumentException("An event finish reason is too long.", nameof(finishReason));
+        }
+
+        if ((outcome == LlmChatInvocationOutcome.Succeeded) != (normalizedFinishReason.Length > 0))
+        {
+            throw new ArgumentException("The finish reason does not match the attempt outcome.", nameof(finishReason));
         }
 
         ArgumentNullException.ThrowIfNull(usage);
@@ -194,6 +219,9 @@ public sealed record LlmChatOperationAttemptFinishedEvent : LlmChatOperationEven
         }
 
         AttemptOrdinal = attemptOrdinal;
+        Model = model.Trim();
+        FinishReason = normalizedFinishReason;
+        DeliveryMode = deliveryMode;
         Outcome = outcome;
         Usage = usage;
         FailureCode = redactedFailureCode;
@@ -202,6 +230,12 @@ public sealed record LlmChatOperationAttemptFinishedEvent : LlmChatOperationEven
     public override LlmChatOperationEventKind Kind => LlmChatOperationEventKind.AttemptFinished;
 
     public int AttemptOrdinal { get; }
+
+    public string Model { get; }
+
+    public string FinishReason { get; }
+
+    public LlmStreamingDeliveryMode DeliveryMode { get; }
 
     public LlmChatInvocationOutcome Outcome { get; }
 

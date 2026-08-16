@@ -50,7 +50,7 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
                  "LeaseExpiresAtUtc", "DispatchPhase",
                  "ProviderDispatchStartedAtUtc", "ProviderDispatchReturnedAtUtc",
                  "TranscriptCompletedAtUtc", "StartedAtUtc", "CompletedAtUtc",
-                 "ResultingTranscriptRevision", "AssistantEntryId", "FailureCode", "ConcurrencyToken")
+                 "ResultingTranscriptRevision", "AssistantEntryId", "FailureCode", "LastEventSequence", "ConcurrencyToken")
             VALUES
                 ({operation.Id.Value}, {operation.ConversationId.Value}, {(int)operation.Kind},
                  {operation.RequestFingerprint.Value}, {operation.ExpectedTranscriptRevision},
@@ -61,7 +61,7 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
                  {operation.ProviderDispatchStartedAtUtc}, {operation.ProviderDispatchReturnedAtUtc},
                  {operation.TranscriptCompletedAtUtc}, {operation.StartedAtUtc}, {operation.CompletedAtUtc},
                  {operation.ResultingTranscriptRevision}, {operation.AssistantEntryId}, {operation.FailureCode},
-                 {operation.ConcurrencyToken})
+                 {operation.LastEventSequence}, {operation.ConcurrencyToken})
             ON CONFLICT ("Id") DO NOTHING
             """, cancellationToken).ConfigureAwait(false);
         var stored = await TryGetAsync(operation.Id, cancellationToken).ConfigureAwait(false)

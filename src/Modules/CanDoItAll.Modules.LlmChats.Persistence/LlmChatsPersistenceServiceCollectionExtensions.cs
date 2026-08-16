@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
 using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
 using CanDoItAll.Modules.LlmChats.Persistence.ReadModels;
@@ -64,7 +65,8 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             evidenceSink,
             serviceProvider.GetRequiredService<IProviderModelCapabilityResolver>(),
             operationScope,
-            serviceProvider.GetRequiredService<TimeProvider>());
+            serviceProvider.GetRequiredService<TimeProvider>(),
+            serviceProvider.GetRequiredService<LlmChatStreamingConsumerState>());
         streamingInvocationPort = new ProfileFencedLlmChatStreamingInvocationPort(
             streamingInvocationPort,
             runtimeState,

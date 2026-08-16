@@ -7,14 +7,31 @@ public sealed class LlmChatOperationDispatchSignal : ILlmChatOperationDispatchSi
     private readonly object signalGate = new();
     private readonly SemaphoreSlim signal = new(0, 1);
     private int executorCount;
+    private int progressingCount;
 
     public bool HasAvailableExecutor => Volatile.Read(ref executorCount) > 0;
+
+    public LlmChatDispatchAvailability Availability => new(
+        Volatile.Read(ref executorCount),
+        Volatile.Read(ref progressingCount));
 
     public IDisposable RegisterExecutor()
     {
         Interlocked.Increment(ref executorCount);
         Signal();
         return new ExecutorRegistration(this);
+    }
+
+    public IDisposable BeginProgress()
+    {
+        var progressing = Interlocked.Increment(ref progressingCount);
+        if (progressing <= Volatile.Read(ref executorCount))
+        {
+            return new ProgressRegistration(this);
+        }
+
+        Interlocked.Decrement(ref progressingCount);
+        throw new InvalidOperationException("LLM Chat dispatcher progress requires a registered worker.");
     }
 
     public void Signal()
@@ -42,6 +59,14 @@ public sealed class LlmChatOperationDispatchSignal : ILlmChatOperationDispatchSi
         }
     }
 
+    private void EndProgress()
+    {
+        if (Interlocked.Decrement(ref progressingCount) < 0)
+        {
+            throw new InvalidOperationException("LLM Chat dispatcher progress registration is unbalanced.");
+        }
+    }
+
     private sealed class ExecutorRegistration(LlmChatOperationDispatchSignal owner) : IDisposable
     {
         private int disposed;
@@ -51,6 +76,19 @@ public sealed class LlmChatOperationDispatchSignal : ILlmChatOperationDispatchSi
             if (Interlocked.Exchange(ref disposed, 1) == 0)
             {
                 owner.UnregisterExecutor();
+            }
+        }
+    }
+
+    private sealed class ProgressRegistration(LlmChatOperationDispatchSignal owner) : IDisposable
+    {
+        private int disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref disposed, 1) == 0)
+            {
+                owner.EndProgress();
             }
         }
     }

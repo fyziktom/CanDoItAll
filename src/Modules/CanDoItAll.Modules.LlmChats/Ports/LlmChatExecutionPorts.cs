@@ -171,11 +171,26 @@ public interface ILlmChatOperationDispatchSignal
 {
     bool HasAvailableExecutor { get; }
 
+    LlmChatDispatchAvailability Availability { get; }
+
     IDisposable RegisterExecutor();
+
+    IDisposable BeginProgress();
 
     void Signal();
 
     ValueTask WaitAsync(TimeSpan maximumDelay, CancellationToken cancellationToken = default);
+}
+
+public readonly record struct LlmChatDispatchAvailability(
+    int RegisteredWorkers,
+    int ProgressingWorkers)
+{
+    public bool IsRegistered => RegisteredWorkers > 0;
+
+    public bool HasIdleWorker => RegisteredWorkers > ProgressingWorkers;
+
+    public bool IsSaturated => IsRegistered && !HasIdleWorker;
 }
 
 public interface ILlmChatOperationScopeAccessor

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Pass`
 
 ## Objective
 
@@ -27,6 +27,8 @@
 ## Exact Source References
 
 - `repo://src/Modules/CanDoItAll.Modules.LlmChats/Application/LlmChatStreamingOptions.cs`
+- `repo://src/Modules/CanDoItAll.Modules.LlmChats/Application/LlmChatExecutionLeaseOptions.cs`
+- `repo://src/Modules/CanDoItAll.Modules.LlmChats/Application/LlmChatTransferOptions.cs`
 - `repo://src/Modules/CanDoItAll.Modules.LlmChats/LlmChatsModuleServiceCollectionExtensions.cs`
 - `repo://src/Modules/CanDoItAll.Modules.LlmChats/Application/LlmChatOperationDispatcher.cs`
 - `repo://src/App/CanDoItAll.Composition/LlmChatOperationDispatcherHostedService.cs`
@@ -34,6 +36,7 @@
 - `repo://src/Modules/CanDoItAll.Modules.LlmChats.Persistence/DatabaseTransfer`
 - `repo://src/Modules/CanDoItAll.Modules.LlmChats.Persistence/EntityConfigurations/LlmChatOperationConfigurations.cs`
 - `repo://tests/Unit/CanDoItAll.Tests.Unit/LlmChatOperationTests.cs`
+- `repo://tests/Unit/CanDoItAll.Tests.Unit/LlmChatCapacityConfigurationTests.cs`
 - `repo://tests/Unit/CanDoItAll.Tests.Unit/LlmChatProviderRuntimeTests.cs`
 - `repo://tests/Integration/CanDoItAll.Tests.Integration/LlmChatPersistenceIntegrationTests.cs`
 
@@ -59,7 +62,7 @@
 - Test solutions: Unit and Integration lanes.
 - Filters: exact new options/dispatcher/transfer cases under `CanDoItAll.Tests.Unit.LlmChats` and LLM Chat persistence integration.
 - Selection reason: startup binding and deterministic worker caps can be direct; leases/transfer require durable integration.
-- Expected named cases: `Configured_streaming_and_dispatch_values_bind_from_configuration`, `Omitted_configuration_preserves_validated_safe_defaults`, `Invalid_streaming_bound_combination_fails_startup`, `Chunk_bound_cannot_exceed_persisted_event_text_bound`, `Aggregate_bound_cannot_exceed_canonical_message_bound`, `Configured_workers_never_exceed_concurrency_cap`, `Slow_conversation_does_not_starve_unrelated_conversation`, `Workers_never_execute_two_active_turns_for_one_conversation`, `Queued_age_expires_without_provider_dispatch`, `Operation_duration_after_dispatch_becomes_evidence_safe_outcome`, `Shutdown_drains_all_started_workers`, `Availability_distinguishes_registration_from_progress`, `Transfer_rejects_invalid_operation_invocation_event_graph`, and `Transfer_rejects_over_bound_document_before_materialization` (14 cases).
+- Expected named cases: `Configured_streaming_and_dispatch_values_bind_from_configuration`, `Omitted_configuration_preserves_validated_safe_defaults`, `Invalid_streaming_bound_combination_fails_startup`, `Chunk_bound_cannot_exceed_persisted_event_text_bound`, `Aggregate_bound_cannot_exceed_canonical_message_bound`, `Configured_workers_never_exceed_concurrency_cap`, `Slow_conversation_does_not_starve_unrelated_conversation`, `Workers_never_execute_two_active_turns_for_one_conversation`, `Queued_age_expires_without_provider_dispatch`, `Operation_duration_after_dispatch_becomes_evidence_safe_outcome`, `Shutdown_drains_all_started_workers`, `Availability_distinguishes_registration_from_progress`, `Transfer_rejects_invalid_operation_invocation_event_graph`, `Transfer_rejects_over_bound_document_before_materialization`, and `Transfer_uses_one_bounded_snapshot_when_source_changes_after_preflight` (15 cases).
 - Invalidation keys: options contracts/section names/defaults, DI binding, hosted service/dispatcher, lease claim, message/event bounds, transfer schema/validator/materializer.
 - Broad-gate decision: deferred to SB10 for Composition/DI/schema/transfer cross-cutting changes.
 
@@ -70,7 +73,7 @@
 3. Fan out a fixed configured number of dispatcher workers over existing database claims; no in-memory queue.
 4. Add deterministic fake-time queue-age and total-duration transitions with safe pre/post-dispatch classification.
 5. Make operational availability/progress/saturation logs accurate and allowlisted.
-6. Validate transfer counts before allocating child graphs, then enum/state/relation integrity; include every final schema field.
+6. Validate transfer counts before allocating child graphs, hold one repeatable-read source snapshot, cap actual materialization by collection and remaining aggregate budget, then validate enum/state/relation integrity; include every final schema field.
 7. Prove worker cap, independent progress, same-conversation serialization, shutdown drain, expiration, and transfer bounds.
 8. Build Core/Persistence/Composition/Web/Migrations; list/run exact Unit/PostgreSQL cases and pending-model/transfer checks.
 
@@ -113,10 +116,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Fourteen named cases discover and pass.
-- [ ] Invalid configuration fails before traffic.
-- [ ] Worker/age/duration/transfer bounds are deterministic and durable.
-- [ ] Pending-model and changed project builds pass.
+- [x] Fifteen named cases discover and pass.
+- [x] Invalid configuration fails before traffic.
+- [x] Worker/age/duration/transfer bounds are deterministic and durable.
+- [x] Pending-model and changed project builds pass.
 
 ## Proof Required
 
@@ -128,7 +131,7 @@
 
 ## Progression Gate
 
-- SB08 starts after SB07; CP2 waits for SB08 to pass.
+- SB07 passed. SB08 is unlocked; CP2 waits for SB08 to pass.
 
 ## Reopen Triggers
 

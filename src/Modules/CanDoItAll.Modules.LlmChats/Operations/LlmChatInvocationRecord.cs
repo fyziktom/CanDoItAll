@@ -28,7 +28,9 @@ public sealed record LlmChatInvocationRecord
         string failureCode,
         DateTimeOffset startedAtUtc,
         DateTimeOffset completedAtUtc,
-        string correlationId)
+        string correlationId,
+        LlmStreamingDeliveryMode deliveryMode = LlmStreamingDeliveryMode.CompletedFallback,
+        string finishReason = "")
     {
         if (operationId.Value == Guid.Empty)
         {
@@ -46,11 +48,37 @@ public sealed record LlmChatInvocationRecord
             throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown invocation outcome.");
         }
 
+        if (!Enum.IsDefined(deliveryMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(deliveryMode), deliveryMode, "Unknown delivery mode.");
+        }
+
         ArgumentNullException.ThrowIfNull(usage);
         ArgumentOutOfRangeException.ThrowIfLessThan(ordinal, 1);
         if (completedAtUtc < startedAtUtc)
         {
             throw new ArgumentException("Completed time cannot precede started time.", nameof(completedAtUtc));
+        }
+
+        var normalizedFinishReason = finishReason?.Trim() ?? string.Empty;
+        if (outcome == LlmChatInvocationOutcome.Succeeded && normalizedFinishReason.Length == 0)
+        {
+            normalizedFinishReason = "completed";
+        }
+        if (normalizedFinishReason.Length > MaximumFinishReasonLength)
+        {
+            throw new ArgumentException("An invocation finish reason is too long.", nameof(finishReason));
+        }
+
+        if ((outcome == LlmChatInvocationOutcome.Succeeded) != (normalizedFinishReason.Length > 0))
+        {
+            throw new ArgumentException("The finish reason does not match the invocation outcome.", nameof(finishReason));
+        }
+
+        var redactedFailureCode = LlmChatOperationStateChangedEvent.RedactFailureCode(failureCode ?? string.Empty);
+        if ((outcome == LlmChatInvocationOutcome.Succeeded) == !string.IsNullOrEmpty(redactedFailureCode))
+        {
+            throw new ArgumentException("The failure code does not match the invocation outcome.", nameof(failureCode));
         }
 
         OperationId = operationId;
@@ -66,14 +94,18 @@ public sealed record LlmChatInvocationRecord
             nameof(model));
         RequestedThinkingEffort = requestedThinkingEffort;
         EffectiveThinkingEffort = effectiveThinkingEffort;
+        DeliveryMode = deliveryMode;
+        FinishReason = normalizedFinishReason;
         Ordinal = ordinal;
         Usage = usage;
         Outcome = outcome;
-        FailureCode = failureCode?.Trim() ?? string.Empty;
+        FailureCode = redactedFailureCode;
         StartedAtUtc = startedAtUtc;
         CompletedAtUtc = completedAtUtc;
         CorrelationId = correlationId?.Trim() ?? string.Empty;
     }
+
+    public const int MaximumFinishReasonLength = 100;
 
     public LlmChatOperationId OperationId { get; }
 
@@ -88,6 +120,10 @@ public sealed record LlmChatInvocationRecord
     public AgentReasoningEffortLevel? RequestedThinkingEffort { get; }
 
     public AgentReasoningEffortLevel? EffectiveThinkingEffort { get; }
+
+    public LlmStreamingDeliveryMode DeliveryMode { get; }
+
+    public string FinishReason { get; }
 
     public int Ordinal { get; }
 

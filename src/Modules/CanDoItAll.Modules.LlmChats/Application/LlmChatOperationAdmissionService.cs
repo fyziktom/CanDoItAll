@@ -13,6 +13,7 @@ public sealed class LlmChatOperationAdmissionService(
     ILlmChatConversationRepository conversationRepository,
     ILlmChatOperationRepository operationRepository,
     ILlmChatTurnStateRepository turnStateRepository,
+    ILlmChatOperationDispatchSignal dispatchSignal,
     ILlmChatUnitOfWork unitOfWork,
     ILlmChatConversationEngine conversationEngine,
     ILlmChatOperationEvidenceSink evidenceSink,
@@ -61,6 +62,11 @@ public sealed class LlmChatOperationAdmissionService(
                 return Matches(existing, command, requestFingerprint)
                     ? Result<LlmChatSendAdmission>.Success(new(existing, false))
                     : Result<LlmChatSendAdmission>.Failure(LlmChatErrors.OperationIdConflict());
+            }
+
+            if (!dispatchSignal.HasAvailableExecutor)
+            {
+                return Result<LlmChatSendAdmission>.Failure(LlmChatErrors.DispatcherUnavailable());
             }
 
             if (conversation.Status == LlmChatConversationStatus.Archived)

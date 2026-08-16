@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete — Pass at c3c7713927b9519200900583f227ead95fafb5e9`
 
 ## Objective
 
@@ -114,11 +114,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Actual source/dependency commits and worktree exclusions recorded.
-- [ ] Every predecessor SB classified.
-- [ ] Current discovery and focused baseline recorded.
-- [ ] No unexplained failure.
-- [ ] CP0 Governed proof passes.
+- [x] Actual source/dependency commits and worktree exclusions recorded.
+- [x] Every predecessor SB classified.
+- [x] Current discovery and focused baseline recorded.
+- [x] No unexplained failure.
+- [x] CP0 Governed proof passes.
 
 ## Proof Required
 

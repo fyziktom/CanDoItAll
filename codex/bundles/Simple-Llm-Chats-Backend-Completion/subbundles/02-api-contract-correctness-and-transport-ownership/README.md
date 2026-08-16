@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete — Pass on the working-tree candidate based on c3c7713927b9519200900583f227ead95fafb5e9`
 
 ## Objective
 
@@ -118,11 +118,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Twelve named host/PostgreSQL cases discover and pass.
-- [ ] Read/manage authorization and secret sentinels are proven.
-- [ ] Route names/templates unchanged except the additive editor route.
-- [ ] Core/Persistence/Web Release builds pass.
-- [ ] Documentation check passes.
+- [x] Twelve named host/PostgreSQL cases discover and pass.
+- [x] Read/manage authorization and secret sentinels are proven.
+- [x] Route names/templates unchanged except the additive editor route.
+- [x] Core/Persistence/Web Release builds pass.
+- [x] Documentation check passes.
 
 ## Proof Required
 

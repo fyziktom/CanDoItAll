@@ -20,6 +20,23 @@ public sealed class EfLlmChatDefinitionRepository(AppDbContext dbContext) : ILlm
         return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
     }
 
+    public async Task<LlmChatDefinition?> TryGetForUpdateAsync(
+        LlmChatDefinitionId id,
+        CancellationToken cancellationToken = default)
+    {
+        var row = await dbContext.Set<LlmChatDefinitionRow>()
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "LlmChats_Definitions"
+                WHERE "Id" = {id.Value}
+                FOR UPDATE
+                """)
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return row is null ? null : LlmChatPersistenceMapper.ToDomain(row);
+    }
+
     public async Task<LlmChatDefinitionRevision?> TryGetRevisionAsync(
         LlmChatDefinitionId id,
         LlmChatDefinitionRevisionNumber revision,
@@ -112,7 +129,7 @@ public sealed class EfLlmChatDefinitionRepository(AppDbContext dbContext) : ILlm
             .ConfigureAwait(false);
         if (affected != 1)
         {
-            throw new DbUpdateConcurrencyException("The LLM Chat definition changed before it could be persisted.");
+            throw new LlmChatPersistenceConcurrencyException(LlmChatConcurrencyResource.Definition);
         }
 
         if (appendedRevision is not null)

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Pass`
 
 ## Objective
 
@@ -50,7 +50,7 @@
 - Test solution: `repo://tests/Solutions/CanDoItAll.Tests.Unit.slnx`.
 - Filter: exact new methods in `CanDoItAll.Tests.Unit.AgentFramework.ProviderBackedLlmStreamingInvocationAdapterTests` plus current retry/cancellation cases in that class.
 - Selection reason: direct log capture must inspect structured state and public exception while preserving adapter state machine.
-- Expected named cases: `Preparation_failure_logs_only_allowlisted_context`, `Provider_attempt_failure_logs_only_allowlisted_context`, `Raw_provider_body_exception_endpoint_credential_path_and_prompts_never_enter_logs`, `Redaction_preserves_retry_before_first_delta`, and `Redaction_preserves_cancellation_semantics` (5 cases).
+- Expected named cases: `Preparation_failure_logs_only_allowlisted_context`, `Preparation_deadline_exposes_only_sanitized_public_exception`, `Provider_attempt_failure_logs_only_allowlisted_context`, `Raw_provider_body_exception_endpoint_credential_path_and_prompts_never_enter_logs`, `Redaction_preserves_retry_before_first_delta`, and `Redaction_preserves_cancellation_semantics` (6 cases).
 - Invalidation keys: provider adapter logging/catch/classification, driver exception construction, logger test sink, retry/cancellation state machine.
 - Broad-gate decision: deferred to SB10 because ProviderRuntime is shared by workflows and chats.
 
@@ -102,10 +102,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Five named cases discover and pass.
-- [ ] All captured log/public/durable outputs exclude sentinels.
-- [ ] Retry/cancellation behavior unchanged.
-- [ ] ProviderRuntime Release build passes.
+- [x] Six named cases discover and pass.
+- [x] All captured log/public/durable outputs exclude sentinels.
+- [x] Retry/cancellation behavior unchanged.
+- [x] ProviderRuntime Release build passes.
 
 ## Proof Required
 
@@ -117,7 +117,7 @@
 
 ## Progression Gate
 
-- SB09 cannot start until SB08 passes and its changes are integrated with the main lane.
+- SB08 and CP2 passed. SB09 is unlocked.
 
 ## Reopen Triggers
 

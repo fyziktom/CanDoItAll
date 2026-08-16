@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,7 @@ internal sealed class LlmChatOperationConfiguration : IEntityTypeConfiguration<L
         builder.HasKey(row => row.Id);
         builder.Property(row => row.RequestFingerprint).HasMaxLength(64).IsFixedLength().IsRequired();
         builder.Property(row => row.FailureCode).HasMaxLength(200).IsRequired();
+        builder.Property(row => row.LastEventSequence).IsRequired();
         builder.Property(row => row.ConcurrencyToken).IsConcurrencyToken();
         builder.HasOne<LlmChatConversationRow>()
             .WithMany()
@@ -35,6 +37,9 @@ internal sealed class LlmChatInvocationRecordConfiguration : IEntityTypeConfigur
         builder.Property(row => row.ProviderName).HasMaxLength(LlmConversationProviderSnapshot.MaximumNameLength).IsRequired();
         builder.Property(row => row.Model).HasMaxLength(LlmConversationProviderSnapshot.MaximumModelLength).IsRequired();
         builder.Property(row => row.FailureCode).HasMaxLength(200).IsRequired();
+        builder.Property(row => row.FinishReason)
+            .HasMaxLength(LlmChatInvocationRecord.MaximumFinishReasonLength)
+            .IsRequired();
         builder.Property(row => row.CorrelationId).HasMaxLength(LlmInvocationRequest.MaximumCorrelationIdLength).IsRequired();
         builder.HasOne<LlmChatOperationRow>()
             .WithMany()
@@ -50,12 +55,17 @@ internal sealed class LlmChatOperationEventConfiguration : IEntityTypeConfigurat
     {
         builder.ToTable("LlmChats_OperationEvents");
         builder.HasKey(row => new { row.OperationId, row.Sequence });
-        builder.Property(row => row.Text).HasMaxLength(8 * 1024).IsRequired();
+        builder.Property(row => row.Text)
+            .HasMaxLength(LlmChatStreamingLimits.MaximumPersistedEventTextBytes)
+            .IsRequired();
         builder.Property(row => row.Model)
             .HasMaxLength(LlmChatOperationStateChangedEvent.MaximumModelLength)
             .IsRequired();
         builder.Property(row => row.FailureCode)
             .HasMaxLength(LlmChatOperationStateChangedEvent.MaximumFailureCodeLength)
+            .IsRequired();
+        builder.Property(row => row.FinishReason)
+            .HasMaxLength(LlmChatInvocationRecord.MaximumFinishReasonLength)
             .IsRequired();
         builder.HasOne<LlmChatOperationRow>()
             .WithMany()

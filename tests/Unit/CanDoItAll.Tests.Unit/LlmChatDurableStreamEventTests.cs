@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
@@ -74,7 +75,11 @@ public sealed class LlmChatDurableStreamEventTests
             operationScope,
             options,
             timeProvider);
-        var pipeline = new LlmChatStreamingPipeline(journal, options, timeProvider);
+        var pipeline = new LlmChatStreamingPipeline(
+            journal,
+            options,
+            timeProvider,
+            new LlmChatStreamingConsumerState());
         using var executionScope = operationScope.Push(new LlmChatOperationExecutionContext(
             operationId,
             runtimeIdentity)
@@ -165,7 +170,11 @@ public sealed class LlmChatDurableStreamEventTests
             operationScope,
             options,
             TimeProvider.System);
-        var pipeline = new LlmChatStreamingPipeline(journal, options, TimeProvider.System);
+        var pipeline = new LlmChatStreamingPipeline(
+            journal,
+            options,
+            TimeProvider.System,
+            new LlmChatStreamingConsumerState());
         var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var executionScope = operationScope.Push(new LlmChatOperationExecutionContext(
@@ -186,6 +195,233 @@ public sealed class LlmChatDurableStreamEventTests
         release.SetResult();
         var result = await consumeTask.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal("small", result.ResponseText);
+    }
+
+    [Fact]
+    public async Task Stream_limit_records_one_consistent_failure_across_all_evidence()
+    {
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FixedTimeProvider(now);
+        var provider = ProviderRuntimeTestData.CreateProvider();
+        var operationId = LlmChatOperationId.New();
+        var ownerId = LlmChatExecutionOwnerId.New();
+        var executionLease = new LlmChatExecutionLeaseIdentity(operationId, ownerId, 1);
+        var operations = new InMemoryLlmChatOperationRepository();
+        operations.Seed(new LlmChatOperation(
+            operationId,
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            0,
+            LlmChatOperationStatus.Running,
+            now,
+            0)
+        {
+            TurnAdmittedAtUtc = now,
+            ExecutionOwnerId = ownerId,
+            ExecutionEpoch = executionLease.Epoch,
+            ClaimedAtUtc = now,
+            HeartbeatAtUtc = now,
+            LeaseExpiresAtUtc = now.AddMinutes(1)
+        });
+        var unitOfWork = new InlineLlmChatUnitOfWork();
+        var operationScope = new LlmChatOperationScopeAccessor();
+        var invocations = new InMemoryLlmChatInvocationRecordRepository();
+        var eventRepository = new InMemoryLlmChatOperationEventRepository(operations);
+        var options = new LlmChatStreamingOptions
+        {
+            MinimumChunkBytes = 1,
+            MaximumChunkBytes = 8,
+            MaximumResponseCharacters = 4,
+            MaximumResponseBytes = 8
+        };
+        var journal = new LlmChatOperationEventJournal(
+            operations,
+            eventRepository,
+            unitOfWork,
+            new NoopLlmChatOperationEventSignal(),
+            operationScope,
+            options,
+            timeProvider);
+        var evidence = new LlmChatOperationEvidenceService(
+            operations,
+            invocations,
+            unitOfWork,
+            operationScope,
+            timeProvider,
+            journal);
+        var consumerState = new LlmChatStreamingConsumerState();
+        var audited = new AuditedLlmChatStreamingInvocationPort(
+            new SequenceStreamingInvocationPort(
+            [
+                new LlmStreamingAttemptStarted(
+                    1,
+                    provider.Id,
+                    provider.Kind,
+                    "safe-model",
+                    LlmStreamingDeliveryMode.Incremental,
+                    now),
+                new LlmStreamingTextDelta(1, "12345", 1),
+                new LlmStreamingCompleted(
+                    1,
+                    "safe-model",
+                    "stop",
+                    LlmUsage.Zero,
+                    LlmStreamingDeliveryMode.Incremental,
+                    now.AddSeconds(1))
+            ]),
+            evidence,
+            new ProviderModelCapabilityResolver(),
+            operationScope,
+            timeProvider,
+            consumerState);
+        var pipeline = new LlmChatStreamingPipeline(journal, options, timeProvider, consumerState);
+        var request = new LlmInvocationRequest(
+            provider,
+            "safe-model",
+            [new LlmMessage(LlmMessageRole.User, "hello")],
+            correlationId: operationId.ToString());
+        using var scope = operationScope.Push(new LlmChatOperationExecutionContext(
+            operationId,
+            new LlmChatRuntimeIdentity(Guid.NewGuid(), new string('b', 64), 1))
+        {
+            ExecutionLease = executionLease
+        });
+
+        var exception = await Assert.ThrowsAsync<LlmChatConversationEngineException>(() =>
+            pipeline.ConsumeAsync(operationId, audited.StreamAsync(request)));
+        Assert.Equal(LlmChatErrorCodes.StreamLimitExceeded, exception.Code);
+        await evidence.CompleteFailureAsync(operationId, now.AddSeconds(2), exception.Code);
+
+        var invocation = Assert.Single(await invocations.ListAsync(operationId));
+        Assert.Equal(LlmChatInvocationOutcome.Failed, invocation.Outcome);
+        Assert.Equal(LlmChatErrorCodes.StreamLimitExceeded, invocation.FailureCode);
+        var page = await journal.ListAfterAsync(operationId, 0, 10);
+        Assert.NotNull(page);
+        var attempt = Assert.Single(page.Events.OfType<LlmChatOperationAttemptFinishedEvent>());
+        Assert.Equal(LlmChatErrorCodes.StreamLimitExceeded, attempt.FailureCode);
+        Assert.Equal("safe-model", attempt.Model);
+        Assert.Equal(LlmStreamingDeliveryMode.Incremental, attempt.DeliveryMode);
+        var terminal = Assert.Single(page.Events.OfType<LlmChatOperationStateChangedEvent>());
+        Assert.Equal(LlmChatOperationStatus.Failed, terminal.Status);
+        Assert.Equal(LlmChatErrorCodes.StreamLimitExceeded, terminal.FailureCode);
+        Assert.Equal(
+            LlmChatOperationStatus.Failed,
+            (await operations.TryGetAsync(operationId))!.Status);
+    }
+
+    [Fact]
+    public async Task Signal_state_evicts_many_completed_operations_without_lost_terminal_replay()
+    {
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new MutableEventTimeProvider(now);
+        var lease = new MutableLlmChatRuntimeLease();
+        var operationId = LlmChatOperationId.New();
+        var operations = new InMemoryLlmChatOperationRepository();
+        var operation = new LlmChatOperation(
+            operationId,
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            0,
+            LlmChatOperationStatus.Succeeded,
+            now,
+            0)
+        {
+            CompletedAtUtc = now,
+            ResultingTranscriptRevision = 1,
+            AssistantEntryId = Guid.NewGuid()
+        };
+        operations.Seed(operation);
+        var scope = new LlmChatOperationScopeAccessor();
+        var events = new InMemoryLlmChatOperationEventRepository(operations);
+        var signal = new LlmChatOperationEventSignal(timeProvider);
+        var options = new LlmChatStreamingOptions();
+        var journal = new LlmChatOperationEventJournal(
+            operations,
+            events,
+            new InlineLlmChatUnitOfWork(),
+            signal,
+            scope,
+            options,
+            timeProvider);
+        using (scope.Push(new LlmChatOperationExecutionContext(operationId, lease.Identity)))
+        {
+            await journal.AppendStateChangedAsync(operation, "model", LlmUsage.Zero);
+        }
+
+        foreach (var value in Enumerable.Range(1, 5_000))
+        {
+            signal.Publish(lease.Identity, new LlmChatOperationId(GuidFromInt32(value)), 1);
+        }
+
+        timeProvider.Advance(TimeSpan.FromMinutes(6));
+        signal.Publish(lease.Identity, LlmChatOperationId.New(), 1);
+        Assert.InRange(GetSignalStateCount(signal), 1, 4_096);
+
+        var factory = new LlmChatOperationEventStreamSessionFactory(
+            new TestLlmChatRuntimeLeaseFactory(lease),
+            scope,
+            journal,
+            options);
+        var opened = await factory.OpenAsync(operationId);
+        Assert.True(opened.IsSuccess);
+        await using var session = opened.Value!;
+        var page = await session.ReadAsync(0, 10, TimeSpan.FromSeconds(1));
+        Assert.True(page.Operation.IsTerminal);
+        Assert.Single(page.Events);
+    }
+
+    [Fact]
+    public void Retention_schedule_evicts_old_profile_generations()
+    {
+        var schedule = new LlmChatOperationEventRetentionSchedule();
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var profileId = Guid.NewGuid();
+        var previous = new LlmChatRuntimeIdentity(profileId, new string('a', 64), 1);
+        var current = new LlmChatRuntimeIdentity(profileId, new string('b', 64), 2);
+        var interval = TimeSpan.FromHours(1);
+        Assert.True(schedule.TryAcquire(previous, now, interval));
+        schedule.Complete(previous, now, interval, retryImmediately: false);
+
+        Assert.True(schedule.TryAcquire(current, now.AddMinutes(1), interval));
+        schedule.Complete(current, now.AddMinutes(1), interval, retryImmediately: false);
+
+        Assert.True(schedule.TryAcquire(previous, now.AddMinutes(2), interval));
+        schedule.Complete(previous, now.AddMinutes(2), interval, retryImmediately: false);
+        foreach (var value in Enumerable.Range(1, 200))
+        {
+            var identity = new LlmChatRuntimeIdentity(
+                GuidFromInt32(10_000 + value),
+                new string('c', 64),
+                1);
+            Assert.True(schedule.TryAcquire(identity, now.AddMinutes(3), interval));
+            schedule.Complete(identity, now.AddMinutes(3), interval, retryImmediately: false);
+        }
+
+        Assert.InRange(GetScheduleStateCount(schedule), 1, 128);
+    }
+
+    [Fact]
+    public async Task Eviction_racing_wait_and_publish_remains_poll_correct()
+    {
+        var signal = new LlmChatOperationEventSignal(TimeProvider.System);
+        var identity = new LlmChatRuntimeIdentity(Guid.NewGuid(), new string('a', 64), 1);
+        var operationId = LlmChatOperationId.New();
+        var waiting = signal.WaitAsync(identity, operationId, 0, TimeSpan.FromSeconds(5)).AsTask();
+
+        var pressure = Task.Run(() =>
+        {
+            foreach (var value in Enumerable.Range(1, 5_000))
+            {
+                signal.Publish(identity, new LlmChatOperationId(GuidFromInt32(value)), 1);
+            }
+        });
+        signal.Publish(identity, operationId, 1);
+
+        await waiting.WaitAsync(TimeSpan.FromSeconds(5));
+        await pressure.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.InRange(GetSignalStateCount(signal), 1, 4_096);
     }
 
     private static async IAsyncEnumerable<LlmStreamingUpdate> FailedUpdates(DateTimeOffset now)
@@ -216,5 +452,45 @@ public sealed class LlmChatDurableStreamEventTests
             LlmUsage.Zero,
             LlmStreamingDeliveryMode.Incremental,
             now.AddSeconds(1));
+    }
+
+    private static Guid GuidFromInt32(int value)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        BitConverter.TryWriteBytes(bytes, value);
+        return new Guid(bytes);
+    }
+
+    private static int GetSignalStateCount(LlmChatOperationEventSignal signal)
+    {
+        var field = typeof(LlmChatOperationEventSignal).GetField(
+            "_states",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var states = field?.GetValue(signal)
+            ?? throw new InvalidOperationException("Signal state storage was not found.");
+        return (int)(states.GetType().GetProperty("Count")?.GetValue(states)
+            ?? throw new InvalidOperationException("Signal state count was not found."));
+    }
+
+    private static int GetScheduleStateCount(LlmChatOperationEventRetentionSchedule schedule)
+    {
+        var field = typeof(LlmChatOperationEventRetentionSchedule).GetField(
+            "_states",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var states = field?.GetValue(schedule)
+            ?? throw new InvalidOperationException("Retention schedule storage was not found.");
+        return (int)(states.GetType().GetProperty("Count")?.GetValue(states)
+            ?? throw new InvalidOperationException("Retention schedule state count was not found."));
+    }
+
+    private sealed class MutableEventTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        private DateTimeOffset _utcNow = utcNow;
+
+        public override DateTimeOffset GetUtcNow()
+            => _utcNow;
+
+        public void Advance(TimeSpan duration)
+            => _utcNow += duration;
     }
 }

@@ -266,12 +266,32 @@ internal sealed class InMemoryLlmChatExecutionLeaseHeartbeatStore(
             operation.Status == LlmChatOperationStatus.CancellationRequested);
 }
 
+internal sealed class ThrowingLlmChatExecutionLeaseHeartbeatStore(Exception exception) :
+    ILlmChatExecutionLeaseHeartbeatStore
+{
+    public Task<LlmChatExecutionLeaseObservation> RenewAndObserveAsync(
+        LlmChatExecutionLeaseIdentity lease,
+        LlmChatRuntimeIdentity runtimeIdentity,
+        DateTimeOffset observedAtUtc,
+        DateTimeOffset leaseExpiresAtUtc,
+        CancellationToken cancellationToken = default)
+        => Task.FromException<LlmChatExecutionLeaseObservation>(exception);
+
+    public Task<LlmChatExecutionLeaseObservation> ObserveAsync(
+        LlmChatExecutionLeaseIdentity lease,
+        LlmChatRuntimeIdentity runtimeIdentity,
+        DateTimeOffset observedAtUtc,
+        CancellationToken cancellationToken = default)
+        => Task.FromException<LlmChatExecutionLeaseObservation>(exception);
+}
+
 internal sealed class EvidenceAwareLlmChatConversationEngine(
     ILlmChatOperationEvidenceSink evidence,
     TimeProvider timeProvider,
     bool blockDispatch,
     bool blockUntilCancelled,
-    bool failAfterPartial) : ILlmChatConversationEngine
+    bool failAfterPartial,
+    bool profileChangeAfterDispatch) : ILlmChatConversationEngine
 {
     private readonly Dictionary<LlmChatConversationId, LlmChatConversationEngineState> states = [];
     private readonly Dictionary<LlmChatOperationId, LlmChatConversationTurnEvidence> turnEvidence = [];
@@ -280,6 +300,12 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public TaskCompletionSource<bool> DispatchStarted { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource<bool> DispatchCancelled { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource<bool> DispatchExited { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public int SendCount { get; private set; }
@@ -403,6 +429,12 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
         await evidence.MarkProviderDispatchStartedAsync(operationId, started, cancellationToken);
         yield return started;
         DispatchStarted.TrySetResult(true);
+        if (profileChangeAfterDispatch)
+        {
+            DispatchExited.TrySetResult(true);
+            throw new LlmChatRuntimeProfileChangedException();
+        }
+
         try
         {
             if (blockUntilCancelled)
@@ -432,6 +464,8 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
                 now,
                 timeProvider.GetUtcNow(),
                 operationId.ToString()), CancellationToken.None);
+            DispatchCancelled.TrySetResult(true);
+            DispatchExited.TrySetResult(true);
             throw;
         }
 
@@ -486,6 +520,7 @@ internal sealed class EvidenceAwareLlmChatConversationEngine(
             usage,
             LlmStreamingDeliveryMode.Incremental,
             timeProvider.GetUtcNow());
+        DispatchExited.TrySetResult(true);
     }
 
     public Task<LlmChatConversationEngineTurnResult> CompleteTurnAsync(
@@ -679,7 +714,9 @@ internal sealed class LlmChatOperationHarness
         bool blockDispatch = false,
         bool blockUntilCancelled = false,
         bool executorAvailable = true,
-        bool failAfterPartial = false)
+        bool failAfterPartial = false,
+        Exception? heartbeatFailure = null,
+        bool profileChangeAfterDispatch = false)
     {
         var now = new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
         var timeProvider = new FixedTimeProvider(now);
@@ -729,19 +766,21 @@ internal sealed class LlmChatOperationHarness
             timeProvider,
             blockDispatch,
             blockUntilCancelled,
-            failAfterPartial);
+            failAfterPartial,
+            profileChangeAfterDispatch);
         engine.SeedConversation(conversationId);
         var cancellations = new LlmChatOperationCancellationRegistry();
         var details = new LlmChatOperationDetailsReader(
             operations,
             new InMemoryLlmChatOperationReadStore(operations, invocations),
-            engine,
-            eventJournal);
+            engine);
+        var dispatchSignal = new LlmChatOperationDispatchSignal();
         var admission = new LlmChatOperationAdmissionService(
             definitions,
             conversations,
             operations,
             new StubLlmChatTurnStateRepository(),
+            dispatchSignal,
             unitOfWork,
             engine,
             evidence,
@@ -756,7 +795,6 @@ internal sealed class LlmChatOperationHarness
             details,
             timeProvider,
             NullLogger<LlmChatOperationStateMachine>.Instance);
-        var dispatchSignal = new LlmChatOperationDispatchSignal();
         IDisposable executorRegistration = executorAvailable
             ? dispatchSignal.RegisterExecutor()
             : new CancellationTokenSource();
@@ -770,7 +808,9 @@ internal sealed class LlmChatOperationHarness
         var options = new LlmChatExecutionLeaseOptions
         {
             PollInterval = TimeSpan.FromMilliseconds(100),
-            HeartbeatInterval = TimeSpan.FromMilliseconds(100),
+            HeartbeatInterval = heartbeatFailure is null
+                ? TimeSpan.FromMilliseconds(100)
+                : TimeSpan.FromMilliseconds(1),
             LeaseDuration = TimeSpan.FromSeconds(1)
         };
         var leaseService = new LlmChatExecutionLeaseService(
@@ -778,22 +818,27 @@ internal sealed class LlmChatOperationHarness
             unitOfWork,
             options,
             timeProvider,
-            eventJournal);
+            eventJournal,
+            NullLogger<LlmChatExecutionLeaseService>.Instance);
         var streamingPipeline = new LlmChatStreamingPipeline(
             eventJournal,
             streamingOptions,
-            timeProvider);
+            timeProvider,
+            new LlmChatStreamingConsumerState());
+        ILlmChatExecutionLeaseHeartbeatStore heartbeatStore = heartbeatFailure is null
+            ? new InMemoryLlmChatExecutionLeaseHeartbeatStore(operations)
+            : new ThrowingLlmChatExecutionLeaseHeartbeatStore(heartbeatFailure);
         var executor = new LlmChatOperationExecutor(
             definitions,
             conversations,
             engine,
-            new InMemoryLlmChatExecutionLeaseHeartbeatStore(operations),
+            heartbeatStore,
             cancellations,
             operationScope,
             streamingPipeline,
             stateMachine,
             options,
-            timeProvider,
+            heartbeatFailure is null ? timeProvider : TimeProvider.System,
             NullLogger<LlmChatOperationExecutor>.Instance);
         var runtimeIdentity = new LlmChatRuntimeIdentity(
             ProviderRuntimeTestData.RuntimeIdentity.ActiveProfileId!.Value,
@@ -829,13 +874,15 @@ internal sealed class LlmChatOperationHarness
         return await Service.GetAsync(command.OperationId);
     }
 
-    public async Task DispatchAsync(LlmChatOperationId operationId)
+    public async Task DispatchAsync(
+        LlmChatOperationId operationId,
+        CancellationToken cancellationToken = default)
     {
         using var scope = operationScope.Push(new LlmChatOperationExecutionContext(operationId, runtimeIdentity));
-        var claim = await leaseService.TryClaimAsync(operationId, ownerId);
+        var claim = await leaseService.TryClaimAsync(operationId, ownerId, cancellationToken);
         if (claim.Claimed)
         {
-            await executor.ExecuteAsync(claim);
+            await executor.ExecuteAsync(claim, cancellationToken);
         }
     }
 

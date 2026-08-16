@@ -2,7 +2,13 @@
 
 ## Status
 
-- `Ready`
+- `Blocked at entry`
+
+## Current Blocker
+
+- SB09/CP3 passed against a frozen application/test hash set, but that working-tree candidate has not been committed.
+- Running the one allowed broad Stable gate now would violate the requirement that it run at the exact frozen CP3 commit, and the required same-commit Windows/Ubuntu/macOS CI matrix cannot be dispatched without commit/push authority.
+- None of the SB10 restore/build/list/broad/CI commands has been credited or run. Resume only after the candidate is committed without source drift and authority exists to push/observe that exact commit.
 
 ## Objective
 

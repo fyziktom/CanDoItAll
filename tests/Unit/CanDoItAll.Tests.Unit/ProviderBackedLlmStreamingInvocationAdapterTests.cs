@@ -3,24 +3,126 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
 {
+    private const string PreparationLogTemplate =
+        "LLM streaming runtime preparation failed. ProviderId={ProviderId} ProviderKind={ProviderKind} Model={Model} CorrelationId={CorrelationId}";
+    private const string AttemptLogTemplate =
+        "LLM streaming provider attempt failed. ProviderId={ProviderId} ProviderKind={ProviderKind} Model={Model} CorrelationId={CorrelationId} AttemptOrdinal={AttemptOrdinal} FailureKind={FailureKind} PartialOutputVisible={PartialOutputVisible}";
+    private static readonly string[] SensitiveValues =
+    [
+        "sensitive-provider-body-1a8f",
+        "sensitive-inner-exception-2b9e",
+        "https://sensitive-endpoint-3c0d.invalid/v1",
+        "SENSITIVE_CREDENTIAL_4D1C",
+        "sensitive-local-path-5e2b",
+        "sensitive-system-instruction-6f3a",
+        "sensitive-user-prompt-7a49"
+    ];
+
     [Fact]
-    public async Task StreamAsync_retries_before_the_first_delta_and_exposes_monotonic_attempt_outcomes()
+    public async Task Preparation_failure_logs_only_allowlisted_context()
     {
+        var logger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
+        var request = CreateSensitiveRequest();
+        var adapter = CreatePreparationFailureAdapter(CreateSensitiveFailure(), logger);
+
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => CollectAsync(adapter.StreamAsync(request)));
+
+        Assert.Equal(LlmInvocationFailureKind.ProviderFailure, exception.Kind);
+        Assert.Null(exception.InnerException);
+        var entry = Assert.Single(logger.Entries);
+        AssertPreparationLog(entry, request);
+        AssertSensitiveValuesAbsent(exception.ToString(), Serialize(entry));
+    }
+
+    [Fact]
+    public async Task Preparation_deadline_exposes_only_sanitized_public_exception()
+    {
+        var logger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
+        var runtimePool = new DeadlineRuntimePool();
+        var adapter = new ProviderBackedLlmStreamingInvocationAdapter(
+            new ProviderProfileRuntimeDescriptorStore(),
+            runtimePool,
+            TimeProvider.System,
+            logger);
+        var request = CreateSensitiveRequest(TimeSpan.FromMilliseconds(50));
+
+        var exception = await Assert.ThrowsAsync<LlmInvocationException>(() => CollectAsync(adapter.StreamAsync(request)));
+
+        Assert.Equal(LlmInvocationFailureKind.DeadlineExceeded, exception.Kind);
+        Assert.Null(exception.InnerException);
+        Assert.Equal(1, runtimePool.GetRequiredCallCount);
+        Assert.Empty(logger.Entries);
+        AssertSensitiveValuesAbsent(exception.ToString());
+    }
+
+    [Fact]
+    public async Task Provider_attempt_failure_logs_only_allowlisted_context()
+    {
+        var logger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
+        var failure = CreateSensitiveFailure();
+        var driver = new RecordingStreamingDriver((request, attempt, cancellationToken) =>
+            FailWithExceptionAfterDelta(failure, cancellationToken));
+        var adapter = CreateAdapter(driver, logger);
+        var request = CreateRequest(correlationId: "safe-attempt-correlation");
+
+        var updates = await CollectAsync(adapter.StreamAsync(request));
+
+        var entry = Assert.Single(logger.Entries);
+        AssertAttemptLog(entry, request, partialOutputVisible: true);
+        Assert.Equal(1, driver.StreamCallCount);
+        Assert.IsType<LlmStreamingFailed>(updates[^1]);
+        AssertSensitiveValuesAbsent(Serialize(entry), string.Join('|', updates));
+    }
+
+    [Fact]
+    public async Task Raw_provider_body_exception_endpoint_credential_path_and_prompts_never_enter_logs()
+    {
+        var request = CreateSensitiveRequest();
+        var failure = CreateSensitiveFailure();
+        var attemptLogger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
+        var driver = new RecordingStreamingDriver((providerRequest, attempt, cancellationToken) =>
+            FailWithExceptionAfterDelta(failure, cancellationToken));
+        var attemptAdapter = CreateAdapter(driver, attemptLogger);
+        var updates = await CollectAsync(attemptAdapter.StreamAsync(request));
+        var preparationLogger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
+        var preparationAdapter = CreatePreparationFailureAdapter(failure, preparationLogger);
+        var publicException = await Assert.ThrowsAsync<LlmInvocationException>(
+            () => CollectAsync(preparationAdapter.StreamAsync(request)));
+
+        Assert.Null(publicException.InnerException);
+        var attemptEntry = Assert.Single(attemptLogger.Entries);
+        var preparationEntry = Assert.Single(preparationLogger.Entries);
+        AssertAttemptLog(attemptEntry, request, partialOutputVisible: true);
+        AssertPreparationLog(preparationEntry, request);
+        AssertSensitiveValuesAbsent(
+            Serialize(attemptEntry),
+            Serialize(preparationEntry),
+            publicException.ToString(),
+            string.Join('|', updates));
+    }
+
+    [Fact]
+    public async Task Redaction_preserves_retry_before_first_delta()
+    {
+        var logger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
         var driver = new RecordingStreamingDriver((request, attempt, cancellationToken) =>
             attempt == 1
                 ? FailBeforeDelta(cancellationToken)
                 : CompleteIncrementally(request.Model, "recovered", cancellationToken));
-        var adapter = CreateAdapter(driver);
+        var adapter = CreateAdapter(driver, logger);
+        var request = CreateRequest(correlationId: "safe-retry-correlation");
 
-        var updates = await CollectAsync(adapter.StreamAsync(CreateRequest()));
+        var updates = await CollectAsync(adapter.StreamAsync(request));
 
         Assert.Equal(2, driver.StreamCallCount);
+        AssertAttemptLog(Assert.Single(logger.Entries), request, partialOutputVisible: false);
         Assert.Collection(
             updates,
             update => Assert.Equal(1, Assert.IsType<LlmStreamingAttemptStarted>(update).AttemptOrdinal),
@@ -152,12 +254,13 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
     }
 
     [Fact]
-    public async Task StreamAsync_keeps_caller_cancellation_cooperative()
+    public async Task Redaction_preserves_cancellation_semantics()
     {
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var logger = new CapturingLogger<ProviderBackedLlmStreamingInvocationAdapter>();
         var driver = new RecordingStreamingDriver((request, attempt, cancellationToken) =>
             BlockUntilCancelled(cancellationToken, started));
-        var adapter = CreateAdapter(driver);
+        var adapter = CreateAdapter(driver, logger);
         using var cancellation = new CancellationTokenSource();
         var collect = CollectAsync(adapter.StreamAsync(CreateRequest(), cancellation.Token));
         await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -166,6 +269,7 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => collect);
         Assert.Equal(1, driver.StreamCallCount);
+        Assert.Empty(logger.Entries);
     }
 
     private static async IAsyncEnumerable<ProviderChatStreamingUpdate> FailBeforeDelta(
@@ -186,6 +290,16 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
         cancellationToken.ThrowIfCancellationRequested();
         yield return new ProviderChatTextDelta("partial");
         throw new InvalidOperationException("must not trigger a retry");
+    }
+
+    private static async IAsyncEnumerable<ProviderChatStreamingUpdate> FailWithExceptionAfterDelta(
+        Exception failure,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
+        yield return new ProviderChatTextDelta("safe-partial-output");
+        throw failure;
     }
 
     private static async IAsyncEnumerable<ProviderChatStreamingUpdate> FailWith(
@@ -229,7 +343,9 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
         yield return new ProviderChatTextDelta("unreachable");
     }
 
-    private static ProviderBackedLlmStreamingInvocationAdapter CreateAdapter(IAgentProviderDriver driver)
+    private static ProviderBackedLlmStreamingInvocationAdapter CreateAdapter(
+        IAgentProviderDriver driver,
+        ILogger<ProviderBackedLlmStreamingInvocationAdapter>? logger = null)
     {
         var factory = new AgentProviderDriverRegistryBuilder().AddDriver(driver).Build();
         var store = new ProviderProfileRuntimeDescriptorStore();
@@ -238,10 +354,21 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
             store,
             pool,
             TimeProvider.System,
-            NullLogger<ProviderBackedLlmStreamingInvocationAdapter>.Instance);
+            logger ?? NullLogger<ProviderBackedLlmStreamingInvocationAdapter>.Instance);
     }
 
-    private static LlmInvocationRequest CreateRequest(TimeSpan? timeout = null)
+    private static ProviderBackedLlmStreamingInvocationAdapter CreatePreparationFailureAdapter(
+        Exception failure,
+        ILogger<ProviderBackedLlmStreamingInvocationAdapter> logger)
+        => new(
+            new ProviderProfileRuntimeDescriptorStore(),
+            new ThrowingRuntimePool(failure),
+            TimeProvider.System,
+            logger);
+
+    private static LlmInvocationRequest CreateRequest(
+        TimeSpan? timeout = null,
+        string correlationId = "")
     {
         var provider = new ProviderProfile(
             Guid.NewGuid(),
@@ -265,8 +392,45 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
             provider,
             provider.DefaultModel,
             [new LlmMessage(LlmMessageRole.User, "hello")],
-            timeout: timeout);
+            timeout: timeout,
+            correlationId: correlationId);
     }
+
+    private static LlmInvocationRequest CreateSensitiveRequest(TimeSpan? timeout = null)
+    {
+        var provider = new ProviderProfile(
+            Guid.NewGuid(),
+            "Safe streaming provider",
+            ProviderKind.OpenAi,
+            SensitiveValues[2],
+            SensitiveValues[3],
+            "gpt-streaming",
+            ProviderTransportKind.ChatCompletions,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: false,
+            PreferFrameworkManagedChatHistory: true,
+            SupportsBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            Notes: SensitiveValues[4],
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: ["gpt-streaming"]);
+        return new LlmInvocationRequest(
+            provider,
+            provider.DefaultModel,
+            [
+                new LlmMessage(LlmMessageRole.System, SensitiveValues[5]),
+                new LlmMessage(LlmMessageRole.User, SensitiveValues[6])
+            ],
+            timeout: timeout,
+            correlationId: "safe-redaction-correlation");
+    }
+
+    private static Exception CreateSensitiveFailure()
+        => new InvalidOperationException(
+            string.Join('|', SensitiveValues),
+            new ApplicationException(SensitiveValues[1]));
 
     private static async Task<List<T>> CollectAsync<T>(IAsyncEnumerable<T> source)
     {
@@ -277,6 +441,173 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapterTests
         }
 
         return values;
+    }
+
+    private static void AssertPreparationLog(
+        CapturedLogEntry entry,
+        LlmInvocationRequest request)
+    {
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal(default, entry.EventId);
+        Assert.Null(entry.Exception);
+        Assert.Equal(PreparationLogTemplate, entry.Template);
+        Assert.Equal(
+            ["CorrelationId", "Model", "ProviderId", "ProviderKind"],
+            entry.Properties.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(request.Provider.Id, entry.Properties["ProviderId"]);
+        Assert.Equal(request.Provider.Kind, entry.Properties["ProviderKind"]);
+        Assert.Equal(request.Model, entry.Properties["Model"]);
+        Assert.Equal(request.CorrelationId, entry.Properties["CorrelationId"]);
+    }
+
+    private static void AssertAttemptLog(
+        CapturedLogEntry entry,
+        LlmInvocationRequest request,
+        bool partialOutputVisible)
+    {
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal(default, entry.EventId);
+        Assert.Null(entry.Exception);
+        Assert.Equal(AttemptLogTemplate, entry.Template);
+        Assert.Equal(
+            [
+                "AttemptOrdinal",
+                "CorrelationId",
+                "FailureKind",
+                "Model",
+                "PartialOutputVisible",
+                "ProviderId",
+                "ProviderKind"
+            ],
+            entry.Properties.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(request.Provider.Id, entry.Properties["ProviderId"]);
+        Assert.Equal(request.Provider.Kind, entry.Properties["ProviderKind"]);
+        Assert.Equal(request.Model, entry.Properties["Model"]);
+        Assert.Equal(request.CorrelationId, entry.Properties["CorrelationId"]);
+        Assert.Equal(1, entry.Properties["AttemptOrdinal"]);
+        Assert.Equal(LlmInvocationFailureKind.ProviderFailure, entry.Properties["FailureKind"]);
+        Assert.Equal(partialOutputVisible, entry.Properties["PartialOutputVisible"]);
+    }
+
+    private static void AssertSensitiveValuesAbsent(params string[] outputs)
+    {
+        var combined = string.Join('|', outputs);
+        foreach (var sensitiveValue in SensitiveValues)
+        {
+            Assert.DoesNotContain(sensitiveValue, combined, StringComparison.Ordinal);
+        }
+    }
+
+    private static string Serialize(CapturedLogEntry entry)
+        => string.Join('|',
+            entry.Template,
+            entry.RenderedMessage,
+            string.Join('|', entry.Properties.Select(pair => $"{pair.Key}={pair.Value}")),
+            entry.Exception?.ToString() ?? string.Empty);
+
+    private sealed record CapturedLogEntry(
+        LogLevel Level,
+        EventId EventId,
+        string Template,
+        IReadOnlyDictionary<string, object?> Properties,
+        Exception? Exception,
+        string RenderedMessage);
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<CapturedLogEntry> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+            => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var values = state is IEnumerable<KeyValuePair<string, object?>> structured
+                ? structured.ToArray()
+                : [];
+            var template = values
+                .FirstOrDefault(pair => pair.Key == "{OriginalFormat}")
+                .Value?
+                .ToString() ?? string.Empty;
+            var properties = values
+                .Where(pair => pair.Key != "{OriginalFormat}")
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+            Entries.Add(new CapturedLogEntry(
+                logLevel,
+                eventId,
+                template,
+                properties,
+                exception,
+                formatter(state, exception)));
+        }
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static NullScope Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class ThrowingRuntimePool(Exception failure) : IProviderRuntimePool
+    {
+        public ValueTask<IProviderRuntimeHandle> GetRequiredAsync(
+            Guid providerProfileId,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromException<IProviderRuntimeHandle>(failure);
+
+        public ValueTask InvalidateAsync(
+            Guid providerProfileId,
+            ProviderRuntimeInvalidationReason reason,
+            CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask DisposeAsync()
+            => ValueTask.CompletedTask;
+    }
+
+    private sealed class DeadlineRuntimePool : IProviderRuntimePool
+    {
+        public int GetRequiredCallCount { get; private set; }
+
+        public async ValueTask<IProviderRuntimeHandle> GetRequiredAsync(
+            Guid providerProfileId,
+            CancellationToken cancellationToken = default)
+        {
+            GetRequiredCallCount++;
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(
+                    string.Join('|', SensitiveValues),
+                    new InvalidOperationException(SensitiveValues[1]),
+                    cancellationToken);
+            }
+
+            throw new InvalidOperationException("The deadline runtime pool completed without cancellation.");
+        }
+
+        public ValueTask InvalidateAsync(
+            Guid providerProfileId,
+            ProviderRuntimeInvalidationReason reason,
+            CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public ValueTask DisposeAsync()
+            => ValueTask.CompletedTask;
     }
 
     private sealed class RecordingStreamingDriver(

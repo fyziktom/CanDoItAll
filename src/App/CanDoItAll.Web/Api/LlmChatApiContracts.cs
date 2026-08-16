@@ -82,6 +82,29 @@ internal sealed record LlmChatDefinitionApiResponse(
     public string? RevisionReason { get; init; }
 }
 
+internal sealed record LlmChatDefinitionEditorApiResponse(
+    Guid Id,
+    string Name,
+    string Summary,
+    string AvatarImageUrl,
+    LlmChatDefinitionStatus Status,
+    int Revision,
+    string SystemPrompt,
+    Guid ProviderProfileId,
+    string ProviderName,
+    [property: JsonConverter(typeof(LlmChatCamelCaseEnumJsonConverter<ProviderKind>))]
+    ProviderKind ProviderKind,
+    string Model,
+    [property: JsonConverter(typeof(LlmChatNullableCamelCaseEnumJsonConverter<AgentReasoningEffortLevel>))]
+    AgentReasoningEffortLevel? ThinkingEffort,
+    LlmChatModelSettingsApiResponse ModelSettings,
+    LlmChatResponseFormatApiResponse? ResponseFormat,
+    IReadOnlyList<string> Tags,
+    string RevisionReason,
+    long ConcurrencyToken,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc);
+
 internal sealed record LlmChatModelSettingsApiResponse(
     double? Temperature,
     JsonElement ModelParameterConfiguration,

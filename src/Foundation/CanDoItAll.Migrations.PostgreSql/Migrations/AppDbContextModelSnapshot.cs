@@ -3254,6 +3254,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<int>("DeliveryMode")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("EffectiveThinkingEffort")
                         .HasColumnType("integer");
 
@@ -3261,6 +3264,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FinishReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("InputTokens")
                         .HasColumnType("integer");
@@ -3373,6 +3381,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("FinishReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<int?>("InputTokens")
                         .HasColumnType("integer");
 
@@ -3458,6 +3471,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
+
+                    b.Property<long>("LastEventSequence")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");

@@ -28,6 +28,8 @@ public sealed record LlmChatOperationDetails(
     LlmChatAssistantMessage? AssistantMessage,
     IReadOnlyList<LlmChatInvocationRecord> Invocations)
 {
+    public const int MaximumInvocationRecords = 100;
+
     public bool Replayed { get; init; }
 
     public long LastEventSequence { get; init; }

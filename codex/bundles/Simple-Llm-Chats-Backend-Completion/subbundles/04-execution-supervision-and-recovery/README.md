@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete — CP1 Pass`
 
 ## Objective
 
@@ -33,7 +33,7 @@
 - `repo://src/App/CanDoItAll.Web/Api/LlmChatOperationsApi.cs`
 - `repo://tests/Unit/CanDoItAll.Tests.Unit/LlmChatOperationTests.cs`
 - `repo://tests/Integration/CanDoItAll.Tests.Integration/LlmChatsTurnApiIntegrationTests.cs`
-- `repo://tests/Integration/CanDoItAll.Tests.Integration/LlmChatsApiPostgreSqlIntegrationTests.cs`
+- `repo://tests/Integration/CanDoItAll.Tests.Integration/LlmChatTransactionalConcurrencyIntegrationTests.cs`
 
 ## UI Composition Contract
 
@@ -56,7 +56,7 @@
 - Test solutions: Unit and Integration lanes.
 - Filters: exact new executor/recovery cases plus `LlmChatsRecoveryApiIntegrationTests`.
 - Selection reason: direct task lifetime needs deterministic unit barriers; route/status/durable evidence needs real host/PostgreSQL.
-- Expected named cases: `Heartbeat_failure_cancels_and_drains_started_provider`, `Provider_failure_during_heartbeat_failure_is_observed_once`, `Shutdown_cancels_and_drains_provider_before_scope_release`, `Profile_switch_after_dispatch_preserves_recovery_required_without_redispatch`, `Reconcile_known_failed_attempt_settles_failed`, `Reconcile_known_cancelled_attempt_settles_cancelled`, `Reconcile_committed_transcript_settles_succeeded`, `Reconcile_ambiguous_dispatch_remains_recovery_required`, `Reconcile_rejects_live_owner`, and `Reconcile_route_requires_manage_scope_and_returns_stable_errors` (10 cases).
+- Expected named cases: `Heartbeat_failure_cancels_and_drains_started_provider`, `Provider_failure_during_heartbeat_failure_is_observed_once`, `Shutdown_cancels_and_drains_provider_before_scope_release`, `Profile_switch_after_dispatch_preserves_recovery_required_without_redispatch`, `Reconcile_known_failed_attempt_settles_failed`, `Reconcile_known_cancelled_attempt_settles_cancelled`, `Reconcile_committed_transcript_settles_succeeded`, `Reconcile_ambiguous_dispatch_remains_recovery_required`, `Reconcile_rejects_live_owner`, `Reconcile_route_requires_manage_scope_and_returns_stable_errors`, `Reconcile_live_owner_rejects_without_mutating_persisted_evidence`, `Reconcile_persisted_failed_attempt_settles_operation_and_compensates_transcript`, and `Reconcile_ambiguous_post_dispatch_evidence_stays_recovery_required_without_redispatch` (13 cases).
 - Invalidation keys: executor, heartbeat/lease, provider port, cancellation registry, state machine/reducer, operation service, reconcile route/auth.
 - Broad-gate decision: deferred to SB10 for hosted execution and public route changes.
 
@@ -109,10 +109,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Ten named cases discover and pass.
-- [ ] Provider task is completed/observed on every tested exit.
-- [ ] Reconcile route and exact scope pass real-host proof.
-- [ ] CP1 review passes.
+- [x] Thirteen named cases discover and pass.
+- [x] Provider task is completed/observed on every tested exit.
+- [x] Reconcile route and exact scope pass real-host proof.
+- [x] CP1 review passes.
 
 ## Proof Required
 

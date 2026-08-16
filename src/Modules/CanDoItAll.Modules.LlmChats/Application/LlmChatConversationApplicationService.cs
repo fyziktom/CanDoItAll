@@ -20,31 +20,32 @@ public sealed class LlmChatConversationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var definition = await definitionRepository.TryGetAsync(command.DefinitionId, cancellationToken)
-            .ConfigureAwait(false);
-        if (definition is null)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.DefinitionNotFound());
-        }
-
-        if (definition.Status != LlmChatDefinitionStatus.Active)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.DefinitionNotActive());
-        }
-
-        var revision = await definitionRepository.TryGetRevisionAsync(
-            definition.Id,
-            definition.CurrentRevision,
-            cancellationToken).ConfigureAwait(false);
-        if (revision is null)
-        {
-            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted());
-        }
-
         try
         {
             return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
             {
+                var definition = await definitionRepository.TryGetForUpdateAsync(
+                    command.DefinitionId,
+                    transactionCancellationToken).ConfigureAwait(false);
+                if (definition is null)
+                {
+                    return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.DefinitionNotFound());
+                }
+
+                if (definition.Status != LlmChatDefinitionStatus.Active)
+                {
+                    return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.DefinitionNotActive());
+                }
+
+                var revision = await definitionRepository.TryGetRevisionAsync(
+                    definition.Id,
+                    definition.CurrentRevision,
+                    transactionCancellationToken).ConfigureAwait(false);
+                if (revision is null)
+                {
+                    return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted());
+                }
+
                 var id = LlmChatConversationId.New();
                 var title = LlmChatConversationTitlePolicy.Normalize(command.Title);
                 var now = timeProvider.GetUtcNow();
@@ -130,6 +131,11 @@ public sealed class LlmChatConversationApplicationService(
         catch (ArgumentException exception)
         {
             return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
+        }
+        catch (LlmChatPersistenceConcurrencyException exception)
+            when (exception.Resource is LlmChatConcurrencyResource.Conversation)
+        {
+            return Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageConflict());
         }
     }
 

@@ -149,6 +149,7 @@ internal static class LlmChatPersistenceMapper
             ResultingTranscriptRevision = operation.ResultingTranscriptRevision,
             AssistantEntryId = operation.AssistantEntryId,
             FailureCode = operation.FailureCode,
+            LastEventSequence = operation.LastEventSequence,
             ConcurrencyToken = operation.ConcurrencyToken
         };
 
@@ -156,7 +157,7 @@ internal static class LlmChatPersistenceMapper
         => new(
             new LlmChatOperationId(row.Id),
             new LlmChatConversationId(row.ConversationId),
-            row.Kind,
+            ValidateOperationKind(row.Kind),
             new LlmChatRequestFingerprint(row.RequestFingerprint),
             row.ExpectedTranscriptRevision,
             row.Status,
@@ -180,8 +181,14 @@ internal static class LlmChatPersistenceMapper
             CompletedAtUtc = row.CompletedAtUtc,
             ResultingTranscriptRevision = row.ResultingTranscriptRevision,
             AssistantEntryId = row.AssistantEntryId,
-            FailureCode = row.FailureCode
+            FailureCode = row.FailureCode,
+            LastEventSequence = row.LastEventSequence
         };
+
+    private static LlmChatOperationKind ValidateOperationKind(LlmChatOperationKind kind)
+        => kind is LlmChatOperationKind.SendTurn
+            ? kind
+            : throw new InvalidDataException($"Stored LLM Chat operation kind '{(int)kind}' is invalid.");
 
     public static LlmChatInvocationRecordRow ToRow(LlmChatInvocationRecord record)
         => new()
@@ -193,6 +200,8 @@ internal static class LlmChatPersistenceMapper
             Model = record.Model,
             RequestedThinkingEffort = record.RequestedThinkingEffort,
             EffectiveThinkingEffort = record.EffectiveThinkingEffort,
+            DeliveryMode = record.DeliveryMode,
+            FinishReason = record.FinishReason,
             Ordinal = record.Ordinal,
             InputTokens = record.Usage.InputTokens,
             OutputTokens = record.Usage.OutputTokens,
@@ -219,5 +228,7 @@ internal static class LlmChatPersistenceMapper
             row.FailureCode,
             row.StartedAtUtc,
             row.CompletedAtUtc,
-            row.CorrelationId);
+            row.CorrelationId,
+            row.DeliveryMode,
+            row.FinishReason);
 }

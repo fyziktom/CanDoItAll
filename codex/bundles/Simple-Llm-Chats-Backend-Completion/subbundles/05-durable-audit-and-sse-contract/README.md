@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete — Pass`
 
 ## Objective
 
@@ -113,11 +113,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Eight named cases discover and pass.
-- [ ] API/SSE secret scan passes.
-- [ ] High-water survives retention/restart/transfer.
-- [ ] Migration snapshot and pending-model check pass.
-- [ ] Changed project Release builds pass.
+- [x] Eight named cases discover and pass.
+- [x] API/SSE secret scan passes.
+- [x] High-water survives retention/restart/transfer.
+- [x] Migration snapshot and pending-model check pass.
+- [x] Changed project Release builds pass.
 
 ## Proof Required
 

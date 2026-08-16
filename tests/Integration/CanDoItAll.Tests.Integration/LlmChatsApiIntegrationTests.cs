@@ -237,7 +237,7 @@ public sealed class LlmChatsSecurityApiIntegrationTests
                 collection.AddSingleton<ILlmChatConversationApplicationService, StubLlmChatConversationApplicationService>();
                 collection.AddSingleton<ILlmChatOperationApplicationService>(operations);
             },
-            useInMemoryDatabase: true);
+            useInMemoryDatabase: false);
         var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
         var conversationRoute =
             $"/api/llm-chats/{StubLlmChatDefinitionApplicationService.DefinitionId.Value:D}/conversations";

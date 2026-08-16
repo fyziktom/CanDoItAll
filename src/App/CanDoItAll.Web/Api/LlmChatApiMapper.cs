@@ -73,6 +73,37 @@ internal static class LlmChatApiMapper
     public static LlmChatDefinitionApiResponse ToDetailResponse(LlmChatDefinitionDetails details)
         => ToResponse(details, includeEditorFields: true);
 
+    public static LlmChatDefinitionEditorApiResponse ToEditorResponse(LlmChatDefinitionDetails details)
+        => new(
+            details.Definition.Id.Value,
+            details.Definition.Name,
+            details.Definition.Summary,
+            details.Definition.AvatarImageUrl,
+            details.Definition.Status,
+            details.Revision.Revision.Value,
+            details.Revision.SystemPrompt,
+            details.Revision.ProviderProfileId,
+            details.Revision.ProviderName,
+            details.Revision.ProviderKind,
+            details.Revision.Model,
+            details.Revision.Settings.ThinkingEffort,
+            new LlmChatModelSettingsApiResponse(
+                details.Revision.Settings.Temperature,
+                ParseJson(details.Revision.Settings.ModelParameterConfigurationJson, JsonValueKind.Object),
+                details.Revision.Timeout?.TotalSeconds),
+            details.Revision.ResponseFormat is { } format
+                ? new LlmChatResponseFormatApiResponse(
+                    format.RequireJson,
+                    ParseJson(format.SchemaJson, JsonValueKind.Object),
+                    format.SchemaName,
+                    format.SchemaDescription)
+                : null,
+            details.NormalizedTags,
+            details.Revision.Reason,
+            details.Definition.ConcurrencyToken,
+            details.Definition.CreatedAtUtc,
+            details.Definition.UpdatedAtUtc);
+
     public static LlmChatConversationApiResponse ToResponse(LlmChatConversationDetails details)
     {
         var response = new LlmChatConversationApiResponse(

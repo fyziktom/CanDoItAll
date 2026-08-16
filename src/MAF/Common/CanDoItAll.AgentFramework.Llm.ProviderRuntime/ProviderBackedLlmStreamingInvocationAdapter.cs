@@ -41,7 +41,7 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapter(
                 handle = await GetRuntimeHandleAsync(provider, deadlineCancellation.Token).ConfigureAwait(false);
                 dispatchPlan = ResolveDispatchPlan(handle, payload);
             }
-            catch (OperationCanceledException exception) when (
+            catch (OperationCanceledException) when (
                 !cancellationToken.IsCancellationRequested && deadlineCancellation.IsCancellationRequested)
             {
                 throw new LlmInvocationException(
@@ -49,17 +49,15 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapter(
                     provider.Name,
                     model,
                     request.CorrelationId,
-                    exception,
-                    aggregateUsage);
+                    usage: aggregateUsage);
             }
             catch (OperationCanceledException)
             {
                 throw;
             }
-            catch (Exception exception)
+            catch (Exception)
             {
                 logger.LogWarning(
-                    exception,
                     "LLM streaming runtime preparation failed. ProviderId={ProviderId} ProviderKind={ProviderKind} Model={Model} CorrelationId={CorrelationId}",
                     provider.Id,
                     provider.Kind,
@@ -70,8 +68,7 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapter(
                     provider.Name,
                     model,
                     request.CorrelationId,
-                    exception,
-                    aggregateUsage);
+                    usage: aggregateUsage);
             }
 
             if (dispatchPlan is null)
@@ -203,7 +200,6 @@ public sealed class ProviderBackedLlmStreamingInvocationAdapter(
             if (dispatchFailure is not null)
             {
                 logger.LogWarning(
-                    dispatchFailure,
                     "LLM streaming provider attempt failed. ProviderId={ProviderId} ProviderKind={ProviderKind} Model={Model} CorrelationId={CorrelationId} AttemptOrdinal={AttemptOrdinal} FailureKind={FailureKind} PartialOutputVisible={PartialOutputVisible}",
                     provider.Id,
                     provider.Kind,

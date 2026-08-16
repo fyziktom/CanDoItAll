@@ -45,7 +45,7 @@ public sealed class EfLlmChatConversationRepository(AppDbContext dbContext) : IL
             .ConfigureAwait(false);
         if (affected != 1)
         {
-            throw new DbUpdateConcurrencyException("The LLM Chat conversation changed before it could be persisted.");
+            throw new LlmChatPersistenceConcurrencyException(LlmChatConcurrencyResource.Conversation);
         }
     }
 }

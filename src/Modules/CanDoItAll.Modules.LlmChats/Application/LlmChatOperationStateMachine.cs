@@ -80,28 +80,46 @@ public sealed class LlmChatOperationStateMachine(
             return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.OperationNotFound());
         }
 
-        if (operation.IsTerminal ||
-            operation.Status == LlmChatOperationStatus.RecoveryRequired ||
-            operation.HasLiveExecutionLease(timeProvider.GetUtcNow()) ||
-            operation.ProviderDispatchStartedAtUtc is null)
+        if (operation.IsTerminal || operation.ProviderDispatchStartedAtUtc is null)
         {
             return await detailsReader.BuildAsync(operation, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (operation.HasLiveExecutionLease(timeProvider.GetUtcNow()))
+        {
+            return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.ActiveTurnConflict());
         }
 
         return await ApplyReducerAsync(operation.Id, null, cancellationToken).ConfigureAwait(false);
     }
 
+    internal Task<Result<LlmChatOperationDetails>> ResolveControlFailureAsync(
+        LlmChatOperationId operationId,
+        string failureCode,
+        bool preservePostDispatchRecovery,
+        CancellationToken cancellationToken)
+        => ApplyReducerAsync(
+            operationId,
+            failureCode,
+            cancellationToken,
+            preservePostDispatchRecovery);
+
     internal async Task<Result<LlmChatOperationDetails>> ApplyReducerAsync(
         LlmChatOperationId operationId,
         string? fallbackFailureCode,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool preservePostDispatchRecovery = false)
     {
         try
         {
             var operation = await unitOfWork.ExecuteAsync(async token =>
             {
                 var current = await RequireLockedAsync(operationId, token).ConfigureAwait(false);
-                var decision = await ReduceAsync(current, false, token).ConfigureAwait(false);
+                var decision = preservePostDispatchRecovery && current.ProviderDispatchStartedAtUtc is not null
+                    ? new LlmChatOperationDecision(
+                        LlmChatOperationDecisionKind.RequireRecovery,
+                        fallbackFailureCode ?? LlmChatErrorCodes.OperationRecoveryRequired)
+                    : await ReduceAsync(current, false, token).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(fallbackFailureCode) &&
                     decision.Kind is LlmChatOperationDecisionKind.CompensateAndFail or
                         LlmChatOperationDecisionKind.MarkFailed)

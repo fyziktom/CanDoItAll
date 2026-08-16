@@ -54,6 +54,9 @@ internal static class LlmChatOperationEventApiMapper
                 DeliveryMode: item.DeliveryMode),
             LlmChatOperationAttemptFinishedEvent item => new LlmChatOperationEventPayloadApiResponse(
                 AttemptOrdinal: item.AttemptOrdinal,
+                Model: item.Model,
+                DeliveryMode: item.DeliveryMode,
+                FinishReason: EmptyToNull(item.FinishReason),
                 Outcome: item.Outcome,
                 Usage: ToUsage(item.Usage),
                 FailureCode: EmptyToNull(item.FailureCode),

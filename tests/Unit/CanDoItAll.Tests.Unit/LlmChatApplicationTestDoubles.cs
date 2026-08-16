@@ -250,7 +250,8 @@ internal sealed class InMemoryLlmChatOperationEventRepository(
         Func<long, LlmChatOperationEvent> createEvent,
         CancellationToken cancellationToken = default)
     {
-        if (await operations.TryGetAsync(operationId, cancellationToken) is null)
+        var operation = await operations.TryGetAsync(operationId, cancellationToken);
+        if (operation is null)
         {
             throw new InvalidOperationException("The operation does not exist.");
         }
@@ -262,8 +263,9 @@ internal sealed class InMemoryLlmChatOperationEventRepository(
             events.Add(operationId, journal);
         }
 
-        var appended = createEvent(journal.Count == 0 ? 1 : checked(journal[^1].Sequence + 1));
+        var appended = createEvent(checked(operation.LastEventSequence + 1));
         journal.Add(appended);
+        operations.Seed(operation with { LastEventSequence = appended.Sequence });
         return appended;
     }
 
@@ -284,7 +286,7 @@ internal sealed class InMemoryLlmChatOperationEventRepository(
             operation,
             [.. journal.Where(item => item.Sequence > afterSequence).Take(take)],
             journal.Count == 0 ? null : journal[0].Sequence,
-            journal.Count == 0 ? 0 : journal[^1].Sequence,
+            operation.LastEventSequence,
             journal.OfType<LlmChatOperationTextDeltaEvent>()
                 .Where(item => item.Sequence <= afterSequence)
                 .Sum(item => item.Text.Length));
@@ -299,10 +301,7 @@ internal sealed class InMemoryLlmChatOperationEventRepository(
             return null;
         }
 
-        var journal = events.GetValueOrDefault(operationId);
-        return journal is null || journal.Count == 0
-            ? 0
-            : journal[^1].Sequence;
+        return (await operations.TryGetAsync(operationId, cancellationToken))!.LastEventSequence;
     }
 
     public Task<int> DeleteExpiredTerminalEventsAsync(

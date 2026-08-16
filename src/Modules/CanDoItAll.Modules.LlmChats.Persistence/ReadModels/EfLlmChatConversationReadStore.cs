@@ -80,7 +80,10 @@ public sealed class EfLlmChatConversationReadStore(AppDbContext dbContext) : ILl
         var afterSequence = cursor?.Sequence ?? 0;
         var rows = await dbContext.Set<LlmChatMessageRow>()
             .AsNoTracking()
-            .Where(row => row.ConversationId == id.Value && row.Sequence > afterSequence)
+            .Where(row =>
+                row.ConversationId == id.Value &&
+                row.Sequence > afterSequence &&
+                row.Role != LlmMessageRole.System)
             .OrderBy(row => row.Sequence)
             .Take(checked(take + 1))
             .ToArrayAsync(cancellationToken)

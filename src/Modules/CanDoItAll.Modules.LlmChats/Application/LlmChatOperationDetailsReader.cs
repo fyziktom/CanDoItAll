@@ -8,8 +8,7 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 public sealed class LlmChatOperationDetailsReader(
     ILlmChatOperationRepository operationRepository,
     ILlmChatOperationReadStore readStore,
-    ILlmChatConversationEngine conversationEngine,
-    LlmChatOperationEventJournal eventJournal)
+    ILlmChatConversationEngine conversationEngine)
 {
     internal async Task<Result<LlmChatOperationDetails>> GetAsync(
         LlmChatOperationId operationId,
@@ -52,11 +51,9 @@ public sealed class LlmChatOperationDetailsReader(
                 item.Usage,
                 item.CreatedAtUtc)
             : null;
-        var lastEventSequence = await eventJournal.TryGetLatestSequenceAsync(operation.Id, cancellationToken)
-            .ConfigureAwait(false) ?? 0;
         return Result<LlmChatOperationDetails>.Success(new(operation, assistant, model.Invocations)
         {
-            LastEventSequence = lastEventSequence
+            LastEventSequence = operation.LastEventSequence
         });
     }
 

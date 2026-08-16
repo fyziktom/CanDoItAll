@@ -4,9 +4,7 @@ namespace CanDoItAll.Modules.LlmChats.Operations;
 
 public enum LlmChatOperationKind
 {
-    SendTurn,
-    Cancel,
-    Recover
+    SendTurn = 0
 }
 
 public enum LlmChatOperationStatus
@@ -30,6 +28,8 @@ public enum LlmChatDispatchPhase
 
 public sealed record LlmChatOperation
 {
+    private long lastEventSequence;
+
     public LlmChatOperation(
         LlmChatOperationId id,
         LlmChatConversationId conversationId,
@@ -123,6 +123,16 @@ public sealed record LlmChatOperation
     public Guid? AssistantEntryId { get; init; }
 
     public string FailureCode { get; init; } = string.Empty;
+
+    public long LastEventSequence
+    {
+        get => lastEventSequence;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            lastEventSequence = value;
+        }
+    }
 
     public long ConcurrencyToken { get; init; }
 

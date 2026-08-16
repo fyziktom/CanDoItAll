@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Ports;
@@ -13,7 +14,8 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
     ILlmChatOperationEvidenceSink evidenceSink,
     IProviderModelCapabilityResolver capabilityResolver,
     ILlmChatOperationScopeAccessor operationScope,
-    TimeProvider timeProvider) : ILlmStreamingInvocationPort
+    TimeProvider timeProvider,
+    LlmChatStreamingConsumerState consumerState) : ILlmStreamingInvocationPort
 {
     public async IAsyncEnumerable<LlmStreamingUpdate> StreamAsync(
         LlmInvocationRequest request,
@@ -25,6 +27,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
         var requestedEffort = request.Settings?.ThinkingEffort;
         var effectiveEffort = requestedEffort ??
             capabilityResolver.ResolveProviderDefaultThinkingEffort(request.Provider, request.Model);
+        consumerState.Reset();
         LlmStreamingAttemptStarted? activeAttempt = null;
         Exception? streamFailure = null;
         try
@@ -67,6 +70,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                                 requestedEffort,
                                 effectiveEffort,
                                 completed.AttemptOrdinal,
+                                completed.Model,
+                                completed.DeliveryMode,
+                                completed.FinishReason,
                                 completed.AttemptUsage,
                                 LlmChatInvocationOutcome.Succeeded,
                                 string.Empty,
@@ -81,6 +87,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                                 requestedEffort,
                                 effectiveEffort,
                                 failed.AttemptOrdinal,
+                                RequireActiveAttempt(activeAttempt, failed.AttemptOrdinal).Model,
+                                RequireActiveAttempt(activeAttempt, failed.AttemptOrdinal).DeliveryMode,
+                                string.Empty,
                                 failed.AttemptUsage,
                                 LlmChatInvocationOutcome.Failed,
                                 AuditedLlmChatInvocationPort.MapFailureCode(failed.FailureKind),
@@ -104,6 +113,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                         requestedEffort,
                         effectiveEffort,
                         activeAttempt.AttemptOrdinal,
+                        activeAttempt.Model,
+                        activeAttempt.DeliveryMode,
+                        string.Empty,
                         LlmUsage.Zero,
                         LlmChatInvocationOutcome.Cancelled,
                         LlmChatErrorCodes.Cancelled,
@@ -124,6 +136,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                     requestedEffort,
                     effectiveEffort,
                     activeAttempt.AttemptOrdinal,
+                    activeAttempt.Model,
+                    activeAttempt.DeliveryMode,
+                    string.Empty,
                     LlmUsage.Zero,
                     LlmChatInvocationOutcome.Failed,
                     LlmChatErrorCodes.ProviderUnavailable,
@@ -149,13 +164,16 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
                     requestedEffort,
                     effectiveEffort,
                     activeAttempt.AttemptOrdinal,
+                    activeAttempt.Model,
+                    activeAttempt.DeliveryMode,
+                    string.Empty,
                     LlmUsage.Zero,
                     cancellationToken.IsCancellationRequested
                         ? LlmChatInvocationOutcome.Cancelled
                         : LlmChatInvocationOutcome.Failed,
                     cancellationToken.IsCancellationRequested
                         ? LlmChatErrorCodes.Cancelled
-                        : LlmChatErrorCodes.ProviderUnavailable,
+                        : ResolveConsumerFailureCode(),
                     activeAttempt.StartedAtUtc,
                     timeProvider.GetUtcNow()).ConfigureAwait(false);
             }
@@ -168,6 +186,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
         AgentReasoningEffortLevel? requestedEffort,
         AgentReasoningEffortLevel? effectiveEffort,
         int ordinal,
+        string model,
+        LlmStreamingDeliveryMode deliveryMode,
+        string finishReason,
         LlmUsage usage,
         LlmChatInvocationOutcome outcome,
         string failureCode,
@@ -178,7 +199,7 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
             request.Provider.Id,
             request.Provider.Kind,
             request.Provider.Name,
-            request.Model,
+            model,
             requestedEffort,
             effectiveEffort,
             ordinal,
@@ -187,7 +208,9 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
             failureCode,
             startedAtUtc,
             completedAtUtc,
-            request.CorrelationId), CancellationToken.None);
+            request.CorrelationId,
+            deliveryMode,
+            finishReason), CancellationToken.None);
 
     private static DateTimeOffset RequireStartedAt(
         LlmStreamingAttemptStarted? activeAttempt,
@@ -199,5 +222,21 @@ public sealed class AuditedLlmChatStreamingInvocationPort(
         }
 
         return activeAttempt.StartedAtUtc;
+    }
+
+    private static LlmStreamingAttemptStarted RequireActiveAttempt(
+        LlmStreamingAttemptStarted? activeAttempt,
+        int terminalAttemptOrdinal)
+    {
+        RequireStartedAt(activeAttempt, terminalAttemptOrdinal);
+        return activeAttempt!;
+    }
+
+    private string ResolveConsumerFailureCode()
+    {
+        var failureCode = consumerState.ResolveFailureCode();
+        return string.IsNullOrEmpty(failureCode)
+            ? LlmChatErrorCodes.ProviderUnavailable
+            : failureCode;
     }
 }

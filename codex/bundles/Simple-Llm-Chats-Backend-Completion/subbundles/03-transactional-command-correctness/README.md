@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete — Pass on working-tree candidate based on c3c7713927b9519200900583f227ead95fafb5e9`
 
 ## Objective
 
@@ -108,10 +108,10 @@
 
 ## Acceptance Checklist
 
-- [ ] Ten named positive/negative/race cases discover and pass.
-- [ ] No duplicate provider/message/audit/event side effect on replay.
-- [ ] PostgreSQL canonical state matches returned conflict/success.
-- [ ] Changed project Release builds pass.
+- [x] Ten named positive/negative/race cases discover and pass.
+- [x] No duplicate provider/message/audit/event side effect on replay.
+- [x] PostgreSQL canonical state matches returned conflict/success.
+- [x] Changed project Release builds pass.
 
 ## Proof Required
 

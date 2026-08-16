@@ -11,6 +11,7 @@ public sealed class LlmChatOperationDispatcher(
     LlmChatExecutionLeaseService leaseService,
     LlmChatOperationExecutor executor,
     LlmChatOperationEventRetentionService eventRetention,
+    ILlmChatOperationDispatchSignal dispatchSignal,
     LlmChatExecutionLeaseOptions options,
     TimeProvider timeProvider,
     ILogger<LlmChatOperationDispatcher> logger)
@@ -30,8 +31,17 @@ public sealed class LlmChatOperationDispatcher(
                     token).ConfigureAwait(false);
                 foreach (var operationId in candidates)
                 {
-                    var claim = await leaseService.TryClaimAsync(operationId, ownerId, token)
-                        .ConfigureAwait(false);
+                    LlmChatExecutionClaimResult claim;
+                    using (dispatchSignal.BeginProgress())
+                    {
+                        claim = await leaseService.TryClaimAsync(operationId, ownerId, token)
+                            .ConfigureAwait(false);
+                        if (claim.Claimed)
+                        {
+                            await executor.ExecuteAsync(claim, token).ConfigureAwait(false);
+                        }
+                    }
+
                     if (claim.Recovered)
                     {
                         return Result<bool>.Success(true);
@@ -42,8 +52,18 @@ public sealed class LlmChatOperationDispatcher(
                         continue;
                     }
 
-                    await executor.ExecuteAsync(claim, token).ConfigureAwait(false);
                     return Result<bool>.Success(true);
+                }
+
+                if (candidates.Count > 0)
+                {
+                    var availability = dispatchSignal.Availability;
+                    logger.LogDebug(
+                        "LLM Chat dispatcher made no progress for {CandidateCount} candidate(s). RegisteredWorkers={RegisteredWorkers} ProgressingWorkers={ProgressingWorkers} Saturated={Saturated}.",
+                        candidates.Count,
+                        availability.RegisteredWorkers,
+                        availability.ProgressingWorkers,
+                        availability.IsSaturated);
                 }
 
                 return Result<bool>.Success(false);

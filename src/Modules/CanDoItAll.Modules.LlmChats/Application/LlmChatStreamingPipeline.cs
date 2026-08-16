@@ -8,7 +8,8 @@ namespace CanDoItAll.Modules.LlmChats.Application;
 public sealed class LlmChatStreamingPipeline(
     LlmChatOperationEventJournal eventJournal,
     LlmChatStreamingOptions options,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    LlmChatStreamingConsumerState consumerState)
 {
     public async Task<LlmInvocationResult> ConsumeAsync(
         LlmChatOperationId operationId,
@@ -66,6 +67,8 @@ public sealed class LlmChatStreamingPipeline(
                         await AppendChunkAsync(delta.AttemptOrdinal, chunk).ConfigureAwait(false);
                     }
 
+                    EnsureDeltaEventsWithinBounds(deltaEventCount, coalescer.BufferedChunkCount);
+
                     break;
                 case LlmStreamingFailed failed:
                     terminalFailure = failed.RetryScheduled ? null : failed;
@@ -103,9 +106,7 @@ public sealed class LlmChatStreamingPipeline(
             deltaEventCount = checked(deltaEventCount + 1);
             if (deltaEventCount > options.MaximumDeltaEvents)
             {
-                throw new LlmChatConversationEngineException(
-                    LlmChatErrorCodes.StreamLimitExceeded,
-                    "The streaming response exceeded its durable event limit.");
+                ThrowStreamLimit("The streaming response exceeded its durable event limit.");
             }
 
             await eventJournal.AppendTextDeltaAsync(
@@ -117,14 +118,26 @@ public sealed class LlmChatStreamingPipeline(
         }
     }
 
+    private void EnsureDeltaEventsWithinBounds(int durableEvents, int bufferedEvents)
+    {
+        if (checked(durableEvents + bufferedEvents) > options.MaximumDeltaEvents)
+        {
+            ThrowStreamLimit("The streaming response exceeded its durable event limit.");
+        }
+    }
+
     private void EnsureResponseWithinBounds(int characters, int bytes)
     {
         if (characters > options.MaximumResponseCharacters || bytes > options.MaximumResponseBytes)
         {
-            throw new LlmChatConversationEngineException(
-                LlmChatErrorCodes.StreamLimitExceeded,
-                "The streaming response exceeded its aggregate size limit.");
+            ThrowStreamLimit("The streaming response exceeded its aggregate size limit.");
         }
+    }
+
+    private void ThrowStreamLimit(string message)
+    {
+        consumerState.Abort(LlmChatStreamingConsumerAbortReason.StreamLimitExceeded);
+        throw new LlmChatConversationEngineException(LlmChatErrorCodes.StreamLimitExceeded, message);
     }
 
     private static string MapFailureCode(LlmInvocationFailureKind kind)

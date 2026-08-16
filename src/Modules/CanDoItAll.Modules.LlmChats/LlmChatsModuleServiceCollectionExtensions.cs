@@ -12,6 +12,7 @@ public static class LlmChatsModuleServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(new LlmChatExecutionLeaseOptions());
+        services.TryAddSingleton(new LlmChatTransferOptions());
         var streamingOptions = new LlmChatStreamingOptions();
         streamingOptions.Validate();
         services.TryAddSingleton(streamingOptions);
@@ -24,6 +25,7 @@ public static class LlmChatsModuleServiceCollectionExtensions
         services.AddScoped<ILlmChatOperationEvidenceSink, LlmChatOperationEvidenceService>();
         services.AddScoped<LlmChatOperationEventJournal>();
         services.AddScoped<LlmChatOperationEventStreamSessionFactory>();
+        services.AddScoped<LlmChatStreamingConsumerState>();
         services.AddScoped<LlmChatStreamingPipeline>();
         services.AddScoped<LlmChatOperationEventRetentionService>();
         services.AddScoped<LlmChatProfileScopeRunner>();

@@ -12,6 +12,11 @@ public interface ILlmChatDefinitionRepository
         LlmChatDefinitionId id,
         CancellationToken cancellationToken = default);
 
+    Task<LlmChatDefinition?> TryGetForUpdateAsync(
+        LlmChatDefinitionId id,
+        CancellationToken cancellationToken = default)
+        => TryGetAsync(id, cancellationToken);
+
     Task<LlmChatDefinitionRevision?> TryGetRevisionAsync(
         LlmChatDefinitionId id,
         LlmChatDefinitionRevisionNumber revision,
@@ -36,6 +41,19 @@ public interface ILlmChatDefinitionRepository
         long expectedConcurrencyToken,
         LlmChatDefinitionRevision? appendedRevision,
         CancellationToken cancellationToken = default);
+}
+
+public enum LlmChatConcurrencyResource
+{
+    Definition,
+    Conversation
+}
+
+public sealed class LlmChatPersistenceConcurrencyException(
+    LlmChatConcurrencyResource resource)
+    : Exception($"The LLM Chat {resource.ToString().ToLowerInvariant()} changed before it could be persisted.")
+{
+    public LlmChatConcurrencyResource Resource { get; } = resource;
 }
 
 public sealed record LlmChatDefinitionReadModel(

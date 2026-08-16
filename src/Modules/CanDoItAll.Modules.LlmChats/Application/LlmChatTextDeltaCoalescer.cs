@@ -45,6 +45,10 @@ public sealed class LlmChatTextDeltaCoalescer
 
     public bool HasBufferedContent => _buffer.Length > 0;
 
+    public int BufferedChunkCount => _buffer.Length == 0
+        ? 0
+        : SplitUtf8Bounded(_buffer.ToString(), _options.MaximumChunkBytes).Count;
+
     public IReadOnlyList<string> Flush(DateTimeOffset observedAtUtc)
     {
         if (_buffer.Length == 0)

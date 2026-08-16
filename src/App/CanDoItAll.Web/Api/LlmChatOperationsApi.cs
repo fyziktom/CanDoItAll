@@ -69,17 +69,34 @@ internal static class LlmChatOperationsApi
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ExecuteLlmChats);
+        operations.MapPost("/{operationId:guid}/reconcile", ReconcileOperationAsync)
+            .WithName("ReconcileLlmChatOperation")
+            .WithDescription(
+                "Reconciles an operation only from durable transcript, invocation, dispatch, and lease evidence. Ambiguous post-dispatch work remains recovery-required and is never redispatched.")
+            .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
+            .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+            .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+            .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         return api;
     }
 
     private static async Task<IResult> SendTurnAsync(
         Guid conversationId,
-        SendLlmChatTurnApiRequest request,
+        HttpRequest httpRequest,
         HttpResponse response,
         ILlmChatOperationApplicationService service,
         CancellationToken cancellationToken)
     {
-        if (!TryCreateSendCommand(conversationId, request, out var command, out var error))
+        var body = await LlmChatApiRequestReader
+            .ReadAsync<SendLlmChatTurnApiRequest>(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        if (body.Error is not null)
+        {
+            return body.Error;
+        }
+
+        if (!TryCreateSendCommand(conversationId, body.Value!, out var command, out var error))
         {
             return error!;
         }
@@ -87,7 +104,7 @@ internal static class LlmChatOperationsApi
         var result = await service.SendAsync(command!, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
         {
-            return LlmChatApiResults.FromFailure(result.Errors, request.OperationId);
+            return LlmChatApiResults.FromFailure(result.Errors, body.Value!.OperationId);
         }
 
         var details = result.Value!;
@@ -101,7 +118,7 @@ internal static class LlmChatOperationsApi
         LlmChatOperationEventStreamSessionFactory streamSessionFactory,
         IOptions<ApiAccessOptions> apiOptions)
     {
-        if (!TryCreateOperationId(operationId, out var id, out var error))
+        if (!LlmChatApiIds.TryCreateOperationId(operationId, out var id, out var error))
         {
             await error!.ExecuteAsync(context);
             return;
@@ -130,7 +147,7 @@ internal static class LlmChatOperationsApi
         ILlmChatOperationApplicationService service,
         CancellationToken cancellationToken)
     {
-        if (!TryCreateOperationId(operationId, out var id, out var error))
+        if (!LlmChatApiIds.TryCreateOperationId(operationId, out var id, out var error))
         {
             return error!;
         }
@@ -147,7 +164,7 @@ internal static class LlmChatOperationsApi
         ILlmChatOperationApplicationService service,
         CancellationToken cancellationToken)
     {
-        if (!TryCreateOperationId(operationId, out var id, out var error))
+        if (!LlmChatApiIds.TryCreateOperationId(operationId, out var id, out var error))
         {
             return error!;
         }
@@ -176,12 +193,12 @@ internal static class LlmChatOperationsApi
         ILlmChatOperationApplicationService service,
         CancellationToken cancellationToken)
     {
-        if (!TryCreateConversationId(conversationId, out var conversation, out var conversationError))
+        if (!LlmChatApiIds.TryCreateConversationId(conversationId, out var conversation, out var conversationError))
         {
             return conversationError!;
         }
 
-        if (!TryCreateOperationId(turnId, out var operation, out var operationError))
+        if (!LlmChatApiIds.TryCreateOperationId(turnId, out var operation, out var operationError))
         {
             return operationError!;
         }
@@ -198,6 +215,27 @@ internal static class LlmChatOperationsApi
         return Results.Ok(LlmChatOperationApiMapper.ToResponse(result.Value));
     }
 
+    private static async Task<IResult> ReconcileOperationAsync(
+        Guid operationId,
+        HttpResponse response,
+        ILlmChatOperationApplicationService service,
+        CancellationToken cancellationToken)
+    {
+        if (!LlmChatApiIds.TryCreateOperationId(operationId, out var id, out var error))
+        {
+            return error!;
+        }
+
+        var result = await service.ReconcileAsync(id, cancellationToken).ConfigureAwait(false);
+        if (result.IsFailure)
+        {
+            return LlmChatApiResults.FromFailure(result.Errors, operationId);
+        }
+
+        SetOperationLocation(response, result.Value!.Operation.Id);
+        return Results.Ok(LlmChatOperationApiMapper.ToResponse(result.Value));
+    }
+
     private static bool TryCreateSendCommand(
         Guid conversationId,
         SendLlmChatTurnApiRequest request,
@@ -205,8 +243,8 @@ internal static class LlmChatOperationsApi
         out IResult? error)
     {
         command = null;
-        if (!TryCreateConversationId(conversationId, out var conversation, out error) ||
-            !TryCreateOperationId(request.OperationId, out var operation, out error))
+        if (!LlmChatApiIds.TryCreateConversationId(conversationId, out var conversation, out error) ||
+            !LlmChatApiIds.TryCreateOperationId(request.OperationId, out var operation, out error))
         {
             return false;
         }
@@ -229,40 +267,6 @@ internal static class LlmChatOperationsApi
             conversation,
             request.ExpectedTranscriptRevision,
             request.Message);
-        return true;
-    }
-
-    private static bool TryCreateConversationId(
-        Guid value,
-        out LlmChatConversationId id,
-        out IResult? error)
-    {
-        if (value == Guid.Empty)
-        {
-            id = default;
-            error = LlmChatApiResults.InvalidRequest("A non-empty conversation id is required.");
-            return false;
-        }
-
-        id = new LlmChatConversationId(value);
-        error = null;
-        return true;
-    }
-
-    private static bool TryCreateOperationId(
-        Guid value,
-        out LlmChatOperationId id,
-        out IResult? error)
-    {
-        if (value == Guid.Empty)
-        {
-            id = default;
-            error = LlmChatApiResults.InvalidRequest("A non-empty operation id is required.");
-            return false;
-        }
-
-        id = new LlmChatOperationId(value);
-        error = null;
         return true;
     }
 

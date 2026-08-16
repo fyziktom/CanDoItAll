@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Pass`
 
 ## Objective
 
@@ -115,11 +115,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Fifteen existing cases and the accepted new focused union discover exactly as expected and pass.
-- [ ] Real PostgreSQL HTTP/SSE flow passes with one dispatch and safe outputs.
-- [ ] Architecture guards/self-tests and CodeAnalytics pass with zero cycles/forbidden edges.
-- [ ] Governed manifest/hashes/semantic invariants complete.
-- [ ] Independent CP3 review passes.
+- [x] Fifteen existing cases and the accepted new focused union discover exactly as expected and pass.
+- [x] Real PostgreSQL HTTP/SSE flow passes with one dispatch and safe outputs.
+- [x] Architecture guards/self-tests and CodeAnalytics pass with zero cycles/forbidden edges.
+- [x] Governed manifest/hashes/semantic invariants complete.
+- [x] Independent CP3 review passes.
 
 ## Proof Required
 
@@ -131,7 +131,7 @@
 
 ## Progression Gate
 
-- Freeze the CP3 application commit. SB10 may change only proof/status/non-runtime documentation; otherwise reopen the owner and CP3.
+- SB09/CP3 is complete. Freeze the application candidate as a commit before SB10 runs its one allowed broad gate. SB10 may change only proof/status/non-runtime documentation; otherwise reopen the owner and CP3.
 
 ## Reopen Triggers
 

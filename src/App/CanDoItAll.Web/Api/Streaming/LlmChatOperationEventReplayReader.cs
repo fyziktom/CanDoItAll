@@ -88,9 +88,9 @@ internal sealed class LlmChatOperationEventReplayReader(
             return new ReplayGap(
                 ReplayGapReason.CursorBeforeRetention,
                 afterExclusive,
-                0,
-                0,
-                0,
+                page.LatestSequence + 1,
+                page.LatestSequence,
+                page.LatestSequence,
                 statusUrl);
         }
 

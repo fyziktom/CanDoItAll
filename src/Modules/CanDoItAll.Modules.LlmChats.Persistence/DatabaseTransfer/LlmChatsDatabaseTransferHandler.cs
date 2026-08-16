@@ -1,9 +1,10 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.LlmChats.Application;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
 
-public sealed class LlmChatsDatabaseTransferHandler : IDatabaseTransferHandler
+public sealed class LlmChatsDatabaseTransferHandler(LlmChatTransferOptions options) : IDatabaseTransferHandler
 {
     public DatabaseTransferItemDescriptor Descriptor { get; } = new(
         "llm-chats",
@@ -15,9 +16,9 @@ public sealed class LlmChatsDatabaseTransferHandler : IDatabaseTransferHandler
         DatabaseTransferContext context,
         CancellationToken cancellationToken = default)
     {
-        var source = await LlmChatsTransferDocument.LoadAsync(context.SourceDbContext, cancellationToken)
+        var source = await LlmChatsTransferDocument.LoadAsync(context.SourceDbContext, options, cancellationToken)
             .ConfigureAwait(false);
-        var target = await LlmChatsTransferDocument.LoadAsync(context.TargetDbContext, cancellationToken)
+        var target = await LlmChatsTransferDocument.LoadAsync(context.TargetDbContext, options, cancellationToken)
             .ConfigureAwait(false);
         return new DatabaseTransferItemPreview(
             Descriptor,
@@ -32,7 +33,7 @@ public sealed class LlmChatsDatabaseTransferHandler : IDatabaseTransferHandler
         DatabaseTransferContext context,
         CancellationToken cancellationToken = default)
     {
-        var document = await LlmChatsTransferDocument.LoadAsync(context.SourceDbContext, cancellationToken)
+        var document = await LlmChatsTransferDocument.LoadAsync(context.SourceDbContext, options, cancellationToken)
             .ConfigureAwait(false);
         document.ValidateForImport();
         if (document.RecordCount == 0)
@@ -45,7 +46,7 @@ public sealed class LlmChatsDatabaseTransferHandler : IDatabaseTransferHandler
                 0);
         }
 
-        var target = await LlmChatsTransferDocument.LoadAsync(context.TargetDbContext, cancellationToken)
+        var target = await LlmChatsTransferDocument.LoadAsync(context.TargetDbContext, options, cancellationToken)
             .ConfigureAwait(false);
         if (target.RecordCount > 0 && !context.ReplaceExisting)
         {

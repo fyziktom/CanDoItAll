@@ -15,6 +15,8 @@ public static class LlmChatErrorCodes
     public const string OperationIdConflict = Prefix + "operation-id-conflict";
     public const string OperationRecoveryRequired = Prefix + "operation-recovery-required";
     public const string DispatcherUnavailable = Prefix + "dispatcher-unavailable";
+    public const string QueueAgeExceeded = Prefix + "queue-age-exceeded";
+    public const string OperationDurationExceeded = Prefix + "operation-duration-exceeded";
     public const string ProviderNotFound = Prefix + "provider-not-found";
     public const string ProviderKindMismatch = Prefix + "provider-kind-mismatch";
     public const string ModelNotSupported = Prefix + "model-not-supported";

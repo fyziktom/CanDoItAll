@@ -120,6 +120,11 @@ public sealed class LlmChatDefinitionApplicationService(
         {
             return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.InvalidRequest(exception.Message));
         }
+        catch (LlmChatPersistenceConcurrencyException exception)
+            when (exception.Resource is LlmChatConcurrencyResource.Definition)
+        {
+            return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.DefinitionConcurrencyConflict());
+        }
     }
 
     public async Task<Result<LlmChatDefinitionDetails>> ChangeStatusAsync(
@@ -158,26 +163,34 @@ public sealed class LlmChatDefinitionApplicationService(
             return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.StorageCorrupted());
         }
 
-        return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
+        try
         {
-            var updated = new LlmChatDefinition(
-                current.Id,
-                current.Name,
-                current.Summary,
-                current.AvatarImageUrl,
-                command.Status,
-                current.CurrentRevision,
-                current.CreatedAtUtc,
-                timeProvider.GetUtcNow(),
-                checked(current.ConcurrencyToken + 1));
-            await repository.ReplaceAsync(
-                updated,
-                command.ExpectedConcurrencyToken,
-                appendedRevision: null,
-                cancellationToken: transactionCancellationToken).ConfigureAwait(false);
-            var tags = await repository.ListTagsAsync(updated.Id, transactionCancellationToken).ConfigureAwait(false);
-            return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(updated, revision, tags));
-        }, cancellationToken).ConfigureAwait(false);
+            return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
+            {
+                var updated = new LlmChatDefinition(
+                    current.Id,
+                    current.Name,
+                    current.Summary,
+                    current.AvatarImageUrl,
+                    command.Status,
+                    current.CurrentRevision,
+                    current.CreatedAtUtc,
+                    timeProvider.GetUtcNow(),
+                    checked(current.ConcurrencyToken + 1));
+                await repository.ReplaceAsync(
+                    updated,
+                    command.ExpectedConcurrencyToken,
+                    appendedRevision: null,
+                    cancellationToken: transactionCancellationToken).ConfigureAwait(false);
+                var tags = await repository.ListTagsAsync(updated.Id, transactionCancellationToken).ConfigureAwait(false);
+                return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(updated, revision, tags));
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (LlmChatPersistenceConcurrencyException exception)
+            when (exception.Resource is LlmChatConcurrencyResource.Definition)
+        {
+            return Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.DefinitionConcurrencyConflict());
+        }
     }
 
     public async Task<Result<LlmChatDefinitionDetails>> GetAsync(

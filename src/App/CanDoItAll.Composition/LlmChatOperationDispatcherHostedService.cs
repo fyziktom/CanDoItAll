@@ -16,6 +16,20 @@ internal sealed class LlmChatOperationDispatcherHostedService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         options.Validate();
+        logger.LogInformation(
+            "Starting {WorkerCount} LLM Chat dispatcher worker(s). CandidateBatchSize={CandidateBatchSize} MaximumQueuedAge={MaximumQueuedAge} MaximumOperationDuration={MaximumOperationDuration}.",
+            options.WorkerCount,
+            options.CandidateBatchSize,
+            options.MaximumQueuedAge,
+            options.MaximumOperationDuration);
+        var workers = Enumerable.Range(1, options.WorkerCount)
+            .Select(workerId => RunWorkerAsync(workerId, stoppingToken))
+            .ToArray();
+        await Task.WhenAll(workers).ConfigureAwait(false);
+    }
+
+    private async Task RunWorkerAsync(int workerId, CancellationToken stoppingToken)
+    {
         var ownerId = LlmChatExecutionOwnerId.New();
         using var registration = dispatchSignal.RegisterExecutor();
         while (!stoppingToken.IsCancellationRequested)
@@ -37,7 +51,13 @@ internal sealed class LlmChatOperationDispatcherHostedService(
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "The LLM Chat dispatcher pass failed.");
+                var availability = dispatchSignal.Availability;
+                logger.LogError(
+                    "LLM Chat dispatcher worker {WorkerId} pass failed. FailureType={FailureType} RegisteredWorkers={RegisteredWorkers} ProgressingWorkers={ProgressingWorkers}.",
+                    workerId,
+                    exception.GetType().FullName,
+                    availability.RegisteredWorkers,
+                    availability.ProgressingWorkers);
                 try
                 {
                     await Task.Delay(options.PollInterval, stoppingToken).ConfigureAwait(false);

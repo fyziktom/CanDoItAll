@@ -49,7 +49,11 @@ internal sealed class LlmChatOperationCancellationRegistration : ILlmChatOperati
 {
     private readonly Action<LlmChatOperationCancellationRegistration> unregister;
     private readonly CancellationTokenSource cancellationSource;
-    private int disposed;
+    private readonly object gate = new();
+    private bool cancellationRequested;
+    private bool disposed;
+    private bool sourceDisposed;
+    private int activeNotifications;
 
     public LlmChatOperationCancellationRegistration(
         CancellationToken cancellationToken,
@@ -62,16 +66,67 @@ internal sealed class LlmChatOperationCancellationRegistration : ILlmChatOperati
     public CancellationToken CancellationToken => cancellationSource.Token;
 
     public void Cancel()
-        => cancellationSource.Cancel();
+    {
+        lock (gate)
+        {
+            if (disposed || cancellationRequested)
+            {
+                return;
+            }
+
+            cancellationRequested = true;
+            activeNotifications++;
+        }
+
+        try
+        {
+            cancellationSource.Cancel(throwOnFirstException: false);
+        }
+        catch (AggregateException)
+        {
+            // Cancellation observers cannot override the already-committed durable request.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposal won the lifecycle race after this notification was selected.
+        }
+        finally
+        {
+            lock (gate)
+            {
+                activeNotifications--;
+                DisposeSourceIfReady();
+            }
+        }
+    }
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        lock (gate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            disposed = true;
+        }
+
+        unregister(this);
+        lock (gate)
+        {
+            DisposeSourceIfReady();
+        }
+    }
+
+    private void DisposeSourceIfReady()
+    {
+        if (!disposed || activeNotifications != 0 || sourceDisposed)
         {
             return;
         }
 
-        unregister(this);
         cancellationSource.Dispose();
+        sourceDisposed = true;
     }
 }

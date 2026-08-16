@@ -23,8 +23,8 @@
 | BC-030–BC-033 task supervision/recovery | SB04 | 10 task-lifetime/reconcile cases, provider task timelines, no-redispatch proof | CP1, SB09, SB10 |
 | BC-040–BC-044 invocation/SSE/high-water/schema | SB05 | 8 restart/retention/API/SSE/migration/transfer cases and pending-model proof | CP2, SB09, SB10 |
 | BC-050–BC-054 replay/retention/transient state | SB06 | 10 isolation/row-bound/starvation/eviction/gap cases, SQL and stress evidence | CP2, SB09, SB10 |
-| BC-060–BC-065 options/workers/age/duration/transfer | SB07 | 14 positive/negative startup/configuration/concurrency/time/transfer cases and migration parity | CP2, SB09, SB10 |
-| BC-070–BC-072 provider log redaction | SB08 | 5 structured-log/sentinel/retry/cancel cases | CP2, SB09, SB10 |
+| BC-060–BC-065 options/workers/age/duration/transfer | SB07 | 15 positive/negative startup/configuration/concurrency/time/transfer cases, including concurrent source mutation, and migration parity | CP2, SB09, SB10 |
+| BC-070–BC-072 provider log redaction | SB08 | 6 structured-log/sentinel/deadline/retry/cancel cases | CP2, SB09, SB10 |
 | BC-080–BC-084 profile/SSE/architecture | SB09 | 15 existing exact profile/frame/gap/heartbeat/disconnect/terminal/cancel/auth/origin cases + accepted new union, real PostgreSQL flow, CodeAnalytics/guards/review | SB10 |
 | BC-090–BC-092 release closure | SB10 | One broad stable gate, pending-model/docs/guards/secrets, same-commit 3-OS CI, independent verifier | FINAL |
 

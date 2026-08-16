@@ -46,6 +46,11 @@ internal static class LlmChatErrors
     public static Error StorageCorrupted()
         => Error.Failure("Required LLM Chat state is missing or inconsistent.", LlmChatErrorCodes.StorageCorrupted);
 
+    public static Error StorageConflict()
+        => Error.Failure(
+            "The LLM Chat state changed after it was read.",
+            LlmChatErrorCodes.StorageConflict);
+
     public static Error OperationFailure(string code)
         => Error.Failure("The LLM Chat turn could not be completed.", code);
 

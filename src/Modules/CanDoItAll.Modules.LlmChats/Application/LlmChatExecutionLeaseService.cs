@@ -1,6 +1,8 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Ports;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.LlmChats.Application;
 
@@ -9,7 +11,8 @@ public sealed class LlmChatExecutionLeaseService(
     ILlmChatUnitOfWork unitOfWork,
     LlmChatExecutionLeaseOptions options,
     TimeProvider timeProvider,
-    LlmChatOperationEventJournal eventJournal)
+    LlmChatOperationEventJournal eventJournal,
+    ILogger<LlmChatExecutionLeaseService> logger)
 {
     public Task<LlmChatExecutionClaimResult> TryClaimAsync(
         LlmChatOperationId operationId,
@@ -31,11 +34,43 @@ public sealed class LlmChatExecutionLeaseService(
                 return LlmChatExecutionClaimResult.Unavailable;
             }
 
+            if (operation.ProviderDispatchStartedAtUtc is null &&
+                now - operation.StartedAtUtc >= options.MaximumQueuedAge)
+            {
+                logger.LogWarning(
+                    "LLM Chat operation {OperationId} expired before provider dispatch. QueueAge={QueueAge} MaximumQueuedAge={MaximumQueuedAge} DispatchPhase={DispatchPhase}.",
+                    operation.Id.Value,
+                    now - operation.StartedAtUtc,
+                    options.MaximumQueuedAge,
+                    operation.DispatchPhase);
+                var expired = LlmChatOperationTransitions.CompleteFailure(
+                    operation,
+                    now,
+                    LlmChatErrorCodes.QueueAgeExceeded);
+                await ReplaceRequiredAsync(operation, expired, token).ConfigureAwait(false);
+                await eventJournal.AppendStateChangedAsync(
+                        expired,
+                        usage: LlmUsage.Zero,
+                        cancellationToken: token)
+                    .ConfigureAwait(false);
+                return new LlmChatExecutionClaimResult(expired, null, Recovered: true);
+            }
+
             if (operation.ProviderDispatchStartedAtUtc is not null)
             {
+                var durationExceeded = now - operation.StartedAtUtc >= options.MaximumOperationDuration;
+                logger.LogWarning(
+                    "LLM Chat operation {OperationId} requires recovery after provider dispatch. DurationExceeded={DurationExceeded} OperationAge={OperationAge} MaximumOperationDuration={MaximumOperationDuration} DispatchPhase={DispatchPhase}.",
+                    operation.Id.Value,
+                    durationExceeded,
+                    now - operation.StartedAtUtc,
+                    options.MaximumOperationDuration,
+                    operation.DispatchPhase);
                 var recovery = LlmChatOperationTransitions.RequireRecovery(
                     operation,
-                    LlmChatErrorCodes.OperationRecoveryRequired);
+                    durationExceeded
+                        ? LlmChatErrorCodes.OperationDurationExceeded
+                        : LlmChatErrorCodes.OperationRecoveryRequired);
                 await ReplaceRequiredAsync(operation, recovery, token).ConfigureAwait(false);
                 await eventJournal.AppendStateChangedAsync(recovery, cancellationToken: token)
                     .ConfigureAwait(false);

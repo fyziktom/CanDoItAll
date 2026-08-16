@@ -66,11 +66,27 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddProcessesModule(configuration);
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
-        var dispatcherOptions =
-            configuration.GetSection(LlmChatExecutionLeaseOptions.SectionName).Get<LlmChatExecutionLeaseOptions>() ??
-            new LlmChatExecutionLeaseOptions();
-        dispatcherOptions.Validate();
-        services.AddSingleton<LlmChatExecutionLeaseOptions>(dispatcherOptions);
+        services
+            .AddOptions<LlmChatExecutionLeaseOptions>()
+            .Bind(configuration.GetSection(LlmChatExecutionLeaseOptions.SectionName))
+            .Validate(static options => IsValid(options.Validate), "LLM Chat dispatcher configuration is invalid.")
+            .ValidateOnStart();
+        services
+            .AddOptions<LlmChatStreamingOptions>()
+            .Bind(configuration.GetSection(LlmChatStreamingOptions.SectionName))
+            .Validate(static options => IsValid(options.Validate), "LLM Chat streaming configuration is invalid.")
+            .ValidateOnStart();
+        services
+            .AddOptions<LlmChatTransferOptions>()
+            .Bind(configuration.GetSection(LlmChatTransferOptions.SectionName))
+            .Validate(static options => IsValid(options.Validate), "LLM Chat transfer configuration is invalid.")
+            .ValidateOnStart();
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<LlmChatExecutionLeaseOptions>>().Value);
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<LlmChatStreamingOptions>>().Value);
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<LlmChatTransferOptions>>().Value);
         services.AddLlmChatsApplication();
         services.AddLlmChatsPersistence();
         services.AddHostedService<LlmChatOperationDispatcherHostedService>();
@@ -81,6 +97,23 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddCanDoItAllFileToolsIntegration();
         services.AddRuntimeHostPlatformComposition(configuration, environment);
         return services;
+    }
+
+    private static bool IsValid(Action validate)
+    {
+        try
+        {
+            validate();
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     public static IServiceCollection AddRuntimeHostPlatformComposition(

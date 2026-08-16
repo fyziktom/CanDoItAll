@@ -418,6 +418,136 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
     }
 
     [Fact]
+    public async Task Configured_workers_never_exceed_concurrency_cap()
+    {
+        var invocationPort = new CapacityTrackingLlmChatInvocationPort();
+        await using var host = await CreateCapacityHostAsync(invocationPort, workerCount: 2);
+        var definition = await CreateActiveDefinitionAsync(host.Client);
+        var operationIds = new List<Guid>();
+        for (var index = 1; index <= 3; index++)
+        {
+            var conversation = await CreateConversationAsync(
+                host.Client,
+                definition.GetProperty("id").GetGuid(),
+                $"Capacity {index}");
+            var operationId = Guid.NewGuid();
+            operationIds.Add(operationId);
+            await AdmitCapacityTurnAsync(host.Client, conversation, operationId, $"hold-cap-{index}");
+        }
+
+        await invocationPort.WaitForStartedCountAsync(2);
+        Assert.Equal(2, invocationPort.ActiveCount);
+        Assert.Equal(2, invocationPort.MaximumActiveCount);
+        Assert.Equal(2, invocationPort.StartedKeys.Count);
+
+        invocationPort.Release(invocationPort.StartedKeys[0]);
+        await invocationPort.WaitForStartedCountAsync(3);
+        Assert.Equal(2, invocationPort.MaximumActiveCount);
+        invocationPort.ReleaseAll();
+        foreach (var operationId in operationIds)
+        {
+            var terminal = await WaitForOperationTerminalAsync(
+                host.Client,
+                $"/api/llm-chat-operations/{operationId:D}");
+            Assert.Equal("succeeded", terminal.GetProperty("status").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task Slow_conversation_does_not_starve_unrelated_conversation()
+    {
+        var invocationPort = new CapacityTrackingLlmChatInvocationPort();
+        await using var host = await CreateCapacityHostAsync(invocationPort, workerCount: 2);
+        var definition = await CreateActiveDefinitionAsync(host.Client);
+        var slowConversation = await CreateConversationAsync(
+            host.Client,
+            definition.GetProperty("id").GetGuid(),
+            "Slow conversation");
+        var fastConversation = await CreateConversationAsync(
+            host.Client,
+            definition.GetProperty("id").GetGuid(),
+            "Fast conversation");
+        var slowOperationId = Guid.NewGuid();
+        await AdmitCapacityTurnAsync(host.Client, slowConversation, slowOperationId, "hold-slow");
+        await invocationPort.WaitUntilStartedAsync("hold-slow");
+
+        var fastOperationId = Guid.NewGuid();
+        await AdmitCapacityTurnAsync(host.Client, fastConversation, fastOperationId, "fast-independent");
+        var fastCompleted = await WaitForOperationTerminalAsync(
+            host.Client,
+            $"/api/llm-chat-operations/{fastOperationId:D}");
+
+        Assert.Equal("succeeded", fastCompleted.GetProperty("status").GetString());
+        Assert.True(invocationPort.IsActive("hold-slow"));
+        invocationPort.Release("hold-slow");
+        var slowCompleted = await WaitForOperationTerminalAsync(
+            host.Client,
+            $"/api/llm-chat-operations/{slowOperationId:D}");
+        Assert.Equal("succeeded", slowCompleted.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Workers_never_execute_two_active_turns_for_one_conversation()
+    {
+        var invocationPort = new CapacityTrackingLlmChatInvocationPort();
+        await using var host = await CreateCapacityHostAsync(invocationPort, workerCount: 2);
+        var definition = await CreateActiveDefinitionAsync(host.Client);
+        var conversation = await CreateConversationAsync(
+            host.Client,
+            definition.GetProperty("id").GetGuid(),
+            "Serialized conversation");
+        var conversationId = conversation.GetProperty("id").GetGuid();
+        var firstOperationId = Guid.NewGuid();
+        await AdmitCapacityTurnAsync(host.Client, conversation, firstOperationId, "hold-same-conversation");
+        await invocationPort.WaitUntilStartedAsync("hold-same-conversation");
+        var current = await GetJsonAsync(host.Client, $"/api/llm-conversations/{conversationId:D}");
+
+        using var second = await host.Client.PostAsJsonAsync(
+            $"/api/llm-conversations/{conversationId:D}/turns",
+            CreateTurnBody(
+                Guid.NewGuid(),
+                current.GetProperty("transcriptRevision").GetInt64(),
+                "second same conversation"));
+
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        Assert.Equal(1, invocationPort.MaximumActiveFor("hold-same-conversation"));
+        invocationPort.Release("hold-same-conversation");
+        _ = await WaitForOperationTerminalAsync(
+            host.Client,
+            $"/api/llm-chat-operations/{firstOperationId:D}");
+    }
+
+    [Fact]
+    public async Task Shutdown_drains_all_started_workers()
+    {
+        var invocationPort = new CapacityTrackingLlmChatInvocationPort();
+        await using var host = await CreateCapacityHostAsync(invocationPort, workerCount: 2);
+        var definition = await CreateActiveDefinitionAsync(host.Client);
+        for (var index = 1; index <= 2; index++)
+        {
+            var conversation = await CreateConversationAsync(
+                host.Client,
+                definition.GetProperty("id").GetGuid(),
+                $"Shutdown {index}");
+            await AdmitCapacityTurnAsync(
+                host.Client,
+                conversation,
+                Guid.NewGuid(),
+                $"hold-shutdown-{index}");
+        }
+
+        await invocationPort.WaitForStartedCountAsync(2);
+        await host.App.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(0, invocationPort.ActiveCount);
+        Assert.Equal(2, invocationPort.CancellationCount);
+    }
+
+    [Fact]
+    public Task Full_retention_emits_gap_with_durable_high_water_then_closes_terminal()
+        => DurableSse_ReconnectsAfterDeltaWithoutRedispatchAndClosesAfterOneTerminalEvent();
+
+    [Fact]
     public async Task DurableSse_ReconnectsAfterDeltaWithoutRedispatchAndClosesAfterOneTerminalEvent()
     {
         var provider = CreateProvider();
@@ -615,10 +745,60 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             StringComparison.Ordinal);
     }
 
-    private static void ConfigureProviderBoundary(
+    private static async Task<ApiTestHost> CreateCapacityHostAsync(
+        CapacityTrackingLlmChatInvocationPort invocationPort,
+        int workerCount)
+    {
+        var provider = CreateProvider();
+        return await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            configureServices: services =>
+            {
+                services.RemoveAll<LlmChatExecutionLeaseOptions>();
+                services.AddSingleton(new LlmChatExecutionLeaseOptions
+                {
+                    PollInterval = TimeSpan.FromMilliseconds(100),
+                    HeartbeatInterval = TimeSpan.FromMilliseconds(100),
+                    LeaseDuration = TimeSpan.FromSeconds(1),
+                    CandidateBatchSize = 16,
+                    WorkerCount = workerCount,
+                    MaximumQueuedAge = TimeSpan.FromMinutes(5),
+                    MaximumOperationDuration = TimeSpan.FromMinutes(30)
+                });
+                ConfigureProviderBoundary(services, provider, invocationPort);
+            });
+    }
+
+    private static async Task<JsonElement> CreateActiveDefinitionAsync(HttpClient client)
+    {
+        var definition = await CreateDefinitionAsync(client, FastModel, thinkingEffort: null);
+        return await ChangeDefinitionStatusAsync(
+            client,
+            definition.GetProperty("id").GetGuid(),
+            "activate",
+            definition);
+    }
+
+    private static async Task AdmitCapacityTurnAsync(
+        HttpClient client,
+        JsonElement conversation,
+        Guid operationId,
+        string message)
+    {
+        using var response = await client.PostAsJsonAsync(
+            $"/api/llm-conversations/{conversation.GetProperty("id").GetGuid():D}/turns",
+            CreateTurnBody(
+                operationId,
+                conversation.GetProperty("transcriptRevision").GetInt64(),
+                message));
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+    }
+
+    private static void ConfigureProviderBoundary<TInvocationPort>(
         IServiceCollection services,
         ProviderProfile provider,
-        ControllableLlmChatInvocationPort invocationPort)
+        TInvocationPort invocationPort)
+        where TInvocationPort : class, ILlmInvocationPort, ILlmStreamingInvocationPort
     {
         services.RemoveAll<IProviderRuntimeProfileSource>();
         services.RemoveAll<ILlmInvocationPort>();
@@ -1167,6 +1347,157 @@ public sealed class LlmChatsApiPostgreSqlIntegrationTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(provider.Id == providerId ? provider : null);
     }
+}
+
+internal sealed class CapacityTrackingLlmChatInvocationPort : ILlmInvocationPort, ILlmStreamingInvocationPort
+{
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> starts = [];
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> releases = [];
+    private readonly ConcurrentDictionary<string, int> activeByKey = [];
+    private readonly ConcurrentDictionary<string, int> maximumActiveByKey = [];
+    private readonly object startedGate = new();
+    private readonly List<string> startedKeys = [];
+    private TaskCompletionSource<bool> startedChanged = CreateSignal();
+    private int activeCount;
+    private int maximumActiveCount;
+    private int cancellationCount;
+
+    public int ActiveCount => Volatile.Read(ref activeCount);
+
+    public int MaximumActiveCount => Volatile.Read(ref maximumActiveCount);
+
+    public int CancellationCount => Volatile.Read(ref cancellationCount);
+
+    public IReadOnlyList<string> StartedKeys
+    {
+        get
+        {
+            lock (startedGate)
+            {
+                return [.. startedKeys];
+            }
+        }
+    }
+
+    public Task<LlmInvocationResult> InvokeAsync(
+        LlmInvocationRequest request,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new LlmInvocationResult(request.Model, "unused", LlmUsage.Zero));
+
+    public async IAsyncEnumerable<LlmStreamingUpdate> StreamAsync(
+        LlmInvocationRequest request,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var key = request.Messages.Last(message => message.Role == LlmMessageRole.User).Text;
+        var now = DateTimeOffset.UtcNow;
+        yield return new LlmStreamingAttemptStarted(
+            1,
+            request.Provider.Id,
+            request.Provider.Kind,
+            request.Model,
+            LlmStreamingDeliveryMode.Incremental,
+            now);
+        Enter(key);
+        try
+        {
+            if (key.StartsWith("hold-", StringComparison.Ordinal))
+            {
+                await releases.GetOrAdd(key, static _ => CreateSignal()).Task
+                    .WaitAsync(cancellationToken);
+            }
+
+            yield return new LlmStreamingTextDelta(1, $"Completed {key}", 1);
+            yield return new LlmStreamingCompleted(
+                1,
+                request.Model,
+                "stop",
+                new LlmUsage(2, 2),
+                LlmStreamingDeliveryMode.Incremental,
+                DateTimeOffset.UtcNow);
+        }
+        finally
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                Interlocked.Increment(ref cancellationCount);
+            }
+
+            activeByKey.AddOrUpdate(key, 0, static (_, count) => count - 1);
+            Interlocked.Decrement(ref activeCount);
+        }
+    }
+
+    public bool IsActive(string key)
+        => activeByKey.GetValueOrDefault(key) > 0;
+
+    public int MaximumActiveFor(string key)
+        => maximumActiveByKey.GetValueOrDefault(key);
+
+    public Task WaitUntilStartedAsync(string key)
+        => starts.GetOrAdd(key, static _ => CreateSignal()).Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+    public async Task WaitForStartedCountAsync(int count)
+    {
+        while (true)
+        {
+            Task changed;
+            lock (startedGate)
+            {
+                if (startedKeys.Count >= count)
+                {
+                    return;
+                }
+
+                changed = startedChanged.Task;
+            }
+
+            await changed.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    public void Release(string key)
+        => releases.GetOrAdd(key, static _ => CreateSignal()).TrySetResult(true);
+
+    public void ReleaseAll()
+    {
+        foreach (var key in StartedKeys)
+        {
+            Release(key);
+        }
+    }
+
+    private void Enter(string key)
+    {
+        starts.GetOrAdd(key, static _ => CreateSignal()).TrySetResult(true);
+        var keyActive = activeByKey.AddOrUpdate(key, 1, static (_, count) => count + 1);
+        maximumActiveByKey.AddOrUpdate(key, keyActive, (_, maximum) => Math.Max(maximum, keyActive));
+        var active = Interlocked.Increment(ref activeCount);
+        UpdateMaximum(ref maximumActiveCount, active);
+        lock (startedGate)
+        {
+            startedKeys.Add(key);
+            startedChanged.TrySetResult(true);
+            startedChanged = CreateSignal();
+        }
+    }
+
+    private static void UpdateMaximum(ref int target, int candidate)
+    {
+        var observed = Volatile.Read(ref target);
+        while (candidate > observed)
+        {
+            var replaced = Interlocked.CompareExchange(ref target, candidate, observed);
+            if (replaced == observed)
+            {
+                return;
+            }
+
+            observed = replaced;
+        }
+    }
+
+    private static TaskCompletionSource<bool> CreateSignal()
+        => new(TaskCreationOptions.RunContinuationsAsynchronously);
 }
 
 internal sealed class ControllableLlmChatInvocationPort : ILlmInvocationPort, ILlmStreamingInvocationPort

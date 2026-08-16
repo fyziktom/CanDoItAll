@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Ready`
+- `Complete — Pass`
 
 ## Objective
 
@@ -108,11 +108,11 @@
 
 ## Acceptance Checklist
 
-- [ ] Ten named cases discover and pass.
-- [ ] Cleanup never exceeds row batch and reaches newer data.
-- [ ] Replay snapshot is coherent and short-lived.
-- [ ] Transient maps remain bounded under stress/profile switches.
-- [ ] Changed project Release builds pass.
+- [x] Ten named cases discover and pass.
+- [x] Cleanup never exceeds row batch and reaches newer data.
+- [x] Replay snapshot is coherent and short-lived.
+- [x] Transient maps remain bounded under stress/profile switches.
+- [x] Changed project Release builds pass.
 
 ## Proof Required
 

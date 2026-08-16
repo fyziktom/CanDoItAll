@@ -21,11 +21,6 @@ public sealed class LlmChatOperationApplicationService(
         ArgumentNullException.ThrowIfNull(command);
         try
         {
-            if (!dispatchSignal.HasAvailableExecutor)
-            {
-                return Result<LlmChatOperationDetails>.Failure(LlmChatErrors.DispatcherUnavailable());
-            }
-
             var admissionResult = await admissionService.AdmitAsync(command, cancellationToken).ConfigureAwait(false);
             if (admissionResult.IsFailure)
             {

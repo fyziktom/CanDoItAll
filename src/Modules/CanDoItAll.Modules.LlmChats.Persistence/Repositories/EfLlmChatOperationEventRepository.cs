@@ -1,3 +1,4 @@
+using System.Data;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.LlmChats.Common;
@@ -5,6 +6,7 @@ using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
 using CanDoItAll.Modules.LlmChats.Ports;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CanDoItAll.Modules.LlmChats.Persistence.Repositories;
 
@@ -17,23 +19,33 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(createEvent);
-        var operation = await dbContext.Set<LlmChatOperationRow>()
-            .FromSqlInterpolated($"""
-                SELECT *
-                FROM "LlmChats_Operations"
-                WHERE "Id" = {operationId.Value}
-                FOR UPDATE
-                """)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new InvalidOperationException("The LLM Chat operation event target does not exist.");
-        var lastSequence = await dbContext.Set<LlmChatOperationEventRow>()
-            .Where(row => row.OperationId == operation.Id)
-            .MaxAsync(row => (long?)row.Sequence, cancellationToken)
-            .ConfigureAwait(false) ?? 0;
-        var appended = createEvent(checked(lastSequence + 1));
-        if (appended.OperationId != operationId || appended.Sequence != lastSequence + 1)
+        if (dbContext.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("Appending an LLM Chat operation event requires an active transaction.");
+        }
+
+        await using var command = dbContext.Database.GetDbConnection().CreateCommand();
+        command.Transaction = dbContext.Database.CurrentTransaction.GetDbTransaction();
+        command.CommandText =
+            """
+            UPDATE "LlmChats_Operations"
+            SET "LastEventSequence" = "LastEventSequence" + 1
+            WHERE "Id" = @operationId
+            RETURNING "LastEventSequence"
+            """;
+        var operationParameter = command.CreateParameter();
+        operationParameter.ParameterName = "operationId";
+        operationParameter.Value = operationId.Value;
+        command.Parameters.Add(operationParameter);
+        var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        var nextSequence = result is long sequence ? sequence : 0;
+        if (nextSequence < 1)
+        {
+            throw new InvalidOperationException("The LLM Chat operation event target does not exist.");
+        }
+
+        var appended = createEvent(nextSequence);
+        if (appended.OperationId != operationId || appended.Sequence != nextSequence)
         {
             throw new InvalidOperationException("The LLM Chat operation event factory changed journal identity.");
         }
@@ -48,12 +60,21 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
         int take,
         CancellationToken cancellationToken = default)
     {
+        await using var snapshot = dbContext.Database.CurrentTransaction is null
+            ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+                .ConfigureAwait(false)
+            : null;
         var operationRow = await dbContext.Set<LlmChatOperationRow>()
             .AsNoTracking()
             .SingleOrDefaultAsync(row => row.Id == operationId.Value, cancellationToken)
             .ConfigureAwait(false);
         if (operationRow is null)
         {
+            if (snapshot is not null)
+            {
+                await snapshot.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return null;
         }
 
@@ -64,15 +85,9 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
             .Take(take)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        var range = await dbContext.Set<LlmChatOperationEventRow>()
+        var earliestRetainedSequence = await dbContext.Set<LlmChatOperationEventRow>()
             .Where(row => row.OperationId == operationId.Value)
-            .GroupBy(static _ => 1)
-            .Select(group => new
-            {
-                Earliest = group.Min(row => row.Sequence),
-                Latest = group.Max(row => row.Sequence)
-            })
-            .SingleOrDefaultAsync(cancellationToken)
+            .MinAsync(row => (long?)row.Sequence, cancellationToken)
             .ConfigureAwait(false);
         var textCharactersThroughCursor = await dbContext.Set<LlmChatOperationEventRow>()
             .Where(row =>
@@ -81,46 +96,61 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
                 row.Kind == LlmChatOperationEventKind.TextDelta)
             .SumAsync(row => row.Text.Length, cancellationToken)
             .ConfigureAwait(false);
-        return new(
+        var page = new LlmChatOperationEventPage(
             LlmChatPersistenceMapper.ToDomain(operationRow),
             [.. rows.Select(ToDomain)],
-            range?.Earliest,
-            range?.Latest ?? 0,
+            earliestRetainedSequence,
+            operationRow.LastEventSequence,
             textCharactersThroughCursor);
+        if (snapshot is not null)
+        {
+            await snapshot.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return page;
     }
 
     public Task<long?> TryGetLatestSequenceAsync(
         LlmChatOperationId operationId,
         CancellationToken cancellationToken = default)
-        => dbContext.Set<LlmChatOperationEventRow>()
-            .Where(row => row.OperationId == operationId.Value)
-            .MaxAsync(row => (long?)row.Sequence, cancellationToken);
+        => dbContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == operationId.Value)
+            .Select(row => (long?)row.LastEventSequence)
+            .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<int> DeleteExpiredTerminalEventsAsync(
         DateTimeOffset completedBeforeUtc,
         int take,
         CancellationToken cancellationToken = default)
     {
-        var operationIds = await dbContext.Set<LlmChatOperationRow>()
-            .AsNoTracking()
-            .Where(row =>
-                (row.Status == LlmChatOperationStatus.Succeeded ||
-                 row.Status == LlmChatOperationStatus.Failed ||
-                 row.Status == LlmChatOperationStatus.Cancelled) &&
-                row.CompletedAtUtc < completedBeforeUtc)
-            .OrderBy(row => row.CompletedAtUtc)
-            .Select(row => row.Id)
-            .Take(take)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (operationIds.Length == 0)
+        if (dbContext.Database.CurrentTransaction is null)
         {
-            return 0;
+            throw new InvalidOperationException("Deleting LLM Chat operation events requires an active transaction.");
         }
 
-        return await dbContext.Set<LlmChatOperationEventRow>()
-            .Where(row => operationIds.Contains(row.OperationId))
-            .ExecuteDeleteAsync(cancellationToken)
+        return await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            WITH candidates AS
+            (
+                SELECT event."OperationId", event."Sequence"
+                FROM "LlmChats_Operations" AS operation
+                INNER JOIN "LlmChats_OperationEvents" AS event
+                    ON event."OperationId" = operation."Id"
+                WHERE operation."Status" IN (
+                    {(int)LlmChatOperationStatus.Succeeded},
+                    {(int)LlmChatOperationStatus.Failed},
+                    {(int)LlmChatOperationStatus.Cancelled})
+                  AND operation."CompletedAtUtc" < {completedBeforeUtc}
+                ORDER BY operation."CompletedAtUtc", event."OperationId", event."Sequence"
+                LIMIT {take}
+                FOR UPDATE OF event SKIP LOCKED
+            )
+            DELETE FROM "LlmChats_OperationEvents" AS event
+            USING candidates
+            WHERE event."OperationId" = candidates."OperationId"
+              AND event."Sequence" = candidates."Sequence"
+            """,
+            cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -149,6 +179,9 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
             case LlmChatOperationAttemptFinishedEvent finished:
                 row.AttemptOrdinal = finished.AttemptOrdinal;
                 row.InvocationOutcome = finished.Outcome;
+                row.Model = finished.Model;
+                row.FinishReason = finished.FinishReason;
+                row.DeliveryMode = finished.DeliveryMode;
                 row.FailureCode = finished.FailureCode;
                 SetUsage(row, finished.Usage);
                 break;
@@ -185,6 +218,9 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
                 new(row.OperationId),
                 row.Sequence,
                 row.AttemptOrdinal ?? throw InvalidRow(row),
+                row.Model,
+                row.FinishReason,
+                row.DeliveryMode ?? throw InvalidRow(row),
                 row.InvocationOutcome ?? throw InvalidRow(row),
                 GetUsage(row) ?? throw InvalidRow(row),
                 row.OccurredAtUtc,

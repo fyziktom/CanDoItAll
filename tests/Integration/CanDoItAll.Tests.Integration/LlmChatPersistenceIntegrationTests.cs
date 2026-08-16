@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Collections.Concurrent;
+using System.Data;
 using System.Data.Common;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.Conversations;
@@ -663,7 +664,223 @@ public sealed class LlmChatOperationEventJournalIntegrationTests
     }
 
     [Fact]
-    public async Task Retention_deletes_only_expired_terminal_journals_and_preserves_active_events()
+    public async Task Completed_event_preserves_model_finish_reason_delivery_mode_and_usage()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcompletedattempt");
+        await using var dbContext = database.CreateDbContext();
+        var now = DateTimeOffset.UtcNow;
+        var operation = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Running, now);
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var journal = LlmChatIntegrationEventJournalFactory.Create(
+            dbContext,
+            operationRepository,
+            unitOfWork,
+            new LlmChatOperationScopeAccessor(),
+            TimeProvider.System);
+        var usage = new LlmUsage(11, 7, 3);
+        var record = new LlmChatInvocationRecord(
+            operation.Id,
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            ProviderKind.OpenAi,
+            "Provider",
+            "completed-model",
+            null,
+            AgentReasoningEffortLevel.Medium,
+            1,
+            usage,
+            LlmChatInvocationOutcome.Succeeded,
+            string.Empty,
+            now,
+            now.AddSeconds(1),
+            "durable-completion",
+            LlmStreamingDeliveryMode.CompletedFallback,
+            "stop");
+
+        await journal.AppendAttemptFinishedAsync(record);
+
+        await using var readContext = database.CreateDbContext();
+        var page = await new EfLlmChatOperationEventRepository(readContext)
+            .ListAfterAsync(operation.Id, 0, 10);
+        var completed = Assert.IsType<LlmChatOperationAttemptFinishedEvent>(Assert.Single(page!.Events));
+        Assert.Equal("completed-model", completed.Model);
+        Assert.Equal("stop", completed.FinishReason);
+        Assert.Equal(LlmStreamingDeliveryMode.CompletedFallback, completed.DeliveryMode);
+        Assert.Equal(usage, completed.Usage);
+        Assert.Equal(1, completed.AttemptOrdinal);
+        Assert.Equal(LlmChatInvocationOutcome.Succeeded, completed.Outcome);
+    }
+
+    [Fact]
+    public async Task Event_append_advances_high_water_atomically()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchathighwateratomic");
+        await using var dbContext = database.CreateDbContext();
+        var now = DateTimeOffset.UtcNow;
+        var operation = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Pending, now);
+        var operationRepository = new EfLlmChatOperationRepository(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var journal = LlmChatIntegrationEventJournalFactory.Create(
+            dbContext,
+            operationRepository,
+            unitOfWork,
+            new LlmChatOperationScopeAccessor(),
+            TimeProvider.System);
+
+        await journal.AppendStateChangedAsync(operation);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => unitOfWork.ExecuteAsync<bool>(async token =>
+        {
+            await journal.AppendStateChangedAsync(operation, cancellationToken: token);
+            throw new InvalidOperationException("Injected rollback.");
+        }));
+
+        dbContext.ChangeTracker.Clear();
+        await using var readContext = database.CreateDbContext();
+        var operationRow = await readContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == operation.Id.Value);
+        var events = await readContext.Set<LlmChatOperationEventRow>()
+            .AsNoTracking()
+            .Where(row => row.OperationId == operation.Id.Value)
+            .ToArrayAsync();
+        Assert.Equal(1, operationRow.LastEventSequence);
+        Assert.Equal(1, Assert.Single(events).Sequence);
+    }
+
+    [Fact]
+    public async Task High_water_survives_full_event_retention_and_restart()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchathighwaterretention");
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        LlmChatOperation operation;
+        await using (var dbContext = database.CreateDbContext())
+        {
+            operation = await SeedOperationAsync(
+                dbContext,
+                LlmChatOperationStatus.Succeeded,
+                now.AddDays(-8));
+            var operationRepository = new EfLlmChatOperationRepository(dbContext);
+            var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+            var scope = new LlmChatOperationScopeAccessor();
+            var options = new LlmChatStreamingOptions { EventRetention = TimeSpan.FromDays(7) };
+            var timeProvider = new FixedIntegrationTimeProvider(now);
+            var journal = new LlmChatOperationEventJournal(
+                operationRepository,
+                new EfLlmChatOperationEventRepository(dbContext),
+                unitOfWork,
+                new LlmChatOperationEventSignal(timeProvider),
+                scope,
+                options,
+                timeProvider);
+            await journal.AppendStateChangedAsync(operation, "model", LlmUsage.Zero);
+            Assert.Equal(1, await journal.DeleteExpiredTerminalEventsAsync());
+        }
+
+        await using var restartedContext = database.CreateDbContext();
+        var replay = await new EfLlmChatOperationEventRepository(restartedContext)
+            .ListAfterAsync(operation.Id, 0, 10);
+        Assert.NotNull(replay);
+        Assert.Empty(replay.Events);
+        Assert.Null(replay.EarliestRetainedSequence);
+        Assert.Equal(1, replay.LatestSequence);
+        Assert.Equal(1, replay.Operation.LastEventSequence);
+    }
+
+    [Fact]
+    public Task Replay_page_observes_terminal_operation_and_event_from_one_snapshot()
+        => AssertCoherentReplaySnapshotAsync("llmchatreplayterminal");
+
+    [Fact]
+    public Task Replay_page_never_exposes_terminal_event_with_missing_result_metadata()
+        => AssertCoherentReplaySnapshotAsync("llmchatreplaymetadata");
+
+    [Fact]
+    public async Task Cleanup_batch_counts_event_rows_not_operations()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcleanuprowbatch");
+        await using var dbContext = database.CreateDbContext();
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var operation = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Succeeded, now.AddDays(-8));
+        var options = new LlmChatStreamingOptions
+        {
+            EventRetention = TimeSpan.FromDays(7),
+            CleanupBatchSize = 2
+        };
+        var journal = CreateJournal(dbContext, options, now);
+        for (var index = 0; index < 5; index++)
+        {
+            await journal.AppendStateChangedAsync(operation, "model", LlmUsage.Zero);
+        }
+
+        await AssertCleanupPlanUsesBoundedIndexesAsync(dbContext, now.AddDays(-7), options.CleanupBatchSize);
+        var deleted = await journal.DeleteExpiredTerminalEventsAsync();
+
+        Assert.Equal(2, deleted);
+        Assert.Equal(3, await dbContext.Set<LlmChatOperationEventRow>()
+            .CountAsync(row => row.OperationId == operation.Id.Value));
+    }
+
+    [Fact]
+    public async Task Cleanup_skips_empty_old_operations_and_reaches_newer_events()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcleanupskipempty");
+        await using var dbContext = database.CreateDbContext();
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        _ = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Succeeded, now.AddDays(-30));
+        var withEvent = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Succeeded, now.AddDays(-8));
+        var options = new LlmChatStreamingOptions
+        {
+            EventRetention = TimeSpan.FromDays(7),
+            CleanupBatchSize = 1
+        };
+        var journal = CreateJournal(dbContext, options, now);
+        await journal.AppendStateChangedAsync(withEvent, "model", LlmUsage.Zero);
+
+        var deleted = await journal.DeleteExpiredTerminalEventsAsync();
+
+        Assert.Equal(1, deleted);
+        Assert.False(await dbContext.Set<LlmChatOperationEventRow>().AnyAsync());
+    }
+
+    [Fact]
+    public async Task Cleanup_drains_multiple_bounded_batches_without_interval_starvation()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcleanupdrain");
+        await using var dbContext = database.CreateDbContext();
+        var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
+        var operation = await SeedOperationAsync(dbContext, LlmChatOperationStatus.Succeeded, now.AddDays(-8));
+        var options = new LlmChatStreamingOptions
+        {
+            EventRetention = TimeSpan.FromDays(7),
+            CleanupInterval = TimeSpan.FromHours(1),
+            CleanupBatchSize = 2
+        };
+        var scope = new LlmChatOperationScopeAccessor();
+        var timeProvider = new FixedIntegrationTimeProvider(now);
+        var journal = CreateJournal(dbContext, options, now, scope);
+        for (var index = 0; index < 5; index++)
+        {
+            await journal.AppendStateChangedAsync(operation, "model", LlmUsage.Zero);
+        }
+
+        var service = new LlmChatOperationEventRetentionService(
+            journal,
+            new LlmChatOperationEventRetentionSchedule(),
+            scope,
+            options,
+            timeProvider);
+        using var operationScope = scope.Push(new LlmChatOperationExecutionContext(
+            operation.Id,
+            new LlmChatRuntimeIdentity(Guid.NewGuid(), new string('a', 64), 1)));
+        Assert.Equal(2, await service.ApplyIfDueAsync());
+        Assert.Equal(2, await service.ApplyIfDueAsync());
+        Assert.Equal(1, await service.ApplyIfDueAsync());
+        Assert.Equal(0, await service.ApplyIfDueAsync());
+        Assert.False(await dbContext.Set<LlmChatOperationEventRow>().AnyAsync());
+    }
+
+    [Fact]
+    public async Task Cleanup_never_deletes_active_operation_events()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchateventretention");
         await using var dbContext = database.CreateDbContext();
@@ -694,6 +911,161 @@ public sealed class LlmChatOperationEventJournalIntegrationTests
         var repository = new EfLlmChatOperationEventRepository(dbContext);
         Assert.Empty((await repository.ListAfterAsync(terminal.Id, 0, 10))!.Events);
         Assert.Single((await repository.ListAfterAsync(active.Id, 0, 10))!.Events);
+    }
+
+    private static async Task AssertCoherentReplaySnapshotAsync(string databaseKey)
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync(databaseKey);
+        LlmChatOperation operation;
+        await using (var seedContext = database.CreateDbContext())
+        {
+            operation = await SeedOperationAsync(seedContext, LlmChatOperationStatus.Pending, DateTimeOffset.UtcNow);
+        }
+
+        await using var readerContext = database.CreateDbContext();
+        await using var snapshot = await readerContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead);
+        var initial = await readerContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == operation.Id.Value);
+        Assert.Equal(LlmChatOperationStatus.Pending, initial.Status);
+
+        var completedAtUtc = DateTimeOffset.UtcNow;
+        var assistantEntryId = Guid.NewGuid();
+        await using (var writerContext = database.CreateDbContext())
+        await using (var writerTransaction = await writerContext.Database.BeginTransactionAsync())
+        {
+            await writerContext.Set<LlmChatOperationRow>()
+                .Where(row => row.Id == operation.Id.Value)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(row => row.Status, LlmChatOperationStatus.Succeeded)
+                    .SetProperty(row => row.CompletedAtUtc, completedAtUtc)
+                    .SetProperty(row => row.ResultingTranscriptRevision, 1L)
+                    .SetProperty(row => row.AssistantEntryId, assistantEntryId)
+                    .SetProperty(row => row.LastEventSequence, 1L));
+            writerContext.Add(new LlmChatOperationEventRow
+            {
+                OperationId = operation.Id.Value,
+                Sequence = 1,
+                Kind = LlmChatOperationEventKind.StateChanged,
+                Status = LlmChatOperationStatus.Succeeded,
+                Model = "model",
+                InputTokens = 1,
+                OutputTokens = 1,
+                CachedInputTokens = 0,
+                OccurredAtUtc = completedAtUtc
+            });
+            await writerContext.SaveChangesAsync();
+            await writerTransaction.CommitAsync();
+        }
+
+        var snapshotPage = await new EfLlmChatOperationEventRepository(readerContext)
+            .ListAfterAsync(operation.Id, 0, 10);
+        Assert.NotNull(snapshotPage);
+        Assert.Equal(LlmChatOperationStatus.Pending, snapshotPage.Operation.Status);
+        Assert.Null(snapshotPage.Operation.ResultingTranscriptRevision);
+        Assert.Null(snapshotPage.Operation.AssistantEntryId);
+        Assert.Empty(snapshotPage.Events);
+        Assert.Equal(0, snapshotPage.LatestSequence);
+        await snapshot.CommitAsync();
+
+        await using var currentContext = database.CreateDbContext();
+        var currentPage = await new EfLlmChatOperationEventRepository(currentContext)
+            .ListAfterAsync(operation.Id, 0, 10);
+        Assert.NotNull(currentPage);
+        Assert.Equal(LlmChatOperationStatus.Succeeded, currentPage.Operation.Status);
+        Assert.Equal(1, currentPage.Operation.ResultingTranscriptRevision);
+        Assert.Equal(assistantEntryId, currentPage.Operation.AssistantEntryId);
+        Assert.Single(currentPage.Events);
+        Assert.Equal(1, currentPage.LatestSequence);
+    }
+
+    private static async Task AssertCleanupPlanUsesBoundedIndexesAsync(
+        AppDbContext dbContext,
+        DateTimeOffset completedBeforeUtc,
+        int take)
+    {
+        const string operationIndex = "IX_LlmChats_Operations_Status_CompletedAtUtc";
+        const string eventIndex = "PK_LlmChats_OperationEvents";
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SET enable_seqscan = off;";
+        await command.ExecuteNonQueryAsync();
+        try
+        {
+            command.CommandText =
+                """
+                EXPLAIN (COSTS OFF)
+                WITH candidates AS
+                (
+                    SELECT event."OperationId", event."Sequence"
+                    FROM "LlmChats_Operations" AS operation
+                    INNER JOIN "LlmChats_OperationEvents" AS event
+                        ON event."OperationId" = operation."Id"
+                    WHERE operation."Status" IN (2, 3, 4)
+                      AND operation."CompletedAtUtc" < @completedBeforeUtc
+                    ORDER BY operation."CompletedAtUtc", event."OperationId", event."Sequence"
+                    LIMIT @take
+                    FOR UPDATE OF event SKIP LOCKED
+                )
+                DELETE FROM "LlmChats_OperationEvents" AS event
+                USING candidates
+                WHERE event."OperationId" = candidates."OperationId"
+                  AND event."Sequence" = candidates."Sequence"
+                """;
+            var completedBeforeParameter = command.CreateParameter();
+            completedBeforeParameter.ParameterName = "completedBeforeUtc";
+            completedBeforeParameter.Value = completedBeforeUtc;
+            command.Parameters.Add(completedBeforeParameter);
+            var takeParameter = command.CreateParameter();
+            takeParameter.ParameterName = "take";
+            takeParameter.Value = take;
+            command.Parameters.Add(takeParameter);
+
+            await using var reader = await command.ExecuteReaderAsync();
+            var lines = new List<string>();
+            while (await reader.ReadAsync())
+            {
+                lines.Add(reader.GetString(0));
+            }
+
+            var plan = string.Join(Environment.NewLine, lines);
+            Assert.Contains(operationIndex, plan, StringComparison.Ordinal);
+            Assert.Contains(eventIndex, plan, StringComparison.Ordinal);
+            var outputDirectory = Environment.GetEnvironmentVariable("CANDOITALL_LLMCHAT_RETENTION_QUERY_PLAN_DIR");
+            if (!string.IsNullOrWhiteSpace(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+                await File.WriteAllTextAsync(Path.Combine(outputDirectory, "cleanup-delete-plan.txt"), plan);
+            }
+        }
+        finally
+        {
+            command.Parameters.Clear();
+            command.CommandText = "RESET enable_seqscan;";
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    private static LlmChatOperationEventJournal CreateJournal(
+        AppDbContext dbContext,
+        LlmChatStreamingOptions options,
+        DateTimeOffset now,
+        LlmChatOperationScopeAccessor? scope = null)
+    {
+        var operationScope = scope ?? new LlmChatOperationScopeAccessor();
+        return new LlmChatOperationEventJournal(
+            new EfLlmChatOperationRepository(dbContext),
+            new EfLlmChatOperationEventRepository(dbContext),
+            new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance),
+            new LlmChatOperationEventSignal(new FixedIntegrationTimeProvider(now)),
+            operationScope,
+            options,
+            new FixedIntegrationTimeProvider(now));
     }
 
     private static async Task<LlmChatOperation> SeedOperationAsync(
@@ -1405,6 +1777,75 @@ public sealed class LlmChatOperationDispatchClaimIntegrationTests
     }
 }
 
+public sealed class LlmChatOperationEvidenceMigrationIntegrationTests
+{
+    private const string PreviousMigrationId = "20260815051653_AddLlmChatOperationEvents";
+
+    [Fact]
+    public async Task Migration_backfills_high_water_from_existing_events()
+    {
+        await using var database = LlmChatsPostgreSqlTestDatabase.CreateUnmigrated("llmchatevidencemigration");
+        await using var dbContext = database.CreateDbContext();
+        var migrator = dbContext.Database.GetService<IMigrator>();
+        await migrator.MigrateAsync(PreviousMigrationId);
+        var conversationId = Guid.NewGuid();
+        var operationId = Guid.NewGuid();
+        var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);
+        dbContext.Add(LlmChatsPostgreSqlTestDatabase.CreateTranscriptRow(conversationId, document.CreatedAtUtc));
+        await dbContext.SaveChangesAsync();
+        await SeedPreviousOperationEvidenceAsync(dbContext, conversationId, operationId, document.CreatedAtUtc);
+
+        await migrator.MigrateAsync();
+
+        dbContext.ChangeTracker.Clear();
+        var operation = await dbContext.Set<LlmChatOperationRow>().SingleAsync(row => row.Id == operationId);
+        var invocation = await dbContext.Set<LlmChatInvocationRecordRow>()
+            .SingleAsync(row => row.OperationId == operationId && row.Ordinal == 1);
+        var finishedEvent = await dbContext.Set<LlmChatOperationEventRow>()
+            .SingleAsync(row => row.OperationId == operationId && row.Sequence == 2);
+        Assert.Equal(2, operation.LastEventSequence);
+        Assert.Equal(LlmStreamingDeliveryMode.Incremental, invocation.DeliveryMode);
+        Assert.Equal("completed", invocation.FinishReason);
+        Assert.Equal("legacy-model", finishedEvent.Model);
+        Assert.Equal(LlmStreamingDeliveryMode.Incremental, finishedEvent.DeliveryMode);
+        Assert.Equal("completed", finishedEvent.FinishReason);
+    }
+
+    private static Task SeedPreviousOperationEvidenceAsync(
+        AppDbContext dbContext,
+        Guid conversationId,
+        Guid operationId,
+        DateTimeOffset occurredAtUtc)
+        => dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            INSERT INTO "LlmChats_Operations"
+                ("Id", "ConversationId", "Kind", "RequestFingerprint", "ExpectedTranscriptRevision", "Status",
+                 "StartedAtUtc", "FailureCode", "ConcurrencyToken")
+            VALUES
+                ({operationId}, {conversationId}, {(int)LlmChatOperationKind.SendTurn}, {new string('a', 64)}, 0,
+                 {(int)LlmChatOperationStatus.Succeeded}, {occurredAtUtc}, '', 0);
+
+            INSERT INTO "LlmChats_InvocationRecords"
+                ("OperationId", "Ordinal", "ProviderProfileId", "ProviderKind", "ProviderName", "Model",
+                 "RequestedThinkingEffort", "EffectiveThinkingEffort", "InputTokens", "OutputTokens",
+                 "CachedInputTokens", "Outcome", "FailureCode", "StartedAtUtc", "CompletedAtUtc", "CorrelationId")
+            VALUES
+                ({operationId}, 1, {Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}, {(int)ProviderKind.OpenAi},
+                 'Legacy provider', 'legacy-model', NULL, NULL, 8, 5, 1, {(int)LlmChatInvocationOutcome.Succeeded},
+                 '', {occurredAtUtc}, {occurredAtUtc.AddSeconds(1)}, 'legacy-correlation');
+
+            INSERT INTO "LlmChats_OperationEvents"
+                ("OperationId", "Sequence", "Kind", "AttemptOrdinal", "DeliveryMode", "Text", "Model",
+                 "FailureCode", "OccurredAtUtc")
+            VALUES
+                ({operationId}, 1, {(int)LlmChatOperationEventKind.AttemptStarted}, 1,
+                 {(int)LlmStreamingDeliveryMode.Incremental}, '', 'legacy-model', '', {occurredAtUtc}),
+                ({operationId}, 2, {(int)LlmChatOperationEventKind.AttemptFinished}, 1,
+                 NULL, '', '', '', {occurredAtUtc.AddSeconds(1)});
+            """);
+}
+
 public sealed class LlmChatsDatabaseTransferIntegrationTests
 {
     [Fact]
@@ -1415,7 +1856,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
-        var handler = new LlmChatsDatabaseTransferHandler();
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions());
         var context = new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),
             CreateProfile(target.ConnectionString),
@@ -1438,12 +1879,219 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         Assert.Equal(seeded.OperationId, audit.OperationId);
         Assert.Equal(AgentReasoningEffortLevel.None, audit.RequestedThinkingEffort);
         Assert.Equal(AgentReasoningEffortLevel.Medium, audit.EffectiveThinkingEffort);
-        var operationEvent = Assert.Single(await targetContext.Set<LlmChatOperationEventRow>()
+        var operationEvents = await targetContext.Set<LlmChatOperationEventRow>()
             .AsNoTracking()
-            .ToArrayAsync());
+            .OrderBy(row => row.Sequence)
+            .ToArrayAsync();
+        Assert.Equal(2, operationEvents.Length);
+        var operationEvent = operationEvents[0];
         Assert.Equal(seeded.OperationId, operationEvent.OperationId);
         Assert.Equal(1, operationEvent.Sequence);
         Assert.Equal(LlmChatOperationEventKind.StateChanged, operationEvent.Kind);
+    }
+
+    [Fact]
+    public async Task Database_transfer_round_trips_completion_and_high_water_fields()
+    {
+        await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcompletiontransfersource");
+        await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcompletiontransfertarget");
+        var seeded = await SeedCompleteGraphAsync(source);
+        await using var sourceContext = source.CreateDbContext();
+        await using var targetContext = target.CreateDbContext();
+        var result = await new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions()).TransferAsync(new DatabaseTransferContext(
+            CreateProfile(source.ConnectionString),
+            CreateProfile(target.ConnectionString),
+            sourceContext,
+            targetContext,
+            ReplaceExisting: true));
+
+        Assert.True(result.Success, result.Message);
+        var operation = await targetContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == seeded.OperationId);
+        var invocation = await targetContext.Set<LlmChatInvocationRecordRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.OperationId == seeded.OperationId);
+        var completedEvent = await targetContext.Set<LlmChatOperationEventRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.OperationId == seeded.OperationId && row.Kind == LlmChatOperationEventKind.AttemptFinished);
+        Assert.Equal(2, operation.LastEventSequence);
+        Assert.Equal(LlmStreamingDeliveryMode.Incremental, invocation.DeliveryMode);
+        Assert.Equal("stop", invocation.FinishReason);
+        Assert.Equal(LlmChatInvocationOutcome.Succeeded, invocation.Outcome);
+        Assert.Equal((10, 4, 2), (invocation.InputTokens, invocation.OutputTokens, invocation.CachedInputTokens));
+        Assert.Equal("model", completedEvent.Model);
+        Assert.Equal(LlmStreamingDeliveryMode.Incremental, completedEvent.DeliveryMode);
+        Assert.Equal("stop", completedEvent.FinishReason);
+        Assert.Equal(LlmChatInvocationOutcome.Succeeded, completedEvent.InvocationOutcome);
+        Assert.Equal((10, 4, 2), (completedEvent.InputTokens, completedEvent.OutputTokens, completedEvent.CachedInputTokens));
+    }
+
+    [Fact]
+    public async Task Transfer_rejects_invalid_operation_invocation_event_graph()
+    {
+        await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatinvalidgraphsource");
+        await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatinvalidgraphtarget");
+        var seeded = await SeedCompleteGraphAsync(source);
+        await using var sourceContext = source.CreateDbContext();
+        await using var targetContext = target.CreateDbContext();
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions());
+        var transfer = new DatabaseTransferContext(
+            CreateProfile(source.ConnectionString),
+            CreateProfile(target.ConnectionString),
+            sourceContext,
+            targetContext,
+            ReplaceExisting: true);
+
+        await sourceContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Kind, (LlmChatOperationKind)999));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(transfer));
+        await sourceContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Kind, LlmChatOperationKind.SendTurn));
+
+        await sourceContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.DispatchPhase, LlmChatDispatchPhase.Claimed));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(transfer));
+        await sourceContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(
+                row => row.DispatchPhase,
+                LlmChatDispatchPhase.ProviderDispatchReturned));
+
+        var userEntryId = await sourceContext.Set<LlmChatMessageRow>()
+            .Where(row => row.ConversationId == seeded.ConversationId && row.Role == LlmMessageRole.User)
+            .Select(row => row.EntryId)
+            .SingleAsync();
+        await sourceContext.Set<LlmChatTranscriptRow>()
+            .Where(row => row.ConversationId == seeded.ConversationId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.ActiveTurnId, seeded.OperationId)
+                .SetProperty(row => row.PendingUserEntryId, userEntryId)
+                .SetProperty(row => row.TurnAdmittedAtUtc, DateTimeOffset.UtcNow)
+                .SetProperty(row => row.TurnAdmittedRevision, 1L));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(transfer));
+        await sourceContext.Set<LlmChatTranscriptRow>()
+            .Where(row => row.ConversationId == seeded.ConversationId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.ActiveTurnId, (Guid?)null)
+                .SetProperty(row => row.PendingUserEntryId, (Guid?)null)
+                .SetProperty(row => row.TurnAdmittedAtUtc, (DateTimeOffset?)null)
+                .SetProperty(row => row.TurnAdmittedRevision, (long?)null));
+
+        await sourceContext.Set<LlmChatMessageRow>()
+            .Where(row => row.EntryId == userEntryId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.TurnId, Guid.NewGuid()));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(transfer));
+        await sourceContext.Set<LlmChatMessageRow>()
+            .Where(row => row.EntryId == userEntryId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.TurnId, seeded.OperationId));
+
+        await sourceContext.Set<LlmChatInvocationRecordRow>()
+            .Where(row => row.OperationId == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Outcome, (LlmChatInvocationOutcome)999));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(transfer));
+        await sourceContext.Set<LlmChatInvocationRecordRow>()
+            .Where(row => row.OperationId == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Outcome, LlmChatInvocationOutcome.Succeeded));
+
+        await sourceContext.Set<LlmChatOperationEventRow>()
+            .Where(row => row.OperationId == seeded.OperationId && row.Sequence == 2)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(row => row.Kind, (LlmChatOperationEventKind)999));
+        await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(transfer));
+        Assert.False(await targetContext.Set<LlmChatOperationRow>().AnyAsync());
+    }
+
+    [Fact]
+    public async Task Transfer_rejects_over_bound_document_before_materialization()
+    {
+        await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatoverboundsource");
+        await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatoverboundtarget");
+        _ = await SeedCompleteGraphAsync(source);
+        await using var sourceContext = source.CreateDbContext();
+        await using var targetContext = target.CreateDbContext();
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions
+        {
+            MaximumRecordsPerCollection = 1,
+            MaximumTotalRecords = 9
+        });
+
+        var exception = await Assert.ThrowsAsync<InvalidDataException>(() => handler.TransferAsync(
+            new DatabaseTransferContext(
+                CreateProfile(source.ConnectionString),
+                CreateProfile(target.ConnectionString),
+                sourceContext,
+                targetContext,
+                ReplaceExisting: true)));
+
+        Assert.Contains("definition revisions", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(sourceContext.ChangeTracker.Entries());
+        Assert.False(await targetContext.Set<LlmChatDefinitionRow>().AnyAsync());
+    }
+
+    [Fact]
+    public async Task Transfer_uses_one_bounded_snapshot_when_source_changes_after_preflight()
+    {
+        await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatsnapshotsource");
+        await using var target = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatsnapshottarget");
+        _ = await SeedCompleteGraphAsync(source);
+        var concurrentDefinitionId = Guid.NewGuid();
+        var interceptor = new InsertAfterCountPreflightInterceptor(async cancellationToken =>
+        {
+            await using var writer = source.CreateDbContext();
+            var now = DateTimeOffset.UtcNow;
+            writer.Add(new LlmChatDefinitionRow
+            {
+                Id = concurrentDefinitionId,
+                Name = "Concurrent definition",
+                Summary = "Inserted after transfer preflight",
+                AvatarImageUrl = "",
+                Status = LlmChatDefinitionStatus.Active,
+                CurrentRevision = 1,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+                ConcurrencyToken = 0
+            });
+            writer.Add(LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(
+                concurrentDefinitionId,
+                1,
+                AgentReasoningEffortLevel.None,
+                now));
+            await writer.SaveChangesAsync(cancellationToken);
+        });
+        await using var sourceContext = source.CreateDbContext(interceptor);
+        await using var targetContext = target.CreateDbContext();
+        var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions
+        {
+            MaximumRecordsPerCollection = 2,
+            MaximumTotalRecords = 12
+        });
+
+        var result = await handler.TransferAsync(new DatabaseTransferContext(
+            CreateProfile(source.ConnectionString),
+            CreateProfile(target.ConnectionString),
+            sourceContext,
+            targetContext,
+            ReplaceExisting: true));
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(12, result.RecordsCopied);
+        Assert.Equal(1, interceptor.InsertionCount);
+        Assert.Equal(2, await sourceContext.Set<LlmChatDefinitionRow>().CountAsync());
+        Assert.Equal(1, await targetContext.Set<LlmChatDefinitionRow>().CountAsync());
+        Assert.False(await targetContext.Set<LlmChatDefinitionRow>().AnyAsync(row => row.Id == concurrentDefinitionId));
+
+        await using var weakAmbientTransaction = await sourceContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        var ambientException = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(
+            new DatabaseTransferContext(
+                CreateProfile(source.ConnectionString),
+                CreateProfile(target.ConnectionString),
+                sourceContext,
+                targetContext,
+                ReplaceExisting: true)));
+        Assert.Contains("repeatable-read or serializable isolation", ambientException.Message, StringComparison.Ordinal);
     }
 
     private static async Task<SeededGraph> SeedCompleteGraphAsync(LlmChatsPostgreSqlTestDatabase database)
@@ -1451,6 +2099,7 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var definitionId = Guid.NewGuid();
         var conversationId = Guid.NewGuid();
         var operationId = Guid.NewGuid();
+        var assistantEntryId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         await using var context = database.CreateDbContext();
         context.Add(new LlmChatDefinitionRow
@@ -1469,7 +2118,10 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(definitionId, 1, AgentReasoningEffortLevel.None, now),
             LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(definitionId, 2, null, now.AddSeconds(1)));
         context.Add(new LlmChatDefinitionTagRow { DefinitionId = definitionId, Tag = "support" });
-        context.Add(LlmChatsPostgreSqlTestDatabase.CreateTranscriptRow(conversationId, now));
+        var transcript = LlmChatsPostgreSqlTestDatabase.CreateTranscriptRow(conversationId, now);
+        transcript.TranscriptRevision = 2;
+        transcript.EntryCount = 2;
+        context.Add(transcript);
         context.Add(new LlmChatMessageRow
         {
             EntryId = Guid.NewGuid(),
@@ -1480,6 +2132,20 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             Text = "Hello",
             CreatedAtUtc = now,
             Model = ""
+        });
+        context.Add(new LlmChatMessageRow
+        {
+            EntryId = assistantEntryId,
+            ConversationId = conversationId,
+            Sequence = 2,
+            TurnId = operationId,
+            Role = LlmMessageRole.Assistant,
+            Text = "Hello back",
+            CreatedAtUtc = now.AddSeconds(1),
+            Model = "model",
+            InputTokens = 10,
+            OutputTokens = 4,
+            CachedInputTokens = 2
         });
         context.Add(new LlmChatConversationRow
         {
@@ -1502,8 +2168,15 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             ExpectedTranscriptRevision = 0,
             Status = LlmChatOperationStatus.Succeeded,
             StartedAtUtc = now,
+            TurnAdmittedAtUtc = now,
+            ProviderDispatchStartedAtUtc = now,
+            ProviderDispatchReturnedAtUtc = now.AddSeconds(1),
+            TranscriptCompletedAtUtc = now.AddSeconds(1),
             CompletedAtUtc = now.AddSeconds(1),
-            ResultingTranscriptRevision = 1,
+            ResultingTranscriptRevision = 2,
+            AssistantEntryId = assistantEntryId,
+            DispatchPhase = LlmChatDispatchPhase.ProviderDispatchReturned,
+            LastEventSequence = 2,
             ConcurrencyToken = 1
         });
         context.Add(new LlmChatInvocationRecordRow
@@ -1516,6 +2189,8 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             Model = "model",
             RequestedThinkingEffort = AgentReasoningEffortLevel.None,
             EffectiveThinkingEffort = AgentReasoningEffortLevel.Medium,
+            DeliveryMode = LlmStreamingDeliveryMode.Incremental,
+            FinishReason = "stop",
             InputTokens = 10,
             OutputTokens = 4,
             CachedInputTokens = 2,
@@ -1537,6 +2212,21 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             CachedInputTokens = 2,
             OccurredAtUtc = now.AddSeconds(1)
         });
+        context.Add(new LlmChatOperationEventRow
+        {
+            OperationId = operationId,
+            Sequence = 2,
+            Kind = LlmChatOperationEventKind.AttemptFinished,
+            AttemptOrdinal = 1,
+            InvocationOutcome = LlmChatInvocationOutcome.Succeeded,
+            DeliveryMode = LlmStreamingDeliveryMode.Incremental,
+            Model = "model",
+            FinishReason = "stop",
+            InputTokens = 10,
+            OutputTokens = 4,
+            CachedInputTokens = 2,
+            OccurredAtUtc = now.AddSeconds(1)
+        });
         await context.SaveChangesAsync();
         return new SeededGraph(definitionId, conversationId, operationId);
     }
@@ -1552,6 +2242,36 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             },
             DatabaseProfileResolutionSource.ExplicitOverride,
             connectionString);
+
+    private sealed class InsertAfterCountPreflightInterceptor(
+        Func<CancellationToken, Task> insert) : DbCommandInterceptor
+    {
+        private int countQueries;
+        private int insertionCount;
+
+        public int InsertionCount => Volatile.Read(ref insertionCount);
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains("count(*)", StringComparison.OrdinalIgnoreCase))
+            {
+                Interlocked.Increment(ref countQueries);
+                return result;
+            }
+
+            if (Volatile.Read(ref countQueries) >= 9 &&
+                Interlocked.CompareExchange(ref insertionCount, 1, 0) == 0)
+            {
+                await insert(cancellationToken);
+            }
+
+            return result;
+        }
+    }
 
     private sealed record SeededGraph(Guid DefinitionId, Guid ConversationId, Guid OperationId);
 }
@@ -1583,8 +2303,13 @@ internal sealed class LlmChatsPostgreSqlTestDatabase : IAsyncDisposable
         return new LlmChatsPostgreSqlTestDatabase(PostgresTestDatabaseLease.Create(key));
     }
 
-    public AppDbContext CreateDbContext()
-        => new(lease.CreateAppDbContextOptions());
+    public AppDbContext CreateDbContext(params IInterceptor[] interceptors)
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>(lease.CreateAppDbContextOptions())
+            .AddInterceptors(interceptors)
+            .Options;
+        return new AppDbContext(options);
+    }
 
     public ValueTask DisposeAsync()
         => lease.DisposeAsync();

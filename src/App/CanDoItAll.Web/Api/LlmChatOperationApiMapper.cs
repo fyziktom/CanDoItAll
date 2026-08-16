@@ -10,12 +10,16 @@ internal static class LlmChatOperationApiMapper
         ArgumentNullException.ThrowIfNull(details);
         var operation = details.Operation;
         var assistant = details.AssistantMessage;
+        if (details.Invocations.Count > LlmChatOperationDetails.MaximumInvocationRecords)
+        {
+            throw new InvalidOperationException("The operation invocation history exceeds its public bound.");
+        }
+
         return new LlmChatOperationApiResponse(
             LlmChatOperationApiSchemas.Operation,
             operation.Id.Value,
             operation.ConversationId.Value,
             operation.Status,
-            operation.RequestFingerprint.Value,
             details.Replayed,
             operation.ExpectedTranscriptRevision,
             operation.ResultingTranscriptRevision,
@@ -23,6 +27,9 @@ internal static class LlmChatOperationApiMapper
             LlmChatOperationApiRoutes.Status(operation.Id.Value),
             LlmChatOperationApiRoutes.Events(operation.Id.Value),
             LlmChatOperationApiRoutes.Cancel(operation.Id.Value),
+            [.. details.Invocations
+                .OrderBy(invocation => invocation.Ordinal)
+                .Select(ToInvocationResponse)],
             assistant is null
                 ? null
                 : new LlmChatMessageApiResponse(
@@ -44,4 +51,27 @@ internal static class LlmChatOperationApiMapper
             operation.StartedAtUtc,
             operation.CompletedAtUtc);
     }
+
+    private static LlmChatInvocationAttemptApiResponse ToInvocationResponse(
+        CanDoItAll.Modules.LlmChats.Operations.LlmChatInvocationRecord invocation)
+        => new(
+            invocation.Ordinal,
+            invocation.ProviderKind,
+            invocation.Model,
+            invocation.DeliveryMode,
+            string.IsNullOrEmpty(invocation.FinishReason) ? null : invocation.FinishReason,
+            invocation.RequestedThinkingEffort,
+            invocation.EffectiveThinkingEffort,
+            invocation.Outcome,
+            new LlmChatUsageApiResponse(
+                invocation.Usage.InputTokens,
+                invocation.Usage.OutputTokens,
+                invocation.Usage.CachedInputTokens),
+            string.IsNullOrEmpty(invocation.FailureCode)
+                ? null
+                : new LlmChatOperationFailureApiResponse(
+                    invocation.FailureCode,
+                    LlmChatApiResults.IsRetryable(invocation.FailureCode)),
+            invocation.StartedAtUtc,
+            invocation.CompletedAtUtc);
 }

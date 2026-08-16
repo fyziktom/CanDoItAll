@@ -35,7 +35,17 @@ public sealed class LlmChatOperationExecutor(
         {
             ExecutionLease = lease
         });
-        using var registration = cancellationRegistry.Register(claim.Operation.Id, cancellationToken);
+        var remainingDuration = claim.Operation.StartedAtUtc + options.MaximumOperationDuration -
+            timeProvider.GetUtcNow();
+        using var operationDeadline = new CancellationTokenSource(
+            remainingDuration > TimeSpan.Zero ? remainingDuration : TimeSpan.Zero,
+            timeProvider);
+        using var executionLifetime = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            operationDeadline.Token);
+        using var registration = cancellationRegistry.Register(
+            claim.Operation.Id,
+            executionLifetime.Token);
         if (claim.Operation.CancellationGeneration > 0)
         {
             await stateMachine.ApplyReducerAsync(claim.Operation.Id, null, CancellationToken.None)
@@ -48,6 +58,7 @@ public sealed class LlmChatOperationExecutor(
             lease,
             runtimeIdentity,
             registration);
+        Exception? controlFailure = null;
         try
         {
             while (!execution.IsCompleted)
@@ -78,11 +89,73 @@ public sealed class LlmChatOperationExecutor(
         {
             cancellationRegistry.RequestCancellation(claim.Operation.Id);
         }
+        catch (Exception exception)
+        {
+            controlFailure = exception;
+            cancellationRegistry.RequestCancellation(claim.Operation.Id);
+        }
 
-        await execution.ConfigureAwait(false);
+        var providerExit = LlmChatProviderExecutionExit.Completed;
+        Exception? providerDrainFailure = null;
+        try
+        {
+            providerExit = await execution.ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            providerDrainFailure = exception;
+        }
+
+        if (controlFailure is not null)
+        {
+            if (providerDrainFailure is not null)
+            {
+                logger.LogWarning(
+                    "LLM Chat provider execution {OperationId} failed while draining after a control failure. ControlFailureType={ControlFailureType} DrainFailureType={DrainFailureType}.",
+                    claim.Operation.Id.Value,
+                    controlFailure.GetType().FullName,
+                    providerDrainFailure.GetType().FullName);
+            }
+
+            var failureCode = LlmChatOperationFailureCodes.TryMap(controlFailure, out var mappedCode)
+                ? mappedCode
+                : LlmChatErrorCodes.StorageCorrupted;
+            await stateMachine.ResolveControlFailureAsync(
+                claim.Operation.Id,
+                failureCode,
+                controlFailure is LlmChatRuntimeProfileChangedException,
+                CancellationToken.None).ConfigureAwait(false);
+        }
+        else if (providerDrainFailure is not null)
+        {
+            logger.LogError(
+                "Failed while draining LLM Chat provider execution {OperationId}. FailureType={FailureType}.",
+                claim.Operation.Id.Value,
+                providerDrainFailure.GetType().FullName);
+            await stateMachine.ApplyReducerAsync(
+                claim.Operation.Id,
+                LlmChatErrorCodes.StorageCorrupted,
+                CancellationToken.None).ConfigureAwait(false);
+        }
+        else if (providerExit == LlmChatProviderExecutionExit.ProfileChanged)
+        {
+            await stateMachine.ResolveControlFailureAsync(
+                claim.Operation.Id,
+                LlmChatErrorCodes.RuntimeProfileChanged,
+                preservePostDispatchRecovery: true,
+                CancellationToken.None).ConfigureAwait(false);
+        }
+        else if (operationDeadline.IsCancellationRequested)
+        {
+            await stateMachine.ResolveControlFailureAsync(
+                claim.Operation.Id,
+                LlmChatErrorCodes.OperationDurationExceeded,
+                preservePostDispatchRecovery: true,
+                CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
-    private async Task ExecuteProviderAsync(
+    private async Task<LlmChatProviderExecutionExit> ExecuteProviderAsync(
         LlmChatOperation operation,
         LlmChatExecutionLeaseIdentity lease,
         LlmChatRuntimeIdentity runtimeIdentity,
@@ -123,6 +196,7 @@ public sealed class LlmChatOperationExecutor(
                 admission,
                 invocationResult,
                 CancellationToken.None).ConfigureAwait(false);
+            return LlmChatProviderExecutionExit.Completed;
         }
         catch (LlmChatRuntimeProfileChangedException)
         {
@@ -131,6 +205,7 @@ public sealed class LlmChatOperationExecutor(
                 operation.Id.Value,
                 lease.OwnerId.Value,
                 lease.Epoch);
+            return LlmChatProviderExecutionExit.ProfileChanged;
         }
         catch (OperationCanceledException)
         {
@@ -138,11 +213,13 @@ public sealed class LlmChatOperationExecutor(
                 operation.Id,
                 lease,
                 runtimeIdentity).ConfigureAwait(false);
+            return LlmChatProviderExecutionExit.Completed;
         }
         catch (Exception exception) when (LlmChatOperationFailureCodes.TryMap(exception, out var failureCode))
         {
             await stateMachine.ApplyReducerAsync(operation.Id, failureCode, CancellationToken.None)
                 .ConfigureAwait(false);
+            return LlmChatProviderExecutionExit.Completed;
         }
         catch (Exception exception)
         {
@@ -155,6 +232,7 @@ public sealed class LlmChatOperationExecutor(
                 operation.Id,
                 LlmChatErrorCodes.StorageCorrupted,
                 CancellationToken.None).ConfigureAwait(false);
+            return LlmChatProviderExecutionExit.Completed;
         }
     }
 
@@ -184,5 +262,11 @@ public sealed class LlmChatOperationExecutor(
                 lease.OwnerId.Value,
                 lease.Epoch);
         }
+    }
+
+    private enum LlmChatProviderExecutionExit
+    {
+        Completed,
+        ProfileChanged
     }
 }

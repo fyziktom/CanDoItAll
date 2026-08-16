@@ -1,10 +1,13 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -82,9 +85,11 @@ public sealed class LlmChatsTurnApiIntegrationTests
         Assert.DoesNotContain("provider-secret", failureJson.RootElement.GetRawText(), StringComparison.Ordinal);
     }
 
-    internal static Task<ApiTestHost> CreateHostAsync(StubLlmChatOperationApplicationService service)
+    internal static Task<ApiTestHost> CreateHostAsync(
+        StubLlmChatOperationApplicationService service,
+        bool jwtEnabled = false)
         => ApiTestHost.CreateAsync(
-            jwtEnabled: false,
+            jwtEnabled,
             configureServices: collection =>
             {
                 collection.RemoveAll<ILlmChatOperationApplicationService>();
@@ -124,9 +129,8 @@ public sealed class LlmChatsIdempotencyApiIntegrationTests
         using var retryJson = JsonDocument.Parse(await retry.Content.ReadAsStringAsync());
         Assert.False(firstJson.RootElement.GetProperty("replayed").GetBoolean());
         Assert.True(retryJson.RootElement.GetProperty("replayed").GetBoolean());
-        Assert.Equal(
-            firstJson.RootElement.GetProperty("requestFingerprint").GetString(),
-            retryJson.RootElement.GetProperty("requestFingerprint").GetString());
+        Assert.False(firstJson.RootElement.TryGetProperty("requestFingerprint", out _));
+        Assert.False(retryJson.RootElement.TryGetProperty("requestFingerprint", out _));
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
         var conflictBody = await conflict.Content.ReadAsStringAsync();
         Assert.Contains(LlmChatErrorCodes.OperationIdConflict, conflictBody);
@@ -168,8 +172,101 @@ public sealed class LlmChatsCancellationApiIntegrationTests
     }
 }
 
+public sealed class LlmChatOperationAuditApiIntegrationTests
+{
+    [Fact]
+    public async Task Operation_status_returns_bounded_sanitized_invocation_attempts()
+    {
+        var service = new StubLlmChatOperationApplicationService();
+        var operationId = LlmChatOperationId.New();
+        service.SeedInvocationAudit(operationId, LlmChatOperationDetails.MaximumInvocationRecords);
+        await using var host = await LlmChatsTurnApiIntegrationTests.CreateHostAsync(service);
+
+        using var response = await host.Client.GetAsync($"/api/llm-chat-operations/{operationId.Value:D}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var attempts = document.RootElement.GetProperty("invocationAttempts").EnumerateArray().ToArray();
+        Assert.Equal(LlmChatOperationDetails.MaximumInvocationRecords, attempts.Length);
+        Assert.Equal(
+            Enumerable.Range(1, LlmChatOperationDetails.MaximumInvocationRecords),
+            attempts.Select(attempt => attempt.GetProperty("ordinal").GetInt32()));
+    }
+
+    [Fact]
+    public async Task Invocation_projection_excludes_profile_name_id_correlation_and_raw_failure()
+    {
+        var service = new StubLlmChatOperationApplicationService();
+        var operationId = LlmChatOperationId.New();
+        service.SeedInvocationAudit(operationId, 1);
+        await using var host = await LlmChatsTurnApiIntegrationTests.CreateHostAsync(service);
+
+        using var response = await host.Client.GetAsync($"/api/llm-chat-operations/{operationId.Value:D}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        var attempt = Assert.Single(document.RootElement.GetProperty("invocationAttempts").EnumerateArray());
+        Assert.Equal((int)ProviderKind.OpenAi, attempt.GetProperty("providerKind").GetInt32());
+        Assert.Equal(
+            LlmChatErrorCodes.StorageCorrupted,
+            attempt.GetProperty("failure").GetProperty("code").GetString());
+        Assert.DoesNotContain("provider-profile-secret", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("correlation-secret", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("raw-provider-secret", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("requestFingerprint", body, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
 public sealed class LlmChatsRecoveryApiIntegrationTests
 {
+    [Fact]
+    public async Task Reconcile_route_requires_manage_scope_and_returns_stable_errors()
+    {
+        var service = new StubLlmChatOperationApplicationService();
+        var operationId = new LlmChatOperationId(Guid.Parse("40000000-0000-0000-0000-000000000002"));
+        service.SeedRecoveryRequired(operationId, hasLiveOwner: false);
+        await using var host = await LlmChatsTurnApiIntegrationTests.CreateHostAsync(service, jwtEnabled: true);
+        var tokenService = host.App.Services.GetRequiredService<IApiTokenService>();
+        var route = $"/api/llm-chat-operations/{operationId.Value:D}/reconcile";
+
+        using var unauthenticated = await host.Client.PostAsync(route, null);
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
+
+        SetScope(host, tokenService, ApiAccessScopeNames.ExecuteLlmChats);
+        using var wrongScope = await host.Client.PostAsync(route, null);
+        Assert.Equal(HttpStatusCode.Forbidden, wrongScope.StatusCode);
+
+        SetScope(host, tokenService, ApiAccessScopeNames.ManageLlmChats);
+        using var reconciled = await host.Client.PostAsync(route, null);
+        Assert.Equal(HttpStatusCode.OK, reconciled.StatusCode);
+        Assert.Equal(1, service.ReconciliationCount);
+
+        using var invalid = await host.Client.PostAsync(
+            $"/api/llm-chat-operations/{Guid.Empty:D}/reconcile",
+            null);
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Contains(LlmChatErrorCodes.InvalidRequest, await invalid.Content.ReadAsStringAsync());
+
+        using var missing = await host.Client.PostAsync(
+            $"/api/llm-chat-operations/{Guid.NewGuid():D}/reconcile",
+            null);
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        Assert.Contains(LlmChatErrorCodes.OperationNotFound, await missing.Content.ReadAsStringAsync());
+
+        using var swagger = await host.Client.GetAsync("/swagger/v1/swagger.json");
+        using var document = JsonDocument.Parse(await swagger.Content.ReadAsStringAsync());
+        var responses = document.RootElement
+            .GetProperty("paths")
+            .GetProperty("/api/llm-chat-operations/{operationId}/reconcile")
+            .GetProperty("post")
+            .GetProperty("responses");
+        Assert.True(responses.TryGetProperty("400", out _));
+        Assert.True(responses.TryGetProperty("404", out _));
+        Assert.True(responses.TryGetProperty("409", out _));
+    }
+
     [Fact]
     public async Task RecoveryApi_RejectsLiveOwnerThenPersistsExactTurnAbandonment()
     {
@@ -197,6 +294,18 @@ public sealed class LlmChatsRecoveryApiIntegrationTests
         using var persisted = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
         Assert.Equal("failed", persisted.RootElement.GetProperty("status").GetString());
     }
+
+    private static void SetScope(ApiTestHost host, IApiTokenService tokenService, string scope)
+    {
+        var token = tokenService.IssueToken(new ApiTokenIssueRequest
+        {
+            Subject = $"llm-chat-reconcile-{scope}",
+            DisplayName = "LLM Chat reconcile client",
+            Scopes = [scope]
+        });
+        host.Client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(token.TokenType, token.Token);
+    }
 }
 
 internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperationApplicationService
@@ -216,6 +325,8 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
     public int CancellationCount { get; private set; }
 
     public int AbandonmentCount { get; private set; }
+
+    public int ReconciliationCount { get; private set; }
 
     public Task<Result<LlmChatOperationDetails>> SendAsync(
         SendLlmChatTurnCommand command,
@@ -283,7 +394,15 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
     public Task<Result<LlmChatOperationDetails>> ReconcileAsync(
         LlmChatOperationId operationId,
         CancellationToken cancellationToken = default)
-        => GetAsync(operationId, cancellationToken);
+    {
+        if (liveOwners.Contains(operationId))
+        {
+            return Failure(LlmChatErrorCodes.ActiveTurnConflict);
+        }
+
+        ReconciliationCount++;
+        return GetAsync(operationId, cancellationToken);
+    }
 
     public Task<Result<LlmChatOperationDetails>> AbandonActiveTurnAsync(
         AbandonLlmChatActiveTurnCommand command,
@@ -332,6 +451,44 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
 
     public void ReleaseLiveOwner(LlmChatOperationId operationId)
         => liveOwners.Remove(operationId);
+
+    public void SeedInvocationAudit(LlmChatOperationId operationId, int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(
+            count,
+            LlmChatOperationDetails.MaximumInvocationRecords);
+        var command = new SendLlmChatTurnCommand(operationId, ConversationId, TranscriptRevision, "audit");
+        var invocations = Enumerable.Range(1, count)
+            .Select(ordinal => new LlmChatInvocationRecord(
+                operationId,
+                Guid.Parse("aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"),
+                ProviderKind.OpenAi,
+                "provider-profile-secret",
+                "safe-model",
+                AgentReasoningEffortLevel.None,
+                AgentReasoningEffortLevel.Medium,
+                ordinal,
+                new LlmUsage(ordinal, 1),
+                ordinal == count
+                    ? LlmChatInvocationOutcome.Failed
+                    : LlmChatInvocationOutcome.Succeeded,
+                ordinal == count ? "raw-provider-secret" : string.Empty,
+                Now.AddSeconds(ordinal),
+                Now.AddSeconds(ordinal + 1),
+                "correlation-secret",
+                LlmStreamingDeliveryMode.Incremental,
+                ordinal == count ? string.Empty : "stop"))
+            .ToArray();
+        commands[operationId] = command;
+        operations[operationId] = CreateDetails(
+            command,
+            LlmChatOperationStatus.Failed,
+            LlmChatErrorCodes.StorageCorrupted) with
+        {
+            Invocations = invocations
+        };
+    }
 
     private static LlmChatOperationDetails CreateDetails(
         SendLlmChatTurnCommand command,

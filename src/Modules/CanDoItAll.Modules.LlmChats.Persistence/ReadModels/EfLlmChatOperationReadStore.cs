@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
 using CanDoItAll.Modules.LlmChats.Persistence.Entities;
@@ -10,8 +11,6 @@ namespace CanDoItAll.Modules.LlmChats.Persistence.ReadModels;
 
 public sealed class EfLlmChatOperationReadStore(AppDbContext dbContext) : ILlmChatOperationReadStore
 {
-    private const int MaximumInvocationRecords = 100;
-
     public async Task<LlmChatOperationReadModel?> TryGetAsync(
         LlmChatOperationId id,
         CancellationToken cancellationToken = default)
@@ -29,10 +28,10 @@ public sealed class EfLlmChatOperationReadStore(AppDbContext dbContext) : ILlmCh
             .AsNoTracking()
             .Where(row => row.OperationId == id.Value)
             .OrderBy(row => row.Ordinal)
-            .Take(MaximumInvocationRecords + 1)
+            .Take(LlmChatOperationDetails.MaximumInvocationRecords + 1)
             .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        if (invocationRows.Length > MaximumInvocationRecords)
+        if (invocationRows.Length > LlmChatOperationDetails.MaximumInvocationRecords)
         {
             throw new InvalidOperationException("The LLM Chat operation exceeds the supported invocation history bound.");
         }
