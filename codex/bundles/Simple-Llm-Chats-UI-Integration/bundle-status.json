@@ -11,8 +11,9 @@
   "floatingIntegrationUnlockCheckpoint": "CP2",
   "targetFinalState": "awaiting-user-simple-chat-ui-verification",
   "completedSubbundles": [
-    "SB01"
+    "SB01",
+    "SB02"
   ],
-  "currentSubbundle": "SB02",
+  "currentSubbundle": "SB03",
   "blockedBy": []
 }

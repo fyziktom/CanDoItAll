@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `hardening`
 - Proof tier: `Behavioral`
 
@@ -45,9 +45,9 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] Mutating source lists after construction cannot change presentation records.
-- [ ] Neutral active-list code contains no Agent, CanStop, Open, or Stop semantic ownership.
-- [ ] Existing Agent active actions behave and render identically.
+- [x] Mutating source lists after construction cannot change presentation records.
+- [x] Neutral active-list code contains no Agent, CanStop, Open, or Stop semantic ownership.
+- [x] Existing Agent active actions behave and render identically.
 
 ## Validation Depth
 
