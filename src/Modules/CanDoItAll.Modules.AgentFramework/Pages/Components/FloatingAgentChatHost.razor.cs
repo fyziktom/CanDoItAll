@@ -415,8 +415,21 @@ public partial class FloatingAgentChatHost
         }
     }
 
-    private Task RequestCloseFromPresentationAsync(ConversationPresentationKey key)
-        => RequestCloseAsync(AgentActiveChatPresentationMapper.ResolveHandleId(key));
+    private async Task HandleActiveChatActionAsync(ConversationActionRequest request)
+    {
+        var handleId = AgentActiveChatPresentationMapper.ResolveHandleId(request.ItemKey);
+        switch (AgentActiveChatPresentationMapper.ResolveAction(request.ActionKey))
+        {
+            case AgentActiveChatPresentationAction.Open:
+                Coordinator.ShowChat(handleId);
+                return;
+            case AgentActiveChatPresentationAction.Stop:
+                await RequestCloseAsync(handleId);
+                return;
+            default:
+                throw new InvalidOperationException("Unsupported Agent active-chat action.");
+        }
+    }
 
     private void ShowChat(ConversationPresentationKey key)
         => Coordinator.ShowChat(AgentActiveChatPresentationMapper.ResolveHandleId(key));

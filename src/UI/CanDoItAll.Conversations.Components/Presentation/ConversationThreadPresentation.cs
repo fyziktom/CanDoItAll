@@ -33,7 +33,7 @@ public sealed record ConversationThreadPresentation
             : searchText;
         TooltipText = string.IsNullOrWhiteSpace(tooltipText) ? preview : tooltipText;
         SelectLabel = string.IsNullOrWhiteSpace(selectLabel) ? $"Open thread {title}" : selectLabel;
-        Badges = badges ?? [];
+        Badges = PresentationCollection.Snapshot(badges, nameof(badges));
         IsSelected = isSelected;
         IsBusy = isBusy;
         IsDisabled = isDisabled;

@@ -35,8 +35,17 @@ public sealed class AgentActiveChatPresentationMapperTests
         Assert.Equal("Agent Alpha", result.DisplayName);
         Assert.Equal(new PresentationBadge(visibilityText, visibilityTone), result.Badges[0]);
         Assert.Equal(new PresentationBadge(runStateText, runStateTone), result.Badges[1]);
-        Assert.Equal(chat.IsVisible, result.IsVisible);
-        Assert.Equal(chat.CanStop, result.CanStop);
+        Assert.Equal("Open", result.Actions[0].Label);
+        Assert.Equal(chat.IsVisible, result.Actions[0].IsDisabled);
+        Assert.Equal("Stop", result.Actions[1].Label);
+        Assert.Equal(!chat.CanStop, result.Actions[1].IsDisabled);
+        Assert.Equal(ConversationActionStyle.Danger, result.Actions[1].Style);
+        Assert.Equal(
+            AgentActiveChatPresentationAction.Open,
+            AgentActiveChatPresentationMapper.ResolveAction(result.Actions[0].Key));
+        Assert.Equal(
+            AgentActiveChatPresentationAction.Stop,
+            AgentActiveChatPresentationMapper.ResolveAction(result.Actions[1].Key));
         Assert.Equal(handleId, AgentActiveChatPresentationMapper.ResolveHandleId(result.Key));
     }
 
@@ -49,5 +58,16 @@ public sealed class AgentActiveChatPresentationMapperTests
             () => AgentActiveChatPresentationMapper.ResolveHandleId(key));
 
         Assert.Contains("not an Agent chat handle", exception.Message);
+    }
+
+    [Fact]
+    public void Rejects_unknown_active_chat_action_keys()
+    {
+        var key = new ConversationPresentationKey("archive");
+
+        var exception = Assert.Throws<ArgumentException>(
+            () => AgentActiveChatPresentationMapper.ResolveAction(key));
+
+        Assert.Contains("not an Agent active-chat action", exception.Message);
     }
 }

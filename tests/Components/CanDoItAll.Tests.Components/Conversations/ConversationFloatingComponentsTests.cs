@@ -60,24 +60,38 @@ public sealed class ConversationFloatingComponentsTests
     }
 
     [Fact]
-    public void Active_list_routes_opaque_open_and_stop_callbacks()
+    public void Active_list_routes_declared_opaque_actions()
     {
         using var context = CreateContext();
         var openKey = new ConversationPresentationKey("source/chat-open");
         var hiddenKey = new ConversationPresentationKey("source/chat-hidden");
-        ConversationPresentationKey? opened = null;
-        ConversationPresentationKey? stopped = null;
+        var openActionKey = new ConversationPresentationKey("open");
+        var stopActionKey = new ConversationPresentationKey("stop");
+        var requests = new List<ConversationActionRequest>();
         IReadOnlyList<ConversationActiveItemPresentation> items =
         [
-            new(openKey, "Open conversation", [new("Open", PresentationTone.Success)], true, false),
-            new(hiddenKey, "Hidden conversation", [new("Kept active")], false, true)
+            new(
+                openKey,
+                "Open conversation",
+                [new("Open", PresentationTone.Success)],
+                [
+                    new(openActionKey, "Open", "open_in_new", isDisabled: true),
+                    new(stopActionKey, "Stop", "stop_circle", isDisabled: true, style: ConversationActionStyle.Danger)
+                ]),
+            new(
+                hiddenKey,
+                "Hidden conversation",
+                [new("Kept active")],
+                [
+                    new(openActionKey, "Open", "open_in_new"),
+                    new(stopActionKey, "Stop", "stop_circle", style: ConversationActionStyle.Danger)
+                ])
         ];
 
         var cut = context.Render<ConversationActiveList>(parameters => parameters
             .Add(component => component.Items, items)
             .Add(component => component.TestId, "active-list")
-            .Add(component => component.OpenRequested, value => opened = value)
-            .Add(component => component.StopRequested, value => stopped = value));
+            .Add(component => component.ActionRequested, requests.Add));
 
         Assert.True(cut.Find("[data-testid='active-list-source/chat-open-open']").HasAttribute("disabled"));
         Assert.True(cut.Find("[data-testid='active-list-source/chat-open-stop']").HasAttribute("disabled"));
@@ -85,8 +99,12 @@ public sealed class ConversationFloatingComponentsTests
         cut.Find("[data-testid='active-list-source/chat-hidden-open']").Click();
         cut.Find("[data-testid='active-list-source/chat-hidden-stop']").Click();
 
-        Assert.Equal(hiddenKey, opened);
-        Assert.Equal(hiddenKey, stopped);
+        Assert.Equal(
+            [
+                new ConversationActionRequest(hiddenKey, openActionKey),
+                new ConversationActionRequest(hiddenKey, stopActionKey)
+            ],
+            requests);
     }
 
     [Fact]

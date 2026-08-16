@@ -26,19 +26,17 @@
                         </Cluster>
                     </Stack>
                     <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-                        <Button Text="Open"
-                                Icon="open_in_new"
-                                Size="ButtonSize.Small"
-                                Disabled="@item.IsVisible"
-                                Click="@(() => OpenRequested.InvokeAsync(item.Key))"
-                                data-testid="@ResolveActionTestId(item.Key, "open")" />
-                        <Button Text="Stop"
-                                Icon="stop_circle"
-                                Size="ButtonSize.Small"
-                                ButtonStyle="ButtonStyle.Danger"
-                                Disabled="@(!item.CanStop)"
-                                Click="@(() => StopRequested.InvokeAsync(item.Key))"
-                                data-testid="@ResolveActionTestId(item.Key, "stop")" />
+                        @foreach (var action in item.Actions)
+                        {
+                            <Button @key="action.Key"
+                                    Text="@action.Label"
+                                    Icon="@action.Icon"
+                                    Size="ButtonSize.Small"
+                                    ButtonStyle="@ResolveButtonStyle(action.Style)"
+                                    Disabled="@action.IsDisabled"
+                                    Click="@(() => HandleActionAsync(item.Key, action.Key))"
+                                    data-testid="@ResolveActionTestId(item.Key, action)" />
+                        }
                     </Cluster>
                 </Split>
             </SurfaceCard>
@@ -57,14 +55,23 @@
     public string TestId { get; set; } = "conversation-active-list";
 
     [Parameter]
-    public EventCallback<ConversationPresentationKey> OpenRequested { get; set; }
-
-    [Parameter]
-    public EventCallback<ConversationPresentationKey> StopRequested { get; set; }
+    public EventCallback<ConversationActionRequest> ActionRequested { get; set; }
 
     private string ResolveItemTestId(ConversationPresentationKey key)
         => $"{TestId}-{key.Value}";
 
-    private string ResolveActionTestId(ConversationPresentationKey key, string action)
-        => $"{ResolveItemTestId(key)}-{action}";
+    private Task HandleActionAsync(
+        ConversationPresentationKey itemKey,
+        ConversationPresentationKey actionKey)
+        => ActionRequested.InvokeAsync(new(itemKey, actionKey));
+
+    private string ResolveActionTestId(
+        ConversationPresentationKey itemKey,
+        ConversationActionPresentation action)
+        => string.IsNullOrWhiteSpace(action.TestId)
+            ? $"{ResolveItemTestId(itemKey)}-{action.Key.Value}"
+            : action.TestId;
+
+    private static ButtonStyle ResolveButtonStyle(ConversationActionStyle style)
+        => style == ConversationActionStyle.Danger ? ButtonStyle.Danger : ButtonStyle.Primary;
 }

@@ -7,4 +7,14 @@ public sealed record ConversationProviderOption(
     string DefaultModel,
     IReadOnlyList<string> SuggestedModels,
     PresentationBadge? Badge = null,
-    string? Description = null);
+    string? Description = null)
+{
+    private IReadOnlyList<string> suggestedModels =
+        PresentationCollection.Snapshot(SuggestedModels, nameof(SuggestedModels));
+
+    public IReadOnlyList<string> SuggestedModels
+    {
+        get => suggestedModels;
+        init => suggestedModels = PresentationCollection.Snapshot(value, nameof(SuggestedModels));
+    }
+}

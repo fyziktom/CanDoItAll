@@ -39,9 +39,9 @@ public sealed record ConversationParticipantPresentation
             ? "Show participant details"
             : detailsAriaLabel;
         SelectLabel = string.IsNullOrWhiteSpace(selectLabel) ? $"Select {displayName}" : selectLabel;
-        Badges = badges ?? [];
-        Tags = tags ?? [];
-        Metadata = metadata ?? [];
+        Badges = PresentationCollection.Snapshot(badges, nameof(badges));
+        Tags = PresentationCollection.Snapshot(tags, nameof(tags));
+        Metadata = PresentationCollection.Snapshot(metadata, nameof(metadata));
         Ribbon = ribbon;
         Favorite = favorite;
         IsSelected = isSelected;

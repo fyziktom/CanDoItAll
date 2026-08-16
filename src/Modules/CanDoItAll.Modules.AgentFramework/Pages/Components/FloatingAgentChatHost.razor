@@ -135,8 +135,7 @@
                             <ConversationActiveList Items="@ActiveChatItems"
                                                     AriaLabel="Active agent chats"
                                                     TestId="floating-agent-chat-active-list"
-                                                    OpenRequested="ShowChat"
-                                                    StopRequested="RequestCloseFromPresentationAsync" />
+                                                    ActionRequested="HandleActiveChatActionAsync" />
                         }
                     </ActiveContent>
                 </ConversationFloatingCatalog>
