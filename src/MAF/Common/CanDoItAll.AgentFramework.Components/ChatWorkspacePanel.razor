@@ -26,7 +26,7 @@
     <Transcript>
 
         <ConversationTranscript Messages="@MessagePresentations"
-                                PendingMessage="@PendingMessagePresentation"
+                                TransientMessages="@TransientMessagePresentations"
                                 EmptyState="@TranscriptEmptyState">
             <AfterMessages>
                 @{
@@ -406,13 +406,13 @@
             Agent,
             Session?.Messages ?? []);
 
-    private ConversationMessagePresentation? PendingMessagePresentation
+    private IReadOnlyList<ConversationMessagePresentation> TransientMessagePresentations
         => string.IsNullOrWhiteSpace(PendingUserPrompt)
-            ? null
-            : AgentConversationPresentationMapper.MapPendingMessage(
+            ? []
+            : [AgentConversationPresentationMapper.MapPendingMessage(
                 Agent,
                 PendingUserPrompt,
-                DateTimeOffset.Now);
+                DateTimeOffset.Now)];
 
     private ConversationEmptyStatePresentation? TranscriptEmptyState
     {

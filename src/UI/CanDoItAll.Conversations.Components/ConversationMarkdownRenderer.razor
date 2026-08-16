@@ -1,10 +1,12 @@
 @using Markdig
+@using Markdig.Renderers
 
 <div class="@CssClassBuilder.Join("chat-markdown", Class)">@((MarkupString)RenderHtml(Markdown))</div>
 
 @code {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .DisableHtml()
+        .Use(new SafeUriExtension())
         .Build();
 
     [Parameter]
@@ -17,4 +19,19 @@
         => string.IsNullOrWhiteSpace(markdown)
             ? string.Empty
             : Markdig.Markdown.ToHtml(markdown, Pipeline);
+
+    private sealed class SafeUriExtension : IMarkdownExtension
+    {
+        public void Setup(MarkdownPipelineBuilder pipeline)
+        {
+        }
+
+        public void Setup(MarkdownPipeline pipeline, IMarkdownRenderer renderer)
+        {
+            if (renderer is Markdig.Renderers.HtmlRenderer htmlRenderer)
+            {
+                htmlRenderer.LinkRewriter = ConversationMarkdownUriPolicy.Rewrite;
+            }
+        }
+    }
 }
