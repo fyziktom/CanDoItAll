@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `floating`
 - Proof tier: `Governed`
 
@@ -56,11 +56,11 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] Unified catalog filters and lifecycle axes are correct.
-- [ ] Agent context/affinity/history/close behavior remains unchanged.
-- [ ] Simple Chat floating stream/reopen/cancel works.
-- [ ] No ambient context reaches Simple Chats.
-- [ ] Shell project has no product backend dependency.
+- [x] Unified catalog filters and lifecycle axes are correct.
+- [x] Agent context/affinity/history/close behavior remains unchanged.
+- [x] Simple Chat floating stream/reopen/cancel works.
+- [x] No ambient context reaches Simple Chats.
+- [x] Shell project has no product backend dependency.
 
 ## Validation Depth
 

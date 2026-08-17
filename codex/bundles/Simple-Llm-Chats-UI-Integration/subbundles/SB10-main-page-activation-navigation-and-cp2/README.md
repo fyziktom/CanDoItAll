@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `checkpoint`
 - Proof tier: `Governed`
 
@@ -55,10 +55,14 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] `/chats` is usable at 1600x1000 with one scroll owner.
-- [ ] Navigation appears only now.
-- [ ] Main page targeted browser scenarios pass and screenshots are reviewed.
-- [ ] CP2 passes before floating work.
+- [x] `/chats` is usable at 1600x1000 with one scroll owner.
+- [x] Navigation appears only now.
+- [x] Main page targeted browser scenarios pass and screenshots are reviewed.
+- [x] CP2 passes before floating work.
+
+## Closure
+
+CP2 passed. The route, navigation contribution, real provider chat flow, durable cancellation/reconnect behavior, conflict reload, sanitized failure boundary, and both required screenshots passed. SB11 floating integration is unlocked.
 
 ## Validation Depth
 

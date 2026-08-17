@@ -1,0 +1,133 @@
+@implements IAsyncDisposable
+@inject IConversationShellCoordinator Coordinator
+@inject IEnumerable<IConversationShellContributor> Contributors
+@inject ILogger<ConversationShellHost> Logger
+
+<div class="conversation-shell-host"
+     data-cda-overlay-container="true"
+     data-testid="floating-agent-chat-host">
+    @if (state.IsCatalogVisible)
+    {
+        <ConversationFloatingWindow WindowId="conversation-shell-catalog"
+                                    TestId="floating-agent-catalog-window"
+                                    AriaLabel="Floating conversations"
+                                    Kicker="Conversations"
+                                    Title="Chats"
+                                    Summary="Start a conversation or reopen an active window."
+                                    State="@ResolveCatalogWindowState()"
+                                    StateChanged="HandleCatalogWindowStateChangedAsync">
+            <ConversationFloatingCatalog SelectedIndex="@SelectedLifecycleIndex"
+                                         SelectedIndexChanged="HandleLifecycleChangedAsync"
+                                         AriaLabel="Conversation catalog"
+                                         PrimaryText="Available"
+                                         PrimaryIcon="add_comment"
+                                         PrimaryPanelTestId="floating-agent-chat-agents-tab"
+                                         ActiveText="Active"
+                                         ActiveIcon="forum"
+                                         ActivePanelTestId="floating-agent-chat-active-tab">
+                <PrimaryContent>
+                    @CatalogControls
+                    @if (isInitializing)
+                    {
+                        <LoadingState Title="Initializing conversations"
+                                      Description="Loading available conversation sources." />
+                    }
+                    else if (AvailableItems.Count == 0)
+                    {
+                        <EmptyState Eyebrow="Available conversations"
+                                    Title="No matching participants"
+                                    Description="Change the type filter or search text." />
+                    }
+                    else
+                    {
+                        <ConversationParticipantCompactList Items="@AvailableItems"
+                                                            AriaLabel="Available conversation participants"
+                                                            TestId="floating-agent-chat-agent-list"
+                                                            DoubleClicked="HandleParticipantDoubleClickedAsync"
+                                                            ActionRequested="HandleParticipantActionAsync" />
+                    }
+                </PrimaryContent>
+                <ActiveContent>
+                    @CatalogControls
+                    @if (ActiveItems.Count == 0)
+                    {
+                        <EmptyState Eyebrow="Active conversations"
+                                    Title="No active conversation windows"
+                                    Description="Start or reopen a conversation from the Available tab." />
+                    }
+                    else
+                    {
+                        <ConversationActiveList Items="@ActiveItems"
+                                                AriaLabel="Active conversations"
+                                                TestId="floating-agent-chat-active-list"
+                                                ActionRequested="HandleActiveActionAsync" />
+                    }
+                </ActiveContent>
+            </ConversationFloatingCatalog>
+        </ConversationFloatingWindow>
+    }
+
+    @if (FocusedWindow is { } window)
+    {
+        <ConversationFloatingWindow @key="window.Key"
+                                    WindowId="@window.Key.WindowId"
+                                    TestId="@window.TestId"
+                                    AriaLabel="@window.AriaLabel"
+                                    Kicker="@window.Kicker"
+                                    Title="@window.Title"
+                                    Summary="@window.Summary"
+                                    DefaultPlacement="@window.DefaultPlacement"
+                                    DefaultWidth="@window.DefaultWidth"
+                                    DefaultHeight="@window.DefaultHeight"
+                                    MinWidth="@window.MinWidth"
+                                    MinHeight="@window.MinHeight"
+                                    MaxWidth="@window.MaxWidth"
+                                    MaxHeight="@window.MaxHeight"
+                                    State="@ResolveFocusedWindowState(window)"
+                                    StateChanged="@((OverlayWindowState value) => HandleFocusedWindowStateChangedAsync(window, value))">
+            <DynamicComponent Type="@window.ComponentType" Parameters="@window.Parameters" />
+        </ConversationFloatingWindow>
+    }
+</div>
+
+@code {
+    private RenderFragment CatalogControls => @<Stack GapScale="LayoutGap.Small">
+        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" data-testid="conversation-shell-kind-filter">
+            @foreach (var option in KindFilters)
+            {
+                <Button Text="@option.Label"
+                        Icon="@option.Icon"
+                        Size="ButtonSize.Small"
+                        Variant="@(state.KindFilter == option.Value ? Variant.Filled : Variant.Outlined)"
+                        ButtonStyle="@(state.KindFilter == option.Value ? ButtonStyle.Primary : ButtonStyle.Light)"
+                        Click="@(() => ChangeKindFilter(option.Value))"
+                        data-testid="@($"conversation-shell-filter-{option.Value.ToString().ToLowerInvariant()}")" />
+            }
+        </Cluster>
+        <TextBox Value="@searchText"
+                 ValueChanged="HandleSearchChangedAsync"
+                 Placeholder="Search conversations"
+                 Immediate="true"
+                 aria-label="Search floating conversations"
+                 data-testid="floating-agent-chat-search" />
+        @if (VisibleStatusBadges.Count > 0)
+        {
+            <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap" data-testid="conversation-shell-source-status">
+                @foreach (var badge in VisibleStatusBadges)
+                {
+                    <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                 Text="@badge.Text"
+                                 Icon="@badge.Icon" />
+                }
+            </Cluster>
+        }
+        @foreach (var failureMessage in VisibleFailureMessages)
+        {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   Variant="Variant.Outlined"
+                   data-testid="conversation-shell-source-error">
+                @failureMessage
+            </Alert>
+        }
+    </Stack>;
+}

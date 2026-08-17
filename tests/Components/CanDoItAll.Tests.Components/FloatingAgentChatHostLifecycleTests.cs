@@ -1,8 +1,7 @@
-using System.Reflection;
 using Bunit;
-using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components.Presentation;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,60 +10,47 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class FloatingAgentChatHostLifecycleTests
 {
     [Fact]
-    public async Task Pending_initialization_does_not_block_events_and_is_cancelled_on_disposal()
+    public async Task Compatibility_host_keeps_pending_contributor_initialization_non_blocking_and_cancels_on_disposal()
     {
-        var coordinator = new PendingCoordinator();
-        var contextRegistry = new RecordingContextRegistry();
-        var cacheInvalidator = new RecordingCacheInvalidator();
-        using var context = CreateContext(coordinator, contextRegistry, cacheInvalidator);
+        var contributor = new PendingContributor();
+        using var context = CreateContext(contributor);
+        var coordinator = context.Services.GetRequiredService<IConversationShellCoordinator>();
 
         var cut = context.Render<FloatingAgentChatHost>();
 
-        await coordinator.InitializationStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await contributor.InitializationStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.NotNull(cut.Find("[data-testid='floating-agent-chat-host']"));
-        Assert.Equal(1, coordinator.InitializeCallCount);
-        Assert.False(coordinator.InitializationSettled.Task.IsCompleted);
+        Assert.Equal(1, contributor.InitializeCallCount);
+        Assert.False(contributor.InitializationSettled.Task.IsCompleted);
 
-        coordinator.PublishCatalogVisibility(isVisible: true);
+        coordinator.ShowCatalog(ConversationCatalogKindFilter.Agents);
 
         cut.WaitForElement("[data-testid='floating-agent-catalog-window']");
-        Assert.Equal(1, coordinator.InitializeCallCount);
-        Assert.False(coordinator.InitializationSettled.Task.IsCompleted);
+        Assert.Equal(1, contributor.InitializeCallCount);
+        Assert.False(contributor.InitializationSettled.Task.IsCompleted);
 
-        await cut.Instance.DisposeAsync();
+        var shellHost = cut.FindComponent<ConversationShellHost>();
+        await shellHost.Instance.DisposeAsync();
         cut.Dispose();
 
-        await coordinator.InitializationCancelled.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        await coordinator.InitializationSettled.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        Assert.Equal(0, coordinator.ChangedSubscriberCount);
-        Assert.Equal(0, contextRegistry.ChangedSubscriberCount);
-        Assert.Equal(0, cacheInvalidator.InvalidatedSubscriberCount);
+        await contributor.InitializationCancelled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await contributor.InitializationSettled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Equal(0, contributor.ChangedSubscriberCount);
     }
 
-    private static BunitContext CreateContext(
-        PendingCoordinator coordinator,
-        RecordingContextRegistry contextRegistry,
-        RecordingCacheInvalidator cacheInvalidator)
+    private static BunitContext CreateContext(PendingContributor contributor)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
-        context.Services.AddSingleton<IFloatingAgentChatCoordinator>(coordinator);
-        context.Services.AddSingleton<IAgentChatContextRegistry>(contextRegistry);
-        context.Services.AddSingleton<IAgentConversationContextService>(
-            new AgentConversationContextService(TimeProvider.System));
-        context.Services.AddSingleton<IAgentReferenceDataCacheInvalidator>(cacheInvalidator);
-        context.Services.AddSingleton<IAgentReferenceDataProvider, UnexpectedReferenceDataProvider>();
-        context.Services.AddSingleton(
-            DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnusedWorkspaceServiceProxy>());
+        context.Services.AddConversationShell();
+        context.Services.AddSingleton<IConversationShellContributor>(contributor);
         return context;
     }
 
-    private sealed class PendingCoordinator : IFloatingAgentChatCoordinator
+    private sealed class PendingContributor : IConversationShellContributor
     {
-        private readonly object gate = new();
-        private FloatingAgentChatState state = new(false, AgentChatCatalogTab.Agents, []);
         private EventHandler? changed;
         private int initializeCallCount;
 
@@ -81,7 +67,9 @@ public sealed class FloatingAgentChatHostLifecycleTests
 
         public int ChangedSubscriberCount { get; private set; }
 
-        public FloatingAgentChatSettings CurrentSettings => FloatingAgentChatSettings.Default;
+        public string SourceId => "agents";
+
+        public ConversationParticipantKind Kind => ConversationParticipantKind.Agent;
 
         public event EventHandler? Changed
         {
@@ -94,14 +82,6 @@ public sealed class FloatingAgentChatHostLifecycleTests
             {
                 changed -= value;
                 ChangedSubscriberCount--;
-            }
-        }
-
-        public FloatingAgentChatState Snapshot()
-        {
-            lock (gate)
-            {
-                return state;
             }
         }
 
@@ -124,149 +104,22 @@ public sealed class FloatingAgentChatHostLifecycleTests
             }
         }
 
-        public void PublishCatalogVisibility(bool isVisible)
-        {
-            lock (gate)
-            {
-                state = state with { IsCatalogVisible = isVisible };
-            }
+        public ConversationShellContributorSnapshot Snapshot()
+            => ConversationShellContributorSnapshot.Empty;
 
-            changed?.Invoke(this, EventArgs.Empty);
-        }
-
-        public void ShowCatalog(AgentChatCatalogTab tab = AgentChatCatalogTab.Agents)
-        {
-            lock (gate)
-            {
-                state = state with { IsCatalogVisible = true, CatalogTab = tab };
-            }
-
-            changed?.Invoke(this, EventArgs.Empty);
-        }
-
-        public void HideCatalog()
-            => PublishCatalogVisibility(isVisible: false);
-
-        public Task<ActiveAgentChat> StartNewChatAsync(
-            Guid agentId,
+        public Task HandleParticipantActionAsync(
+            ParticipantActionRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<ActiveAgentChat> OpenChatAsync(
-            Guid agentId,
-            Guid chatSessionId,
+        public Task HandleActiveActionAsync(
+            ConversationActionRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public ActiveAgentChat ShowChat(AgentChatHandleId handleId)
-            => throw new NotSupportedException();
-
-        public ActiveAgentChat KeepActive(AgentChatHandleId handleId)
-            => throw new NotSupportedException();
-
-        public void Stop(AgentChatHandleId handleId)
-            => throw new NotSupportedException();
-
-        public ActiveAgentChat SetRunState(
-            AgentChatHandleId handleId,
-            ActiveAgentChatRunState runState)
-            => throw new NotSupportedException();
-
-        public bool TryBeginOperation(AgentChatHandleId handleId)
-            => throw new NotSupportedException();
-
-        public void ReconcileRunStateAfterOperation(AgentChatHandleId handleId)
-            => throw new NotSupportedException();
-
-        public ActiveAgentChat AttachSession(AgentChatHandleId handleId, Guid chatSessionId)
-            => throw new NotSupportedException();
-
-        public int PruneExpired()
-            => 0;
-
-        public void ApplySettings(FloatingAgentChatSettings settings)
-        {
-        }
-    }
-
-    private sealed class RecordingContextRegistry : IAgentChatContextRegistry
-    {
-        private EventHandler? changed;
-
-        public int ChangedSubscriberCount { get; private set; }
-
-        public event EventHandler? Changed
-        {
-            add
-            {
-                changed += value;
-                ChangedSubscriberCount++;
-            }
-            remove
-            {
-                changed -= value;
-                ChangedSubscriberCount--;
-            }
-        }
-
-        public IAgentChatWorkspacePositionLease RegisterWorkspacePosition(
-            AgentChatWorkspacePosition position,
-            AgentChatNavigationIdentity navigationIdentity)
-            => throw new NotSupportedException();
-
-        public IAgentChatContextScopeLease ActivateScope(AgentChatContextScope scope)
-            => throw new NotSupportedException();
-
-        public IAgentChatContextFragmentLease RegisterFragment(
-            AgentChatContextScopeId scopeId,
-            AgentChatContextFragment fragment)
-            => throw new NotSupportedException();
-
-        public AgentChatContextSnapshot? Capture()
-            => null;
-
-        public ValueTask<AgentChatContextSnapshot?> CaptureAsync(
+        public Task HandleWindowCloseAsync(
+            string windowId,
             CancellationToken cancellationToken = default)
-            => ValueTask.FromResult<AgentChatContextSnapshot?>(null);
-    }
-
-    private sealed class RecordingCacheInvalidator : IAgentReferenceDataCacheInvalidator
-    {
-        private EventHandler? invalidated;
-
-        public int InvalidatedSubscriberCount { get; private set; }
-
-        public event EventHandler? Invalidated
-        {
-            add
-            {
-                invalidated += value;
-                InvalidatedSubscriberCount++;
-            }
-            remove
-            {
-                invalidated -= value;
-                InvalidatedSubscriberCount--;
-            }
-        }
-
-        public void Invalidate()
-            => invalidated?.Invoke(this, EventArgs.Empty);
-    }
-
-    private sealed class UnexpectedReferenceDataProvider : IAgentReferenceDataProvider
-    {
-        public Task<AgentReferenceDataSnapshot> GetAsync(
-            AgentReferenceDataRequest request,
-            CancellationToken cancellationToken = default)
-            => throw new InvalidOperationException(
-                "Agent reference data must not load while host initialization is pending.");
-    }
-
-    private class UnusedWorkspaceServiceProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-            => throw new InvalidOperationException(
-                $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.");
+            => throw new NotSupportedException();
     }
 }

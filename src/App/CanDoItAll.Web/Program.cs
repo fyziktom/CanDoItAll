@@ -2,6 +2,7 @@ using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Charts;
 using CanDoItAll.Components.Mermaid.Infrastructure;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -53,6 +54,7 @@ if (!databaseOptions.EnableEntityFrameworkConsoleLogging)
 builder.Services.AddCanDoItAllInteractiveServer(detailedErrorsEnabled);
 
 builder.Services.AddCanDoItAllBaseLib();
+builder.Services.AddConversationShell();
 builder.Services.AddCanDoItAllCharts();
 builder.Services.AddCanDoItAllInfrastructure(builder.Configuration, builder.Environment, CanDoItAll.Web.Composition.ModuleAssemblies.All);
 builder.Services.AddCanDoItAllRuntimeDatabaseSwitching();

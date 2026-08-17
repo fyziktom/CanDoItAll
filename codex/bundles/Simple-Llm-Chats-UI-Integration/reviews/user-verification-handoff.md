@@ -2,6 +2,14 @@
 
 Final execution must leave this checklist for the user and mark only automated items as automated.
 
+## Automated Browser Proof
+
+- [x] Automated: main Simple Chat returned exact `MAIN_SIMPLE_OK` and settled ready for another message.
+- [x] Automated: floating Simple Chat returned exact `FINAL_FLOATING_SIMPLE_OK`, hid, remained Active, reopened, and preserved its transcript.
+- [x] Automated: floating Agent chat followed `Agents · Overview`, returned exact `FINAL_FLOATING_AGENT_OK`, used Keep active, reopened, and preserved its transcript.
+- [x] Automated: unified `Available / Active` and `All / Agents / Chats` controls rendered and remained usable at 1440x1000.
+- [x] Automated: the browser reported zero console errors at the final scenario checkpoint, before intentional runtime shutdown, and the managed app reported no new agent-optimized error log entries.
+
 ## Existing Agent Regression
 
 - [ ] Edit and save an Agent identity/runtime setting.

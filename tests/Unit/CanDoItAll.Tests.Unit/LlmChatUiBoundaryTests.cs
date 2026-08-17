@@ -281,8 +281,11 @@ public sealed class LlmChatUiEventSessionGatewayTests
         var operationId = LlmChatOperationId.New();
         var session = new StubEventSession(operationId);
         var source = new StubEventSessionSource(session);
+        using var serviceProvider = new ServiceCollection()
+            .AddScoped<ILlmChatOperationEventSessionSource>(_ => source)
+            .BuildServiceProvider();
         var gateway = new LlmChatUiEventSessionGateway(
-            source,
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false));
 
         var opened = await gateway.OpenAsync(operationId.Value);
@@ -293,6 +296,34 @@ public sealed class LlmChatUiEventSessionGatewayTests
         Assert.DoesNotContain(
             typeof(LlmChatUiEventSessionGateway).GetConstructors().Single().GetParameters(),
             parameter => parameter.ParameterType == typeof(ILlmChatOperationApplicationService));
+    }
+
+    [Fact]
+    public async Task Event_session_owns_its_service_scope_until_session_disposal()
+    {
+        var operationId = LlmChatOperationId.New();
+        var session = new StubEventSession(operationId);
+        var source = new StubEventSessionSource(session);
+        var scopeProbe = new ScopeDisposalProbe();
+        using var serviceProvider = new ServiceCollection()
+            .AddScoped(_ => scopeProbe)
+            .AddScoped<ILlmChatOperationEventSessionSource>(provider =>
+            {
+                _ = provider.GetRequiredService<ScopeDisposalProbe>();
+                return source;
+            })
+            .BuildServiceProvider();
+        var gateway = new LlmChatUiEventSessionGateway(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false));
+
+        var opened = await gateway.OpenAsync(operationId.Value);
+
+        Assert.True(opened.IsSuccess);
+        Assert.False(scopeProbe.IsDisposed);
+        await opened.Value!.DisposeAsync();
+        Assert.True(scopeProbe.IsDisposed);
+        Assert.True(session.IsDisposed);
     }
 
     private sealed class StubEventSessionSource(ILlmChatOperationEventSession session)
@@ -335,6 +366,14 @@ public sealed class LlmChatUiEventSessionGatewayTests
             IsDisposed = true;
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class ScopeDisposalProbe : IDisposable
+    {
+        public bool IsDisposed { get; private set; }
+
+        public void Dispose()
+            => IsDisposed = true;
     }
 
     private static LlmChatOperation CreateOperation(LlmChatOperationId operationId)
@@ -395,17 +434,17 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             [
                 "CanDoItAll.AppComponents",
                 "CanDoItAll.Conversations.Components",
+                "CanDoItAll.Conversations.Shell",
                 "CanDoItAll.Modules.LlmChats"
             ],
             references);
 
-        var source = string.Join(
-            '\n',
-            Directory.EnumerateFiles(projectDirectory, "*.*", SearchOption.AllDirectories)
-                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-                .Where(path => Path.GetExtension(path) is ".cs" or ".razor")
-                .Select(File.ReadAllText));
+        var sourcePaths = Directory.EnumerateFiles(projectDirectory, "*.*", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => Path.GetExtension(path) is ".cs" or ".razor")
+            .ToArray();
+        var source = string.Join('\n', sourcePaths.Select(File.ReadAllText));
         foreach (var forbidden in new[]
         {
             "CanDoItAll.Web",
@@ -421,8 +460,52 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             Assert.DoesNotContain(forbidden, source, StringComparison.Ordinal);
         }
 
-        Assert.DoesNotContain("@page", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("/chats", source, StringComparison.OrdinalIgnoreCase);
+        var routePagePath = Path.Combine(projectDirectory, "Pages", "LlmChatsPage.razor");
+        var navigationPath = Path.Combine(
+            projectDirectory,
+            "Navigation",
+            "LlmChatsShellNavigationContributor.cs");
+        Assert.Contains("@page \"/chats\"", File.ReadAllText(routePagePath), StringComparison.Ordinal);
+        Assert.Contains("\"/chats\"", File.ReadAllText(navigationPath), StringComparison.Ordinal);
+
+        var nonActivationSource = string.Join(
+            '\n',
+            sourcePaths
+                .Except([routePagePath, navigationPath], StringComparer.OrdinalIgnoreCase)
+                .Select(File.ReadAllText));
+        Assert.DoesNotContain("@page", nonActivationSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/chats", nonActivationSource, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Conversation_shell_depends_only_on_neutral_presentation_and_component_boundaries()
+    {
+        var root = FindRepositoryRoot();
+        var projectDirectory = Path.Combine(root, "src", "UI", "CanDoItAll.Conversations.Shell");
+        var project = XDocument.Load(Path.Combine(
+            projectDirectory,
+            "CanDoItAll.Conversations.Shell.csproj"));
+        var references = project.Descendants("ProjectReference")
+            .Select(element => Path.GetFullPath(Path.Combine(
+                projectDirectory,
+                element.Attribute("Include")!.Value)))
+            .Select(path => Path.GetFileNameWithoutExtension(path)!)
+            .ToArray();
+
+        Assert.Equal(["CanDoItAll.Conversations.Components"], references);
+
+        var source = string.Join(
+            '\n',
+            Directory.EnumerateFiles(projectDirectory, "*.*", SearchOption.AllDirectories)
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => Path.GetExtension(path) is ".cs" or ".razor")
+                .Select(File.ReadAllText));
+        Assert.Contains("IConversationShellContributor", source, StringComparison.Ordinal);
+        Assert.Contains("DynamicComponent", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("AgentFramework", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("LlmChats", source, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

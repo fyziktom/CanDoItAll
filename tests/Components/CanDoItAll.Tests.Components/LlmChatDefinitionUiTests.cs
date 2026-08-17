@@ -82,8 +82,14 @@ public sealed class LlmChatDefinitionUiTests
     [Fact]
     public void Concurrency_conflict_is_sanitized_and_reload_replaces_stale_editor_state()
     {
-        var initial = CreateEditor(name: "Stale name", concurrencyToken: 7);
-        var refreshed = CreateEditor(name: "Current server name", concurrencyToken: 9);
+        var initial = CreateEditor(
+            name: "Stale name",
+            summary: "Stale summary",
+            concurrencyToken: 7);
+        var refreshed = CreateEditor(
+            name: "Current server name",
+            summary: "Current server summary",
+            concurrencyToken: 9);
         var gateway = new StubDefinitionGateway(initial, refreshed)
         {
             UpdateFailure = new(
@@ -98,6 +104,8 @@ public sealed class LlmChatDefinitionUiTests
         var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
             .Add(component => component.DefinitionId, DefinitionId));
         cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
+        var staleSummary = cut.Find("[data-testid='llm-chat-definition-summary']");
+        staleSummary.Change("Unsaved stale summary");
 
         cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
 
@@ -107,7 +115,10 @@ public sealed class LlmChatDefinitionUiTests
 
         cut.WaitForAssertion(() =>
         {
+            var currentSummary = cut.Find("[data-testid='llm-chat-definition-summary']");
             Assert.Equal("Current server name", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
+            Assert.Equal("Current server summary", currentSummary.TextContent);
+            Assert.NotSame(staleSummary, currentSummary);
             Assert.Equal(2, gateway.GetEditorCalls);
         });
     }
@@ -173,13 +184,14 @@ public sealed class LlmChatDefinitionUiTests
 
     private static LlmChatDefinitionEditor CreateEditor(
         string name = "Research assistant",
+        string summary = "Summarizes research.",
         long concurrencyToken = 7,
         LlmChatDefinitionStatus status = LlmChatDefinitionStatus.Draft)
     {
         var definition = new LlmChatDefinitionListItem(
             DefinitionId,
             name,
-            "Summarizes research.",
+            summary,
             string.Empty,
             status,
             3,

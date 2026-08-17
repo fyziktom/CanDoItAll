@@ -1,0 +1,16 @@
+.conversation-shell-host {
+    position: fixed;
+    inset: 0;
+    z-index: 1700;
+    pointer-events: none;
+}
+
+.conversation-shell-host ::deep .conversation-floating-window,
+.conversation-shell-host ::deep .cda-overlay-window {
+    pointer-events: auto;
+}
+
+.conversation-shell-host ::deep .conversation-floating-catalog {
+    min-height: 0;
+    height: 100%;
+}

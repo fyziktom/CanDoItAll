@@ -1,9 +1,12 @@
 using System.Security.Claims;
 using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.Modules.LlmChats.Ui.Pages;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -24,6 +27,28 @@ public sealed class LlmChatUiCompositionTests
         Assert.Contains(
             CanDoItAll.Composition.ModuleAssemblies.All,
             assembly => assembly == typeof(LlmChatsUiAssemblyMarker).Assembly);
+        Assert.Contains(
+            services,
+            item =>
+                item.ServiceType == typeof(IShellNavigationContributor) &&
+                item.ImplementationType == typeof(LlmChatsShellNavigationContributor));
+    }
+
+    [Fact]
+    public void Activated_page_and_navigation_share_the_canonical_chats_route()
+    {
+        var route = Assert.Single(typeof(LlmChatsPage)
+            .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
+            .Cast<RouteAttribute>());
+        var contribution = Assert.Single(
+            new LlmChatsShellNavigationContributor().GetShellNavigationContributions());
+
+        Assert.Equal("/chats", route.Template);
+        Assert.Equal("llm-chats", contribution.ModuleId);
+        Assert.Equal("/agents", contribution.ParentRoute);
+        Assert.Equal("/chats", contribution.Item.Route);
+        Assert.Equal("Simple Chats", contribution.Item.Title);
+        Assert.True(contribution.IsSubItem);
     }
 
     [Fact]

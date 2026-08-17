@@ -198,6 +198,71 @@ public sealed class LlmChatDurableStreamEventTests
     }
 
     [Fact]
+    public async Task Pipeline_observes_an_in_flight_move_before_disposing_a_cancelled_stream()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var operationId = LlmChatOperationId.New();
+        var ownerId = LlmChatExecutionOwnerId.New();
+        var executionLease = new LlmChatExecutionLeaseIdentity(operationId, ownerId, 1);
+        var operations = new InMemoryLlmChatOperationRepository();
+        operations.Seed(new LlmChatOperation(
+            operationId,
+            LlmChatConversationId.New(),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('a', 64)),
+            1,
+            LlmChatOperationStatus.Running,
+            now,
+            0)
+        {
+            ExecutionOwnerId = ownerId,
+            ExecutionEpoch = executionLease.Epoch,
+            ClaimedAtUtc = now,
+            HeartbeatAtUtc = now,
+            LeaseExpiresAtUtc = now.AddMinutes(1),
+            TurnAdmittedAtUtc = now,
+            ProviderDispatchStartedAtUtc = now
+        });
+        var operationScope = new LlmChatOperationScopeAccessor();
+        var options = new LlmChatStreamingOptions
+        {
+            MinimumChunkBytes = 32,
+            MaximumChunkBytes = 64,
+            MaximumCoalescingDelay = TimeSpan.FromSeconds(10)
+        };
+        var journal = new LlmChatOperationEventJournal(
+            operations,
+            new InMemoryLlmChatOperationEventRepository(operations),
+            new CancellationAwareUnitOfWork(),
+            new NoopLlmChatOperationEventSignal(),
+            operationScope,
+            options,
+            TimeProvider.System);
+        var pipeline = new LlmChatStreamingPipeline(
+            journal,
+            options,
+            TimeProvider.System,
+            new LlmChatStreamingConsumerState());
+        var stream = new DelayedCancellationStream();
+        using var cancellation = new CancellationTokenSource();
+        using var executionScope = operationScope.Push(new LlmChatOperationExecutionContext(
+            operationId,
+            new LlmChatRuntimeIdentity(Guid.NewGuid(), new string('b', 64), 1))
+        {
+            ExecutionLease = executionLease
+        });
+        var consumeTask = pipeline.ConsumeAsync(operationId, stream, cancellation.Token);
+        await stream.SecondMoveStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await consumeTask.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(stream.IsDisposed);
+        Assert.False(stream.DisposedWithMoveInFlight);
+    }
+
+    [Fact]
     public async Task Stream_limit_records_one_consistent_failure_across_all_evidence()
     {
         var now = new DateTimeOffset(2026, 8, 15, 12, 0, 0, TimeSpan.Zero);
@@ -492,6 +557,82 @@ public sealed class LlmChatDurableStreamEventTests
             LlmUsage.Zero,
             LlmStreamingDeliveryMode.Incremental,
             now.AddSeconds(1));
+    }
+
+    private sealed class DelayedCancellationStream :
+        IAsyncEnumerable<LlmStreamingUpdate>,
+        IAsyncEnumerator<LlmStreamingUpdate>
+    {
+        private CancellationToken cancellationToken;
+        private TaskCompletionSource<bool>? pendingMove;
+        private CancellationTokenRegistration registration;
+        private int moveCount;
+
+        public TaskCompletionSource SecondMoveStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool IsDisposed { get; private set; }
+
+        public bool DisposedWithMoveInFlight { get; private set; }
+
+        public LlmStreamingUpdate Current { get; private set; } = null!;
+
+        public IAsyncEnumerator<LlmStreamingUpdate> GetAsyncEnumerator(
+            CancellationToken cancellationToken = default)
+        {
+            this.cancellationToken = cancellationToken;
+            return this;
+        }
+
+        public ValueTask<bool> MoveNextAsync()
+        {
+            if (moveCount++ == 0)
+            {
+                Current = new LlmStreamingTextDelta(1, "small", 1);
+                return ValueTask.FromResult(true);
+            }
+
+            pendingMove = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            registration = cancellationToken.Register(() => _ = CompleteCancellationAsync());
+            SecondMoveStarted.TrySetResult();
+            return new(pendingMove.Task);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            IsDisposed = true;
+            registration.Dispose();
+            if (pendingMove?.Task.IsCompleted == false)
+            {
+                DisposedWithMoveInFlight = true;
+                throw new NotSupportedException("The stream cannot be disposed while MoveNext is active.");
+            }
+
+            return ValueTask.CompletedTask;
+        }
+
+        private async Task CompleteCancellationAsync()
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(50));
+            pendingMove!.TrySetCanceled(cancellationToken);
+        }
+    }
+
+    private sealed class CancellationAwareUnitOfWork : ILlmChatUnitOfWork
+    {
+        public Task<T> ExecuteAsync<T>(
+            Func<CancellationToken, Task<T>> operation,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return operation(cancellationToken);
+        }
+
+        public void RegisterPostCommit(Action callback)
+        {
+            ArgumentNullException.ThrowIfNull(callback);
+            callback();
+        }
     }
 
     private static Guid GuidFromInt32(int value)

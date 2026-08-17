@@ -6,6 +6,7 @@
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Infrastructure.ControlPlane
 @using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Conversations.Shell
 @using CanDoItAll.Modules.Collaboration
 @using CanDoItAll.Modules.AgentFramework.Pages.Components
 @using CanDoItAll.Modules.Projects
@@ -20,7 +21,7 @@
 @inject CollaborationService CollaborationService
 @inject DatabaseProfileWorkspaceService DatabaseProfileWorkspaceService
 @inject ProjectsService ProjectsService
-@inject IAgentChatLauncher AgentChatLauncher
+@inject IConversationShellLauncher ConversationShellLauncher
 @inject IJSRuntime JS
 
 <AppShell NavigationItems="@NavigationItems"
@@ -56,15 +57,15 @@
             <TooltipTarget Position="TooltipPosition.Right"
                            Delay="@ShellMenuTooltipDelay"
                            TriggerClass="w-full"
-                           Text="Open floating agent chats"
+                           Text="Open floating conversations"
                            TestId="shell-agent-chats-tooltip">
                 <ChildContent>
                     <button type="button"
                             class="cda-shell-utility-button"
                             data-testid="shell-agent-chats-action"
-                            @onclick="OpenFloatingAgentChats">
+                            @onclick="OpenFloatingConversations">
                         <span class="cda-shell-utility-icon" aria-hidden="true"><Icon Name="smart_toy" /></span>
-                        <span class="cda-shell-utility-label">Agent chats</span>
+                        <span class="cda-shell-utility-label">Chats</span>
                     </button>
                 </ChildContent>
             </TooltipTarget>
@@ -249,7 +250,7 @@
 </AppShell>
 
 <WorkspaceAgentChatContextProvider />
-<FloatingAgentChatHost />
+<ConversationShellHost />
 <DialogHost />
 <Tooltip />
 
@@ -283,6 +284,6 @@
 </div>
 
 @code {
-    private void OpenFloatingAgentChats()
-        => AgentChatLauncher.ShowCatalog();
+    private void OpenFloatingConversations()
+        => ConversationShellLauncher.ShowCatalog();
 }

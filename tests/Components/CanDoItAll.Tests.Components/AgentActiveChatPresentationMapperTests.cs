@@ -61,6 +61,26 @@ public sealed class AgentActiveChatPresentationMapperTests
     }
 
     [Fact]
+    public void Global_shell_focus_controls_open_action_without_changing_agent_handle_visibility()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var chat = new ActiveAgentChat(
+            AgentChatHandleId.Create(),
+            new AgentChatIdentity(Guid.NewGuid(), "Agent Alpha", "Reviewer", string.Empty),
+            Guid.NewGuid(),
+            ActiveAgentChatVisibility.Visible,
+            ActiveAgentChatRunState.Idle,
+            now,
+            now,
+            null);
+
+        var result = AgentActiveChatPresentationMapper.Map(chat, isFocused: false);
+
+        Assert.Equal(new PresentationBadge("Kept active", PresentationTone.Default), result.Badges[0]);
+        Assert.False(result.Actions[0].IsDisabled);
+    }
+
+    [Fact]
     public void Rejects_unknown_active_chat_action_keys()
     {
         var key = new ConversationPresentationKey("archive");

@@ -1275,6 +1275,54 @@ public sealed class LlmChatCanonicalTitleMigrationIntegrationTests
 public sealed class LlmChatPersistenceIntegrationTests
 {
     [Fact]
+    public async Task Definition_tags_can_be_replaced_twice_in_the_same_db_context()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchattagreplacement");
+        await using var dbContext = database.CreateDbContext();
+        var repository = new EfLlmChatDefinitionRepository(dbContext);
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var definitionId = new LlmChatDefinitionId(Guid.NewGuid());
+        var now = DateTimeOffset.UtcNow;
+        var firstRevision = CreateRevision(definitionId, 1, null, now);
+        var definition = new LlmChatDefinition(
+            definitionId,
+            firstRevision.Name,
+            firstRevision.Summary,
+            firstRevision.AvatarImageUrl,
+            LlmChatDefinitionStatus.Active,
+            firstRevision.Revision,
+            now,
+            now,
+            0);
+        await unitOfWork.ExecuteAsync(async cancellationToken =>
+        {
+            await repository.CreateAsync(definition, firstRevision, cancellationToken);
+            await repository.ReplaceTagsAsync(definitionId, ["codex", "cp2"], cancellationToken);
+            return true;
+        });
+
+        var secondRevision = CreateRevision(definitionId, 2, null, now.AddMinutes(1));
+        var updated = new LlmChatDefinition(
+            definitionId,
+            secondRevision.Name,
+            secondRevision.Summary,
+            secondRevision.AvatarImageUrl,
+            LlmChatDefinitionStatus.Active,
+            secondRevision.Revision,
+            now,
+            now.AddMinutes(1),
+            1);
+        await unitOfWork.ExecuteAsync(async cancellationToken =>
+        {
+            await repository.ReplaceAsync(updated, 0, secondRevision, cancellationToken);
+            await repository.ReplaceTagsAsync(definitionId, ["codex", "cp2"], cancellationToken);
+            return true;
+        });
+
+        Assert.Equal(["codex", "cp2"], await repository.ListTagsAsync(definitionId));
+    }
+
+    [Fact]
     public async Task Definition_revisions_append_and_preserve_provider_default_versus_explicit_none()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatrevisions");

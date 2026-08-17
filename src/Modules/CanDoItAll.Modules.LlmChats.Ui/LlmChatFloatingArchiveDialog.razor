@@ -1,0 +1,24 @@
+@inject DialogService DialogService
+
+@if (Conversation is not null)
+{
+    <DangerActionDialog Eyebrow="Archive conversation"
+                        Title="@($"Archive {Conversation.Title}")"
+                        Description="Archiving keeps the canonical transcript but makes this conversation read-only."
+                        RequiredConfirmation="@Conversation.Title"
+                        ConfirmButtonText="Archive"
+                        Confirmed="ConfirmAsync"
+                        Cancelled="CancelAsync"
+                        TestId="floating-simple-chat-archive-confirmation" />
+}
+
+@code {
+    [Parameter]
+    public LlmChatConversationListItem? Conversation { get; set; }
+
+    private Task ConfirmAsync()
+        => DialogService.CloseAsync(true);
+
+    private Task CancelAsync()
+        => DialogService.CloseAsync(false);
+}

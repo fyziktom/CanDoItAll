@@ -509,6 +509,9 @@
   .max-w-\[44rem\] {
     max-width: 44rem;
   }
+  .max-w-\[1400px\] {
+    max-width: 1400px;
+  }
   .max-w-full {
     max-width: 100%;
   }
@@ -1253,9 +1256,6 @@
   }
   .opacity-80 {
     opacity: 80%;
-  }
-  .opacity-90 {
-    opacity: 90%;
   }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));

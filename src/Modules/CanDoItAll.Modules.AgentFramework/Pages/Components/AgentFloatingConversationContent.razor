@@ -1,0 +1,142 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@implements IDisposable
+@inject IAgentChatContextRegistry ContextRegistry
+@inject IAgentConversationContextService ConversationContextService
+
+<div class="agent-floating-conversation-content" data-testid="floating-agent-chat-content">
+    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+        @if (currentContext is { } activeContext)
+        {
+            <StatusBadge Tone="info" Text="@activeContext.Scope.DisplayName" />
+            <StatusBadge Tone="@(activeContext.CanRead(Chat.Agent.AgentId) ? "success" : "warning")"
+                         Text="@(activeContext.CanRead(Chat.Agent.AgentId) ? "Context access allowed" : "Context access blocked")" />
+        }
+        else
+        {
+            <StatusBadge Tone="neutral" Text="No module context" />
+        }
+        <StatusBadge Tone="@(IsDetached ? "warning" : "neutral")"
+                     Text="@ResolveAffinityStatus()"
+                     data-testid="floating-agent-chat-affinity-status" />
+        @if (HasPendingContextChange())
+        {
+            <StatusBadge Tone="info"
+                         Text="@ResolvePendingContextText()"
+                         data-testid="floating-agent-chat-pending-context" />
+        }
+        <Button Icon="@(IsDetached ? "link" : "link_off")"
+                Text="@(IsDetached ? "Follow context" : "Detach")"
+                ButtonStyle="ButtonStyle.Light"
+                Size="ButtonSize.Small"
+                Click="ToggleConversationContextMode"
+                data-testid="floating-agent-chat-affinity-toggle" />
+    </Cluster>
+    @if (Chat.ChatSessionId is { } sessionId)
+    {
+        <AgentChatPanel PreferredAgentId="@Chat.Agent.AgentId"
+                        PreferredAgent="@PreferredAgent"
+                        PreferredSessionId="@sessionId"
+                        ActiveChatHandleId="@Chat.HandleId"
+                        PersistedActiveChatRunState="@Chat.RunState"
+                        DisplayMode="AgentChatPanelDisplayMode.FocusedFloating" />
+    }
+    else
+    {
+        <LoadingState Title="Preparing chat"
+                      Description="Reserving the agent and creating a durable conversation." />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ActiveAgentChat Chat { get; set; } = default!;
+
+    [Parameter]
+    public AgentDefinition? PreferredAgent { get; set; }
+
+    private AgentChatContextSnapshot? currentContext;
+
+    private AgentConversationContextBinding? Binding
+    {
+        get
+        {
+            var key = Chat.ChatSessionId is { } sessionId
+                ? AgentConversationKey.ForSession(sessionId)
+                : AgentConversationKey.ForHandle(Chat.HandleId);
+            return ConversationContextService.TryGetBinding(key);
+        }
+    }
+
+    private bool IsDetached => Binding is { Mode: AgentConversationContextMode.Detached };
+
+    protected override void OnInitialized()
+    {
+        ContextRegistry.Changed += HandleChanged;
+        ConversationContextService.Changed += HandleChanged;
+        currentContext = ContextRegistry.Capture();
+    }
+
+    private void HandleChanged(object? sender, EventArgs eventArgs)
+    {
+        currentContext = ContextRegistry.Capture();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string ResolveAffinityStatus()
+    {
+        if (Binding is { Mode: AgentConversationContextMode.Detached })
+        {
+            return "Detached from application context";
+        }
+
+        if (Binding is { IsFollowing: true } binding)
+        {
+            var view = string.IsNullOrWhiteSpace(binding.LastView) ? string.Empty : $" / {binding.LastView}";
+            return $"Following: {binding.DisplayName}{view}";
+        }
+
+        return "Following: current surface";
+    }
+
+    private bool HasPendingContextChange()
+    {
+        if (Binding is not { IsFollowing: true } binding ||
+            binding.Mode == AgentConversationContextMode.Detached ||
+            currentContext is not { } context)
+        {
+            return false;
+        }
+
+        var currentView = context.Scope.SurfacePosition?.View ?? string.Empty;
+        return binding.SourceKind != context.Scope.Source.Kind ||
+               binding.SourceId != context.Scope.Source.Id ||
+               !string.Equals(binding.LastView, currentView, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolvePendingContextText()
+        => currentContext is { } context
+            ? $"Next turn: {context.Scope.DisplayName}{(string.IsNullOrWhiteSpace(context.Scope.SurfacePosition?.View) ? string.Empty : $" / {context.Scope.SurfacePosition!.View}")}"
+            : "Next turn: no module context";
+
+    private void ToggleConversationContextMode()
+    {
+        var key = Chat.ChatSessionId is { } sessionId
+            ? AgentConversationKey.ForSession(sessionId)
+            : AgentConversationKey.ForHandle(Chat.HandleId);
+        if (ConversationContextService.GetOrCreateBinding(key).Mode == AgentConversationContextMode.Detached)
+        {
+            ConversationContextService.FollowCurrentSurface(key);
+        }
+        else
+        {
+            ConversationContextService.Detach(key);
+        }
+    }
+
+    public void Dispose()
+    {
+        ContextRegistry.Changed -= HandleChanged;
+        ConversationContextService.Changed -= HandleChanged;
+    }
+}

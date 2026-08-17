@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed with classified validation debt`
 - Stage: `final`
 - Proof tier: `Governed`
 
@@ -57,10 +57,10 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] All targeted proof passes before the one Stable gate.
-- [ ] Stable gate runs no more than once.
-- [ ] Final architecture/security/proof checks pass.
-- [ ] Final status is awaiting user verification with no unsupported closure claim.
+- [x] All targeted proof passed before the one Stable gate.
+- [x] Stable gate ran exactly once. It failed on a shell-composition defect that was repaired and covered by focused proof; it was not rerun because this subbundle permits only one broad run.
+- [x] Final architecture, security, artifact-integrity, build, focused-test, and named browser checks pass.
+- [x] Final status is awaiting user verification. `FINAL Pass` is not claimed because the Stable and full Playwright broad-gate results are non-green.
 
 ## Validation Depth
 
@@ -123,7 +123,7 @@ Do not add a partial class as the final separation boundary. A Razor component c
 
 ## Progression Gate
 
-FINAL Pass sets awaiting-user-simple-chat-ui-verification.
+Implementation is complete and the handoff state is `awaiting-user-simple-chat-ui-verification`. `FINAL Pass` is not claimed while the classified broad-gate debt remains.
 
 ## Reopen Triggers
 

@@ -1,6 +1,7 @@
 using CanDoItAll.Modules.LlmChats.Application;
 using CanDoItAll.Modules.LlmChats.Common;
 using CanDoItAll.Modules.LlmChats.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Modules.LlmChats.Ui;
 
@@ -35,7 +36,7 @@ public interface ILlmChatUiEventSessionGateway
 }
 
 public sealed class LlmChatUiEventSessionGateway(
-    ILlmChatOperationEventSessionSource sessions,
+    IServiceScopeFactory scopeFactory,
     ILlmChatUiAuthorizationFacade authorization) : ILlmChatUiEventSessionGateway
 {
     public async ValueTask<LlmChatUiResult<ILlmChatUiEventSession>> OpenAsync(
@@ -52,13 +53,31 @@ public sealed class LlmChatUiEventSessionGateway(
             return LlmChatUiResultMapper.Invalid<ILlmChatUiEventSession>("Select a valid Simple Chat operation.");
         }
 
-        var result = await sessions.OpenAsync(new(operationId), cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(
-            result,
-            session => (ILlmChatUiEventSession)new LlmChatUiEventSession(session));
+        var scope = scopeFactory.CreateAsyncScope();
+        try
+        {
+            var sessions = scope.ServiceProvider.GetRequiredService<ILlmChatOperationEventSessionSource>();
+            var result = await sessions.OpenAsync(new(operationId), cancellationToken).ConfigureAwait(false);
+            var mapped = LlmChatUiResultMapper.Map(
+                result,
+                session => (ILlmChatUiEventSession)new LlmChatUiEventSession(session, scope));
+            if (mapped.IsFailure)
+            {
+                await scope.DisposeAsync().ConfigureAwait(false);
+            }
+
+            return mapped;
+        }
+        catch
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
-    private sealed class LlmChatUiEventSession(ILlmChatOperationEventSession session) : ILlmChatUiEventSession
+    private sealed class LlmChatUiEventSession(
+        ILlmChatOperationEventSession session,
+        AsyncServiceScope scope) : ILlmChatUiEventSession
     {
         public CancellationToken ProfileLifetime => session.ProfileLifetime;
 
@@ -83,6 +102,16 @@ public sealed class LlmChatUiEventSessionGateway(
                 page.TextCharactersThroughCursor);
         }
 
-        public ValueTask DisposeAsync() => session.DisposeAsync();
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                await scope.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `ui`
 - Proof tier: `Behavioral`
 
@@ -53,9 +53,9 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] Conversation create/list/select/page/rename/archive/send-admission flows pass.
-- [ ] System messages are absent.
-- [ ] No unbounded transcript materialization or forbidden context feature exists.
+- [x] Conversation create/list/select/page/rename/archive/send-admission flows pass.
+- [x] System messages are absent.
+- [x] No unbounded transcript materialization or forbidden context feature exists.
 
 ## Validation Depth
 

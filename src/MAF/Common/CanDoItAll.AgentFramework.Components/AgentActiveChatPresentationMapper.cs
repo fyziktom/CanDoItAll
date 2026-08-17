@@ -8,17 +8,21 @@ public static class AgentActiveChatPresentationMapper
     private static readonly ConversationPresentationKey OpenActionKey = new("open");
     private static readonly ConversationPresentationKey StopActionKey = new("stop");
 
-    public static ConversationActiveItemPresentation Map(ActiveAgentChat chat)
+    public static ConversationActiveItemPresentation Map(
+        ActiveAgentChat chat,
+        ConversationPresentationKey? key = null,
+        bool? isFocused = null)
     {
         ArgumentNullException.ThrowIfNull(chat);
+        var focused = isFocused ?? chat.IsVisible;
 
         return new(
-            Key(chat.HandleId),
+            key ?? Key(chat.HandleId),
             chat.Agent.Name,
             [
                 new(
-                    chat.IsVisible ? "Open" : "Kept active",
-                    chat.IsVisible ? PresentationTone.Success : PresentationTone.Default),
+                    focused ? "Open" : "Kept active",
+                    focused ? PresentationTone.Success : PresentationTone.Default),
                 new(ResolveRunStateLabel(chat.RunState), ResolveRunStateTone(chat.RunState))
             ],
             [
@@ -26,7 +30,7 @@ public static class AgentActiveChatPresentationMapper
                     OpenActionKey,
                     "Open",
                     "open_in_new",
-                    isDisabled: chat.IsVisible),
+                    isDisabled: focused),
                 new(
                     StopActionKey,
                     "Stop",

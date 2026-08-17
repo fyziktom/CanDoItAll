@@ -26,75 +26,93 @@ public sealed class LlmChatStreamingPipeline(
         LlmStreamingFailed? terminalFailure = null;
         await using var enumerator = updates.GetAsyncEnumerator(cancellationToken);
         Task<bool>? moveNextTask = null;
-        while (true)
+        try
         {
-            moveNextTask ??= enumerator.MoveNextAsync().AsTask();
-            if (coalescer.HasBufferedContent)
+            while (true)
             {
-                var delay = Task.Delay(
-                    coalescer.GetRemainingDelay(timeProvider.GetUtcNow()),
-                    timeProvider,
-                    cancellationToken);
-                if (await Task.WhenAny(moveNextTask, delay).ConfigureAwait(false) == delay)
+                moveNextTask ??= enumerator.MoveNextAsync().AsTask();
+                if (coalescer.HasBufferedContent)
                 {
-                    foreach (var chunk in coalescer.Flush(timeProvider.GetUtcNow()))
+                    var delay = Task.Delay(
+                        coalescer.GetRemainingDelay(timeProvider.GetUtcNow()),
+                        timeProvider,
+                        cancellationToken);
+                    if (await Task.WhenAny(moveNextTask, delay).ConfigureAwait(false) == delay)
                     {
-                        await AppendChunkAsync(bufferedAttemptOrdinal, chunk).ConfigureAwait(false);
-                    }
+                        foreach (var chunk in coalescer.Flush(timeProvider.GetUtcNow()))
+                        {
+                            await AppendChunkAsync(bufferedAttemptOrdinal, chunk).ConfigureAwait(false);
+                        }
 
-                    continue;
+                        continue;
+                    }
+                }
+
+                if (!await moveNextTask.ConfigureAwait(false))
+                {
+                    break;
+                }
+
+                var update = enumerator.Current;
+                moveNextTask = null;
+                switch (update)
+                {
+                    case LlmStreamingAttemptStarted:
+                        break;
+                    case LlmStreamingTextDelta delta:
+                        response.Append(delta.Delta);
+                        responseBytes = checked(responseBytes + Encoding.UTF8.GetByteCount(delta.Delta));
+                        EnsureResponseWithinBounds(response.Length, responseBytes);
+                        bufferedAttemptOrdinal = delta.AttemptOrdinal;
+                        foreach (var chunk in coalescer.Append(delta.Delta, timeProvider.GetUtcNow()))
+                        {
+                            await AppendChunkAsync(delta.AttemptOrdinal, chunk).ConfigureAwait(false);
+                        }
+
+                        EnsureDeltaEventsWithinBounds(deltaEventCount, coalescer.BufferedChunkCount);
+
+                        break;
+                    case LlmStreamingFailed failed:
+                        terminalFailure = failed.RetryScheduled ? null : failed;
+                        break;
+                    case LlmStreamingCompleted completed:
+                        foreach (var chunk in coalescer.Flush(timeProvider.GetUtcNow()))
+                        {
+                            await AppendChunkAsync(bufferedAttemptOrdinal, chunk).ConfigureAwait(false);
+                        }
+
+                        return new LlmInvocationResult(completed.Model, response.ToString(), completed.Usage);
+                    default:
+                        throw new InvalidOperationException("The streaming provider returned an unknown update.");
                 }
             }
 
-            if (!await moveNextTask.ConfigureAwait(false))
+            foreach (var chunk in coalescer.Flush(timeProvider.GetUtcNow()))
             {
-                break;
+                await AppendChunkAsync(bufferedAttemptOrdinal, chunk).ConfigureAwait(false);
             }
 
-            var update = enumerator.Current;
-            moveNextTask = null;
-            switch (update)
-            {
-                case LlmStreamingAttemptStarted:
-                    break;
-                case LlmStreamingTextDelta delta:
-                    response.Append(delta.Delta);
-                    responseBytes = checked(responseBytes + Encoding.UTF8.GetByteCount(delta.Delta));
-                    EnsureResponseWithinBounds(response.Length, responseBytes);
-                    bufferedAttemptOrdinal = delta.AttemptOrdinal;
-                    foreach (var chunk in coalescer.Append(delta.Delta, timeProvider.GetUtcNow()))
-                    {
-                        await AppendChunkAsync(delta.AttemptOrdinal, chunk).ConfigureAwait(false);
-                    }
-
-                    EnsureDeltaEventsWithinBounds(deltaEventCount, coalescer.BufferedChunkCount);
-
-                    break;
-                case LlmStreamingFailed failed:
-                    terminalFailure = failed.RetryScheduled ? null : failed;
-                    break;
-                case LlmStreamingCompleted completed:
-                    foreach (var chunk in coalescer.Flush(timeProvider.GetUtcNow()))
-                    {
-                        await AppendChunkAsync(bufferedAttemptOrdinal, chunk).ConfigureAwait(false);
-                    }
-
-                    return new LlmInvocationResult(completed.Model, response.ToString(), completed.Usage);
-                default:
-                    throw new InvalidOperationException("The streaming provider returned an unknown update.");
-            }
+            throw new LlmChatConversationEngineException(
+                terminalFailure is null
+                    ? LlmChatErrorCodes.ProviderUnavailable
+                    : MapFailureCode(terminalFailure.FailureKind),
+                "The streaming LLM invocation did not complete successfully.");
         }
-
-        foreach (var chunk in coalescer.Flush(timeProvider.GetUtcNow()))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await AppendChunkAsync(bufferedAttemptOrdinal, chunk).ConfigureAwait(false);
-        }
+            if (moveNextTask is { IsCompleted: false })
+            {
+                try
+                {
+                    await moveNextTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                }
+            }
 
-        throw new LlmChatConversationEngineException(
-            terminalFailure is null
-                ? LlmChatErrorCodes.ProviderUnavailable
-                : MapFailureCode(terminalFailure.FailureKind),
-            "The streaming LLM invocation did not complete successfully.");
+            throw;
+        }
 
         async Task AppendChunkAsync(int attemptOrdinal, string chunk)
         {

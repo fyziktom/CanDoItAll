@@ -20,6 +20,7 @@
     <ProjectReference Include="..\CanDoItAll.Modules.LlmChats\CanDoItAll.Modules.LlmChats.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.Conversations.Components\CanDoItAll.Conversations.Components.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
   </ItemGroup>
 
 </Project>

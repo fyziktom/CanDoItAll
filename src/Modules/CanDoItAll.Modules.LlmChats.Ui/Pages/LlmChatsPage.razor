@@ -1,0 +1,38 @@
+@page "/chats"
+@namespace CanDoItAll.Modules.LlmChats.Ui.Pages
+
+<PageTitle>Simple Chats</PageTitle>
+
+<PageScaffold MaxWidthClass="max-w-full" data-testid="llm-chats-page">
+    <Header>
+        <PageHeader Eyebrow="LLM conversations"
+                    Title="Simple Chats"
+                    Description="Reusable model definitions and durable conversations without agent tools, memory, or workflow orchestration."
+                    Compact="true" />
+    </Header>
+
+    <ChildContent>
+        <Tabs @bind-SelectedIndex="selectedTabIndex"
+              RenderMode="TabRenderMode.Server"
+              Variant="TabsVariant.WorkspacePrimary"
+              BorderMode="TabsBorderMode.Soft"
+              OverflowMode="TabsOverflowMode.Wrap"
+              AriaLabel="Simple Chat workspace tabs"
+              data-testid="llm-chats-tabs">
+            <TabsItem Text="Conversations"
+                      Icon="chat"
+                      data-testid="llm-chats-tab-conversations">
+                <LlmChatConversationWorkspace />
+            </TabsItem>
+            <TabsItem Text="Definitions"
+                      Icon="tune"
+                      data-testid="llm-chats-tab-definitions">
+                <LlmChatDefinitionCatalogPanel />
+            </TabsItem>
+        </Tabs>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private int selectedTabIndex;
+}

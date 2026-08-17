@@ -68,11 +68,18 @@ public sealed class EfLlmChatDefinitionRepository(AppDbContext dbContext) : ILlm
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tags);
-        await dbContext.Set<LlmChatDefinitionTagRow>()
+        var desiredTags = tags.ToHashSet(StringComparer.Ordinal);
+        var existingTags = await dbContext.Set<LlmChatDefinitionTagRow>()
             .Where(row => row.DefinitionId == id.Value)
-            .ExecuteDeleteAsync(cancellationToken)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        dbContext.AddRange(tags.Select(tag => new LlmChatDefinitionTagRow
+        var existingTagNames = existingTags
+            .Select(row => row.Tag)
+            .ToHashSet(StringComparer.Ordinal);
+        dbContext.RemoveRange(existingTags.Where(row => !desiredTags.Contains(row.Tag)));
+        dbContext.AddRange(desiredTags
+            .Where(tag => !existingTagNames.Contains(tag))
+            .Select(tag => new LlmChatDefinitionTagRow
         {
             DefinitionId = id.Value,
             Tag = tag

@@ -60,9 +60,11 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             invocationPort,
             runtimeState,
             operationScope);
+        var streamingEvidenceSink = new FreshScopeLlmChatOperationEvidenceSink(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>());
         ILlmStreamingInvocationPort streamingInvocationPort = new AuditedLlmChatStreamingInvocationPort(
             serviceProvider.GetRequiredService<ILlmStreamingInvocationPort>(),
-            evidenceSink,
+            streamingEvidenceSink,
             serviceProvider.GetRequiredService<IProviderModelCapabilityResolver>(),
             operationScope,
             serviceProvider.GetRequiredService<TimeProvider>(),

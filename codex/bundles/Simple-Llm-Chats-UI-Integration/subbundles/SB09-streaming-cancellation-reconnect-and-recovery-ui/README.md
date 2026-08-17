@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `ui`
 - Proof tier: `Governed`
 
@@ -55,11 +55,11 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] Slow streaming updates one transient Assistant message.
-- [ ] Refresh/remount reconnects to the same operation.
-- [ ] Gap refreshes canonical state without duplicate partial text.
-- [ ] Close/dispose does not cancel; explicit Cancel does.
-- [ ] Recovery actions are evidence/state gated.
+- [x] Slow streaming updates one transient Assistant message.
+- [x] Refresh/remount reconnects to the same operation.
+- [x] Gap refreshes canonical state without duplicate partial text.
+- [x] Close/dispose does not cancel; explicit Cancel does.
+- [x] Recovery actions are evidence/state gated.
 
 ## Validation Depth
 

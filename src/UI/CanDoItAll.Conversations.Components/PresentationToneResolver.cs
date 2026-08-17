@@ -2,7 +2,7 @@ using CanDoItAll.Conversations.Components.Presentation;
 
 namespace CanDoItAll.Conversations.Components;
 
-internal static class PresentationToneResolver
+public static class PresentationToneResolver
 {
     public static string Resolve(PresentationTone tone)
     {

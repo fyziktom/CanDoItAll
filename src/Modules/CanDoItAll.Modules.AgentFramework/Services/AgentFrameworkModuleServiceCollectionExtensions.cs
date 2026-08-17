@@ -28,6 +28,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tools.Documents;
@@ -44,6 +45,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddConversationShell();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             AgentFrameworkProjectTransferTargetStateParticipant>());
@@ -273,10 +275,14 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentChatPreparationPool>());
         services.AddScoped<IFloatingAgentChatSettingsService, FloatingAgentChatSettingsService>();
         services.AddScoped<FloatingAgentChatCoordinator>();
-        services.AddScoped<IAgentChatLauncher>(serviceProvider =>
-            serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
         services.AddScoped<IFloatingAgentChatCoordinator>(serviceProvider =>
             serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
+        services.AddScoped<AgentChatLauncherCompatibilityFacade>();
+        services.AddScoped<IAgentChatLauncher>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentChatLauncherCompatibilityFacade>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IConversationShellContributor,
+            AgentConversationShellContributor>());
         services.Replace(
             ServiceDescriptor.Scoped<IPromptGalleryCuratorLauncher, AgentFrameworkPromptGalleryCuratorLauncher>());
         services.AddScoped<ICanDoItAllAgentWorkspaceFactory, CanDoItAllAgentWorkspaceFactory>();

@@ -3,9 +3,9 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Components;
 
-internal static class AgentParticipantPresentationMapper
+public static class AgentParticipantPresentationMapper
 {
-    public static ConversationParticipantPresentation MapCard(
+    internal static ConversationParticipantPresentation MapCard(
         AgentDefinition agent,
         AgentParticipantCardProjectionOptions options)
     {
@@ -53,7 +53,8 @@ internal static class AgentParticipantPresentationMapper
         bool isBusy,
         string? shellTestId,
         string? selectTestId,
-        IReadOnlyList<ParticipantActionPresentation> actions)
+        IReadOnlyList<ParticipantActionPresentation> actions,
+        ConversationPresentationKey? key = null)
     {
         var displayName = string.IsNullOrWhiteSpace(agent.Name) ? "Agent" : agent.Name.Trim();
         var role = ResolveRole(agent);
@@ -61,7 +62,7 @@ internal static class AgentParticipantPresentationMapper
         var workload = AgentWorkloadDisplay.ResolveLabel(agent.Workload);
         var tags = VisibleTags(agent);
         var participant = new ConversationParticipantPresentation(
-            key: AgentKey(agent.Id),
+            key: key ?? AgentKey(agent.Id),
             displayName: displayName,
             subtitle: role,
             avatarImageUrl: agent.AvatarImageUrl,
