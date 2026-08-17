@@ -1,0 +1,14 @@
+{
+  "bundleId": "AgentFramework-Simple-Chats-Consolidation",
+  "stage": "prepared",
+  "executionState": "not-started",
+  "validationState": "prepared-pass",
+  "reviewVerdict": "ready-for-phased-execution",
+  "reviewedHead": "30edf7b034cb2a06d29ee3ba2df8193006109dd5",
+  "completedSubbundles": [],
+  "currentSubbundle": "SB01",
+  "lastPassedCheckpoint": null,
+  "targetFinalState": "agentframework-simple-chats-consolidated-and-verified",
+  "blockedBy": [],
+  "implementationPerformedDuringPreparation": false
+}
