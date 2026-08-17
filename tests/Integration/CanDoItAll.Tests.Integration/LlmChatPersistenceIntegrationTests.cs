@@ -1399,7 +1399,9 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         Assert.NotNull(transcript);
         Assert.Equal(25, transcript.Entries.Count);
         Assert.NotNull(transcript.NextCursor);
-        Assert.Equal(seeded.SystemEntryId, transcript.Entries[0].EntryId);
+        Assert.DoesNotContain(transcript.Entries, entry => entry.Role == LlmMessageRole.System);
+        Assert.Equal(LlmMessageRole.User, transcript.Entries[0].Role);
+        Assert.Equal("message-0002", transcript.Entries[0].Text);
         Assert.Equal(2, interceptor.Commands.Count);
         Assert.Contains(interceptor.Commands, command =>
             command.CommandText.Contains("LlmChats_Messages", StringComparison.Ordinal) &&
@@ -1484,7 +1486,6 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         var conversationId = LlmChatConversationId.New();
         var pendingTurnId = Guid.NewGuid();
         var pendingEntryId = Guid.NewGuid();
-        var systemEntryId = Guid.NewGuid();
         dbContext.Add(new LlmChatConversationRow
         {
             Id = conversationId.Value,
@@ -1513,7 +1514,7 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         });
         dbContext.Add(new LlmChatMessageRow
         {
-            EntryId = systemEntryId,
+            EntryId = Guid.NewGuid(),
             ConversationId = conversationId.Value,
             Sequence = 1,
             TurnId = Guid.NewGuid(),
@@ -1558,8 +1559,7 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         return new SeededBoundedConversation(
             conversationId,
             providerId,
-            pendingTurnId,
-            systemEntryId);
+            pendingTurnId);
     }
 
     private static ProviderProfile CreateProvider(Guid providerId)
@@ -1626,8 +1626,7 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
     private sealed record SeededBoundedConversation(
         LlmChatConversationId ConversationId,
         Guid ProviderId,
-        Guid PendingTurnId,
-        Guid SystemEntryId);
+        Guid PendingTurnId);
 }
 
 public sealed class LlmChatOperationDispatchClaimIntegrationTests
@@ -1751,6 +1750,7 @@ public sealed class LlmChatOperationDispatchClaimIntegrationTests
         LlmChatExecutionLeaseOptions options)
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(options);
         services.AddSingleton(TimeProvider.System);
         services.AddScoped(_ => database.CreateDbContext());
