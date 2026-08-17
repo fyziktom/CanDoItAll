@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.LlmChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 
 namespace CanDoItAll.Web.Api;
 

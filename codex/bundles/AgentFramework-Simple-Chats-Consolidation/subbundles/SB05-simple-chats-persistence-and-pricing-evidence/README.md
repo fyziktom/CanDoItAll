@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — CP1 Pass
 - Stage: persistence-checkpoint
 - Proof tier: Governed
 

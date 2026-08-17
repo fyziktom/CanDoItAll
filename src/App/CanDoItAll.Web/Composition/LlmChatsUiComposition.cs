@@ -1,4 +1,4 @@
-using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +13,7 @@ public static class LlmChatsUiComposition
     public static IServiceCollection AddCanDoItAllLlmChatsUi(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        services.AddLlmChatsUi();
+        services.AddSimpleChatsComponents();
         services.AddCascadingAuthenticationState();
         services.TryAddScoped<ILlmChatUiPolicyEvaluator, WebLlmChatUiPolicyEvaluator>();
         return services;

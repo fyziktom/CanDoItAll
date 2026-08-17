@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
@@ -208,15 +209,18 @@ public sealed class AgentDetailsDialogDeletionTests
         {
             context.JSInterop.Mode = JSRuntimeMode.Loose;
             context.Services.AddCanDoItAllBaseLib();
-            context.Services.AddSingleton(new AgentAvatarGenerationService(
+            var avatarGenerationService = new AgentAvatarGenerationService(
                 new UnavailableAgentImageGenerationService(),
-                NullLogger<AgentAvatarGenerationService>.Instance));
+                NullLogger<AgentAvatarGenerationService>.Instance);
 
             var workspaceService = DispatchProxy.Create<
                 IAgentFrameworkWorkspaceService,
                 RecordingWorkspaceServiceProxy>();
             Workspace = (RecordingWorkspaceServiceProxy)(object)workspaceService;
+            context.Services.AddSingleton(avatarGenerationService);
             context.Services.AddSingleton(workspaceService);
+            context.Services.AddSingleton<IAvatarGenerationGateway>(
+                new AgentAvatarGenerationGateway(workspaceService, avatarGenerationService));
             context.Services.AddSingleton(
                 (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
             context.Services.AddSingleton(

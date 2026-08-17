@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.Web.Api.Streaming;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.AspNetCore.Mvc;

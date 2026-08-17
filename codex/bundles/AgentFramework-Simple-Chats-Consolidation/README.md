@@ -13,12 +13,13 @@ The target state is:
 - Agent and Simple Chat costs are projected through one typed analytics contract with Agents, Simple Chats, and Both selections.
 - Agent execution evidence and relational Simple Chat invocation attempts remain their respective authoritative audit stores.
 - Existing Agent and Simple Chat main/floating chat behavior remains intact.
+- The Simple Chat definition dialog uses Identity, Runtime, and Output and revision settings tabs and shares the full Agent avatar selector, including AI generation, instead of exposing an avatar URL textbox.
 
-This bundle is preparation only. It contains no product or test implementation.
+The bundle has been implemented. Product, migration, architecture, focused-test, named Playwright, and Playwright MCP evidence are recorded under `proof/` and `reviews/`.
 
-## Preparation Verdict
+## Execution Verdict
 
-Ready for phased execution after CP0 reconfirms the frozen baseline.
+Implementation complete. Architecture, focused selectors, named Playwright, and Playwright MCP pass. The one authorized Stable run discovered eight stale test-only contracts: six component fixtures omitted the new avatar gateway and two source-boundary assertions still described the old route/path. Those exact classes pass after repair. Stable was not rerun because the bundle authorizes exactly one broad run; FINAL certification is therefore conditional until an explicitly authorized second Stable run.
 
 The bundle deliberately rejects:
 
@@ -58,7 +59,7 @@ Execution must stop at every checkpoint. Later phases may not be pulled forward 
 - Branch: simple-chats-agent-module
 - Prepared head: 30edf7b034cb2a06d29ee3ba2df8193006109dd5
 - SharedInfo head: 7b7808e8591d7219f40826cf0e5624e182981d90
-- Fresh scoped CodeAnalytics snapshot: snap-20260817163454-e036fa6f
+- Fresh scoped CodeAnalytics snapshot: snap-20260817172927-da2eea1a
 - Worktree was clean before bundle preparation.
 
 ## Proof Policy
@@ -67,23 +68,23 @@ Every subbundle owns focused tests, impact analysis, an execution report, and an
 
 ## Subbundle Gate Results
 
-Pending execution. SB01 is the only ready work unit; CP0 through FINAL remain unopened.
+SB01-SB11 implementation is complete. CP0-CP4 pass. FINAL is conditional only on the one-shot Stable exception described above; no product defect remains open.
 
 ## Browser Validation Analytics
 
-Pending execution. Planned normal/open-overlay scenarios, first-viewport targets, container-aware compound-control checks, and scroll owners are specified in plan/03-ui-composition-contract.md and SB07-SB09/SB11.
+Pass at 1600x1000. The real UI proved main and floating Agent/Simple Chat conversations, hide/reopen continuity, the `/chats` compatibility redirect, route persistence, scope-exact dashboard totals/dialogs/charts, the three-tab Simple Chat settings dialog, shared avatar selection/upload, and configured-provider AI image generation. Six screenshots and SHA256 hashes are recorded in `proof/SB11/playwright-mcp-evidence.md`; console/page errors were zero.
 
 ## Raw Input Closure
 
-Pending execution. inputs/03-input-coverage.json maps every raw request to requirements, owners, planned proof, and closure documents. No raw request is claimed solved by preparation alone.
+Every raw request, including the follow-up for internal settings tabs and shared AI avatar generation, is implemented and mapped to the closure proof.
 
 ## Validation Summary
 
-- Bundle preparation status: Prepared
-- Execution status: Not started
+- Bundle preparation status: Complete
+- Execution status: Complete
 - Local structural/traceability/test-policy/checksum validation: Pass
 - Canonical initiative readiness validation: Pass
 - C# architecture preparation gate: Pass
-- Subbundle gate review: SB01 ready; all later phases gated
-- Final closure gate: Not started
-- Browser validation analytics: Planned, not executed
+- Subbundle gate review: SB01-SB11 implemented; CP0-CP4 pass
+- Final closure gate: Conditional pending authorization for a second Stable run after test-only repair
+- Browser validation analytics: Pass

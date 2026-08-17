@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — Pass
 - Stage: boundaries
 - Proof tier: Governed
 
@@ -59,11 +59,11 @@ Move Simple Chat domain behavior into Core and use cases/ports into Application 
 
 ## Acceptance Criteria
 
-- [ ] Core and Application build/test independently of EF, Razor, Web, Agent module.
-- [ ] All Core/Application behavior resides in target projects.
-- [ ] Existing API/application selectors remain green.
-- [ ] Old core project has zero callers and is removed or has a CP0-authorized bounded facade.
-- [ ] No cycle/partial/shallow delegation.
+- [x] Core and Application build/test independently of EF, Razor, Web, Agent module.
+- [x] All Core/Application behavior resides in target projects.
+- [x] Existing API/application selectors remain green.
+- [x] Old core project has zero callers and is removed; no facade exists.
+- [x] No cycle/partial/shallow delegation.
 
 ## Validation Depth
 
@@ -87,8 +87,13 @@ Required:
 - LlmChatConversationApplicationServiceTests
 - LlmChatOperationTests
 - LlmChatDurableStreamEventTests
-- LlmChatsApiIntegrationTests
-- LlmChatApiHardeningIntegrationTests
+- LlmChatsDefinitionApiIntegrationTests
+- LlmChatsConversationApiIntegrationTests
+- LlmChatsSecurityApiIntegrationTests
+- LlmChatApiValidationIntegrationTests
+- LlmChatApiPrivacyIntegrationTests
+- LlmChatApiMetadataIntegrationTests
+- LlmChatOperationStorageContractIntegrationTests
 
 Add SimpleChatArchitectureBoundaryTests with exact CoreHasNoOuterDependencies and ApplicationUsesOnlyCoreAndPorts cases.
 

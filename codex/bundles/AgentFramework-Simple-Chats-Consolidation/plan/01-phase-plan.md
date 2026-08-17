@@ -27,8 +27,8 @@ flowchart LR
 | SB04 | Provider runtime no longer lives in Persistence | Governed | Persistence move |
 | SB05 | MAF Persistence, stable schema, append-only pricing evidence | Governed | CP1 |
 | SB06 | Agent + Simple Chat source adapters and exact aggregate query | Governed | CP2 |
-| SB07 | Reusable MAF Components with behavior parity | Behavioral | Page integration |
-| SB08 | Simple Chats adjacent to Agents; /chats redirect; one nav/shell registration | Governed | Page checkpoint |
+| SB07 | Reusable MAF Components, typed settings tabs, and one shared Agent/Simple Chat avatar selector | Behavioral | Page integration |
+| SB08 | Simple Chats adjacent to Agents; /chats redirect; typed avatar-generation gateway; one nav/shell registration | Governed | Page checkpoint |
 | SB09 | Both/Agents/Simple Chats scoped cost dashboard/dialogs | Governed | CP3 |
 | SB10 | Old projects/namespaces/references removed and composition clean | Governed | CP4 |
 | SB11 | Frozen final architecture, Stable, named Playwright and MCP proof | Governed | FINAL |
@@ -88,6 +88,7 @@ Exact conditions are in plan/architecture-checkpoints.md.
 - No new project/type cycle.
 - Unknown/unpriced cost is never silently normalized to zero.
 - Both is a query union, not persisted data.
+- Agent and Simple Chat editors use one shared avatar selector; provider execution and aggregate persistence remain outside it.
 
 ## Broad-gate trigger
 

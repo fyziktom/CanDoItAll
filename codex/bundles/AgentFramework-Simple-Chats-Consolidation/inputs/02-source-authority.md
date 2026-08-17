@@ -10,7 +10,7 @@
 
 ## Preparation evidence
 
-- Fresh CodeAnalytics snapshot snap-20260817163454-e036fa6f.
+- Architecture-wide snapshot snap-20260817163454-e036fa6f and focused follow-up snapshot snap-20260817172927-da2eea1a.
 - Direct project, namespace, DI, route, persistence, usage, and test inspection.
 - Compact component recommendation was attempted through CanDoItAll Components MCP; both library and recommendation calls failed because the transport closed. Existing repository component usage and the compact composition standard are therefore the recorded fallback evidence.
 
@@ -20,4 +20,3 @@
 - The new request overrides the old UI bundle’s placement decision.
 - Existing HTTP routes, authorization scopes, table names, and durable behavior are compatibility constraints unless this bundle explicitly says otherwise.
 - No implementation decision may silently reinterpret unknown historical cost as zero.
-

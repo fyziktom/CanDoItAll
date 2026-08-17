@@ -5,11 +5,12 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,7 +22,8 @@ public sealed class LlmChatBackendCompositionTests
     public void Real_profile_scope_resolves_backend_without_generic_file_store_or_workflow_registration()
     {
         var services = CreateProfileServices(useExistingInvocationPort: true);
-        services.AddLlmChatsApplication();
+        services.AddSimpleChatsApplication();
+        services.AddSimpleChatsRuntime();
         services.AddLlmChatsPersistence();
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -48,10 +50,11 @@ public sealed class LlmChatBackendCompositionTests
     }
 
     [Fact]
-    public void Persistence_composition_owns_provider_backed_port_without_workflow_composition()
+    public void Runtime_composition_owns_provider_backed_port_without_workflow_composition()
     {
         var services = CreateProfileServices(useExistingInvocationPort: false);
-        services.AddLlmChatsApplication();
+        services.AddSimpleChatsApplication();
+        services.AddSimpleChatsRuntime();
         services.AddLlmChatsPersistence();
         using var provider = services.BuildServiceProvider();
 

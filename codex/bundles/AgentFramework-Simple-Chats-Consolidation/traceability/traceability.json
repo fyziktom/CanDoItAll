@@ -47,7 +47,10 @@
     {"requirement": "ASCC-045", "owners": ["SB03", "SB05", "SB10", "SB11"], "proof": ["proof/SB03/manifest.md (Governed)", "proof/SB05/manifest.md (Governed)", "proof/SB10/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]},
     {"requirement": "ASCC-046", "owners": ["SB03", "SB05", "SB06", "SB07", "SB10", "SB11"], "proof": ["proof/SB03/manifest.md (Governed)", "proof/SB05/manifest.md (Governed)", "proof/SB06/manifest.md (Governed)", "proof/SB07/manifest.md (Behavioral)", "proof/SB10/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]},
     {"requirement": "ASCC-047", "owners": ["SB08", "SB09", "SB11"], "proof": ["proof/SB08/manifest.md (Governed)", "proof/SB09/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]},
-    {"requirement": "ASCC-048", "owners": ["SB11"], "proof": ["proof/SB11/manifest.md (Governed)"]}
+    {"requirement": "ASCC-048", "owners": ["SB11"], "proof": ["proof/SB11/manifest.md (Governed)"]},
+    {"requirement": "ASCC-049", "owners": ["SB07", "SB08", "SB11"], "proof": ["proof/SB07/manifest.md (Behavioral)", "proof/SB08/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]},
+    {"requirement": "ASCC-050", "owners": ["SB07", "SB08", "SB10", "SB11"], "proof": ["proof/SB07/manifest.md (Behavioral)", "proof/SB08/manifest.md (Governed)", "proof/SB10/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]},
+    {"requirement": "ASCC-051", "owners": ["SB07", "SB08", "SB11"], "proof": ["proof/SB07/manifest.md (Behavioral)", "proof/SB08/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]},
+    {"requirement": "ASCC-052", "owners": ["SB07", "SB08", "SB11"], "proof": ["proof/SB07/manifest.md (Behavioral)", "proof/SB08/manifest.md (Governed)", "proof/SB11/manifest.md (Governed)"]}
   ]
 }
-

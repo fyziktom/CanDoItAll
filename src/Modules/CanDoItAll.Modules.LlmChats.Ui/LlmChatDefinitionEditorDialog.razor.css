@@ -1,7 +1,0 @@
-.llm-chat-definition-editor {
-    max-height: min(72vh, 52rem);
-    min-width: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 0.25rem;
-}

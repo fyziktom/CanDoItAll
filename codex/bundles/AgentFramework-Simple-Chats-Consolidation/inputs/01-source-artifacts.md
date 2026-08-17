@@ -12,6 +12,6 @@
 - bundle://inputs/02-source-authority.md — authority and conflict rules.
 - bundle://inventories/01-source-surface-inventory.md — inspected surface.
 - bundle://analysis/02-findings-register.md — findings.
-- CodeAnalytics snapshot snap-20260817163454-e036fa6f.
+- Initial CodeAnalytics snapshot snap-20260817163454-e036fa6f.
+- Follow-up UI/boundary snapshot snap-20260817172927-da2eea1a covering AgentFramework.Components, Modules.AgentFramework, and all current LlmChats projects.
 - CanDoItAll.SharedInfo commit 7b7808e8591d7219f40826cf0e5624e182981d90.
-

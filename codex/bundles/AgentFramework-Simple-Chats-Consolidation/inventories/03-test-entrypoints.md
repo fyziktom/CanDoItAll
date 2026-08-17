@@ -18,10 +18,19 @@ Unit:
 - LlmChatConversationApplicationServiceTests
 - LlmChatOperationTests
 - LlmChatDurableStreamEventTests
-- LlmChatProviderRuntimeTests
+- ProviderRuntimeContractOwnershipTests
+- LlmInvocationPortCompositionTests
+- LlmChatProviderResolutionTests
+- LlmChatRuntimeFenceTests
+- LlmChatActiveOperationProjectionTests
+- LlmChatDefinitionRevisionExecutionTests
 - LlmChatWholeUseCaseProfileScopeTests
 - LlmChatBackendCompositionTests
-- LlmChatUiBoundaryTests
+- LlmChatUiAuthorizationFacadeTests
+- LlmChatDefinitionUiGatewayTests
+- LlmChatOperationProjectionReducerTests
+- LlmChatUiEventSessionGatewayTests
+- LlmChatUiRegistrationAndArchitectureTests
 - ProviderUsageNormalizationTests
 - ProviderPricingTests
 - DashboardQueryServicesTests
@@ -30,6 +39,7 @@ Unit:
 Components:
 
 - AgentsHomePageTests
+- AgentDetailsDialogAvatarGenerationTests
 - LlmChatConversationWorkspaceTests
 - LlmChatDefinitionUiTests
 - LlmChatConversationShellContributorTests

@@ -1,14 +1,16 @@
 {
   "bundleId": "AgentFramework-Simple-Chats-Consolidation",
-  "stage": "prepared",
-  "executionState": "not-started",
-  "validationState": "prepared-pass",
-  "reviewVerdict": "ready-for-phased-execution",
-  "reviewedHead": "30edf7b034cb2a06d29ee3ba2df8193006109dd5",
-  "completedSubbundles": [],
-  "currentSubbundle": "SB01",
-  "lastPassedCheckpoint": null,
+  "stage": "complete",
+  "executionState": "completed-with-test-only-post-gate-repair",
+  "validationState": "conditional-stable-repair-proved-focused",
+  "reviewVerdict": "implemented-with-documented-one-shot-stable-exception",
+  "reviewedHead": "10cd5ecbbe153095769be2c6eb251ed97de0f277",
+  "completedSubbundles": ["SB01", "SB02", "SB03", "SB04", "SB05", "SB06", "SB07", "SB08", "SB09", "SB10", "SB11"],
+  "currentSubbundle": null,
+  "lastPassedCheckpoint": "CP4",
   "targetFinalState": "agentframework-simple-chats-consolidated-and-verified",
-  "blockedBy": [],
+  "blockedBy": [
+    "FINAL certification remains conditional: the one authorized Stable run found eight stale test-only contracts; all exact affected classes pass after repair, but Stable was not rerun by policy"
+  ],
   "implementationPerformedDuringPreparation": false
 }

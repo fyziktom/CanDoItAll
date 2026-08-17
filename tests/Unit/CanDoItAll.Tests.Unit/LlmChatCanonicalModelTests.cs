@@ -1,9 +1,9 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
 

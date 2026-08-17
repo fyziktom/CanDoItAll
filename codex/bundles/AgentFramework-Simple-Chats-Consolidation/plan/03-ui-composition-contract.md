@@ -16,6 +16,16 @@ AgentFramework page:
 
 The Simple Chats component supplies only its workspace body and inner tabs.
 
+Definition setup is a Wide dense-chrome Dialog with internal ModalCompact Tabs:
+
+- Identity: name, summary, system prompt, tags, avatar preview/actions;
+- Runtime: Chat provider/model, temperature, thinking effort, timeout, model parameters;
+- Output and revision: response format/schema, status/revision context, lifecycle transitions, revision reason.
+
+The validation summary stays above the tab panels and the stable Cancel/Save footer stays outside the dialog-body scroll owner.
+
+Agent and Simple Chat identity editors compose one shared AgentFramework avatar selector. The selector owns current preview, bundled options, default reset, validated browser upload, and explicit AI-generation UI state. A typed host gateway supplies provider/model availability and generation; the selector never persists either aggregate.
+
 ## Usage hierarchy
 
 Overview usage section:
@@ -47,11 +57,11 @@ At 1600x1000 capture:
 - Agent-only and Simple-Chat-only scoped charts;
 - provider/model/consumer detail dialog;
 - Simple Chats Conversations and Definitions modes;
-- definition editor;
+- each definition-editor settings tab;
+- Agent and Simple Chat shared avatar selector open, including deterministic AI success and unavailable/error state;
 - main Simple Chat completed/streaming/cancelled state;
 - floating Agent and Simple Chat open;
 - hide/reopen/reload state;
 - /chats redirect result.
 
 Each proof records URL, viewport, selected state, console/page errors, and screenshot path.
-

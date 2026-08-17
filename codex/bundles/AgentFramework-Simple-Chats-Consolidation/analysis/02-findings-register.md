@@ -20,4 +20,5 @@
 | F-016 | High | Existing historical chat rows cannot prove the price that applied at execution time. | Backfill tokens/status deterministically and mark price unknown; never reprice. |
 | F-017 | High | No dedicated repeatable Playwright Simple Chat/Agent chat consolidation scenario exists. | Add named scenarios and require Playwright MCP closure. |
 | F-018 | Medium | Components MCP was unavailable and CodeAnalytics reports unrelated pre-existing AgentFramework cycles. | Retry component discovery at SB07 and gate only no-new-cycle/no-enlargement. |
-
+| F-019 | High | LlmChatDefinitionEditorDialog is a single stacked form without internal settings tabs and exposes AvatarImageUrl as a raw textbox. | The integrated editor would remain less usable and inconsistent with Agent settings unless SB07 adds typed modal tabs and replaces the raw field. |
+| F-020 | High | AgentDetailsDialog contains the complete avatar catalog/upload/AI-generation selector inline instead of a reusable component. | Copying it into Simple Chats would duplicate policy and UI; extract one shared AgentFramework component and shrink the Agent dialog. |

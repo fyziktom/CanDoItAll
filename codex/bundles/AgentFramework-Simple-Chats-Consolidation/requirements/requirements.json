@@ -239,7 +239,26 @@
       "id": "ASCC-048",
       "text": "Run focused impacted tests throughout, one unfiltered Stable solution exactly once at the frozen final candidate, governed manifests/checksums/invariants, and a user-verification handoff.",
       "owners": ["SB11"]
+    },
+    {
+      "id": "ASCC-049",
+      "text": "The Simple Chat definition settings dialog uses typed internal Identity, Runtime, and Output and revision tabs with the same compact modal tab behavior as Agent settings; validation and required actions remain visible and accessible.",
+      "owners": ["SB07", "SB08", "SB11"]
+    },
+    {
+      "id": "ASCC-050",
+      "text": "Extract one reusable avatar-selection component from the Agent settings implementation into a MAF UI library and use that component from both Agent and Simple Chat editors without duplicated avatar catalog, upload, preview, or AI-generation markup.",
+      "owners": ["SB07", "SB08", "SB10", "SB11"]
+    },
+    {
+      "id": "ASCC-051",
+      "text": "The Simple Chat avatar selector replaces the raw URL editor and supports current preview, bundled selection, default reset, validated PNG/JPEG/WebP/GIF upload, and AI generation through the configured default image provider with explicit loading, unavailable, and error states; the selected avatar persists only when the definition is saved.",
+      "owners": ["SB07", "SB08", "SB11"]
+    },
+    {
+      "id": "ASCC-052",
+      "text": "Component and Playwright proof covers every Simple Chat settings tab, avatar selection/reset/upload, deterministic AI-generation success and unavailable/error behavior, saved avatar rendering, and regression parity for the Agent editor using the same shared selector.",
+      "owners": ["SB07", "SB08", "SB11"]
     }
   ]
 }
-

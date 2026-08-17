@@ -26,6 +26,8 @@ The authoritative machine-readable list is requirements.json. Requirements are g
 ## UI
 
 - ASCC-031 through ASCC-043 put Simple Chats next to Agents, preserve inner workspace tabs and floating behavior, consolidate navigation, and scope the existing cost dashboard.
+- ASCC-049 through ASCC-052 require Identity, Runtime, and Output and revision tabs inside the definition dialog and one shared MAF avatar selector used by both Agent and Simple Chat editors.
+- The selector replaces the Simple Chat avatar URL textbox and preserves bundled choices, preview, default reset, validated upload, and configured-provider AI generation.
 - Both is the default usage scope.
 - Catalog/configuration totals do not change with usage scope.
 - Provider/model usage and cost do change with scope.
@@ -33,5 +35,4 @@ The authoritative machine-readable list is requirements.json. Requirements are g
 
 ## Proof
 
-- ASCC-044 through ASCC-048 define sensitive-data handling, compatibility guards, architecture proof, named browser scenarios, and final closure.
-
+- ASCC-044 through ASCC-048 define sensitive-data handling, compatibility guards, architecture proof, named browser scenarios, and final closure; ASCC-052 adds direct shared-selector and settings-tab regression proof.

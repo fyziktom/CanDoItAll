@@ -27,6 +27,8 @@ For every subbundle:
 - SimpleChatUsageProjectionSourceTests
 - SimpleChatArchitectureBoundaryTests
 - AgentFrameworkSimpleChatsRouteTests
+- AgentAvatarSelectorTests
+- SimpleChatDefinitionSettingsDialogTests
 - AgentFrameworkSimpleChatsConsolidationPlaywrightTests
 
 At least these exact behaviors must exist:
@@ -43,6 +45,11 @@ At least these exact behaviors must exist:
 - ChatsRouteRedirectsAndPreservesRecognizedState
 - FloatingAgentAndSimpleChatRemainIndependent
 - AllUsageScopesDriveChartsAndDialogs
+- DefinitionEditorUsesIdentityRuntimeAndOutputRevisionTabs
+- AgentAndSimpleChatEditorsUseSharedAvatarSelector
+- SharedAvatarSelectorHandlesBundledResetUploadAndAiStates
+- CancellingDefinitionDiscardsAvatarAndSavingPersistsIt
+- SimpleChatSettingsTabsAndSharedAvatarWorkflowRemainOperational
 
 ## Broad-gate policy
 
@@ -63,6 +70,7 @@ Reopen the owning subbundle and every downstream proof when any of these changes
 - AgentOverview or neutral dashboard projection contract;
 - route/tab/query key or redirect mapping;
 - Components parameter, gateway, shell contribution, authorization mapping;
+- shared avatar selector contract, upload/image policy, AI-generation gateway, settings-tab ordering, or definition save/cancel semantics;
 - DI/composition/assembly scan/hosted service;
 - HTTP route/contract/SSE/security behavior;
 - test workspace/project reference;
@@ -74,4 +82,3 @@ Reopen the owning subbundle and every downstream proof when any of these changes
 - Run API/SSE selectors when Application contracts or endpoint mappings change.
 - Run browser proof when route, tab, query, component, dialog, chart, navigation, or shell composition changes.
 - Retry Components MCP when shared/reusable UI controls change.
-

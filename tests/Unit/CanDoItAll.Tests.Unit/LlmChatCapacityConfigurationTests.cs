@@ -1,6 +1,6 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Composition;
-using CanDoItAll.Modules.LlmChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

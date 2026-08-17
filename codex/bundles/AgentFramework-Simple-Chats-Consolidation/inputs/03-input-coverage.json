@@ -41,6 +41,20 @@
       "subbundles": ["SB01", "SB11"],
       "proof": ["reviews/01-preparation-review.md", "proof/SB11/manifest.md"],
       "closure": "reviews/01-execution-report.md"
+    },
+    {
+      "request": "Use a properly tabbed Simple Chat settings dialog like Agent settings",
+      "requirements": ["ASCC-049", "ASCC-052"],
+      "subbundles": ["SB07", "SB08", "SB11"],
+      "proof": ["proof/SB07/manifest.md", "proof/SB08/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
+    },
+    {
+      "request": "Reuse the Agent avatar selector for Simple Chats including AI image generation",
+      "requirements": ["ASCC-050", "ASCC-051", "ASCC-052"],
+      "subbundles": ["SB07", "SB08", "SB10", "SB11"],
+      "proof": ["proof/SB07/manifest.md", "proof/SB08/manifest.md", "proof/SB10/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
     }
   ]
 }

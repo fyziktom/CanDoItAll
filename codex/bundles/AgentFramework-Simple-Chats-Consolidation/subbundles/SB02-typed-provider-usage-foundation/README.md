@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — Pass
 - Stage: foundation
 - Proof tier: Governed
 
@@ -58,12 +58,12 @@ Create the neutral AgentFramework.Usage boundary, typed atomic workload/selectio
 
 ## Acceptance Criteria
 
-- [ ] Agents, SimpleChats, Both, invalid None, and unknown bits are directly tested.
-- [ ] Both is exact deduplicated union and never persisted.
-- [ ] Usage-known and pricing-known are separate.
-- [ ] Partial source failure is explicit.
-- [ ] Usage has no Persistence/Module/Razor/Web dependency.
-- [ ] No duplicate pricing model or new cycle is introduced.
+- [x] Agents, SimpleChats, Both, invalid None, and unknown bits are directly tested.
+- [x] Both is exact deduplicated union and never persisted.
+- [x] Usage-known and pricing-known are separate.
+- [x] Partial source failure is explicit.
+- [x] Usage has no Persistence/Module/Razor/Web dependency.
+- [x] No duplicate pricing model or new cycle is introduced.
 
 ## Validation Depth
 

@@ -1,5 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
-using CanDoItAll.Modules.LlmChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 
 namespace CanDoItAll.Web.Api;
 
@@ -53,7 +53,7 @@ internal static class LlmChatOperationApiMapper
     }
 
     private static LlmChatInvocationAttemptApiResponse ToInvocationResponse(
-        CanDoItAll.Modules.LlmChats.Operations.LlmChatInvocationRecord invocation)
+        CanDoItAll.AgentFramework.Llm.SimpleChats.Operations.LlmChatInvocationRecord invocation)
         => new(
             invocation.Ordinal,
             invocation.ProviderKind,

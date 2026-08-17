@@ -1,0 +1,62 @@
+@using CanDoItAll.AgentFramework.Usage
+
+@if (IsLoading)
+{
+    <LoadingState Eyebrow="Usage ranking"
+                  Title="Loading consumers"
+                  Description="Combining selected provider usage sources." />
+}
+else if (Rows.Count == 0)
+{
+    <EmptyState Eyebrow="No usage"
+                Title="No consumers are ranked"
+                Description="@EmptyDescription" />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Small" data-testid="@TestId">
+        @foreach (var row in Rows)
+        {
+            <SurfaceCard Soft="true">
+                <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                         AlignItems="AlignItems.Center"
+                         Gap="LayoutGap.Medium"
+                         Wrap="FlexWrap.Wrap">
+                    <Stack Gap="0.15rem">
+                        <span class="font-medium text-slate-950">@row.ConsumerName</span>
+                        <span class="text-xs text-slate-500">@ResolveConsumerKind(row.ConsumerKind) · @AgentUsageDisplay.FormatLastUsed(row.LastUsedAtUtc)</span>
+                    </Stack>
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="info" Text="@($"{AgentUsageDisplay.FormatCount(row.Totals.ExecutionCount)} executions")" />
+                        <StatusBadge Tone="@(row.Totals.FailedExecutionCount > 0 ? "danger" : "success")"
+                                     Text="@($"{AgentUsageDisplay.FormatCount(row.Totals.FailedExecutionCount)} failed")" />
+                        <StatusBadge Tone="base" Text="@($"{AgentUsageDisplay.FormatTokens(row.Totals.Tokens.TotalTokens)} tokens")" />
+                    </Cluster>
+                </Cluster>
+            </SurfaceCard>
+        }
+    </Stack>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ProviderUsageConsumerRow> Rows { get; set; } = [];
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "Run an Agent or Simple Chat to populate usage.";
+
+    [Parameter]
+    public string TestId { get; set; } = "provider-usage-consumer-list";
+
+    private static string ResolveConsumerKind(ProviderUsageConsumerKind kind)
+        => kind switch
+        {
+            ProviderUsageConsumerKind.Agent => "Agent",
+            ProviderUsageConsumerKind.SimpleChatDefinition => "Simple Chat",
+            ProviderUsageConsumerKind.Unattributed => "Unattributed",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown usage consumer kind.")
+        };
+}

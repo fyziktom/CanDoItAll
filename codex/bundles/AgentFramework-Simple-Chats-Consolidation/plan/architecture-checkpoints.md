@@ -51,10 +51,13 @@ Required:
 
 - Simple Chats immediately after Agents;
 - inner tabs and provider editor function;
+- Identity, Runtime, and Output and revision definition settings tabs function with validation and stable actions;
+- Agent and Simple Chat editors consume one shared avatar selector and Simple Chat supports bundled/reset/upload/AI generation/save behavior;
 - /chats redirect and no duplicate navigation/shell;
 - all three usage scopes drive totals/charts/rankings/dialogs;
 - named Playwright tests and Playwright MCP evidence at 1600x1000;
 - Agent main/floating and Simple Chat main/floating parity;
+- Agent avatar-selector parity after extraction;
 - zero unhandled console/page errors;
 - C# architecture and UI composition gate Pass.
 
@@ -83,6 +86,7 @@ Required:
 - one authorized Stable run recorded;
 - named Playwright selectors green;
 - Playwright MCP Agent/Simple Chat main/floating/cost-scope proof;
+- Playwright MCP settings-tab and shared-avatar/AI-generation proof in both editors;
 - manifests, transcripts, screenshots, semantic invariants, checksums;
 - final architecture gate and user-verification handoff.
 

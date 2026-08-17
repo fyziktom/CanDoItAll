@@ -650,7 +650,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ExecutionRunId = run.Id
                     },
                     provider);
-                var usageObservations = BuildUsageObservations(run, runtimeAgent, provider, metric, runtimeResponse);
+                var usageObservations = UsageObservationAssembler.BuildUsageObservations(
+                    run,
+                    runtimeAgent,
+                    provider,
+                    metric,
+                    runtimeResponse,
+                    ResolveEffectiveManagedSeedModel(runtimeAgent, provider));
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -801,18 +807,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 },
                 failureProvider);
             var failureUsageObservations = lastRuntimeResponse is null
-                ? BuildFailureUsageObservations(
+                ? UsageObservationAssembler.BuildFailureUsageObservations(
                     run,
                     runtimeAgent ?? agent,
                     failureProvider,
                     failureMetric,
-                    exception)
-                : BuildRuntimeResponseUsageObservations(
+                    exception,
+                    failureModel)
+                : UsageObservationAssembler.BuildRuntimeResponseUsageObservations(
                     run,
                     runtimeAgent ?? agent,
                     failureProvider,
                     failureMetric,
-                    lastRuntimeResponse);
+                    lastRuntimeResponse,
+                    failureModel);
             var failureToolReceipts = CreateToolInvocationTraceReceipts(
                 run,
                 failureToolInvocationTraces);
@@ -1492,7 +1500,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ExecutionRunId = run.Id
                     },
                     provider);
-                var usageObservations = BuildUsageObservations(run, runtimeAgent, provider, metric, runtimeResponse);
+                var usageObservations = UsageObservationAssembler.BuildUsageObservations(
+                    run,
+                    runtimeAgent,
+                    provider,
+                    metric,
+                    runtimeResponse,
+                    ResolveEffectiveManagedSeedModel(runtimeAgent, provider));
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -1643,18 +1657,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 },
                 failureProvider);
             var failureUsageObservations = lastRuntimeResponse is null
-                ? BuildFailureUsageObservations(
+                ? UsageObservationAssembler.BuildFailureUsageObservations(
                     run,
                     runtimeAgent ?? agent,
                     failureProvider,
                     failureMetric,
-                    exception)
-                : BuildRuntimeResponseUsageObservations(
+                    exception,
+                    failureModel)
+                : UsageObservationAssembler.BuildRuntimeResponseUsageObservations(
                     run,
                     runtimeAgent ?? agent,
                     failureProvider,
                     failureMetric,
-                    lastRuntimeResponse);
+                    lastRuntimeResponse,
+                    failureModel);
             var failureToolReceipts = CreateToolInvocationTraceReceipts(
                 run,
                 failureToolInvocationTraces);
@@ -2275,7 +2291,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     MaxAttempts = maxRepairAttempts
                 },
                 cancellationToken);
-            response = AppendRepairUsageObservations(response, repair);
+            response = AgentProviderUsageObservationAssembler.AppendRepairUsageObservations(response, repair);
 
             if (!repair.Succeeded || string.IsNullOrWhiteSpace(repair.RepairedRawOutput))
             {

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — CP3 Pass
 - Stage: dashboard-checkpoint
 - Proof tier: Governed
 

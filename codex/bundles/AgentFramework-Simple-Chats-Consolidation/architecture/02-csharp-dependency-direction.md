@@ -4,6 +4,8 @@
 
 Modules.AgentFramework -> SimpleChats.Components -> SimpleChats.Application -> SimpleChats.Core
 
+SimpleChats.Components -> AgentFramework.Components
+
 SimpleChats.Runtime -> SimpleChats.Application -> SimpleChats.Core
 
 SimpleChats.Persistence -> SimpleChats.Application -> SimpleChats.Core
@@ -28,7 +30,8 @@ PostgreSQL migrations -> SimpleChats.Persistence
 - SimpleChats.Application -> Runtime, Persistence, Components, Modules, Web, EF.
 - SimpleChats.Runtime -> Persistence or AppDbContext.
 - SimpleChats.Persistence -> Runtime, Components, Modules.AgentFramework, Web.
-- SimpleChats.Components -> Runtime, Persistence, AgentFramework.Core, Modules.AgentFramework, Web.
+- SimpleChats.Components -> Runtime, Persistence, AgentFramework.Core, Modules.AgentFramework, Web. Its shared avatar dependency is AgentFramework.Components only; provider execution is reached through a SimpleChats.Components gateway implemented at product composition.
+- AgentFramework.Components -> SimpleChats.*, Modules.AgentFramework, Web.
 - AgentFramework.Usage -> either source implementation.
 - AgentFramework.Core -> SimpleChats.Persistence.
 - Any new project -> old CanDoItAll.Modules.LlmChats* after SB10.
@@ -42,7 +45,7 @@ PostgreSQL migrations -> SimpleChats.Persistence
 4. Extract Runtime without EF references.
 5. Move Persistence and add append-only usage evidence.
 6. Implement source adapters and aggregate queries.
-7. Move Components, then activate Agent module composition.
+7. Extract the existing Agent avatar selector into AgentFramework.Components, move Simple Chat Components, and activate the Agent-module gateway/composition.
 8. Remove old projects and namespaces after caller inventory reaches zero.
 
 ## Cycle proof
@@ -56,4 +59,3 @@ At CP0, CP1, CP2, CP4, and FINAL:
 - run a source guard for CanDoItAll.Modules.LlmChats and old project paths.
 
 No “build succeeds” claim substitutes for the dependency proof.
-

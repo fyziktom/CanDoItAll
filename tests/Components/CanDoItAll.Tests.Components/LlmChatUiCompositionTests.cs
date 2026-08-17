@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using CanDoItAll.Modules.LlmChats.Ui;
-using CanDoItAll.Modules.LlmChats.Ui.Pages;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Api;
@@ -26,29 +26,22 @@ public sealed class LlmChatUiCompositionTests
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatDefinitionUiGateway));
         Assert.Contains(
             CanDoItAll.Composition.ModuleAssemblies.All,
-            assembly => assembly == typeof(LlmChatsUiAssemblyMarker).Assembly);
-        Assert.Contains(
+            assembly => assembly == typeof(SimpleChatsComponentsAssemblyMarker).Assembly);
+        Assert.DoesNotContain(
             services,
-            item =>
-                item.ServiceType == typeof(IShellNavigationContributor) &&
-                item.ImplementationType == typeof(LlmChatsShellNavigationContributor));
+            item => item.ServiceType == typeof(IShellNavigationContributor) &&
+                    item.ImplementationType?.Name.Contains("LlmChats", StringComparison.Ordinal) == true);
     }
 
     [Fact]
-    public void Activated_page_and_navigation_share_the_canonical_chats_route()
+    public void Compatibility_route_redirects_to_the_canonical_agent_tab_without_duplicate_navigation()
     {
-        var route = Assert.Single(typeof(LlmChatsPage)
+        var route = Assert.Single(typeof(LlmChatsCompatibilityRedirect)
             .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
             .Cast<RouteAttribute>());
-        var contribution = Assert.Single(
-            new LlmChatsShellNavigationContributor().GetShellNavigationContributions());
 
         Assert.Equal("/chats", route.Template);
-        Assert.Equal("llm-chats", contribution.ModuleId);
-        Assert.Equal("/agents", contribution.ParentRoute);
-        Assert.Equal("/chats", contribution.Item.Route);
-        Assert.Equal("Simple Chats", contribution.Item.Title);
-        Assert.True(contribution.IsSubItem);
+        Assert.Equal("simple-chats", AgentWorkspaceTabs.SimpleChats);
     }
 
     [Fact]

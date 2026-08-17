@@ -1,10 +1,11 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.LlmChats;
@@ -40,10 +41,12 @@ public sealed class LlmChatDefinitionUiTests
     public void Wide_editor_composes_reusable_fields_and_saves_provider_capability_revision_values()
     {
         var gateway = new StubDefinitionGateway(CreateEditor());
+        var avatarGateway = new StubAvatarGenerationGateway();
         using var context = CreateContext(
             gateway,
             new StubProviderGateway(),
-            new StubAuthorization(canRead: true, canManage: true));
+            new StubAuthorization(canRead: true, canManage: true),
+            avatarGateway);
 
         var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
             .Add(component => component.DefinitionId, DefinitionId));
@@ -52,6 +55,21 @@ public sealed class LlmChatDefinitionUiTests
         Assert.Equal(ModalSize.Wide, cut.FindComponent<Dialog>().Instance.Size);
         Assert.NotNull(cut.FindComponent<ConversationDefinitionEditorShell>());
         Assert.NotNull(cut.FindComponent<ConversationIdentityFields>());
+        Assert.NotNull(cut.FindComponent<AvatarPicker>());
+        Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-tab-identity']"));
+        Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-tab-runtime']"));
+        Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-tab-output']"));
+        cut.Find("[data-testid='llm-chat-definition-tags']").Change("Research, Summary");
+
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-avatar-ai-prompt']");
+        cut.Find("[data-testid='llm-chat-definition-avatar-ai-prompt']").Input("A concise blue research symbol");
+        cut.Find("[data-testid='llm-chat-definition-avatar-ai-generate']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(1, avatarGateway.GenerateCalls));
+        cut.Find("[data-testid='llm-chat-definition-avatar-close']").Click();
+
+        cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-system-prompt']");
         Assert.NotNull(cut.FindComponent<ConversationProviderSelector>());
         Assert.NotNull(cut.FindComponent<ConversationProviderModelSelector>());
         Assert.NotNull(cut.FindComponent<ConversationTemperatureField>());
@@ -59,18 +77,20 @@ public sealed class LlmChatDefinitionUiTests
         cut.Find("[data-testid='llm-chat-definition-system-prompt']").Change("updated system prompt");
         cut.Find("[data-testid='llm-chat-definition-thinking-effort']").Change("1");
         cut.Find("[data-testid='llm-chat-definition-timeout']").Change("90");
+        cut.Find("[data-testid='llm-chat-definition-tab-output']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-response-format']");
         cut.Find("[data-testid='llm-chat-definition-response-format']").Change("2");
         cut.WaitForElement("[data-testid='llm-chat-definition-schema-json']");
         cut.Find("[data-testid='llm-chat-definition-schema-name']").Change("answer");
         cut.Find("[data-testid='llm-chat-definition-schema-description']").Change("Structured answer");
         cut.Find("[data-testid='llm-chat-definition-schema-json']").Input("{\"type\":\"object\"}");
-        cut.Find("[data-testid='llm-chat-definition-tags']").Change("Research, Summary");
         cut.Find("[data-testid='llm-chat-definition-revision-reason']").Change("Tune structured output");
         cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(gateway.UpdatedMutation));
         Assert.Equal(7, gateway.UpdateExpectedConcurrencyToken);
         Assert.Equal("updated system prompt", gateway.UpdatedMutation!.SystemPrompt);
+        Assert.Equal("data:image/jpeg;base64,AQID", gateway.UpdatedMutation.AvatarImageUrl);
         Assert.Equal(LlmChatThinkingEffort.High, gateway.UpdatedMutation.ThinkingEffort);
         Assert.Equal(TimeSpan.FromSeconds(90), gateway.UpdatedMutation.Timeout);
         Assert.Equal(LlmChatUiResponseFormatKind.JsonSchema, gateway.UpdatedMutation.ResponseFormat);
@@ -155,6 +175,8 @@ public sealed class LlmChatDefinitionUiTests
             .Add(component => component.DefinitionId, DefinitionId));
         cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
 
+        cut.Find("[data-testid='llm-chat-definition-tab-output']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-response-format']");
         cut.Find("[data-testid='llm-chat-definition-response-format']").Change("2");
         cut.WaitForElement("[data-testid='llm-chat-definition-schema-json']");
         cut.Find("[data-testid='llm-chat-definition-schema-name']").Change("answer");
@@ -171,7 +193,8 @@ public sealed class LlmChatDefinitionUiTests
     private static BunitContext CreateContext(
         ILlmChatDefinitionUiGateway definitions,
         ILlmChatProviderUiGateway providers,
-        ILlmChatUiAuthorizationFacade authorization)
+        ILlmChatUiAuthorizationFacade authorization,
+        IAvatarGenerationGateway? avatarGeneration = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -179,6 +202,7 @@ public sealed class LlmChatDefinitionUiTests
         context.Services.AddSingleton(definitions);
         context.Services.AddSingleton(providers);
         context.Services.AddSingleton(authorization);
+        context.Services.AddSingleton<IAvatarGenerationGateway>(avatarGeneration ?? new StubAvatarGenerationGateway());
         return context;
     }
 
@@ -326,5 +350,25 @@ public sealed class LlmChatDefinitionUiTests
                 LlmChatUiPermission.Execute => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, "Unknown permission.")
             });
+    }
+
+    private sealed class StubAvatarGenerationGateway : IAvatarGenerationGateway
+    {
+        public int GenerateCalls { get; private set; }
+
+        public Task<AvatarGenerationSource?> GetDefaultSourceAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<AvatarGenerationSource?>(new(
+                ProviderId,
+                "Image provider",
+                "image-model"));
+
+        public Task<AvatarGenerationResult> GenerateAsync(
+            AvatarGenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            GenerateCalls++;
+            return Task.FromResult(new AvatarGenerationResult("data:image/jpeg;base64,AQID"));
+        }
     }
 }

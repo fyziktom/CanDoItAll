@@ -46,7 +46,7 @@ SB06:
 
 ## UI proof
 
-SB07 component tests construct Components with gateway fakes only.
+SB07 component tests construct Components with gateway fakes only. They exercise typed Identity/Runtime/Output-and-revision tab selection and the shared avatar selector independently of either editor. Agent and Simple Chat consumer tests prove the same component handles bundled selection, default reset, validated upload, deterministic AI success, unavailable provider, generation error, and save-only persistence semantics.
 
 SB08 tests typed route/tab parsing, /chats redirect, no duplicate navigation/shell registration, and the reusable workspace without persistence/runtime.
 
@@ -57,12 +57,14 @@ SB09 tests one selection instance propagates to metrics, charts, consumer panels
 - Core cannot reference Application/EF/Razor.
 - Runtime cannot reference Persistence/AppDbContext.
 - Components cannot reference Runtime/Persistence/Agent module/Web.
+- SimpleChats.Components cannot duplicate avatar option/upload/generation markup or depend on the Agent module; AgentDetailsDialog cannot retain its old inline avatar selector.
 - Usage cannot reference either store implementation.
 - Duplicate (OperationId, Ordinal) cannot increase totals.
 - Transcript and terminal aggregate cannot enter the source adapter.
 - Legacy known tokens with no pricing cannot produce known $0.
 - ChatSessionId/BasicChat cannot classify a workload.
 - /chats cannot render a second workspace or register navigation.
+- the Simple Chat editor cannot render a raw avatar URL input and cannot hide required validation or footer actions behind an inactive settings tab.
 - selection None/unknown flags cannot execute a query.
 
 ## Old-owner shrink proof
@@ -77,4 +79,3 @@ At each architecture subbundle capture:
 - architecture gate verdict.
 
 “The tests pass through the old facade” is insufficient.
-

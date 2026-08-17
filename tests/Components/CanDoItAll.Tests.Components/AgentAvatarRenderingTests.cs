@@ -1,5 +1,6 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -81,7 +82,7 @@ public sealed class AgentAvatarRenderingTests
     [Fact]
     public async Task Avatar_upload_formatter_accepts_supported_image()
     {
-        var dataUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(
+        var dataUrl = await AvatarUploadFormatter.BuildDataUrlAsync(
             new FakeBrowserFile("avatar.png", "image/png", [1, 2, 3]));
 
         Assert.Equal("data:image/png;base64,AQID", dataUrl);
@@ -90,7 +91,7 @@ public sealed class AgentAvatarRenderingTests
     [Fact]
     public async Task Avatar_upload_formatter_normalizes_jpg_content_type()
     {
-        var dataUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(
+        var dataUrl = await AvatarUploadFormatter.BuildDataUrlAsync(
             new FakeBrowserFile("avatar.jpg", "image/jpg", [1, 2, 3]));
 
         Assert.Equal("data:image/jpeg;base64,AQID", dataUrl);
@@ -100,7 +101,7 @@ public sealed class AgentAvatarRenderingTests
     public async Task Avatar_upload_formatter_rejects_unsupported_file_type()
     {
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => AgentAvatarUploadFormatter.BuildDataUrlAsync(
+            () => AvatarUploadFormatter.BuildDataUrlAsync(
                 new FakeBrowserFile("avatar.txt", "text/plain", [1, 2, 3])));
 
         Assert.Contains("PNG, JPEG, WebP, or GIF", exception.Message, StringComparison.Ordinal);
@@ -110,12 +111,12 @@ public sealed class AgentAvatarRenderingTests
     public async Task Avatar_upload_formatter_rejects_oversized_image()
     {
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => AgentAvatarUploadFormatter.BuildDataUrlAsync(
+            () => AvatarUploadFormatter.BuildDataUrlAsync(
                 new FakeBrowserFile(
                     "avatar.png",
                     "image/png",
                     [1, 2, 3],
-                    AgentAvatarUploadFormatter.MaxAvatarUploadBytes + 1)));
+                    AvatarUploadFormatter.MaxAvatarUploadBytes + 1)));
 
         Assert.Contains("128 KB or smaller", exception.Message, StringComparison.Ordinal);
     }

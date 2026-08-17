@@ -1,40 +1,35 @@
 # C# architecture gate
 
-## Preparation-stage verdict
+## Implementation verdict
 
-Pass — implementation not yet evaluated.
+Pass. The Stable certification condition is a test-execution artifact and does not alter the architecture verdict.
 
 ## Boundary quality
 
-- Core/Application/Runtime/Persistence/Components have explicit responsibilities and forbidden dependencies.
-- AgentFramework.Usage is neutral and store-independent.
-- Modules.AgentFramework remains a product integration owner.
-- App.Composition remains the runtime/persistence/hosted-service composition root.
-- Existing generic LLM/conversation libraries are reused.
+- `CanDoItAll.AgentFramework.Usage` owns typed, store-neutral usage query and aggregation contracts and references only Models.
+- Simple Chats is split into Core, Application, Runtime, Persistence, and Components under `src/MAF/SimpleChats`.
+- Application owns narrow ports; Runtime owns orchestration; Persistence owns EF/audit adapters; Components owns reusable UI only.
+- `CanDoItAll.Modules.AgentFramework` owns product page composition, scoped dashboard UI, compatibility routing, and the concrete avatar generation gateway.
+- App composition wires Application, Runtime, Persistence, and Components without service location.
+- No active product namespace or project remains under `CanDoItAll.Modules.LlmChats*`; legacy namespace text is confined to historical EF migration metadata.
 
-## Dependency quality
+## Dependency proof
 
-- Intended ProjectReference direction is explicit.
-- No service location/reflection is allowed to bypass the graph.
-- Existing unrelated AgentFramework cycles are baselined; no-new/no-enlargement is gated repeatedly.
-- Old Modules.LlmChats projects have a named deletion phase.
+- Final CodeAnalytics snapshot: `snap-20260817210315-53bec4ab`.
+- Eleven Simple Chats modules and 50 filtered dependency edges were inspected.
+- No Simple Chats project appears in any module or type cycle.
+- The three reported module cycles match the unrelated baseline in Infrastructure, AgentFramework module internals, and Workbench internals; this work added none.
+- Project-reference inspection confirms Core -> generic LLM/Models/SharedKernel; Application -> Core/generic contracts; Runtime -> Application/Core/provider runtime; Persistence -> Application/Core/Usage/infrastructure; Components -> Application/Core/shared components and conversation UI.
 
-## Pattern quality
+## Design and testability proof
 
-- Ports/adapters and a composite read model fit the independent operational stores.
-- Immutable pricing evidence avoids historical repricing.
-- Typed producer/selection semantics avoid ChatSessionId/string inference.
-- Compatibility redirect avoids duplicate page ownership.
-- Central ledger/outbox and dual-write alternatives are correctly rejected for scope/risk.
+- Atomic producer kind and validated flags selection prevent string/ChatSessionId classification.
+- Independent Agent-file and Simple-Chat-EF adapters keep operational audit stores authoritative while the query service composes exact-once totals.
+- Immutable invocation pricing evidence prevents historical repricing; legacy usage remains explicitly unpriced rather than free.
+- The controller state extraction is directly tested and reduced the moved controller to 678 lines without introducing a partial type.
+- Final added-partial scan found zero matches.
+- Unit, component, integration, route, migration, transfer, aggregation, and named browser tests exercise the new owners directly.
 
-## Testability quality
+## Gate conclusion
 
-- Every critical extraction requires direct tests through its new owner.
-- Negative architecture/double-count/legacy/route cases are named.
-- Old-owner shrink/removal and no-new-partial are required.
-- Browser proof supplements rather than replaces lower-level proof.
-
-## Conditions for execution gates
-
-At CP0/CP1/CP2/CP3/CP4/FINAL, replace this preparation verdict with an implementation verdict for the exact candidate. Any fake separation, permanent facade, cycle, permissive profile fallback, UI persistence reference, guessed cost, or missing direct test is a Fail.
-
+No fake separation, dependency inversion, cycle, duplicate owner, dual write, UI-only merge, guessed historical price, or new partial-class escape hatch was found. Architecture gate Pass.

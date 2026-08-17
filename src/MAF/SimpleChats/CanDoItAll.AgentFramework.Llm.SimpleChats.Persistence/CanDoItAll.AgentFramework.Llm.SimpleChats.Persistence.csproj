@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Llm.Abstractions\CanDoItAll.AgentFramework.Llm.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Llm.Conversations\CanDoItAll.AgentFramework.Llm.Conversations.csproj" />
+    <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Usage\CanDoItAll.AgentFramework.Usage.csproj" />
+  </ItemGroup>
+
+</Project>

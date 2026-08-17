@@ -1,10 +1,11 @@
-using CanDoItAll.Modules.LlmChats;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -57,7 +58,7 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
 
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddLlmChatsApplication();
+        services.AddSimpleChatsApplication();
         services.AddSingleton<ILlmChatRuntimeLeaseFactory>(leaseFactory);
         services.AddSingleton<ILlmChatOperationScopeAccessor, LlmChatOperationScopeAccessor>();
         services.AddSingleton<ILlmChatDefinitionRepository>(definitions);

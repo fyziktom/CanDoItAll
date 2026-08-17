@@ -34,7 +34,7 @@
     <ProjectReference Include="..\..\..\src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
     <ProjectReference Include="..\..\..\src\UI\CanDoItAll.Conversations.Components\CanDoItAll.Conversations.Components.csproj" />
     <ProjectReference Include="..\..\..\src\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
-    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.LlmChats.Ui\CanDoItAll.Modules.LlmChats.Ui.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />

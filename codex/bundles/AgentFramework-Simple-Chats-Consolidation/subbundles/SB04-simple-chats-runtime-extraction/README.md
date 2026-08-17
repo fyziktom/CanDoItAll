@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — focused proof Pass
 - Stage: boundaries
 - Proof tier: Governed
 

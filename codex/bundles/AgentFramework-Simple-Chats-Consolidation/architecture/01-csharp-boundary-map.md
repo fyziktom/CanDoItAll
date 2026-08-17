@@ -83,7 +83,19 @@ Owns:
 
 Allowed references: Core, Application, AppComponents, Conversations.Components, Conversations.Shell, BaseLib.
 
+Also allowed: CanDoItAll.AgentFramework.Components for the shared avatar-selection component. SimpleChats.Components supplies a narrow avatar-generation gateway; it does not own provider-runtime execution.
+
 Forbidden: @page, shell navigation item, EF/Persistence, Runtime, Web, Agent module.
+
+### CanDoItAll.AgentFramework.Components avatar seam
+
+Owns:
+
+- one reusable avatar selector dialog/component used by both AgentDetailsDialog and the Simple Chat definition editor;
+- bundled-avatar catalog presentation, current preview, selected/default state, and validated browser-file upload through AgentAvatarImagePolicy;
+- a typed generation callback/request/result seam and explicit busy/unavailable/error presentation.
+
+It does not select provider profiles, persist an Agent or Simple Chat definition, or depend on SimpleChats/Modules. Product/application adapters supply generation availability and execute the configured-provider call.
 
 ### CanDoItAll.AgentFramework.Usage
 
@@ -112,6 +124,7 @@ Owns:
 - removal of duplicate Simple Chats shell navigation;
 - use of reusable Components and unified Usage query in the Agent page;
 - scope-aware dashboard/dialog orchestration.
+- the small Simple Chat avatar-generation gateway implementation that resolves the configured default image provider and delegates to the existing generation service; the reusable component and Simple Chat editor remain in MAF UI libraries.
 
 It does not own Simple Chat Core, Application, Runtime, Persistence, or reusable component internals.
 
@@ -137,4 +150,3 @@ Owns:
 - Any temporary facade is delegation-only, guarded against new callers, and deleted in SB10.
 - /chats compatibility is a browser route adapter, not an old feature assembly.
 - Historical EF migrations are not rewritten.
-

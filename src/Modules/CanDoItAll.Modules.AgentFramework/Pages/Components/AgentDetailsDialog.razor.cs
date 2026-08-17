@@ -8,7 +8,6 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -40,9 +39,6 @@ public partial class AgentDetailsDialog
     [Inject]
     public DialogService DialogService { get; set; } = default!;
 
-    [Inject]
-    public AgentAvatarGenerationService AvatarGenerationService { get; set; } = default!;
-
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
@@ -55,9 +51,6 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<string> tagValues = [];
     private string externalWorkspaceRootsText = string.Empty;
     private string allowedStorageCatalogIdsText = string.Empty;
-    private string customAvatarFileName = string.Empty;
-    private string avatarGenerationPrompt = string.Empty;
-    private string? avatarGenerationErrorMessage;
     private string capabilitySearch = string.Empty;
     private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
     private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
@@ -65,8 +58,6 @@ public partial class AgentDetailsDialog
     private bool isLoading = true;
     private bool isBusy;
     private bool isOpeningCapabilityWizard;
-    private bool isAvatarUploadBusy;
-    private bool isAvatarGenerationBusy;
     private bool isConfirmingAutoApproval;
     private bool isConfirmingDelete;
     private bool areProvidersLoaded;
@@ -81,9 +72,6 @@ public partial class AgentDetailsDialog
     private Task? projectStructureProjectsLoadTask;
     private int selectedTabIndex;
     private int autoApprovalInputVersion;
-    private bool avatarSelectorOpen;
-
-    private static IReadOnlyList<string> AvatarOptions => AgentAvatarImageCatalog.BundledAvatarUrls;
 
     private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
     [
@@ -141,6 +129,11 @@ public partial class AgentDetailsDialog
     private ProviderProfile? DefaultAvatarImageProvider
         => SelectedImageGenerationProvider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration } provider
             ? provider
+            : null;
+
+    private AvatarGenerationSource? AvatarGenerationSource
+        => DefaultAvatarImageProvider is { } provider
+            ? new(provider.Id, provider.Name, ResolveAvatarImageModel(provider))
             : null;
 
     private ProviderProfile? ImageCapableRuntimeProvider
@@ -487,134 +480,10 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
-    private Task OpenAvatarSelectorAsync()
-    {
-        if (string.IsNullOrWhiteSpace(avatarGenerationPrompt))
-        {
-            avatarGenerationPrompt = BuildDefaultAvatarGenerationPrompt();
-        }
-
-        avatarGenerationErrorMessage = null;
-        avatarSelectorOpen = true;
-        return Task.CompletedTask;
-    }
-
-    private Task CloseAvatarSelectorAsync()
-    {
-        avatarSelectorOpen = false;
-        return Task.CompletedTask;
-    }
-
-    private Task ClearAvatarAsync()
-    {
-        editorModel.AvatarImageUrl = string.Empty;
-        customAvatarFileName = string.Empty;
-        avatarGenerationErrorMessage = null;
-        return Task.CompletedTask;
-    }
-
-    private async Task LoadCustomAvatarAsync(InputFileChangeEventArgs args)
-    {
-        var file = args.File;
-        customAvatarFileName = file.Name;
-        isAvatarUploadBusy = true;
-
-        try
-        {
-            editorModel.AvatarImageUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(file);
-            avatarGenerationErrorMessage = null;
-            NotificationService.Success("Custom avatar loaded", "Save the agent to persist the loaded avatar.");
-        }
-        catch (Exception exception)
-        {
-            customAvatarFileName = string.Empty;
-            NotificationService.Error("Avatar upload failed", exception.Message);
-        }
-        finally
-        {
-            isAvatarUploadBusy = false;
-        }
-    }
-
-    private void SelectAvatar(string avatarImageUrl)
-    {
-        editorModel.AvatarImageUrl = avatarImageUrl.Trim();
-        customAvatarFileName = string.Empty;
-        avatarGenerationErrorMessage = null;
-    }
-
-    private async Task GenerateAvatarAsync()
-    {
-        if (isAvatarGenerationBusy)
-        {
-            return;
-        }
-
-        var provider = DefaultAvatarImageProvider;
-        if (provider is null)
-        {
-            const string message = "No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.";
-            avatarGenerationErrorMessage = message;
-            NotificationService.Warning("AI avatar unavailable", message);
-            return;
-        }
-
-        var model = ResolveAvatarImageModel(provider);
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            var message = $"Image-generation provider '{provider.Name}' does not define a default model.";
-            avatarGenerationErrorMessage = message;
-            NotificationService.Warning("AI avatar unavailable", message);
-            return;
-        }
-
-        isAvatarGenerationBusy = true;
-        avatarGenerationErrorMessage = null;
-        try
-        {
-            var result = await AvatarGenerationService.GenerateAsync(
-                provider,
-                model,
-                avatarGenerationPrompt);
-            editorModel.AvatarImageUrl = result.AvatarDataUrl;
-            customAvatarFileName = string.Empty;
-            NotificationService.Success("AI avatar created", "Save the agent to persist the generated avatar.");
-        }
-        catch (Exception exception)
-        {
-            avatarGenerationErrorMessage = exception.Message;
-            NotificationService.Error("AI avatar generation failed", exception.Message);
-        }
-        finally
-        {
-            isAvatarGenerationBusy = false;
-        }
-    }
-
-    private string BuildDefaultAvatarGenerationPrompt()
-    {
-        var name = FirstNonEmpty(editorModel.Name, "this software agent");
-        var role = string.IsNullOrWhiteSpace(editorModel.RoleTitle)
-            ? string.Empty
-            : $", whose role is {editorModel.RoleTitle.Trim()}";
-        return $"A distinctive, friendly illustrated avatar for {name}{role}, in a clean modern professional style.";
-    }
-
     private string ResolveAvatarImageModel(ProviderProfile provider)
         => string.IsNullOrWhiteSpace(editorModel.ImageGenerationAccess.DefaultModel)
             ? provider.DefaultModel.Trim()
             : editorModel.ImageGenerationAccess.DefaultModel.Trim();
-
-    private bool IsSelectedAvatar(string avatarImageUrl)
-        => string.Equals(editorModel.AvatarImageUrl?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
-
-    private bool IsCustomAvatarLoaded()
-        => editorModel.AvatarImageUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
-
-    private string ResolveAvatarOptionClass(string avatarImageUrl)
-        => IsSelectedAvatar(avatarImageUrl)
-            ? "agent-details-dialog__avatar-option agent-details-dialog__avatar-option--selected"
-            : "agent-details-dialog__avatar-option";
 
     private string ResolveAvatarSelectionText()
     {
@@ -1330,6 +1199,12 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
+    private Task HandleAvatarChangedAsync(string? value)
+    {
+        editorModel.AvatarImageUrl = value?.Trim() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
     private Task HandleSummaryChangedAsync(string? value)
     {
         editorModel.Summary = value ?? string.Empty;
@@ -1669,10 +1544,6 @@ public partial class AgentDetailsDialog
 
     private void ResetAvatarGenerationState()
     {
-        avatarGenerationPrompt = string.Empty;
-        avatarGenerationErrorMessage = null;
-        isAvatarGenerationBusy = false;
-        avatarSelectorOpen = false;
     }
 
     private enum CapabilityDialogAssignmentFilter

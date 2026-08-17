@@ -1,11 +1,11 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Ports;
-using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using System.Xml.Linq;
@@ -395,7 +395,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
     {
         var services = new ServiceCollection();
 
-        services.AddLlmChatsUi();
+        services.AddSimpleChatsComponents();
 
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatDefinitionUiGateway));
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatConversationUiGateway));
@@ -404,7 +404,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatUiEventSessionGateway));
         Assert.DoesNotContain(services, item => item.ServiceType == typeof(HttpClient));
         Assert.DoesNotContain(
-            typeof(LlmChatsUiServiceCollectionExtensions).Assembly.GetTypes()
+            typeof(SimpleChatsComponentsServiceCollectionExtensions).Assembly.GetTypes()
                 .SelectMany(type => type.GetConstructors())
                 .SelectMany(constructor => constructor.GetParameters()),
             parameter => parameter.ParameterType == typeof(IServiceProvider));
@@ -417,11 +417,12 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
         var projectDirectory = Path.Combine(
             root,
             "src",
-            "Modules",
-            "CanDoItAll.Modules.LlmChats.Ui");
+            "MAF",
+            "SimpleChats",
+            "CanDoItAll.AgentFramework.Llm.SimpleChats.Components");
         var project = XDocument.Load(Path.Combine(
             projectDirectory,
-            "CanDoItAll.Modules.LlmChats.Ui.csproj"));
+            "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj"));
         var references = project.Descendants("ProjectReference")
             .Select(element => Path.GetFullPath(Path.Combine(
                 projectDirectory,
@@ -432,10 +433,12 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
 
         Assert.Equal(
             [
+                "CanDoItAll.AgentFramework.Components",
+                "CanDoItAll.AgentFramework.Llm.SimpleChats.Application",
+                "CanDoItAll.AgentFramework.Llm.SimpleChats.Core",
                 "CanDoItAll.AppComponents",
                 "CanDoItAll.Conversations.Components",
-                "CanDoItAll.Conversations.Shell",
-                "CanDoItAll.Modules.LlmChats"
+                "CanDoItAll.Conversations.Shell"
             ],
             references);
 
@@ -460,21 +463,19 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             Assert.DoesNotContain(forbidden, source, StringComparison.Ordinal);
         }
 
-        var routePagePath = Path.Combine(projectDirectory, "Pages", "LlmChatsPage.razor");
-        var navigationPath = Path.Combine(
-            projectDirectory,
-            "Navigation",
-            "LlmChatsShellNavigationContributor.cs");
-        Assert.Contains("@page \"/chats\"", File.ReadAllText(routePagePath), StringComparison.Ordinal);
-        Assert.Contains("\"/chats\"", File.ReadAllText(navigationPath), StringComparison.Ordinal);
+        Assert.DoesNotContain("@page", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/chats", source, StringComparison.OrdinalIgnoreCase);
 
-        var nonActivationSource = string.Join(
-            '\n',
-            sourcePaths
-                .Except([routePagePath, navigationPath], StringComparer.OrdinalIgnoreCase)
-                .Select(File.ReadAllText));
-        Assert.DoesNotContain("@page", nonActivationSource, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("/chats", nonActivationSource, StringComparison.OrdinalIgnoreCase);
+        var compatibilityRoute = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "LlmChatsCompatibilityRedirect.razor");
+        var compatibilitySource = File.ReadAllText(compatibilityRoute);
+        Assert.Contains("@page \"/chats\"", compatibilitySource, StringComparison.Ordinal);
+        Assert.Contains("AgentWorkspaceRouteState.BuildCompatibilityRedirect", compatibilitySource, StringComparison.Ordinal);
     }
 
     [Fact]

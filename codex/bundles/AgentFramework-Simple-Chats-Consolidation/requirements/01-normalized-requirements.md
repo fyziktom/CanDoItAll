@@ -8,6 +8,6 @@ The authoritative exact requirements, wording, and owning subbundles are in requ
 - ASCC-020–030: typed usage, authoritative attempts, immutable pricing, legacy, deduplication, and composite query.
 - ASCC-031–043: Agent page tab/route/dashboard/component/accessibility behavior.
 - ASCC-044–048: sensitive data, compatibility surfaces, direct architecture proof, Playwright, and final closure.
+- ASCC-049–052: typed Simple Chat settings tabs, one shared Agent/Simple Chat avatar selector, complete upload/AI-generation behavior, and regression proof.
 
 Non-goals and explicit exceptions are in requirements/02-non-goals.md.
-

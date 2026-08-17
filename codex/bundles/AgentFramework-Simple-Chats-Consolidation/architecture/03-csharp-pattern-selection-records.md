@@ -76,3 +76,17 @@ Do not introduce a general framework or one-implementation interface solely for 
 
 Decision: no new partial class. Touched provider-usage behavior leaves AgentFrameworkWorkspaceExecutionService.Usage for top-level collaborators. Large UI/controller classes shrink through cohesive collaborators or component state services, not additional partial files.
 
+## PSR-009 — Shared avatar component with a product gateway
+
+Decision: extract the existing Agent avatar UI into one AgentFramework.Components selector and drive AI generation through a typed callback/gateway. AgentDetailsDialog and the Simple Chat editor both compose that selector; provider selection and persistence stay with their existing owners.
+
+Why: the current selector is embedded in AgentDetailsDialog while Simple Chat exposes a raw URL textbox. Copying the markup, upload policy, catalog, and image-generation state would create two diverging implementations and force SimpleChats.Components toward Agent runtime dependencies.
+
+Rejected:
+
+- duplicate the Agent markup in SimpleChats.Components: guaranteed UI/policy drift;
+- make SimpleChats.Components reference Modules.AgentFramework or provider runtime: reverses dependency direction;
+- move provider selection or definition persistence into the selector: turns a reusable UI component into an application service;
+- leave the Agent dialog on the old inline selector: fails reuse and keeps the old owner large.
+
+Proof: direct shared-selector component tests, source guard proving one selector implementation, Agent and Simple Chat consumer tests, deterministic AI success/unavailable/error cases, and browser proof with both editors.

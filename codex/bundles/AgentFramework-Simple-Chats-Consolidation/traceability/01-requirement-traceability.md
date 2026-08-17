@@ -1,6 +1,6 @@
 # Requirement traceability
 
-The exact 48-row owner/proof map is traceability/traceability.json. Raw-input coverage is inputs/03-input-coverage.json.
+The exact 52-row owner/proof map is traceability/traceability.json. Raw-input coverage is inputs/03-input-coverage.json.
 
 | Input | Bundle location | Owning subbundles | Planned proof | Closure |
 |---|---|---|---|---|
@@ -10,4 +10,5 @@ The exact 48-row owner/proof map is traceability/traceability.json. Raw-input co
 | Simple Chats next to Agents | ASCC-031–034, ASCC-039–042 | SB07, SB08 | SB08/SB11 browser manifests | user handoff |
 | Move from Modules to MAF | ASCC-007–012, ASCC-045 | SB03–SB05, SB07, SB10 | SB10/SB11 manifests | architecture gate |
 | Bundle only; no implementation | ASCC-001, ASCC-005, ASCC-046–048 | SB01, SB11 | preparation review/final manifest | execution report |
-
+| Tabbed Simple Chat settings dialog | ASCC-049, ASCC-052 | SB07, SB08, SB11 | component/browser manifests | user handoff |
+| Reused Agent/Simple Chat avatar selector and AI generation | ASCC-050–052 | SB07, SB08, SB10, SB11 | component/source/browser manifests | user handoff |

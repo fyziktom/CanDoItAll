@@ -11,9 +11,9 @@ The complete current-state inventory is architecture/00-csharp-current-state-inv
 - Existing AgentFramework.Llm.* and Conversations.* projects already own reusable generic chat foundations.
 - Agent usage is file-backed and price-aware; Simple Chat attempt usage is EF-backed but lacks complete status/cost/pricing provenance.
 - /agents has an established SecondaryTabs dashboard; /chats is a separate full page.
+- The Simple Chat definition editor is an untabbed stacked form with a raw avatar URL input, while AgentDetailsDialog contains a complete but inline avatar catalog/upload/AI-generation workflow.
 - No current LlmChats project cycle was found; unrelated pre-existing AgentFramework cycles must not grow.
 
 ## Implication
 
 The work is a boundary extraction plus data/read-model/UI consolidation, not a namespace-only rename.
-

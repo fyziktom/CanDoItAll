@@ -76,6 +76,12 @@ Conclusion: invocation attempts are the authoritative chat cost source; transcri
 - /chats is a separate PageScaffold with inner Conversations and Definitions tabs.
 - A separate Simple Chats navigation contributor points to /chats.
 - Agent overview/provider/model/agent usage methods have no workload selection.
+- LlmChatDefinitionEditorDialog is one vertically stacked form with no internal settings Tabs. Identity/provider controls are always visible and output/revision fields sit in an advanced section.
+- The Simple Chat avatar field is a raw URL TextBox even though the definition already persists AvatarImageUrl and list/chat surfaces render it.
+- AgentDetailsDialog already provides current preview, bundled avatars, reset, validated upload, and configured-provider AI generation, but the selector markup/state is embedded in the large dialog instead of a reusable component.
+- AgentDetailsDialog.razor.cs is a 1,600+ line partial component with about 174 collected members; adding a second consumer by copying its avatar methods would deepen responsibility concentration.
+
+Follow-up architecture evidence: scoped CodeAnalytics snapshot snap-20260817172927-da2eea1a loaded the five current Agent/AgentFramework.Components/LlmChats projects, 258 documents, no blocking errors, and confirmed AgentDetailsDialog, AgentAvatarGenerationService, and AgentAvatarUploadFormatter remain owned by Modules.AgentFramework. The Components MCP transport was unavailable on both library-list and recommendation calls; SB07 must retry before markup changes and otherwise follow the locally verified BaseLib Tabs/Dialog/Avatar composition already used by AgentDetailsDialog.
 
 ## Concentration and partial-class observations
 
@@ -97,4 +103,3 @@ Moving bytes without changing owners is insufficient. Critical phases must prove
 - database transfer module identity llm-chats.
 - /chats browser route and floating-shell source keys.
 - AppDbContext configuration scanning and module assembly registration.
-

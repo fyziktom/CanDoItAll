@@ -1,0 +1,252 @@
+@inject ILlmChatDefinitionUiGateway Definitions
+@inject ILlmChatUiAuthorizationFacade Authorization
+
+<SurfaceCard Class="llm-chat-definition-catalog" data-testid="llm-chat-definition-catalog">
+    <Stack GapScale="LayoutGap.Large">
+        <Split Breakpoint="LayoutBreakpoint.Sm"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Gap="LayoutGap.Medium"
+               Wrap="FlexWrap.Wrap">
+            <Stack GapScale="LayoutGap.Tiny">
+                <span class="cda-eyebrow">Reusable Simple Chats</span>
+                <h2 class="text-xl font-semibold text-slate-900">Definitions</h2>
+                <p class="text-sm leading-6 text-slate-600">Choose the provider, model, prompt, and output contract reused by conversations.</p>
+            </Stack>
+            @if (authorization.CanManage)
+            {
+                <Button Text="New definition"
+                        Icon="add"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Click="OpenCreateEditor"
+                        data-testid="llm-chat-definition-create" />
+            }
+        </Split>
+
+        @if (!authorization.CanRead)
+        {
+            <EmptyState Eyebrow="Access required"
+                        Title="Definitions are unavailable"
+                        Description="Read Simple Chats permission is required to view reusable definitions." />
+        }
+        else
+        {
+            <FilterBar ResultText="@ResultText" data-testid="llm-chat-definition-filter-bar">
+                <FormField Text="Status" Class="llm-chat-definition-catalog__status-filter">
+                    <DropDown TValue="LlmChatDefinitionStatusFilter"
+                              Data="@StatusOptions"
+                              TextProperty="@nameof(LlmChatDefinitionStatusFilterOption.Label)"
+                              ValueProperty="@nameof(LlmChatDefinitionStatusFilterOption.Value)"
+                              Value="@statusFilter"
+                              ValueChanged="ChangeStatusFilterAsync"
+                              Disabled="@isLoading"
+                              data-testid="llm-chat-definition-status-filter" />
+                </FormField>
+            </FilterBar>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="llm-chat-definition-error">
+                    @errorMessage
+                </Alert>
+            }
+
+            @if (isLoading && definitions.Count == 0)
+            {
+                <LoadingState Eyebrow="Definitions"
+                              Title="Loading Simple Chat definitions"
+                              Description="Reading the reusable definition catalog." />
+            }
+            else if (definitions.Count == 0)
+            {
+                <EmptyState Eyebrow="Definitions"
+                            Title="No definitions match this status"
+                            Description="Choose another status or create a reusable Simple Chat definition." />
+            }
+            else
+            {
+                <Grid ColumnsMd="2" ColumnsXl="3" Gap="LayoutGap.Medium" Class="llm-chat-definition-catalog__grid">
+                    @foreach (var definition in definitions)
+                    {
+                        <ConversationParticipantCard @key="definition.DefinitionId"
+                                                     Participant="@LlmChatDefinitionPresentationMapper.ToParticipant(definition, selectedDefinitionId)"
+                                                     Layout="ParticipantCardLayout.Enterprise"
+                                                     ShellTestId="@($"llm-chat-definition-{definition.DefinitionId:D}")"
+                                                     SelectTestId="@($"llm-chat-definition-select-{definition.DefinitionId:D}")"
+                                                     Selected="OpenSelectedEditorAsync">
+                            <Actions>
+                                @if (authorization.CanManage)
+                                {
+                                    <Button Text="Edit"
+                                            Icon="edit"
+                                            Size="ButtonSize.Small"
+                                            Variant="Variant.Outlined"
+                                            Click="@(() => OpenEditorAsync(definition.DefinitionId))"
+                                            data-testid="@($"llm-chat-definition-edit-{definition.DefinitionId:D}")" />
+                                }
+                            </Actions>
+                        </ConversationParticipantCard>
+                    }
+                </Grid>
+
+                @if (nextCursor is not null)
+                {
+                    <Cluster JustifyContent="JustifyContent.Center">
+                        <Button Text="Load more"
+                                Icon="expand_more"
+                                Variant="Variant.Outlined"
+                                Click="LoadMoreAsync"
+                                Disabled="@isLoading"
+                                IsBusy="@isLoading"
+                                data-testid="llm-chat-definition-load-more" />
+                    </Cluster>
+                }
+            }
+        }
+    </Stack>
+</SurfaceCard>
+
+@if (editorOpen)
+{
+    <LlmChatDefinitionEditorDialog @key="editorKey"
+                                   DefinitionId="@selectedDefinitionId"
+                                   Saved="HandleSavedAsync"
+                                   Cancelled="CloseEditor" />
+}
+
+@code {
+    [Parameter]
+    public Guid? RequestedDefinitionId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> SelectedDefinitionIdChanged { get; set; }
+
+    private static readonly IReadOnlyList<LlmChatDefinitionStatusFilterOption> StatusOptions =
+    [
+        new(LlmChatDefinitionStatusFilter.All, "All statuses"),
+        new(LlmChatDefinitionStatusFilter.Draft, "Draft"),
+        new(LlmChatDefinitionStatusFilter.Active, "Active"),
+        new(LlmChatDefinitionStatusFilter.Suspended, "Suspended"),
+        new(LlmChatDefinitionStatusFilter.Archived, "Archived")
+    ];
+
+    private readonly List<LlmChatDefinitionListItem> definitions = [];
+    private LlmChatUiAuthorizationSnapshot authorization = new(false, false, false);
+    private LlmChatDefinitionStatusFilter statusFilter;
+    private LlmChatDefinitionCursor? nextCursor;
+    private Guid? selectedDefinitionId;
+    private Guid editorKey;
+    private bool editorOpen;
+    private bool isLoading;
+    private string errorMessage = string.Empty;
+
+    private string ResultText => isLoading
+        ? "Loading definitions"
+        : $"{definitions.Count} definition{(definitions.Count == 1 ? string.Empty : "s")}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        authorization = await Authorization.GetAsync();
+        if (authorization.CanRead)
+        {
+            await LoadAsync(append: false);
+        }
+
+        if (authorization.CanManage && RequestedDefinitionId is { } definitionId && definitionId != Guid.Empty)
+        {
+            OpenEditor(definitionId);
+        }
+    }
+
+    private async Task ChangeStatusFilterAsync(LlmChatDefinitionStatusFilter value)
+    {
+        statusFilter = value;
+        await LoadAsync(append: false);
+    }
+
+    private Task LoadMoreAsync()
+        => LoadAsync(append: true);
+
+    private async Task LoadAsync(bool append)
+    {
+        if (isLoading)
+        {
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = string.Empty;
+        try
+        {
+            var cursor = append ? nextCursor : null;
+            var result = await Definitions.ListPageAsync(new(
+                take: 24,
+                status: LlmChatDefinitionPresentationMapper.ToStatus(statusFilter),
+                cursor: cursor));
+            if (result.IsFailure)
+            {
+                errorMessage = FormatFailures(result.Failures);
+                return;
+            }
+
+            if (!append)
+            {
+                definitions.Clear();
+            }
+
+            definitions.AddRange(result.Value!.Items);
+            nextCursor = result.Value.NextCursor;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task OpenCreateEditor()
+        => OpenEditorAsync(null);
+
+    private Task OpenSelectedEditorAsync(ConversationPresentationKey key)
+    {
+        if (authorization.CanManage && LlmChatDefinitionPresentationMapper.TryGetDefinitionId(key, out var definitionId))
+        {
+            return OpenEditorAsync(definitionId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenEditorAsync(Guid? definitionId)
+    {
+        if (!authorization.CanManage)
+        {
+            return;
+        }
+
+        OpenEditor(definitionId);
+        await SelectedDefinitionIdChanged.InvokeAsync(definitionId);
+    }
+
+    private void OpenEditor(Guid? definitionId)
+    {
+        selectedDefinitionId = definitionId;
+        editorKey = Guid.NewGuid();
+        editorOpen = true;
+    }
+
+    private async Task CloseEditor()
+    {
+        editorOpen = false;
+        selectedDefinitionId = null;
+        await SelectedDefinitionIdChanged.InvokeAsync(null);
+    }
+
+    private async Task HandleSavedAsync(LlmChatDefinitionListItem definition)
+    {
+        await CloseEditor();
+        await LoadAsync(append: false);
+    }
+
+    private static string FormatFailures(IReadOnlyList<LlmChatUiFailure> failures)
+        => string.Join(' ', failures.Select(failure => failure.Message));
+}

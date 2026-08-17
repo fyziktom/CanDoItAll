@@ -1,4 +1,4 @@
-﻿using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.FileTools.Integration;
@@ -9,9 +9,10 @@ using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
-using CanDoItAll.Modules.LlmChats;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -87,7 +88,8 @@ public static class RuntimeHostServiceCollectionExtensions
             provider.GetRequiredService<IOptions<LlmChatStreamingOptions>>().Value);
         services.AddSingleton(provider =>
             provider.GetRequiredService<IOptions<LlmChatTransferOptions>>().Value);
-        services.AddLlmChatsApplication();
+        services.AddSimpleChatsApplication();
+        services.AddSimpleChatsRuntime();
         services.AddLlmChatsPersistence();
         services.AddHostedService<LlmChatOperationDispatcherHostedService>();
         services.AddSchedulerPlannerModule(configuration);

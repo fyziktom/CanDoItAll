@@ -76,6 +76,7 @@ def main() -> int:
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     status = json.loads((root / "bundle-status.json").read_text(encoding="utf-8"))
     requirements = json.loads((root / "requirements/requirements.json").read_text(encoding="utf-8"))["requirements"]
+    findings = json.loads((root / "analysis/findings-register.json").read_text(encoding="utf-8"))["findings"]
 
     for label, document in (("manifest", manifest), ("status", status)):
         if document.get("stage") != args.stage:
@@ -92,12 +93,15 @@ def main() -> int:
 
     manifest_requirements = manifest.get("requirements", [])
     requirement_ids = [item.get("id") for item in requirements]
-    if len(manifest_requirements) != 48 or len(set(manifest_requirements)) != 48:
-        errors.append(f"expected 48 unique manifest requirements, found {len(manifest_requirements)}")
+    if len(manifest_requirements) != len(set(manifest_requirements)):
+        errors.append("manifest requirements must be unique")
     if manifest_requirements != requirement_ids:
         errors.append("manifest and requirements.json requirement order differ")
-    if len(manifest.get("findings", [])) != 18:
-        errors.append("expected 18 findings")
+    finding_ids = [item.get("id") for item in findings]
+    if len(finding_ids) != len(set(finding_ids)):
+        errors.append("findings register IDs must be unique")
+    if manifest.get("findings", []) != finding_ids:
+        errors.append("manifest and findings-register.json finding order differ")
 
     by_sub = {item["id"]: item for item in subs}
     for sub in subs:
@@ -132,4 +136,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed with documented one-shot Stable certification exception
 - Stage: final
 - Proof tier: Governed
 
@@ -32,6 +32,10 @@ Freeze one final candidate and close the initiative with focused proof, one Stab
 - ASCC-046
 - ASCC-047
 - ASCC-048
+- ASCC-049
+- ASCC-050
+- ASCC-051
+- ASCC-052
 
 ## Prerequisites
 
@@ -64,11 +68,12 @@ Freeze one final candidate and close the initiative with focused proof, one Stab
 5. Start the supported watch/browser loop and use Playwright MCP against the real UI at 1600x1000.
 6. Configure/use a deterministic provider through the Providers tab; never expose its secret in proof.
 7. Create/open an Agent and send/complete a main chat; open floating Agent chat, send/stream/cancel where deterministic, hide/reopen, and verify transcript continuity.
-8. Create/open a Simple Chat definition and conversation through the Agent page tab; send/stream/complete/cancel/reload; repeat floating Simple Chat hide/reopen continuity.
-9. Verify /chats redirect, tab adjacency, inner tabs, provider selection, Both default, Agents/Simple Chats/Both totals, exact no-double-count relation, charts, rankings, provider/model/consumer dialogs, deep-link/reload/back-forward, scroll/overlays, and zero unhandled console/page errors.
-10. Capture screenshots/transcripts with sensitive data masked.
-11. Run the unfiltered tests/Solutions/CanDoItAll.Tests.Stable.slnx exactly once.
-12. Complete semantic invariants, checksums, final architecture gate, execution report, and user-verification handoff.
+8. Create/open a Simple Chat definition through the Agent page tab; verify Identity/Runtime/Output-and-revision tabs, choose/reset/upload/generate an avatar through the shared selector, save/reopen it, then send/stream/complete/cancel/reload a conversation and repeat floating Simple Chat hide/reopen continuity.
+9. Open Agent settings and prove the same selector implementation retains Agent avatar behavior, including the configured-provider AI path or its explicit deterministic unavailable state.
+10. Verify /chats redirect, tab adjacency, inner tabs, provider selection, Both default, Agents/Simple Chats/Both totals, exact no-double-count relation, charts, rankings, provider/model/consumer dialogs, deep-link/reload/back-forward, scroll/overlays, and zero unhandled console/page errors.
+11. Capture screenshots/transcripts with sensitive data masked.
+12. Run the unfiltered tests/Solutions/CanDoItAll.Tests.Stable.slnx exactly once.
+13. Complete semantic invariants, checksums, final architecture gate, execution report, and user-verification handoff.
 
 ## Acceptance Criteria
 
@@ -77,6 +82,7 @@ Freeze one final candidate and close the initiative with focused proof, one Stab
 - [ ] Named Playwright tests pass or an exact external/pre-existing blocker is documented.
 - [ ] Playwright MCP proves main/floating Agent and Simple Chat flows.
 - [ ] Both/Agents/Simple Chats cost scopes are exact and visually operational.
+- [ ] Simple Chat settings tabs and the shared Agent/Simple Chat avatar selector—including AI generation—are browser-proven and persist only on save.
 - [ ] No old projects/namespaces/cycles/duplicate registrations.
 - [ ] Final architecture gate Pass and handoff complete.
 
@@ -104,6 +110,7 @@ Required cases:
 - ChatsRouteRedirectsAndPreservesRecognizedState
 - MainAndFloatingAgentAndSimpleChatFlowsRemainOperational
 - AllUsageScopesDriveChartsAndDialogs
+- SimpleChatSettingsTabsAndSharedAvatarWorkflowRemainOperational
 
 Expected discovery: exactly the named cases exist and each discovers one test; Stable discovery is non-zero and recorded before the one authorized run.
 
@@ -117,12 +124,12 @@ Complete plan/03-ui-composition-contract.md at 1600x1000.
 
 - Primary surfaces reviewed: Agent overview/dashboard, Simple Chat workspace, Agent main/floating chat, Simple Chat main/floating chat.
 - Supporting content/stats: verify compact page header/tabs/scope and that dashboard stats support rather than displace the primary task.
-- List/editor organization: inspect definition/conversation lists and the Wide definition editor with realistic long prompt content.
+- List/editor organization: inspect definition/conversation lists and all three internal tabs of the Wide definition editor with realistic long prompt content.
 - Textarea/dialog rationale: confirm Extended/explicit prompt rows, Wide dense-chrome dialog, stable actions, and dialog-body scrolling.
 - First viewport: useful dashboard or workspace task state appears before page scroll.
 - Scroll owner: record the one intended owner in every normal/open state.
 - Container-aware controls: inspect top/inner tabs, scope selector, filter/action rows, and form groups in their actual narrow grid/card/dialog containers.
-- Open overlays: inspect selector, detail dialog, definition dialog, and both floating window sources for layering/clipping/focus.
+- Open overlays: inspect the shared avatar selector in both Agent and Simple Chat editors, scope selector, detail dialog, definition dialog, and both floating window sources for layering/clipping/focus.
 - Record reload/deep links, accessibility state, nonblank charts, and browser console/page errors.
 
 ## C# Architecture Impact
@@ -165,10 +172,11 @@ Complete before/after dependency/cycle graphs, direct source/test proof, old-own
 - cost scope/double-count/unknown-price failure;
 - browser console/layout/accessibility failure;
 - architecture/compatibility guard failure.
+- settings-tab, shared-selector, avatar upload/generation/save, or Agent avatar parity failure.
 
 ## Covered Inputs
 
-- Every raw request and ASCC-001–048 closure path, with direct ownership concentrated on the requirements listed above.
+- Every raw request and ASCC-001–052 closure path, with direct ownership concentrated on the requirements listed above.
 
 ## Exact Source References
 
@@ -199,5 +207,5 @@ Complete before/after dependency/cycle graphs, direct source/test proof, old-own
 - Routes: /agents overview/agents/simple-chats/providers plus /chats compatibility; relevant main/floating sources.
 - Viewport: 1600x1000.
 - Actions: configure deterministic provider safely, complete/cancel/reload Agent and Simple Chat main/floating conversations, switch every cost scope, open every relevant dialog, verify deep links/history.
-- Screenshots: final overview Both/Agents/SimpleChats, main Simple Chat, definition editor, provider/model/consumer dialogs, Agent floating, Simple Chat floating, redirect, relevant error/unknown/unpriced state.
+- Screenshots: final overview Both/Agents/SimpleChats, main Simple Chat, each definition settings tab, shared avatar selector in Agent and Simple Chat contexts, AI generation/unavailable state, saved avatar, provider/model/consumer dialogs, Agent floating, Simple Chat floating, redirect, relevant error/unknown/unpriced state.
 - Review: primary task in first viewport, stats density, long prompt/dialog sizing, all scroll owners, constrained compound controls, overlay/focus/clipping, nonblank charts, exact totals, zero unhandled console/page errors.

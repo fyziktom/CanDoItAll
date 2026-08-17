@@ -27,6 +27,23 @@ The exact existing labels after Providers remain unchanged unless component evid
 - Preserve definition catalog/editor, conversation selection/archive/rename, streaming/cancel/reconnect/recovery, and floating contributor behavior.
 - Use typed query state for inner tab and recognized IDs.
 
+## Simple Chat definition settings dialog
+
+- Use a Wide dense-chrome Dialog with BaseLib Tabs in ModalCompact mode and one dialog-body scroll owner.
+- Internal tab order is Identity, Runtime, Output and revision.
+- Identity contains name, summary, system prompt, tags, avatar preview, and the shared Choose avatar/default actions.
+- Runtime contains Chat-purpose provider/model selection, temperature, thinking effort, timeout, and model-parameter JSON.
+- Output and revision contains response format/schema, current status/revision context, revision reason, and lifecycle transitions.
+- Validation is summarized above the tab panels and field-specific state remains adjacent to its owning control; saving with a hidden-tab error activates/focuses the owning tab when practical.
+- Header/status and the stable Cancel/Save footer remain usable while the dialog body scrolls.
+
+## Shared avatar selector
+
+- Both Agent and Simple Chat editors use the one selector from CanDoItAll.AgentFramework.Components.
+- It provides current preview, bundled choices, default reset, PNG/JPEG/WebP/GIF upload capped by AgentAvatarImagePolicy, and AI generation through a typed host gateway.
+- AI availability identifies the configured image provider/model without exposing secrets. Loading, unavailable, validation, and generation error states are explicit.
+- Closing the selector stages the value in the editor only; Cancel discards it and Save persists it through the existing Agent or Simple Chat mutation.
+
 ## /chats compatibility
 
 - Redirect to /agents?tab=simple-chats.
@@ -59,4 +76,4 @@ The exact existing labels after Providers remain unchanged unless component evid
 - Dialog body scroll remains inside the dialog.
 - Floating windows stay above page content and below modal overlays.
 - Selected tab/scope, labels, keyboard operation, focus restoration, loading, empty, unknown, unpriced, partial-source, forbidden, and error states are testable.
-- Capture normal page, scope selector open/changed, Simple Chat editor/dialog, Agent floating chat, Simple Chat floating chat, and usage detail dialog screenshots.
+- Capture normal page, scope selector open/changed, each Simple Chat settings tab, shared avatar selector in Agent and Simple Chat contexts, AI unavailable/success state, Simple Chat editor/dialog, Agent floating chat, Simple Chat floating chat, and usage detail dialog screenshots.

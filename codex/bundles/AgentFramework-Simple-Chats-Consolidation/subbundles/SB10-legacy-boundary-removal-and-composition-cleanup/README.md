@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — CP4 Pass
 - Stage: cleanup
 - Proof tier: Governed
 
@@ -30,6 +30,7 @@ Remove the three old Modules.LlmChats projects/namespaces and all duplicate rout
 - ASCC-044
 - ASCC-045
 - ASCC-046
+- ASCC-050
 
 ## Prerequisites
 
@@ -64,7 +65,7 @@ Remove the three old Modules.LlmChats projects/namespaces and all duplicate rout
 5. Update all unit/component/integration/Playwright test project references/namespaces and solution grouping.
 6. Remove obsolete LlmChats full page/navigation/assembly markers and duplicate registrations.
 7. Delete the old three project directories and solution entries after caller count reaches zero.
-8. Run source guards for CanDoItAll.Modules.LlmChats, old csproj paths, duplicate shell/hosted/usage source registrations, and forbidden references.
+8. Run source guards for CanDoItAll.Modules.LlmChats, old csproj paths, duplicate shell/hosted/usage source registrations, forbidden references, duplicate avatar-selector implementations, and retained inline Agent avatar markup.
 9. Run API/SSE/security/migration/transfer/component/composition focused suites and builds.
 10. Refresh CodeAnalytics dependency/cycles and run CP4 architecture gate.
 
@@ -75,6 +76,7 @@ Remove the three old Modules.LlmChats projects/namespaces and all duplicate rout
 - [ ] No duplicate DI/navigation/shell/hosted registration.
 - [ ] HTTP/table/scope/migration/transfer compatibility passes.
 - [ ] /chats redirect remains.
+- [ ] Exactly one reusable avatar selector remains and both Agent/Simple Chat editors consume it.
 - [ ] CP4 no-new-cycle/architecture gate Pass.
 
 ## Validation Depth
@@ -158,7 +160,7 @@ Before/after full ProjectReference/caller/DI graphs, direct target owner proof, 
 ## Covered Inputs
 
 - Raw request: LlmChats projects must no longer live under Modules naming/grouping; Agent module remains thin.
-- Requirements ASCC-002, ASCC-006–016, ASCC-033–034, ASCC-043–046.
+- Requirements ASCC-002, ASCC-006–016, ASCC-033–034, ASCC-043–046, ASCC-050.
 
 ## Exact Source References
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Prepared
+- Completed — CP0 Pass
 - Stage: baseline
 - Proof tier: Governed
 
@@ -57,12 +57,12 @@ Freeze the actual execution baseline, convert current behavior into named charac
 
 ## Acceptance Criteria
 
-- [ ] CP0 evidence identifies every current caller/writer/registration and target owner.
-- [ ] Characterization selectors discover non-zero tests and pass.
-- [ ] Target project graph is cycle-free on paper and through CodeAnalytics.
-- [ ] Legacy cost policy never guesses or reprices.
-- [ ] No production/schema/UI implementation is included.
-- [ ] Architecture gate is Pass.
+- [x] CP0 evidence identifies every current caller/writer/registration and target owner.
+- [x] Characterization selectors discover non-zero tests and pass.
+- [x] Target project graph is cycle-free on paper and through CodeAnalytics.
+- [x] Legacy cost policy never guesses or reprices.
+- [x] No production/schema/UI implementation is included.
+- [x] Architecture gate is Pass.
 
 ## Validation Depth
 
@@ -81,10 +81,21 @@ Workspaces:
 Required existing selectors:
 
 - LlmChatApplicationBoundaryTests
-- LlmChatProviderRuntimeTests
+- ProviderRuntimeContractOwnershipTests
+- LlmInvocationPortCompositionTests
+- LlmChatProviderResolutionTests
+- LlmChatRuntimeFenceTests
+- LlmChatActiveOperationProjectionTests
+- LlmChatDefinitionRevisionExecutionTests
 - LlmChatWholeUseCaseProfileScopeTests
-- LlmChatUiBoundaryTests
+- LlmChatUiAuthorizationFacadeTests
+- LlmChatDefinitionUiGatewayTests
+- LlmChatOperationProjectionReducerTests
+- LlmChatUiEventSessionGatewayTests
+- LlmChatUiRegistrationAndArchitectureTests
 - AgentsHomePageTests
+- AgentDetailsDialogAvatarGenerationTests
+- LlmChatDefinitionUiTests
 - LlmChatConversationWorkspaceTests
 - LlmChatConversationShellContributorTests
 - ConversationShellRegistrationTests
@@ -113,7 +124,7 @@ Validate architecture/02-csharp-dependency-direction.md and stop if the target c
 
 ## Pattern Decision
 
-Confirm PSR-001 through PSR-008. Record any replacement as a dated decision with affected requirements/subbundles before implementation.
+Confirm PSR-001 through PSR-009. Record any replacement as a dated decision with affected requirements/subbundles before implementation.
 
 ## Testability Contract
 
@@ -143,7 +154,7 @@ Before graph/callers/DI/schema, target graph, CodeAnalytics cycles, architecture
 ## Covered Inputs
 
 - Raw request: isolate Simple Chat MAF libraries, consolidate Agent/provider/cost/UI placement, preserve behavior, and prepare before implementation.
-- Requirements ASCC-001–007 and ASCC-014; findings F-001–F-018 are inventoried.
+- Requirements ASCC-001–007 and ASCC-014; findings F-001–F-020 are inventoried, including the follow-up UI/avatar gaps that SB07 owns.
 
 ## Exact Source References
 

@@ -6,11 +6,12 @@ using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Workflows.Runtime;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
@@ -616,6 +617,11 @@ internal static class ProviderRuntimeTestData
             null,
             ["model-fast", "model-deep"])
         {
+            ModelPrices =
+            [
+                new ProviderModelTokenPrice("model-fast", 1m, 0.1m, 2m),
+                new ProviderModelTokenPrice("model-deep", 2m, 0.2m, 4m)
+            ],
             ModelThinkingEffortCapabilities =
             [
                 new ProviderModelThinkingEffortCapability(
