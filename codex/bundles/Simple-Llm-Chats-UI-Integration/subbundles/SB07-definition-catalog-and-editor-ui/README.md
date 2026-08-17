@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Not started`
+- `Completed`
 - Stage: `ui`
 - Proof tier: `Behavioral`
 
@@ -55,9 +55,9 @@ Deliver the named outcome without activating or implementing later phases.
 
 ## Acceptance Criteria
 
-- [ ] Definition CRUD/status/revision/conflict/provider capability flows pass.
-- [ ] System prompt is never present in read-only projection.
-- [ ] Editor uses reusable components and one wide dialog with internal scrolling.
+- [x] Definition CRUD/status/revision/conflict/provider capability flows pass.
+- [x] System prompt is never present in read-only projection.
+- [x] Editor uses reusable components and one wide dialog with internal scrolling.
 
 ## Validation Depth
 

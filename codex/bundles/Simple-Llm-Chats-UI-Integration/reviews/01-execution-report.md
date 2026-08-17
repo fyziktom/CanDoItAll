@@ -10,6 +10,7 @@
 | SB04 | Governed | Pass | Pass | SB05 unlocked; CP1 remains locked |
 | SB05 | Governed | Pass | Pass | CP1 passed; Simple Chat UI activation and SB06 unlocked |
 | SB06 | Behavioral | Pass | Pass | SB07 unlocked; route remains unadvertised |
+| SB07 | Behavioral | Pass | Pass | SB08 unlocked; route remains unadvertised |
 
 ## Browser Analytics
 
@@ -21,7 +22,8 @@
 | SB04 | N/A | N/A | N/A | N/A | N/A | No browser-visible change owned |
 | SB05 | 1600x1000 | Agent catalog and main chat pass | Settings, floating chat, close decision, and contextual catalog pass | Primary actions and composers visible | Transcript owns inner scroll | Pass |
 | SB06 | N/A | N/A | N/A | N/A | N/A | No user-visible activation |
+| SB07 | N/A | Internal panels only | Wide editor verified in bUnit | Browser activation deferred to SB10 | Dialog body owns internal scroll | Pass; route remains inactive |
 
 ## Current Decision
 
-CP1 passed. SB06 established the Simple Chat UI boundary without route activation. Execution is active at SB07; floating Simple Chat integration remains locked until CP2.
+CP1 passed. SB07 completed the route-inactive definition catalog/editor and unlocked SB08. Execution is active at SB08; floating Simple Chat integration remains locked until CP2.
