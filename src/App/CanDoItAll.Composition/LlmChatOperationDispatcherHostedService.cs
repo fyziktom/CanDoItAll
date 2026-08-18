@@ -1,6 +1,6 @@
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

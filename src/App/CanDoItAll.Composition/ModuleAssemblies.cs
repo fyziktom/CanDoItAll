@@ -4,8 +4,9 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Memory;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -34,7 +35,7 @@ public static class ModuleAssemblies
         typeof(ProcessPersistenceAssemblyMarker).Assembly,
         typeof(MemoryPersistenceAssemblyMarker).Assembly,
         typeof(LlmChatsPersistenceAssemblyMarker).Assembly,
-        typeof(LlmChatsUiAssemblyMarker).Assembly,
+        typeof(SimpleChatsComponentsAssemblyMarker).Assembly,
         typeof(PromptsModuleAssemblyMarker).Assembly,
         typeof(ResourcesModuleAssemblyMarker).Assembly,
         typeof(SchedulerPlannerModuleAssemblyMarker).Assembly,

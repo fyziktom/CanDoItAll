@@ -45,6 +45,12 @@ The LLM Chats schema is an append-only migration chain:
 - `20260815005922_AddLlmChatCancellationGeneration` adds durable cancellation fencing.
 - `20260815023403_AddLlmChatExecutionLeases` adds recoverable multi-host dispatch ownership.
 - `20260815051653_AddLlmChatOperationEvents` adds the durable replay journal and retention indexes.
+- `20260815233557_CompleteLlmChatOperationEvidence` completes durable delivery, finish-reason, and
+  event high-water evidence.
+- `20260817183339_AddSimpleChatInvocationPricingEvidence` adds usage and immutable pricing evidence
+  for Simple Chat provider invocations.
+- `20260818103613_AddSimpleChatProjectAttribution` records immutable workspace attribution for
+  Simple Chat operations and indexes project-scoped activity reporting.
 
 The model snapshot and database-transfer contract must represent the same final shape. Never remove or
 rename an applied migration to make a pending-model check pass.

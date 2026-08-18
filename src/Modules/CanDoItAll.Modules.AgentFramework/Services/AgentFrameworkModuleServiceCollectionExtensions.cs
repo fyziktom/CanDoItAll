@@ -1,6 +1,7 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -15,6 +16,7 @@ using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AgentFramework.Tools;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.FileSystem;
@@ -195,8 +197,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>
+            (IAgentProviderUsageEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceCatalogStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
+            AgentProviderUsageProjectionSource>());
+        services.TryAddScoped<ProviderUsageQueryService>();
         services.TryAddScoped<IAgentRecruitingEvidenceStore>(serviceProvider =>
             (IAgentRecruitingEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentRecruitingEvidenceService, AgentRecruitingEvidenceService>();
@@ -257,6 +264,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<AgentChatContextRegistry>();
         services.AddScoped<IAgentChatContextRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatContextRegistry>());
+        services.AddScoped<IAgentWorkspaceScopeAccessor, AgentChatWorkspaceScopeAccessor>();
         services.AddScoped<AgentChatExecutionNotificationHub>();
         services.AddScoped<IAgentChatExecutionNotificationHub>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatExecutionNotificationHub>());
@@ -299,6 +307,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddScoped<AgentAvatarGenerationService>();
+        services.TryAddScoped<IAvatarGenerationGateway, AgentAvatarGenerationGateway>();
         services.TryAddScoped<HrAgentAdministrationService>();
         services.TryAddScoped<HrAgentAvatarGenerationService>();
         services.TryAddScoped<HrAgentUsageAnalyticsService>();

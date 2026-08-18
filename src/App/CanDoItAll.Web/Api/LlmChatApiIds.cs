@@ -1,4 +1,4 @@
-using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 
 namespace CanDoItAll.Web.Api;
 

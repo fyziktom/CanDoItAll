@@ -11,7 +11,7 @@ first-party agent tool provider for that bounded area.
 | [CRM/HR](../../src/Modules/CanDoItAll.Modules.CrmHr/README.md) | Parties, accounts, opportunities, workforce, recruiting, skills, staffing, and agent/person relationships |
 | [Memory](../../src/Modules/CanDoItAll.Modules.Memory/README.md) | Memory provider configuration, operations, diagnostics, and user-facing Memory surfaces |
 | [Plugins](../../src/Modules/CanDoItAll.Modules.Plugins/README.md) | Plugin catalog, installation, activation, grants, OAuth, settings, and logs |
-| [LLM Chats](../../src/Modules/CanDoItAll.Modules.LlmChats/README.md) | Backend-only chat definitions, pinned conversations, durable dispatch, replayable SSE events, and provider-neutral invocation |
+| [MAF Simple Chats](../../src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/README.md) | Reusable chat definitions, durable dispatch, replayable SSE events, provider-neutral invocation, and shared AgentFramework usage analytics |
 | [Processes](../../src/Modules/CanDoItAll.Modules.Processes/README.md) | Process definition, launch, monitoring, recovery, assignments, and process UI |
 | [Projects](../../src/Modules/CanDoItAll.Modules.Projects/README.md) | Project portfolio, hierarchy, phases, files, planning, and project-facing services |
 | [Prompts](../../src/Modules/CanDoItAll.Modules.Prompts/README.md) | Prompt catalog, versions, assets, and curation surfaces |

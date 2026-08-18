@@ -19,6 +19,13 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
                 InvalidCorrelationRunCount: 0,
                 DailyCost: [],
                 Activities: []),
+            simpleChat: new ProjectManagerSimpleChatSummaryInput(
+                TotalCount: 4,
+                KnownCostUsd: 1.5m,
+                DurationMilliseconds: 0L,
+                UnknownCostRunCount: 4,
+                DailyCost: [],
+                Activities: []),
             workflow: new ProjectManagerWorkflowSummaryInput(
                 TotalCount: 2,
                 KnownCostUsd: 3m,
@@ -38,15 +45,15 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
         var snapshot = ProjectManagerSummarySnapshotCalculator.Calculate(input);
 
         var costs = snapshot.CostBreakdown.ToDictionary(static item => item.Category);
-        Assert.Equal(2m, costs[ProjectManagerCostCategory.ChatsAndAgents].HistoricalKnownUsd);
+        Assert.Equal(3.5m, costs[ProjectManagerCostCategory.ChatsAndAgents].HistoricalKnownUsd);
         Assert.Equal(3m, costs[ProjectManagerCostCategory.Workflows].HistoricalKnownUsd);
         Assert.Equal(4m, costs[ProjectManagerCostCategory.Processes].HistoricalKnownUsd);
         Assert.Equal(5m, costs[ProjectManagerCostCategory.Processes].HistoricalEstimatedUsd);
         Assert.Equal(0m, costs[ProjectManagerCostCategory.ChatsAndAgents].HistoricalEstimatedUsd);
         Assert.Equal(0m, costs[ProjectManagerCostCategory.Workflows].HistoricalEstimatedUsd);
-        Assert.Equal(9m, snapshot.Costs.HistoricalKnownUsd);
+        Assert.Equal(10.5m, snapshot.Costs.HistoricalKnownUsd);
         Assert.Equal(5m, snapshot.Costs.HistoricalEstimatedUsd);
-        Assert.Equal(6, snapshot.Costs.UnknownHistoricalCostCount);
+        Assert.Equal(10, snapshot.Costs.UnknownHistoricalCostCount);
     }
 
     [Fact]
@@ -98,11 +105,15 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
             CreateActivity(2, Now.AddMinutes(-5), ProjectManagerActivityKind.Conversation),
             CreateActivity(3, Now.AddMinutes(-4), ProjectManagerActivityKind.Workflow),
             CreateActivity(4, Now.AddMinutes(-3), ProjectManagerActivityKind.Process),
-            CreateActivity(5, Now.AddMinutes(-2), ProjectManagerActivityKind.Conversation),
+            CreateActivity(5, Now.AddMinutes(-2), ProjectManagerActivityKind.SimpleChat),
             CreateActivity(6, Now.AddMinutes(-1), ProjectManagerActivityKind.Workflow)
         };
         var input = CreateInput(
-            agent: EmptyAgent([activities[0], activities[1], activities[4]]),
+            agent: EmptyAgent([activities[0], activities[1]]),
+            simpleChat: ProjectManagerSimpleChatSummaryInput.Empty with
+            {
+                Activities = [activities[4]]
+            },
             workflow: ProjectManagerWorkflowSummaryInput.Empty with
             {
                 Activities = [activities[2], activities[5]]
@@ -148,6 +159,10 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
             ],
             agent: EmptyAgent(
                 dailyCost: [new ProjectManagerKnownExpensePoint(date, 1m)]),
+            simpleChat: ProjectManagerSimpleChatSummaryInput.Empty with
+            {
+                DailyCost = [new ProjectManagerKnownExpensePoint(date, 0.5m)]
+            },
             workflow: ProjectManagerWorkflowSummaryInput.Empty with
             {
                 DailyCost = [new ProjectManagerKnownExpensePoint(date, 2m)]
@@ -161,7 +176,7 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
             ProjectManagerSummarySnapshotCalculator.Calculate(input).ExpenseTrend);
 
         Assert.Equal(date, point.Date);
-        Assert.Equal(6m, point.HistoricalKnownUsd);
+        Assert.Equal(6.5m, point.HistoricalKnownUsd);
         Assert.Equal(4m, point.HistoricalEstimatedUsd);
         Assert.Equal(5m, point.FuturePlannedUsd);
     }
@@ -210,6 +225,7 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
             ProjectManagerSummaryContentMode.HistoryOnly,
         IReadOnlyList<ProjectPlanManagerSummary>? plans = null,
         ProjectManagerAgentSummaryInput? agent = null,
+        ProjectManagerSimpleChatSummaryInput? simpleChat = null,
         ProjectManagerWorkflowSummaryInput? workflow = null,
         ProjectManagerProcessSummaryInput? process = null)
     {
@@ -233,6 +249,7 @@ public sealed class ProjectManagerSummarySnapshotCalculatorTests
             GeneratedAtUtc: Now,
             plans ?? [],
             agent ?? EmptyAgent(),
+            simpleChat ?? ProjectManagerSimpleChatSummaryInput.Empty,
             workflow ?? ProjectManagerWorkflowSummaryInput.Empty,
             process ?? ProjectManagerProcessSummaryInput.Empty);
     }

@@ -1,11 +1,11 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Shell;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -47,10 +47,12 @@ public sealed class LlmChatConversationShellContributorTests
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddConversationShell();
         var shell = context.Services.GetRequiredService<IConversationShellCoordinator>();
-        var contributor = new LlmChatConversationShellContributor(
+        var catalogInvalidator = new LlmChatDefinitionCatalogInvalidationHub();
+        await using var contributor = new LlmChatConversationShellContributor(
             definitions,
             conversations,
             new AllowAllAuthorization(),
+            catalogInvalidator,
             shell,
             context.Services.GetRequiredService<DialogService>(),
             context.Services.GetRequiredService<NotificationService>(),
@@ -93,6 +95,57 @@ public sealed class LlmChatConversationShellContributorTests
         Assert.NotNull(shell.Snapshot().FocusedWindow);
     }
 
+    [Fact]
+    public async Task Definition_catalog_invalidation_exposes_a_newly_activated_chat_without_reinitializing()
+    {
+        var definition = new LlmChatDefinitionListItem(
+            Guid.NewGuid(),
+            "Draft assistant",
+            "Becomes available after activation.",
+            string.Empty,
+            LlmChatDefinitionStatus.Draft,
+            1,
+            1,
+            DateTimeOffset.Parse("2026-08-18T10:00:00Z"),
+            ["draft"]);
+        var definitions = new StubDefinitionGateway(definition);
+        var conversations = new StubConversationGateway(null);
+        var catalogInvalidator = new LlmChatDefinitionCatalogInvalidationHub();
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddConversationShell();
+        await using var contributor = new LlmChatConversationShellContributor(
+            definitions,
+            conversations,
+            new AllowAllAuthorization(),
+            catalogInvalidator,
+            context.Services.GetRequiredService<IConversationShellCoordinator>(),
+            context.Services.GetRequiredService<DialogService>(),
+            context.Services.GetRequiredService<NotificationService>(),
+            NullLogger<LlmChatConversationShellContributor>.Instance);
+
+        await contributor.InitializeAsync();
+        Assert.Empty(contributor.Snapshot().Available);
+
+        definitions.Definition = definition with
+        {
+            Status = LlmChatDefinitionStatus.Active,
+            ConcurrencyToken = 2,
+            UpdatedAtUtc = DateTimeOffset.Parse("2026-08-18T10:01:00Z")
+        };
+        var refreshed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        contributor.Changed += (_, _) => refreshed.TrySetResult();
+
+        catalogInvalidator.Invalidate(definitions.Definition);
+        await refreshed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var available = Assert.Single(contributor.Snapshot().Available);
+        Assert.Equal(definition.Name, available.Presentation.Participant.DisplayName);
+        Assert.Equal(1, definitions.ListCalls);
+        Assert.Equal(1, conversations.ListCalls);
+    }
+
     private sealed class AllowAllAuthorization : ILlmChatUiAuthorizationFacade
     {
         public ValueTask<LlmChatUiAuthorizationSnapshot> GetAsync(
@@ -108,12 +161,19 @@ public sealed class LlmChatConversationShellContributorTests
     private sealed class StubDefinitionGateway(LlmChatDefinitionListItem definition)
         : ILlmChatDefinitionUiGateway
     {
+        public LlmChatDefinitionListItem Definition { get; set; } = definition;
+
+        public int ListCalls { get; private set; }
+
         public Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
             LlmChatDefinitionQuery query,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(
+        {
+            ListCalls++;
+            return Task.FromResult(
                 LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>.Success(
-                    new([definition], null)));
+                    new([Definition], null)));
+        }
 
         public Task<LlmChatUiResult<LlmChatDefinitionListItem>> GetAsync(
             Guid definitionId,
@@ -145,17 +205,22 @@ public sealed class LlmChatConversationShellContributorTests
             => throw new NotSupportedException();
     }
 
-    private sealed class StubConversationGateway(LlmChatConversationListItem createdConversation)
+    private sealed class StubConversationGateway(LlmChatConversationListItem? createdConversation)
         : ILlmChatConversationUiGateway
     {
         public Guid? CreatedDefinitionId { get; private set; }
 
+        public int ListCalls { get; private set; }
+
         public Task<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>> ListPageAsync(
             LlmChatConversationQuery query,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(
+        {
+            ListCalls++;
+            return Task.FromResult(
                 LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>.Success(
                     new([], null)));
+        }
 
         public Task<LlmChatUiResult<LlmChatConversationView>> GetAsync(
             Guid conversationId,
@@ -169,6 +234,11 @@ public sealed class LlmChatConversationShellContributorTests
             CancellationToken cancellationToken = default)
         {
             CreatedDefinitionId = definitionId;
+            if (createdConversation is null)
+            {
+                throw new NotSupportedException();
+            }
+
             return Task.FromResult(LlmChatUiResult<LlmChatConversationView>.Success(
                 new(createdConversation, [], null)));
         }

@@ -2,8 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 
 namespace CanDoItAll.Web.Api;
 

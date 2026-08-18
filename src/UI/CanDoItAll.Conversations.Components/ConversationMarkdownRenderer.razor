@@ -6,6 +6,7 @@
 @code {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .DisableHtml()
+        .UsePipeTables()
         .Use(new SafeUriExtension())
         .Build();
 

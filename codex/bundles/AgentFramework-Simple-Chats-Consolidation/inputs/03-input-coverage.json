@@ -1,0 +1,60 @@
+{
+  "coverage": [
+    {
+      "request": "Simple Chats are logically related to Agent provider setup",
+      "requirements": ["ASCC-017", "ASCC-019", "ASCC-035"],
+      "subbundles": ["SB03", "SB04", "SB08"],
+      "proof": ["proof/SB04/manifest.md", "proof/SB08/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
+    },
+    {
+      "request": "Costs belong with Agent costs and must switch Agents, Chats, Both",
+      "requirements": ["ASCC-020", "ASCC-021", "ASCC-022", "ASCC-023", "ASCC-024", "ASCC-025", "ASCC-026", "ASCC-027", "ASCC-028", "ASCC-029", "ASCC-030", "ASCC-036", "ASCC-037", "ASCC-038"],
+      "subbundles": ["SB02", "SB05", "SB06", "SB09"],
+      "proof": ["proof/SB06/manifest.md", "proof/SB09/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
+    },
+    {
+      "request": "Do not dump many classes into Agent module; isolate libraries",
+      "requirements": ["ASCC-006", "ASCC-007", "ASCC-008", "ASCC-009", "ASCC-010", "ASCC-011", "ASCC-012", "ASCC-013", "ASCC-014", "ASCC-015", "ASCC-016"],
+      "subbundles": ["SB01", "SB02", "SB03", "SB04", "SB05", "SB07", "SB08", "SB10"],
+      "proof": ["proof/SB03/manifest.md", "proof/SB04/manifest.md", "proof/SB05/manifest.md", "proof/SB07/manifest.md", "proof/SB10/manifest.md"],
+      "closure": "reviews/csharp-architecture-gate.md"
+    },
+    {
+      "request": "Simple Chats is a tab next to Agents",
+      "requirements": ["ASCC-031", "ASCC-032", "ASCC-033", "ASCC-034", "ASCC-039", "ASCC-040", "ASCC-041", "ASCC-042"],
+      "subbundles": ["SB07", "SB08"],
+      "proof": ["proof/SB08/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
+    },
+    {
+      "request": "LlmChats projects should be part of MAF namespace",
+      "requirements": ["ASCC-006", "ASCC-007", "ASCC-008", "ASCC-009", "ASCC-010", "ASCC-011", "ASCC-012", "ASCC-045"],
+      "subbundles": ["SB03", "SB04", "SB05", "SB07", "SB10"],
+      "proof": ["proof/SB10/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/csharp-architecture-gate.md"
+    },
+    {
+      "request": "Prepare a detailed new bundle only; do not implement",
+      "requirements": ["ASCC-001", "ASCC-005", "ASCC-046", "ASCC-047", "ASCC-048"],
+      "subbundles": ["SB01", "SB11"],
+      "proof": ["reviews/01-preparation-review.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/01-execution-report.md"
+    },
+    {
+      "request": "Use a properly tabbed Simple Chat settings dialog like Agent settings",
+      "requirements": ["ASCC-049", "ASCC-052"],
+      "subbundles": ["SB07", "SB08", "SB11"],
+      "proof": ["proof/SB07/manifest.md", "proof/SB08/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
+    },
+    {
+      "request": "Reuse the Agent avatar selector for Simple Chats including AI image generation",
+      "requirements": ["ASCC-050", "ASCC-051", "ASCC-052"],
+      "subbundles": ["SB07", "SB08", "SB10", "SB11"],
+      "proof": ["proof/SB07/manifest.md", "proof/SB08/manifest.md", "proof/SB10/manifest.md", "proof/SB11/manifest.md"],
+      "closure": "reviews/user-verification-handoff.md"
+    }
+  ]
+}

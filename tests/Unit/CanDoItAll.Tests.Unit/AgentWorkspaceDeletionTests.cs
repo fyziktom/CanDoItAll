@@ -2,12 +2,80 @@ using System.Reflection;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentWorkspaceDeletionTests
 {
+    [Fact]
+    public async Task Provider_usage_evidence_read_skips_unrelated_execution_payloads()
+    {
+        var rootPath = TestFileSystem.CreateTemporaryRoot("agent-provider-usage-evidence");
+        try
+        {
+            var reads = new List<FileSandboxWorkspacePhysicalJsonRead>();
+            var store = CreateStore(
+                rootPath,
+                new FileSandboxWorkspaceJsonReadDiagnostics(reads.Add));
+            var agent = await CreateAgentAsync(store, "Usage evidence agent");
+            var detail = CreateRunDetail(agent, DateTimeOffset.UtcNow);
+            detail = detail with
+            {
+                Artifacts =
+                [
+                    new ExecutionArtifactRecord(
+                        Guid.NewGuid(),
+                        detail.Run.Id,
+                        "test",
+                        "Unrelated artifact",
+                        "artifacts/unrelated.txt",
+                        "text/plain",
+                        "test",
+                        "Must not be read for usage analytics.",
+                        DateTimeOffset.UtcNow)
+                ]
+            };
+            await store.SaveExecutionRunDetailAsync(detail);
+            reads.Clear();
+
+            await store.LoadExecutionAsync();
+            var fullExecutionReads = reads.ToArray();
+            Assert.Contains(
+                fullExecutionReads,
+                read => read.PayloadType == typeof(ExecutionLogEntry));
+            Assert.Contains(
+                fullExecutionReads,
+                read => read.PayloadType == typeof(ExecutionArtifactRecord));
+            reads.Clear();
+
+            var source = new AgentProviderUsageProjectionSource(
+                store,
+                store,
+                NullLogger<AgentProviderUsageProjectionSource>.Instance);
+            var result = await source.ReadAsync();
+            var contribution = Assert.Single(result.Contributions);
+            var usageEvidenceReads = reads.ToArray();
+
+            Assert.Equal(detail.Run.Id.ToString("D"), contribution.ExecutionId);
+            Assert.Equal(detail.UsageObservations[0].Id.ToString("D"), contribution.ContributionId);
+            Assert.Equal(detail.UsageObservations[0].TotalTokens, contribution.Tokens.TotalTokens);
+            Assert.True(usageEvidenceReads.Length < fullExecutionReads.Length);
+            Assert.Contains(usageEvidenceReads, read => read.PayloadType == typeof(ExecutionRunRecord));
+            Assert.Contains(usageEvidenceReads, read => read.PayloadType == typeof(ProviderUsageObservation));
+            Assert.DoesNotContain(
+                usageEvidenceReads,
+                read => read.PayloadType == typeof(ExecutionLogEntry) ||
+                        read.PayloadType == typeof(ExecutionArtifactRecord));
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(rootPath);
+        }
+    }
+
     [Fact]
     public async Task Deletion_cascades_owned_catalog_and_execution_data_without_reading_unrelated_run_details()
     {

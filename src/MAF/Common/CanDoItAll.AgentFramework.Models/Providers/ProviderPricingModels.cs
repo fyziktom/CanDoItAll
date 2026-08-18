@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -667,6 +670,46 @@ public static class ProviderPricingMetadata
         {
             return new JsonObject();
         }
+    }
+}
+
+public static class ProviderPricingSnapshot
+{
+    public const string Version = "provider-pricing-v1";
+    public const int ProfileHashLength = 64;
+
+    public static string CreateProfileHash(ProviderProfile provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        var prices = string.Join(
+            ';',
+            provider.ModelPrices
+                .OrderBy(price => price.Model, StringComparer.OrdinalIgnoreCase)
+                .Select(price => string.Join(
+                    ':',
+                    price.Model.Trim().ToUpperInvariant(),
+                    price.InputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
+                    price.CachedInputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
+                    price.OutputPerMillionTokensUsd.ToString(CultureInfo.InvariantCulture),
+                    FormatNullable(price.CacheWritePerMillionTokensUsd),
+                    FormatNullable(price.LongContextThresholdTokens),
+                    FormatNullable(price.LongContextInputPerMillionTokensUsd),
+                    FormatNullable(price.LongContextCachedInputPerMillionTokensUsd),
+                    FormatNullable(price.LongContextCacheWritePerMillionTokensUsd),
+                    FormatNullable(price.LongContextOutputPerMillionTokensUsd))));
+        var canonical = string.Join(
+            '|',
+            provider.Id.ToString("D"),
+            provider.Kind,
+            provider.Transport,
+            provider.IsPrivateProvider,
+            prices);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+    }
+
+    private static string FormatNullable<T>(T? value) where T : struct, IFormattable
+    {
+        return value?.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty;
     }
 }
 

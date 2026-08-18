@@ -1,12 +1,13 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Reflection;
 
@@ -89,6 +90,26 @@ public sealed class LlmChatOperationIdempotencyTests
 
         var conflict = await harness.Service.SendAsync(harness.CreateSendCommand(operationId, "different"));
 
+        Assert.True(conflict.IsFailure);
+        Assert.Equal(LlmChatErrorCodes.OperationIdConflict, Assert.Single(conflict.Errors).Code);
+        Assert.Equal(1, harness.Engine.SendCount);
+    }
+
+    [Fact]
+    public async Task Operation_replay_cannot_retarget_project_attribution()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync();
+        var operationId = LlmChatOperationId.New();
+        var firstScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var otherScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var command = harness.CreateSendCommand(operationId, "hello", firstScope);
+
+        var first = await harness.SendAndDispatchAsync(command);
+        var conflict = await harness.Service.SendAsync(
+            harness.CreateSendCommand(operationId, "hello", otherScope));
+
+        Assert.True(first.IsSuccess);
+        Assert.Equal(firstScope, first.Value!.Operation.AttributionScope);
         Assert.True(conflict.IsFailure);
         Assert.Equal(LlmChatErrorCodes.OperationIdConflict, Assert.Single(conflict.Errors).Code);
         Assert.Equal(1, harness.Engine.SendCount);
@@ -777,7 +798,7 @@ public sealed class LlmChatOperationTransitionRegressionTests
         };
 
         var transitions = typeof(LlmChatOperation).Assembly.GetType(
-            "CanDoItAll.Modules.LlmChats.Operations.LlmChatOperationTransitions",
+            "CanDoItAll.AgentFramework.Llm.SimpleChats.Operations.LlmChatOperationTransitions",
             throwOnError: true)!;
         var completeTranscript = transitions.GetMethod(
             "CompleteTranscript",
@@ -913,6 +934,11 @@ public sealed class LlmChatInvocationAuditTests
         var record = Assert.Single(await context.Invocations.ListAsync(context.OperationId));
         Assert.Equal(LlmChatInvocationOutcome.Failed, record.Outcome);
         Assert.Equal(new LlmUsage(7, 3, 2), record.Usage);
+        Assert.Equal(LlmChatInvocationUsageEvidenceStatus.Observed, record.UsageStatus);
+        Assert.Equal(LlmChatInvocationPricingEvidenceStatus.CalculatedAtExecution, record.PricingStatus);
+        Assert.True(record.CalculatedCostUsd > 0m);
+        Assert.Equal(ProviderPricingSnapshot.ProfileHashLength, record.PricingProfileHash.Length);
+        Assert.Equal(ProviderPricingSnapshot.Version, record.PricingVersion);
     }
 
     [Theory]
@@ -949,5 +975,25 @@ public sealed class LlmChatInvocationAuditTests
         var record = Assert.Single(await context.Invocations.ListAsync(context.OperationId));
         Assert.Equal(LlmChatInvocationOutcome.Failed, record.Outcome);
         Assert.Equal(LlmChatErrorCodes.DeadlineExceeded, record.FailureCode);
+        Assert.Equal(
+            LlmChatInvocationUsageEvidenceStatus.MissingAfterProviderActivity,
+            record.UsageStatus);
+        Assert.Equal(LlmChatInvocationPricingEvidenceStatus.Unpriced, record.PricingStatus);
+        Assert.Null(record.CalculatedCostUsd);
+    }
+
+    [Fact]
+    public async Task ProviderDispatchedWithoutUsageIsExplicitlyUnknown()
+    {
+        var context = LlmChatInvocationAuditHarness.Create(
+            requestedEffort: null,
+            invoke: request => new LlmInvocationResult(request.Model, "answer", LlmUsage.Zero));
+
+        await context.InvokeAsync();
+
+        var record = Assert.Single(await context.Invocations.ListAsync(context.OperationId));
+        Assert.Equal(LlmChatInvocationUsageEvidenceStatus.UsageUnavailable, record.UsageStatus);
+        Assert.Equal(LlmChatInvocationPricingEvidenceStatus.Unpriced, record.PricingStatus);
+        Assert.Null(record.CalculatedCostUsd);
     }
 }

@@ -1,13 +1,14 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Unit.LlmChats;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -886,8 +887,11 @@ internal sealed class LlmChatOperationHarness
         }
     }
 
-    public SendLlmChatTurnCommand CreateSendCommand(LlmChatOperationId operationId, string message)
-        => new(operationId, ConversationId, 1, message);
+    public SendLlmChatTurnCommand CreateSendCommand(
+        LlmChatOperationId operationId,
+        string message,
+        WorkspaceScopeDescriptor? attributionScope = null)
+        => new(operationId, ConversationId, 1, message, attributionScope);
 
     public LlmChatOperation CreateOperation(
         LlmChatOperationId operationId,

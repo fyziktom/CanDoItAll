@@ -46,6 +46,25 @@ public sealed class ConversationWorkspaceComponentsTests
         Assert.Contains("src=\"https://example.test/preview.png\"", html, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Markdown_renderer_renders_pipe_tables_as_semantic_table_markup()
+    {
+        const string markdown = """
+            | Topic | What it means | Why it matters |
+            | --- | --- | --- |
+            | Strong typing | Compile-time checks | Fewer runtime errors |
+            """;
+
+        var html = ConversationMarkdownRenderer.RenderHtml(markdown);
+
+        Assert.Contains("<table>", html, StringComparison.Ordinal);
+        Assert.Contains("<thead>", html, StringComparison.Ordinal);
+        Assert.Contains("<tbody>", html, StringComparison.Ordinal);
+        Assert.Contains("<th>Topic</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<td>Strong typing</td>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("| --- |", html, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("JaVaScRiPt:alert(1)")]

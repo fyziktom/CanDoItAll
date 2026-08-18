@@ -776,7 +776,7 @@ public sealed class LlmConversationServiceTests
     }
 
     [Fact]
-    public void Production_ordinary_conversation_consumers_are_confined_to_llm_chat_persistence()
+    public void Production_ordinary_conversation_consumers_are_confined_to_simple_chats()
     {
         var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
         var conversationLibrarySegment = Path.Combine(
@@ -806,13 +806,16 @@ public sealed class LlmConversationServiceTests
             .ToArray();
 
         Assert.NotEmpty(consumers);
-        var allowedRoot = Path.Combine("Modules", "CanDoItAll.Modules.LlmChats.Persistence");
+        var allowedRoot = Path.Combine("MAF", "SimpleChats");
         Assert.All(
             consumers,
             consumer => Assert.StartsWith(allowedRoot, consumer, StringComparison.OrdinalIgnoreCase));
+        var persistenceRoot = Path.Combine(
+            allowedRoot,
+            "CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence");
         var registrationSource = File.ReadAllText(Path.Combine(
             sourceRoot,
-            allowedRoot,
+            persistenceRoot,
             "LlmChatsPersistenceServiceCollectionExtensions.cs"));
         Assert.DoesNotContain("AddLlmConversations(", registrationSource, StringComparison.Ordinal);
     }

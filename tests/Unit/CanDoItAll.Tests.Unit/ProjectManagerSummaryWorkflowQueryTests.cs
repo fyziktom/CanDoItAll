@@ -39,6 +39,7 @@ public sealed class ProjectManagerSummaryWorkflowQueryTests
         var service = new ProjectManagerSummaryQueryService(
             planAnalytics: null!,
             agentWorkspace: null!,
+            simpleChatProjectStructureReportStore: null!,
             workflowProjectStructureReportStore: reportStore,
             processRunRecordStore: null!,
             processDefinitionCatalog:

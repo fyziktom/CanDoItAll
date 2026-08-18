@@ -1,7 +1,7 @@
 using System.Reflection;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
 

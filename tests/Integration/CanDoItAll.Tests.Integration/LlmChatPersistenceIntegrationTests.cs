@@ -8,23 +8,27 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Persistence.DatabaseTransfer;
-using CanDoItAll.Modules.LlmChats.Persistence.Entities;
-using CanDoItAll.Modules.LlmChats.Persistence.Repositories;
-using CanDoItAll.Modules.LlmChats.Persistence.ReadModels;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Usage;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
@@ -335,6 +339,34 @@ public sealed class LlmChatConversationTransactionIntegrationTests
 
 public sealed class LlmChatTurnTransactionIntegrationTests
 {
+    [Fact]
+    public async Task Operation_admission_round_trips_typed_project_attribution()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatprojectattribution");
+        await using var dbContext = database.CreateDbContext();
+        var seeded = await SeedConversationAsync(dbContext, admitted: false);
+        var repository = new EfLlmChatOperationRepository(dbContext);
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var operation = new LlmChatOperation(
+            new LlmChatOperationId(seeded.TurnId),
+            new LlmChatConversationId(seeded.ConversationId),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('c', 64)),
+            0,
+            LlmChatOperationStatus.Pending,
+            seeded.Now,
+            0,
+            projectScope);
+
+        var admitted = await repository.AdmitAsync(operation);
+        dbContext.ChangeTracker.Clear();
+        var reloaded = await repository.TryGetAsync(operation.Id);
+
+        Assert.True(admitted.Created);
+        Assert.Equal(projectScope, admitted.Operation.AttributionScope);
+        Assert.Equal(projectScope, reloaded!.AttributionScope);
+    }
+
     [Fact]
     public async Task Admission_rolls_back_claim_pending_message_active_turn_and_evidence_together()
     {
@@ -1434,6 +1466,39 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         Assert.Equal(2, interceptor.Commands.Count);
 
         interceptor.Clear();
+        var nameMatch = await definitionStore.ListPageAsync(
+            10,
+            null,
+            LlmChatDefinitionStatus.Active,
+            "DEFINITION 07");
+
+        Assert.Equal("Definition 07", Assert.Single(nameMatch.Items).Definition.Name);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
+        var summaryMatch = await definitionStore.ListPageAsync(10, null, null, "summary 11");
+
+        Assert.Equal("Summary 11", Assert.Single(summaryMatch.Items).Definition.Summary);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
+        var tagMatch = await definitionStore.ListPageAsync(10, null, null, "TAG-19");
+
+        Assert.Contains("tag-19", Assert.Single(tagMatch.Items).Tags);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
+        var exactTagMatch = await definitionStore.ListPageAsync(
+            10,
+            null,
+            null,
+            null,
+            ["tag-19", "shared"]);
+
+        Assert.Equal("Definition 19", Assert.Single(exactTagMatch.Items).Definition.Name);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
         var conversationStore = new EfLlmChatConversationReadStore(dbContext);
         var conversations = await conversationStore.ListPageAsync(10, null, null);
 
@@ -1502,7 +1567,7 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
             {
                 Id = definitionId,
                 Name = $"Definition {index:D2}",
-                Summary = "Summary",
+                Summary = $"Summary {index:D2}",
                 AvatarImageUrl = "",
                 Status = LlmChatDefinitionStatus.Active,
                 CurrentRevision = 1,
@@ -1529,6 +1594,14 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
                 DefinitionId = definitionId,
                 Tag = $"tag-{index:D2}"
             });
+            if (index == 19)
+            {
+                dbContext.Add(new LlmChatDefinitionTagRow
+                {
+                    DefinitionId = definitionId,
+                    Tag = "shared"
+                });
+            }
         }
 
         var conversationId = LlmChatConversationId.New();
@@ -1885,6 +1958,12 @@ public sealed class LlmChatOperationEvidenceMigrationIntegrationTests
         Assert.Equal(2, operation.LastEventSequence);
         Assert.Equal(LlmStreamingDeliveryMode.Incremental, invocation.DeliveryMode);
         Assert.Equal("completed", invocation.FinishReason);
+        Assert.Equal(LlmChatInvocationUsageEvidenceStatus.LegacyKnownTokens, invocation.UsageStatus);
+        Assert.Equal(LlmChatInvocationPricingEvidenceStatus.Unpriced, invocation.PricingStatus);
+        Assert.Null(invocation.ProviderCostUsd);
+        Assert.Null(invocation.CalculatedCostUsd);
+        Assert.Empty(invocation.PricingProfileHash);
+        Assert.Empty(invocation.PricingVersion);
         Assert.Equal("legacy-model", finishedEvent.Model);
         Assert.Equal(LlmStreamingDeliveryMode.Incremental, finishedEvent.DeliveryMode);
         Assert.Equal("completed", finishedEvent.FinishReason);
@@ -1927,6 +2006,29 @@ public sealed class LlmChatOperationEvidenceMigrationIntegrationTests
 public sealed class LlmChatsDatabaseTransferIntegrationTests
 {
     [Fact]
+    public async Task Usage_projection_reads_priced_attempts_with_definition_identity()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatusageprojection");
+        var seeded = await SeedCompleteGraphAsync(database);
+        var source = new SimpleChatProviderUsageProjectionSource(
+            new LlmChatTestDbContextFactory(database),
+            NullLogger<SimpleChatProviderUsageProjectionSource>.Instance);
+
+        var result = await source.ReadAsync();
+
+        Assert.Equal(ProviderUsageSourceState.Complete, result.State);
+        var contribution = Assert.Single(result.Contributions);
+        Assert.Equal(ProviderUsageWorkloadKind.SimpleChat, contribution.WorkloadKind);
+        Assert.Equal(ProviderUsageConsumerKind.SimpleChatDefinition, contribution.ConsumerKind);
+        Assert.Equal(seeded.DefinitionId.ToString("D"), contribution.ConsumerId);
+        Assert.Equal(ProviderUsageCompleteness.Observed, contribution.UsageCompleteness);
+        Assert.Equal(
+            ProviderUsagePricingCompleteness.CalculatedAtExecution,
+            contribution.PricingCompleteness);
+        Assert.Equal(0.000012m, contribution.CostUsd);
+    }
+
+    [Fact]
     public async Task Transfer_round_trip_preserves_all_ids_revisions_operations_audit_and_references()
     {
         await using var source = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchattransfersource");
@@ -1934,6 +2036,12 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
+        var attributedProjectId = Guid.NewGuid();
+        await sourceContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.AttributionScopeKind, WorkspaceScopeKind.Project)
+                .SetProperty(row => row.AttributionScopeKey, attributedProjectId.ToString("D")));
         var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions());
         var context = new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),
@@ -1952,11 +2060,20 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         Assert.True(await targetContext.Set<LlmChatConversationRow>().AnyAsync(row => row.Id == seeded.ConversationId));
         Assert.True(await targetContext.Set<LlmChatTranscriptRow>().AnyAsync(row => row.ConversationId == seeded.ConversationId));
         Assert.True(await targetContext.Set<LlmChatMessageRow>().AnyAsync(row => row.ConversationId == seeded.ConversationId));
-        Assert.True(await targetContext.Set<LlmChatOperationRow>().AnyAsync(row => row.Id == seeded.OperationId));
+        var transferredOperation = await targetContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == seeded.OperationId);
+        Assert.Equal(WorkspaceScopeKind.Project, transferredOperation.AttributionScopeKind);
+        Assert.Equal(attributedProjectId.ToString("D"), transferredOperation.AttributionScopeKey);
         var audit = Assert.Single(await targetContext.Set<LlmChatInvocationRecordRow>().AsNoTracking().ToArrayAsync());
         Assert.Equal(seeded.OperationId, audit.OperationId);
         Assert.Equal(AgentReasoningEffortLevel.None, audit.RequestedThinkingEffort);
         Assert.Equal(AgentReasoningEffortLevel.Medium, audit.EffectiveThinkingEffort);
+        Assert.Equal(LlmChatInvocationUsageEvidenceStatus.Observed, audit.UsageStatus);
+        Assert.Equal(LlmChatInvocationPricingEvidenceStatus.CalculatedAtExecution, audit.PricingStatus);
+        Assert.Equal(0.000012m, audit.CalculatedCostUsd);
+        Assert.Equal(ProviderPricingSnapshot.ProfileHashLength, audit.PricingProfileHash.Length);
+        Assert.Equal(ProviderPricingSnapshot.Version, audit.PricingVersion);
         var operationEvents = await targetContext.Set<LlmChatOperationEventRow>()
             .AsNoTracking()
             .OrderBy(row => row.Sequence)
@@ -2272,6 +2389,11 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
             InputTokens = 10,
             OutputTokens = 4,
             CachedInputTokens = 2,
+            UsageStatus = LlmChatInvocationUsageEvidenceStatus.Observed,
+            PricingStatus = LlmChatInvocationPricingEvidenceStatus.CalculatedAtExecution,
+            CalculatedCostUsd = 0.000012m,
+            PricingProfileHash = new string('b', ProviderPricingSnapshot.ProfileHashLength),
+            PricingVersion = ProviderPricingSnapshot.Version,
             Outcome = LlmChatInvocationOutcome.Succeeded,
             FailureCode = "",
             StartedAtUtc = now,

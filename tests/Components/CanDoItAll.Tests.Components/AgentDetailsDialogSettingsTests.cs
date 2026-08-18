@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
@@ -122,9 +123,12 @@ public sealed class AgentDetailsDialogSettingsTests
             (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
         context.Services.AddSingleton(
             (SecretService)RuntimeHelpers.GetUninitializedObject(typeof(SecretService)));
-        context.Services.AddSingleton(new AgentAvatarGenerationService(
+        var avatarGenerationService = new AgentAvatarGenerationService(
             new UnavailableAgentImageGenerationService(),
-            NullLogger<AgentAvatarGenerationService>.Instance));
+            NullLogger<AgentAvatarGenerationService>.Instance);
+        context.Services.AddSingleton(avatarGenerationService);
+        context.Services.AddSingleton<IAvatarGenerationGateway>(
+            new AgentAvatarGenerationGateway(workspaceService, avatarGenerationService));
         return context;
     }
 

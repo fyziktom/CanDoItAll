@@ -1,0 +1,316 @@
+@inject IAvatarGenerationGateway AvatarGenerationGateway
+@inject NotificationService NotificationService
+
+<Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+    <Button Text="Choose avatar"
+            Icon="face"
+            ButtonStyle="ButtonStyle.Light"
+            Size="ButtonSize.Small"
+            Click="OpenAsync"
+            data-testid="@($"{TestIdPrefix}-open")" />
+    <Button Text="Use default"
+            Icon="restart_alt"
+            ButtonStyle="ButtonStyle.Light"
+            Size="ButtonSize.Small"
+            Disabled="@(Disabled || string.IsNullOrWhiteSpace(Value))"
+            Click="ClearAsync"
+            data-testid="@($"{TestIdPrefix}-clear")" />
+</Cluster>
+
+@if (isOpen)
+{
+    <Dialog IsOpen="true"
+            Eyebrow="@($"{EntityKind} identity")"
+            Title="Choose avatar"
+            Subtitle="@AvatarAltText"
+            Size="ModalSize.Wide"
+            DenseChrome="true"
+            TestId="@($"{TestIdPrefix}-dialog")"
+            OnClose="CloseAsync">
+        <ChildContent>
+            <Stack GapScale="LayoutGap.Medium" Class="avatar-picker__body">
+                <SurfaceCard Soft="true">
+                    <Stack Orientation="Orientation.Horizontal"
+                           AlignItems="AlignItems.Center"
+                           GapScale="LayoutGap.Medium">
+                        <Avatar Alt="@AvatarAltText"
+                                ImageUrl="@Value"
+                                FallbackText="@FallbackText"
+                                DefaultImageSeed="@AvatarSeed"
+                                Size="AvatarSize.Large"
+                                Shape="AvatarShape.Rounded" />
+                        <Stack GapScale="LayoutGap.XSmall">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
+                            <strong>@SelectionText</strong>
+                            <small class="text-sm text-slate-600">Avatar changes are saved with the definition.</small>
+                        </Stack>
+                    </Stack>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true">
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label" for="@UploadInputId">Custom image</label>
+                            <InputFile id="@UploadInputId"
+                                       class="cda-input"
+                                       accept="image/png,image/jpeg,image/webp,image/gif"
+                                       OnChange="LoadCustomAvatarAsync"
+                                       data-testid="@($"{TestIdPrefix}-upload")" />
+                            @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
+                            {
+                                <p class="mt-2 break-all text-sm text-slate-600" data-testid="@($"{TestIdPrefix}-upload-file")">@customAvatarFileName</p>
+                            }
+                        </div>
+                        <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Start">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Custom avatar" />
+                            <p class="text-sm leading-6 text-slate-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
+                            @if (isUploadBusy)
+                            {
+                                <StatusBadge Tone="info" Text="Loading" />
+                            }
+                            else if (IsCustomAvatar)
+                            {
+                                <StatusBadge Tone="success" Text="Loaded" />
+                            }
+                        </Stack>
+                    </Grid>
+                </SurfaceCard>
+
+                <SurfaceCard Soft="true" data-testid="@($"{TestIdPrefix}-ai")">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Create with AI" />
+                        @if (generationSource is not null)
+                        {
+                            <TextBlock TextStyle="TextStyle.Body2"
+                                       Value="@($"Uses the image provider '{generationSource.ProviderName}' and model '{generationSource.Model}'.")" />
+                            <FormField Text="Creative direction">
+                                <TextArea Value="@generationPrompt"
+                                          ValueChanged="@(value => generationPrompt = value ?? string.Empty)"
+                                          Size="TextAreaSize.Compact"
+                                          Immediate="true"
+                                          Disabled="@isGenerationBusy"
+                                          maxlength="2000"
+                                          data-testid="@($"{TestIdPrefix}-ai-prompt")" />
+                            </FormField>
+                            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                                <Button Text="Create avatar with AI"
+                                        Icon="auto_awesome"
+                                        ButtonStyle="ButtonStyle.Primary"
+                                        Size="ButtonSize.Small"
+                                        IsBusy="@isGenerationBusy"
+                                        Disabled="@(isGenerationBusy || string.IsNullOrWhiteSpace(generationPrompt))"
+                                        Click="GenerateAsync"
+                                        data-testid="@($"{TestIdPrefix}-ai-generate")" />
+                            </Cluster>
+                        }
+                        else
+                        {
+                            <Alert AlertStyle="AlertStyle.Warning" data-testid="@($"{TestIdPrefix}-ai-unavailable")">
+                                No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.
+                            </Alert>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(generationErrorMessage))
+                        {
+                            <Alert AlertStyle="AlertStyle.Danger" data-testid="@($"{TestIdPrefix}-ai-error")">
+                                @generationErrorMessage
+                            </Alert>
+                        }
+                    </Stack>
+                </SurfaceCard>
+
+                <Grid Gap="LayoutGap.Medium"
+                      ColumnTemplate="repeat(4,minmax(0,1fr))"
+                      data-testid="@($"{TestIdPrefix}-options")">
+                    @foreach (var option in AgentAvatarImageCatalog.BundledAvatarUrls.Select((url, index) => new { Url = url, Number = index + 1 }))
+                    {
+                        <button type="button"
+                                class="@ResolveOptionClass(option.Url)"
+                                @onclick="@(() => SelectAsync(option.Url))"
+                                data-testid="@($"{TestIdPrefix}-option-{option.Number}")">
+                            <Avatar Alt="@($"Avatar {option.Number}")"
+                                    ImageUrl="@option.Url"
+                                    FallbackText="@option.Number.ToString()"
+                                    UseDefaultImageWhenMissing="false"
+                                    Size="AvatarSize.Large"
+                                    Shape="AvatarShape.Rounded" />
+                            <span>Avatar @option.Number</span>
+                            @if (IsSelected(option.Url))
+                            {
+                                <StatusBadge Tone="success" Text="Selected" />
+                            }
+                        </button>
+                    }
+                </Grid>
+            </Stack>
+        </ChildContent>
+        <Footer>
+            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="CloseAsync"
+                        data-testid="@($"{TestIdPrefix}-close")" />
+            </Cluster>
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private AvatarGenerationSource? generationSource;
+    private string customAvatarFileName = string.Empty;
+    private string generationPrompt = string.Empty;
+    private string? generationErrorMessage;
+    private bool isOpen;
+    private bool isUploadBusy;
+    private bool isGenerationBusy;
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public string EntityName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string EntityDescription { get; set; } = string.Empty;
+
+    [Parameter]
+    public string EntityKind { get; set; } = "Agent";
+
+    [Parameter]
+    public AvatarGenerationSource? GenerationSource { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string TestIdPrefix { get; set; } = "avatar-picker";
+
+    private string UploadInputId => $"{TestIdPrefix}-upload";
+
+    private string AvatarSeed => FirstNonEmpty(EntityName, EntityDescription, $"{EntityKind} avatar");
+
+    private string AvatarAltText => FirstNonEmpty(EntityName, EntityDescription, $"{EntityKind} avatar");
+
+    private string FallbackText => string.Concat(AvatarSeed
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Take(2)
+        .Select(part => char.ToUpperInvariant(part[0])));
+
+    private bool IsCustomAvatar => Value.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
+
+    private string SelectionText => string.IsNullOrWhiteSpace(Value)
+        ? "Default generated avatar"
+        : AgentAvatarImageCatalog.IsBundledAvatarUrl(Value)
+            ? "Bundled avatar selected"
+            : IsCustomAvatar
+                ? "Custom avatar loaded"
+                : "Custom avatar selected";
+
+    private async Task OpenAsync()
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        generationPrompt = string.IsNullOrWhiteSpace(generationPrompt)
+            ? BuildDefaultPrompt()
+            : generationPrompt;
+        generationErrorMessage = null;
+        generationSource = GenerationSource ?? await AvatarGenerationGateway.GetDefaultSourceAsync();
+        isOpen = true;
+    }
+
+    private Task CloseAsync()
+    {
+        isOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ClearAsync()
+    {
+        customAvatarFileName = string.Empty;
+        generationErrorMessage = null;
+        await ValueChanged.InvokeAsync(string.Empty);
+    }
+
+    private async Task LoadCustomAvatarAsync(InputFileChangeEventArgs args)
+    {
+        customAvatarFileName = args.File.Name;
+        isUploadBusy = true;
+        try
+        {
+            await ValueChanged.InvokeAsync(await AvatarUploadFormatter.BuildDataUrlAsync(args.File));
+            generationErrorMessage = null;
+            NotificationService.Success("Custom avatar loaded", $"Save the {EntityKind.ToLowerInvariant()} to persist the loaded avatar.");
+        }
+        catch (Exception exception)
+        {
+            customAvatarFileName = string.Empty;
+            NotificationService.Error("Avatar upload failed", exception.Message);
+        }
+        finally
+        {
+            isUploadBusy = false;
+        }
+    }
+
+    private async Task SelectAsync(string avatarImageUrl)
+    {
+        customAvatarFileName = string.Empty;
+        generationErrorMessage = null;
+        await ValueChanged.InvokeAsync(avatarImageUrl.Trim());
+    }
+
+    private async Task GenerateAsync()
+    {
+        if (isGenerationBusy || generationSource is null)
+        {
+            return;
+        }
+
+        isGenerationBusy = true;
+        generationErrorMessage = null;
+        try
+        {
+            var result = await AvatarGenerationGateway.GenerateAsync(
+                new AvatarGenerationRequest(generationSource, generationPrompt));
+            customAvatarFileName = string.Empty;
+            await ValueChanged.InvokeAsync(result.AvatarDataUrl);
+            NotificationService.Success("AI avatar created", $"Save the {EntityKind.ToLowerInvariant()} to persist the generated avatar.");
+        }
+        catch (Exception exception)
+        {
+            generationErrorMessage = exception.Message;
+            NotificationService.Error("AI avatar generation failed", exception.Message);
+        }
+        finally
+        {
+            isGenerationBusy = false;
+        }
+    }
+
+    private bool IsSelected(string avatarImageUrl)
+        => string.Equals(Value?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private string ResolveOptionClass(string avatarImageUrl)
+        => IsSelected(avatarImageUrl)
+            ? "avatar-picker__option avatar-picker__option--selected"
+            : "avatar-picker__option";
+
+    private string BuildDefaultPrompt()
+    {
+        var name = FirstNonEmpty(EntityName, $"this {EntityKind.ToLowerInvariant()}");
+        var description = string.IsNullOrWhiteSpace(EntityDescription)
+            ? string.Empty
+            : $", described as {EntityDescription.Trim()}";
+        return $"A distinctive, friendly illustrated avatar for {name}{description}, in a clean modern professional style.";
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+        => values.First(value => !string.IsNullOrWhiteSpace(value))!.Trim();
+}

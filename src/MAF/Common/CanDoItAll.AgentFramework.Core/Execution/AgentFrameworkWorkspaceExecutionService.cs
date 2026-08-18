@@ -58,6 +58,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
         workspaceProcessLeaseCleaner
         ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
     private readonly ILogger logger = logger;
+    private static readonly AgentProviderUsageObservationAssembler UsageObservationAssembler = new();
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);
     private readonly AgentTurnContextLeaseRegistry transientContextRegistry =

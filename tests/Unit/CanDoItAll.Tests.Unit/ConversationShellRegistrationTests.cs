@@ -1,5 +1,5 @@
 using CanDoItAll.Modules.AgentFramework;
-using CanDoItAll.Modules.LlmChats.Ui;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,7 +28,7 @@ public sealed class ConversationShellRegistrationTests
     {
         var services = new ServiceCollection();
 
-        services.AddLlmChatsUi();
+        services.AddSimpleChatsComponents();
 
         Assert.Contains(services, item => item.ServiceType.FullName == LauncherTypeName);
         Assert.Contains(services, item => item.ServiceType.FullName == CoordinatorTypeName);

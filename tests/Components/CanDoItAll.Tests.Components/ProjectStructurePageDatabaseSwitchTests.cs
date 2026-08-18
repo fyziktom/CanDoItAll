@@ -163,6 +163,7 @@ public sealed class ProjectStructurePageDatabaseSwitchTests
             Assert.NotNull(cut.Find("[data-testid='manager-activity-next']"));
             var activityKind = cut.Find("[data-testid='manager-activity-kind']");
             Assert.Contains("Agents", activityKind.TextContent, StringComparison.Ordinal);
+            Assert.Contains("Simple chats", activityKind.TextContent, StringComparison.Ordinal);
             Assert.DoesNotContain(
                 "Conversations",
                 activityKind.TextContent,

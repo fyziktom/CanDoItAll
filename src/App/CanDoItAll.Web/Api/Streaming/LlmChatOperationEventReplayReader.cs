@@ -1,6 +1,6 @@
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 
 namespace CanDoItAll.Web.Api.Streaming;

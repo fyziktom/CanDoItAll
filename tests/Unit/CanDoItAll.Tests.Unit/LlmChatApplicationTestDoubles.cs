@@ -1,11 +1,11 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Conversations;
-using CanDoItAll.Modules.LlmChats.Definitions;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Tests.Unit;
@@ -116,10 +116,15 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
         int take,
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
+        string? searchText = null,
+        IReadOnlyList<string>? tagFilters = null,
         CancellationToken cancellationToken = default)
     {
+        var normalizedSearchText = searchText?.Trim() ?? string.Empty;
         var ordered = definitions.Values
             .Where(item => status is null || item.Status == status)
+            .Where(item => MatchesSearch(item, normalizedSearchText))
+            .Where(item => MatchesTags(item, tagFilters))
             .Where(item => cursor is not { } position ||
                            item.UpdatedAtUtc < position.UpdatedAtUtc ||
                            item.UpdatedAtUtc == position.UpdatedAtUtc &&
@@ -143,6 +148,24 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
             : null;
         return new LlmChatPage<LlmChatDefinitionReadModel, LlmChatDefinitionCursor>(items, next);
     }
+
+    private bool MatchesSearch(LlmChatDefinition definition, string searchText)
+    {
+        if (searchText.Length == 0)
+        {
+            return true;
+        }
+
+        return definition.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               definition.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               tags.GetValueOrDefault(definition.Id, [])
+                   .Any(tag => tag.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool MatchesTags(LlmChatDefinition definition, IReadOnlyList<string>? tagFilters)
+        => tagFilters is null || tagFilters.Count == 0 || tagFilters.All(filter =>
+            tags.GetValueOrDefault(definition.Id, [])
+                .Contains(filter, StringComparer.OrdinalIgnoreCase));
 }
 
 internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversationRepository

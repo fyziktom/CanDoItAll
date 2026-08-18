@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using CanDoItAll.Modules.LlmChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +19,7 @@ internal static class LlmChatApiResults
             retryable: operationId is null ? null : IsRetryable(code));
     }
 
-    public static IResult FromOperationFailure(CanDoItAll.Modules.LlmChats.Operations.LlmChatOperation operation)
+    public static IResult FromOperationFailure(CanDoItAll.AgentFramework.Llm.SimpleChats.Operations.LlmChatOperation operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
         var code = string.IsNullOrWhiteSpace(operation.FailureCode)

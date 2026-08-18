@@ -1,10 +1,11 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Providers;
-using CanDoItAll.Modules.LlmChats.Application;
-using CanDoItAll.Modules.LlmChats.Common;
-using CanDoItAll.Modules.LlmChats.Operations;
-using CanDoItAll.Modules.LlmChats.Persistence;
-using CanDoItAll.Modules.LlmChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
 

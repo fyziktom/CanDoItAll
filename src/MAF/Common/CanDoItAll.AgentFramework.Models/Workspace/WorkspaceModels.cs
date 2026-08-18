@@ -177,6 +177,14 @@ public sealed record SandboxWorkspaceExecutionSummary(
     int ActiveRuns,
     int FailedRuns);
 
+public sealed record AgentProviderUsageEvidence(
+    string Version,
+    IReadOnlyList<ExecutionRunRecord> ExecutionRuns,
+    IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations)
+{
+    public static AgentProviderUsageEvidence Empty { get; } = new("1.0", [], []);
+}
+
 public sealed record SandboxDashboardSnapshot(
     int AgentCount,
     int TemplateCount,

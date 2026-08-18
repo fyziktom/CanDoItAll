@@ -8,6 +8,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 
 public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceStore,
+    IAgentProviderUsageEvidenceStore,
     ISandboxWorkspaceChatQueryStore,
     ISandboxWorkspaceChatProjectionQueryStore,
     ISandboxWorkspaceChatSessionStore,
@@ -291,6 +292,22 @@ public sealed partial class FileSandboxWorkspaceStore :
             await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
             await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
             return await LoadUsageProjectionCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
+            await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
+            return await executionSliceStore.LoadProviderUsageEvidenceAsync(cancellationToken);
         }
         finally
         {

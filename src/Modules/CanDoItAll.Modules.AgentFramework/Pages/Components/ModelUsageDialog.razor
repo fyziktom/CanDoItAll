@@ -1,4 +1,4 @@
-@inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject ProviderUsageQueryService UsageQueryService
 
 @if (isLoading)
 {
@@ -21,8 +21,9 @@ else
             <MetricCard Label="Models" Value="@AgentUsageDisplay.FormatCount(snapshot.Models.Count)" />
             <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
             <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
-            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.TotalTokens)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.Tokens.TotalTokens)" />
             <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
+            <MetricCard Label="Unpriced" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnpricedObservationCount)" />
         </Grid>
 
         <CdaChart Title="Model usage"
@@ -42,13 +43,13 @@ else
             }
             else
             {
-                <DataGrid TItem="ModelOverviewUsageRow"
+                <DataGrid TItem="ProviderUsageModelRow"
                           Data="@ModelRows"
                           AllowPaging="true"
                           PageSize="10"
                           data-testid="model-usage-dialog-grid">
                     <Columns>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Model">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Model">
                             <Template Context="model">
                                 <Stack Gap="0.15rem">
                                     <span class="font-medium text-slate-950">@model.Model</span>
@@ -56,32 +57,32 @@ else
                                 </Stack>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Share">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Share">
                             <Template Context="model">
-                                <span>@AgentUsageDisplay.FormatUsageShare(AgentUsageDisplay.ResolveModelUsageValue(model), TotalModelUsage)</span>
+                                <span>@AgentUsageDisplay.FormatUsageShare(model.Totals.UsageObservationCount, TotalModelUsage)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Observations">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Observations">
                             <Template Context="model">
-                                <span>@AgentUsageDisplay.FormatCount(model.UsageObservationCount)</span>
+                                <span>@AgentUsageDisplay.FormatCount(model.Totals.UsageObservationCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Unknown">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Unknown">
                             <Template Context="model">
-                                <span>@AgentUsageDisplay.FormatCount(model.UnknownUsageObservationCount)</span>
+                                <span>@AgentUsageDisplay.FormatCount(model.Totals.UnknownUsageObservationCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Tokens">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Tokens">
                             <Template Context="model">
-                                <span>@AgentUsageDisplay.FormatTokens(model.TotalTokens)</span>
+                                <span>@AgentUsageDisplay.FormatTokens(model.Totals.Tokens.TotalTokens)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Known cost">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Known cost">
                             <Template Context="model">
-                                <span>@AgentUsageDisplay.FormatCost(model.KnownCostUsd)</span>
+                                <span>@AgentUsageDisplay.FormatCost(model.Totals.KnownCostUsd)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ModelOverviewUsageRow" Title="Last used">
+                        <DataGridColumn TItem="ProviderUsageModelRow" Title="Last used">
                             <Template Context="model">
                                 <span>@AgentUsageDisplay.FormatLastUsed(model.LastUsedAtUtc)</span>
                             </Template>
@@ -118,18 +119,21 @@ else
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
-    private ModelUsageDetailSnapshot snapshot = ModelUsageDetailSnapshot.Empty;
+    [Parameter]
+    public ProviderUsageWorkloadSelection Selection { get; set; } = ProviderUsageWorkloadSelection.Both;
+
+    private ProviderUsageSnapshot snapshot = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isLoading = true;
     private string? loadError;
 
-    private IReadOnlyList<ModelOverviewUsageRow> ModelRows =>
+    private IReadOnlyList<ProviderUsageModelRow> ModelRows =>
         snapshot.Models
-            .OrderByDescending(AgentUsageDisplay.ResolveModelUsageValue)
+            .OrderByDescending(item => item.Totals.UsageObservationCount)
             .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private decimal TotalModelUsage => ModelRows.Sum(AgentUsageDisplay.ResolveModelUsageValue);
+    private decimal TotalModelUsage => ModelRows.Sum(item => item.Totals.UsageObservationCount);
 
     private IReadOnlyList<CdaChartSeries> ModelUsageSeries =>
         ModelRows.Count == 0
@@ -144,7 +148,7 @@ else
                         .Take(12)
                         .Select(item => new CdaChartPoint(
                             AgentUsageDisplay.TrimLabel(item.Model, 24),
-                            AgentUsageDisplay.ResolveModelUsageValue(item)))
+                            item.Totals.UsageObservationCount))
                         .ToArray()
                 }
             ];
@@ -153,7 +157,7 @@ else
     {
         try
         {
-            snapshot = await WorkspaceService.GetModelUsageDetailsAsync();
+            snapshot = await UsageQueryService.QueryAsync(Selection);
         }
         catch (Exception exception)
         {

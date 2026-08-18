@@ -9,7 +9,6 @@ services, and module-specific tool providers.
 | [Collaboration](CanDoItAll.Modules.Collaboration/README.md) | Collaboration product surfaces |
 | [CRM/HR](CanDoItAll.Modules.CrmHr/README.md) | Parties, CRM, workforce, recruiting, and staffing |
 | [Memory](CanDoItAll.Modules.Memory/README.md) | Memory provider configuration and operations |
-| [LLM Chats](CanDoItAll.Modules.LlmChats/README.md) | Reusable ordinary-chat definitions, pinned conversations, durable operations, and audit |
 | [Plugins](CanDoItAll.Modules.Plugins/README.md) | Plugin catalog, activation, grants, OAuth, and settings |
 | [Processes](CanDoItAll.Modules.Processes/README.md) | Process authoring, launch, monitoring, and recovery |
 | [Projects](CanDoItAll.Modules.Projects/README.md) | Project portfolio, hierarchy, planning, and files |

@@ -34,6 +34,12 @@ public interface ISandboxWorkspaceExecutionStore
         CancellationToken cancellationToken = default);
 }
 
+public interface IAgentProviderUsageEvidenceStore
+{
+    Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
+        CancellationToken cancellationToken = default);
+}
+
 public interface ISandboxWorkspaceExecutionRunStore
 {
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(

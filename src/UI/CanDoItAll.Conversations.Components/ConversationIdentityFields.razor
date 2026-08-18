@@ -86,22 +86,25 @@
         }
     </FormField>
 
-    <FormField Text="@InstructionsLabel" Class="conversation-identity-fields__full-field">
-        @if (!string.IsNullOrWhiteSpace(InstructionsDescription))
-        {
-            <p class="mb-2 text-sm leading-6 text-slate-600">@InstructionsDescription</p>
-        }
-        <TextArea Value="@Instructions"
-                  ValueChanged="InstructionsChanged"
-                  Size="TextAreaSize.Extended"
-                  Disabled="@Disabled"
-                  Class="conversation-identity-fields__instructions"
-                  data-testid="@InstructionsTestId" />
-        @if (InstructionsValidation is not null)
-        {
-            @InstructionsValidation
-        }
-    </FormField>
+    @if (ShowInstructions)
+    {
+        <FormField Text="@InstructionsLabel" Class="conversation-identity-fields__full-field">
+            @if (!string.IsNullOrWhiteSpace(InstructionsDescription))
+            {
+                <p class="mb-2 text-sm leading-6 text-slate-600">@InstructionsDescription</p>
+            }
+            <TextArea Value="@Instructions"
+                      ValueChanged="InstructionsChanged"
+                      Size="TextAreaSize.Extended"
+                      Disabled="@Disabled"
+                      Class="conversation-identity-fields__instructions"
+                      data-testid="@InstructionsTestId" />
+            @if (InstructionsValidation is not null)
+            {
+                @InstructionsValidation
+            }
+        </FormField>
+    }
 </Stack>
 
 @code {
@@ -164,6 +167,9 @@
 
     [Parameter]
     public string? InstructionsDescription { get; set; }
+
+    [Parameter]
+    public bool ShowInstructions { get; set; } = true;
 
     [Parameter]
     public string AvatarLabel { get; set; } = "Avatar";

@@ -1,0 +1,33 @@
+.avatar-picker__body {
+    max-height: min(72vh, 52rem);
+    min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+}
+
+.avatar-picker__option {
+    align-items: center;
+    background: rgb(255 255 255);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    color: rgb(15 23 42);
+    display: grid;
+    gap: 0.65rem;
+    justify-items: center;
+    min-height: 9rem;
+    padding: 0.85rem;
+    text-align: center;
+}
+
+.avatar-picker__option:hover,
+.avatar-picker__option:focus-visible {
+    border-color: rgb(59 130 246);
+    outline: none;
+}
+
+.avatar-picker__option--selected {
+    background: rgb(239 246 255);
+    border-color: rgb(37 99 235);
+    box-shadow: 0 0 0 3px rgb(191 219 254 / 0.7);
+}
