@@ -50,7 +50,8 @@ public sealed class AgentFrameworkSimpleChatsConsolidationPlaywrightTests(
         await using var session = await OpenAgentsAsync("/agents?tab=chat");
         await session.Page.GetByTestId("agents-chat-panel").WaitForAsync();
 
-        await session.Page.GotoAsync($"{fixture.BaseUrl}/agents?tab=simple-chats");
+        await session.Page.GotoAsync(
+            $"{fixture.BaseUrl}/agents?tab=simple-chats&simpleChatView=conversations");
         await session.Page.GetByTestId("llm-chat-conversation-workspace").WaitForAsync();
 
         await OpenFloatingCatalogAsync(session.Page);

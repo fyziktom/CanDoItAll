@@ -221,12 +221,16 @@ internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversati
         => conversations[conversation.Id] = conversation;
 }
 
-internal sealed class StubLlmChatConversationReadStore : ILlmChatConversationReadStore
+internal sealed class StubLlmChatConversationReadStore(
+    LlmChatConversationReadModel? conversation = null) : ILlmChatConversationReadStore
 {
     public Task<LlmChatConversationReadModel?> TryGetAsync(
         LlmChatConversationId id,
         CancellationToken cancellationToken = default)
-        => throw new NotSupportedException();
+        => conversation is null
+            ? throw new NotSupportedException()
+            : Task.FromResult<LlmChatConversationReadModel?>(
+                conversation.Conversation.Id == id ? conversation : null);
 
     public Task<LlmChatPage<LlmChatConversationReadModel, LlmChatConversationCursor>> ListPageAsync(
         int take,

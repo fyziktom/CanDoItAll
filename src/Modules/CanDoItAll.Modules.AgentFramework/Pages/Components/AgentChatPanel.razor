@@ -1,4 +1,3 @@
-@using CanDoItAll.Modules.Prompts
 @using CanDoItAll.Modules.Prompts.Components
 
 <div class="@ResolveShellClass()"
@@ -118,16 +117,9 @@
                             VoiceRecordingToggled="ToggleVoiceRecordingAsync"
                             SpeakLatestAssistantMessageRequested="SpeakLatestAssistantMessageAsync">
             <ComposerActions>
-                <PromptGalleryPickerButton Text=""
-                                           Icon="library_books"
-                                           IconOnly="true"
-                                           AriaLabel="Insert from prompt gallery"
-                                           Size="ButtonSize.Small"
-                                           Consumer="PromptGalleryConsumer.Chat"
-                                           Provider="@SelectedAgentProviderKind"
-                                           Model="@selectedAgent?.Model"
-                                           AllowEdit="true"
-                                           Selected="HandlePromptGallerySelectionAsync" />
+                <PromptGalleryChatComposerButton Provider="@SelectedAgentProviderKind"
+                                                 Model="@selectedAgent?.Model"
+                                                 ContentSelected="InsertPromptGalleryContentAsync" />
             </ComposerActions>
             <HeaderActions>
                 @if (IsFocusedFloating)

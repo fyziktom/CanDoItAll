@@ -10,6 +10,59 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class PromptGallerySearchListTests
 {
     [Fact]
+    public void Actual_chat_model_filter_uses_the_pinned_provider_model_and_can_show_all_prompts()
+    {
+        const string provider = "OpenAi";
+        const string model = "gpt-5.4-mini";
+        var gallery = new TestPromptGallery();
+        using var context = new BunitContext();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<IPromptGalleryService>(gallery);
+
+        var cut = context.Render<PromptGallerySearchList>(parameters => parameters
+            .Add(component => component.Consumer, PromptGalleryConsumer.Chat)
+            .Add(component => component.Provider, provider)
+            .Add(component => component.Model, model)
+            .Add(component => component.ShowActualChatModelFilter, true)
+            .Add(component => component.Compact, true));
+
+        cut.WaitForAssertion(() =>
+        {
+            var query = Assert.Single(gallery.Queries);
+            Assert.Equal(provider, query.Provider);
+            Assert.Equal(model, query.Model);
+            Assert.Contains("Show actual chat model only", cut.Markup, StringComparison.Ordinal);
+        });
+
+        cut.Find("[data-testid='prompt-gallery-clear-filters']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(2, gallery.Queries.Count);
+            Assert.Null(gallery.Queries[^1].Provider);
+            Assert.Null(gallery.Queries[^1].Model);
+        });
+
+        cut.Find("[data-testid='prompt-gallery-actual-model-filter']").Change(true);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(3, gallery.Queries.Count);
+            Assert.Equal(provider, gallery.Queries[^1].Provider);
+            Assert.Equal(model, gallery.Queries[^1].Model);
+        });
+
+        cut.Find("[data-testid='prompt-gallery-actual-model-filter']").Change(false);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(4, gallery.Queries.Count);
+            Assert.Null(gallery.Queries[^1].Provider);
+            Assert.Null(gallery.Queries[^1].Model);
+        });
+    }
+
+    [Fact]
     public void Desktop_filters_share_one_rail_and_item_title_and_favorite_are_explicit()
     {
         var gallery = new TestPromptGallery();
@@ -52,11 +105,14 @@ public sealed class PromptGallerySearchListTests
 
         public bool FavoriteValue { get; private set; }
 
+        public List<PromptGalleryQuery> Queries { get; } = [];
+
         public Task<PromptGalleryPage<PromptGallerySearchItem>> SearchAsync(
             PromptGalleryQuery query,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            Queries.Add(query);
             PromptGallerySearchItem item = new(
                 ItemId,
                 "Reusable architecture review",

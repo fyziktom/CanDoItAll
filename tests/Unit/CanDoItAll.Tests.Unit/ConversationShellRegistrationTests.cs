@@ -21,6 +21,10 @@ public sealed class ConversationShellRegistrationTests
 
         Assert.Contains(services, item => item.ServiceType.FullName == LauncherTypeName);
         Assert.Contains(services, item => item.ServiceType.FullName == CoordinatorTypeName);
+        Assert.Single(
+            services,
+            item => item.ServiceType == typeof(ILlmChatComposerActionContributor) &&
+                    item.ImplementationType == typeof(PromptGalleryLlmChatComposerActionContributor));
     }
 
     [Fact]

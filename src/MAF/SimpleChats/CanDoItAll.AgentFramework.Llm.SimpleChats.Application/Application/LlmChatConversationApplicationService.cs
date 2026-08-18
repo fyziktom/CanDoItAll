@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
@@ -68,6 +69,7 @@ public sealed class LlmChatConversationApplicationService(
                 return Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
                     conversation,
                     definition.Name,
+                    ToProviderModel(revision),
                     transcript));
             }, cancellationToken).ConfigureAwait(false);
         }
@@ -233,6 +235,7 @@ public sealed class LlmChatConversationApplicationService(
         return Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
             transcript.Conversation.Conversation,
             transcript.Conversation.DefinitionName,
+            transcript.Conversation.ProviderModel,
             transcript.Conversation.Transcript,
             transcript.Entries,
             transcript.NextCursor));
@@ -264,7 +267,7 @@ public sealed class LlmChatConversationApplicationService(
     }
 
     private static LlmChatConversationDetails Map(LlmChatConversationReadModel model)
-        => new(model.Conversation, model.DefinitionName, model.Transcript);
+        => new(model.Conversation, model.DefinitionName, model.ProviderModel, model.Transcript);
 
     private async Task<Result<LlmChatConversationDetails>> BuildDetailsAsync(
         LlmChatConversation conversation,
@@ -273,11 +276,23 @@ public sealed class LlmChatConversationApplicationService(
     {
         var definition = await definitionRepository.TryGetAsync(conversation.DefinitionId, cancellationToken)
             .ConfigureAwait(false);
-        return definition is null
+        var revision = await definitionRepository.TryGetRevisionAsync(
+            conversation.DefinitionId,
+            conversation.DefinitionRevision,
+            cancellationToken).ConfigureAwait(false);
+        return definition is null || revision is null
             ? Result<LlmChatConversationDetails>.Failure(LlmChatErrors.StorageCorrupted())
             : Result<LlmChatConversationDetails>.Success(new LlmChatConversationDetails(
                 conversation,
                 definition.Name,
+                ToProviderModel(revision),
                 transcript));
     }
+
+    private static LlmConversationProviderSnapshot ToProviderModel(LlmChatDefinitionRevision revision)
+        => new(
+            revision.ProviderProfileId,
+            revision.ProviderName,
+            revision.ProviderKind,
+            revision.Model);
 }

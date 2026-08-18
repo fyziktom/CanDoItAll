@@ -93,6 +93,40 @@ public sealed class EfLlmConversationStoreIntegrationTests
     }
 
     [Fact]
+    public async Task Conversation_read_projection_uses_its_pinned_definition_revision_provider_model()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatpinnedmodelprojection");
+        await using var dbContext = database.CreateDbContext();
+        var store = new EfLlmConversationStore(dbContext);
+        var conversationId = Guid.NewGuid();
+        var document = LlmChatsPostgreSqlTestDatabase.CreateDocument(conversationId);
+        LlmChatsPostgreSqlTestDatabase.SeedConversationRoot(dbContext, document);
+        var definition = dbContext.ChangeTracker.Entries<LlmChatDefinitionRow>().Single().Entity;
+        definition.CurrentRevision = 2;
+        var currentRevision = LlmChatsPostgreSqlTestDatabase.CreateRevisionRow(
+            definition.Id,
+            2,
+            AgentReasoningEffortLevel.None,
+            document.CreatedAtUtc);
+        currentRevision.ProviderProfileId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        currentRevision.ProviderKind = ProviderKind.AzureOpenAi;
+        currentRevision.ProviderName = "Current provider";
+        currentRevision.Model = "current-model";
+        dbContext.Add(currentRevision);
+        await store.CreateAsync(document);
+        dbContext.ChangeTracker.Clear();
+        var readStore = new EfLlmChatConversationReadStore(dbContext);
+
+        var loaded = await readStore.TryGetAsync(new LlmChatConversationId(conversationId));
+
+        Assert.NotNull(loaded);
+        Assert.Equal(document.Provider.ProviderId, loaded.ProviderModel.ProviderId);
+        Assert.Equal(document.Provider.ProviderKind, loaded.ProviderModel.ProviderKind);
+        Assert.Equal(document.Provider.ProviderName, loaded.ProviderModel.ProviderName);
+        Assert.Equal(document.Provider.Model, loaded.ProviderModel.Model);
+    }
+
+    [Fact]
     public async Task Compensation_removes_only_the_exact_pending_entry()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatstorecompensation");

@@ -1,4 +1,5 @@
 using Bunit;
+using System.Reflection;
 using System.Threading.Channels;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Components.BaseLib;
@@ -8,6 +9,12 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.Modules.Prompts.Components;
+using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.LlmChats;
@@ -18,6 +25,11 @@ public sealed class LlmChatConversationWorkspaceTests
     private static readonly Guid DraftDefinitionId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly Guid ConversationId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private static readonly Guid SecondConversationId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+    private static readonly LlmConversationProviderSnapshot PinnedProviderModel = new(
+        Guid.Parse("55555555-5555-5555-5555-555555555555"),
+        "Pinned Azure OpenAI",
+        ProviderKind.AzureOpenAi,
+        "gpt-5.4-mini");
 
     [Fact]
     public void Floating_adapter_preserves_the_focused_full_height_workspace_contract()
@@ -79,6 +91,62 @@ public sealed class LlmChatConversationWorkspaceTests
             Assert.Contains("flex-col", panel.ClassList);
             Assert.Contains("overflow-hidden", panel.ClassList);
         });
+    }
+
+    [Fact]
+    public void Floating_workspace_contributor_renders_gallery_button_for_the_pinned_provider_and_model()
+    {
+        var conversation = CreateConversation(providerModel: PinnedProviderModel);
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([conversation], null));
+        conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
+        using var context = CreateContext(conversations, new StubOperationGateway());
+        context.Services.AddSingleton(
+            DispatchProxy.Create<IPromptGalleryService, UnexpectedPromptGalleryServiceProxy>());
+        context.Services.AddSingleton<ILlmChatComposerActionContributor, PromptGalleryLlmChatComposerActionContributor>();
+
+        var cut = context.Render<LlmChatFloatingConversationContent>(parameters => parameters
+            .Add(component => component.ConversationId, ConversationId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var galleryButton = cut.FindComponent<PromptGalleryChatComposerButton>();
+            Assert.Equal(PinnedProviderModel.ProviderKind.ToString(), galleryButton.Instance.Provider);
+            Assert.Equal(PinnedProviderModel.Model, galleryButton.Instance.Model);
+
+            var picker = galleryButton.FindComponent<PromptGalleryPickerButton>();
+            Assert.Equal(PinnedProviderModel.ProviderKind.ToString(), picker.Instance.Provider);
+            Assert.Equal(PinnedProviderModel.Model, picker.Instance.Model);
+            Assert.Single(cut.FindAll("[data-testid='prompt-gallery-picker-button']"));
+        });
+    }
+
+    [Fact]
+    public async Task Floating_gallery_dialog_inserts_the_selected_prompt_without_sending()
+    {
+        var conversation = CreateConversation(providerModel: PinnedProviderModel);
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([conversation], null));
+        conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
+        var operations = new StubOperationGateway();
+        using var context = CreateContext(conversations, operations);
+        context.Services.AddSingleton<IPromptGalleryService>(new SelectionPromptGalleryService());
+        context.Services.AddSingleton<ILlmChatComposerActionContributor, PromptGalleryLlmChatComposerActionContributor>();
+        var dialogHost = context.Render<DialogHost>();
+
+        var cut = context.Render<LlmChatFloatingConversationContent>(parameters => parameters
+            .Add(component => component.ConversationId, ConversationId));
+        cut.WaitForElement("[data-testid='prompt-gallery-picker-button']").Click();
+
+        dialogHost.WaitForElement("[data-testid='prompt-gallery-picker-dialog']");
+        dialogHost.WaitForElement("[data-testid='prompt-gallery-select']").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            "Floating gallery prompt",
+            cut.Find("[data-testid='llm-chat-prompt']").GetAttribute("value")));
+        Assert.Empty(dialogHost.FindAll("[data-testid='prompt-gallery-picker-dialog']"));
+        Assert.Empty(context.Services.GetRequiredService<DialogService>().Dialogs);
+        Assert.Empty(operations.Sends);
     }
 
     [Fact]
@@ -171,6 +239,32 @@ public sealed class LlmChatConversationWorkspaceTests
 
         cut.WaitForAssertion(() => Assert.Equal(12, conversations.ArchiveExpectedConcurrencyToken));
         Assert.Contains("Archived", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Composer_action_appends_trimmed_content_to_the_existing_draft_without_sending()
+    {
+        var conversation = CreateConversation(providerModel: PinnedProviderModel);
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([conversation], null));
+        conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
+        var operations = new StubOperationGateway();
+        var composerActionContributor = new CaptureComposerActionContributor();
+        using var context = CreateContext(conversations, operations);
+        context.Services.AddSingleton<ILlmChatComposerActionContributor>(composerActionContributor);
+
+        var cut = context.Render<LlmChatConversationWorkspace>();
+        cut.WaitForElement("[data-testid='llm-chat-prompt']").Input("Existing draft   ");
+        cut.WaitForAssertion(() => Assert.NotNull(composerActionContributor.Context));
+        var composerActionContext = Assert.IsType<LlmChatComposerActionContext>(composerActionContributor.Context);
+        Assert.Equal(PinnedProviderModel, composerActionContext.ProviderModel);
+
+        await cut.InvokeAsync(() => composerActionContext.ContentSelected.InvokeAsync("  Gallery prompt  "));
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            "Existing draft\n\nGallery prompt",
+            cut.Find("[data-testid='llm-chat-prompt']").GetAttribute("value")));
+        Assert.Empty(operations.Sends);
     }
 
     [Fact]
@@ -604,13 +698,15 @@ public sealed class LlmChatConversationWorkspaceTests
         int definitionRevision = 3,
         long concurrencyToken = 11,
         long transcriptRevision = 15,
-        Guid? activeOperationId = null)
+        Guid? activeOperationId = null,
+        LlmConversationProviderSnapshot? providerModel = null)
         => new(
             conversationId ?? ConversationId,
             ActiveDefinitionId,
             definitionRevision,
             title,
             "Research assistant",
+            providerModel ?? PinnedProviderModel,
             LlmChatConversationStatus.Active,
             LlmChatConversationOrigin.Application,
             concurrencyToken,
@@ -632,6 +728,167 @@ public sealed class LlmChatConversationWorkspaceTests
             text,
             DateTimeOffset.Parse("2026-08-16T12:01:00Z"),
             role == LlmMessageRole.Assistant ? "model-a" : string.Empty);
+
+    private class UnexpectedPromptGalleryServiceProxy : DispatchProxy
+    {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+            => throw new NotSupportedException(
+                $"{targetMethod?.Name ?? "Unknown prompt-gallery operation"} is not used while rendering the composer action.");
+    }
+
+    private sealed class CaptureComposerActionContributor : ILlmChatComposerActionContributor
+    {
+        public LlmChatComposerActionContext? Context { get; private set; }
+
+        public RenderFragment Render(LlmChatComposerActionContext context)
+        {
+            Context = context;
+            return _ => { };
+        }
+    }
+
+    private sealed class SelectionPromptGalleryService : IPromptGalleryService
+    {
+        private readonly Guid itemId = Guid.NewGuid();
+
+        public Task<PromptGalleryPage<PromptGallerySearchItem>> SearchAsync(
+            PromptGalleryQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            PromptGallerySearchItem item = new(
+                itemId,
+                "Floating gallery prompt",
+                "Reusable prompt for a floating Simple Chat.",
+                "Floating gallery prompt",
+                PromptGalleryItemKind.FullPrompt,
+                "chat",
+                PromptArtifactStatus.Draft,
+                IsArchived: false,
+                CollectionName: null,
+                Tags: ["chat"],
+                SupportedModels:
+                [
+                    new PromptProviderModel(
+                        PinnedProviderModel.ProviderKind.ToString(),
+                        PinnedProviderModel.Model,
+                        IsPreferred: true)
+                ],
+                Recommendations: new PromptModelRecommendations(),
+                CurrentVersionNumber: 0,
+                UpdatedAtUtc: DateTimeOffset.UnixEpoch,
+                IsFavorite: false);
+            return Task.FromResult(new PromptGalleryPage<PromptGallerySearchItem>([item], 0, query.PageSize, 1));
+        }
+
+        public Task<Result<PromptGalleryItemDetails>> GetItemAsync(
+            Guid promptArtifactId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            PromptGalleryItemDetails item = new(
+                promptArtifactId,
+                ProjectId: null,
+                CollectionId: null,
+                "Floating gallery prompt",
+                "Reusable prompt for a floating Simple Chat.",
+                PromptGalleryItemKind.FullPrompt,
+                "chat",
+                PromptArtifactStatus.Draft,
+                IsArchived: false,
+                "  Floating gallery prompt  ",
+                CurrentVersionNumber: 0,
+                Tags: ["chat"],
+                TemplateTokens: [],
+                SupportedModels:
+                [
+                    new PromptProviderModel(
+                        PinnedProviderModel.ProviderKind.ToString(),
+                        PinnedProviderModel.Model,
+                        IsPreferred: true)
+                ],
+                SupportedConsumers: [PromptGalleryConsumer.Chat],
+                WarningSuppressions: [],
+                Recommendations: new PromptModelRecommendations(),
+                Source: new PromptGallerySourceInfo(
+                    PromptArtifactProvenance.User,
+                    Catalog: null,
+                    Key: null,
+                    GroupKey: null,
+                    GroupName: null,
+                    ItemKind: null,
+                    OrderIndex: null),
+                Versions: [],
+                CreatedAtUtc: DateTimeOffset.UnixEpoch,
+                UpdatedAtUtc: DateTimeOffset.UnixEpoch,
+                IsFavorite: false);
+            return Task.FromResult(Result<PromptGalleryItemDetails>.Success(item));
+        }
+
+        public Task<Result<PromptCompatibilityResult>> EvaluateCompatibilityAsync(
+            Guid promptArtifactId,
+            PromptGalleryConsumerContext context,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(Result<PromptCompatibilityResult>.Success(new PromptCompatibilityResult([])));
+        }
+
+        public Task<Result<PromptDraftSaveReceipt>> SaveDraftAsync(
+            PromptGalleryDraft draft,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result<PromptVersionSnapshot>> CreateVersionAsync(
+            Guid promptArtifactId,
+            PromptVersionCreateRequest request,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
+            Guid promptVersionId,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result<PromptVersionSnapshot>> GetVersionSnapshotAsync(
+            Guid promptArtifactId,
+            int versionNumber,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result<IReadOnlyList<PromptVersionSnapshot>>> GetVersionSnapshotsAsync(
+            IReadOnlyCollection<Guid> promptVersionIds,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result<IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot>>> GetCompatibilitySnapshotsAsync(
+            IReadOnlyCollection<Guid> promptArtifactIds,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result> ArchiveAsync(
+            Guid promptArtifactId,
+            bool archived,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result> SetFavoriteAsync(
+            Guid promptArtifactId,
+            bool favorite,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        public Task<Result> SetWarningSuppressionAsync(
+            Guid promptArtifactId,
+            PromptGalleryConsumer consumer,
+            PromptCompatibilityIssueCode issueCode,
+            bool suppressed,
+            CancellationToken cancellationToken = default)
+            => throw Unused();
+
+        private static NotSupportedException Unused()
+            => new("This prompt-gallery operation is not used by the floating selection test.");
+    }
 
     private static LlmChatOperationView CreateOperationView(
         Guid? operationId = null,

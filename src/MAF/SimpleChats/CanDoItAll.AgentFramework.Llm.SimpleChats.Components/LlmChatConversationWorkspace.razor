@@ -5,6 +5,7 @@
 @inject ILlmChatUiAuthorizationFacade Authorization
 @inject ILlmChatUiEventSessionGateway EventSessions
 @inject ILlmChatOperationProjectionReducer ProjectionReducer
+@inject IEnumerable<ILlmChatComposerActionContributor> ComposerActionContributors
 @inject ILogger<LlmChatConversationWorkspaceController> Logger
 @inject ILogger<LlmChatOperationFollower> FollowerLogger
 @implements IAsyncDisposable
@@ -210,7 +211,17 @@ else
                                       Placeholder="Message this Simple Chat"
                                       PromptTestId="llm-chat-prompt"
                                       SendTestId="llm-chat-send"
-                                      SendAriaLabel="Send Simple Chat message" />
+                                      SendAriaLabel="Send Simple Chat message">
+                    <LeadingActions>
+                        @if (ComposerActionContext is { } composerActionContext)
+                        {
+                            @foreach (var contributor in ComposerActionContributors)
+                            {
+                                @contributor.Render(composerActionContext)
+                            }
+                        }
+                    </LeadingActions>
+                </ConversationComposer>
             </Composer>
         </ConversationWorkspacePanel>
         </Grid>
@@ -449,6 +460,13 @@ else
            } ||
            string.IsNullOrWhiteSpace(draftPrompt);
 
+    private LlmChatComposerActionContext? ComposerActionContext
+        => controller?.SelectedConversation is { } selected
+            ? new(
+                selected.ProviderModel,
+                EventCallback.Factory.Create<string>(this, InsertPromptAsync))
+            : null;
+
     private string? ThreadErrorText
         => controller is { SelectedConversation: null } && !string.IsNullOrWhiteSpace(controller.ErrorMessage)
             ? controller.ErrorMessage
@@ -611,6 +629,18 @@ else
     private Task HandleDraftChanged(string? value)
     {
         draftPrompt = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task InsertPromptAsync(string content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        var normalizedContent = content.Trim();
+        draftPrompt = string.IsNullOrWhiteSpace(draftPrompt)
+            ? normalizedContent
+            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{normalizedContent}";
+        composerKey++;
+        StateHasChanged();
         return Task.CompletedTask;
     }
 

@@ -93,6 +93,7 @@ public interface ILlmChatConversationRepository
 public sealed record LlmChatConversationReadModel(
     LlmChatConversation Conversation,
     string DefinitionName,
+    LlmConversationProviderSnapshot ProviderModel,
     LlmChatConversationEngineState Transcript);
 
 public sealed record LlmChatTranscriptReadModel(

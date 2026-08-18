@@ -147,14 +147,26 @@ public sealed class EfLlmChatConversationReadStore(AppDbContext dbContext) : ILl
         => from conversation in conversations
            join definition in dbContext.Set<LlmChatDefinitionRow>().AsNoTracking()
                on conversation.DefinitionId equals definition.Id
+           join revision in dbContext.Set<LlmChatDefinitionRevisionRow>().AsNoTracking()
+               on new { DefinitionId = conversation.DefinitionId, Revision = conversation.DefinitionRevision }
+               equals new { revision.DefinitionId, revision.Revision }
            join transcript in dbContext.Set<LlmChatTranscriptRow>().AsNoTracking()
                on conversation.Id equals transcript.ConversationId
-           select new ConversationRow(conversation, definition.Name, transcript);
+           select new ConversationRow(
+               conversation,
+               definition.Name,
+               new LlmConversationProviderSnapshot(
+                   revision.ProviderProfileId,
+                   revision.ProviderName,
+                   revision.ProviderKind,
+                   revision.Model),
+               transcript);
 
     private static LlmChatConversationReadModel Map(ConversationRow row)
         => new(
             LlmChatPersistenceMapper.ToDomain(row.Conversation),
             row.DefinitionName,
+            row.ProviderModel,
             new LlmChatConversationEngineState(
                 new LlmChatConversationId(row.Conversation.Id),
                 row.Transcript.TranscriptRevision,
@@ -194,5 +206,6 @@ public sealed class EfLlmChatConversationReadStore(AppDbContext dbContext) : ILl
     private sealed record ConversationRow(
         LlmChatConversationRow Conversation,
         string DefinitionName,
+        LlmConversationProviderSnapshot ProviderModel,
         LlmChatTranscriptRow Transcript);
 }

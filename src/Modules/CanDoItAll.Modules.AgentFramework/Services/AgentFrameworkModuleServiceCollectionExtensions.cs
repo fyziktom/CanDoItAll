@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Memory.DependencyInjection;
@@ -291,6 +292,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IConversationShellContributor,
             AgentConversationShellContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            ILlmChatComposerActionContributor,
+            PromptGalleryLlmChatComposerActionContributor>());
         services.Replace(
             ServiceDescriptor.Scoped<IPromptGalleryCuratorLauncher, AgentFrameworkPromptGalleryCuratorLauncher>());
         services.AddScoped<ICanDoItAllAgentWorkspaceFactory, CanDoItAllAgentWorkspaceFactory>();

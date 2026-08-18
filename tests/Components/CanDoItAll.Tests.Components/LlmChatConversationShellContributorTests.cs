@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Shell;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
@@ -6,6 +7,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -34,6 +36,11 @@ public sealed class LlmChatConversationShellContributorTests
             7,
             "Research assistant chat",
             definition.Name,
+            new LlmConversationProviderSnapshot(
+                Guid.NewGuid(),
+                "Pinned OpenAI",
+                ProviderKind.OpenAi,
+                "gpt-5.4-mini"),
             LlmChatConversationStatus.Active,
             LlmChatConversationOrigin.Application,
             4,

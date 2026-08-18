@@ -512,6 +512,11 @@ internal sealed class StubLlmChatConversationApplicationService : ILlmChatConver
         return new LlmChatConversationDetails(
             conversation,
             "Architecture assistant",
+            new LlmConversationProviderSnapshot(
+                StubLlmChatProviderResolver.ProviderId,
+                "Private provider",
+                ProviderKind.OpenAi,
+                "reasoning-model"),
             new LlmChatConversationEngineState(ConversationId, 5, ActiveOperationId, Now, Now));
     }
 }

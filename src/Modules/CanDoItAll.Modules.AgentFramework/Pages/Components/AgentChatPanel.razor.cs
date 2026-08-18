@@ -4,8 +4,6 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
-using CanDoItAll.Modules.Prompts;
-using CanDoItAll.Modules.Prompts.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
@@ -74,9 +72,6 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
-
-    [Inject]
-    public IPromptGalleryService PromptGallery { get; set; } = default!;
 
     [Inject]
     public ILogger<AgentChatPanel> Logger { get; set; } = default!;
@@ -340,88 +335,16 @@ public partial class AgentChatPanel : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private async Task HandlePromptGallerySelectionAsync(PromptGallerySelection selection)
+    private Task InsertPromptGalleryContentAsync(string content)
     {
-        var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
-            selection.ArtifactId,
-            new PromptGalleryConsumerContext(
-                PromptGalleryConsumer.Chat,
-                PromptGalleryCompatibilityPurpose.Selection,
-                Provider: SelectedAgentProviderKind,
-                Model: selectedAgent?.Model));
-        if (compatibilityResult.IsFailure || compatibilityResult.Value is null)
-        {
-            NotificationService.Warning(
-                "Prompt compatibility unavailable",
-                DescribePromptGalleryErrors(compatibilityResult.Errors));
-            return;
-        }
-
-        var compatibility = compatibilityResult.Value;
-        var decision = PromptCompatibilityWarningDecision.InsertAnyway;
-        if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
-        {
-            var dialogResult = await DialogService.OpenAsync<PromptCompatibilityWarningDialog>(
-                "Prompt compatibility",
-                new Dictionary<string, object?>
-                {
-                    [nameof(PromptCompatibilityWarningDialog.Selection)] = selection,
-                    [nameof(PromptCompatibilityWarningDialog.Compatibility)] = compatibility
-                },
-                new DialogOptions
-                {
-                    Eyebrow = "Provider and model check",
-                    Subtitle = "Review declared compatibility before inserting this prompt.",
-                    Size = ModalSize.Medium,
-                    DenseChrome = true,
-                    TestId = "prompt-gallery-chat-compatibility-dialog",
-                    AriaLabel = "Prompt compatibility warning"
-                });
-            if (dialogResult is not PromptCompatibilityWarningDecision selectedDecision ||
-                selectedDecision == PromptCompatibilityWarningDecision.Cancel)
-            {
-                return;
-            }
-
-            decision = selectedDecision;
-        }
-
-        if (decision == PromptCompatibilityWarningDecision.InsertAndSuppress)
-        {
-            foreach (var issue in compatibility.Issues.Where(issue =>
-                         !issue.IsSuppressed && issue.IsSuppressible))
-            {
-                var suppression = await PromptGallery.SetWarningSuppressionAsync(
-                    selection.ArtifactId,
-                    PromptGalleryConsumer.Chat,
-                    issue.Code,
-                    suppressed: true);
-                if (suppression.IsFailure)
-                {
-                    NotificationService.Warning(
-                        "Warning preference was not saved",
-                        DescribePromptGalleryErrors(suppression.Errors));
-                }
-            }
-        }
-
-        var content = selection.Content.Trim();
-        if (content.Length == 0)
-        {
-            NotificationService.Warning("Prompt is empty", "The selected Gallery item has no content to insert.");
-            return;
-        }
-
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        var normalizedContent = content.Trim();
         draftPrompt = string.IsNullOrWhiteSpace(draftPrompt)
-            ? content
-            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{content}";
+            ? normalizedContent
+            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{normalizedContent}";
         composerKey++;
+        return Task.CompletedTask;
     }
-
-    private static string DescribePromptGalleryErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
-        => errors.Count == 0
-            ? "The Prompt Gallery did not return a result."
-            : string.Join(" ", errors.Select(error => error.Message));
 
     private Task HandleThreadSelectedAsync(ConversationPresentationKey key)
     {

@@ -3,6 +3,8 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
 
@@ -48,6 +50,54 @@ public sealed class LlmChatConversationApplicationServiceTests
         Assert.Equal(result.Value.Conversation.Id, engineCreate.Id);
         Assert.Equal(result.Value.Conversation.DefinitionRevision, engineCreate.Revision.Revision);
         Assert.Equal("Support assistant", result.Value.DefinitionName);
+        Assert.Equal(
+            new LlmConversationProviderSnapshot(
+                activeDefinition.Value.Revision.ProviderProfileId,
+                activeDefinition.Value.Revision.ProviderName,
+                activeDefinition.Value.Revision.ProviderKind,
+                activeDefinition.Value.Revision.Model),
+            result.Value.ProviderModel);
+    }
+
+    [Fact]
+    public async Task Get_maps_the_pinned_provider_model_from_the_conversation_read_projection()
+    {
+        var definitionId = LlmChatDefinitionId.New();
+        var conversationId = LlmChatConversationId.New();
+        var conversation = new LlmChatConversation(
+            conversationId,
+            definitionId,
+            new LlmChatDefinitionRevisionNumber(3),
+            "Pinned conversation",
+            LlmChatConversationStatus.Active,
+            LlmChatConversationOrigin.Api,
+            Now,
+            Now,
+            0);
+        var providerModel = new LlmConversationProviderSnapshot(
+            Guid.NewGuid(),
+            "Pinned provider",
+            ProviderKind.OpenAi,
+            "gpt-5-pinned");
+        var transcript = new LlmChatConversationEngineState(conversationId, 1, null, Now, Now);
+        var service = new LlmChatConversationApplicationService(
+            new InMemoryLlmChatDefinitionRepository(),
+            new InMemoryLlmChatConversationRepository(),
+            new StubLlmChatConversationReadStore(new LlmChatConversationReadModel(
+                conversation,
+                "Pinned definition",
+                providerModel,
+                transcript)),
+            new StubLlmChatTurnStateRepository(),
+            new InlineLlmChatUnitOfWork(),
+            new StubLlmChatConversationEngine(),
+            new FixedTimeProvider(Now));
+
+        var result = await service.GetAsync(conversationId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(providerModel, result.Value!.ProviderModel);
+        Assert.Equal(conversation.DefinitionRevision, result.Value.Conversation.DefinitionRevision);
     }
 
     [Theory]

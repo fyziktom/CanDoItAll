@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
@@ -55,6 +56,11 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
         var operationId = LlmChatOperationId.New();
         engine.SeedActiveTurn(conversationId, operationId);
         transcript = transcript with { ActiveOperationId = operationId };
+        var providerModel = new LlmConversationProviderSnapshot(
+            revision.ProviderProfileId,
+            revision.ProviderName,
+            revision.ProviderKind,
+            revision.Model);
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -64,7 +70,7 @@ public sealed class LlmChatWholeUseCaseProfileScopeTests
         services.AddSingleton<ILlmChatDefinitionRepository>(definitions);
         services.AddSingleton<ILlmChatConversationRepository>(conversations);
         services.AddSingleton<ILlmChatConversationReadStore>(new SwitchingConversationReadStore(
-            new LlmChatConversationReadModel(conversation, definition.Name, transcript),
+            new LlmChatConversationReadModel(conversation, definition.Name, providerModel, transcript),
             () => runtimeLease.IsCurrent = false));
         services.AddSingleton<ILlmChatTurnStateRepository>(new StubLlmChatTurnStateRepository());
         services.AddSingleton<ILlmChatUnitOfWork>(new InlineLlmChatUnitOfWork());

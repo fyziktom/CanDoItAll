@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
@@ -70,6 +71,7 @@ public sealed record LlmChatTranscriptQuery
 public sealed record LlmChatConversationDetails(
     LlmChatConversation Conversation,
     string DefinitionName,
+    LlmConversationProviderSnapshot ProviderModel,
     LlmChatConversationEngineState Transcript,
     IReadOnlyList<LlmChatTranscriptEntry>? Messages = null,
     LlmChatTranscriptCursor? NextMessageCursor = null)

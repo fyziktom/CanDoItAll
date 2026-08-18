@@ -158,6 +158,13 @@ public sealed class AgentsHomePageTests
         Assert.Equal(
             "true",
             cut.Find("[data-testid='llm-chats-tab-definitions']").GetAttribute("aria-selected"));
+
+        cut.Find("[data-testid='llm-chats-tab-conversations']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-conversation-workspace']", TimeSpan.FromSeconds(10));
+        cut.WaitForAssertion(() => Assert.DoesNotContain(
+            "Loading conversations...",
+            cut.Find("[data-testid='llm-chat-conversation-workspace']").TextContent,
+            StringComparison.Ordinal), TimeSpan.FromSeconds(10));
     }
 
     [Fact]
