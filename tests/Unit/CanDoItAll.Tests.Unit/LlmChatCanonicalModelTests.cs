@@ -74,6 +74,19 @@ public sealed class LlmChatCanonicalModelTests
     }
 
     [Fact]
+    public void Avatar_image_validation_accepts_catalog_asset_and_rejects_unknown_relative_path()
+    {
+        var bundledAvatar = AgentAvatarImageCatalog.BundledAvatarUrls[1];
+
+        var normalized = LlmChatDefinitionValidation.NormalizeAvatarImageUrl($"  {bundledAvatar}  ");
+
+        Assert.Equal(bundledAvatar, normalized);
+        var exception = Assert.Throws<ArgumentException>(() =>
+            LlmChatDefinitionValidation.NormalizeAvatarImageUrl("avatars/unknown.png"));
+        Assert.Contains("absolute HTTP or HTTPS URL", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Operation_id_is_the_generic_turn_id()
     {
         var value = Guid.NewGuid();

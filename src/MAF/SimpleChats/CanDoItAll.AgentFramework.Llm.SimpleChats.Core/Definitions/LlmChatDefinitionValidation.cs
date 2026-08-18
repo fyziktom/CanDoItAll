@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 
@@ -41,6 +42,11 @@ public static class LlmChatDefinitionValidation
     {
         var normalized = NormalizeOptional(value, MaximumAvatarImageUrlLength, nameof(value));
         if (normalized.Length == 0)
+        {
+            return normalized;
+        }
+
+        if (AgentAvatarImageCatalog.IsBundledAvatarUrl(normalized))
         {
             return normalized;
         }

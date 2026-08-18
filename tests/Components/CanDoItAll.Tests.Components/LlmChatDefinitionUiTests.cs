@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Conversations.Components.Presentation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -188,6 +189,28 @@ public sealed class LlmChatDefinitionUiTests
         Assert.Equal("answer", gateway.UpdatedMutation.SchemaName);
         Assert.Equal(["research", "summary"], gateway.UpdatedMutation.Tags);
         Assert.Equal("Tune structured output", gateway.UpdatedMutation.RevisionReason);
+    }
+
+    [Fact]
+    public void Selecting_bundled_avatar_saves_the_catalog_asset_path()
+    {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(
+            gateway,
+            new StubProviderGateway(),
+            new StubAuthorization(canRead: true, canManage: true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
+
+        cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-avatar-option-2']");
+        cut.Find("[data-testid='llm-chat-definition-avatar-option-2']").Click();
+        cut.Find("[data-testid='llm-chat-definition-avatar-close']").Click();
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(gateway.UpdatedMutation));
+        Assert.Equal(AgentAvatarImageCatalog.BundledAvatarUrls[1], gateway.UpdatedMutation!.AvatarImageUrl);
     }
 
     [Fact]
