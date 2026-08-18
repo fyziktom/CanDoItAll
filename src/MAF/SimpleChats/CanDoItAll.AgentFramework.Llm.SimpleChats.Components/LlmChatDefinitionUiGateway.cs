@@ -90,7 +90,8 @@ public interface ILlmChatDefinitionUiGateway
 
 public sealed class LlmChatDefinitionUiGateway(
     ILlmChatDefinitionApplicationService definitions,
-    ILlmChatUiAuthorizationFacade authorization) : ILlmChatDefinitionUiGateway
+    ILlmChatUiAuthorizationFacade authorization,
+    ILlmChatDefinitionCatalogInvalidator catalogInvalidator) : ILlmChatDefinitionUiGateway
 {
     public async Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
         LlmChatDefinitionQuery query,
@@ -167,7 +168,9 @@ public sealed class LlmChatDefinitionUiGateway(
             ToResponseFormat(mutation),
             mutation.RevisionReason,
             mutation.Tags), cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToEditor);
+        return InvalidateCatalogAfterSuccess(
+            LlmChatUiResultMapper.Map(result, ToEditor),
+            static editor => editor.Definition);
     }
 
     public async Task<LlmChatUiResult<LlmChatDefinitionEditor>> UpdateAsync(
@@ -201,7 +204,9 @@ public sealed class LlmChatDefinitionUiGateway(
             mutation.RevisionReason,
             expectedConcurrencyToken,
             mutation.Tags), cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToEditor);
+        return InvalidateCatalogAfterSuccess(
+            LlmChatUiResultMapper.Map(result, ToEditor),
+            static editor => editor.Definition);
     }
 
     public async Task<LlmChatUiResult<LlmChatDefinitionListItem>> ChangeStatusAsync(
@@ -223,7 +228,21 @@ public sealed class LlmChatDefinitionUiGateway(
         var result = await definitions.ChangeStatusAsync(
             new ChangeLlmChatDefinitionStatusCommand(id, status, expectedConcurrencyToken),
             cancellationToken).ConfigureAwait(false);
-        return LlmChatUiResultMapper.Map(result, ToListItem);
+        return InvalidateCatalogAfterSuccess(
+            LlmChatUiResultMapper.Map(result, ToListItem),
+            static definition => definition);
+    }
+
+    private LlmChatUiResult<T> InvalidateCatalogAfterSuccess<T>(
+        LlmChatUiResult<T> result,
+        Func<T, LlmChatDefinitionListItem> resolveDefinition)
+    {
+        if (result is { IsSuccess: true, Value: { } value })
+        {
+            catalogInvalidator.Invalidate(resolveDefinition(value));
+        }
+
+        return result;
     }
 
     private static bool TryCreateId(Guid value, out LlmChatDefinitionId id)

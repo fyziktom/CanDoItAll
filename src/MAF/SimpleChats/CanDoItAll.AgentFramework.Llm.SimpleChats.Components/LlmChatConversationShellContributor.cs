@@ -11,10 +11,11 @@ public sealed class LlmChatConversationShellContributor(
     ILlmChatDefinitionUiGateway definitions,
     ILlmChatConversationUiGateway conversations,
     ILlmChatUiAuthorizationFacade authorization,
+    ILlmChatDefinitionCatalogInvalidator definitionCatalogInvalidator,
     IConversationShellLauncher shell,
     DialogService dialogService,
     NotificationService notificationService,
-    ILogger<LlmChatConversationShellContributor> logger) : IConversationShellContributor
+    ILogger<LlmChatConversationShellContributor> logger) : IConversationShellContributor, IAsyncDisposable
 {
     public const string SourceIdentifier = "simple-chats";
     private static readonly ConversationPresentationKey NewChatActionKey = new("new-chat");
@@ -28,6 +29,8 @@ public sealed class LlmChatConversationShellContributor(
     private Task initializationTask = Task.CompletedTask;
     private string failureMessage = string.Empty;
     private bool initialized;
+    private bool attached;
+    private int disposed;
 
     public string SourceId => SourceIdentifier;
 
@@ -137,7 +140,7 @@ public sealed class LlmChatConversationShellContributor(
         {
             activeConversations[conversationId] = state with { IsVisible = false };
             shell.ClearFocusedWindow(SourceIdentifier, windowId);
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
         }
 
         return Task.CompletedTask;
@@ -148,6 +151,8 @@ public sealed class LlmChatConversationShellContributor(
 
     private async Task InitializeCoreAsync(CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+        Attach();
         failureMessage = string.Empty;
         try
         {
@@ -175,7 +180,7 @@ public sealed class LlmChatConversationShellContributor(
         }
         finally
         {
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
         }
     }
 
@@ -385,7 +390,7 @@ public sealed class LlmChatConversationShellContributor(
         ReplaceConversation(result.Value.Conversation);
         activeConversations.Remove(conversation.ConversationId);
         shell.ClearFocusedWindow(SourceIdentifier, BuildWindowId(conversation.ConversationId));
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     private void ShowConversation(LlmChatConversationListItem conversation)
@@ -397,7 +402,7 @@ public sealed class LlmChatConversationShellContributor(
 
         activeConversations[conversation.ConversationId] = new(conversation, true);
         shell.FocusWindow(SourceIdentifier, BuildWindowId(conversation.ConversationId));
-        Changed?.Invoke(this, EventArgs.Empty);
+        RaiseChanged();
     }
 
     private void ReplaceConversation(LlmChatConversationListItem conversation)
@@ -416,7 +421,42 @@ public sealed class LlmChatConversationShellContributor(
     private void SetFailure(IReadOnlyList<LlmChatUiFailure> failures)
     {
         failureMessage = failures.FirstOrDefault()?.Message ?? "Simple Chats could not be loaded.";
-        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void Attach()
+    {
+        if (attached)
+        {
+            return;
+        }
+
+        attached = true;
+        definitionCatalogInvalidator.Invalidated += HandleDefinitionCatalogInvalidated;
+    }
+
+    private void HandleDefinitionCatalogInvalidated(
+        object? sender,
+        LlmChatDefinitionCatalogInvalidatedEventArgs eventArgs)
+    {
+        var definition = eventArgs.Definition;
+        var unchangedDefinitions = activeDefinitions.Where(item =>
+            item.DefinitionId != definition.DefinitionId);
+        activeDefinitions = definition.Status == LlmChatDefinitionStatus.Active
+            ? [
+                definition,
+                .. unchangedDefinitions.Take(
+                    LlmChatConversationWorkspaceController.MaximumDefinitionCount - 1)
+            ]
+            : [.. unchangedDefinitions];
+        RaiseChanged();
+    }
+
+    private void RaiseChanged()
+    {
+        if (Volatile.Read(ref disposed) == 0)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void NotifyFailure(string title, IReadOnlyList<LlmChatUiFailure> failures)
@@ -433,6 +473,21 @@ public sealed class LlmChatConversationShellContributor(
                conversationId != Guid.Empty
             ? conversationId
             : throw new ArgumentException($"'{windowId}' is not a Simple Chat window id.", nameof(windowId));
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        if (attached)
+        {
+            definitionCatalogInvalidator.Invalidated -= HandleDefinitionCatalogInvalidated;
+        }
+
+        return ValueTask.CompletedTask;
     }
 
     private sealed record FloatingConversationState(

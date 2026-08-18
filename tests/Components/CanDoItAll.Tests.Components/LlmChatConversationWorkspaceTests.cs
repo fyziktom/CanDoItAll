@@ -20,6 +20,68 @@ public sealed class LlmChatConversationWorkspaceTests
     private static readonly Guid SecondConversationId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
     [Fact]
+    public void Floating_adapter_preserves_the_focused_full_height_workspace_contract()
+    {
+        var conversation = CreateConversation();
+        var conversations = new StubConversationGateway();
+        conversations.ListPages.Enqueue(new([conversation], null));
+        conversations.TranscriptPages.Enqueue(CreateView(conversation, []));
+        using var context = CreateContext(conversations, new StubOperationGateway());
+
+        var cut = context.Render<LlmChatFloatingConversationContent>(parameters => parameters
+            .Add(component => component.ConversationId, ConversationId));
+
+        cut.WaitForAssertion(() =>
+        {
+            var adapter = cut.Find("[data-testid='floating-simple-chat-content']");
+            Assert.Contains("llm-chat-floating-conversation-content", adapter.ClassList);
+            Assert.All(
+                new[]
+                {
+                    "flex",
+                    "flex-1",
+                    "flex-col",
+                    "h-full",
+                    "min-h-0",
+                    "min-w-0",
+                    "w-full",
+                    "overflow-hidden"
+                },
+                className => Assert.Contains(className, adapter.ClassList));
+
+            var workspace = cut.Find("[data-testid='llm-chat-conversation-workspace']");
+            Assert.Contains("llm-chat-conversation-workspace--focused", workspace.ClassList);
+            Assert.All(
+                new[]
+                {
+                    "flex-1",
+                    "h-full",
+                    "min-h-0",
+                    "min-w-0",
+                    "w-full",
+                    "overflow-hidden"
+                },
+                className => Assert.Contains(className, workspace.ClassList));
+
+            var grid = workspace.QuerySelector(":scope > div");
+            Assert.NotNull(grid);
+            Assert.Contains("h-full", grid.ClassList);
+            Assert.Contains("min-h-0", grid.ClassList);
+            Assert.Contains("w-full", grid.ClassList);
+            Assert.Contains("height:100%", grid.GetAttribute("style"), StringComparison.Ordinal);
+            Assert.Contains("min-height:0", grid.GetAttribute("style"), StringComparison.Ordinal);
+
+            var panel = workspace.QuerySelector("[data-testid='llm-chat-workspace-panel']");
+            Assert.NotNull(panel);
+            Assert.Contains("flex", panel.ClassList);
+            Assert.Contains("h-full", panel.ClassList);
+            Assert.Contains("min-h-0", panel.ClassList);
+            Assert.Contains("flex-col", panel.ClassList);
+            Assert.Contains("overflow-hidden", panel.ClassList);
+        });
+    }
+
+    [Fact]
     public void Start_chat_picker_exposes_only_active_definitions_and_selects_the_pinned_revision()
     {
         var conversations = new StubConversationGateway();

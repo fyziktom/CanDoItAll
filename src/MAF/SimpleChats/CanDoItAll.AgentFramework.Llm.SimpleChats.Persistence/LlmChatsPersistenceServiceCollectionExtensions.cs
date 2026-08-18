@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
@@ -24,6 +25,7 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
         services.AddScoped<ILlmChatConversationReadStore, EfLlmChatConversationReadStore>();
         services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();
         services.AddScoped<ILlmChatOperationReadStore, EfLlmChatOperationReadStore>();
+        services.AddScoped<ILlmChatProjectStructureReportStore, EfLlmChatProjectStructureReportStore>();
         services.AddScoped<ILlmChatTurnStateRepository, EfLlmChatTurnStateRepository>();
         services.AddScoped<ILlmChatInvocationRecordRepository, EfLlmChatInvocationRecordRepository>();
         services.AddScoped<ILlmChatOperationEventRepository, EfLlmChatOperationEventRepository>();

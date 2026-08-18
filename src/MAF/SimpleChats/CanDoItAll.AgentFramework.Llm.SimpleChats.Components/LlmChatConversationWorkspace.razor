@@ -23,13 +23,17 @@ else if (!controller.Authorization.CanRead)
 }
 else
 {
-    <section class="@CssClassBuilder.Join("llm-chat-conversation-workspace", Focused ? "llm-chat-conversation-workspace--focused" : null)"
+    <section class="@CssClassBuilder.Join(
+                        "llm-chat-conversation-workspace",
+                        Focused
+                            ? "llm-chat-conversation-workspace--focused flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
+                            : null)"
              data-testid="llm-chat-conversation-workspace"
              data-conversation-context="none">
         <Grid ColumnTemplateXl="@(Focused ? "minmax(0,1fr)" : "minmax(16rem,22rem) minmax(0,1fr)")"
               Gap="LayoutGap.Large"
               FillHeight="true"
-              Class="h-full">
+              Class="h-full min-h-0 w-full flex-1">
         @if (!Focused)
         {
         <SurfaceCard Class="llm-chat-conversation-workspace__rail h-full min-h-0 overflow-y-auto">

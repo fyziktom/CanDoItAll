@@ -264,6 +264,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<AgentChatContextRegistry>();
         services.AddScoped<IAgentChatContextRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatContextRegistry>());
+        services.AddScoped<IAgentWorkspaceScopeAccessor, AgentChatWorkspaceScopeAccessor>();
         services.AddScoped<AgentChatExecutionNotificationHub>();
         services.AddScoped<IAgentChatExecutionNotificationHub>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatExecutionNotificationHub>());

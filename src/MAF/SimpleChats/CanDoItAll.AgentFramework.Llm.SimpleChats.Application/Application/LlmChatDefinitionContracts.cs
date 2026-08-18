@@ -41,11 +41,13 @@ public sealed record ChangeLlmChatDefinitionStatusCommand(
 public sealed record LlmChatDefinitionQuery
 {
     public const int MaximumTake = 100;
+    public const int MaximumSearchLength = 200;
 
     public LlmChatDefinitionQuery(
         int take = 50,
         LlmChatDefinitionStatus? status = null,
-        LlmChatDefinitionCursor? cursor = null)
+        LlmChatDefinitionCursor? cursor = null,
+        string? searchText = null)
     {
         if (take is < 1 or > MaximumTake)
         {
@@ -57,9 +59,18 @@ public sealed record LlmChatDefinitionQuery
             throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown definition status.");
         }
 
+        var normalizedSearchText = searchText?.Trim() ?? string.Empty;
+        if (normalizedSearchText.Length > MaximumSearchLength)
+        {
+            throw new ArgumentException(
+                $"Definition search cannot exceed {MaximumSearchLength} characters.",
+                nameof(searchText));
+        }
+
         Take = take;
         Status = status;
         Cursor = cursor;
+        SearchText = normalizedSearchText;
     }
 
     public int Take { get; }
@@ -67,6 +78,8 @@ public sealed record LlmChatDefinitionQuery
     public LlmChatDefinitionStatus? Status { get; }
 
     public LlmChatDefinitionCursor? Cursor { get; }
+
+    public string SearchText { get; }
 }
 
 public sealed record LlmChatDefinitionDetails(

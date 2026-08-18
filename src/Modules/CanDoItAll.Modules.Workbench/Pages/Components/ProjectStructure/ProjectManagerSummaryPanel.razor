@@ -733,6 +733,7 @@
         => kind switch
         {
             ProjectManagerActivityKind.Conversation => "Agent",
+            ProjectManagerActivityKind.SimpleChat => "Simple chat",
             ProjectManagerActivityKind.Workflow => "Workflow",
             ProjectManagerActivityKind.Process => "Process",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported manager activity kind.")

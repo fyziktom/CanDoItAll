@@ -71,6 +71,7 @@ public interface ILlmChatDefinitionReadStore
         int take,
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
+        string? searchText = null,
         CancellationToken cancellationToken = default);
 }
 

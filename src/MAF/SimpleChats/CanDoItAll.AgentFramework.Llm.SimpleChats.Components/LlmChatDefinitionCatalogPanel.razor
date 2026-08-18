@@ -1,5 +1,7 @@
+@using CanDoItAll.AgentFramework.Llm.SimpleChats.Application
 @inject ILlmChatDefinitionUiGateway Definitions
 @inject ILlmChatUiAuthorizationFacade Authorization
+@implements IAsyncDisposable
 
 <SurfaceCard Class="llm-chat-definition-catalog" data-testid="llm-chat-definition-catalog">
     <Stack GapScale="LayoutGap.Large">
@@ -11,7 +13,6 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <span class="cda-eyebrow">Reusable Simple Chats</span>
                 <h2 class="text-xl font-semibold text-slate-900">Definitions</h2>
-                <p class="text-sm leading-6 text-slate-600">Choose the provider, model, prompt, and output contract reused by conversations.</p>
             </Stack>
             @if (authorization.CanManage)
             {
@@ -32,7 +33,30 @@
         else
         {
             <FilterBar ResultText="@ResultText" data-testid="llm-chat-definition-filter-bar">
-                <FormField Text="Status" Class="llm-chat-definition-catalog__status-filter">
+                <Cluster Gap="LayoutGap.XSmall"
+                         Wrap="FlexWrap.NoWrap"
+                         Class="llm-chat-definition-catalog__filters"
+                         data-testid="llm-chat-definition-filters">
+                    <TextBox Value="@searchText"
+                             ValueChanged="ChangeSearchAsync"
+                             Placeholder="Search definitions"
+                             Immediate="true"
+                             Class="llm-chat-definition-catalog__search-filter"
+                             maxlength="@LlmChatDefinitionQuery.MaximumSearchLength"
+                             aria-label="Search Simple Chat definitions"
+                             data-testid="llm-chat-definition-search" />
+                    <TooltipTarget Text="Reset definition search"
+                                   Position="TooltipPosition.Bottom"
+                                   Duration="@((TimeSpan?)null)"
+                                   TestId="llm-chat-definition-reset-tooltip">
+                        <Button Icon="restart_alt"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="ResetSearchAsync"
+                                Disabled="@string.IsNullOrWhiteSpace(searchText)"
+                                aria-label="Reset definition search"
+                                data-testid="llm-chat-definition-search-reset" />
+                    </TooltipTarget>
                     <DropDown TValue="LlmChatDefinitionStatusFilter"
                               Data="@StatusOptions"
                               TextProperty="@nameof(LlmChatDefinitionStatusFilterOption.Label)"
@@ -40,8 +64,10 @@
                               Value="@statusFilter"
                               ValueChanged="ChangeStatusFilterAsync"
                               Disabled="@isLoading"
+                              Class="llm-chat-definition-catalog__status-filter"
+                              aria-label="Filter Simple Chat definitions by status"
                               data-testid="llm-chat-definition-status-filter" />
-                </FormField>
+                </Cluster>
             </FilterBar>
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
@@ -60,17 +86,19 @@
             else if (definitions.Count == 0)
             {
                 <EmptyState Eyebrow="Definitions"
-                            Title="No definitions match this status"
-                            Description="Choose another status or create a reusable Simple Chat definition." />
+                            Title="No definitions match the current filters"
+                            Description="@EmptyDescription" />
             }
             else
             {
-                <Grid ColumnsMd="2" ColumnsXl="3" Gap="LayoutGap.Medium" Class="llm-chat-definition-catalog__grid">
+                <Grid ColumnTemplate="repeat(auto-fill,minmax(min(100%,17rem),22rem))"
+                      Gap="LayoutGap.Medium"
+                      data-testid="llm-chat-definition-grid">
                     @foreach (var definition in definitions)
                     {
                         <ConversationParticipantCard @key="definition.DefinitionId"
                                                      Participant="@LlmChatDefinitionPresentationMapper.ToParticipant(definition, selectedDefinitionId)"
-                                                     Layout="ParticipantCardLayout.Enterprise"
+                                                     Layout="@(ParticipantCardLayout.Enterprise | ParticipantCardLayout.Centered)"
                                                      ShellTestId="@($"llm-chat-definition-{definition.DefinitionId:D}")"
                                                      SelectTestId="@($"llm-chat-definition-select-{definition.DefinitionId:D}")"
                                                      Selected="OpenSelectedEditorAsync">
@@ -129,20 +157,29 @@
         new(LlmChatDefinitionStatusFilter.Suspended, "Suspended"),
         new(LlmChatDefinitionStatusFilter.Archived, "Archived")
     ];
+    private static readonly TimeSpan SearchDebounceDelay = TimeSpan.FromMilliseconds(250);
 
     private readonly List<LlmChatDefinitionListItem> definitions = [];
     private LlmChatUiAuthorizationSnapshot authorization = new(false, false, false);
+    private CancellationTokenSource? catalogLoadCancellation;
+    private CancellationTokenSource? searchDebounceCancellation;
     private LlmChatDefinitionStatusFilter statusFilter;
     private LlmChatDefinitionCursor? nextCursor;
     private Guid? selectedDefinitionId;
+    private long loadSequence;
     private Guid editorKey;
     private bool editorOpen;
     private bool isLoading;
     private string errorMessage = string.Empty;
+    private string searchText = string.Empty;
 
     private string ResultText => isLoading
         ? "Loading definitions"
         : $"{definitions.Count} definition{(definitions.Count == 1 ? string.Empty : "s")}";
+
+    private string EmptyDescription => string.IsNullOrWhiteSpace(searchText)
+        ? "Choose another status or create a reusable Simple Chat definition."
+        : "Clear the search or choose another status to see more definitions.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,20 +197,58 @@
 
     private async Task ChangeStatusFilterAsync(LlmChatDefinitionStatusFilter value)
     {
+        CancelPendingSearch();
         statusFilter = value;
+        await LoadAsync(append: false);
+    }
+
+    private async Task ChangeSearchAsync(string? value)
+    {
+        searchText = value ?? string.Empty;
+        CancelPendingSearch();
+        var debounceCancellation = new CancellationTokenSource();
+        searchDebounceCancellation = debounceCancellation;
+
+        try
+        {
+            await Task.Delay(SearchDebounceDelay, debounceCancellation.Token);
+            await LoadAsync(append: false, debounceCancellation.Token);
+        }
+        catch (OperationCanceledException) when (debounceCancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(searchDebounceCancellation, debounceCancellation))
+            {
+                searchDebounceCancellation = null;
+            }
+
+            debounceCancellation.Dispose();
+        }
+    }
+
+    private async Task ResetSearchAsync()
+    {
+        CancelPendingSearch();
+        searchText = string.Empty;
         await LoadAsync(append: false);
     }
 
     private Task LoadMoreAsync()
         => LoadAsync(append: true);
 
-    private async Task LoadAsync(bool append)
+    private async Task LoadAsync(bool append, CancellationToken cancellationToken = default)
     {
-        if (isLoading)
+        if (append && isLoading)
         {
             return;
         }
 
+        var requestSequence = ++loadSequence;
+        CancelCurrentLoad();
+        var loadCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        catalogLoadCancellation = loadCancellation;
         isLoading = true;
         errorMessage = string.Empty;
         try
@@ -182,7 +257,14 @@
             var result = await Definitions.ListPageAsync(new(
                 take: 24,
                 status: LlmChatDefinitionPresentationMapper.ToStatus(statusFilter),
-                cursor: cursor));
+                cursor: cursor,
+                searchText: searchText),
+                loadCancellation.Token);
+            if (requestSequence != loadSequence || loadCancellation.IsCancellationRequested)
+            {
+                return;
+            }
+
             if (result.IsFailure)
             {
                 errorMessage = FormatFailures(result.Failures);
@@ -197,10 +279,37 @@
             definitions.AddRange(result.Value!.Items);
             nextCursor = result.Value.NextCursor;
         }
+        catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
+        {
+        }
         finally
         {
-            isLoading = false;
+            if (requestSequence == loadSequence)
+            {
+                isLoading = false;
+            }
+
+            if (ReferenceEquals(catalogLoadCancellation, loadCancellation))
+            {
+                catalogLoadCancellation = null;
+            }
+
+            loadCancellation.Dispose();
         }
+    }
+
+    private void CancelPendingSearch()
+    {
+        var cancellation = searchDebounceCancellation;
+        searchDebounceCancellation = null;
+        cancellation?.Cancel();
+    }
+
+    private void CancelCurrentLoad()
+    {
+        var cancellation = catalogLoadCancellation;
+        catalogLoadCancellation = null;
+        cancellation?.Cancel();
     }
 
     private Task OpenCreateEditor()
@@ -249,4 +358,12 @@
 
     private static string FormatFailures(IReadOnlyList<LlmChatUiFailure> failures)
         => string.Join(' ', failures.Select(failure => failure.Message));
+
+    public ValueTask DisposeAsync()
+    {
+        loadSequence++;
+        CancelPendingSearch();
+        CancelCurrentLoad();
+        return ValueTask.CompletedTask;
+    }
 }

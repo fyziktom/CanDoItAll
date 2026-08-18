@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 
@@ -28,6 +29,8 @@ public enum LlmChatDispatchPhase
 
 public sealed record LlmChatOperation
 {
+    public const int MaximumAttributionScopeKeyLength = 200;
+
     private long lastEventSequence;
 
     public LlmChatOperation(
@@ -38,7 +41,8 @@ public sealed record LlmChatOperation
         long expectedTranscriptRevision,
         LlmChatOperationStatus status,
         DateTimeOffset startedAtUtc,
-        long concurrencyToken)
+        long concurrencyToken,
+        WorkspaceScopeDescriptor? attributionScope = null)
     {
         if (id.Value == Guid.Empty)
         {
@@ -65,6 +69,21 @@ public sealed record LlmChatOperation
             throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown operation status.");
         }
 
+        if (attributionScope is not null && !Enum.IsDefined(attributionScope.Kind))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(attributionScope),
+                attributionScope.Kind,
+                "Unknown attribution workspace scope kind.");
+        }
+
+        if (attributionScope?.Key.Length > MaximumAttributionScopeKeyLength)
+        {
+            throw new ArgumentException(
+                $"An attribution workspace scope key cannot exceed {MaximumAttributionScopeKeyLength} characters.",
+                nameof(attributionScope));
+        }
+
         ArgumentOutOfRangeException.ThrowIfNegative(expectedTranscriptRevision);
         ArgumentOutOfRangeException.ThrowIfNegative(concurrencyToken);
 
@@ -76,6 +95,9 @@ public sealed record LlmChatOperation
         Status = status;
         StartedAtUtc = startedAtUtc;
         ConcurrencyToken = concurrencyToken;
+        AttributionScope = attributionScope is null
+            ? null
+            : new WorkspaceScopeDescriptor(attributionScope.Kind, attributionScope.Key);
     }
 
     public LlmChatOperationId Id { get; init; }
@@ -89,6 +111,8 @@ public sealed record LlmChatOperation
     public long ExpectedTranscriptRevision { get; init; }
 
     public LlmChatOperationStatus Status { get; init; }
+
+    public WorkspaceScopeDescriptor? AttributionScope { get; }
 
     public DateTimeOffset? CancellationRequestedAtUtc { get; init; }
 

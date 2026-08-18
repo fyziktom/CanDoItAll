@@ -23,7 +23,7 @@ internal sealed record LlmChatsTransferDocument(
     IReadOnlyList<LlmChatInvocationRecordRow> InvocationRecords,
     IReadOnlyList<LlmChatOperationEventRow> OperationEvents)
 {
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
     public int RecordCount =>
         Definitions.Count + Revisions.Count + Tags.Count + Conversations.Count + Transcripts.Count +
@@ -374,6 +374,7 @@ internal sealed record LlmChatsTransferDocument(
     {
         if (row.Id == Guid.Empty ||
             row.ConversationId == Guid.Empty ||
+            !HasValidAttributionScope(row) ||
             row.ExpectedTranscriptRevision < 0 ||
             row.CancellationGeneration < 0 ||
             row.ConcurrencyToken < 0 ||
@@ -443,6 +444,32 @@ internal sealed record LlmChatsTransferDocument(
                  row.AssistantEntryId is null &&
                  row.FailureCode.Length == 0
         };
+    }
+
+    private static bool HasValidAttributionScope(LlmChatOperationRow row)
+    {
+        if (row.AttributionScopeKind is null)
+        {
+            return row.AttributionScopeKey.Length == 0;
+        }
+
+        if (!Enum.IsDefined(row.AttributionScopeKind.Value) ||
+            row.AttributionScopeKey.Length > LlmChatOperation.MaximumAttributionScopeKeyLength)
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = new WorkspaceScopeDescriptor(
+                row.AttributionScopeKind.Value,
+                row.AttributionScopeKey);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     private static bool IsValidUsage(int? inputTokens, int? outputTokens, int? cachedInputTokens)

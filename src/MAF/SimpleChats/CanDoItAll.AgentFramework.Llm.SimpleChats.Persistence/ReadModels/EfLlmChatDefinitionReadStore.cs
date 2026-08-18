@@ -33,6 +33,7 @@ public sealed class EfLlmChatDefinitionReadStore(AppDbContext dbContext) : ILlmC
         int take,
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
+        string? searchText = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
@@ -40,6 +41,18 @@ public sealed class EfLlmChatDefinitionReadStore(AppDbContext dbContext) : ILlmC
         if (status is { } value)
         {
             query = query.Where(item => item.Status == value);
+        }
+
+        var normalizedSearchText = searchText?.Trim() ?? string.Empty;
+        if (normalizedSearchText.Length > 0)
+        {
+            var searchPattern = $"%{EscapeLikePattern(normalizedSearchText)}%";
+            query = query.Where(item =>
+                EF.Functions.ILike(item.Name, searchPattern, "\\") ||
+                EF.Functions.ILike(item.Summary, searchPattern, "\\") ||
+                dbContext.Set<LlmChatDefinitionTagRow>().Any(tag =>
+                    tag.DefinitionId == item.Id &&
+                    EF.Functions.ILike(tag.Tag, searchPattern, "\\")));
         }
 
         if (cursor is { } position)
@@ -111,6 +124,12 @@ public sealed class EfLlmChatDefinitionReadStore(AppDbContext dbContext) : ILlmC
             LlmChatPersistenceMapper.ToDomain(definition),
             LlmChatPersistenceMapper.ToDomain(revision),
             tags.GetValueOrDefault(definition.Id) ?? []);
+
+    private static string EscapeLikePattern(string value)
+        => value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 
     private sealed record DefinitionRow(
         LlmChatDefinitionRow Definition,

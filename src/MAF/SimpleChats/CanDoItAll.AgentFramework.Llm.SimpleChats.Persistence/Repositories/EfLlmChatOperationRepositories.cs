@@ -45,7 +45,8 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
         var inserted = await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
             INSERT INTO "LlmChats_Operations"
                 ("Id", "ConversationId", "Kind", "RequestFingerprint", "ExpectedTranscriptRevision",
-                 "Status", "CancellationRequestedAtUtc", "CancellationGeneration", "TurnAdmittedAtUtc",
+                 "Status", "AttributionScopeKind", "AttributionScopeKey",
+                 "CancellationRequestedAtUtc", "CancellationGeneration", "TurnAdmittedAtUtc",
                  "ExecutionOwnerId", "ExecutionEpoch", "ClaimedAtUtc", "HeartbeatAtUtc",
                  "LeaseExpiresAtUtc", "DispatchPhase",
                  "ProviderDispatchStartedAtUtc", "ProviderDispatchReturnedAtUtc",
@@ -54,7 +55,10 @@ public sealed class EfLlmChatOperationRepository(AppDbContext dbContext) : ILlmC
             VALUES
                 ({operation.Id.Value}, {operation.ConversationId.Value}, {(int)operation.Kind},
                  {operation.RequestFingerprint.Value}, {operation.ExpectedTranscriptRevision},
-                 {(int)operation.Status}, {operation.CancellationRequestedAtUtc}, {operation.CancellationGeneration},
+                 {(int)operation.Status},
+                 {(operation.AttributionScope == null ? null : (int?)operation.AttributionScope.Kind)},
+                 {operation.AttributionScope?.Key ?? string.Empty},
+                 {operation.CancellationRequestedAtUtc}, {operation.CancellationGeneration},
                  {operation.TurnAdmittedAtUtc}, {(operation.ExecutionOwnerId == null ? null : operation.ExecutionOwnerId.Value.Value)},
                  {operation.ExecutionEpoch}, {operation.ClaimedAtUtc}, {operation.HeartbeatAtUtc},
                  {operation.LeaseExpiresAtUtc}, {(int)operation.DispatchPhase},

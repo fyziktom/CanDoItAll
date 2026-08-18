@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 
@@ -132,6 +133,8 @@ internal static class LlmChatPersistenceMapper
             RequestFingerprint = operation.RequestFingerprint.Value,
             ExpectedTranscriptRevision = operation.ExpectedTranscriptRevision,
             Status = operation.Status,
+            AttributionScopeKind = operation.AttributionScope?.Kind,
+            AttributionScopeKey = operation.AttributionScope?.Key ?? string.Empty,
             CancellationRequestedAtUtc = operation.CancellationRequestedAtUtc,
             CancellationGeneration = operation.CancellationGeneration,
             ExecutionOwnerId = operation.ExecutionOwnerId?.Value,
@@ -162,7 +165,10 @@ internal static class LlmChatPersistenceMapper
             row.ExpectedTranscriptRevision,
             row.Status,
             row.StartedAtUtc,
-            row.ConcurrencyToken)
+            row.ConcurrencyToken,
+            row.AttributionScopeKind is { } attributionScopeKind
+                ? new WorkspaceScopeDescriptor(attributionScopeKind, row.AttributionScopeKey)
+                : null)
         {
             CancellationRequestedAtUtc = row.CancellationRequestedAtUtc,
             CancellationGeneration = row.CancellationGeneration,

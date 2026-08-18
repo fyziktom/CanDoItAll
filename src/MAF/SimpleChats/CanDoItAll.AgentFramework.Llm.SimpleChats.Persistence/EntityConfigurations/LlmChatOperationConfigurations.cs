@@ -15,6 +15,9 @@ internal sealed class LlmChatOperationConfiguration : IEntityTypeConfiguration<L
         builder.ToTable("LlmChats_Operations");
         builder.HasKey(row => row.Id);
         builder.Property(row => row.RequestFingerprint).HasMaxLength(64).IsFixedLength().IsRequired();
+        builder.Property(row => row.AttributionScopeKey)
+            .HasMaxLength(LlmChatOperation.MaximumAttributionScopeKeyLength)
+            .IsRequired();
         builder.Property(row => row.FailureCode).HasMaxLength(200).IsRequired();
         builder.Property(row => row.LastEventSequence).IsRequired();
         builder.Property(row => row.ConcurrencyToken).IsConcurrencyToken();
@@ -23,6 +26,12 @@ internal sealed class LlmChatOperationConfiguration : IEntityTypeConfiguration<L
             .HasForeignKey(row => row.ConversationId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(row => new { row.ConversationId, row.StartedAtUtc });
+        builder.HasIndex(row => new
+        {
+            row.AttributionScopeKind,
+            row.AttributionScopeKey,
+            row.StartedAtUtc
+        });
         builder.HasIndex(row => new { row.Status, row.StartedAtUtc });
         builder.HasIndex(row => new { row.Status, row.LeaseExpiresAtUtc, row.StartedAtUtc });
         builder.HasIndex(row => new { row.Status, row.CompletedAtUtc });

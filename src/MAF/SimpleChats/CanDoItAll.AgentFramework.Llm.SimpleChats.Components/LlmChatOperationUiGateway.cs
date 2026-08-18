@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
@@ -55,7 +56,8 @@ public interface ILlmChatOperationUiGateway
 
 public sealed class LlmChatOperationUiGateway(
     ILlmChatOperationApplicationService operations,
-    ILlmChatUiAuthorizationFacade authorization) : ILlmChatOperationUiGateway
+    ILlmChatUiAuthorizationFacade authorization,
+    IAgentWorkspaceScopeAccessor workspaceScopeAccessor) : ILlmChatOperationUiGateway
 {
     public async Task<LlmChatUiResult<LlmChatOperationView>> SendAsync(
         Guid operationId,
@@ -75,8 +77,23 @@ public sealed class LlmChatOperationUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatOperationView>("Select a valid Simple Chat operation and conversation.");
         }
 
+        CanDoItAll.AgentFramework.Models.WorkspaceScopeDescriptor? attributionScope;
+        try
+        {
+            attributionScope = await workspaceScopeAccessor.CaptureAsync(cancellationToken);
+        }
+        catch (AgentWorkspaceScopeUnavailableException exception)
+        {
+            return LlmChatUiResultMapper.Invalid<LlmChatOperationView>(exception.Message);
+        }
+
         var result = await operations.SendAsync(
-            new(typedOperationId, typedConversationId, expectedTranscriptRevision, message),
+            new(
+                typedOperationId,
+                typedConversationId,
+                expectedTranscriptRevision,
+                message,
+                attributionScope),
             cancellationToken).ConfigureAwait(false);
         return LlmChatUiResultMapper.Map(result, ToView);
     }

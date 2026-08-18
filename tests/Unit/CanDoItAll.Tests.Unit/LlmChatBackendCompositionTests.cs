@@ -10,6 +10,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.DatabaseTransfer;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,8 @@ public sealed class LlmChatBackendCompositionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionApplicationService>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ILlmChatConversationApplicationService>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ILlmChatOperationApplicationService>());
+        Assert.IsType<EfLlmChatProjectStructureReportStore>(
+            scope.ServiceProvider.GetRequiredService<ILlmChatProjectStructureReportStore>());
         Assert.IsType<LlmChatConversationEngine>(
             scope.ServiceProvider.GetRequiredService<ILlmChatConversationEngine>());
         Assert.Contains(

@@ -54,7 +54,8 @@ public sealed class LlmChatOperationAdmissionService(
                 command.ConversationId,
                 command.ExpectedTranscriptRevision,
                 command.Message,
-                revision.SettingsFingerprint);
+                revision.SettingsFingerprint,
+                command.AttributionScope);
             var existing = await operationRepository.TryGetForUpdateAsync(command.OperationId, token)
                 .ConfigureAwait(false);
             if (existing is not null)
@@ -92,7 +93,8 @@ public sealed class LlmChatOperationAdmissionService(
                 command.ExpectedTranscriptRevision,
                 LlmChatOperationStatus.Pending,
                 timeProvider.GetUtcNow(),
-                0);
+                0,
+                command.AttributionScope);
             var operationAdmission = await operationRepository.AdmitAsync(proposed, token).ConfigureAwait(false);
             if (!operationAdmission.Created)
             {
@@ -125,6 +127,7 @@ public sealed class LlmChatOperationAdmissionService(
         LlmChatRequestFingerprint requestFingerprint)
         => operation.RequestFingerprint == requestFingerprint &&
            operation.ConversationId == command.ConversationId &&
+           operation.AttributionScope == command.AttributionScope &&
            operation.Kind == LlmChatOperationKind.SendTurn;
 }
 

@@ -7,6 +7,35 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 public sealed class LlmChatFingerprintTests
 {
     [Fact]
+    public void Request_fingerprint_includes_typed_attribution_scope_without_changing_unattributed_requests()
+    {
+        var conversationId = LlmChatConversationId.New();
+        var settings = new LlmChatSettingsFingerprint(new string('a', 64));
+        var projectId = Guid.NewGuid();
+
+        var legacy = LlmChatFingerprints.CreateRequest(
+            conversationId,
+            3,
+            "hello",
+            settings);
+        var explicitUnattributed = LlmChatFingerprints.CreateRequest(
+            conversationId,
+            3,
+            "hello",
+            settings,
+            attributionScope: null);
+        var attributed = LlmChatFingerprints.CreateRequest(
+            conversationId,
+            3,
+            "hello",
+            settings,
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+
+        Assert.Equal(legacy, explicitUnattributed);
+        Assert.NotEqual(legacy, attributed);
+    }
+
+    [Fact]
     public void Settings_fingerprint_distinguishes_provider_default_from_every_explicit_effort()
     {
         var providerId = Guid.NewGuid();

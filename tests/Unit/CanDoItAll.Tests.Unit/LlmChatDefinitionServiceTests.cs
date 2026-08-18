@@ -11,6 +11,57 @@ public sealed class LlmChatDefinitionServiceTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-08-14T12:00:00Z");
 
     [Fact]
+    public void Definition_query_normalizes_and_bounds_search_text()
+    {
+        var query = new LlmChatDefinitionQuery(searchText: "  incident response  ");
+
+        Assert.Equal("incident response", query.SearchText);
+        Assert.Throws<ArgumentException>(() => new LlmChatDefinitionQuery(
+            searchText: new string('x', LlmChatDefinitionQuery.MaximumSearchLength + 1)));
+    }
+
+    [Fact]
+    public async Task List_page_applies_search_before_paging()
+    {
+        var repository = new InMemoryLlmChatDefinitionRepository();
+        var service = CreateService(repository, new StubLlmChatProviderResolver());
+        var providerId = Guid.NewGuid();
+        await service.CreateAsync(new CreateLlmChatDefinitionCommand(
+            "General assistant",
+            "Handles ordinary questions",
+            string.Empty,
+            "Be concise.",
+            providerId,
+            "gpt-5",
+            new LlmModelSettings(),
+            null,
+            null,
+            "Initial",
+            ["general"]));
+        await service.CreateAsync(new CreateLlmChatDefinitionCommand(
+            "Operations assistant",
+            "Handles incidents",
+            string.Empty,
+            "Be precise.",
+            providerId,
+            "gpt-5",
+            new LlmModelSettings(),
+            null,
+            null,
+            "Initial",
+            ["incident-response"]));
+
+        var result = await service.ListPageAsync(new LlmChatDefinitionQuery(
+            take: 1,
+            searchText: " RESPONSE "));
+
+        Assert.True(result.IsSuccess);
+        var definition = Assert.Single(result.Value!.Items);
+        Assert.Equal("Operations assistant", definition.Definition.Name);
+        Assert.Null(result.Value.NextCursor);
+    }
+
+    [Fact]
     public async Task Create_and_update_resolve_provider_and_append_an_immutable_revision()
     {
         var repository = new InMemoryLlmChatDefinitionRepository();

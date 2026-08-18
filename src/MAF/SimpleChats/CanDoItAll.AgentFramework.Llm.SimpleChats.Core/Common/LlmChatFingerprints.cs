@@ -92,7 +92,8 @@ public static class LlmChatFingerprints
         LlmChatConversationId conversationId,
         long expectedTranscriptRevision,
         string userText,
-        LlmChatSettingsFingerprint settingsFingerprint)
+        LlmChatSettingsFingerprint settingsFingerprint,
+        WorkspaceScopeDescriptor? attributionScope = null)
     {
         if (conversationId.Value == Guid.Empty)
         {
@@ -114,6 +115,14 @@ public static class LlmChatFingerprints
             writer.WriteNumber("expectedTranscriptRevision", expectedTranscriptRevision);
             writer.WriteString("userText", userText);
             writer.WriteString("settingsFingerprint", settingsFingerprint.Value);
+            if (attributionScope is not null)
+            {
+                writer.WriteStartObject("attributionScope");
+                writer.WriteString("kind", attributionScope.Kind.ToString());
+                writer.WriteString("key", attributionScope.Key);
+                writer.WriteEndObject();
+            }
+
             writer.WriteEndObject();
         }
 

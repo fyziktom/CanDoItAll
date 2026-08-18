@@ -190,6 +190,10 @@ internal sealed class LlmChatOperationRow
 
     public LlmChatOperationStatus Status { get; set; }
 
+    public WorkspaceScopeKind? AttributionScopeKind { get; set; }
+
+    public string AttributionScopeKey { get; set; } = string.Empty;
+
     public DateTimeOffset? CancellationRequestedAtUtc { get; set; }
 
     public long CancellationGeneration { get; set; }

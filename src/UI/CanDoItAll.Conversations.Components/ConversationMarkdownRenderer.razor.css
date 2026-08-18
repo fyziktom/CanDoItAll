@@ -1,4 +1,6 @@
 .chat-markdown {
+    max-width: 100%;
+    min-width: 0;
     overflow-wrap: anywhere;
 }
 
@@ -79,4 +81,31 @@
     border-left: 3px solid rgb(148 163 184);
     color: rgb(71 85 105);
     padding-left: 0.85rem;
+}
+
+.chat-markdown ::deep table {
+    border-collapse: collapse;
+    display: block;
+    margin-top: 0.75rem;
+    max-width: 100%;
+    overflow-x: auto;
+    width: max-content;
+}
+
+.chat-markdown ::deep table:first-child {
+    margin-top: 0;
+}
+
+.chat-markdown ::deep th,
+.chat-markdown ::deep td {
+    border: 1px solid rgb(203 213 225);
+    padding: 0.5rem 0.65rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.chat-markdown ::deep th {
+    background: rgb(241 245 249);
+    color: rgb(30 41 59);
+    font-weight: 700;
 }

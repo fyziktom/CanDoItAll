@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
@@ -9,7 +10,8 @@ public sealed record SendLlmChatTurnCommand(
     LlmChatOperationId OperationId,
     LlmChatConversationId ConversationId,
     long ExpectedTranscriptRevision,
-    string Message);
+    string Message,
+    WorkspaceScopeDescriptor? AttributionScope = null);
 
 public sealed record AbandonLlmChatActiveTurnCommand(
     LlmChatConversationId ConversationId,

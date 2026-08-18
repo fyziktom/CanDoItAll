@@ -46,7 +46,8 @@ public enum ProjectManagerActivityKind
 {
     Conversation,
     Workflow,
-    Process
+    Process,
+    SimpleChat
 }
 
 public enum ProjectManagerActivityStatus

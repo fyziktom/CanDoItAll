@@ -340,6 +340,34 @@ public sealed class LlmChatConversationTransactionIntegrationTests
 public sealed class LlmChatTurnTransactionIntegrationTests
 {
     [Fact]
+    public async Task Operation_admission_round_trips_typed_project_attribution()
+    {
+        await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatprojectattribution");
+        await using var dbContext = database.CreateDbContext();
+        var seeded = await SeedConversationAsync(dbContext, admitted: false);
+        var repository = new EfLlmChatOperationRepository(dbContext);
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var operation = new LlmChatOperation(
+            new LlmChatOperationId(seeded.TurnId),
+            new LlmChatConversationId(seeded.ConversationId),
+            LlmChatOperationKind.SendTurn,
+            new LlmChatRequestFingerprint(new string('c', 64)),
+            0,
+            LlmChatOperationStatus.Pending,
+            seeded.Now,
+            0,
+            projectScope);
+
+        var admitted = await repository.AdmitAsync(operation);
+        dbContext.ChangeTracker.Clear();
+        var reloaded = await repository.TryGetAsync(operation.Id);
+
+        Assert.True(admitted.Created);
+        Assert.Equal(projectScope, admitted.Operation.AttributionScope);
+        Assert.Equal(projectScope, reloaded!.AttributionScope);
+    }
+
+    [Fact]
     public async Task Admission_rolls_back_claim_pending_message_active_turn_and_evidence_together()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatadmissionatomic");
@@ -1438,6 +1466,28 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         Assert.Equal(2, interceptor.Commands.Count);
 
         interceptor.Clear();
+        var nameMatch = await definitionStore.ListPageAsync(
+            10,
+            null,
+            LlmChatDefinitionStatus.Active,
+            "DEFINITION 07");
+
+        Assert.Equal("Definition 07", Assert.Single(nameMatch.Items).Definition.Name);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
+        var summaryMatch = await definitionStore.ListPageAsync(10, null, null, "summary 11");
+
+        Assert.Equal("Summary 11", Assert.Single(summaryMatch.Items).Definition.Summary);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
+        var tagMatch = await definitionStore.ListPageAsync(10, null, null, "TAG-19");
+
+        Assert.Contains("tag-19", Assert.Single(tagMatch.Items).Tags);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
         var conversationStore = new EfLlmChatConversationReadStore(dbContext);
         var conversations = await conversationStore.ListPageAsync(10, null, null);
 
@@ -1506,7 +1556,7 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
             {
                 Id = definitionId,
                 Name = $"Definition {index:D2}",
-                Summary = "Summary",
+                Summary = $"Summary {index:D2}",
                 AvatarImageUrl = "",
                 Status = LlmChatDefinitionStatus.Active,
                 CurrentRevision = 1,
@@ -1967,6 +2017,12 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         var seeded = await SeedCompleteGraphAsync(source);
         await using var sourceContext = source.CreateDbContext();
         await using var targetContext = target.CreateDbContext();
+        var attributedProjectId = Guid.NewGuid();
+        await sourceContext.Set<LlmChatOperationRow>()
+            .Where(row => row.Id == seeded.OperationId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.AttributionScopeKind, WorkspaceScopeKind.Project)
+                .SetProperty(row => row.AttributionScopeKey, attributedProjectId.ToString("D")));
         var handler = new LlmChatsDatabaseTransferHandler(new LlmChatTransferOptions());
         var context = new DatabaseTransferContext(
             CreateProfile(source.ConnectionString),
@@ -1985,7 +2041,11 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
         Assert.True(await targetContext.Set<LlmChatConversationRow>().AnyAsync(row => row.Id == seeded.ConversationId));
         Assert.True(await targetContext.Set<LlmChatTranscriptRow>().AnyAsync(row => row.ConversationId == seeded.ConversationId));
         Assert.True(await targetContext.Set<LlmChatMessageRow>().AnyAsync(row => row.ConversationId == seeded.ConversationId));
-        Assert.True(await targetContext.Set<LlmChatOperationRow>().AnyAsync(row => row.Id == seeded.OperationId));
+        var transferredOperation = await targetContext.Set<LlmChatOperationRow>()
+            .AsNoTracking()
+            .SingleAsync(row => row.Id == seeded.OperationId);
+        Assert.Equal(WorkspaceScopeKind.Project, transferredOperation.AttributionScopeKind);
+        Assert.Equal(attributedProjectId.ToString("D"), transferredOperation.AttributionScopeKey);
         var audit = Assert.Single(await targetContext.Set<LlmChatInvocationRecordRow>().AsNoTracking().ToArrayAsync());
         Assert.Equal(seeded.OperationId, audit.OperationId);
         Assert.Equal(AgentReasoningEffortLevel.None, audit.RequestedThinkingEffort);

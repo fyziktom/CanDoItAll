@@ -116,10 +116,13 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
         int take,
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
+        string? searchText = null,
         CancellationToken cancellationToken = default)
     {
+        var normalizedSearchText = searchText?.Trim() ?? string.Empty;
         var ordered = definitions.Values
             .Where(item => status is null || item.Status == status)
+            .Where(item => MatchesSearch(item, normalizedSearchText))
             .Where(item => cursor is not { } position ||
                            item.UpdatedAtUtc < position.UpdatedAtUtc ||
                            item.UpdatedAtUtc == position.UpdatedAtUtc &&
@@ -142,6 +145,19 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
             ? new LlmChatDefinitionCursor(pageDefinitions[^1].UpdatedAtUtc, pageDefinitions[^1].Id)
             : null;
         return new LlmChatPage<LlmChatDefinitionReadModel, LlmChatDefinitionCursor>(items, next);
+    }
+
+    private bool MatchesSearch(LlmChatDefinition definition, string searchText)
+    {
+        if (searchText.Length == 0)
+        {
+            return true;
+        }
+
+        return definition.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               definition.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               tags.GetValueOrDefault(definition.Id, [])
+                   .Any(tag => tag.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
 }
 

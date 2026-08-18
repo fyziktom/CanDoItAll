@@ -96,6 +96,26 @@ public sealed class LlmChatOperationIdempotencyTests
     }
 
     [Fact]
+    public async Task Operation_replay_cannot_retarget_project_attribution()
+    {
+        var harness = await LlmChatOperationHarness.CreateAsync();
+        var operationId = LlmChatOperationId.New();
+        var firstScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var otherScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var command = harness.CreateSendCommand(operationId, "hello", firstScope);
+
+        var first = await harness.SendAndDispatchAsync(command);
+        var conflict = await harness.Service.SendAsync(
+            harness.CreateSendCommand(operationId, "hello", otherScope));
+
+        Assert.True(first.IsSuccess);
+        Assert.Equal(firstScope, first.Value!.Operation.AttributionScope);
+        Assert.True(conflict.IsFailure);
+        Assert.Equal(LlmChatErrorCodes.OperationIdConflict, Assert.Single(conflict.Errors).Code);
+        Assert.Equal(1, harness.Engine.SendCount);
+    }
+
+    [Fact]
     public async Task Same_id_and_request_replays_after_the_conversation_is_archived()
     {
         var harness = await LlmChatOperationHarness.CreateAsync();

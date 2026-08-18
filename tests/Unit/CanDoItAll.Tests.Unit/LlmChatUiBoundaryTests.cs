@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
@@ -62,7 +63,8 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var service = new StubDefinitionService(details);
         var gateway = new LlmChatDefinitionUiGateway(
             service,
-            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false));
+            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false),
+            new LlmChatDefinitionCatalogInvalidationHub());
 
         var result = await gateway.ListPageAsync(new LlmChatDefinitionQuery());
 
@@ -84,7 +86,8 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var service = new StubDefinitionService(CreateDefinitionDetails("system prompt"));
         var gateway = new LlmChatDefinitionUiGateway(
             service,
-            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false));
+            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false),
+            new LlmChatDefinitionCatalogInvalidationHub());
 
         var result = await gateway.GetEditorAsync(Guid.NewGuid());
 
@@ -101,7 +104,8 @@ public sealed class LlmChatDefinitionUiGatewayTests
                 Error.Failure("provider body contains secret-token", "provider.internal.failure")));
         var gateway = new LlmChatDefinitionUiGateway(
             service,
-            new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: true));
+            new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: true),
+            new LlmChatDefinitionCatalogInvalidationHub());
 
         var result = await gateway.GetEditorAsync(Guid.NewGuid());
 
@@ -111,6 +115,83 @@ public sealed class LlmChatDefinitionUiGatewayTests
         Assert.DoesNotContain("provider", failure.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("secret-token", failure.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task Successful_definition_mutations_invalidate_the_catalog()
+    {
+        var details = CreateDefinitionDetails("system prompt");
+        var invalidator = new LlmChatDefinitionCatalogInvalidationHub();
+        var invalidatedDefinitions = new List<LlmChatDefinitionListItem>();
+        invalidator.Invalidated += (_, eventArgs) =>
+            invalidatedDefinitions.Add(eventArgs.Definition);
+        var gateway = new LlmChatDefinitionUiGateway(
+            new StubDefinitionService(details),
+            new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: false),
+            invalidator);
+        var mutation = CreateMutation();
+
+        var created = await gateway.CreateAsync(mutation);
+        var updated = await gateway.UpdateAsync(details.Definition.Id.Value, mutation, expectedConcurrencyToken: 3);
+        var activated = await gateway.ChangeStatusAsync(
+            details.Definition.Id.Value,
+            LlmChatDefinitionStatus.Active,
+            expectedConcurrencyToken: 3);
+
+        Assert.True(created.IsSuccess);
+        Assert.True(updated.IsSuccess);
+        Assert.True(activated.IsSuccess);
+        Assert.Equal(3, invalidatedDefinitions.Count);
+        Assert.All(
+            invalidatedDefinitions,
+            definition => Assert.Equal(details.Definition.Id.Value, definition.DefinitionId));
+    }
+
+    [Fact]
+    public async Task Failed_definition_mutations_do_not_invalidate_the_catalog()
+    {
+        var failure = Result<LlmChatDefinitionDetails>.Failure(
+            Error.Failure("definition mutation failed", LlmChatErrorCodes.StorageConflict));
+        var invalidator = new LlmChatDefinitionCatalogInvalidationHub();
+        var invalidationCount = 0;
+        invalidator.Invalidated += (_, _) => invalidationCount++;
+        var gateway = new LlmChatDefinitionUiGateway(
+            new StubDefinitionService(failure),
+            new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: false),
+            invalidator);
+        var mutation = CreateMutation();
+        var definitionId = Guid.NewGuid();
+
+        var created = await gateway.CreateAsync(mutation);
+        var updated = await gateway.UpdateAsync(definitionId, mutation, expectedConcurrencyToken: 3);
+        var activated = await gateway.ChangeStatusAsync(
+            definitionId,
+            LlmChatDefinitionStatus.Active,
+            expectedConcurrencyToken: 3);
+
+        Assert.True(created.IsFailure);
+        Assert.True(updated.IsFailure);
+        Assert.True(activated.IsFailure);
+        Assert.Equal(0, invalidationCount);
+    }
+
+    private static LlmChatDefinitionMutation CreateMutation()
+        => new(
+            "Research assistant",
+            "Summarizes source material.",
+            string.Empty,
+            "system prompt",
+            Guid.NewGuid(),
+            "gpt-test",
+            0.2,
+            null,
+            string.Empty,
+            TimeSpan.FromMinutes(1),
+            LlmChatUiResponseFormatKind.Text,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            "Updated definition",
+            ["research"]);
 
     private static LlmChatDefinitionDetails CreateDefinitionDetails(string systemPrompt)
     {
@@ -198,6 +279,110 @@ public sealed class LlmChatDefinitionUiGatewayTests
                 ? Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Success(
                     new([result.Value!], null))
                 : Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Failure(result.Errors));
+    }
+}
+
+public sealed class LlmChatOperationUiGatewayTests
+{
+    [Fact]
+    public async Task Send_captures_the_typed_workspace_scope_at_admission()
+    {
+        var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+        var operations = new CapturingOperationService();
+        var gateway = new LlmChatOperationUiGateway(
+            operations,
+            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: true),
+            new StubWorkspaceScopeAccessor(projectScope));
+
+        await gateway.SendAsync(Guid.NewGuid(), Guid.NewGuid(), 2, "hello");
+
+        Assert.NotNull(operations.LastSend);
+        Assert.Equal(projectScope, operations.LastSend.AttributionScope);
+    }
+
+    [Fact]
+    public async Task Send_fails_explicitly_when_the_workspace_scope_is_not_ready()
+    {
+        var operations = new CapturingOperationService();
+        var gateway = new LlmChatOperationUiGateway(
+            operations,
+            new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: true),
+            new StubWorkspaceScopeAccessor("Workspace context is still updating."));
+
+        var result = await gateway.SendAsync(Guid.NewGuid(), Guid.NewGuid(), 2, "hello");
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(LlmChatUiFailureCodes.InvalidInput, Assert.Single(result.Failures).Code);
+        Assert.Equal(0, operations.SendCount);
+    }
+
+    private sealed class StubWorkspaceScopeAccessor : IAgentWorkspaceScopeAccessor
+    {
+        private readonly WorkspaceScopeDescriptor? scope;
+        private readonly string? failureMessage;
+
+        public StubWorkspaceScopeAccessor(WorkspaceScopeDescriptor? scope)
+        {
+            this.scope = scope;
+        }
+
+        public StubWorkspaceScopeAccessor(string failureMessage)
+        {
+            this.failureMessage = failureMessage;
+        }
+
+        public ValueTask<WorkspaceScopeDescriptor?> CaptureAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (failureMessage is not null)
+            {
+                throw new AgentWorkspaceScopeUnavailableException(
+                    failureMessage,
+                    new InvalidOperationException(failureMessage));
+            }
+
+            return ValueTask.FromResult(scope);
+        }
+    }
+
+    private sealed class CapturingOperationService : ILlmChatOperationApplicationService
+    {
+        public int SendCount { get; private set; }
+
+        public SendLlmChatTurnCommand? LastSend { get; private set; }
+
+        public Task<Result<LlmChatOperationDetails>> SendAsync(
+            SendLlmChatTurnCommand command,
+            CancellationToken cancellationToken = default)
+        {
+            SendCount++;
+            LastSend = command;
+            return FailedAsync();
+        }
+
+        public Task<Result<LlmChatOperationDetails>> GetAsync(
+            LlmChatOperationId operationId,
+            CancellationToken cancellationToken = default)
+            => FailedAsync();
+
+        public Task<Result<LlmChatOperationDetails>> CancelAsync(
+            LlmChatOperationId operationId,
+            CancellationToken cancellationToken = default)
+            => FailedAsync();
+
+        public Task<Result<LlmChatOperationDetails>> ReconcileAsync(
+            LlmChatOperationId operationId,
+            CancellationToken cancellationToken = default)
+            => FailedAsync();
+
+        public Task<Result<LlmChatOperationDetails>> AbandonActiveTurnAsync(
+            AbandonLlmChatActiveTurnCommand command,
+            CancellationToken cancellationToken = default)
+            => FailedAsync();
+
+        private static Task<Result<LlmChatOperationDetails>> FailedAsync()
+            => Task.FromResult(Result<LlmChatOperationDetails>.Failure(
+                Error.Failure("The operation was not executed by this test double.", "test.operation.not_executed")));
     }
 }
 
@@ -397,6 +582,10 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
 
         services.AddSimpleChatsComponents();
 
+        var invalidatorRegistration = Assert.Single(
+            services,
+            item => item.ServiceType == typeof(ILlmChatDefinitionCatalogInvalidator));
+        Assert.Equal(ServiceLifetime.Scoped, invalidatorRegistration.Lifetime);
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatDefinitionUiGateway));
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatConversationUiGateway));
         Assert.Contains(services, item => item.ServiceType == typeof(ILlmChatOperationUiGateway));

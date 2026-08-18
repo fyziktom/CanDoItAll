@@ -887,8 +887,11 @@ internal sealed class LlmChatOperationHarness
         }
     }
 
-    public SendLlmChatTurnCommand CreateSendCommand(LlmChatOperationId operationId, string message)
-        => new(operationId, ConversationId, 1, message);
+    public SendLlmChatTurnCommand CreateSendCommand(
+        LlmChatOperationId operationId,
+        string message,
+        WorkspaceScopeDescriptor? attributionScope = null)
+        => new(operationId, ConversationId, 1, message, attributionScope);
 
     public LlmChatOperation CreateOperation(
         LlmChatOperationId operationId,
