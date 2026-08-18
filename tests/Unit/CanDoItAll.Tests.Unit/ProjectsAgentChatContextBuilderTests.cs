@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectsAgentChatContextBuilderTests
 {

@@ -9,7 +9,7 @@ using CanDoItAll.Modules.Workspace;
 using Microsoft.Playwright;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed partial class AppSmokeTests

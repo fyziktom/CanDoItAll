@@ -1,0 +1,80 @@
+{
+  "selectedTab": "Runtime",
+  "controls": [
+    {
+      "label": null,
+      "testId": null,
+      "type": "hidden",
+      "value": "CfDJ8GLVTeq0sbFJmdontEu9z1MXNn009E6rZLRtSFuziDqXD3HrdM8BPfV2AKe9bMmWRzyf9KAOwZbunRwQjsF27YcFZWYCl9zX3XI53VA3kW2D_Netfba6v2y3qJrTGbXZrcIoWO9VSYcpuV11s3_4bLE",
+      "checked": false
+    },
+    {
+      "label": null,
+      "testId": "agents-catalog-provider",
+      "type": "select",
+      "value": "3",
+      "checked": null
+    },
+    {
+      "label": null,
+      "testId": "agents-catalog-model-choice",
+      "type": "select",
+      "value": "2",
+      "checked": null
+    },
+    {
+      "label": "Override model name",
+      "testId": "agents-catalog-model-override",
+      "type": "checkbox",
+      "value": "on",
+      "checked": false
+    },
+    {
+      "label": null,
+      "testId": "agents-catalog-thinking-effort",
+      "type": "select",
+      "value": "3",
+      "checked": null
+    },
+    {
+      "label": null,
+      "testId": null,
+      "type": "select",
+      "value": "Active",
+      "checked": null
+    },
+    {
+      "label": null,
+      "testId": null,
+      "type": "select",
+      "value": "Programming",
+      "checked": null
+    },
+    {
+      "label": null,
+      "testId": null,
+      "type": "select",
+      "value": "FrameworkManaged",
+      "checked": null
+    },
+    {
+      "label": "Require approval for external calls",
+      "testId": "agents-catalog-require-external-approval",
+      "type": "checkbox",
+      "value": "on",
+      "checked": true
+    },
+    {
+      "label": "Auto-approve approval-required tool calls by default",
+      "testId": "agents-catalog-auto-approval",
+      "type": "checkbox",
+      "value": "on",
+      "checked": true
+    }
+  ],
+  "alerts": [
+    "Model 'gpt-5.6-luna' supports configurable thinking effort. Provider default inherits the provider setting. None explicitly disables thinking.",
+    "Runtime parameter policy\n                                    Temperature will be omitted for model 'gpt-5.6-luna'. Provider defaults apply.",
+    "Automatic approval is enabled\n                                            This agent can continue approval-required tool calls without asking for each call. Scope and runtime policy checks still apply."
+  ]
+}

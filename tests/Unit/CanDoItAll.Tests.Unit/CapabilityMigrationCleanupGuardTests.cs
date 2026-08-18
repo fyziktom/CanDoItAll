@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CapabilityMigrationCleanupGuardTests
 {

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ChatWorkspacePanelTests
 {
@@ -171,6 +171,27 @@ public sealed class ChatWorkspacePanelTests
         cut.Find("[data-testid='chat-prompt-input']").Input("Analyze this screenshot.");
 
         Assert.Equal("Analyze this screenshot.", changedPrompt);
+    }
+
+    [Fact]
+    public void Pending_agent_prompt_uses_the_transient_user_projection_and_preserves_hidden_context()
+    {
+        using var context = CreateContext();
+        const string pendingPrompt = "Workspace context that must remain hidden.\n\nUser request: Summarize the selected file.";
+
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
+            .Add(item => item.PendingUserPrompt, pendingPrompt)
+            .Add(item => item.DraftPrompt, string.Empty));
+
+        var pendingMessage = cut.Find("[data-testid='conversation-message']");
+        Assert.Contains("justify-end", pendingMessage.ClassList);
+        Assert.Equal("true", pendingMessage.GetAttribute("aria-busy"));
+        var visibleContent = pendingMessage.QuerySelector("p");
+        Assert.NotNull(visibleContent);
+        Assert.Equal("Summarize the selected file.", visibleContent.TextContent);
+        Assert.Contains(
+            "Workspace context that must remain hidden.",
+            cut.Find("[data-testid='chat-pending-hidden-context']").TextContent);
     }
 
     private static BunitContext CreateContext()

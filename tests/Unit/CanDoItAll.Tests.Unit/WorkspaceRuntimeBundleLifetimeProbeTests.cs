@@ -4,7 +4,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Lifetime probes for the run-owned workspace service bundle: each bundle owns

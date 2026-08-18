@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Skills;
 using CanDoItAll.AgentFramework.Skills.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class SkillLoaderContractsTests
 {

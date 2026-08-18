@@ -47,6 +47,61 @@ public sealed record ProviderChatCompletionResult(
     public int CachedInputTokens { get; init; }
 }
 
+public enum ProviderChatStreamingMode
+{
+    Incremental,
+    CompletedFallback,
+    Unsupported
+}
+
+public abstract record ProviderChatStreamingUpdate;
+
+public sealed record ProviderChatTextDelta : ProviderChatStreamingUpdate
+{
+    public ProviderChatTextDelta(string text)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(text);
+        Text = text;
+    }
+
+    public string Text { get; }
+}
+
+public sealed record ProviderChatCompleted : ProviderChatStreamingUpdate
+{
+    public ProviderChatCompleted(
+        string model,
+        int inputTokens,
+        int outputTokens,
+        string finishReason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        ArgumentOutOfRangeException.ThrowIfNegative(inputTokens);
+        ArgumentOutOfRangeException.ThrowIfNegative(outputTokens);
+        ArgumentException.ThrowIfNullOrWhiteSpace(finishReason);
+        Model = model.Trim();
+        InputTokens = inputTokens;
+        OutputTokens = outputTokens;
+        FinishReason = finishReason.Trim();
+    }
+
+    public string Model { get; }
+
+    public int InputTokens { get; }
+
+    public int OutputTokens { get; }
+
+    public string FinishReason { get; }
+
+    public int CachedInputTokens
+    {
+        get;
+        init => field = value >= 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value), value, "Cached input tokens cannot be negative.");
+    }
+}
+
 public sealed record ProviderImageSource(
     string Name,
     string ContentType,

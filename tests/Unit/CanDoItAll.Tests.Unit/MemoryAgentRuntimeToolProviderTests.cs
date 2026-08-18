@@ -8,7 +8,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Memory;
 
 public sealed class MemoryAgentRuntimeToolProviderTests
 {

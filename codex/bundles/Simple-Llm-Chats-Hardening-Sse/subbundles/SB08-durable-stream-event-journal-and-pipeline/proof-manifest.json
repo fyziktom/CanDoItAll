@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB08",
+  "title": "Durable stream event journal and pipeline",
+  "state": "Completed",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "e543e7bdd3de97e8f52db9d7df182f462b317742",
+  "dependencyMode": "local sibling source projects",
+  "host": "Microsoft Windows NT 10.0.26200.0 x64; .NET SDK 10.0.303",
+  "database": "PostgreSQL Testcontainers in focused Integration tests",
+  "requirements": [
+    "RQ-006",
+    "RQ-008",
+    "RQ-014",
+    "RQ-022",
+    "RQ-026",
+    "RQ-029",
+    "RQ-030"
+  ],
+  "commands": [
+    {
+      "command": "dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -nologo -v:minimal -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName~LlmChat\"",
+      "exitCode": 0,
+      "result": "61 passed, 0 failed, 0 skipped; affected source compiled with no reported warnings/errors"
+    },
+    {
+      "command": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -nologo -v:minimal -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName~LlmChatOperationEventJournalIntegrationTests|FullyQualifiedName~LlmChatTurnTransactionIntegrationTests|FullyQualifiedName~LlmChatsDatabaseTransferIntegrationTests\"",
+      "exitCode": 0,
+      "result": "7 passed, 0 failed, 0 skipped in 19 seconds; affected source compiled with no reported warnings/errors"
+    },
+    {
+      "command": "$env:UseLocalCanDoItAllLibraries='true'; dotnet ef migrations has-pending-model-changes --no-build --project src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj --startup-project src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --context AppDbContext --configuration Debug",
+      "exitCode": 0,
+      "result": "No changes have been made to the model since the last migration"
+    },
+    {
+      "command": "CodeAnalytics two-project journal/persistence boundary snapshot",
+      "exitCode": 0,
+      "result": "snap-20260815060048-09276cd1; 0 cycles, 0 diagnostics, 0 blocking/error findings, 0 open questions; one documented nonblocking existing engine file-size warning"
+    }
+  ],
+  "sourceAssertions": [
+    "The production executor and concrete engine expose StreamTurnAsync and no InvokeTurnAsync or direct ILlmInvocationPort execution path.",
+    "Application owns immutable event variants, coalescing, bounds, lease checks, retention policy, and post-commit signal semantics.",
+    "Persistence owns operation-row sequence locking, normalized mapping, paging, terminal cleanup, transfer schema v5, and migration.",
+    "Event rows contain no prompt, credential, raw frame, raw body, or raw provider error field; unknown failure text is redacted to a stable product code.",
+    "The in-process signal is keyed by runtime identity and operation and is registered only as a post-commit accelerator.",
+    "No Web/SSE project reference, production partial class, stub marker, or dependency cycle was introduced."
+  ],
+  "behavioralCases": [
+    "eight PostgreSQL contexts append unique monotonic sequences to one operation",
+    "committed event wakes after commit while rolled-back event produces no wake",
+    "a fresh DbContext replays all committed events without first-instance memory",
+    "small deltas coalesce, preserve emoji rune boundaries, and flush during provider pause",
+    "successful stream finalizes one canonical assistant message with model and usage",
+    "partial failed stream persists incomplete replay evidence and compensates the active turn",
+    "retention deletes only expired terminal journals and preserves active journals",
+    "database transfer schema v5 round-trips retained operation events"
+  ],
+  "negativeCases": [
+    "text append without the current durable execution lease is rejected",
+    "aggregate response and durable event-count bounds fail with llm-chat.stream-limit-exceeded",
+    "raw provider failure text containing credential material is never persisted",
+    "transaction rollback publishes no local event notification",
+    "partial failed output never becomes a canonical assistant transcript message",
+    "RecoveryRequired remains nonterminal and is excluded from retention cleanup"
+  ],
+  "acceptance": [
+    {
+      "criterion": "Every operation event has a unique monotonic sequence within its operation.",
+      "satisfied": true,
+      "evidence": "Eight concurrent PostgreSQL contexts append under the operation row lock and replay one unique contiguous sequence protected by the composite primary key."
+    },
+    {
+      "criterion": "State-transition events commit in the same transaction as their state.",
+      "satisfied": true,
+      "evidence": "Admission, lease, evidence, transcript, and terminal paths nest in EfLlmChatUnitOfWork; rollback removes the event and suppresses its post-commit wake."
+    },
+    {
+      "criterion": "Text chunks are coalesced and bounded rather than one row per token.",
+      "satisfied": true,
+      "evidence": "Direct tests prove size/natural/time flush, emoji-safe UTF-8 splitting, and configured aggregate/event limits."
+    },
+    {
+      "criterion": "Partial output is replayable but never canonical unless finalization succeeds.",
+      "satisfied": true,
+      "evidence": "The failed-stream pipeline test retains partial text plus incomplete failed state; operation compensation leaves no assistant transcript message."
+    },
+    {
+      "criterion": "A second instance reads all committed events without first-instance memory.",
+      "satisfied": true,
+      "evidence": "The PostgreSQL test appends/commits in one DbContext and replays from a new DbContext; the signal is not used for authoritative reads."
+    },
+    {
+      "criterion": "Event payloads contain no system prompt, user prompt, credential, or raw provider error.",
+      "satisfied": true,
+      "evidence": "Normalized row/source inspection shows no such fields, and the redaction test maps raw secret-bearing failure text to llm-chat.storage-corrupted."
+    }
+  ],
+  "architecture": {
+    "owner": "LlmChats product/application owns typed journal semantics and stream aggregation; LlmChats.Persistence owns EF locking/storage/transfer; transcript finalization remains canonical message owner",
+    "dependencyDirection": "product ports and immutable events -> persistence adapters; no Web/SSE reverse dependency",
+    "cycleCheck": "CodeAnalytics snap-20260815060048-09276cd1: two scoped projects, zero cycles, diagnostics, blocking errors, error findings, or open questions",
+    "partialClassCheck": "pass; no production partial expansion",
+    "oldPathRemoval": "the executor and concrete engine no longer expose InvokeTurnAsync; production execution consumes StreamTurnAsync through LlmChatStreamingPipeline"
+  },
+  "bugs": [
+    "Added a real coalescing deadline race so small output flushes while the provider pauses.",
+    "Required the current durable execution lease for every text append.",
+    "Removed the residual public completed-only concrete engine bypass.",
+    "Corrected RecoveryRequired to nonterminal event usage semantics.",
+    "Corrected PostgreSQL test fixtures to include transcript parents and valid hexadecimal fingerprints."
+  ],
+  "deviations": [
+    "Nineteen filtered test attempts substantially exceeded the four-command budget while resolving compile issues, a stale --no-build diagnostic, PostgreSQL fixture defects, time-window semantics, completed-path removal, and the RecoveryRequired defect found by the final broad LLM Chat filter. No unfiltered Unit/Integration or solution-wide test lane ran.",
+    "Four affected builds exceeded the normal three-build budget because the EF migration needed generation/compilation. The final Unit and Integration commands rebuilt affected source cleanly.",
+    "EF tool 10.0.3 reported it is older than runtime 10.0.4, but the model check succeeded; no package/tool version was changed."
+  ],
+  "knownGaps": [
+    "SB09 owns asynchronous HTTP admission, Last-Event-ID replay/gap behavior, SSE heartbeat/disconnect/terminal close, and shared writer reuse.",
+    "SB10 owns external origin/scope authorization and stable public contracts.",
+    "SB11 owns focused cross-platform HTTP/SSE portability proof."
+  ],
+  "progression": {
+    "decision": "Ready",
+    "reason": "The durable journal, atomic lifecycle evidence, bounded time-aware coalescing, partial-output semantics, retention, transfer, and old-path removal pass current-head Unit/PostgreSQL/model/source/architecture gates at e543e7bdd3de97e8f52db9d7df182f462b317742.",
+    "unlocks": [
+      "SB09"
+    ]
+  }
+}

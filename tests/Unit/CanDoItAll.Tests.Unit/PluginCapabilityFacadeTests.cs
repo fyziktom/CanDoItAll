@@ -7,7 +7,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Plugins;
 
 public sealed class PluginCapabilityFacadeTests
 {

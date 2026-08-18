@@ -1,163 +1,41 @@
 @inject DialogService DialogService
 
-<WorkspacePanel Class="flex h-full min-h-0 flex-col overflow-hidden"
-                data-testid="chat-workspace-panel">
-    <div class="chat-panel-header">
-        <div class="chat-panel-header__row">
-            <div class="chat-panel-header__identity">
-                <Avatar Alt="@ResolveAvatarAlt()"
-                        ImageUrl="@Agent?.AvatarImageUrl"
-                        FallbackText="@ResolveAvatarFallbackText()"
-                        DefaultImageSeed="@ResolveAvatarSeed()"
-                        Size="AvatarSize.Medium"
-                        Shape="AvatarShape.Rounded" />
-
-                <div class="chat-panel-header__main">
-                    <div class="chat-panel-header__meta">
-                        <StatusBadge Tone="@ResolveSessionTone()" Text="@ResolveSessionBadge()" />
-                        @if (!string.IsNullOrWhiteSpace(RunStateText))
-                        {
-                            <StatusBadge Tone="@RunStateTone"
-                                         Text="@RunStateText"
-                                         data-testid="agent-chat-run-state" />
-                        }
-                        @if (IsAutoApprovalActive())
-                        {
-                            <StatusBadge Tone="success" Text="@ResolveAutoApproveBadgeText()" />
-                        }
-                        @if (Session is not null)
-                        {
-                            <StatusBadge Tone="neutral" Text="@($"{Session.Messages.Count} messages")" />
-                        }
-                        @if (HasPendingApprovals)
-                        {
-                            <StatusBadge Tone="warning" Text="@($"{PendingApprovals.Count} approvals")" />
-                        }
-                        @if (IsVoiceModeEnabled)
-                        {
-                            <StatusBadge Tone="primary" Text="Audio mode" />
-                        }
-                        @if (Session is not null)
-                        {
-                            <StatusBadge Tone="primary" Text="@Session.UpdatedAtUtc.LocalDateTime.ToString("g")"/>
-                        }
-                    </div>
-
-                    <div class="chat-panel-header__title-row">
-                        @if (Session is null)
-                        {
-                            <p class="chat-panel-header__empty-title">Select or create a thread</p>
-                        }
-                        else
-                        {
-                            <Editable TItem="EditableThreadTitleModel"
-                                      Item="@titleEditor"
-                                      ItemChanged="HandleSessionTitleChangedAsync"
-                                      ParameterName="@nameof(EditableThreadTitleModel.Title)"
-                                      Placeholder="Thread title"
-                                      EmptyText="Untitled thread"
-                                      Class="chat-thread-title-edit" />
-                        }
-                    </div>
-                </div>
-            </div>
-
-            @if (HeaderActions is not null)
-            {
-                <div class="chat-panel-header__actions">
-                    @HeaderActions
-                </div>
-            }
-        </div>
-    </div>
-
-    <div class="chat-conversation-flow" style="scrollbar-gutter:stable;">
-        @{
-            var hasMessages = Session?.Messages.Count > 0;
-            var hasPendingApprovals = HasPendingApprovals;
-            var hasPendingPrompt = !string.IsNullOrWhiteSpace(PendingUserPrompt);
-            var executionEntries = ResolveActiveExecutionEntries();
-            var hasExecutionStream = executionEntries.Count > 0;
-            var shouldCollapseExecutionStream = hasExecutionStream && ShouldCollapseExecutionStream(executionEntries);
-            var visibleExecutionEntries = shouldCollapseExecutionStream
-                ? Array.Empty<ExecutionLogEntry>()
-                : ResolveVisibleExecutionEntries(executionEntries);
-        }
-
-        @if (Session is null && !hasPendingPrompt)
-        {
-            <EmptyState Eyebrow="Conversation"
-                        Title="Nothing is open in the center panel"
-                        Description="Choose a thread from the left rail or create a new one to keep the active transcript in view." />
-        }
-        else if (!hasMessages && !hasPendingApprovals && !hasPendingPrompt && !hasExecutionStream)
-        {
-            <EmptyState Eyebrow="Conversation"
-                        Title="This thread is ready for the first prompt"
-                        Description="Use the composer below to ask for a plan, a status update, or an actual working answer from the selected agent." />
-        }
-        else
-        {
-            <Stack GapScale="LayoutGap.Medium">
-                @foreach (var message in Session?.Messages.OrderBy(item => item.CreatedAtUtc) ?? Enumerable.Empty<ChatMessageRecord>())
+<ConversationWorkspacePanel>
+    <Header>
+        <ConversationHeader Presentation="@HeaderPresentation"
+                            Actions="@HeaderActions">
+            <TitleContent>
+                @if (Session is null)
                 {
-                    var isUserMessage = message.Role == ChatMessageRole.User;
-                    var userMessageDisplay = isUserMessage
-                        ? ResolveUserMessageDisplay(message.Content)
-                        : null;
+                    <p class="chat-panel-header__empty-title">Select or create a thread</p>
+                }
+                else
+                {
+                    <Editable TItem="EditableThreadTitleModel"
+                              Item="@titleEditor"
+                              ItemChanged="HandleSessionTitleChangedAsync"
+                              ParameterName="@nameof(EditableThreadTitleModel.Title)"
+                              Placeholder="Thread title"
+                              EmptyText="Untitled thread"
+                              Class="chat-thread-title-edit" />
+                }
+            </TitleContent>
+        </ConversationHeader>
+    </Header>
 
-                    <div class="flex @(isUserMessage ? "justify-end" : "justify-start")">
-                        <div class="flex max-w-[44rem] flex-col gap-2 @(isUserMessage ? "items-end" : "items-start")">
-                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                @if (!isUserMessage)
-                                {
-                                    <Avatar Alt="@ResolveAvatarAlt()"
-                                            ImageUrl="@Agent?.AvatarImageUrl"
-                                            FallbackText="@ResolveAvatarFallbackText()"
-                                            DefaultImageSeed="@ResolveAvatarSeed()"
-                                            Size="AvatarSize.Small"
-                                            Shape="AvatarShape.Rounded" />
-                                }
+    <Transcript>
 
-                                <StatusBadge Tone="@ResolveRoleTone(message.Role)" Text="@message.Role.ToString()" />
-                                <TextBlock TextStyle="TextStyle.Caption" Value="@message.CreatedAtUtc.LocalDateTime.ToString("g")" />
-                            </Cluster>
-
-                            <div class="chat-message-bubble rounded-[1.4rem] border px-4 py-3.5 shadow-sm @(ResolveBubbleClass(isUserMessage))">
-                                @if (isUserMessage && userMessageDisplay is not null)
-                                {
-                                    <p class="text-sm leading-6">@userMessageDisplay.VisibleContent</p>
-                                    @if (!string.IsNullOrWhiteSpace(userMessageDisplay.HiddenContext))
-                                    {
-                                        <details class="chat-message-context chat-message-context--user" data-testid="chat-message-hidden-context">
-                                            <summary>...more</summary>
-                                            <pre>@userMessageDisplay.HiddenContext</pre>
-                                        </details>
-                                    }
-                                }
-                                else
-                                {
-                                    <div class="chat-markdown text-sm leading-6">@RenderAssistantMessage(message.Content)</div>
-                                }
-
-                                <div class="chat-message-footer">
-                                    <span class="chat-message-footer-meta">
-                                        @if (message.TokenEstimate > 0)
-                                        {
-                                            <span class="text-xs @(isUserMessage ? "text-white/70" : "text-slate-400")">~@message.TokenEstimate tokens</span>
-                                        }
-                                    </span>
-
-                                    <CopyButton Value="@message.Content"
-                                                Disabled="@string.IsNullOrWhiteSpace(message.Content)"
-                                                DisplayMode="CopyButtonDisplayMode.IconOnly"
-                                                Size="CopyButtonSize.ExtraSmall"
-                                                AriaLabel="@(isUserMessage ? "Copy user message" : "Copy assistant message")"
-                                                Class="@(isUserMessage ? "chat-message-copy chat-message-copy--user" : "chat-message-copy")" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <ConversationTranscript Messages="@MessagePresentations"
+                                TransientMessages="@TransientMessagePresentations"
+                                EmptyState="@TranscriptEmptyState">
+            <AfterMessages>
+                @{
+                    var executionEntries = ResolveActiveExecutionEntries();
+                    var hasExecutionStream = executionEntries.Count > 0;
+                    var shouldCollapseExecutionStream = hasExecutionStream && ShouldCollapseExecutionStream(executionEntries);
+                    var visibleExecutionEntries = shouldCollapseExecutionStream
+                        ? Array.Empty<ExecutionLogEntry>()
+                        : ResolveVisibleExecutionEntries(executionEntries);
                 }
 
                 @if (hasExecutionStream)
@@ -207,33 +85,8 @@
                         }
                     </div>
                 }
-
-                @if (hasPendingPrompt)
-                {
-                    var pendingUserMessageDisplay = ResolveUserMessageDisplay(PendingUserPrompt);
-
-                    <div class="flex justify-end">
-                        <div class="flex max-w-[44rem] flex-col items-end gap-2">
-                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                <StatusBadge Tone="info" Text="User" />
-                                <StatusBadge Tone="neutral" Text="Sending..." />
-                                <TextBlock TextStyle="TextStyle.Caption" Value="@DateTime.Now.ToString("g")" />
-                            </Cluster>
-
-                            <div class="rounded-[1.4rem] border border-slate-900 bg-slate-900 px-4 py-3.5 text-white shadow-sm opacity-90">
-                                <p class="text-sm leading-6">@pendingUserMessageDisplay.VisibleContent</p>
-                                @if (!string.IsNullOrWhiteSpace(pendingUserMessageDisplay.HiddenContext))
-                                {
-                                    <details class="chat-message-context chat-message-context--user" data-testid="chat-pending-hidden-context">
-                                        <summary>...more</summary>
-                                        <pre>@pendingUserMessageDisplay.HiddenContext</pre>
-                                    </details>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                }
-
+            </AfterMessages>
+            <AfterPendingMessage>
                 @if (HasPendingApprovals)
                 {
                     <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50/80 p-4">
@@ -299,27 +152,26 @@
                         </Stack>
                     </div>
                 }
-            </Stack>
+            </AfterPendingMessage>
+        </ConversationTranscript>
+    </Transcript>
+
+    <MiddleContent>
+        @if (ActivityStreamId is not null)
+        {
+            <AgentExecutionActivityStatus @key="ActivityStreamId"
+                                          StreamId="@ActivityStreamId" />
         }
-    </div>
+    </MiddleContent>
 
-    @if (ActivityStreamId is not null)
-    {
-        <AgentExecutionActivityStatus @key="ActivityStreamId"
-                                      StreamId="@ActivityStreamId" />
-    }
-
-    <div class="chat-composer-panel">
-        <FormField>
-            <div class="chat-composer">
-                <ChatPromptTextArea @key="ComposerKey"
-                                    Value="@DraftPrompt"
-                                    ValueChanged="HandleDraftChanged"
-                                    Rows="2"
-                                    Placeholder="Ask for a plan, a diagnosis, or a concrete next step."
-                                    class="chat-composer__textarea"
-                                    data-testid="chat-prompt-input" />
-                <div class="chat-composer__tools">
+    <Composer>
+        <ConversationComposer DraftPrompt="@DraftPrompt"
+                              DraftPromptChanged="@DraftPromptChanged"
+                              SendRequested="@SendRequested"
+                              IsBusy="@IsBusy"
+                              IsSendDisabled="@(IsBusy || HasPendingApprovals)"
+                              ComposerKey="@ComposerKey">
+            <LeadingActions>
                     @ComposerActions
                     @if (AttachmentFilesSelected.HasDelegate)
                     {
@@ -349,16 +201,8 @@
                             aria-label="Attach workspace artifact"
                             title="Attach workspace artifact"
                             data-testid="chat-attachment-button" />
-                    <Button Icon="send"
-                            ButtonStyle="ButtonStyle.Light"
-                            Size="ButtonSize.Small"
-                            Disabled="@(IsBusy || HasPendingApprovals)"
-                            IsBusy="@IsBusy"
-                            Class="chat-composer__icon-button"
-                            Click="@(async () => await SendRequested.InvokeAsync())"
-                            aria-label="Send prompt"
-                            title="Send prompt"
-                            data-testid="chat-send-button" />
+            </LeadingActions>
+            <TrailingActions>
                     <Button Icon="@(IsVoiceRecording ? "stop" : "mic")"
                             ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
                             Size="ButtonSize.Small"
@@ -388,9 +232,8 @@
                             aria-label="Toggle audio mode"
                             title="Toggle audio mode"
                             data-testid="chat-voice-mode-button" />
-                </div>
-            </div>
-        </FormField>
+            </TrailingActions>
+            <Footer>
 
         @if (DraftAttachmentPaths.Count > 0)
         {
@@ -452,15 +295,12 @@
             </Cluster>
             </div>
         }
-    </div>
-</WorkspacePanel>
+            </Footer>
+        </ConversationComposer>
+    </Composer>
+</ConversationWorkspacePanel>
 
 @code {
-    private static MarkupString RenderAssistantMessage(string? content)
-        => new(ChatMarkdownRenderer.RenderHtml(content));
-
-    private const string UserRequestMarker = "User request:";
-
     [Parameter]
     public AgentDefinition? Agent { get; set; }
 
@@ -557,6 +397,94 @@
 
     [Parameter]
     public EventCallback SpeakLatestAssistantMessageRequested { get; set; }
+
+    private ConversationHeaderPresentation HeaderPresentation
+        => AgentConversationPresentationMapper.MapHeader(Agent, BuildHeaderBadges());
+
+    private IReadOnlyList<ConversationMessagePresentation> MessagePresentations
+        => AgentConversationPresentationMapper.MapMessages(
+            Agent,
+            Session?.Messages ?? []);
+
+    private IReadOnlyList<ConversationMessagePresentation> TransientMessagePresentations
+        => string.IsNullOrWhiteSpace(PendingUserPrompt)
+            ? []
+            : [AgentConversationPresentationMapper.MapPendingMessage(
+                Agent,
+                PendingUserPrompt,
+                DateTimeOffset.Now)];
+
+    private ConversationEmptyStatePresentation? TranscriptEmptyState
+    {
+        get
+        {
+            var hasPendingPrompt = !string.IsNullOrWhiteSpace(PendingUserPrompt);
+            if (Session is null && !hasPendingPrompt)
+            {
+                return new(
+                    "Conversation",
+                    "Nothing is open in the center panel",
+                    "Choose a thread from the left rail or create a new one to keep the active transcript in view.");
+            }
+
+            if (Session?.Messages.Count > 0 ||
+                HasPendingApprovals ||
+                hasPendingPrompt ||
+                ResolveActiveExecutionEntries().Count > 0)
+            {
+                return null;
+            }
+
+            return new(
+                "Conversation",
+                "This thread is ready for the first prompt",
+                "Use the composer below to ask for a plan, a status update, or an actual working answer from the selected agent.");
+        }
+    }
+
+    private IReadOnlyList<PresentationBadge> BuildHeaderBadges()
+    {
+        var badges = new List<PresentationBadge>
+        {
+            new(ResolveSessionBadge(), AgentConversationPresentationMapper.MapTone(ResolveSessionTone()))
+        };
+        if (!string.IsNullOrWhiteSpace(RunStateText))
+        {
+            badges.Add(new(
+                RunStateText,
+                AgentConversationPresentationMapper.MapTone(RunStateTone),
+                testId: "agent-chat-run-state"));
+        }
+
+        if (IsAutoApprovalActive())
+        {
+            badges.Add(new(ResolveAutoApproveBadgeText(), PresentationTone.Success));
+        }
+
+        if (Session is not null)
+        {
+            badges.Add(new($"{Session.Messages.Count} messages"));
+        }
+
+        if (HasPendingApprovals)
+        {
+            badges.Add(new($"{PendingApprovals.Count} approvals", PresentationTone.Warning));
+        }
+
+        if (IsVoiceModeEnabled)
+        {
+            badges.Add(new("Audio mode", PresentationTone.Accent));
+        }
+
+        if (Session is not null)
+        {
+            badges.Add(new(
+                Session.UpdatedAtUtc.LocalDateTime.ToString("g"),
+                PresentationTone.Accent));
+        }
+
+        return badges;
+    }
 
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
         => ActiveRun?.PendingApprovals ?? [];
@@ -724,9 +652,6 @@
         titleEditor.Title = Session.Title;
     }
 
-    private Task HandleDraftChanged(string? value)
-        => DraftPromptChanged.InvokeAsync(value ?? string.Empty);
-
     private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
         => AttachmentFilesSelected.InvokeAsync(args);
 
@@ -746,30 +671,6 @@
 
     private string ResolveVoiceRecordingLabel()
         => IsVoiceRecording ? "Stop voice recording" : "Start voice recording";
-
-    private static UserMessageDisplay ResolveUserMessageDisplay(string? content)
-    {
-        var normalizedContent = content?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalizedContent))
-        {
-            return new UserMessageDisplay(string.Empty, null);
-        }
-
-        var markerIndex = normalizedContent.LastIndexOf(UserRequestMarker, StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0)
-        {
-            return new UserMessageDisplay(normalizedContent, null);
-        }
-
-        var visibleContent = normalizedContent[(markerIndex + UserRequestMarker.Length)..].Trim();
-        if (string.IsNullOrWhiteSpace(visibleContent))
-        {
-            return new UserMessageDisplay(normalizedContent, null);
-        }
-
-        var hiddenContext = normalizedContent[..markerIndex].Trim();
-        return new UserMessageDisplay(visibleContent, hiddenContext.Length == 0 ? null : hiddenContext);
-    }
 
     private async Task HandleSessionTitleChangedAsync(EditableThreadTitleModel editor)
     {
@@ -975,21 +876,6 @@
         return $"{entries.Count} step(s) captured from {entries[0].CreatedAtUtc.LocalDateTime:g} to {entries[^1].CreatedAtUtc.LocalDateTime:g}.";
     }
 
-    private string ResolveHeaderSummary()
-    {
-        if (Agent is null)
-        {
-            return "Select an agent on the right to make the center panel conversational again.";
-        }
-
-        if (!string.IsNullOrWhiteSpace(Agent.Summary))
-        {
-            return Agent.Summary;
-        }
-
-        return "Keep the active transcript visible here while the side rails handle thread switching and agent changes.";
-    }
-
     private string ResolveComposerGuidance()
     {
         if (HasPendingApprovals)
@@ -1047,37 +933,6 @@
     private string ResolveAutoApproveBadgeText()
         => ActiveRun?.AutoApprovePendingToolCalls == true ? "Run Auto Approve" : "Auto Approve";
 
-    private string ResolveAvatarAlt()
-        => Agent?.Name ?? "Selected agent";
-
-    private string ResolveAvatarFallbackText()
-        => BuildInitials(ResolveAvatarSeed());
-
-    private string ResolveAvatarSeed()
-    {
-        if (!string.IsNullOrWhiteSpace(Agent?.Name))
-        {
-            return Agent.Name;
-        }
-
-        if (!string.IsNullOrWhiteSpace(Agent?.RoleTitle))
-        {
-            return Agent.RoleTitle;
-        }
-
-        return "Sandbox Agent";
-    }
-
-    private static string ResolveRoleTone(ChatMessageRole role)
-    {
-        return role switch
-        {
-            ChatMessageRole.Assistant => "success",
-            ChatMessageRole.User => "info",
-            _ => "neutral"
-        };
-    }
-
     private static string ResolveExecutionTone(ExecutionState state)
     {
         return state switch
@@ -1089,28 +944,6 @@
             _ => "neutral"
         };
     }
-
-    private static string ResolveBubbleClass(bool isUserMessage)
-        => isUserMessage
-            ? "border-slate-900 bg-slate-900 text-white"
-            : "border-slate-200 bg-slate-50 text-slate-700";
-
-    private static string BuildInitials(string value)
-    {
-        var segments = value
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Take(2)
-            .ToList();
-
-        if (segments.Count == 0)
-        {
-            return "AG";
-        }
-
-        return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0])));
-    }
-
-    private sealed record UserMessageDisplay(string VisibleContent, string? HiddenContext);
 
     private sealed class EditableThreadTitleModel
     {

@@ -10,6 +10,8 @@ The architecture documentation is intentionally small:
 - [Internal communication](internal-communication.md) explains in-process, persistence,
   HTTP, event-stream, provider, and plugin communication.
 - [Modules](modules.md) maps product modules to their responsibilities and entry points.
+- [LLM Chats boundary and integration ownership](llm-chats-boundary-and-handoffs.md) defines asynchronous
+  execution, SSE ownership, delivered UI adapters, forbidden coupling, and remaining context/deployment handoffs.
 - [Process outcome authority with MAF 1.15](process-maf-1.15-outcome-authority.md)
   records the finalizer, managed-artifact, and branch-aware preflight boundary.
 - [Provider model-parameter negotiation](provider-model-parameter-negotiation.md)

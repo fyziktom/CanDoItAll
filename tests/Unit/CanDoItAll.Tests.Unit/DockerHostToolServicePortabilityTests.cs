@@ -8,7 +8,7 @@ using CanDoItAll.Plugins.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Trait("Category", "PluginPortability")]
 public sealed class DockerHostToolServicePortabilityTests : IDisposable

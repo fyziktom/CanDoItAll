@@ -5,7 +5,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Persistence;
 
 public sealed class ControlPlaneDatabaseProfileIntegrationTests
 {

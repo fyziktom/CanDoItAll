@@ -20,6 +20,8 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
+  CANDOITALL_COMPONENTS_COMMIT: 8372c1d55f21b349f8e859470b02eeb4421e96ca
+  CANDOITALL_FILETOOLS_COMMIT: c95dd07208a6d48724443317cdc6cfe67a13020a
 
 jobs:
   stable:
@@ -42,15 +44,34 @@ jobs:
             profile: MacOsHeadless
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: CanDoItAll
 
     steps:
-      - name: Check out source
+      - name: Check out application source
         uses: actions/checkout@v4
+        with:
+          path: CanDoItAll
+
+      - name: Check out Components source
+        uses: actions/checkout@v4
+        with:
+          repository: fysiktom/CanDoItAll.Components
+          ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
+          path: CanDoItAll.Components
+
+      - name: Check out FileTools source
+        uses: actions/checkout@v4
+        with:
+          repository: fysiktom/CanDoItAll.FileTools
+          ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
+          path: CanDoItAll.FileTools
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          global-json-file: global.json
+          global-json-file: CanDoItAll/global.json
 
       - name: Start PostgreSQL for the stable integration gate
         id: postgres
@@ -68,29 +89,34 @@ jobs:
           Write-Host "OS: $([System.Runtime.InteropServices.RuntimeInformation]::OSDescription)"
           Write-Host "Architecture: $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)"
 
-      - name: Restore with package dependencies
+      - name: Restore with sibling source dependencies
         shell: pwsh
-        run: dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false
+        run: |
+          dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true
+          dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx -p:UseLocalCanDoItAllLibraries=true
+          dotnet restore ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx -p:UseLocalCanDoItAllLibraries=true
 
       - name: Build
         shell: pwsh
-        run: >-
-          ./tools/Validation/Test-RuntimePortability.ps1
-          -Configuration Release
-          -ResultsDirectory "${{ runner.temp }}/test-results"
-          -UseLocalCanDoItAllLibraries $false
-          -BuildOnly
+        run: |
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+          dotnet build ./tests/Solutions/CanDoItAll.Tests.Playwright.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
+          ./tools/Validation/Test-RuntimePortability.ps1 `
+            -Configuration Release `
+            -ResultsDirectory "${{ runner.temp }}/test-results" `
+            -UseLocalCanDoItAllLibraries $true `
+            -BuildOnly
 
       - name: Run stable test gate
         shell: pwsh
         env:
           CANDOITALL_TESTS_POSTGRES_CONNECTION: Host=127.0.0.1;Port=5432;Database=candoitall_development;Username=candoitall;Password=candoitall;Include Error Detail=true;Timeout=3;Command Timeout=15
         run: >-
-          dotnet test ./CanDoItAll.slnx --configuration Release --no-build
+          dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore
           --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           --logger "trx;LogFilePrefix=stable-${{ matrix.name }}"
           --results-directory "${{ runner.temp }}/test-results"
-          -p:UseLocalCanDoItAllLibraries=false /m:1
+          -p:UseLocalCanDoItAllLibraries=true /m:1
 
       - name: Run actual-host core portability unit gate
         shell: pwsh
@@ -100,7 +126,7 @@ jobs:
           --filter "(Category=UnixPortabilityCore)&(Category!=UnixRuntimePortability)&(RequiresHostDocker!=true)"
           --logger "trx;LogFileName=portability-unit-${{ matrix.name }}.trx"
           --results-directory "${{ runner.temp }}/test-results"
-          -p:UseLocalCanDoItAllLibraries=false
+          -p:UseLocalCanDoItAllLibraries=true
 
       - name: Run actual-host core portability integration gate
         shell: pwsh
@@ -112,7 +138,7 @@ jobs:
           --filter "(Category=UnixPortabilityCore)&(Category!=UnixRuntimePortability)&(RequiresHostDocker!=true)"
           --logger "trx;LogFileName=portability-integration-${{ matrix.name }}.trx"
           --results-directory "${{ runner.temp }}/test-results"
-          -p:UseLocalCanDoItAllLibraries=false
+          -p:UseLocalCanDoItAllLibraries=true
 
       - name: Run PostgreSQL-backed core migration and restart gate
         shell: pwsh
@@ -124,7 +150,7 @@ jobs:
           --filter "(Category=UnixPortabilityCore)&(RequiresHostDocker=true)"
           --logger "trx;LogFileName=portability-postgres-${{ matrix.name }}.trx"
           --results-directory "${{ runner.temp }}/test-results"
-          -p:UseLocalCanDoItAllLibraries=false
+          -p:UseLocalCanDoItAllLibraries=true
 
       - name: Install Chromium for portability browser gates
         shell: pwsh
@@ -138,7 +164,7 @@ jobs:
           ./tools/Validation/Test-RuntimePortability.ps1
           -Configuration Release
           -ResultsDirectory "${{ runner.temp }}/test-results"
-          -UseLocalCanDoItAllLibraries $false
+          -UseLocalCanDoItAllLibraries $true
           -SkipBuild
 
       - name: Publish, start, restart, and inspect headless host
@@ -148,6 +174,7 @@ jobs:
           -RuntimeIdentifier "${{ matrix.rid }}"
           -RuntimeProfile "${{ matrix.profile }}"
           -OutputRoot "${{ runner.temp }}/candoitall-a07-${{ matrix.name }}"
+          -UseLocalCanDoItAllLibraries $true
 
       - name: Validate documentation and repository structure
         if: runner.os == 'Windows'
@@ -170,7 +197,7 @@ jobs:
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/publish.log
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/startup-*.log
             ${{ runner.temp }}/candoitall-a07-${{ matrix.name }}/browser-smoke.*
-            output/playwright/b07-runtime-capabilities-*.png
+            CanDoItAll/output/playwright/b07-runtime-capabilities-*.png
           if-no-files-found: warn
           retention-days: 14
 
@@ -234,10 +261,29 @@ jobs:
     name: containers
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: CanDoItAll
 
     steps:
-      - name: Check out source
+      - name: Check out application source
         uses: actions/checkout@v4
+        with:
+          path: CanDoItAll
+
+      - name: Check out Components source
+        uses: actions/checkout@v4
+        with:
+          repository: fysiktom/CanDoItAll.Components
+          ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
+          path: CanDoItAll.Components
+
+      - name: Check out FileTools source
+        uses: actions/checkout@v4
+        with:
+          repository: fysiktom/CanDoItAll.FileTools
+          ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
+          path: CanDoItAll.FileTools
 
       - name: Create disposable Compose database secret
         shell: pwsh

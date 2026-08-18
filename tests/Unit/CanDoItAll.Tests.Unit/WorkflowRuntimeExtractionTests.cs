@@ -7,7 +7,7 @@ using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 using WorkflowRuntimeManagerContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeManager;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowRuntimeExtractionTests
 {

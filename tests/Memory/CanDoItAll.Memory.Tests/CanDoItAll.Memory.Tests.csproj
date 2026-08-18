@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.Memory.Tests" />
     <Using Include="Xunit" />
   </ItemGroup>
 

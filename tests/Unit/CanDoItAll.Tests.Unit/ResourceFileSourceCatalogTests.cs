@@ -6,7 +6,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class ResourceFileSourceCatalogTests
 {

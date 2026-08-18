@@ -1,4 +1,4 @@
-@inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject ProviderUsageQueryService UsageQueryService
 
 @if (isLoading)
 {
@@ -21,9 +21,10 @@ else
             <MetricCard Label="Providers" Value="@AgentUsageDisplay.FormatCount(snapshot.Providers.Count)" />
             <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
             <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
-            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.TotalTokens)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.Tokens.TotalTokens)" />
             <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
-            <MetricCard Label="Failed runs" Value="@AgentUsageDisplay.FormatCount(snapshot.Providers.Sum(item => item.FailedRunCount))" />
+            <MetricCard Label="Unpriced" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnpricedObservationCount)" />
+            <MetricCard Label="Failed executions" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.FailedExecutionCount)" />
         </Grid>
 
         <Grid Gap="LayoutGap.Large"
@@ -51,13 +52,13 @@ else
             }
             else
             {
-                <DataGrid TItem="ProviderOverviewUsageRow"
+                <DataGrid TItem="ProviderUsageProviderRow"
                           Data="@ProviderRows"
                           AllowPaging="true"
                           PageSize="10"
                           data-testid="provider-usage-dialog-grid">
                     <Columns>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Provider">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Provider">
                             <Template Context="provider">
                                 <Stack Gap="0.15rem">
                                     <span class="font-medium text-slate-950">@provider.ProviderName</span>
@@ -65,35 +66,35 @@ else
                                 </Stack>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Share">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Share">
                             <Template Context="provider">
-                                <span>@AgentUsageDisplay.FormatUsageShare(AgentUsageDisplay.ResolveProviderUsageValue(provider), TotalProviderUsage)</span>
+                                <span>@AgentUsageDisplay.FormatUsageShare(provider.Totals.UsageObservationCount, TotalProviderUsage)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Observations">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Observations">
                             <Template Context="provider">
-                                <span>@AgentUsageDisplay.FormatCount(provider.UsageObservationCount)</span>
+                                <span>@AgentUsageDisplay.FormatCount(provider.Totals.UsageObservationCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Unknown">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Unknown">
                             <Template Context="provider">
-                                <span>@AgentUsageDisplay.FormatCount(provider.UnknownUsageObservationCount)</span>
+                                <span>@AgentUsageDisplay.FormatCount(provider.Totals.UnknownUsageObservationCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Tokens">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Tokens">
                             <Template Context="provider">
-                                <span>@AgentUsageDisplay.FormatTokens(provider.TotalTokens)</span>
+                                <span>@AgentUsageDisplay.FormatTokens(provider.Totals.Tokens.TotalTokens)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Known cost">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Known cost">
                             <Template Context="provider">
-                                <span>@AgentUsageDisplay.FormatCost(provider.KnownCostUsd)</span>
+                                <span>@AgentUsageDisplay.FormatCost(provider.Totals.KnownCostUsd)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="ProviderOverviewUsageRow" Title="Failed">
+                        <DataGridColumn TItem="ProviderUsageProviderRow" Title="Unpriced">
                             <Template Context="provider">
-                                <StatusBadge Tone="@(provider.FailedRunCount > 0 ? "danger" : "success")"
-                                             Text="@AgentUsageDisplay.FormatCount(provider.FailedRunCount)"
+                                <StatusBadge Tone="@(provider.Totals.UnpricedObservationCount > 0 ? "warning" : "success")"
+                                             Text="@AgentUsageDisplay.FormatCount(provider.Totals.UnpricedObservationCount)"
                                              NoWrap="true" />
                             </Template>
                         </DataGridColumn>
@@ -144,17 +145,20 @@ else
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
-    private ProviderUsageDetailSnapshot snapshot = ProviderUsageDetailSnapshot.Empty;
+    [Parameter]
+    public ProviderUsageWorkloadSelection Selection { get; set; } = ProviderUsageWorkloadSelection.Both;
+
+    private ProviderUsageSnapshot snapshot = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isLoading = true;
     private string? loadError;
 
-    private IReadOnlyList<ProviderOverviewUsageRow> ProviderRows =>
+    private IReadOnlyList<ProviderUsageProviderRow> ProviderRows =>
         snapshot.Providers
-            .OrderByDescending(AgentUsageDisplay.ResolveProviderUsageValue)
+            .OrderByDescending(item => item.Totals.UsageObservationCount)
             .ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private decimal TotalProviderUsage => ProviderRows.Sum(AgentUsageDisplay.ResolveProviderUsageValue);
+    private decimal TotalProviderUsage => ProviderRows.Sum(item => item.Totals.UsageObservationCount);
 
     private IReadOnlyList<CdaChartSeries> ProviderUsageBarSeries => BuildProviderUsageSeries(CdaChartType.Bar, "Provider usage");
 
@@ -164,7 +168,7 @@ else
     {
         try
         {
-            snapshot = await WorkspaceService.GetProviderUsageDetailsAsync();
+            snapshot = await UsageQueryService.QueryAsync(Selection);
         }
         catch (Exception exception)
         {
@@ -193,7 +197,7 @@ else
                     .Take(12)
                     .Select(item => new CdaChartPoint(
                         AgentUsageDisplay.TrimLabel(item.ProviderName, 22),
-                        AgentUsageDisplay.ResolveProviderUsageValue(item)))
+                        item.Totals.UsageObservationCount))
                     .ToArray()
             }
         ];

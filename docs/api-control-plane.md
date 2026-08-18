@@ -61,6 +61,10 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/memory-providers` | Experimental provider profiles, context queries, and owned operation status. | [`MemoryProvidersApi.cs`](../src/App/CanDoItAll.Web/Api/MemoryProvidersApi.cs) |
 | `/api/plugins` | Plugin catalog, configuration, and runtime operations. | [`PluginsApi.cs`](../src/App/CanDoItAll.Web/Api/PluginsApi.cs) |
 | `/api/crm-hr` | CRM, workforce, recruiting, capacity, and relationship operations. | [`CrmHrApi.cs`](../src/App/CanDoItAll.Web/Api/CrmHrApi.cs) |
+| `/api/llm-chats` | Simple Chat definition catalog, lifecycle, provider/model options, and conversation creation. | [`LlmChatDefinitionEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatDefinitionEndpoints.cs) |
+| `/api/llm-conversations` | Conversation paging, transcript reads, rename/archive, turn admission, and explicit recovery. | [`LlmChatConversationEndpoints.cs`](../src/App/CanDoItAll.Web/Api/LlmChatConversationEndpoints.cs) |
+| `/api/llm-chat-operations` | Durable turn status, replayable SSE, cancellation, and evidence-based reconciliation. | [`LlmChatOperationsApi.cs`](../src/App/CanDoItAll.Web/Api/LlmChatOperationsApi.cs) |
+| `/api/runtime` | Host capability and bounded operation-readiness snapshots. | [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs) |
 
 Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
 

@@ -5,7 +5,7 @@ using CanDoItAll.Memory.Application;
 using CanDoItAll.Memory.Drivers.CognitiveMemory;
 using CanDoItAll.Memory.Http;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Providers;
 
 public sealed class HttpMemoryProviderResponseLimitTests
 {

@@ -6,7 +6,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureProcessRunRecordProjectorTests
 {

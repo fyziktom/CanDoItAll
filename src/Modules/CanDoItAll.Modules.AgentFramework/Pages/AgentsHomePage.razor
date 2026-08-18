@@ -91,19 +91,19 @@
     </Lead>
 
     <ChildContent>
-        @if (string.Equals(selectedTab, "providers", StringComparison.Ordinal))
+        @if (string.Equals(selectedTab, AgentWorkspaceTabs.Providers, StringComparison.Ordinal))
         {
             <AgentProviderProfilesPanel />
         }
-        else if (string.Equals(selectedTab, "voice", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Voice, StringComparison.Ordinal))
         {
             <AgentVoiceSettingsPanel />
         }
-        else if (string.Equals(selectedTab, "floating-chat", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.FloatingChat, StringComparison.Ordinal))
         {
             <FloatingAgentChatSettingsPanel />
         }
-        else if (string.Equals(selectedTab, "agents", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Agents, StringComparison.Ordinal))
         {
             <AgentCatalogPanel RequestedAgentId="@effectiveRequestedAgentId"
                                RequestedTeamId="@effectiveRequestedTeamId"
@@ -112,25 +112,32 @@
                                ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync"
                                SkipCatalogRepair="true" />
         }
-        else if (string.Equals(selectedTab, "chat", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.SimpleChats, StringComparison.Ordinal))
+        {
+            <SimpleChatsWorkspace View="@simpleChatRouteState.View"
+                                  DefinitionId="@simpleChatRouteState.DefinitionId"
+                                  ConversationId="@simpleChatRouteState.ConversationId"
+                                  RouteStateChanged="HandleSimpleChatRouteStateChangedAsync" />
+        }
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Chat, StringComparison.Ordinal))
         {
             <AgentChatPanel PreferredAgentId="@effectiveRequestedAgentId"
                             SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                             ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, "capabilities", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Capabilities, StringComparison.Ordinal))
         {
             <AgentCapabilitiesPanel PreferredAgentId="@effectiveRequestedAgentId"
                                     SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                                     ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, "governance", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Governance, StringComparison.Ordinal))
         {
             <AgentGovernancePanel PreferredAgentId="@effectiveRequestedAgentId"
                                   SelectedAgentChanged="HandleSelectedAgentChangedAsync"
                                   ContextAccessStateChanged="HandleSelectionAccessStateChangedAsync" />
         }
-        else if (string.Equals(selectedTab, "diagnostics", StringComparison.Ordinal))
+        else if (string.Equals(selectedTab, AgentWorkspaceTabs.Diagnostics, StringComparison.Ordinal))
         {
             <AgentDiagnosticsPanel />
         }
@@ -147,6 +154,28 @@
                         <h2 class="mt-1 text-base font-semibold text-slate-950">Agent runtime summary could not be refreshed</h2>
                         <p class="mt-2 text-sm leading-6 text-slate-600">@overviewLoadError</p>
                     </SurfaceCard>
+                }
+
+                <SurfaceCard Soft="true" data-testid="agents-overview-usage-scope">
+                    <Cluster JustifyContent="JustifyContent.SpaceBetween"
+                             AlignItems="AlignItems.Center"
+                             Gap="LayoutGap.Medium"
+                             Wrap="FlexWrap.Wrap">
+                        <Stack Gap="0.2rem">
+                            <p class="cda-eyebrow">Usage scope</p>
+                            <span class="text-sm text-slate-600">Catalog counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use this scope.</span>
+                        </Stack>
+                        <SecondaryTabs Items="UsageScopeTabs"
+                                       SelectedKey="@UsageScopeKey"
+                                       SelectedKeyChanged="HandleUsageScopeChangedAsync" />
+                    </Cluster>
+                </SurfaceCard>
+
+                @if (!string.IsNullOrWhiteSpace(usageLoadError))
+                {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-overview-usage-partial">
+                        Some usage evidence is unavailable. Displayed totals are partial. @usageLoadError
+                    </Alert>
                 }
 
                 <div class="agents-overview-stat-strip w-full"
@@ -173,30 +202,31 @@
                       ColumnTemplateXl="minmax(20rem,0.95fr) minmax(0,1.1fr) minmax(16rem,0.72fr) minmax(20rem,0.95fr)">
                     <SurfaceCard Soft="true"
                                  Class="agents-overview-main-card agents-overview-list-card"
-                                 data-testid="agents-overview-top-agents">
+                                 data-testid="agents-overview-top-consumers">
                         <Cluster JustifyContent="JustifyContent.SpaceBetween"
                                  AlignItems="AlignItems.Start"
                                  Gap="LayoutGap.Medium"
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.25rem">
-                                <p class="cda-eyebrow">Most used agents</p>
-                                <h2 class="text-base font-semibold text-slate-950">Top 5 by execution count</h2>
+                                <p class="cda-eyebrow">Most used consumers</p>
+                                <h2 class="text-base font-semibold text-slate-950">Top 5 @UsageScopeLabel by execution count</h2>
                             </Stack>
                             <StatusBadge Tone="info"
-                                         Text="@(isLoaded ? $"{overview.TopAgents.Count} ranked" : "Loading")" />
+                                         Text="@(!isUsageLoading && isLoaded ? $"{TopUsageConsumers.Count} ranked" : "Loading")" />
                         </Cluster>
 
-                        <AgentOverviewUsageList IsLoaded="@isLoaded"
-                                                Rows="@overview.TopAgents"
-                                                TestId="agents-overview-top-agents-list"
-                                                EmptyDescription="Run an agent or process-backed execution to populate top-agent usage." />
+                        <ProviderUsageConsumerList IsLoading="@(isUsageLoading || !isLoaded)"
+                                                   Rows="@TopUsageConsumers"
+                                                   AvatarImageUrls="@OverviewConsumerAvatarImageUrls"
+                                                   TestId="agents-overview-top-consumers-list"
+                                                   EmptyDescription="Run an Agent or Simple Chat in the selected scope to populate consumer usage." />
                     </SurfaceCard>
 
                     <Stack GapScale="LayoutGap.Medium"
                            Class="agents-overview-main-card agents-overview-chart-shell"
                            data-testid="agents-overview-provider-bar">
                         <CdaChart Title="Usage per provider"
-                                  Description="Provider usage observations captured from technical executions."
+                                  Description="Provider usage observations for the selected Agent and Simple Chat scope."
                                   Series="@ProviderUsageBarSeries"
                                   Options="@ProviderUsageBarChartOptions"
                                   Height="310"
@@ -208,7 +238,7 @@
                            Class="agents-overview-main-card agents-overview-chart-shell"
                            data-testid="agents-overview-provider-distribution">
                         <CdaChart Title="Provider distribution"
-                                  Description="Share of total provider usage observations across the current workspace."
+                                  Description="Share of provider usage observations in the selected scope."
                                   Series="@ProviderUsageDistributionSeries"
                                   Options="@ProviderUsageDistributionChartOptions"
                                   Height="310"
@@ -218,27 +248,25 @@
 
                     <SurfaceCard Soft="true"
                                  Class="agents-overview-main-card agents-overview-list-card"
-                                 data-testid="agents-overview-failing-agents">
+                                 data-testid="agents-overview-failing-consumers">
                         <Cluster JustifyContent="JustifyContent.SpaceBetween"
                                  AlignItems="AlignItems.Start"
                                  Gap="LayoutGap.Medium"
                                  Wrap="FlexWrap.Wrap">
                             <Stack Gap="0.25rem">
-                                <p class="cda-eyebrow">Most failing agents</p>
-                                <h2 class="text-base font-semibold text-slate-950">Top 5 by failed runs</h2>
+                                <p class="cda-eyebrow">Most failing consumers</p>
+                                <h2 class="text-base font-semibold text-slate-950">Top 5 @UsageScopeLabel by failed executions</h2>
                             </Stack>
                             <StatusBadge Tone="danger"
-                                         Text="@(isLoaded ? $"{overview.TopFailingAgents.Count} flagged" : "Loading")" />
+                                         Text="@(!isUsageLoading && isLoaded ? $"{TopFailingConsumers.Count} flagged" : "Loading")" />
                         </Cluster>
 
-                        <AgentOverviewUsageList IsLoaded="@isLoaded"
-                                                Rows="@overview.TopFailingAgents"
-                                                ShowFailureRank="true"
-                                                TestId="agents-overview-failing-agents-list"
-                                                LoadingTitle="Failure ranking is loading"
-                                                EmptyEyebrow="No failures"
-                                                EmptyTitle="No failing agents are ranked"
-                                                EmptyDescription="Recent failed executions will appear here without opening the full usage dialog." />
+                        <ProviderUsageConsumerList IsLoading="@(isUsageLoading || !isLoaded)"
+                                                   Rows="@TopFailingConsumers"
+                                                   AvatarImageUrls="@OverviewConsumerAvatarImageUrls"
+                                                   ShowFailureRank="true"
+                                                   TestId="agents-overview-failing-consumers-list"
+                                                   EmptyDescription="No failed Agent or Simple Chat executions exist in the selected scope." />
                     </SurfaceCard>
                 </Grid>
 
@@ -305,12 +333,12 @@
                             </Stack>
                             <Cluster Gap="LayoutGap.Small"
                                      Wrap="FlexWrap.Wrap">
-                                <Button Text="Agents"
+                                <Button Text="Consumers"
                                         Icon="analytics"
                                         Size="ButtonSize.Small"
                                         ButtonStyle="ButtonStyle.Light"
                                         Variant="Variant.Outlined"
-                                        title="Open agent usage details"
+                                        title="Open Agent and Simple Chat consumer usage details"
                                         Click="OpenAgentUsageDialogAsync"
                                         data-testid="agents-overview-open-agent-usage" />
                                 <Button Text="Providers"

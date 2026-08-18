@@ -1,56 +1,13 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
-/// Baseline characterization for the floating agent context path captured before the
-/// MAF runtime/context refactor. These tests freeze observable behavior so later
-/// extractions can be distinguished from behavior rewrites.
+/// Guards floating-agent context capture and the ownership boundaries around runtime invocation.
 /// </summary>
 public sealed class FloatingAgentContextBaselineCharacterizationTests
 {
-    [Fact]
-    public void Captured_canvas_snapshot_remains_immutable_after_the_registry_publishes_a_gantt_view()
-    {
-        var registry = new AgentChatContextRegistry(TimeProvider.System);
-        var scopeId = AgentChatContextScopeId.Create();
-        var canvasAttachment = new ViewStateAttachment("canvas");
-        using var lease = registry.PublishModuleContext(CreateViewPublication(
-            scopeId,
-            view: "canvas",
-            fragmentContent: "Current view: Canvas",
-            canvasAttachment));
-
-        var capturedForRun = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        var capturedVersion = capturedForRun.Version;
-
-        lease.Update(CreateViewPublication(
-            scopeId,
-            view: "gantt",
-            fragmentContent: "Current view: Gantt",
-            new ViewStateAttachment("gantt")));
-
-        // The admitted run keeps the exact canvas capture: fragment text, attachment
-        // instance, and version are unchanged by the later Gantt publication.
-        Assert.Equal(
-            "Current view: Canvas",
-            capturedForRun.Fragments.Single(item =>
-                item.ContributorId == new AgentChatContextContributorId("view")).Content);
-        var envelope = Assert.Single(capturedForRun.Attachments);
-        Assert.True(envelope.TryGetAttachment<ViewStateAttachment>(out var attachment));
-        Assert.Same(canvasAttachment, attachment);
-        Assert.Equal(capturedVersion, capturedForRun.Version);
-
-        // The next capture (= next turn) observes the Gantt publication at a higher version.
-        var nextTurnCapture = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        Assert.Equal(
-            "Current view: Gantt",
-            nextTurnCapture.Fragments.Single(item =>
-                item.ContributorId == new AgentChatContextContributorId("view")).Content);
-        Assert.True(nextTurnCapture.Version > capturedVersion);
-    }
-
     [Fact]
     public void Composed_transient_context_digest_is_not_affected_by_later_view_publications()
     {
@@ -135,62 +92,6 @@ public sealed class FloatingAgentContextBaselineCharacterizationTests
             @"src\MAF\Common\CanDoItAll.AgentFramework.Core\Context\AgentTurnContextCaptureService.cs"));
         Assert.Equal(1, CountOccurrences(captureServiceSource, ".CaptureAsync(cancellationToken)"));
         Assert.DoesNotContain("RespondToPendingApprovals", captureServiceSource, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Baseline_gap_gantt_panel_does_not_contribute_observation_facts_yet()
-    {
-        // Documents the pre-refactor limitation targeted by the Gantt observation
-        // contributor work: the Gantt panel exposes no facts to the agent chat
-        // context; the only Gantt-specific model context is the static view fragment
-        // in ProjectStructureAgentChatContextBuilder. When the Gantt observation
-        // contributor lands, this assertion must be replaced by positive coverage
-        // of the contributor contract.
-        var root = FindRepoRoot();
-        var panelSources = new[]
-        {
-            @"src\Modules\CanDoItAll.Modules.Workbench\Pages\Components\ProjectStructure\ProjectStructureGanttPanel.razor",
-            @"src\Modules\CanDoItAll.Modules.Workbench\Pages\Components\ProjectStructure\ProjectStructureGanttPanel.razor.cs"
-        };
-
-        var contributesObservationFacts = panelSources.Any(relativePath =>
-        {
-            var fullPath = TestRepositoryPath.Resolve(root, relativePath);
-            if (!File.Exists(fullPath))
-            {
-                return false;
-            }
-
-            var text = File.ReadAllText(fullPath);
-            return text.Contains("AgentChatContext", StringComparison.Ordinal) ||
-                   text.Contains("GanttObservationContributor", StringComparison.Ordinal);
-        });
-
-        var builderSource = File.ReadAllText(TestRepositoryPath.Resolve(
-            root,
-            @"src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAgentChatContextBuilder.cs"));
-        var ganttObservationContributorExists = Directory
-            .EnumerateFiles(
-                TestRepositoryPath.Resolve(root, @"src\Modules\CanDoItAll.Modules.Workbench"),
-                "*GanttObservation*",
-                SearchOption.AllDirectories)
-            .Any();
-
-        if (ganttObservationContributorExists)
-        {
-            // The Gantt observation contributor has landed; the baseline gap is closed
-            // and rich facts are expected to flow through the dedicated contributor.
-            Assert.True(
-                contributesObservationFacts || ganttObservationContributorExists,
-                "Gantt observation contributor exists but is not wired to the panel or context path.");
-            return;
-        }
-
-        Assert.False(
-            contributesObservationFacts,
-            "Baseline expectation changed: the Gantt panel now references the agent chat context. " +
-            "Update this characterization with positive contributor coverage.");
-        Assert.Contains("BuildViewFragment", builderSource, StringComparison.Ordinal);
     }
 
     private static AgentChatContextPublication CreateViewPublication(

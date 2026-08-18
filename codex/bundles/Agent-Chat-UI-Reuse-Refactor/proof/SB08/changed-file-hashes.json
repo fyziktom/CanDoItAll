@@ -1,0 +1,20 @@
+{
+  "algorithm": "SHA-256",
+  "baseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "scope": "Representative production adapters/consumers and direct owner tests; complete per-subbundle manifests are linked from SB03-SB07.",
+  "files": [
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs", "before": null, "after": "3c8266abd46b25ad6a39d6eb4d49d4f75235d734475f1368fabf3b1d14d50774" },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSelectionCard.razor", "before": "d311f26fa262d0b79267c89f1c2cd5010670cf1484f8ba6d793ee616c6c37591", "after": "3dc8521e88ab077c53245360c972663d2e3cb7bba627866ead0dbf54ff5cc35f" },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor", "before": "0c8b85d005b8a46a5831c1b9afbbb96d78b5b2a1f5ed250dc306962c830c6d6b", "after": "4fb5f4befcc8ddc378b1cab300b4ec1d865cf87c5a8a82cbd7f4dcd1bc6ab8ae" },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentConversationPresentationMapper.cs", "before": null, "after": "1fe9f7155bf40521538de4f60568a38eefdd2c660f5beb2c39f634dae4e10828" },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ProviderModelSelector.razor", "before": "d1c20c80f07c0f1dd822b9c15d3eb64d330951255f2a34962faf1a43360b34ad", "after": "01936655f1347a538bee6c9e5afc913ef89220877559f3ea55710b08411b5789" },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentActiveChatPresentationMapper.cs", "before": null, "after": "3caebe0682bbab4849bc6130b7e08260786444b46ca269db8a5e8a42c3e864ba" },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor", "before": "855f7d4e6f2cc716262398488677365d9cad5cfbb698ed92c25701b90d7e8586", "after": "8793ba16ea95bb7b4d2e60532ed83caaab49e4eea01cfa6a9732bb73bf0aa4cd" },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor", "before": "237fde26cbf54b5376b39cc647f4173644fd3bdcdde32df0c1e2ebfbeccd2d60", "after": "8b5c75b3b174e839eebfd02aaddcff5631f7314faf9d67f13d10cbb5de5df116" },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor", "before": "69766e67be147a31f3e0fb4864d18058c99322476449440b3523f4348a0564bf", "after": "b7e2ab2b2f659402bcd110f59025848a9526ee3c80a28afc36a975b4aaa3dfd9" },
+    { "path": "tests/Components/CanDoItAll.Tests.Components/Conversations/ConversationParticipantComponentsTests.cs", "before": null, "after": "106352391be9acb3381ce4f462470354e78300f291b5421327e7640d714d0b04" },
+    { "path": "tests/Components/CanDoItAll.Tests.Components/Conversations/ConversationWorkspaceComponentsTests.cs", "before": null, "after": "d16cb44265f62966cbb4a385a22fae8ef55273b3126c9d57320143335da27b26" },
+    { "path": "tests/Components/CanDoItAll.Tests.Components/Conversations/ConversationFloatingComponentsTests.cs", "before": null, "after": "5daae2b1b2d200f85061918226d9126071c55d5f9915dd65b40e8ac061610698" },
+    { "path": "tests/Components/CanDoItAll.Tests.Components/AgentActiveChatPresentationMapperTests.cs", "before": null, "after": "3c65a0a4cd67fdda3ed43cc386e6cac3d39ca8e387835d7404f10a07f800621b" }
+  ]
+}

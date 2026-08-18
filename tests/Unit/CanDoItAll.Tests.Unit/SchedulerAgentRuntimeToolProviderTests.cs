@@ -8,7 +8,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.SchedulerPlanner;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class SchedulerAgentRuntimeToolProviderTests
 {

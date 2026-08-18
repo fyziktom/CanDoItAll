@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Maf;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class OllamaToolResultProtocolHandlerTests
 {

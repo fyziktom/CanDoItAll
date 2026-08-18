@@ -9,7 +9,7 @@ using WorkflowDefinitionValidatorContract = CanDoItAll.AgentFramework.Workflows.
 using WorkflowRuntimeBackendCatalogContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeBackendCatalog;
 using WorkflowRuntimeManagerContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeManager;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowCoreExtractionTests
 {

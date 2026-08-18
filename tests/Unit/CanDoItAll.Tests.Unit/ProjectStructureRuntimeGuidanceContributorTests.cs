@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workbench.AgentContext;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 /// <summary>
 /// Durable project-structure operational guidance is supplied by the

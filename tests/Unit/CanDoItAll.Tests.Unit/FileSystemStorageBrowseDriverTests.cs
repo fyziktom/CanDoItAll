@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)

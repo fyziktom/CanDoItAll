@@ -1,0 +1,5 @@
+.llm-chat-floating-conversation-content {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}

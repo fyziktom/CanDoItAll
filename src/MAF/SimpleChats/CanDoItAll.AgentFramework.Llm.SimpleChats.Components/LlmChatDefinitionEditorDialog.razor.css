@@ -1,0 +1,18 @@
+.llm-chat-definition-editor {
+    min-height: min(72vh, 52rem);
+    min-width: 0;
+}
+
+.llm-chat-definition-editor__tabs {
+    min-height: min(60vh, 42rem);
+}
+
+@media (max-width: 760px) {
+    .llm-chat-definition-editor {
+        min-height: auto;
+    }
+
+    .llm-chat-definition-editor__tabs {
+        min-height: 34rem;
+    }
+}

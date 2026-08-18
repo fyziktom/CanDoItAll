@@ -11,7 +11,7 @@ using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessProjectionPipelineTests
 {

@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 using WorkspaceProviderProfile =
     CanDoItAll.Modules.Workspace.ProviderProfile;
@@ -216,6 +216,51 @@ public sealed class ProviderCatalogProjectionFailureTests
         Assert.Equal(
             [AgentReasoningEffortLevel.High],
             Assert.Single(edited.ModelThinkingEffortCapabilities).AllowedEfforts);
+    }
+
+    [Fact]
+    public async Task Provider_save_round_trips_ollama_suggested_models_through_database_mapping()
+    {
+        var registry = CreateRegistry(
+            new OllamaProviderAdapter(new UnexpectedHttpClientFactory()));
+        var providerId = await registry.SaveProviderAsync(
+            new AgentFrameworkProviderProfileEditorModel
+            {
+                Name = "Local Ollama",
+                Kind = AgentFrameworkProviderKind.Ollama,
+                BaseUrl = "http://127.0.0.1:11434",
+                DefaultModel = "gemma4-12b-256k",
+                SuggestedModels =
+                [
+                    " gemma4-12b-256k ",
+                    "gptoss20b64k",
+                    "GPTOSS20B64K"
+                ],
+                Transport = ProviderTransportKind.ChatCompletions,
+                Purpose = ProviderProfilePurpose.Chat,
+                IsEnabled = true,
+                SupportsStreaming = true,
+                SupportsTools = true,
+                ConfigurationJson = "{}"
+            });
+        var reloaded = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(
+            ["gemma4-12b-256k", "gptoss20b64k"],
+            reloaded.SuggestedModels);
+        Assert.Contains(
+            "suggestedModels",
+            reloaded.ConfigurationJson,
+            StringComparison.Ordinal);
+
+        var editor = await registry.GetProviderEditorAsync(providerId);
+        await registry.SaveProviderAsync(editor);
+        var savedAgain = Assert.IsType<CanDoItAll.AgentFramework.Models.ProviderProfile>(
+            await registry.GetProviderAsync(providerId));
+
+        Assert.Equal(reloaded.SuggestedModels, savedAgain.SuggestedModels);
+        Assert.Contains("gptoss20b64k", savedAgain.SuggestedModels);
     }
 
     [Fact]

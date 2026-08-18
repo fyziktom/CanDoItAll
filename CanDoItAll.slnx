@@ -30,6 +30,8 @@
   </Folder>
   <Folder Name="/src/UI/">
     <Project Path="src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
+    <Project Path="src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj" />
+    <Project Path="src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj" />
     <Project Path="src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Common/">
@@ -45,6 +47,7 @@
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.ProviderPipelines/CanDoItAll.AgentFramework.ProviderPipelines.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj" />
+    <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj" />
     <Project Path="src/MAF/Common/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
   </Folder>
   <Folder Name="/src/MAF/Capabilities/">
@@ -94,6 +97,8 @@
     <Project Path="src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj" />
+    <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
+    <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
@@ -104,6 +109,11 @@
     <Project Path="src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj" />
     <Project Path="src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj" />
+  </Folder>
+  <Folder Name="/src/MAF/SimpleChats/">
+    <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj" />
+    <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj" />
+    <Project Path="src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.csproj" />
   </Folder>
   <Folder Name="/src/Processes/">
     <Project Path="src/Processes/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj" />
@@ -129,30 +139,8 @@
     <Project Path="src/plugins/Implementations/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj" />
     <Project Path="src/plugins/Implementations/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj" />
   </Folder>
-  <Folder Name="/tests/Support/">
-    <Project Path="tests/Support/CanDoItAll.DurableFileWriter.TestHost/CanDoItAll.DurableFileWriter.TestHost.csproj" />
-    <Project Path="tests/Support/CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj" />
-  </Folder>
-  <Folder Name="/tests/Unit/">
-    <Project Path="tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
-  </Folder>
   <Folder Name="/src/MAF/Memory/">
     <Project Path="src/MAF/Memory/CanDoItAll.AgentFramework.Memory/CanDoItAll.AgentFramework.Memory.csproj" />
-  </Folder>
-  <Folder Name="/tests/Memory/">
-    <Project Path="tests/Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj" />
-  </Folder>
-  <Folder Name="/tests/MAF/">
-    <Project Path="tests/MAF/CanDoItAll.AgentFramework.Memory.Tests/CanDoItAll.AgentFramework.Memory.Tests.csproj" />
-  </Folder>
-  <Folder Name="/tests/Integration/">
-    <Project Path="tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
-  </Folder>
-  <Folder Name="/tests/Components/">
-    <Project Path="tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
-  </Folder>
-  <Folder Name="/tests/Playwright/">
-    <Project Path="tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj" />
   </Folder>
   <Folder Name="/tools/App/">
     <Project Path="tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />

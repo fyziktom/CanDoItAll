@@ -1,0 +1,60 @@
+<Stack GapScale="LayoutGap.Medium"
+       Class="@Class"
+       data-testid="@TestId">
+    <FormField Text="Keep hidden chats active (minutes)">
+        <Numeric TValue="int"
+                 Value="@HiddenChatRetentionMinutes"
+                 ValueChanged="@HiddenChatRetentionMinutesChanged"
+                 Min="1"
+                 Max="@MaximumRetentionMinutes"
+                 Disabled="@Disabled"
+                 data-testid="@RetentionInputTestId" />
+    </FormField>
+    <TextBlock TextStyle="TextStyle.Caption"
+               Value="Idle hidden handles are stopped after this interval. Durable conversation history is not deleted." />
+
+    <FormField Text="Maximum active chats">
+        <Numeric TValue="int"
+                 Value="@MaximumActiveChats"
+                 ValueChanged="@MaximumActiveChatsChanged"
+                 Min="1"
+                 Max="@MaximumActiveChatLimit"
+                 Disabled="@Disabled"
+                 data-testid="@MaximumActiveInputTestId" />
+    </FormField>
+</Stack>
+
+@code {
+    [Parameter]
+    public int HiddenChatRetentionMinutes { get; set; }
+
+    [Parameter]
+    public EventCallback<int> HiddenChatRetentionMinutesChanged { get; set; }
+
+    [Parameter]
+    public int MaximumRetentionMinutes { get; set; }
+
+    [Parameter]
+    public int MaximumActiveChats { get; set; }
+
+    [Parameter]
+    public EventCallback<int> MaximumActiveChatsChanged { get; set; }
+
+    [Parameter]
+    public int MaximumActiveChatLimit { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string TestId { get; set; } = "conversation-active-chat-lifecycle-fields";
+
+    [Parameter]
+    public string RetentionInputTestId { get; set; } = "conversation-hidden-chat-retention";
+
+    [Parameter]
+    public string MaximumActiveInputTestId { get; set; } = "conversation-maximum-active-chats";
+}

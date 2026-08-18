@@ -9,7 +9,7 @@ using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 [Trait("Category", "UnixPortabilityCore")]

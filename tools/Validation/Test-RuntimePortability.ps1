@@ -4,7 +4,7 @@ param(
     [string]$ResultsDirectory,
     [string]$CatalogPath,
     [string]$BuildStampPath,
-    [bool]$UseLocalCanDoItAllLibraries = $false,
+    [bool]$UseLocalCanDoItAllLibraries = $true,
     [ValidateSet('All', 'Unit', 'Integration', 'Browser')]
     [string]$Scope = 'All',
     [switch]$SkipBuild,

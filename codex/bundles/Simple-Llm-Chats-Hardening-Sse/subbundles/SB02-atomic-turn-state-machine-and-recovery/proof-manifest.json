@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB02",
+  "title": "Atomic turn state machine and recovery",
+  "state": "Completed",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "be36fedb2ce329af6021cd2330eb6162d8ef2db4",
+  "dependencyMode": "local sibling source projects",
+  "host": "Microsoft Windows 10.0.26200 x64; .NET SDK 10.0.303",
+  "database": "local PostgreSQL ephemeral databases managed by PostgresTestDatabaseLease",
+  "requirements": [
+    "RQ-005",
+    "RQ-006",
+    "RQ-007",
+    "RQ-008",
+    "RQ-009",
+    "RQ-010",
+    "RQ-016",
+    "RQ-026"
+  ],
+  "commands": [
+    {
+      "command": "historical cancellation regression at c90f56497 with pinned sibling roots and CopyRepositoryTemplatesToOutput=false",
+      "exitCode": 1,
+      "result": "expected red: 0 passed, 1 failed, 0 skipped"
+    },
+    {
+      "command": "focused SB02 unit filter",
+      "exitCode": 0,
+      "result": "19 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "dotnet test tests\\Unit\\CanDoItAll.Tests.Unit\\CanDoItAll.Tests.Unit.csproj --no-restore -nologo -v:minimal --filter FullyQualifiedName~LlmChatOperationTransitionRegressionTests",
+      "exitCode": 0,
+      "result": "1 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "focused PostgreSQL turn-transaction and dispatch-claim filter",
+      "exitCode": 0,
+      "result": "4 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "focused real-host LlmChatsApiPostgreSqlIntegrationTests filter",
+      "exitCode": 0,
+      "result": "1 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "affected Persistence and Unit project builds",
+      "exitCode": 0,
+      "result": "both pass with 0 warnings and 0 errors"
+    },
+    {
+      "command": "dotnet ef migrations has-pending-model-changes --no-build",
+      "exitCode": 0,
+      "result": "no pending model changes"
+    }
+  ],
+  "sourceAssertions": [
+    "ProfileFencedLlmConversationStore has no post-commit admission callback.",
+    "The operation facade does not invoke the old composite conversationEngine.SendAsync path.",
+    "CompleteTranscript excludes CancellationRequested.",
+    "Provider invocation is outside the admission and finalization transactions.",
+    "No production partial expansion or forbidden project dependency was introduced."
+  ],
+  "behavioralCases": [
+    "atomic admission and rollback",
+    "atomic success finalization and rollback",
+    "atomic compensation and rollback",
+    "recovery-required escalation",
+    "cancellation-finalization ordering",
+    "idempotent replay after archive",
+    "fingerprint conflict before dispatch",
+    "archive exclusion",
+    "direct/restart reducer parity",
+    "deterministic deadline audit"
+  ],
+  "negativeCases": [
+    "pre-SB02 cancellation transition fails 0/1 because no exception is thrown",
+    "compensation failure cannot produce terminal Failed/Cancelled",
+    "ambiguous prior dispatch requires recovery and cannot redispatch",
+    "stale transcript revision remains a typed HTTP conflict"
+  ],
+  "acceptance": [
+    {
+      "criterion": "Turn admission is one transaction across operation, transcript, evidence, and event state.",
+      "satisfied": true,
+      "evidence": "PostgreSQL admission failure injection rolls back operation, user entry, active turn, and admission evidence together. Stream-event journal integration is additively owned by SB08."
+    },
+    {
+      "criterion": "Successful completion is one transaction across assistant message, usage, active-turn clearing, and operation success.",
+      "satisfied": true,
+      "evidence": "PostgreSQL success-finalization failure injection removes assistant/result state and preserves the active nonterminal operation."
+    },
+    {
+      "criterion": "Failed compensation cannot leave a terminal Failed or Cancelled operation with a live active turn.",
+      "satisfied": true,
+      "evidence": "Rollback proof plus failed-compensation unit test advances unresolved state to RecoveryRequired."
+    },
+    {
+      "criterion": "A cancellation request committed before finalization prevents Succeeded.",
+      "satisfied": true,
+      "evidence": "Monotonic cancellation generation, locked finalization check, and red/green transition regression."
+    },
+    {
+      "criterion": "Same operation ID and fingerprint replays the original result even after later lifecycle changes.",
+      "satisfied": true,
+      "evidence": "Focused replay-after-archive unit case passes without a second provider dispatch."
+    },
+    {
+      "criterion": "Same operation ID with a different fingerprint conflicts before provider dispatch.",
+      "satisfied": true,
+      "evidence": "Focused idempotency conflict case passes and dispatch count remains unchanged."
+    },
+    {
+      "criterion": "Conversation archive cannot race an active or nonterminal turn.",
+      "satisfied": true,
+      "evidence": "Archive and admission share a conversation row lock; focused active/nonterminal cases reject archive."
+    },
+    {
+      "criterion": "Direct completion and recovery reduce identical durable evidence to the same outcome.",
+      "satisfied": true,
+      "evidence": "LlmChatOperationReducer direct/restart and DeadlineExceeded audit cases pass."
+    }
+  ],
+  "architecture": {
+    "owner": "LlmChatOperationAdmissionService, LlmChatOperationStateMachine, LlmChatOperationDetailsReader, and pure LlmChatOperationReducer behind a thin facade",
+    "dependencyDirection": "product contracts/domain -> application -> persistence adapters; provider I/O outside transactions; no Web/EF dependency in product",
+    "cycleCheck": "CodeAnalytics snap-20260815011610-d209545b: zero cycles, errors, warnings, and open questions",
+    "partialClassCheck": "pass; no production partial expansion; only generated EF migration/designer partials",
+    "oldPathRemoval": "post-commit conversation-store callback and application composite SendAsync path are unreachable"
+  },
+  "bugs": [
+    "Architecture review caught and split an initial 643-line operation orchestrator before closure.",
+    "Real-host proof caught lost typed stale-revision mapping; final API result is the stable conflict response."
+  ],
+  "deviations": [
+    "Focused command count exceeded the nominal four because one new unit test initially lacked an import, one real-host run was blocked by sandboxed LocalAppData access, the real-host test exposed a typed-error regression, and the mandatory architecture gate required a responsibility split and revalidation. No broad suite was run."
+  ],
+  "knownGaps": [
+    "The durable stream-event journal and atomic lifecycle-event rows are owned by SB08/RQ-022; SB02 establishes the transaction seams they will join."
+  ],
+  "progression": {
+    "decision": "Ready",
+    "reason": "All SB02 state-machine, transaction, PostgreSQL, API, migration-model, and architecture proof passes at implementation commit be36fedb2ce329af6021cd2330eb6162d8ef2db4.",
+    "unlocks": [
+      "SB03"
+    ]
+  }
+}

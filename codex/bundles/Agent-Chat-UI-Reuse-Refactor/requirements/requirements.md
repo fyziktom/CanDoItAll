@@ -1,0 +1,61 @@
+# Requirements
+
+Every requirement must be owned by at least one subbundle and closed by recorded proof.
+
+- **UIR-001 — Baseline:** Reconcile execution against the live simple-chats branch, record the exact starting SHA, and stop for bundle repair when source drift changes the planned ownership or tests.
+- **UIR-002 — Phase control:** Treat this as a behavior-preserving refactor. Do not add new end-user behavior, routes, menus, filters, or product concepts.
+- **UIR-003 — Phase control:** Do not consume, inject, reference, call, map, or render the Simple Chat/LlmChats product API, domain, persistence, routes, or SSE surface in production UI.
+- **UIR-004 — Regression:** Preserve every existing Agent Chat flow, copy, action, state transition, keyboard interaction, scrolling behavior, overlay behavior, and error path unless an explicit parity record proves a necessary internal-only delta.
+- **UIR-005 — Phase control:** Stop after Phase 1 proof and user handoff. Do not begin the Simple Chat UI integration phase.
+- **UIR-010 — Architecture:** Create an application-owned neutral conversation presentation boundary, preferred as src/UI/CanDoItAll.Conversations.Components.
+- **UIR-011 — Architecture:** The neutral boundary must not depend on AgentFramework Models/Core/Voice, Modules.AgentFramework, Modules.LlmChats, EF Core, AppDbContext, persistence, provider SDKs, or runtime services.
+- **UIR-012 — Architecture:** Use CodeAnalytics dependency evidence before and after project-reference changes and reject any cycle or inward dependency.
+- **UIR-013 — Architecture:** Use small immutable presentation records, opaque keys, explicit callbacks, and focused render fragments instead of backend entities or mutable service-owned state.
+- **UIR-014 — Architecture:** Keep domain mapping, service calls, command execution, cancellation, persistence, and lifecycle effects in agent-owned adapters or orchestration components.
+- **UIR-015 — Architecture:** Do not create a boolean-parameter god component, service-locator UI, dynamic backend switch, reflection-based adapter, or generic interface whose only implementation is the old monolith.
+- **UIR-016 — Compatibility:** Keep existing public AgentFramework component entry points as compatibility facades until all existing consumers and owner tests have migrated.
+- **UIR-017 — Testability:** Extracted presentation behavior must be directly testable without constructing AgentChatPanel, the full web host, provider runtimes, persistence, or a real agent execution.
+- **UIR-018 — Architecture:** Do not add new AgentChatPanel, ChatWorkspacePanel, FloatingAgentChatHost, or AgentDetailsDialog partial files to hide responsibility growth; prefer independent types and adapters.
+- **UIR-019 — Compatibility:** Preserve stable data-testid values, accessible names, visual hierarchy, scroll owners, and CSS behavior. Record any unavoidable DOM delta before implementation and prove equivalent interaction.
+- **UIR-020 — Listing:** Extract a neutral participant card that accepts presentation data and action/adornment slots rather than AgentDefinition.
+- **UIR-021 — Listing:** Extract a neutral compact participant list and item using opaque stable keys and presentation callbacks.
+- **UIR-022 — Listing:** Extract reusable search, tag-filter, favorite, and picker presentation only where semantics are genuinely source-neutral.
+- **UIR-023 — Listing:** Keep agent teams, capabilities, workload, status policy, provider privacy, approval counts, managed-agent identities, and favorite persistence in agent-owned mapping or slots.
+- **UIR-024 — Listing:** Convert AgentSelectionCard, AgentCompactList, and AgentCompactListItem into thin compatibility adapters or replace their internals without breaking their existing callers.
+- **UIR-025 — Listing:** Preserve AgentCatalogPanel and AgentSwitchDialog filtering, ordering, favorites, team selection, double-click behavior, managed-agent actions, copy, and test selectors.
+- **UIR-026 — Architecture:** Neutral contracts must not assume Guid agent identity; use an opaque string or dedicated source-neutral key.
+- **UIR-030 — Threads:** Extract neutral conversation thread rail, list item, search, count, empty, loading, and error presentation.
+- **UIR-031 — Threads:** Preserve selected thread, new-thread creation, refresh, title editing, search filtering, switching, and current agent workspace behavior.
+- **UIR-032 — Threads:** Represent agent-only pending-approval, auto-approval, and execution badges through adapter-provided metadata or adornment fragments.
+- **UIR-033 — Threads:** Preserve bounded history loading, active-session indication, history dialog selection, and open-thread behavior.
+- **UIR-040 — Workspace:** Extract neutral message, transcript, header, status, empty-state, and safe markdown presentation.
+- **UIR-041 — Workspace:** Extract neutral composer chrome, prompt text area, draft state, send-disabled state, send action, and validation/status region.
+- **UIR-042 — Workspace:** Expose focused slots for agent execution activity, approvals, voice, attachments, prompt gallery, runtime diagnostics, and extra header/composer actions.
+- **UIR-043 — Workspace:** Keep UserRequestMarker and hidden-context parsing in the agent adapter; the neutral component receives explicit visible content and optional context presentation.
+- **UIR-044 — Workspace:** Preserve message role labels, timestamps, token estimates, copy behavior, tooltips, focus, keyboard behavior, auto-scroll, overflow, and large-desktop layout.
+- **UIR-045 — Workspace:** Preserve run, send, cancel, approval, title, attachment, voice, and runtime-detail callbacks and do not alter backend orchestration semantics.
+- **UIR-046 — Workspace:** Keep ChatWorkspacePanel as an agent-facing facade that composes neutral components and agent-only slots; do not duplicate backend logic inside the neutral project.
+- **UIR-050 — Settings:** Extract a reusable conversation-definition editor shell with configurable sections and action slots.
+- **UIR-051 — Settings:** Extract reusable identity/avatar/name/summary/instructions fields with configurable labels so a future caller can use System prompt without binding this phase to LlmChats.
+- **UIR-052 — Settings:** Extract provider/model selection presentation through neutral provider/model option records; retain ProviderProfile mapping in an AgentFramework adapter.
+- **UIR-053 — Settings:** Prepare a neutral temperature field and optional advanced-settings slot. Keep thinking-effort and provider-specific settings in adapters unless represented by source-neutral options.
+- **UIR-054 — Settings:** Keep agent status, workload, chat history, approval policy, Memory, Images, capabilities, tools, skills, governance, and other agent-only tabs in AgentDetailsDialog ownership.
+- **UIR-055 — Settings:** Separate generic active-chat retention/capacity presentation from agent-only prepared activation stock and preparation-budget semantics.
+- **UIR-060 — Floating UI:** Extract floating catalog/window/list presentation seams that can later host multiple participant sources without adding those sources now.
+- **UIR-061 — Floating UI:** Keep IFloatingAgentChatCoordinator, context registry, context access, affinity, history, handle lifecycle, preparation, and workspace services in the agent host adapter.
+- **UIR-062 — Phase control:** Do not add Agents/Simple Chats filter controls, mixed catalogs, new tabs, badges, or labels in the production UI.
+- **UIR-063 — Phase control:** Do not add the future Add context action, project-structure capture, current-node/subtree selection, or context injection behavior.
+- **UIR-064 — Floating UI:** Preserve overlay size, placement, state persistence, close versus stop semantics, hide/reopen behavior, active limits, retention, and current context-affinity behavior.
+- **UIR-070 — Testing:** At execution, load the current CanDoItAll.SharedInfo skills and record their active hashes; do not rely only on the preparation-time hashes.
+- **UIR-071 — Testing:** Use code_analytics_impacted_tests_get with only actual diff files and one-based changed line ranges; put inspected-but-unchanged files in contextOnlyPaths.
+- **UIR-072 — Testing:** Call impacted-test analysis first with behaviorIntent Unknown; use BehaviorPreservingImplementation only after the conservative result resolves the intended body-only change and the assertion is justified.
+- **UIR-073 — Testing:** Verify workspace health, nonzero source/test discovery, resolved changed symbols, nonzero test discovery, and run every required selector.
+- **UIR-074 — Testing:** Honor conditional-selector promotion triggers. Do not replace impacted-test evidence with habitual broad solution or project runs.
+- **UIR-075 — Testing:** Use isolated bUnit/component tests, affected project builds, and focused browser proof at the named checkpoints; add missing owner tests when extraction creates a new test seam.
+- **UIR-076 — Testing:** Run an unfiltered Stable/full gate at most once and only when CodeAnalytics returns a workspace/all-suite requirement or a recorded invalidation trigger makes affected-scope proof insufficient.
+- **UIR-077 — Testing:** Pass neutral-boundary source guards, phase-exclusion guards, dependency/cycle review, architecture review, and bundle validators.
+- **UIR-078 — UI proof:** Validate at a named maximized or large-screen desktop viewport and inspect normal plus relevant open-overlay states; preserve existing responsive behavior without adding mobile scope.
+- **UIR-079 — Handoff:** Produce a manual regression checklist covering Agent catalog, switcher, sessions, chat, approvals, execution details, attachments, prompt gallery, voice, floating chats, settings, contextual windows, and Process workspace consumers.
+- **UIR-080 — Handoff:** Final implementation state must be awaiting-user-agent-chat-regression, not ready-for-simple-chat-ui.
+- **UIR-081 — Handoff:** The next Simple Chat UI bundle is blocked until the user confirms Agent Chat parity after running the application.
+- **UIR-082 — Future seam:** Document future Simple Chat mapping and streaming/context extension seams, but leave them unregistered, unreferenced, and unused in production.

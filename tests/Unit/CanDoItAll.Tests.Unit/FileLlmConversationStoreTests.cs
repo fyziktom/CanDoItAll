@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.Conversations;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 /// <summary>
 /// SB15: persistence behavior of the file-backed ordinary LLM conversation store — durable round trips

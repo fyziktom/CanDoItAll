@@ -1,7 +1,7 @@
 using System.Text;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class PortablePhysicalFileNamePolicyTests
 {

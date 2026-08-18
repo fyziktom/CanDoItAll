@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Guards the typed-dependency composition of the MAF runtime: runtime code consumes constructor-injected

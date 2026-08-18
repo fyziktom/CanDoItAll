@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessProductRootResolverPortabilityTests
 {

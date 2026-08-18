@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 public sealed partial class AppSmokeTests
 {

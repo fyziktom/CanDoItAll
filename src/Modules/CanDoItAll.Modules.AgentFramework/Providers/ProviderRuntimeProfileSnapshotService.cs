@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;

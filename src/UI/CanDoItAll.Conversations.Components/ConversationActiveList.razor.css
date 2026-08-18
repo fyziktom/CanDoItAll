@@ -1,0 +1,11 @@
+.conversation-active-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.conversation-active-list ::deep .conversation-active-list__card {
+    min-width: 0;
+}

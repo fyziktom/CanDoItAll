@@ -10,7 +10,7 @@ using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectTransferTargetStateArchitectureTests
 {

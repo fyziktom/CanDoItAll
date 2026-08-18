@@ -4,7 +4,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.Configuration;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentProviderCredentialDispatchScopeTests {
     [Fact]

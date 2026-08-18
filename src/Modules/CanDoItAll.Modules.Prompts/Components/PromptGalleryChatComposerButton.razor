@@ -1,0 +1,113 @@
+@inject IPromptGalleryService PromptGallery
+@inject DialogService DialogService
+@inject NotificationService Notifications
+
+<PromptGalleryPickerButton Text=""
+                           Icon="library_books"
+                           IconOnly="true"
+                           AriaLabel="Insert from prompt gallery"
+                           Size="ButtonSize.Small"
+                           Consumer="PromptGalleryConsumer.Chat"
+                           Provider="@Provider"
+                           Model="@Model"
+                           ShowActualChatModelFilter="true"
+                           Disabled="@Disabled"
+                           AllowEdit="@AllowEdit"
+                           Selected="HandleSelectionAsync" />
+
+@code {
+    [Parameter]
+    public string? Provider { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool AllowEdit { get; set; } = true;
+
+    [Parameter, EditorRequired]
+    public EventCallback<string> ContentSelected { get; set; }
+
+    private async Task HandleSelectionAsync(PromptGallerySelection selection)
+    {
+        var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
+            selection.ArtifactId,
+            new PromptGalleryConsumerContext(
+                PromptGalleryConsumer.Chat,
+                PromptGalleryCompatibilityPurpose.Selection,
+                Provider: Provider,
+                Model: Model));
+        if (compatibilityResult.IsFailure || compatibilityResult.Value is null)
+        {
+            Notifications.Warning(
+                "Prompt compatibility unavailable",
+                DescribeErrors(compatibilityResult.Errors));
+            return;
+        }
+
+        var compatibility = compatibilityResult.Value;
+        var decision = PromptCompatibilityWarningDecision.InsertAnyway;
+        if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
+        {
+            var dialogResult = await DialogService.OpenAsync<PromptCompatibilityWarningDialog>(
+                "Prompt compatibility",
+                new Dictionary<string, object?>
+                {
+                    [nameof(PromptCompatibilityWarningDialog.Selection)] = selection,
+                    [nameof(PromptCompatibilityWarningDialog.Compatibility)] = compatibility
+                },
+                new DialogOptions
+                {
+                    Eyebrow = "Provider and model check",
+                    Subtitle = "Review declared compatibility before inserting this prompt.",
+                    Size = ModalSize.Medium,
+                    DenseChrome = true,
+                    TestId = "prompt-gallery-chat-compatibility-dialog",
+                    AriaLabel = "Prompt compatibility warning"
+                });
+            if (dialogResult is not PromptCompatibilityWarningDecision selectedDecision ||
+                selectedDecision == PromptCompatibilityWarningDecision.Cancel)
+            {
+                return;
+            }
+
+            decision = selectedDecision;
+        }
+
+        if (decision == PromptCompatibilityWarningDecision.InsertAndSuppress)
+        {
+            foreach (var issue in compatibility.Issues.Where(issue =>
+                         !issue.IsSuppressed && issue.IsSuppressible))
+            {
+                var suppression = await PromptGallery.SetWarningSuppressionAsync(
+                    selection.ArtifactId,
+                    PromptGalleryConsumer.Chat,
+                    issue.Code,
+                    suppressed: true);
+                if (suppression.IsFailure)
+                {
+                    Notifications.Warning(
+                        "Warning preference was not saved",
+                        DescribeErrors(suppression.Errors));
+                }
+            }
+        }
+
+        var content = selection.Content.Trim();
+        if (content.Length == 0)
+        {
+            Notifications.Warning("Prompt is empty", "The selected Gallery item has no content to insert.");
+            return;
+        }
+
+        await ContentSelected.InvokeAsync(content);
+    }
+
+    private static string DescribeErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+        => errors.Count == 0
+            ? "The Prompt Gallery did not return a result."
+            : string.Join(" ", errors.Select(error => error.Message));
+}

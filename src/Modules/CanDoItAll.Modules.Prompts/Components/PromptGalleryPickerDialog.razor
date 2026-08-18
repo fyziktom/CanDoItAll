@@ -6,6 +6,7 @@
                          Consumer="@Consumer"
                          Provider="@Provider"
                          Model="@Model"
+                         ShowActualChatModelFilter="@ShowActualChatModelFilter"
                          Compact="true"
                          PageSize="@PageSize"
                          AllowEdit="@AllowEdit"
@@ -25,6 +26,9 @@
 
     [Parameter]
     public string? Model { get; set; }
+
+    [Parameter]
+    public bool ShowActualChatModelFilter { get; set; }
 
     [Parameter]
     public int PageSize { get; set; } = 15;

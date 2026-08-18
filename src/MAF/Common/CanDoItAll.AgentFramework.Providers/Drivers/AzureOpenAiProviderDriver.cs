@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
@@ -7,7 +8,8 @@ namespace CanDoItAll.AgentFramework.Providers;
 public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDriverCredentialResolver credentialResolver) :
     IProviderHealthDriver,
     IProviderModelCatalogDriver,
-    IProviderChatCompletionDriver
+    IProviderChatCompletionDriver,
+    IProviderStreamingChatCompletionDriver
 {
     private const string DefaultApiVersion = "2024-10-21";
 
@@ -100,6 +102,109 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
         };
     }
 
+    public ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Provider.Transport is ProviderTransportKind.ChatCompletions or ProviderTransportKind.Responses
+            ? ProviderChatStreamingMode.Incremental
+            : ProviderChatStreamingMode.Unsupported;
+    }
+
+    public async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamChatAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var updates = request.Provider.Transport switch
+        {
+            ProviderTransportKind.ChatCompletions => StreamChatCompletionsAsync(request, cancellationToken),
+            ProviderTransportKind.Responses => StreamResponseAsync(request, cancellationToken),
+            _ => throw new InvalidOperationException(
+                $"Unsupported transport '{request.Provider.Transport}' for provider '{request.Provider.Name}'.")
+        };
+        await foreach (var update in updates.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamChatCompletionsAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var credential = ResolveRequiredCredential(request.Provider);
+        var endpoint = AzureOpenAiEndpoint.Parse(request.Provider);
+        using var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            endpoint.BuildDeploymentChatCompletionsEndpoint(
+                request.Model,
+                ReadApiVersion(request.Provider.ConfigurationJson)));
+        httpRequest.Headers.Add("api-key", credential.ApiKey);
+        var payload = new Dictionary<string, object?>
+        {
+            ["messages"] = ProviderDriverProtocol.BuildOpenAiChatMessages(request),
+            ["stream"] = true,
+            ["stream_options"] = new Dictionary<string, object> { ["include_usage"] = true }
+        };
+        ProviderDriverProtocol.AddOpenAiChatCompletionModelParameters(payload, request);
+        ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
+        ProviderDriverProtocol.AddOpenAiChatCompletionResponseFormat(payload, request);
+        httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
+        using var response = await httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            "Azure OpenAI chat completion",
+            cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await foreach (var update in ProviderStreamingProtocol.ReadOpenAiChatCompletionsAsync(
+            stream,
+            request.Model,
+            cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamResponseAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var credential = ResolveRequiredCredential(request.Provider);
+        var endpoint = AzureOpenAiEndpoint.Parse(request.Provider);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint.ResponsesEndpoint);
+        httpRequest.Headers.Add("api-key", credential.ApiKey);
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = request.Model,
+            ["input"] = ProviderDriverProtocol.BuildOpenAiResponsesInput(request),
+            ["stream"] = true,
+            ["store"] = false
+        };
+        ProviderDriverProtocol.AddOpenAiResponsesModelParameters(payload, request);
+        ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
+        ProviderDriverProtocol.AddOpenAiResponsesResponseFormat(payload, request);
+        httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
+        using var response = await httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            "Azure OpenAI response",
+            cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await foreach (var update in ProviderStreamingProtocol.ReadOpenAiResponsesAsync(
+            stream,
+            request.Model,
+            cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
+    }
+
     private async Task<ProviderChatCompletionResult> CompleteChatCompletionsAsync(
         ProviderChatCompletionRequest request,
         CancellationToken cancellationToken)
@@ -186,6 +291,17 @@ public sealed class AzureOpenAiProviderDriver(HttpClient httpClient, IProviderDr
     private ProviderDriverCredential ResolveCredential(ProviderProfile provider)
     {
         return credentialResolver.Resolve(provider);
+    }
+
+    private ProviderDriverCredential ResolveRequiredCredential(ProviderProfile provider)
+    {
+        var credential = ResolveCredential(provider);
+        if (!credential.IsResolved)
+        {
+            throw new InvalidOperationException(credential.FailureMessage);
+        }
+
+        return credential;
     }
 
     private static string ReadApiVersion(string? configurationJson)

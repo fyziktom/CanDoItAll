@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.Tests.Integration" />
     <Using Include="Xunit" />
   </ItemGroup>
 
@@ -38,6 +39,8 @@
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Usage\CanDoItAll.AgentFramework.Usage.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />

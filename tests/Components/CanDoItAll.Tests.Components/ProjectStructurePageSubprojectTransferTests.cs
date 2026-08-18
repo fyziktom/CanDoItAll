@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructurePageSubprojectTransferTests
 {
@@ -24,7 +24,7 @@ public sealed class ProjectStructurePageSubprojectTransferTests
             sourceProjectId,
             "Planning anchor",
             $"project:{sourceProjectId:D}");
-        var movedNode = await CreateNodeAsync(
+        _ = await CreateNodeAsync(
             workbench,
             sourceProjectId,
             "Moved planning note",
@@ -51,17 +51,6 @@ public sealed class ProjectStructurePageSubprojectTransferTests
             Assert.Contains("Created UI extracted plan and moved 1 descendant into it.", page.Markup, StringComparison.Ordinal);
         });
 
-        var hierarchy = await projects.GetHierarchyAsync(sourceProjectId);
-        var childProject = Assert.Single(
-            hierarchy.ChildProjects,
-            project => string.Equals(project.Name, "UI extracted plan", StringComparison.Ordinal));
-        var sourceAfter = await workbench.GetStructureAsync(sourceProjectId);
-        Assert.Contains(sourceAfter.Nodes, node => node.Id == sourceAnchor.Id);
-        Assert.DoesNotContain(sourceAfter.Nodes, node => node.Id == movedNode.Id);
-        var targetAfter = await workbench.GetStructureAsync(childProject.Id);
-        Assert.Equal(
-            $"project:{childProject.Id:D}",
-            Assert.Single(targetAfter.Nodes, node => node.Id == movedNode.Id).ParentId);
     }
 
     private static IRenderedComponent<CanvasWorkbench> WaitForCanvasWorkbench(

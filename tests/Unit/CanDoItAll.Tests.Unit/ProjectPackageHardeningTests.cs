@@ -20,7 +20,7 @@ using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectPackageHardeningTests
 {

@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Processes.AgentChat;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessInvocationSnapshotTests
 {

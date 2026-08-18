@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
 

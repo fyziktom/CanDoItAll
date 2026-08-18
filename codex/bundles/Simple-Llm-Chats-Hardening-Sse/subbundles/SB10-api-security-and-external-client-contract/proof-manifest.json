@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB10",
+  "title": "API security and external-client contract",
+  "state": "Completed",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "ebb8deae5f2deb0a379875fecf853ea8fc423be7",
+  "dependencyMode": "local sibling source projects",
+  "host": "Microsoft Windows NT 10.0.26200.0 x64; .NET SDK 10.0.303",
+  "database": "PostgreSQL Testcontainers for persisted origin; in-memory real hosts for policy and transport proof",
+  "requirements": [
+    "RQ-027",
+    "RQ-028",
+    "RQ-029",
+    "RQ-033"
+  ],
+  "commands": [
+    {
+      "command": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName=CanDoItAll.Tests.Integration.LlmChatsSecurityApiIntegrationTests.AuthorizationEnabledHost_EnforcesDistinctScopesAndAuthenticatesSseOnlyThroughBearerHeader\" -nologo -v:minimal",
+      "exitCode": 1,
+      "result": "Expected-red: 0 passed, 1 failed because broad api scope returned 200 rather than 403 on the pre-SB10 source"
+    },
+    {
+      "command": "dotnet build src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore -p:UseLocalCanDoItAllLibraries=true -nologo -v:minimal",
+      "exitCode": 0,
+      "result": "Final affected graph build passed with 0 warnings and 0 errors; command used twice, both successful"
+    },
+    {
+      "command": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName~LlmChatsDefinitionApiIntegrationTests|FullyQualifiedName~LlmChatsConversationApiIntegrationTests|FullyQualifiedName~LlmChatsSecurityApiIntegrationTests|FullyQualifiedName~LlmChatsTurnApiIntegrationTests|FullyQualifiedName~LlmChatsIdempotencyApiIntegrationTests|FullyQualifiedName~LlmChatsCancellationApiIntegrationTests|FullyQualifiedName~LlmChatsRecoveryApiIntegrationTests|FullyQualifiedName~ApiAccessAuthorizationIntegrationTests\" -nologo -v:minimal",
+      "exitCode": 0,
+      "result": "12 passed, 0 failed, 0 skipped in 17 seconds"
+    },
+    {
+      "command": "dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName=CanDoItAll.Tests.Unit.LlmChatConversationApplicationServiceTests.Create_pins_the_exact_current_active_revision_and_preserves_trusted_application_origin\" -nologo -v:minimal",
+      "exitCode": 0,
+      "result": "1 passed, 0 failed, 0 skipped; trusted Application origin is preserved by the product owner"
+    },
+    {
+      "command": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -p:UseLocalCanDoItAllLibraries=true --filter \"FullyQualifiedName=CanDoItAll.Tests.Integration.LlmChatsApiPostgreSqlIntegrationTests.ConversationApi_PersistsServerOwnedApiOriginAndRejectsSpoofedOrigin\" -nologo -v:minimal",
+      "exitCode": 0,
+      "result": "1 passed, 0 failed, 0 skipped in 8 seconds; authoritative PostgreSQL row stored Api origin"
+    },
+    {
+      "command": "CodeAnalytics four-project Web/Workspace/product/persistence architecture snapshot",
+      "exitCode": 0,
+      "result": "snap-20260815072303-363bd134; 4 projects, 609 types, 4140 members, 53 DI registrations, 0 cycles, 0 blocking diagnostics"
+    }
+  ],
+  "sourceAssertions": [
+    "CreateLlmChatConversationApiRequest contains only Title; Web is the only HTTP mapping and supplies LlmChatConversationOrigin.Api.",
+    "Every definition/conversation/operation route applies exact read, manage, or execute policy metadata; the three generated definition-status endpoints share manage policy.",
+    "Exact LLM Chat policies use HasScope rather than HasApiOrSpecificScope, so broad api does not imply LLM Chat access.",
+    "Definition response DTO/mapper contain no SystemPrompt field, while mutation input remains transport-owned and explicit.",
+    "No logger in the LLM Chat product receives a raw exception object; logs retain safe IDs and exception type only.",
+    "No production partial expansion, reverse dependency, dormant deployment/participant model, new persistence table, wildcard CORS, anonymous widget, or query bearer-token handler exists."
+  ],
+  "behavioralCases": [
+    "auth-enabled hosts enforce exact read/manage/execute capabilities and reject broad api",
+    "auth-disabled trusted-local hosts continue to create/read/execute without bearer metadata",
+    "Authorization-header read token passes SSE authorization while access_token query JWT does not",
+    "normal HTTP conversation create persists Api origin in PostgreSQL and trusted product calls preserve Application",
+    "operation responses carry candoitall.llm-chat-operation.v1, replay metadata, and canonical status/events/cancel links",
+    "OpenAPI exposes LlmChatOperationApiResponse transport schema rather than operation/conversation/definition-revision entities"
+  ],
+  "negativeCases": [
+    "origin application is rejected before service execution and creates no PostgreSQL row",
+    "read cannot manage/execute, manage cannot read, and execute cannot read/manage",
+    "same operation ID with a different body returns a stable redacted conflict without either message or fingerprint",
+    "definition detail omits the stored system prompt and raw prompt value",
+    "source audit found and removed every raw-exception logging overload in LLM Chat product code",
+    "future deployment, participant, moderation, channel, quota, and retention concepts remain absent from current persistence and product models"
+  ],
+  "acceptance": [
+    {
+      "criterion": "An API client cannot choose or spoof stored conversation origin.",
+      "satisfied": true,
+      "evidence": "Title-only HTTP request rejects origin, Web supplies Api, and the exact PostgreSQL test reads Api from the authoritative row; direct product proof preserves Application."
+    },
+    {
+      "criterion": "Authorization-enabled hosts enforce distinct read, manage, and execute policies.",
+      "satisfied": true,
+      "evidence": "The 12-case real-host union proves positive capability routes and cross-scope/broad-api 403 denials."
+    },
+    {
+      "criterion": "Authorization-disabled trusted-local hosts preserve documented local behavior.",
+      "satisfied": true,
+      "evidence": "Origin, definition, turn, cancel, recovery, and existing API-access tests pass with jwtEnabled false and no token."
+    },
+    {
+      "criterion": "No API/SSE error exposes prompts, system instructions, credentials, or raw provider failures.",
+      "satisfied": true,
+      "evidence": "Definition prompt and conflict bodies are negative-tested; SB09 provider-secret SSE proof remains current; the complete product logging guard finds no raw exception overload."
+    },
+    {
+      "criterion": "OpenAPI exposes versioned transport DTOs and stable links, not domain or EF entities.",
+      "satisfied": true,
+      "evidence": "Runtime/OpenAPI tests assert the v1 operation schema property and transport response schema, exclude entity schemas, and retain canonical status/events/cancel links."
+    },
+    {
+      "criterion": "Future chatbot concerns remain a separate documented deployment boundary rather than dormant definition fields.",
+      "satisfied": true,
+      "evidence": "ADR-H11 and architecture 11 define the future aggregate and idempotency defer; source guard finds no deployment/participant markers or schema additions."
+    }
+  ],
+  "architecture": {
+    "owner": "Workspace owns scope constants; Web owns policies, route metadata, provenance mapping, and versioned transport; product preserves trusted provenance and stable failures; EF remains authoritative persistence",
+    "dependencyDirection": "Web -> LlmChats product and Workspace; Persistence -> LlmChats product; product and Workspace have no scoped project references",
+    "cycleCheck": "CodeAnalytics snap-20260815072303-363bd134: zero cycles and no blocking diagnostics",
+    "partialClassCheck": "pass; no production partial expansion",
+    "oldPathRemoval": "caller origin binder, broad-api LLM access, unversioned operation snapshot, system-prompt response, and raw-exception logging paths are removed"
+  },
+  "bugs": [
+    "Removed a caller-controlled Origin field whose Api default did not prevent application spoofing.",
+    "Added missing route-level capability authorization; previous bearer configuration authenticated only the parent API group.",
+    "Removed stored system prompt from definition detail responses.",
+    "Sanitized raw exception-object logging across executor, state machine, and application service after the source audit found all paths."
+  ],
+  "deviations": [],
+  "knownGaps": [
+    "Conversation-create idempotency is explicitly deferred until LlmChatDeployment owns a safe external identity namespace; the current OpenAPI warns against blind retry.",
+    "SB11 owns focused PostgreSQL HTTP/SSE portability confirmation and the CP2 decision.",
+    "SB12 owns final documentation/source guards and SB13 owns the immutable-head stable solution/CI matrix."
+  ],
+  "progression": {
+    "decision": "Ready",
+    "reason": "Origin, exact scopes, trusted-local compatibility, header-only SSE auth, versioned/redacted transport, PostgreSQL provenance, and future deployment separation pass at ebb8deae5f2deb0a379875fecf853ea8fc423be7.",
+    "unlocks": [
+      "SB11"
+    ]
+  }
+}

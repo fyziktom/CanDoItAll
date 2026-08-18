@@ -6,7 +6,7 @@ using CanDoItAll.Memory.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Runtime;
 
 public sealed class MemoryOperationHandlerTests
 {

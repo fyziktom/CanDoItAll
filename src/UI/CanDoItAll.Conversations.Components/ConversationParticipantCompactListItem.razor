@@ -1,0 +1,108 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<article class="@ResolveContainerClass()"
+         role="listitem"
+         aria-busy="@(Item.Participant.IsBusy ? "true" : "false")"
+         data-testid="@Item.ShellTestId">
+    <button type="button"
+            class="agent-compact-list-item__select"
+            aria-label="@Item.Participant.SelectLabel"
+            aria-pressed="@(Item.Participant.IsSelected ? "true" : "false")"
+            disabled="@Item.Participant.IsDisabled"
+            @onclick="HandleSelectAsync"
+            @ondblclick="HandleDoubleClickAsync"
+            data-testid="@Item.SelectTestId">
+        <Avatar Alt="@Item.Participant.DisplayName"
+                ImageUrl="@Item.Participant.AvatarImageUrl"
+                FallbackText="@Item.Participant.AvatarFallbackText"
+                DefaultImageSeed="@Item.Participant.AvatarSeed"
+                Size="AvatarSize.Small"
+                Shape="AvatarShape.Rounded" />
+
+        <span class="agent-compact-list-item__copy">
+            <TooltipTarget Text="@Item.Participant.DetailsText"
+                           Position="TooltipPosition.LeftTop"
+                           TriggerClass="agent-compact-list-item__name-trigger"
+                           TabIndex="-1">
+                <span class="agent-compact-list-item__name">@Item.Participant.DisplayName</span>
+            </TooltipTarget>
+            @if (!string.IsNullOrWhiteSpace(Item.Participant.Subtitle))
+            {
+                <span class="agent-compact-list-item__role">@Item.Participant.Subtitle</span>
+            }
+            @if (Item.Participant.Badges.Count > 0 || Item.Participant.Metadata.Count > 0)
+            {
+                <span class="agent-compact-list-item__meta">
+                    @foreach (var badge in Item.Participant.Badges)
+                    {
+                        <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                     Text="@badge.Text" />
+                    }
+                    @foreach (var meta in Item.Participant.Metadata)
+                    {
+                        <span class="agent-compact-list-item__model" title="@meta.Tooltip">@meta.DisplayText</span>
+                    }
+                </span>
+            }
+        </span>
+    </button>
+
+    <div class="agent-compact-list-item__actions">
+        @foreach (var action in Item.Actions)
+        {
+            <TooltipTarget Text="@action.Label"
+                           Position="TooltipPosition.Bottom"
+                           TestId="@ResolveTooltipTestId(action.TestId)">
+                <Button Class="cda-button--quick agent-compact-list-item__action"
+                        Icon="@action.Icon"
+                        Size="ButtonSize.Small"
+                        ButtonStyle="@ResolveButtonStyle(action.Style)"
+                        Disabled="@action.IsDisabled"
+                        aria-label="@action.Label"
+                        data-testid="@action.TestId"
+                        Click="@(() => HandleActionAsync(action.Key))" />
+            </TooltipTarget>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversationParticipantCompactItemPresentation Item { get; set; } = default!;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> DoubleClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<ParticipantActionRequest> ActionRequested { get; set; }
+
+    private Task HandleSelectAsync()
+        => Selected.InvokeAsync(Item.Participant.Key);
+
+    private Task HandleDoubleClickAsync()
+        => DoubleClicked.InvokeAsync(Item.Participant.Key);
+
+    private Task HandleActionAsync(ConversationPresentationKey actionKey)
+        => ActionRequested.InvokeAsync(new(Item.Participant.Key, actionKey));
+
+    private string ResolveContainerClass()
+    {
+        return CssClassBuilder.Join(
+            "agent-compact-list-item",
+            Item.Participant.IsSelected ? "agent-compact-list-item--selected" : null,
+            Item.Participant.IsBusy ? "agent-compact-list-item--busy" : null,
+            Class);
+    }
+
+    private static ButtonStyle ResolveButtonStyle(ParticipantActionStyle style)
+        => style == ParticipantActionStyle.Light ? ButtonStyle.Light : ButtonStyle.Primary;
+
+    private static string? ResolveTooltipTestId(string? actionTestId)
+        => string.IsNullOrWhiteSpace(actionTestId) ? null : $"{actionTestId}-tooltip";
+}

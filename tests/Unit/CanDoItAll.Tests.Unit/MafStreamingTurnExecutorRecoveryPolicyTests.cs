@@ -8,7 +8,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Exercises <see cref="MafStreamingTurnExecutor"/>'s generic recovery coordinator directly (internal method,

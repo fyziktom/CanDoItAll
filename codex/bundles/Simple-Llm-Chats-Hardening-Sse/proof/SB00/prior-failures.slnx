@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="../../../../../tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
+    <Project Path="../../../../../tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
+    <Project Path="../../../../../tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

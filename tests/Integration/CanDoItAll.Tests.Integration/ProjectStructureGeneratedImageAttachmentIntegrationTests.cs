@@ -13,7 +13,7 @@ using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 [Trait("Category", "FileSystemPortability")]
 public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests

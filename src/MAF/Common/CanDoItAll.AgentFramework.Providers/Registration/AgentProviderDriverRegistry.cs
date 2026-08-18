@@ -181,7 +181,8 @@ public sealed class AgentProviderDriverRegistry : IAgentProviderFactory
             return AgentProviderCapabilityKind.ModelCatalog;
         }
 
-        if (driverType == typeof(IProviderChatCompletionDriver))
+        if (driverType == typeof(IProviderChatCompletionDriver) ||
+            driverType == typeof(IProviderStreamingChatCompletionDriver))
         {
             return AgentProviderCapabilityKind.ChatCompletion;
         }

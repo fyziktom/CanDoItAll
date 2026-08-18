@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Processes;
 
 [Trait("Category", "ProcessCapabilityPortability")]
 [Trait("Category", "UnixRuntimePortability")]

@@ -1,6 +1,6 @@
 using CanDoItAll.Modules.Processes;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessProductCompletionStateGateTests
 {

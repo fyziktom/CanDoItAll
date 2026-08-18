@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceProductTargetFilesystemStateLaunchVariableContributorTests : IDisposable
 {

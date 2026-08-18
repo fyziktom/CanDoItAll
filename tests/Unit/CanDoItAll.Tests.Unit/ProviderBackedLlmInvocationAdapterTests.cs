@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Llm.ProviderRuntime;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderBackedLlmInvocationAdapterTests
 {

@@ -9,7 +9,7 @@ using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class DotNetSolutionSetupRuntimeExecutorTests

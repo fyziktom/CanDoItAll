@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
@@ -8,6 +9,7 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
     IProviderHealthDriver,
     IProviderModelCatalogDriver,
     IProviderChatCompletionDriver,
+    IProviderStreamingChatCompletionDriver,
     IProviderModelMaintenanceDriver
 {
     private const string NumPredictSnakePropertyName = "num_predict";
@@ -110,38 +112,7 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
         ProviderChatCompletionRequest request,
         CancellationToken cancellationToken = default)
     {
-        var payload = new Dictionary<string, object?>
-        {
-            ["model"] = request.Model,
-            ["messages"] = ProviderDriverProtocol.BuildOllamaChatMessages(request),
-            ["stream"] = false
-        };
-        var options = ResolveChatOptions(request.Provider, request.ModelParameterConfigurationJson, request.Temperature);
-        if (options.Count > 0)
-        {
-            payload["options"] = options;
-        }
-
-        if (request.ResponseFormat is { RequireJson: true })
-        {
-            // Ollama has no schema-enforced JSON mode; plain JSON mode is the closest supported behavior.
-            // Schema validation for Ollama responses stays the caller's responsibility.
-            payload["format"] = "json";
-        }
-
-        var thinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
-            request.Provider,
-            request.Model,
-            request.ModelParameterConfigurationJson);
-        if (thinkingEffort is not null)
-        {
-            var thinkingCapability = AgentThinkingEffortPolicy.ResolveCapability(
-                request.Provider,
-                request.Model);
-            payload["think"] = OllamaThinkingEffortAdapter.ToNativeValue(
-                thinkingCapability,
-                thinkingEffort.Value);
-        }
+        var payload = BuildChatPayload(request, stream: false);
 
         using var response = await httpClient.PostAsJsonAsync(
             BuildEndpoint(request.Provider, "api/chat"),
@@ -159,6 +130,40 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             ReadMessageText(message),
             ProviderDriverJson.ReadInt(document.RootElement, "prompt_eval_count"),
             ProviderDriverJson.ReadInt(document.RootElement, "eval_count"));
+    }
+
+    public ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return ProviderChatStreamingMode.Incremental;
+    }
+
+    public async IAsyncEnumerable<ProviderChatStreamingUpdate> StreamChatAsync(
+        ProviderChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var payload = BuildChatPayload(request, stream: true);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, BuildEndpoint(request.Provider, "api/chat"))
+        {
+            Content = JsonContent.Create(payload, options: ProviderDriverJson.Options)
+        };
+        using var response = await httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        await ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            "Ollama chat completion",
+            cancellationToken).ConfigureAwait(false);
+        await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await foreach (var update in ProviderStreamingProtocol.ReadOllamaAsync(
+            responseStream,
+            request.Model,
+            cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
     }
 
     public async Task<ProviderModelMaintenanceResult> CreateOrUpdateModelAsync(
@@ -204,6 +209,45 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
     private static string BuildEndpoint(ProviderProfile provider, string relativePath)
     {
         return $"{provider.BaseUrl.Trim().TrimEnd('/')}/{relativePath.TrimStart('/')}";
+    }
+
+    private static Dictionary<string, object?> BuildChatPayload(
+        ProviderChatCompletionRequest request,
+        bool stream)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["model"] = request.Model,
+            ["messages"] = ProviderDriverProtocol.BuildOllamaChatMessages(request),
+            ["stream"] = stream
+        };
+        var options = ResolveChatOptions(request.Provider, request.ModelParameterConfigurationJson, request.Temperature);
+        if (options.Count > 0)
+        {
+            payload["options"] = options;
+        }
+
+        if (request.ResponseFormat is { RequireJson: true })
+        {
+            payload["format"] = "json";
+        }
+
+        var thinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
+            request.Provider,
+            request.Model,
+            request.ModelParameterConfigurationJson);
+        if (thinkingEffort is null)
+        {
+            return payload;
+        }
+
+        var thinkingCapability = AgentThinkingEffortPolicy.ResolveCapability(
+            request.Provider,
+            request.Model);
+        payload["think"] = OllamaThinkingEffortAdapter.ToNativeValue(
+            thinkingCapability,
+            thinkingEffort.Value);
+        return payload;
     }
 
     private async Task<ProviderModelDescriptor> CreateModelDescriptorAsync(

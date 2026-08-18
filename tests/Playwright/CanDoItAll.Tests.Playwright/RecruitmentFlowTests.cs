@@ -4,7 +4,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Quarantined;
 
 [Collection(PlaywrightCollection.Name)]
 [Trait("Category", "Quarantined")]

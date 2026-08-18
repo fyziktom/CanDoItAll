@@ -6,7 +6,7 @@ using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class BrowserStateStoreTests
 {

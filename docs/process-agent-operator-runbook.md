@@ -113,8 +113,14 @@ If a step waits on a subprocess, inspect the child run first. Recovery can relea
 For process behavior changes:
 
 ```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests"
-dotnet test tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests"
+dotnet build src\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj --configuration Release
+dotnet build src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj --configuration Release
+dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests"
+dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~ProcessRuntimeDispatchApplicationServiceTests"
+dotnet test tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --list-tests --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests"
+dotnet test tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~ProjectStructureAgentIntegrationTests"
 ```
 
-Then run the stable gate in [Testing](testing.md).
+State the expected discovery count for each filter and reject zero or drifted discovery.
+Run the [broad stable gate](testing.md#broad-stable-gate) only for CI, release/merge
+closure, a frozen checkpoint, or a named invalidation trigger.

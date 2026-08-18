@@ -2,7 +2,7 @@ using CanDoItAll.Memory.SourceGateway;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Persistence;
 
 public sealed class MemorySourceGatewayHardeningCheckpointTests
 {

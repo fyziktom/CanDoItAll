@@ -7,7 +7,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.External;
 
 public sealed class UnknownConnectorManifestIntegrationTests
 {

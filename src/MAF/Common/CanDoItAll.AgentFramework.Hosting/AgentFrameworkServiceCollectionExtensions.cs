@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Infrastructure;

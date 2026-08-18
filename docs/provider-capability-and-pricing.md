@@ -108,7 +108,12 @@ See [Secure configuration](secure-configuration.md) and the [process operator ru
 Provider behavior changes should include focused lifecycle, policy, pricing, and driver tests:
 
 ```powershell
-dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderModelParameterPolicyTests|FullyQualifiedName~ProviderPricing"
+dotnet build src\MAF\Common\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj --configuration Release
+dotnet build src\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj --configuration Release
+dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter "FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderModelParameterPolicyTests|FullyQualifiedName~ProviderPricingTests"
+dotnet test tests\Solutions\CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~ProviderRuntimeLifecycleTests|FullyQualifiedName~AgentProviderModelParameterPolicyTests|FullyQualifiedName~ProviderPricingTests"
 ```
 
-Then run the stable gate in [Testing](testing.md).
+State the expected discovery count before the first command and reject zero or drifted
+discovery. Run the [broad stable gate](testing.md#broad-stable-gate) only for CI,
+release/merge closure, a frozen checkpoint, or a named invalidation trigger.

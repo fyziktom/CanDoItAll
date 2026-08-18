@@ -7,7 +7,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRuntimeProjectionCatchupServiceTests
 {

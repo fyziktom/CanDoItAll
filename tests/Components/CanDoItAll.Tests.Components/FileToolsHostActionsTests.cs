@@ -7,7 +7,7 @@ using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.Integration;
 using Microsoft.JSInterop;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class FileToolsHostActionsTests
 {

@@ -14,6 +14,9 @@ services:
     build:
       context: .
       dockerfile: src/App/CanDoItAll.Web/Dockerfile
+      additional_contexts:
+        components: ../CanDoItAll.Components
+        filetools: ../CanDoItAll.FileTools
       args:
         DOTNET_SDK_VERSION: ${DOTNET_SDK_VERSION:-10.0.302}
         DOTNET_RUNTIME_VERSION: ${DOTNET_RUNTIME_VERSION:-10.0.10}

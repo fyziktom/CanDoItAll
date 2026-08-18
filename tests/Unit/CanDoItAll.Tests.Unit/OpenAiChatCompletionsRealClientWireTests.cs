@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 using OpenAI.Chat;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class OpenAiChatCompletionsRealClientWireTests
 {

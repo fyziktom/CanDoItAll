@@ -5,7 +5,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// The injected tool-governance pipeline: domain contributors enrich the

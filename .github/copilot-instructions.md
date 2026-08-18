@@ -51,7 +51,10 @@ launch configuration and local MCP settings outside this repository.
 
 ## Validation And Documentation
 
-- Build after C# or project changes and run the narrowest relevant test before the stable gate.
+- Build each affected production project after C# or project changes, then run the
+  narrowest relevant test with a stated and confirmed discovery count. Run the broad
+  stable gate only for CI, release/merge closure, a frozen checkpoint, or a named
+  invalidation trigger from `docs/testing.md`.
 - Use Playwright for shipped UI behavior and capture evidence at the supported large-desktop viewport.
 - Never describe quarantined, skipped, unavailable, or unfiltered failing tests as green.
 - Update maintained docs when public behavior, configuration, architecture, or validation changes.

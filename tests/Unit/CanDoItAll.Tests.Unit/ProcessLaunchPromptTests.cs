@@ -8,7 +8,7 @@ using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessLaunchPromptTests

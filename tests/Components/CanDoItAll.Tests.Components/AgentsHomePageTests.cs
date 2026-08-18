@@ -2,16 +2,19 @@ using AngleSharp.Dom;
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Usage;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentsHomePageTests
 {
@@ -122,6 +125,97 @@ public sealed class AgentsHomePageTests
         Assert.Empty(cut.FindAll("[data-testid='agents-workflow-curator-open-top']"));
     }
 
+    [Fact]
+    public async Task Simple_chats_follows_agents_and_renders_both_nested_workspaces()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.AddSingleton<ILlmChatUiAuthorizationFacade>(new AllowSimpleChatsAuthorization());
+            services.AddSimpleChatsComponents();
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/agents");
+
+        var cut = harness.Context.Render<AgentsHomePage>();
+        cut.WaitForElement("[data-testid='agents-shell-tabs']", TimeSpan.FromSeconds(10));
+        var tabs = cut.FindAll("[data-testid='agents-shell-tabs'] button")
+            .Select(tab => tab.TextContent.Trim())
+            .ToArray();
+        var agentsIndex = Array.FindIndex(tabs, label => label.StartsWith("Agents", StringComparison.Ordinal));
+        var simpleChatsIndex = Array.FindIndex(tabs, label => label.StartsWith("Simple Chats", StringComparison.Ordinal));
+
+        Assert.Equal(agentsIndex + 1, simpleChatsIndex);
+        FindTab(cut, "Simple Chats").Click();
+
+        cut.WaitForElement("[data-testid='llm-chats-tabs']", TimeSpan.FromSeconds(10));
+        cut.WaitForElement("[data-testid='llm-chat-definition-catalog']", TimeSpan.FromSeconds(10));
+        Assert.Contains("tab=simple-chats", navigation.Uri, StringComparison.Ordinal);
+        var workspaceTabs = cut.FindAll("[data-testid='llm-chats-tabs'] [role='tab']");
+        Assert.Collection(
+            workspaceTabs,
+            tab => Assert.EndsWith("Definitions", tab.TextContent.Trim(), StringComparison.Ordinal),
+            tab => Assert.EndsWith("Conversations", tab.TextContent.Trim(), StringComparison.Ordinal));
+        Assert.Equal(
+            "true",
+            cut.Find("[data-testid='llm-chats-tab-definitions']").GetAttribute("aria-selected"));
+
+        cut.Find("[data-testid='llm-chats-tab-conversations']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-conversation-workspace']", TimeSpan.FromSeconds(10));
+        cut.WaitForAssertion(() => Assert.DoesNotContain(
+            "Loading conversations...",
+            cut.Find("[data-testid='llm-chat-conversation-workspace']").TextContent,
+            StringComparison.Ordinal), TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
+    public async Task Usage_scope_defaults_to_both_and_is_forwarded_to_detail_dialogs()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/agents");
+        var dialogHost = harness.Context.Render<DialogHost>();
+        var cut = harness.Context.Render<AgentsHomePage>();
+
+        var scope = cut.WaitForElement("[data-testid='agents-overview-usage-scope']", TimeSpan.FromSeconds(10));
+        var scopeTabs = cut.FindComponents<SecondaryTabs>()
+            .Single(component => component.Instance.Items.Any(item => item.Label == "Both"));
+        Assert.Equal(nameof(ProviderUsageWorkloadSelection.Both), scopeTabs.Instance.SelectedKey);
+
+        var chats = scope.QuerySelectorAll("button")
+            .Single(button => button.TextContent.Trim().StartsWith("Chats", StringComparison.Ordinal));
+        chats.Click();
+        cut.WaitForAssertion(
+            () => Assert.Equal(
+                nameof(ProviderUsageWorkloadSelection.SimpleChats),
+                cut.FindComponents<SecondaryTabs>()
+                    .Single(component => component.Instance.Items.Any(item => item.Label == "Both"))
+                    .Instance.SelectedKey),
+            TimeSpan.FromSeconds(10));
+        Assert.Contains("usageScope=simple-chats", navigation.Uri, StringComparison.Ordinal);
+
+        cut.Find("[data-testid='agents-overview-open-provider-usage']").Click();
+        var dialog = dialogHost.WaitForComponent<ProviderUsageDialog>(TimeSpan.FromSeconds(10));
+        Assert.Equal(ProviderUsageWorkloadSelection.SimpleChats, dialog.Instance.Selection);
+    }
+
+    [Fact]
+    public async Task Simple_chat_inner_view_is_restored_from_the_typed_query_state()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.AddSingleton<ILlmChatUiAuthorizationFacade>(new AllowSimpleChatsAuthorization());
+            services.AddSimpleChatsComponents();
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/agents?tab=simple-chats&simpleChatView=definitions");
+
+        var cut = harness.Context.Render<AgentsHomePage>();
+
+        cut.WaitForElement("[data-testid='llm-chat-definition-catalog']", TimeSpan.FromSeconds(10));
+        var definitionsTab = cut.Find("[data-testid='llm-chats-tab-definitions']");
+        Assert.Equal("true", definitionsTab.GetAttribute("aria-selected"));
+    }
+
     private static IElement FindTab(IRenderedComponent<IComponent> cut, string label)
         => cut.FindAll("[data-testid='agents-shell-tabs'] button")
             .Single(tab => tab.TextContent.Trim().StartsWith(label, StringComparison.Ordinal));
@@ -165,5 +259,17 @@ public sealed class AgentsHomePageTests
                 now,
                 HiddenAtUtc: null);
         }
+    }
+
+    private sealed class AllowSimpleChatsAuthorization : ILlmChatUiAuthorizationFacade
+    {
+        public ValueTask<LlmChatUiAuthorizationSnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(new LlmChatUiAuthorizationSnapshot(true, true, true));
+
+        public ValueTask<bool> IsAllowedAsync(
+            LlmChatUiPermission permission,
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(true);
     }
 }

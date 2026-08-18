@@ -34,13 +34,22 @@ This repository does not own:
 |---|---|
 | [`CanDoItAll.Web`](src/App/CanDoItAll.Web/README.md) | Blazor host, HTTP API, OpenAPI, and runtime endpoints |
 | [`CanDoItAll.Composition`](src/App/CanDoItAll.Composition/README.md) | Dependency injection and application runtime composition |
-| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules |
+| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules, including the AgentFramework-hosted Simple Chats experience |
 | [`src/Processes`](src/Processes/README.md) | Durable process model, execution, projections, and persistence |
 | [`src/Memory`](src/Memory/README.md) | Provider-neutral Memory contracts, drivers, and persistence |
 | [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
 | [`Templates`](Templates/README.md) | Repository-owned runtime seed and template packs |
 
-`CanDoItAll.slnx` is the canonical solution.
+`CanDoItAll.slnx` is the canonical product solution. Test projects are intentionally
+kept out of that build graph and have suite-specific entry points under
+[`tests/Solutions`](tests/Solutions).
+
+Simple Chats provides provider-neutral ordinary conversations without creating agents or agent runs.
+The AgentFramework workspace hosts definition and conversation views, floating conversations,
+Prompt Gallery composer actions, and combined Agent/Simple Chat usage analytics. Its asynchronous HTTP
+contract remains available to remote clients: turn admission returns a durable operation, a hosted
+dispatcher owns provider execution, and clients follow status or replayable SSE. See
+[LLM Chats product and API](docs/llm-chats-api.md).
 
 ## Requirements
 
@@ -84,17 +93,23 @@ dotnet restore ./CanDoItAll.slnx \
   -p:CanDoItAllFileToolsRepositoryRoot=/source/CanDoItAll.FileTools
 ```
 
-Clean-checkout, CI, Docker, and reproducible artifact builds use the pinned NuGet graph
-instead. Select that mode explicitly and consistently:
+CI checks out the Components and FileTools repositories at the commits declared in
+`.github/workflows/ci.yml`, places all three repositories beside each other, and uses the
+same direct project-reference graph. Docker receives those sibling repositories as named
+build contexts. Reproducible local validation must record the three source commits and
+keep the repository roots identical across restore, build, test, and publish.
 
 ```text
-dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=false
-dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=false /m:1
+git -C ../CanDoItAll.Components rev-parse HEAD
+git -C ../CanDoItAll.FileTools rev-parse HEAD
+dotnet restore ./CanDoItAll.slnx -p:UseLocalCanDoItAllLibraries=true
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore -p:UseLocalCanDoItAllLibraries=true /m:1
 ```
 
-Do not switch modes between restore and build. The package versions are centralized in
-[`Directory.Build.props`](Directory.Build.props); `false` is an intentional package build,
-not a silent fallback for missing sibling repositories.
+Do not substitute unavailable NuGet packages for the current sibling-source contract.
+The package declarations remain the portable project metadata, while
+[`Directory.Build.targets`](Directory.Build.targets) removes matching declarations and
+adds direct project references for the active build graph.
 
 ## Install An Instance
 
@@ -140,13 +155,32 @@ Compose, copy `compose.override.yaml.example` to ignored `compose.override.yaml`
 
 ## Build And Test
 
-The following commands use the default sibling-source dependency mode. They are identical
-on Windows, Linux, and macOS when run in PowerShell 7:
+The following commands use the default sibling-source dependency mode. A normal product
+build does not compile the test suites:
 
 ```powershell
 dotnet restore ./CanDoItAll.slnx
 dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+```
+
+During local or bundle work, build the affected production project and run only the
+owning topic or exact test. Confirm discovery before treating the result as proof. This
+example expects exactly one discovered test case:
+
+```powershell
+$testFilter = "FullyQualifiedName=CanDoItAll.Tests.Unit.AgentFramework.OpenAiRequestCompatibilityPolicyTests.Luna_chat_completions_function_tools_require_explicit_none"
+$expectedDiscovery = 1
+
+dotnet build ./src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj --configuration Release /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --list-tests --filter $testFilter /m:1
+# Verify that discovery reports $expectedDiscovery test case before executing it.
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter $testFilter /m:1
+```
+
+Run the documentation validator when maintained documentation or source-truth claims
+change:
+
+```powershell
 ./tools/Validation/Test-Documentation.ps1
 ```
 
@@ -157,10 +191,12 @@ changes:
 ./tools/install/tests/Test-CanDoItAllWebAppInstallScripts.ps1
 ```
 
-The filtered command is the routine repository gate. Environment-dependent and extended
-test lanes are documented in [Testing](docs/testing.md). GitHub CI runs the package-mode
-stable and actual-host portability gates on Windows x64, Ubuntu x64, and macOS arm64, plus
-the Linux container gate.
+The broad stable gate is reserved for CI, release or merge closure, a frozen checkpoint,
+or an invalidation trigger explicitly named by the work plan. It is not a routine
+per-change or per-subbundle loop. Suite entry points, filters, discovery rules, and
+environment-dependent lanes are documented in [Testing](docs/testing.md). GitHub CI runs
+the sibling-source stable and actual-host portability gates on Windows x64, Ubuntu x64,
+and macOS arm64, plus the Linux container gate.
 
 ## Containers
 

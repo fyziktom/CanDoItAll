@@ -14,7 +14,7 @@ using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 using Capabilities = CanDoItAll.AgentFramework.Capabilities.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRuntimeIntegrationMetadataTests
 {

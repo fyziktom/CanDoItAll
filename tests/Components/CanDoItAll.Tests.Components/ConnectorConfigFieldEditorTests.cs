@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class ConnectorConfigFieldEditorTests
 {

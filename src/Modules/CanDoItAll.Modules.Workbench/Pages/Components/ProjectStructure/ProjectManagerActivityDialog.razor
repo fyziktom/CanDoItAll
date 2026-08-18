@@ -28,6 +28,7 @@
                                  disabled="@isLoading"
                                  data-testid="manager-activity-kind">
                         <option value="@ProjectManagerActivityKind.Conversation">Agents</option>
+                        <option value="@ProjectManagerActivityKind.SimpleChat">Simple chats</option>
                         <option value="@ProjectManagerActivityKind.Workflow">Workflows</option>
                         <option value="@ProjectManagerActivityKind.Process">Processes</option>
                     </InputSelect>
@@ -408,6 +409,7 @@
         => kind switch
         {
             ProjectManagerActivityKind.Conversation => "Agent",
+            ProjectManagerActivityKind.SimpleChat => "Simple chat",
             ProjectManagerActivityKind.Workflow => "Workflow",
             ProjectManagerActivityKind.Process => "Process",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported manager activity kind.")

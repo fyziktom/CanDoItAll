@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Security.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.External;
 
 public sealed class PluginSecretBrokerIntegrationTests
 {

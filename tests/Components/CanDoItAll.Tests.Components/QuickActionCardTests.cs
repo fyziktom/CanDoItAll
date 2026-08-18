@@ -4,7 +4,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Common;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class QuickActionCardTests
 {

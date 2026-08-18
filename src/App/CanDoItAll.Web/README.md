@@ -60,6 +60,12 @@ The checked-in API configuration is intended for a trusted local host and leaves
 
 `/api/crm-hr` is a thin HTTP adapter over the CRM-HR application services. It intentionally has no seed route and no direct persistence. Operator automation should use the canonical API skills from the sibling `CanDoItAll.SharedInfo` repository, together with OpenAPI, and retain search-before-create identity handling. JWT scope claims are not endpoint policies in the current host; remotely reachable deployments must not treat a claimed `crmhr.*` scope as authorization enforcement.
 
+`/api/llm-chats`, `/api/llm-conversations`, and `/api/llm-chat-operations` are thin adapters over the
+LLM Chats application boundary. They expose safe provider/model thinking-effort options, immutable
+definition revisions, pinned PostgreSQL conversations, and retry-safe operations without exposing
+provider credentials, endpoints, EF entities, or agent execution. See
+[`docs/llm-chats-api.md`](../../../docs/llm-chats-api.md).
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root
@@ -69,3 +75,4 @@ The checked-in API configuration is intended for a trusted local host and leaves
 - Storage and host-path portability: `docs/architecture/storage-and-path-portability.md`
 - Runtime execution and shell portability: `docs/architecture/runtime-execution-portability.md`
 - CRM-HR API: `docs/crm-hr-api.md`
+- LLM Chats API: `docs/llm-chats-api.md`

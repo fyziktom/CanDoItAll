@@ -11,9 +11,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
+using static CanDoItAll.Tests.Unit.Infrastructure.DatabaseRuntimeSwitchingTestProfiles;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class ControlPlaneDatabaseProfileCatalogTests

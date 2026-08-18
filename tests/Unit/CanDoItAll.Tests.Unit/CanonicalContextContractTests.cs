@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Contract tests for the SDK-free canonical context records introduced by the

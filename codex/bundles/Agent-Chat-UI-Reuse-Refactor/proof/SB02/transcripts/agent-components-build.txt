@@ -1,0 +1,33 @@
+Command: dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj --configuration Debug /m:1
+StartedUtc: 2026-08-16T11:02:41.1783771+00:00
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\bin\Debug\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\bin\Debug\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Conversations.Components -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.Conversations.Components\bin\Debug\net10.0\CanDoItAll.Conversations.Components.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure.Abstractions\bin\Debug\net10.0\CanDoItAll.Infrastructure.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Memory.SourceGateway.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.SourceGateway.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.ProviderPipelines\bin\Debug\net10.0\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Providers\bin\Debug\net10.0\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.AgentFramework.Runtime.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Runtime.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Runtime.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Voice\bin\Debug\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\bin\Debug\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib\bin\Debug\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Components\bin\Debug\net10.0\CanDoItAll.AgentFramework.Components.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:04.78
+CompletedUtc: 2026-08-16T11:02:46.2633071+00:00
+ExitCode: 0

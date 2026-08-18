@@ -7,7 +7,7 @@ using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class AgentMemorySettingsPanelTests : AgentMemorySettingsPanelTestBase
 {

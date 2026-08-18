@@ -6,7 +6,7 @@ using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScop
 using MemoryProviderInstanceId = CanDoItAll.Memory.Abstractions.MemoryProviderInstanceId;
 using MafMemorySourceKind = CanDoItAll.Memory.SourceGateway.MemorySourceKind;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectMemoryIngestionServiceTests
 {

@@ -7,7 +7,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class PortablePathOwnerCompatibilityTests

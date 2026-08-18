@@ -1,4 +1,4 @@
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class CrossPlatformCiWorkflowTests
 {
@@ -6,7 +6,7 @@ public sealed class CrossPlatformCiWorkflowTests
 
     [Fact]
     [Trait("Category", "UnixPortabilityCore")]
-    public void Active_workflow_defines_three_actual_host_gates_and_package_fallback()
+    public void Active_workflow_defines_three_actual_host_gates_with_pinned_sibling_sources()
     {
         string repositoryRoot = FindRepositoryRoot();
         string workflowPath = Path.Combine(repositoryRoot, ".github", "workflows", "ci.yml");
@@ -20,7 +20,14 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("ubuntu-24.04", workflow, StringComparison.Ordinal);
         Assert.Contains("macos-15", workflow, StringComparison.Ordinal);
         Assert.Contains("fail-fast: false", workflow, StringComparison.Ordinal);
-        Assert.Contains("UseLocalCanDoItAllLibraries=false", workflow, StringComparison.Ordinal);
+        Assert.Contains("UseLocalCanDoItAllLibraries=true", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseLocalCanDoItAllLibraries=false", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: fysiktom/CanDoItAll.Components", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: fysiktom/CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
+        Assert.Contains("path: CanDoItAll.Components", workflow, StringComparison.Ordinal);
+        Assert.Contains("path: CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
+        Assert.Contains("CANDOITALL_COMPONENTS_COMMIT", workflow, StringComparison.Ordinal);
+        Assert.Contains("CANDOITALL_FILETOOLS_COMMIT", workflow, StringComparison.Ordinal);
         Assert.Contains("ikalnytskyi/action-setup-postgres@v8", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_TESTS_POSTGRES_CONNECTION", workflow, StringComparison.Ordinal);
         Assert.Contains("postgres-version: \"16\"", workflow, StringComparison.Ordinal);
@@ -61,6 +68,29 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("Test-Docker.ps1 -RunNegativeFixtures", workflow, StringComparison.Ordinal);
         Assert.Contains("up -d --build --wait --wait-timeout 360", workflow, StringComparison.Ordinal);
         Assert.Contains("Remove-Item -LiteralPath .secrets/db-password", workflow, StringComparison.Ordinal);
+
+        string buildTargets = File.ReadAllText(Path.Combine(repositoryRoot, "Directory.Build.targets"));
+        Assert.Contains("Exclude=\"CanDoItAll.Components.*\"", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("Exclude=\"CanDoItAll.FileTools.*\"", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAllLocalLibrary", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("ValidateResolvedLocalCanDoItAllLibraryReferences", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("_UnconvertedCanDoItAllLibraryPackage", buildTargets, StringComparison.Ordinal);
+        Assert.Contains("_MissingCanDoItAllLocalProject", buildTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("WithMetadataValue('Identity'", buildTargets, StringComparison.Ordinal);
+
+        string compose = File.ReadAllText(Path.Combine(repositoryRoot, "compose.yaml"));
+        Assert.Contains("components: ../CanDoItAll.Components", compose, StringComparison.Ordinal);
+        Assert.Contains("filetools: ../CanDoItAll.FileTools", compose, StringComparison.Ordinal);
+
+        string dockerfile = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "App",
+            "CanDoItAll.Web",
+            "Dockerfile"));
+        Assert.Contains("COPY --from=components . /CanDoItAll.Components", dockerfile, StringComparison.Ordinal);
+        Assert.Contains("COPY --from=filetools . /CanDoItAll.FileTools", dockerfile, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseLocalCanDoItAllLibraries=false", dockerfile, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -499,6 +499,60 @@ public interface ILlmConversationStore
     Task DeleteAsync(Guid conversationId, CancellationToken cancellationToken = default);
 }
 
+public sealed record LlmConversationTurnSnapshot(
+    Guid ConversationId,
+    string Title,
+    LlmConversationProviderSnapshot Provider,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc,
+    long TranscriptRevision,
+    int EntryCount,
+    ImmutableArray<LlmConversationTranscriptEntry> ContextEntries,
+    LlmConversationActiveTurn? ActiveTurn,
+    LlmConversationAccelerationEnvelope? AccelerationState);
+
+public sealed record LlmConversationTurnAdmissionWrite(
+    LlmConversationTurnSnapshot Current,
+    LlmConversationProviderSnapshot Provider,
+    LlmConversationTranscriptEntry UserEntry,
+    LlmConversationActiveTurn ActiveTurn,
+    LlmConversationAccelerationEnvelope? AccelerationState,
+    DateTimeOffset UpdatedAtUtc,
+    int MaximumContextMessages);
+
+public sealed record LlmConversationTurnCompletionWrite(
+    Guid ConversationId,
+    Guid TurnId,
+    Guid PendingUserEntryId,
+    long ExpectedTranscriptRevision,
+    int ExpectedEntryCount,
+    LlmConversationTranscriptEntry AssistantEntry,
+    DateTimeOffset UpdatedAtUtc,
+    int MaximumContextMessages);
+
+public interface ILlmConversationTurnStore
+{
+    Task<LlmConversationTurnSnapshot?> TryGetAsync(
+        Guid conversationId,
+        int maximumContextMessages,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnSnapshot> AdmitAsync(
+        LlmConversationTurnAdmissionWrite write,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnSnapshot> CompleteAsync(
+        LlmConversationTurnCompletionWrite write,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnSnapshot> CompensateAsync(
+        Guid conversationId,
+        Guid turnId,
+        DateTimeOffset updatedAtUtc,
+        int maximumContextMessages,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>Input for context-window selection: the canonical entries plus hard outbound bounds.</summary>
 public sealed record LlmConversationContextWindowRequest
 {
@@ -541,6 +595,8 @@ public interface ILlmConversationContextWindowPolicy
 /// <summary>Request to create a conversation bound to a provider/model snapshot.</summary>
 public sealed record LlmConversationStartRequest
 {
+    private Guid? conversationId;
+
     public LlmConversationStartRequest(
         ProviderProfile provider,
         string model = "",
@@ -568,6 +624,20 @@ public sealed record LlmConversationStartRequest
     /// <summary>The live provider profile; only its stable identity is persisted.</summary>
     public ProviderProfile Provider { get; }
 
+    public Guid? ConversationId
+    {
+        get => conversationId;
+        init
+        {
+            if (value == Guid.Empty)
+            {
+                throw new ArgumentException("A supplied conversation id must be non-empty.", nameof(ConversationId));
+            }
+
+            conversationId = value;
+        }
+    }
+
     /// <summary>Optional model override; blank selects the provider's default model.</summary>
     public string Model { get; }
 
@@ -585,6 +655,8 @@ public sealed record LlmConversationStartRequest
 /// </summary>
 public sealed record LlmConversationTurnRequest
 {
+    private Guid? turnId;
+
     public LlmConversationTurnRequest(
         Guid conversationId,
         long expectedTranscriptRevision,
@@ -638,6 +710,20 @@ public sealed record LlmConversationTurnRequest
 
     public Guid ConversationId { get; }
 
+    public Guid? TurnId
+    {
+        get => turnId;
+        init
+        {
+            if (value == Guid.Empty)
+            {
+                throw new ArgumentException("A supplied turn id must be non-empty.", nameof(TurnId));
+            }
+
+            turnId = value;
+        }
+    }
+
     public long ExpectedTranscriptRevision { get; }
 
     public string UserText { get; }
@@ -663,6 +749,61 @@ public sealed record LlmConversationTurnResult(
     LlmConversationDocument Conversation,
     LlmConversationTranscriptEntry UserEntry,
     LlmConversationTranscriptEntry AssistantEntry);
+
+public sealed record LlmConversationAdmittedTurnRequest
+{
+    public LlmConversationAdmittedTurnRequest(
+        Guid conversationId,
+        Guid turnId,
+        ProviderProfile provider,
+        string model = "",
+        LlmResponseFormat? responseFormat = null,
+        LlmModelSettings? settings = null,
+        TimeSpan? timeout = null,
+        string correlationId = "")
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(conversationId, Guid.Empty);
+        ArgumentOutOfRangeException.ThrowIfEqual(turnId, Guid.Empty);
+        Provider = provider ?? throw new ArgumentNullException(nameof(provider));
+        var normalizedCorrelationId = correlationId?.Trim() ?? string.Empty;
+        if (normalizedCorrelationId.Length > LlmInvocationRequest.MaximumCorrelationIdLength)
+        {
+            throw new ArgumentException(
+                $"A correlation id cannot exceed {LlmInvocationRequest.MaximumCorrelationIdLength} characters.",
+                nameof(correlationId));
+        }
+
+        ConversationId = conversationId;
+        TurnId = turnId;
+        Model = model?.Trim() ?? string.Empty;
+        ResponseFormat = responseFormat;
+        Settings = settings;
+        Timeout = timeout;
+        CorrelationId = normalizedCorrelationId;
+    }
+
+    public Guid ConversationId { get; }
+
+    public Guid TurnId { get; }
+
+    public ProviderProfile Provider { get; }
+
+    public string Model { get; }
+
+    public LlmResponseFormat? ResponseFormat { get; }
+
+    public LlmModelSettings? Settings { get; }
+
+    public TimeSpan? Timeout { get; }
+
+    public string CorrelationId { get; }
+}
+
+public sealed record LlmConversationTurnAdmission(
+    LlmConversationDocument Conversation,
+    LlmConversationTranscriptEntry UserEntry,
+    LlmInvocationRequest InvocationRequest,
+    int PersistedEntryCount = 0);
 
 /// <summary>
 /// Application service for ordinary multi-turn LLM conversations, layered strictly above
@@ -692,6 +833,24 @@ public interface ILlmConversationService
     /// </summary>
     Task<LlmConversationTurnResult> SendAsync(
         LlmConversationTurnRequest request, CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnAdmission> AdmitTurnAsync(
+        LlmConversationTurnRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnAdmission> ResumeAdmittedTurnAsync(
+        LlmConversationAdmittedTurnRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationTurnResult> CompleteTurnAsync(
+        LlmConversationTurnAdmission admission,
+        LlmInvocationResult invocationResult,
+        CancellationToken cancellationToken = default);
+
+    Task<LlmConversationDocument> CompensateTurnAsync(
+        Guid conversationId,
+        Guid turnId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Explicit recovery for a turn orphaned by a crash: removes the pending user entry and clears the

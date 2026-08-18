@@ -8,6 +8,8 @@ namespace CanDoItAll.Tests.Unit.AgentFramework.Providers;
 
 public sealed class ConcreteProviderDriverTests
 {
+    private const string RepositoryRootEnvironmentVariable = "CANDOITALL_TEST_REPOSITORY_ROOT";
+
     [Fact]
     public void ConcreteDrivers_RegisterThroughProviderBuilder()
     {
@@ -1440,7 +1442,20 @@ public sealed class ConcreteProviderDriverTests
 
     private static string FindRepositoryRoot()
     {
-        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        var configuredRoot = Environment.GetEnvironmentVariable(RepositoryRootEnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(configuredRoot))
+        {
+            var resolvedRoot = Path.GetFullPath(configuredRoot);
+            if (!File.Exists(Path.Combine(resolvedRoot, "CanDoItAll.slnx")))
+            {
+                throw new DirectoryNotFoundException(
+                    $"Configured repository root does not contain CanDoItAll.slnx: {resolvedRoot}");
+            }
+
+            return resolvedRoot;
+        }
+
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
             if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))

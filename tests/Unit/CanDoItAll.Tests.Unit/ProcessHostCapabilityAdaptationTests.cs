@@ -12,7 +12,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "ProcessCapabilityPortability")]
 public sealed class ProcessHostCapabilityAdaptationTests

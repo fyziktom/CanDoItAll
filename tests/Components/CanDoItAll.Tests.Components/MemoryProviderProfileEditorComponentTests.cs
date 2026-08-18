@@ -5,7 +5,7 @@ using CanDoItAll.Modules.Memory.Components;
 using CanDoItAll.Modules.Memory.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class MemoryProviderProfileEditorComponentTests
 {

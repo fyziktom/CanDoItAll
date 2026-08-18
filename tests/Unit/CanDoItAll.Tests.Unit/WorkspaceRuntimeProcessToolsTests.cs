@@ -1,6 +1,6 @@
 using CanDoItAll.Manager;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceRuntimeProcessToolsTests
 {

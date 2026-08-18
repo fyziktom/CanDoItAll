@@ -1,0 +1,96 @@
+.agent-thread-history-dialog {
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.agent-thread-history-dialog__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.agent-thread-history-dialog__row {
+    align-items: stretch;
+    background: rgb(255 255 255 / 0.96);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    color: rgb(15 23 42);
+    cursor: pointer;
+    display: grid;
+    font: inherit;
+    gap: 0.65rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.7rem 0.8rem;
+    text-align: left;
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    width: 100%;
+}
+
+.agent-thread-history-dialog__row:hover,
+.agent-thread-history-dialog__row:focus-visible,
+.agent-thread-history-dialog__row.is-selected {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 10px 24px rgb(15 23 42 / 0.08);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.agent-thread-history-dialog__row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.agent-thread-history-dialog__title {
+    color: rgb(15 23 42);
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-thread-history-dialog__preview {
+    color: rgb(71 85 105);
+    display: -webkit-box;
+    font-size: 0.78rem;
+    line-height: 1.25rem;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.agent-thread-history-dialog__row-meta {
+    align-items: flex-end;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 8rem;
+}
+
+.agent-thread-history-dialog__time {
+    color: rgb(100 116 139);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1rem;
+    white-space: nowrap;
+}
+
+.conversation-thread-history-list__actions {
+    margin-top: 0.4rem;
+}
+
+@media (max-width: 640px) {
+    .agent-thread-history-dialog__row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .agent-thread-history-dialog__row-meta {
+        align-items: flex-start;
+        min-width: 0;
+    }
+}

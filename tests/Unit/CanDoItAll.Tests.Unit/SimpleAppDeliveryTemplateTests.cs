@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class SimpleAppDeliveryTemplateTests
 {

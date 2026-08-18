@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/tests/Components/">
+    <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
+  </Folder>
+</Solution>

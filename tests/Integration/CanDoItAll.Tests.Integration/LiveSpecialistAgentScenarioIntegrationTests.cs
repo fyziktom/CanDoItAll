@@ -5,7 +5,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class LiveSpecialistAgentScenarioIntegrationTests
 {

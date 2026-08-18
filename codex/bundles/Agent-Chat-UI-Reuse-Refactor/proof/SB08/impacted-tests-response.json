@@ -1,0 +1,38 @@
+{
+  "correlationId": "code-analytics_d84697b78d1e4008b1ae497684c22a55",
+  "ok": true,
+  "confidence": "Low",
+  "isComplete": false,
+  "fallbackKind": "AllSuppliedSuites",
+  "fallbackReason": "Static traversal exhausted its explicit 5000-member budget across dynamic and reflection dispatch.",
+  "workspaceHealth": {
+    "suiteName": "Components",
+    "isHealthy": true,
+    "projectCount": 113,
+    "sourceTestCount": 922
+  },
+  "resolvedChangeCount": 406,
+  "resolvedSymbolCount": 394,
+  "unresolvedCount": 12,
+  "requiredSelection": {
+    "scopeKind": "AllSuppliedSuites",
+    "selectedSourceTestCount": 922,
+    "runtimeCases": 990,
+    "passed": 990,
+    "failed": 0,
+    "evidenceReuse": "The required suite ran after the final production edit in SB07; no source, test, build-configuration, or dependency input changed before SB08 closure."
+  },
+  "conditionalSelections": [],
+  "crossConsumerFocusedSelection": {
+    "classes": [
+      "ProcessWorkspaceShellTests",
+      "AgentPanelSelectionFailClosedTests",
+      "ContextualAgentWorkspaceWindowsFailureTests",
+      "FloatingAgentChatHostLifecycleTests",
+      "FloatingAgentChatSettingsPanelTests"
+    ],
+    "discovered": 81,
+    "passed": 81,
+    "failed": 0
+  }
+}

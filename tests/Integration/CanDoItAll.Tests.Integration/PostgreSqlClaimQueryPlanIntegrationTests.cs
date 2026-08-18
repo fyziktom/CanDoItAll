@@ -3,7 +3,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Persistence;
 
 public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
     private const string ProcessOutboxClaimIndex = "IX_process_outbox_messages_Status_AvailableAtUtc_LockedAtUtc";

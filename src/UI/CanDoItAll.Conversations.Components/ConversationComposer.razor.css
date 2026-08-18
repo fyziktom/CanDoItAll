@@ -1,0 +1,52 @@
+.chat-composer-panel {
+    border-top: 1px solid rgb(226 232 240);
+    flex: 0 0 auto;
+    margin-top: 0.45rem;
+    padding-top: 0.45rem;
+}
+
+.chat-composer {
+    align-items: stretch;
+    display: grid;
+    gap: 0.4rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+}
+
+.chat-composer ::deep .chat-composer__textarea {
+    min-height: clamp(4rem, 8vh, 5rem);
+    resize: vertical;
+}
+
+.chat-composer__tools {
+    align-content: start;
+    display: grid;
+    gap: 0.35rem;
+    grid-template-columns: repeat(3, minmax(2.125rem, auto));
+}
+
+.chat-composer__tools ::deep .chat-composer__icon-button,
+.chat-composer__tools ::deep .cda-button {
+    min-height: 2.125rem;
+    min-width: 2.5rem;
+}
+
+.chat-composer-panel ::deep .chat-composer-status {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+}
+
+@media (max-width: 560px) {
+    .chat-composer {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .chat-composer__tools {
+        grid-template-columns: repeat(6, minmax(2.375rem, auto));
+        justify-content: start;
+    }
+}

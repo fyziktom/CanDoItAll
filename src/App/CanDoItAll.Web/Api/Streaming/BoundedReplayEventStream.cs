@@ -232,14 +232,16 @@ public readonly record struct SequencedServerEvent<T>(
 
 public sealed record BoundedReplayReadResult<T>(
     IReadOnlyList<SequencedServerEvent<T>> Events,
-    ReplayGap? Gap);
+    ReplayGap? Gap,
+    bool IsCompleted = false);
 
 public sealed record ReplayGap(
     ReplayGapReason Reason,
     long RequestedAfterSequence,
     long FirstAvailableSequence,
     long LastAvailableSequence,
-    long ResumeAfterSequence);
+    long ResumeAfterSequence,
+    string? SnapshotUrl = null);
 
 public enum ReplayGapReason
 {

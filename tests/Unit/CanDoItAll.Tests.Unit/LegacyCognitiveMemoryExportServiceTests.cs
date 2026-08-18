@@ -4,7 +4,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Memory;
 
 public sealed class LegacyCognitiveMemoryExportServiceTests
 {

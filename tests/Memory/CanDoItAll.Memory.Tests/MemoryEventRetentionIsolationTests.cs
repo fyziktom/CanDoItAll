@@ -3,7 +3,7 @@ using CanDoItAll.Memory.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Persistence;
 
 public sealed class MemoryEventRetentionIsolationTests
 {

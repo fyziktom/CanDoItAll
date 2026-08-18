@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using ModelContextProtocol.Protocol;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class McpPayloadSizeLimitTests
 {

@@ -7,7 +7,7 @@ using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
 {

@@ -1,7 +1,7 @@
 using Bunit;
 using CanDoItAll.Modules.Workbench.Pages;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureToolbarActionsTests
 {

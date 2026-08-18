@@ -1,0 +1,36 @@
+@inject DialogService DialogService
+
+<ConversationThreadHistoryList Threads="@threads"
+                               MaxItems="25"
+                               ContextLabel="@Definition?.Name"
+                               EmptyEyebrow="Simple Chat history"
+                               EmptyTitle="No saved conversations"
+                               EmptyDescription="This definition does not have a durable conversation yet."
+                               Selected="SelectConversationAsync" />
+
+@code {
+    [Parameter]
+    public LlmChatDefinitionListItem? Definition { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<LlmChatConversationListItem> Conversations { get; set; } = [];
+
+    private IReadOnlyList<ConversationThreadPresentation> threads = [];
+
+    protected override void OnParametersSet()
+    {
+        threads = Conversations
+            .Select(item => LlmChatConversationPresentationMapper.ToThread(item, null, false))
+            .ToArray();
+    }
+
+    private Task SelectConversationAsync(ConversationPresentationKey key)
+    {
+        if (!LlmChatConversationPresentationMapper.TryGetConversationId(key, out var conversationId))
+        {
+            throw new InvalidOperationException($"'{key.Value}' is not a Simple Chat conversation key.");
+        }
+
+        return DialogService.CloseAsync(conversationId);
+    }
+}

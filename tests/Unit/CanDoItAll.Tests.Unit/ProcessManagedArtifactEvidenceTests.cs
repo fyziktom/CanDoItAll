@@ -3,7 +3,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessManagedArtifactEvidenceTests
 {

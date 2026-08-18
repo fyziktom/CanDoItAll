@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Visual;
 
 public sealed class Scenario04GeneratedAppBrowserValidationTests
 {

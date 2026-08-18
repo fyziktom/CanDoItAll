@@ -1,6 +1,11 @@
 # Testing
 
-The routine verification contract is the filtered Release gate. Browser, live-process, long-running, and quarantined tests are separate extended gates and must not be described as passing unless their exact commands pass.
+`CanDoItAll.slnx` is the product build graph. It deliberately contains no test or
+test-support projects. Local and bundle verification starts with the affected production
+project and the narrowest owning test topic; it does not start with every test assembly.
+Browser, live-process, long-running, Docker-host, runtime-portability, and quarantined
+tests are separate lanes and must not be described as passing unless their exact commands
+pass.
 
 ## Prerequisites
 
@@ -11,27 +16,87 @@ are not a prerequisite for this solution. The default build graph requires sibli
 README. DotNetWatch integration tests additionally require the sibling `CanDoItAll.Mcp`
 repository.
 
-## Stable Release Gate
+## Test Entry Points
+
+| Entry point | Scope |
+| --- | --- |
+| `tests/Solutions/CanDoItAll.Tests.Unit.slnx` | Unit tests |
+| `tests/Solutions/CanDoItAll.Tests.Components.slnx` | Component and component-host tests |
+| `tests/Solutions/CanDoItAll.Tests.Integration.slnx` | HTTP, persistence, and cross-boundary integration tests |
+| `tests/Solutions/CanDoItAll.Tests.Memory.slnx` | Provider-neutral Memory and AgentFramework Memory tests |
+| `tests/Solutions/CanDoItAll.Tests.Playwright.slnx` | Browser automation only |
+| `tests/Solutions/CanDoItAll.Tests.Stable.slnx` | Unit, Components, Integration, and both Memory projects |
+
+The stable aggregate excludes the Playwright project. Its command filter also excludes
+special traits because those tests remain in their owning assemblies for focused and
+environment-specific execution. Test-support projects are transitive dependencies of
+their owning test projects and are not standalone gates.
+
+## Local And Bundle Loop
+
+For each implementation slice:
+
+1. Build every changed production project directly.
+2. Select the owning suite entry point from the table above.
+3. Use an exact `FullyQualifiedName=<namespace>.<class>.<method>` filter when one behavior
+   owns the change. Use a bounded `FullyQualifiedName~<topic>` filter or explicit `|`
+   expression only when the change intentionally spans that topic.
+4. State the expected discovery count before execution. Run `--list-tests` for every new
+   or changed filter. Zero tests or a count different from the expectation invalidates
+   the proof; data-driven case counts must be included in the expectation.
+5. Execute the filtered tests. `--no-build --no-restore` is valid only after the owning
+   test assembly has been refreshed for the current source state.
+
+Example for a one-case provider-policy change:
+
+```powershell
+$affectedProject = "./src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj"
+$testSolution = "./tests/Solutions/CanDoItAll.Tests.Unit.slnx"
+$testFilter = "FullyQualifiedName=CanDoItAll.Tests.Unit.AgentFramework.OpenAiRequestCompatibilityPolicyTests.Luna_chat_completions_function_tools_require_explicit_none"
+$expectedDiscovery = 1
+
+dotnet build $affectedProject --configuration Release /m:1
+dotnet test $testSolution --configuration Release --list-tests --filter $testFilter /m:1
+# Verify that discovery reports $expectedDiscovery test case before executing it.
+dotnet test $testSolution --configuration Release --no-build --no-restore --filter $testFilter /m:1
+```
+
+Do not run an unfiltered test project or the stable aggregate merely because a bundle
+phase completed. The bundle proof must record the production projects built, the exact
+filter, expected and actual discovery counts, and the filtered result.
+
+## Broad Stable Gate
+
+Run this gate only for CI, release or merge closure, a frozen checkpoint, an explicit
+operator or reviewer request, or a named invalidation trigger in the work plan. Typical
+invalidation triggers are cross-cutting composition/DI changes, root solution or
+`Directory.Build.*` changes, and shared persistence, migration, or test-infrastructure
+changes. A trigger must be named; "run everything to be safe" is not one.
 
 Run from the repository root:
 
 ```powershell
 dotnet restore ./CanDoItAll.slnx
 dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx
+dotnet build ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" /m:1
 ```
 
 `/m:1` avoids `bin` and `obj` contention when local MCP or watch processes are active. A developer with an isolated workspace may increase parallelism, but the result must still come from the same configuration and filter.
 
-Those commands use sibling source projects. For the clean-checkout package graph used by
-CI and Docker, pass `-p:UseLocalCanDoItAllLibraries=false` to restore, build, and test.
-Keep the dependency mode identical for the whole gate.
+Those commands use sibling source projects. CI checks out Components and FileTools at the
+pinned commits declared in its workflow, and Docker receives the same repositories as
+named build contexts. Keep source roots and commits identical for the whole gate; do not
+substitute an unpublished package graph for any command.
 
 The filter intentionally excludes:
 
 - browser automation
 - process-spawning and live-host integration
 - long-running suites
+- actual-host runtime-portability cases
+- tests requiring host Docker
 - tests with an explicit `Quarantined` trait
 
 Quarantine is not a passing result. Remove a quarantine only with focused replacement evidence and a passing owning gate.
@@ -46,29 +111,53 @@ Run this after changing maintained Markdown, repository metadata, public paths, 
 
 ## Focused HTTP Integration
 
-For CRM/HR API changes, run the real HTTP-host slice before the broad gate:
+For CRM/HR API changes, build the affected production project and run the real HTTP-host
+slice. Record and confirm its expected discovery count first:
 
 ```powershell
-dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~CrmHrApiIntegrationTests" /m:1
+dotnet build .\src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj --configuration Release /m:1
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --list-tests --filter "FullyQualifiedName~CrmHrApiIntegrationTests" /m:1
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~CrmHrApiIntegrationTests" /m:1
 ```
 
 This proof must create and read linked records through `/api/crm-hr`; direct service or database setup does not validate the HTTP boundary.
 
-Use the same pattern for other API families: choose the narrowest real-host test slice first, then run the stable solution gate.
+Use the same pattern for other API families: choose the narrowest real-host test slice.
+Run the stable aggregate afterward only when one of its explicit triggers applies.
+
+For LLM Chats, the focused real-host slice keeps Web, hosted dispatch, application behavior, provider
+resolution, EF stores, SSE transport, and PostgreSQL real while replacing only the live external
+provider boundary:
+
+```powershell
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --list-tests --filter "FullyQualifiedName~LlmChatsApiPostgreSqlIntegrationTests"
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "FullyQualifiedName~LlmChatsApiPostgreSqlIntegrationTests"
+```
+
+Use the focused migration and `LlmChatsDatabaseTransferIntegrationTests` cases when changing schema or
+transfer behavior. Use a `FullyQualifiedName~LlmChat` filter for the narrow owning Unit or Integration
+project while iterating; do not run an unfiltered project merely to validate one LLM Chat change. The
+stable aggregate is additional proof only when a broad-gate trigger applies.
+
+The LLM Chat event-stream slice verifies `202 Accepted` before slow-provider completion, durable lease
+dispatch, replay, `Last-Event-ID`/`after`, gap signaling, heartbeats, terminal closure, disconnect
+independence, explicit cancellation, server-owned origin, exact authorization scopes, and redaction.
+Do not replace it with an in-memory endpoint test when changing HTTP, SSE, migration, or multi-host
+ownership behavior.
 
 ## Browser Gate
 
 Build the Playwright project and install Chromium once per machine:
 
 ```powershell
-dotnet build .\tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --configuration Release
+dotnet build .\tests\Solutions\CanDoItAll.Tests.Playwright.slnx --configuration Release
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Release\net10.0\playwright.ps1 install chromium
 ```
 
 Run the non-quarantined browser gate:
 
 ```powershell
-dotnet test .\tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --configuration Release --no-build --filter "Category!=Quarantined" /m:1
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Playwright.slnx --configuration Release --no-build --no-restore --filter "Category!=Quarantined" /m:1
 ```
 
 Playwright hosts infer the active build configuration from the test output path. Set `CANDOITALL_TEST_CONFIGURATION` only for a non-standard output layout.
@@ -78,7 +167,7 @@ Playwright hosts infer the active build configuration from the test output path.
 Run the application integration slice:
 
 ```powershell
-dotnet test .\tests\Integration\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter "Category=LiveProcess" /m:1
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter "Category=LiveProcess" /m:1
 ```
 
 Run the sibling DotNetWatch integration project from this repository root:
@@ -92,7 +181,11 @@ The DotNetWatch assembly uses this repository for workspace settings and runtime
 ## Unfiltered Suite
 
 ```powershell
-dotnet test .\CanDoItAll.slnx --configuration Release --no-build
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore
+dotnet test .\tests\Solutions\CanDoItAll.Tests.Playwright.slnx --configuration Release --no-build --no-restore
 ```
 
-Do not report the full suite as green unless this exact no-filter command passes. Expected quarantine failures, missing browser binaries, and unavailable sibling processes are still failures of this gate and must be reported as such.
+Do not report the full suite as green unless both exact no-filter commands pass after the
+required browsers, hosts, databases, and sibling processes are available. Expected
+quarantine failures and missing environment dependencies are still failures of this
+gate and must be reported as such.

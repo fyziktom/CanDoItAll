@@ -1,0 +1,28 @@
+{
+  "subbundleId": "SB04",
+  "productionChanges": [
+    { "path": "src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationThreadPresentation.cs", "ranges": [[1, 67]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationThreadRailText.cs", "ranges": [[1, 10]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationThreadListItem.razor", "ranges": [[1, 71]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationThreadListItem.razor.css", "ranges": [[1, 99]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationThreadRail.razor", "ranges": [[1, 109]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationThreadRail.razor.css", "ranges": [[1, 24]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationThreadHistoryList.razor", "ranges": [[1, 108]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationThreadHistoryList.razor.css", "ranges": [[1, 96]] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentThreadPresentationMapper.cs", "ranges": [[1, 59]] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor", "ranges": [[1, 155]] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs", "ranges": [[1, 2056]] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.css", "ranges": [[1, 62]] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/_Imports.razor", "ranges": [[1, 15]] },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentThreadHistoryDialog.razor", "ranges": [[1, 53]] },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentThreadHistoryPresentationMapper.cs", "ranges": [[1, 105]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationParticipantPresentation.cs", "ranges": [[1, 91]] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationParticipantCard.razor", "ranges": [[48, 50]] },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentParticipantPresentationMapper.cs", "ranges": [[17, 47], [209, 227]] },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSelectionCard.razor", "ranges": [[104, 132]] },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSwitchDialog.razor", "ranges": [[48, 70]] }
+  ],
+  "testChanges": [
+    { "path": "tests/Components/CanDoItAll.Tests.Components/Conversations/ConversationThreadComponentsTests.cs", "ranges": [[1, 80]] }
+  ]
+}

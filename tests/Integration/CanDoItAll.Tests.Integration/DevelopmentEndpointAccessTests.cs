@@ -1,7 +1,7 @@
 using System.Net;
 using CanDoItAll.Web;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Api;
 
 public sealed class DevelopmentEndpointAccessTests
 {

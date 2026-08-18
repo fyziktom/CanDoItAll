@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class AgentProjectStructureAccessMetadataTests
 {

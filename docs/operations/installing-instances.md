@@ -10,9 +10,9 @@ lifecycle owners.
 | Model | Hosts | Dependency graph | State owner | Intended use |
 | --- | --- | --- | --- | --- |
 | Direct source run | Windows, Linux, macOS | Sibling source repositories by default | Current operating-system user | Development and interactive local use |
-| Development Compose stack | Any host with a Linux Compose engine | Pinned NuGet packages inside the image build | Compose volumes `app-data` and `db-data` | Disposable or persistent local development |
+| Development Compose stack | Any host with a Linux Compose engine | Sibling source repositories supplied as named image-build contexts | Compose volumes `app-data` and `db-data` | Disposable or persistent local development |
 | Dedicated Windows app | Windows x64 | Installer-published application | Per-user install root and installer-managed PostgreSQL | Installed local Windows instance |
-| Framework-dependent Web host | Windows x64, Linux x64, macOS x64/arm64 | Use the pinned NuGet graph for reproducible artifacts | Operator-selected release, data, configuration, state, log, and database roots | Long-running headless Web service |
+| Framework-dependent Web host | Windows x64, Linux x64, macOS x64/arm64 | Recorded sibling source commits | Operator-selected release, data, configuration, state, log, and database roots | Long-running headless Web service |
 
 The Web UI is available in every model. "Headless" means the server process does not
 depend on a desktop session; it does not mean the application has no UI.
@@ -22,14 +22,14 @@ depend on a desktop session; it does not mean the application has no UI.
 Source builds require the SDK selected by [`global.json`](../../global.json). The default
 development graph expects `CanDoItAll`, `CanDoItAll.Components`, and
 `CanDoItAll.FileTools` as sibling repositories. See the root
-[build dependency modes](../../README.md#build-dependency-modes) section for custom roots
-and package-mode commands.
+[build dependency modes](../../README.md#build-dependency-modes) section for custom roots.
 
-Reproducible installation artifacts must use package mode throughout restore and publish:
+Reproducible installation artifacts must use the same recorded sibling source commits
+throughout restore and publish:
 
 ```text
-dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --runtime <RID> -p:UseLocalCanDoItAllLibraries=false
-dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --configuration Release --runtime <RID> --self-contained false --no-restore --output <ABSOLUTE_OUTPUT> -p:UseLocalCanDoItAllLibraries=false
+dotnet restore ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --runtime <RID> -p:UseLocalCanDoItAllLibraries=true
+dotnet publish ./src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --configuration Release --runtime <RID> --self-contained false --no-restore --output <ABSOLUTE_OUTPUT> -p:UseLocalCanDoItAllLibraries=true
 ```
 
 Framework-dependent artifacts require the matching .NET 10 ASP.NET Core runtime on the

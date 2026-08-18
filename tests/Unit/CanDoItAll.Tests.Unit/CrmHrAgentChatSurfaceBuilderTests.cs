@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class CrmHrAgentChatSurfaceBuilderTests
 {

@@ -22,6 +22,614 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DefinitionRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DefinitionId", "DefinitionRevision");
+
+                    b.HasIndex("DefinitionId", "UpdatedAtUtc");
+
+                    b.HasIndex("Status", "UpdatedAtUtc");
+
+                    b.ToTable("LlmChats_Conversations", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", b =>
+                {
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AvatarImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("HasResponseFormat")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ModelParameterConfigurationJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("ProviderKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("ResponseRequireJson")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ResponseSchemaDescription")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ResponseSchemaJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResponseSchemaName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SettingsFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("SystemPrompt")
+                        .IsRequired()
+                        .HasMaxLength(400000)
+                        .HasColumnType("character varying(400000)");
+
+                    b.Property<double?>("Temperature")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("ThinkingEffort")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("TimeoutTicks")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("DefinitionId", "Revision");
+
+                    b.HasIndex("ProviderProfileId");
+
+                    b.ToTable("LlmChats_DefinitionRevisions", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AvatarImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<long>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CurrentRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "Name");
+
+                    b.ToTable("LlmChats_Definitions", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionTagRow", b =>
+                {
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tag")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("DefinitionId", "Tag");
+
+                    b.HasIndex("Tag");
+
+                    b.ToTable("LlmChats_DefinitionTags", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatInvocationRecordRow", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CachedInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("CalculatedCostUsd")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.Property<DateTimeOffset>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("DeliveryMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EffectiveThinkingEffort")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FailureCode")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FinishReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PricingProfileHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("PricingStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PricingVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal?>("ProviderCostUsd")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.Property<int>("ProviderKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("RequestedThinkingEffort")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UsageStatus")
+                        .HasColumnType("integer");
+
+                    b.HasKey("OperationId", "Ordinal");
+
+                    b.HasIndex("ProviderProfileId", "StartedAtUtc");
+
+                    b.ToTable("LlmChats_InvocationRecords", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatMessageRow", b =>
+                {
+                    b.Property<Guid>("EntryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("CachedInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(400000)
+                        .HasColumnType("character varying(400000)");
+
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("EntryId");
+
+                    b.HasIndex("ConversationId", "Sequence")
+                        .IsUnique();
+
+                    b.HasIndex("ConversationId", "TurnId", "Role")
+                        .IsUnique();
+
+                    b.ToTable("LlmChats_Messages", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationEventRow", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("AttemptOrdinal")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CachedInputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DeliveryMode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FailureCode")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("FinishReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("InputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("InvocationOutcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("OutputTokens")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
+
+                    b.HasKey("OperationId", "Sequence");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.ToTable("LlmChats_OperationEvents", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssistantEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttributionScopeKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("AttributionScopeKind")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("CancellationGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("CancellationRequestedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ClaimedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DispatchPhase")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ExecutionEpoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("ExecutionOwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ExpectedTranscriptRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FailureCode")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("HeartbeatAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("LastEventSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ProviderDispatchReturnedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ProviderDispatchStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<long?>("ResultingTranscriptRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("TranscriptCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("TurnAdmittedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId", "StartedAtUtc");
+
+                    b.HasIndex("Status", "CompletedAtUtc");
+
+                    b.HasIndex("Status", "StartedAtUtc");
+
+                    b.HasIndex("AttributionScopeKind", "AttributionScopeKey", "StartedAtUtc");
+
+                    b.HasIndex("Status", "LeaseExpiresAtUtc", "StartedAtUtc");
+
+                    b.ToTable("LlmChats_Operations", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", b =>
+                {
+                    b.Property<Guid>("ConversationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccelerationModel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("AccelerationPayloadJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccelerationProviderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("AccelerationStrategyId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("ActiveTurnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CompensationAccelerationModel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CompensationAccelerationPayloadJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CompensationAccelerationProviderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CompensationAccelerationStrategyId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CompensationModel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("CompensationProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("CompensationProviderKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CompensationProviderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("EntryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("PendingUserEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ProviderKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<long>("TranscriptRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("TurnAdmittedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("TurnAdmittedRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ConversationId");
+
+                    b.ToTable("LlmChats_Transcripts", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Infrastructure.BackgroundJobs.BackgroundJobRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6291,6 +6899,75 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsUnique();
 
                     b.ToTable("process_strategy_result_receipts", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", null)
+                        .WithMany()
+                        .HasForeignKey("DefinitionId", "DefinitionRevision")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", null)
+                        .WithMany()
+                        .HasForeignKey("DefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionTagRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", null)
+                        .WithMany()
+                        .HasForeignKey("DefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatInvocationRecordRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", null)
+                        .WithMany()
+                        .HasForeignKey("OperationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatMessageRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationEventRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", null)
+                        .WithMany()
+                        .HasForeignKey("OperationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", b =>
+                {
+                    b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b =>

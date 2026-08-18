@@ -1,3 +1,4 @@
+using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
@@ -6,10 +7,12 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Persistence;
 
 public sealed class MigrationBootstrapIntegrationTests
 {
+    private const string PreLlmChatsMigrationId = "20260813012618_CorrectProcessPlanHashClassification";
+
     [Fact]
     public async Task Bootstrap_migrates_a_new_postgresql_database()
     {
@@ -53,6 +56,25 @@ public sealed class MigrationBootstrapIntegrationTests
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         Assert.True(await dbContext.Database.CanConnectAsync());
+        await AssertCurrentMigrationChainAsync(dbContext);
+    }
+
+    [Fact]
+    public async Task Llm_chats_migration_upgrades_the_immediately_previous_schema()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        await using var database = PostgresTestDatabaseLease.Create("integration-postgres-llm-chats-upgrade");
+        await using var dbContext = new AppDbContext(database.CreateAppDbContextOptions());
+        var migrator = dbContext.Database.GetService<IMigrator>();
+
+        await migrator.MigrateAsync(PreLlmChatsMigrationId);
+        Assert.DoesNotContain(
+            "20260814163458_AddLlmChats",
+            await dbContext.Database.GetAppliedMigrationsAsync());
+        Assert.Empty(await ReadLlmChatsTableNamesAsync(dbContext));
+
+        await migrator.MigrateAsync();
+
         await AssertCurrentMigrationChainAsync(dbContext);
     }
 
@@ -200,6 +222,52 @@ public sealed class MigrationBootstrapIntegrationTests
         Assert.Equal(knownMigrations, appliedMigrations);
         await AssertProcessRuntimeStepHostCapabilitiesColumnAsync(dbContext);
         await AssertCustomBaselineIndexesAsync(dbContext);
+        await AssertLlmChatsTablesAsync(dbContext);
+    }
+
+    private static async Task AssertLlmChatsTablesAsync(AppDbContext dbContext)
+    {
+        string[] expectedTableNames =
+        [
+            "LlmChats_Conversations",
+            "LlmChats_DefinitionRevisions",
+            "LlmChats_DefinitionTags",
+            "LlmChats_Definitions",
+            "LlmChats_InvocationRecords",
+            "LlmChats_Messages",
+            "LlmChats_OperationEvents",
+            "LlmChats_Operations",
+            "LlmChats_Transcripts"
+        ];
+
+        Assert.Equal(expectedTableNames, await ReadLlmChatsTableNamesAsync(dbContext));
+    }
+
+    private static async Task<string[]> ReadLlmChatsTableNamesAsync(AppDbContext dbContext)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        var tableNames = new List<string>();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = current_schema()
+              AND table_name LIKE 'LlmChats\_%' ESCAPE '\'
+            ORDER BY table_name;
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            tableNames.Add(reader.GetString(0));
+        }
+
+        return [.. tableNames];
     }
 
     private static async Task AssertProcessRuntimeStepHostCapabilitiesColumnAsync(AppDbContext dbContext)

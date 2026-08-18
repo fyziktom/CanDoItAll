@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
 using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {

@@ -1,0 +1,34 @@
+{
+  "subbundleId": "SB08",
+  "status": "completed",
+  "proofTier": "Governed",
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "repositoryHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "semanticInvariants": "proof/SB08/semantic-invariants.md",
+  "consumerClosure": "proof/SB08/consumer-migration.md",
+  "changedFilesAndRanges": "proof/SB08/changed-files-and-ranges.json",
+  "changedFileHashes": "proof/SB08/changed-file-hashes.json",
+  "impactedTestsRequest": "proof/SB08/impacted-tests-request.json",
+  "impactedTestsResponse": "proof/SB08/impacted-tests-response.json",
+  "architectureReview": "proof/SB08/architecture-review.md",
+  "sourceGuards": "proof/SB08/source-guards.md",
+  "transcripts": ["proof/SB08/transcripts/validation.txt"],
+  "snapshotIds": ["snap-20260816102508-c82f9e5f", "snap-20260816142006-84a4f698"],
+  "codeAnalyticsCorrelationIds": [
+    "code-analytics_fd6e453a316245cf9116fd356ee53c12",
+    "code-analytics_dcdfe58ccc714b7a8d1653deb3bb72a5",
+    "code-analytics_27fe8bdeb4c14d21aa23170f428cc3a0",
+    "code-analytics_cbde331b19ac497d92a7727edb30ace7",
+    "code-analytics_d84697b78d1e4008b1ae497684c22a55"
+  ],
+  "tests": [
+    { "selection": "cross-consumer focused", "discovered": 81, "passed": 81, "failed": 0 },
+    { "selection": "AllSuppliedSuites Components, reused without invalidation", "discovered": 990, "passed": 990, "failed": 0 }
+  ],
+  "builds": [
+    { "project": "CanDoItAll.Modules.Processes", "result": "pass", "warnings": 0, "errors": 0 },
+    { "projects": "neutral + Agent components + Agent module", "result": "pass", "source": "proof/SB07/manifest.json" }
+  ],
+  "browserProof": ["proof/SB05/browser-parity.md", "proof/SB07/browser-parity.md"],
+  "checkpointDecision": "pass-to-SB09"
+}

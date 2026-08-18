@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class CanvasAdapterTests
 {
@@ -147,5 +147,4 @@ public sealed class CanvasAdapterTests
     }
 
 }
-
 

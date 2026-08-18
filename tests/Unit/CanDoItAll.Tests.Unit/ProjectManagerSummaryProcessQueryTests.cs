@@ -10,7 +10,7 @@ using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectManagerSummaryProcessQueryTests
 {
@@ -49,6 +49,7 @@ public sealed class ProjectManagerSummaryProcessQueryTests
                 new NoopProjectPartyIntegrationBridge(),
                 new ProjectPlanSummaryCalculator()),
             new EmptyAgentExecutionReportReader(),
+            new EmptyLlmChatProjectStructureReportStore(),
             new EmptyWorkflowProjectStructureReportStore(),
             processStore,
             CreateProcessDefinitionCatalog(),
@@ -85,6 +86,7 @@ public sealed class ProjectManagerSummaryProcessQueryTests
         var service = new ProjectManagerSummaryQueryService(
             planAnalytics: null!,
             agentWorkspace: null!,
+            simpleChatProjectStructureReportStore: null!,
             workflowProjectStructureReportStore: null!,
             processRunRecordStore: processStore,
             processDefinitionCatalog: CreateProcessDefinitionCatalog(),
@@ -136,6 +138,7 @@ public sealed class ProjectManagerSummaryProcessQueryTests
         var service = new ProjectManagerSummaryQueryService(
             planAnalytics: null!,
             agentWorkspace: null!,
+            simpleChatProjectStructureReportStore: null!,
             workflowProjectStructureReportStore: null!,
             processRunRecordStore: processStore,
             processDefinitionCatalog: CreateProcessDefinitionCatalog(),
@@ -169,6 +172,7 @@ public sealed class ProjectManagerSummaryProcessQueryTests
         var service = new ProjectManagerSummaryQueryService(
             planAnalytics: null!,
             agentWorkspace: null!,
+            simpleChatProjectStructureReportStore: null!,
             workflowProjectStructureReportStore: null!,
             processRunRecordStore: processStore,
             processDefinitionCatalog: CreateProcessDefinitionCatalog(),

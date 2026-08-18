@@ -1,12 +1,13 @@
 using System.Net.Http.Json;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Playwright.Flows;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Visual;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class ProjectStructureMermaidPlaywrightTests(PlaywrightAppFixture fixture)

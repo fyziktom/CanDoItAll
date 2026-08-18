@@ -1,6 +1,6 @@
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Visual;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class AppShellLayoutTests

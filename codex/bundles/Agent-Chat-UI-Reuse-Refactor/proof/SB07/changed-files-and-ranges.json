@@ -1,0 +1,27 @@
+{
+  "subbundleId": "SB07",
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "candidateHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "productionChanges": [
+    { "path": "src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj", "ranges": [{ "start": 18, "end": 18 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/_Imports.razor", "ranges": [{ "start": 3, "end": 3 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor", "ranges": [{ "start": 1, "end": 70 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingWindow.razor.css", "ranges": [{ "start": 1, "end": 11 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingCatalog.razor", "ranges": [{ "start": 1, "end": 57 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationFloatingCatalog.razor.css", "ranges": [{ "start": 1, "end": 23 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationActiveItemPresentation.cs", "ranges": [{ "start": 1, "end": 8 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationActiveList.razor", "ranges": [{ "start": 1, "end": 70 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationActiveList.razor.css", "ranges": [{ "start": 1, "end": 11 }] },
+    { "path": "src/UI/CanDoItAll.Conversations.Components/ConversationActiveChatLifecycleFields.razor", "ranges": [{ "start": 1, "end": 60 }] },
+    { "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentActiveChatPresentationMapper.cs", "ranges": [{ "start": 1, "end": 56 }] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor", "ranges": [{ "start": 8, "end": 15 }, { "start": 36, "end": 45 }, { "start": 119, "end": 120 }, { "start": 135, "end": 144 }] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor.cs", "ranges": [{ "start": 6, "end": 6 }, { "start": 68, "end": 72 }, { "start": 418, "end": 422 }, { "start": 553, "end": 555 }] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor.css", "ranges": [{ "start": 12, "end": 12 }, { "start": 24, "end": 25 }] },
+    { "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatSettingsPanel.razor", "ranges": [{ "start": 11, "end": 18 }] }
+  ],
+  "testChanges": [
+    { "path": "tests/Components/CanDoItAll.Tests.Components/Conversations/ConversationFloatingComponentsTests.cs", "ranges": [{ "start": 1, "end": 129 }] },
+    { "path": "tests/Components/CanDoItAll.Tests.Components/AgentActiveChatPresentationMapperTests.cs", "ranges": [{ "start": 1, "end": 53 }] },
+    { "path": "tests/Components/CanDoItAll.Tests.Components/FloatingAgentChatSettingsPanelTests.cs", "ranges": [{ "start": 1, "end": 78 }] }
+  ]
+}

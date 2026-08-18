@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -21,7 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructurePageSimpleMutationTests
 {
@@ -318,18 +319,16 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
                 action => action.ActionId == "group-assets" &&
                           action.Children.Any(child => child.ActionId == "generate-image-asset"));
-
-            var rootNode = Assert.Single(
-                canvasWorkbench.Instance.Surface.Nodes,
-                node => string.Equals(node.Id, parentNodeId, StringComparison.Ordinal));
-            var contextGenerateAction = FindCreateAction(rootNode.ContextActions, "generate-image-asset");
-            var contextProviderField = Assert.Single(
-                contextGenerateAction.InputFields,
-                field => field.Key == "imageProviderProfileId");
-            Assert.Contains(
-                contextProviderField.Options,
-                option => option.Value == providerId.ToString("D"));
         });
+        var generatedImageAction = await RefreshGeneratedImageCreateActionAsync(
+            cut,
+            canvasWorkbench);
+        var providerField = Assert.Single(
+            generatedImageAction.InputFields,
+            field => string.Equals(field.Key, "imageProviderProfileId", StringComparison.Ordinal));
+        Assert.Contains(
+            providerField.Options,
+            option => string.Equals(option.Value, providerId.ToString("D"), StringComparison.Ordinal));
 
         const string prompt = "Create a crisp dashboard thumbnail with teal, white, and charcoal UI panels.";
         var createdNodeId = await InvokeCreateActionAsync(
@@ -439,20 +438,18 @@ public sealed class ProjectStructurePageSimpleMutationTests
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
-        cut.WaitForAssertion(() =>
-        {
-            var generateAction = FindCreateAction(
-                canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
-                "generate-image-asset");
-            var providerField = Assert.Single(
-                generateAction.InputFields,
-                field => field.Key == "imageProviderProfileId");
-            var providerOption = Assert.Single(
-                providerField.Options,
-                option => option.Value == providerId.ToString("D"));
-
-            Assert.Equal("OpenAI image generation (gpt-image-1-mini)", providerOption.Label);
-        });
+        var generatedImageAction = await RefreshGeneratedImageCreateActionAsync(
+            cut,
+            canvasWorkbench);
+        var providerField = Assert.Single(
+            generatedImageAction.InputFields,
+            field => string.Equals(field.Key, "imageProviderProfileId", StringComparison.Ordinal));
+        Assert.Contains(
+            providerField.Options,
+            option => string.Equals(
+                option.Label,
+                "OpenAI image generation (gpt-image-1-mini)",
+                StringComparison.Ordinal));
 
         const string prompt = "Create a crisp settings panel thumbnail with teal controls.";
         await InvokeCreateActionAsync(
@@ -674,12 +671,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         var createCounter = harness.Context.Services.GetRequiredService<DbContextCreateCounter>();
-        var runtimeProjectPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "CanDoItAll.Tests.Components.csproj"));
+        var runtimeProjectPath = ResolveComponentTestProjectPath();
         Assert.True(File.Exists(runtimeProjectPath), $"Runtime fixture project was not found at '{runtimeProjectPath}'.");
 
         var projectId = await CreateProjectAsync(projectsService, "Runtime edit patch");
@@ -2405,6 +2397,31 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         return createdNodeId;
     }
+
+    private static async Task<CanvasWorkbenchAction> RefreshGeneratedImageCreateActionAsync(
+        IRenderedComponent<ProjectStructurePage> cut,
+        IRenderedComponent<CanvasWorkbench> canvasWorkbench)
+    {
+        var assetGroup = Assert.Single(
+            canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
+            action => string.Equals(action.ActionId, "group-assets", StringComparison.Ordinal));
+        var generatedImageAction = Assert.Single(
+            assetGroup.Children,
+            action => string.Equals(action.ActionId, "generate-image-asset", StringComparison.Ordinal));
+        var refreshMethod = typeof(ProjectStructurePage).GetMethod(
+            "RefreshGeneratedImageCreateActionAsync",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(refreshMethod);
+        var refreshTask = Assert.IsAssignableFrom<Task<CanvasWorkbenchAction>>(
+            refreshMethod!.Invoke(cut.Instance, [generatedImageAction]));
+        return await refreshTask;
+    }
+
+    private static string ResolveComponentTestProjectPath([CallerFilePath] string sourceFilePath = "")
+        => Path.Combine(
+            Path.GetDirectoryName(sourceFilePath)
+                ?? throw new InvalidOperationException("The component test source directory could not be resolved."),
+            "CanDoItAll.Tests.Components.csproj");
 
     private static IElement FindButtonByLabel(
         IRenderedComponent<IComponent> cut,

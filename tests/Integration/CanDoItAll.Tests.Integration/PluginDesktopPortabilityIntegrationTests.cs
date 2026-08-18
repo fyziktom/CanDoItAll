@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.External;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class PluginDesktopPortabilityIntegrationTests

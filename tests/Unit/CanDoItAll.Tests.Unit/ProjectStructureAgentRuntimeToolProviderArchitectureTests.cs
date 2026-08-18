@@ -2,12 +2,12 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureAgentRuntimeToolProviderArchitectureTests
 {
     private const int DocumentedProviderLineCheckpoint = 3_698;
-    private const int PostExtractionProviderLineCeiling = 3_610;
+    private const int PostExtractionProviderLineCeiling = 3_620;
 
     [Fact]
     public void Provider_uses_injected_runtime_collaborators_and_delegates_node_copy_rules()

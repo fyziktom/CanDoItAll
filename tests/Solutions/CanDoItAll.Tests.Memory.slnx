@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/tests/Memory/">
+    <Project Path="../Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj" />
+    <Project Path="../MAF/CanDoItAll.AgentFramework.Memory.Tests/CanDoItAll.AgentFramework.Memory.Tests.csproj" />
+  </Folder>
+</Solution>

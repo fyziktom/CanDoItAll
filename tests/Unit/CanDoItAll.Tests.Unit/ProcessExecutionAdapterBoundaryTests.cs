@@ -5,7 +5,7 @@ using CanDoItAll.Processes.Builder;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Drivers.Standard;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessExecutionAdapterBoundaryTests
 {

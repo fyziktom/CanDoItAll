@@ -1,4 +1,4 @@
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class MemoryUiRefactoringCheckpointTests
 {

@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="..\..\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
     <ProjectReference Include="..\..\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabilities.Templates.csproj" />
     <ProjectReference Include="..\..\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
@@ -28,6 +29,9 @@
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />

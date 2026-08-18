@@ -1,0 +1,648 @@
+- generic [ref=f1e1] [box=0,0,1920,1080]:
+  - generic [ref=f1e258] [box=0,0,1920,1080]:
+    - complementary [ref=f1e259] [box=16,8,76,1064]:
+      - generic [ref=f1e260] [box=27,19,54,1042]:
+        - generic [ref=f1e261] [box=27,19,54,40]:
+          - generic [ref=f1e262] [box=27,19,54,40]:
+            - generic [ref=f1e263] [box=34,19,40,40]: apps
+            - generic [ref=f1e265] [box=54,39,1,1]: CanDoItAll local delivery workbench
+          - button "Expand navigation" [ref=f1e266] [box=69,25,28,28]:
+            - generic [ref=f1e267] [box=73,29,20,20]: chevron_right
+        - navigation "Primary navigation" [ref=f1e268] [box=27,67,54,783]:
+          - button "Dashboard" [ref=f1e270] [box=32,71,44,44]:
+            - generic [ref=f1e271] [box=34,73,40,40]: dashboard
+          - button "Projects" [ref=f1e274] [box=32,121,44,44]:
+            - generic [ref=f1e275] [box=34,123,40,40]: folder_open
+          - button "Collaboration" [ref=f1e278] [box=32,171,44,44]:
+            - generic [ref=f1e279] [box=34,173,40,40]: forum
+            - generic [ref=f1e281] [box=56,173,18,16]: "90"
+          - button "CRM / HR" [ref=f1e283] [box=32,221,44,44]:
+            - generic [ref=f1e284] [box=34,223,40,40]: groups
+          - button "Agents" [ref=f1e287] [box=32,271,44,44]:
+            - generic [ref=f1e288] [box=34,273,40,40]: smart_toy
+          - button "Workflows" [ref=f1e291] [box=32,321,44,44]:
+            - generic [ref=f1e292] [box=34,323,40,40]: account_tree
+          - button "Processes" [ref=f1e295] [box=32,371,44,44]:
+            - generic [ref=f1e296] [box=34,373,40,40]: account_tree
+          - button "Live Processes" [ref=f1e299] [box=32,421,44,44]:
+            - generic [ref=f1e300] [box=34,423,40,40]: monitor_heart
+          - button "Memory Providers" [ref=f1e303] [box=32,471,44,44]:
+            - generic [ref=f1e304] [box=34,473,40,40]: psychology
+          - button "Resources" [ref=f1e307] [box=32,521,44,44]:
+            - generic [ref=f1e308] [box=34,523,40,40]: inventory_2
+          - button "Plugins" [ref=f1e311] [box=32,571,44,44]:
+            - generic [ref=f1e312] [box=34,573,40,40]: extension
+          - button "Prompt Gallery" [ref=f1e315] [box=32,621,44,44]:
+            - generic [ref=f1e316] [box=34,623,40,40]: library_books
+          - button "Test Lab" [ref=f1e319] [box=32,671,44,44]:
+            - generic [ref=f1e320] [box=34,673,40,40]: science
+          - button "More pages" [ref=f1e323] [box=32,721,44,44]:
+            - generic [ref=f1e324] [box=34,723,40,40]: expand_less
+        - generic [ref=f1e327] [box=27,867,54,194]:
+          - button "Agent chats" [active] [ref=f1e329] [box=27,867,54,44]:
+            - generic [ref=f1e330] [box=36,871,36,36]: smart_toy
+          - button "Settings" [ref=f1e334] [box=27,917,54,44]:
+            - generic [ref=f1e335] [box=36,921,36,36]: settings
+          - button "Runtime capabilities" [ref=f1e339] [box=27,967,54,44]:
+            - generic [ref=f1e340] [box=36,971,36,36]: health_and_safety
+          - button "Switch Database" [ref=f1e344] [box=27,1017,54,44]:
+            - generic [ref=f1e345] [box=36,1021,36,36]: storage
+    - main [ref=f1e348] [box=100,8,1804,1064]:
+      - generic [ref=f1e349] [box=100,8,1804,42]:
+        - generic [ref=f1e352] [box=100,8,1764,38]:
+          - tablist "Open workspace tabs" [ref=f1e353] [box=100,8,1487,38]:
+            - tab "Dashboard" [ref=f1e355] [box=111,17,721,20]:
+              - generic [ref=f1e357] [box=176,17,20,20]: push_pin
+            - tab "Agents" [selected] [ref=f1e360] [box=858,19,721,16]
+          - textbox "Search tabs" [ref=f1e363] [box=1595,10,269,34]
+        - button "Workspace status" [ref=f1e367] [cursor=pointer] [box=1872,13,32,32]:
+          - generic [ref=f1e368] [box=1886,23,3,11]: i
+      - generic [ref=f1e371] [box=125,83,1754,964]:
+        - generic [ref=f1e373] [box=125,83,1739,70]:
+          - generic [ref=f1e374] [box=125,83,1539,70]:
+            - generic [ref=f1e375] [box=125,83,1021,70]:
+              - paragraph [ref=f1e376] [box=125,89,119,15]: AgentFramework
+              - heading "Integrated technical agent runtime" [level=1] [ref=f1e377] [box=254,83,299,28]
+              - paragraph [ref=f1e378] [box=125,121,896,32]: This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.
+            - generic [ref=f1e379] [box=1158,92,506,52]:
+              - generic [ref=f1e380] [box=1158,92,127,22]: 28 technical agents
+              - generic [ref=f1e383] [box=1292,92,83,22]: 6 providers
+              - generic [ref=f1e386] [box=1384,92,129,22]: 28 bound resources
+              - generic [ref=f1e389] [box=1521,92,104,22]: 127 capabilities
+              - generic [ref=f1e392] [box=1158,122,89,22]: 1 active runs
+              - generic [ref=f1e395] [box=1255,122,89,22]: 6 failed runs
+          - generic [ref=f1e398] [box=1672,100,192,36]:
+            - button "Open HR Agent" [ref=f1e400] [box=1672,100,36,36]:
+              - img "HR Agent" [ref=f1e402] [box=1674,102,32,32]
+            - button "Show AgentFramework shell help" [ref=f1e404] [cursor=pointer] [box=1716,110,16,16]:
+              - generic [ref=f1e405] [box=1722,113,4,10]: "?"
+            - button "Open CRM / HR agents" [ref=f1e407] [box=1740,100,36,36]:
+              - generic [ref=f1e408] [box=1748,108,20,20]: groups
+              - generic [ref=f1e409] [box=1758,117,1,1]: groups
+            - button "Open workflows" [ref=f1e411] [box=1784,100,36,36]:
+              - generic [ref=f1e412] [box=1792,108,20,20]: account_tree
+              - generic [ref=f1e413] [box=1802,117,1,1]: flow
+            - button "Open processes" [ref=f1e415] [box=1828,100,36,36]:
+              - generic [ref=f1e416] [box=1836,108,20,20]: account_tree
+              - generic [ref=f1e417] [box=1846,117,1,1]: flow
+        - generic [ref=f1e419] [box=125,169,1739,42]:
+          - generic [ref=f1e421] [box=125,169,1134,42]:
+            - button "Overview" [ref=f1e422] [box=125,169,99,42]
+            - button "Agents28" [ref=f1e423] [box=232,169,122,42]
+            - button "Providers6" [ref=f1e424] [box=362,169,131,42]
+            - button "Voice" [ref=f1e425] [box=501,169,72,42]
+            - button "Floating chat" [ref=f1e426] [box=581,169,125,42]
+            - button "Chat" [ref=f1e427] [box=714,169,67,42]
+            - button "Capabilities127" [ref=f1e428] [box=789,169,159,42]
+            - button "Governance1" [ref=f1e429] [box=956,169,148,42]
+            - button "Diagnostics6" [ref=f1e430] [box=1112,169,147,42]
+          - button "Load default agents and providers" [ref=f1e432] [box=1828,172,36,36]:
+            - generic [ref=f1e433] [box=1836,180,20,20]: sync
+            - generic [ref=f1e434] [box=1846,189,1,1]: cloud sync
+        - generic [ref=f1e438] [box=125,227,1739,760]:
+          - article [ref=f1e439] [box=125,227,420,760]:
+            - generic [ref=f1e441] [box=146,248,378,238]:
+              - generic [ref=f1e442] [box=146,248,277,64]:
+                - generic [ref=f1e443] [box=146,248,277,24]:
+                  - paragraph [ref=f1e444] [box=146,248,103,24]: Agent threads
+                  - button "Show agent thread help" [ref=f1e446] [cursor=pointer] [box=257,252,16,16]:
+                    - generic [ref=f1e447] [box=263,255,4,10]: "?"
+                - generic [ref=f1e448] [box=146,280,277,32]:
+                  - img ".NET Application Developer" [ref=f1e449] [box=146,280,32,32]
+                  - generic [ref=f1e450] [box=187,288,236,16]: "Selected agent: .NET Application Developer"
+              - generic [ref=f1e451] [box=431,248,93,238]:
+                - button "Switch Agent" [ref=f1e452] [box=431,248,93,114]:
+                  - generic [ref=f1e453] [box=444,295,20,20]: sync
+                - button "Refresh" [ref=f1e455] [box=431,370,78,42]
+                - button "New thread" [ref=f1e457] [box=431,420,93,66]
+            - generic [ref=f1e460] [box=146,519,359,235]:
+              - textbox "Search agent threads" [ref=f1e461] [box=146,519,359,43]:
+                - /placeholder: Search threads
+              - generic [ref=f1e463] [box=163,590,325,146]:
+                - generic [ref=f1e464] [box=163,590,325,30]:
+                  - paragraph [ref=f1e465] [box=163,590,56,15]: Threads
+                  - generic [ref=f1e466] [box=438,590,50,30]: 1 of 1
+                - button "New exploration thread 13.08 10:13 Empty thread No messages yet." [ref=f1e467] [cursor=pointer] [box=163,628,325,108]:
+                  - generic [ref=f1e468] [box=178,642,294,23]:
+                    - generic [ref=f1e469] [box=178,642,213,18]: New exploration thread
+                    - generic [ref=f1e470] [box=400,642,72,23]: 13.08 10:13
+                  - generic [ref=f1e471] [box=178,674,294,19]: Empty thread
+                  - generic [ref=f1e472] [box=178,704,294,19]: No messages yet.
+          - article [ref=f1e474] [box=561,227,1303,760]:
+            - generic [ref=f1e476] [box=582,248,1261,42]:
+              - generic [ref=f1e477] [box=582,249,1087,40]:
+                - img ".NET Application Developer" [ref=f1e478] [box=582,249,40,40]
+                - generic [ref=f1e479] [box=632,254,553,30]:
+                  - generic [ref=f1e480] [box=832,254,353,30]:
+                    - generic [ref=f1e481] [box=832,254,55,30]: Ready
+                    - generic [ref=f1e482] [box=893,254,98,30]: Auto Approve
+                    - generic [ref=f1e483] [box=997,254,84,30]: 0 messages
+                    - generic [ref=f1e484] [box=1087,254,109,30]: 13.08.2026 10:13
+                  - generic [ref=f1e487] [box=632,254,182,30]:
+                    - paragraph [ref=f1e488] [box=632,260,146,18]: New exploration thread
+                    - button "Edit Title" [ref=f1e489] [box=784,254,30,30]
+              - button "Runtime details" [disabled] [ref=f1e493] [box=1680,248,163,42]:
+                - generic [ref=f1e494] [box=1693,259,20,20]: terminal
+            - generic [ref=f1e497] [box=582,307,1242,132]:
+              - paragraph [ref=f1e498] [box=599,328,1208,16]: Conversation
+              - heading "This thread is ready for the first prompt" [level=3] [ref=f1e499] [box=599,350,1208,24]
+              - paragraph [ref=f1e500] [box=867,378,672,40]: Use the composer below to ask for a plan, a status update, or an actual working answer from the selected agent.
+            - generic [ref=f1e505] [box=582,840,1261,125]:
+              - textbox "Ask for a plan, a diagnosis, or a concrete next step." [ref=f1e506] [box=582,840,1106,125]
+              - generic [ref=f1e507] [box=1694,840,149,125]:
+                - button "Insert from prompt gallery" [ref=f1e508] [box=1694,840,46,38]:
+                  - generic [ref=f1e509] [box=1707,849,20,20]: library_books
+                  - generic [ref=f1e510] [box=1716,859,1,1]: library books
+                - generic "Attach image file" [ref=f1e511] [cursor=pointer] [box=1745,840,40,34]: image
+                - button "Attach workspace artifact" [ref=f1e513] [box=1797,840,46,38]:
+                  - generic [ref=f1e514] [box=1810,849,20,20]: add
+                  - generic [ref=f1e515] [box=1820,859,1,1]: add
+                - button "Send prompt" [ref=f1e516] [box=1694,884,46,38]:
+                  - generic [ref=f1e517] [box=1707,893,20,20]: send
+                  - generic [ref=f1e518] [box=1716,903,1,1]: send
+                - button "Start voice recording" [disabled] [ref=f1e519] [box=1745,884,46,38]:
+                  - generic [ref=f1e520] [box=1758,893,20,20]: mic
+                  - generic [ref=f1e521] [box=1768,903,1,1]: mic
+                - button "Speak latest assistant message" [disabled] [ref=f1e522] [box=1797,884,46,38]:
+                  - generic [ref=f1e523] [box=1810,893,20,20]: volume_up
+                  - generic [ref=f1e524] [box=1820,903,1,1]: volume up
+                - button "Toggle audio mode" [disabled] [ref=f1e525] [box=1694,928,46,38]:
+                  - generic [ref=f1e526] [box=1707,937,20,20]: hearing
+                  - generic [ref=f1e527] [box=1716,946,1,1]: hearing
+  - region "Floating agent chats" [ref=f1e528] [box=1344,16,560,720]:
+    - generic [ref=f1e529] [box=1357,29,535,57]:
+      - generic [ref=f1e530] [box=1357,29,273,57]:
+        - paragraph [ref=f1e531] [box=1357,29,273,14]: Agents
+        - heading "Agent chats" [level=3] [ref=f1e532] [box=1357,45,273,18]
+        - paragraph [ref=f1e533] [box=1357,66,273,19]: Start a contextual chat or reopen an active one.
+      - generic [ref=f1e534] [box=1784,29,107,32]:
+        - button "Minimize window" [ref=f1e535] [box=1784,29,32,32]:
+          - generic [ref=f1e536] [box=1793,37,14,14]: minimize
+        - button "Restart window position and size" [disabled] [ref=f1e537] [box=1822,29,32,32]:
+          - generic [ref=f1e538] [box=1831,37,14,14]: restart_alt
+        - button "Hide window" [ref=f1e539] [box=1859,29,32,32]:
+          - generic [ref=f1e540] [box=1868,37,14,14]: visibility_off
+    - generic [ref=f1e542] [box=1357,97,517,627]:
+      - tablist "Agent chat catalog" [ref=f1e543] [box=1357,97,517,44]:
+        - tab "Agents" [selected] [ref=f1e544] [box=1361,98,108,43]:
+          - generic [ref=f1e545] [box=1376,109,20,20]: smart_toy
+        - tab "Active chats" [ref=f1e547] [box=1477,97,143,43]:
+          - generic [ref=f1e548] [box=1492,108,20,20]: forum
+      - tabpanel "Agents" [ref=f1e551] [box=1357,139,517,584]:
+        - generic [ref=f1e552] [box=1372,155,486,554]:
+          - textbox "Search floating chat agents" [ref=f1e553] [box=1372,155,486,42]:
+            - /placeholder: Search agents
+          - generic [ref=f1e554] [box=1372,209,486,30]:
+            - generic [ref=f1e555] [box=1372,209,95,30]: Agents · Chat
+            - generic [ref=f1e556] [box=1473,209,55,30]: Ready
+            - generic [ref=f1e557] [box=1534,209,87,30]: 28 available
+          - list "Available chat agents" [ref=f1e558] [box=1372,251,486,458]:
+            - listitem [ref=f1e559] [box=1372,252,467,76]:
+              - button "Select .NET Application Developer" [ref=f1e560] [cursor=pointer] [box=1373,253,386,82]:
+                - img ".NET Application Developer" [ref=f1e561] [box=1384,278,32,32]
+                - generic [ref=f1e562] [box=1427,262,327,64]:
+                  - generic [ref=f1e563] [box=1427,262,327,17]: .NET Application Developer
+                  - generic [ref=f1e565] [box=1427,281,327,14]: .NET implementation specialist
+                  - generic [ref=f1e566] [box=1427,296,327,30]:
+                    - generic [ref=f1e567] [box=1427,296,97,30]: Programming
+                    - generic [ref=f1e568] [box=1530,305,60,12]: gpt-5.6-luna
+              - generic [ref=f1e569] [box=1759,253,79,82]:
+                - button "Start a new chat with .NET Application Developer" [ref=f1e571] [box=1761,278,32,32]:
+                  - generic [ref=f1e572] [box=1767,284,20,20]: add_comment
+                  - generic [ref=f1e573] [box=1777,294,1,1]: add comment
+                - button "Open chat history for .NET Application Developer" [ref=f1e575] [box=1797,278,32,32]:
+                  - generic [ref=f1e576] [box=1803,284,20,20]: history
+                  - generic [ref=f1e577] [box=1813,294,1,1]: history
+            - listitem [ref=f1e578] [box=1372,335,467,76]:
+              - button "Select .NET QA Review Lead" [ref=f1e579] [cursor=pointer] [box=1373,336,386,82]:
+                - img ".NET QA Review Lead" [ref=f1e580] [box=1384,360,32,32]
+                - generic [ref=f1e581] [box=1427,344,327,64]:
+                  - generic [ref=f1e582] [box=1427,344,327,17]: .NET QA Review Lead
+                  - generic [ref=f1e584] [box=1427,363,327,14]: .NET QA specialist
+                  - generic [ref=f1e585] [box=1427,379,327,30]:
+                    - generic [ref=f1e586] [box=1427,379,39,30]: QA
+                    - generic [ref=f1e587] [box=1472,388,60,12]: gpt-5.6-luna
+              - generic [ref=f1e588] [box=1759,336,79,82]:
+                - button "Start a new chat with .NET QA Review Lead" [ref=f1e590] [box=1761,360,32,32]:
+                  - generic [ref=f1e591] [box=1767,366,20,20]: add_comment
+                  - generic [ref=f1e592] [box=1777,376,1,1]: add comment
+                - button "Open chat history for .NET QA Review Lead" [ref=f1e594] [box=1797,360,32,32]:
+                  - generic [ref=f1e595] [box=1803,366,20,20]: history
+                  - generic [ref=f1e596] [box=1813,376,1,1]: history
+            - listitem [ref=f1e597] [box=1372,417,467,76]:
+              - button "Select .NET Runtime Failure Analyst" [ref=f1e598] [cursor=pointer] [box=1373,418,386,82]:
+                - img ".NET Runtime Failure Analyst" [ref=f1e599] [box=1384,443,32,32]
+                - generic [ref=f1e600] [box=1427,427,327,64]:
+                  - generic [ref=f1e601] [box=1427,427,327,17]: .NET Runtime Failure Analyst
+                  - generic [ref=f1e603] [box=1427,446,327,14]: .NET and Blazor QA diagnostic specialist
+                  - generic [ref=f1e604] [box=1427,461,327,30]:
+                    - generic [ref=f1e605] [box=1427,461,39,30]: QA
+                    - generic [ref=f1e606] [box=1472,470,60,12]: gpt-5.6-luna
+              - generic [ref=f1e607] [box=1759,418,79,82]:
+                - button "Start a new chat with .NET Runtime Failure Analyst" [ref=f1e609] [box=1761,443,32,32]:
+                  - generic [ref=f1e610] [box=1767,449,20,20]: add_comment
+                  - generic [ref=f1e611] [box=1777,458,1,1]: add comment
+                - button "Open chat history for .NET Runtime Failure Analyst" [ref=f1e613] [box=1797,443,32,32]:
+                  - generic [ref=f1e614] [box=1803,449,20,20]: history
+                  - generic [ref=f1e615] [box=1813,458,1,1]: history
+            - listitem [ref=f1e616] [box=1372,499,467,76]:
+              - button "Select .NET Solution Architect" [ref=f1e617] [cursor=pointer] [box=1373,500,386,82]:
+                - img ".NET Solution Architect" [ref=f1e618] [box=1384,525,32,32]
+                - generic [ref=f1e619] [box=1427,509,327,64]:
+                  - generic [ref=f1e620] [box=1427,509,327,17]: .NET Solution Architect
+                  - generic [ref=f1e622] [box=1427,528,327,14]: .NET architecture specialist
+                  - generic [ref=f1e623] [box=1427,543,327,30]:
+                    - generic [ref=f1e624] [box=1427,543,70,30]: Research
+                    - generic [ref=f1e625] [box=1503,552,60,12]: gpt-5.6-luna
+              - generic [ref=f1e626] [box=1759,500,79,82]:
+                - button "Start a new chat with .NET Solution Architect" [ref=f1e628] [box=1761,525,32,32]:
+                  - generic [ref=f1e629] [box=1767,531,20,20]: add_comment
+                  - generic [ref=f1e630] [box=1777,541,1,1]: add comment
+                - button "Open chat history for .NET Solution Architect" [ref=f1e632] [box=1797,525,32,32]:
+                  - generic [ref=f1e633] [box=1803,531,20,20]: history
+                  - generic [ref=f1e634] [box=1813,541,1,1]: history
+            - listitem [ref=f1e635] [box=1372,582,467,76]:
+              - button "Select Blazor Application Developer" [ref=f1e636] [cursor=pointer] [box=1373,583,386,82]:
+                - img "Blazor Application Developer" [ref=f1e637] [box=1384,608,32,32]
+                - generic [ref=f1e638] [box=1427,592,327,64]:
+                  - generic [ref=f1e639] [box=1427,592,327,17]: Blazor Application Developer
+                  - generic [ref=f1e641] [box=1427,610,327,14]: Blazor implementation specialist
+                  - generic [ref=f1e642] [box=1427,626,327,30]:
+                    - generic [ref=f1e643] [box=1427,626,97,30]: Programming
+                    - generic [ref=f1e644] [box=1530,635,60,12]: gpt-5.6-luna
+              - generic [ref=f1e645] [box=1759,583,79,82]:
+                - button "Start a new chat with Blazor Application Developer" [ref=f1e647] [box=1761,608,32,32]:
+                  - generic [ref=f1e648] [box=1767,614,20,20]: add_comment
+                  - generic [ref=f1e649] [box=1777,623,1,1]: add comment
+                - button "Open chat history for Blazor Application Developer" [ref=f1e651] [box=1797,608,32,32]:
+                  - generic [ref=f1e652] [box=1803,614,20,20]: history
+                  - generic [ref=f1e653] [box=1813,623,1,1]: history
+            - listitem [ref=f1e654] [box=1372,664,467,76]:
+              - button "Select Business Strategist" [ref=f1e655] [cursor=pointer] [box=1373,665,386,82]:
+                - img "Business Strategist" [ref=f1e656] [box=1384,690,32,32]
+                - generic [ref=f1e657] [box=1427,674,327,64]:
+                  - generic [ref=f1e658] [box=1427,674,327,17]: Business Strategist
+                  - generic [ref=f1e660] [box=1427,693,327,14]: Business planning specialist
+                  - generic [ref=f1e661] [box=1427,708,327,30]:
+                    - generic [ref=f1e662] [box=1427,708,95,30]: Management
+                    - generic [ref=f1e663] [box=1527,717,60,12]: gpt-5.4-mini
+              - generic [ref=f1e664] [box=1759,665,79,82]:
+                - button "Start a new chat with Business Strategist" [ref=f1e666] [box=1761,690,32,32]:
+                  - generic [ref=f1e667] [box=1767,696,20,20]: add_comment
+                  - generic [ref=f1e668] [box=1777,706,1,1]: add comment
+                - button "Open chat history for Business Strategist" [ref=f1e670] [box=1797,690,32,32]:
+                  - generic [ref=f1e671] [box=1803,696,20,20]: history
+                  - generic [ref=f1e672] [box=1813,706,1,1]: history
+            - listitem [ref=f1e673] [box=1372,747,467,76]:
+              - button "Select Capability Curator Agent" [ref=f1e674] [cursor=pointer] [box=1373,748,386,82]:
+                - img "Capability Curator Agent" [ref=f1e675] [box=1384,772,32,32]
+                - generic [ref=f1e676] [box=1427,756,327,64]:
+                  - generic [ref=f1e677] [box=1427,756,327,17]: Capability Curator Agent
+                  - generic [ref=f1e679] [box=1427,775,327,14]: Capability catalog and setup curator
+                  - generic [ref=f1e680] [box=1427,791,327,30]:
+                    - generic [ref=f1e681] [box=1427,791,95,30]: Management
+                    - generic [ref=f1e682] [box=1527,800,60,12]: gpt-5.4-mini
+              - generic [ref=f1e683] [box=1759,748,79,82]:
+                - button "Start a new chat with Capability Curator Agent" [ref=f1e685] [box=1761,772,32,32]:
+                  - generic [ref=f1e686] [box=1767,778,20,20]: add_comment
+                  - generic [ref=f1e687] [box=1777,788,1,1]: add comment
+                - button "Open chat history for Capability Curator Agent" [ref=f1e689] [box=1797,772,32,32]:
+                  - generic [ref=f1e690] [box=1803,778,20,20]: history
+                  - generic [ref=f1e691] [box=1813,788,1,1]: history
+            - listitem [ref=f1e692] [box=1372,829,467,76]:
+              - button "Select Code Review Lead" [ref=f1e693] [cursor=pointer] [box=1373,830,386,82]:
+                - img "Code Review Lead" [ref=f1e694] [box=1384,855,32,32]
+                - generic [ref=f1e695] [box=1427,839,327,64]:
+                  - generic [ref=f1e696] [box=1427,839,327,17]: Code Review Lead
+                  - generic [ref=f1e698] [box=1427,858,327,14]: Code reviewer
+                  - generic [ref=f1e699] [box=1427,873,327,30]:
+                    - generic [ref=f1e700] [box=1427,873,39,30]: QA
+                    - generic [ref=f1e701] [box=1472,882,60,12]: gpt-5.6-luna
+              - generic [ref=f1e702] [box=1759,830,79,82]:
+                - button "Start a new chat with Code Review Lead" [ref=f1e704] [box=1761,855,32,32]:
+                  - generic [ref=f1e705] [box=1767,861,20,20]: add_comment
+                  - generic [ref=f1e706] [box=1777,870,1,1]: add comment
+                - button "Open chat history for Code Review Lead" [ref=f1e708] [box=1797,855,32,32]:
+                  - generic [ref=f1e709] [box=1803,861,20,20]: history
+                  - generic [ref=f1e710] [box=1813,870,1,1]: history
+            - listitem [ref=f1e711] [box=1372,911,467,76]:
+              - button "Select Delivery Manager" [ref=f1e712] [cursor=pointer] [box=1373,912,386,82]:
+                - img "Delivery Manager" [ref=f1e713] [box=1384,937,32,32]
+                - generic [ref=f1e714] [box=1427,921,327,64]:
+                  - generic [ref=f1e715] [box=1427,921,327,17]: Delivery Manager
+                  - generic [ref=f1e717] [box=1427,940,327,14]: Delivery manager
+                  - generic [ref=f1e718] [box=1427,955,327,30]:
+                    - generic [ref=f1e719] [box=1427,955,95,30]: Management
+                    - generic [ref=f1e720] [box=1527,964,60,12]: gpt-5.6-luna
+              - generic [ref=f1e721] [box=1759,912,79,82]:
+                - button "Start a new chat with Delivery Manager" [ref=f1e723] [box=1761,937,32,32]:
+                  - generic [ref=f1e724] [box=1767,943,20,20]: add_comment
+                  - generic [ref=f1e725] [box=1777,953,1,1]: add comment
+                - button "Open chat history for Delivery Manager" [ref=f1e727] [box=1797,937,32,32]:
+                  - generic [ref=f1e728] [box=1803,943,20,20]: history
+                  - generic [ref=f1e729] [box=1813,953,1,1]: history
+            - listitem [ref=f1e730] [box=1372,994,467,76]:
+              - button "Select Delivery QA Observer" [ref=f1e731] [cursor=pointer] [box=1373,995,386,82]:
+                - img "Delivery QA Observer" [ref=f1e732] [box=1384,1020,32,32]
+                - generic [ref=f1e733] [box=1427,1004,327,64]:
+                  - generic [ref=f1e734] [box=1427,1004,327,17]: Delivery QA Observer
+                  - generic [ref=f1e736] [box=1427,1022,327,14]: QA lead and browser-proof reviewer
+                  - generic [ref=f1e737] [box=1427,1038,327,30]:
+                    - generic [ref=f1e738] [box=1427,1038,39,30]: QA
+                    - generic [ref=f1e739] [box=1472,1047,60,12]: gpt-5.6-luna
+              - generic [ref=f1e740] [box=1759,995,79,82]:
+                - button "Start a new chat with Delivery QA Observer" [ref=f1e742] [box=1761,1020,32,32]:
+                  - generic [ref=f1e743] [box=1767,1026,20,20]: add_comment
+                  - generic [ref=f1e744] [box=1777,1035,1,1]: add comment
+                - button "Open chat history for Delivery QA Observer" [ref=f1e746] [box=1797,1020,32,32]:
+                  - generic [ref=f1e747] [box=1803,1026,20,20]: history
+                  - generic [ref=f1e748] [box=1813,1035,1,1]: history
+            - listitem [ref=f1e749] [box=1372,1076,467,76]:
+              - button "Select Financial Strategist" [ref=f1e750] [cursor=pointer] [box=1373,1077,386,82]:
+                - img "Financial Strategist" [ref=f1e751] [box=1384,1102,32,32]
+                - generic [ref=f1e752] [box=1427,1086,327,64]:
+                  - generic [ref=f1e753] [box=1427,1086,327,17]: Financial Strategist
+                  - generic [ref=f1e755] [box=1427,1105,327,14]: Financial planning specialist
+                  - generic [ref=f1e756] [box=1427,1120,327,30]:
+                    - generic [ref=f1e757] [box=1427,1120,89,30]: Spreadsheet
+                    - generic [ref=f1e758] [box=1522,1129,60,12]: gpt-5.4-mini
+              - generic [ref=f1e759] [box=1759,1077,79,82]:
+                - button "Start a new chat with Financial Strategist" [ref=f1e761] [box=1761,1102,32,32]:
+                  - generic [ref=f1e762] [box=1767,1108,20,20]: add_comment
+                  - generic [ref=f1e763] [box=1777,1118,1,1]: add comment
+                - button "Open chat history for Financial Strategist" [ref=f1e765] [box=1797,1102,32,32]:
+                  - generic [ref=f1e766] [box=1803,1108,20,20]: history
+                  - generic [ref=f1e767] [box=1813,1118,1,1]: history
+            - listitem [ref=f1e768] [box=1372,1159,467,76]:
+              - button "Select HR Agent" [ref=f1e769] [cursor=pointer] [box=1373,1160,386,82]:
+                - img "HR Agent" [ref=f1e770] [box=1384,1184,32,32]
+                - generic [ref=f1e771] [box=1427,1168,327,64]:
+                  - generic [ref=f1e772] [box=1427,1168,327,17]: HR Agent
+                  - generic [ref=f1e774] [box=1427,1187,327,14]: Agent governance and workforce intelligence lead
+                  - generic [ref=f1e775] [box=1427,1203,327,30]:
+                    - generic [ref=f1e776] [box=1427,1203,38,30]: HR
+                    - generic [ref=f1e777] [box=1471,1212,60,12]: gpt-5.4-mini
+              - generic [ref=f1e778] [box=1759,1160,79,82]:
+                - button "Start a new chat with HR Agent" [ref=f1e780] [box=1761,1184,32,32]:
+                  - generic [ref=f1e781] [box=1767,1190,20,20]: add_comment
+                  - generic [ref=f1e782] [box=1777,1200,1,1]: add comment
+                - button "Open chat history for HR Agent" [ref=f1e784] [box=1797,1184,32,32]:
+                  - generic [ref=f1e785] [box=1803,1190,20,20]: history
+                  - generic [ref=f1e786] [box=1813,1200,1,1]: history
+            - listitem [ref=f1e787] [box=1372,1241,467,76]:
+              - button "Select HR Staffing Manager" [ref=f1e788] [cursor=pointer] [box=1373,1242,386,82]:
+                - img "HR Staffing Manager" [ref=f1e789] [box=1384,1267,32,32]
+                - generic [ref=f1e790] [box=1427,1251,327,64]:
+                  - generic [ref=f1e791] [box=1427,1251,327,17]: HR Staffing Manager
+                  - generic [ref=f1e793] [box=1427,1270,327,14]: HR staffing and assignment manager
+                  - generic [ref=f1e794] [box=1427,1285,327,30]:
+                    - generic [ref=f1e795] [box=1427,1285,95,30]: Management
+                    - generic [ref=f1e796] [box=1527,1294,60,12]: gpt-5.4-mini
+              - generic [ref=f1e797] [box=1759,1242,79,82]:
+                - button "Start a new chat with HR Staffing Manager" [ref=f1e799] [box=1761,1267,32,32]:
+                  - generic [ref=f1e800] [box=1767,1273,20,20]: add_comment
+                  - generic [ref=f1e801] [box=1777,1282,1,1]: add comment
+                - button "Open chat history for HR Staffing Manager" [ref=f1e803] [box=1797,1267,32,32]:
+                  - generic [ref=f1e804] [box=1803,1273,20,20]: history
+                  - generic [ref=f1e805] [box=1813,1282,1,1]: history
+            - listitem [ref=f1e806] [box=1372,1323,467,76]:
+              - button "Select JavaScript Application Developer" [ref=f1e807] [cursor=pointer] [box=1373,1324,386,82]:
+                - img "JavaScript Application Developer" [ref=f1e808] [box=1384,1349,32,32]
+                - generic [ref=f1e809] [box=1427,1333,327,64]:
+                  - generic [ref=f1e810] [box=1427,1333,327,17]: JavaScript Application Developer
+                  - generic [ref=f1e812] [box=1427,1352,327,14]: JavaScript implementation specialist
+                  - generic [ref=f1e813] [box=1427,1367,327,30]:
+                    - generic [ref=f1e814] [box=1427,1367,97,30]: Programming
+                    - generic [ref=f1e815] [box=1530,1376,60,12]: gpt-5.6-luna
+              - generic [ref=f1e816] [box=1759,1324,79,82]:
+                - button "Start a new chat with JavaScript Application Developer" [ref=f1e818] [box=1761,1349,32,32]:
+                  - generic [ref=f1e819] [box=1767,1355,20,20]: add_comment
+                  - generic [ref=f1e820] [box=1777,1365,1,1]: add comment
+                - button "Open chat history for JavaScript Application Developer" [ref=f1e822] [box=1797,1349,32,32]:
+                  - generic [ref=f1e823] [box=1803,1355,20,20]: history
+                  - generic [ref=f1e824] [box=1813,1365,1,1]: history
+            - listitem [ref=f1e825] [box=1372,1406,467,76]:
+              - button "Select JavaScript QA Review Lead" [ref=f1e826] [cursor=pointer] [box=1373,1407,386,82]:
+                - img "JavaScript QA Review Lead" [ref=f1e827] [box=1384,1432,32,32]
+                - generic [ref=f1e828] [box=1427,1416,327,64]:
+                  - generic [ref=f1e829] [box=1427,1416,327,17]: JavaScript QA Review Lead
+                  - generic [ref=f1e831] [box=1427,1434,327,14]: JavaScript QA specialist
+                  - generic [ref=f1e832] [box=1427,1450,327,30]:
+                    - generic [ref=f1e833] [box=1427,1450,39,30]: QA
+                    - generic [ref=f1e834] [box=1472,1459,60,12]: gpt-5.6-luna
+              - generic [ref=f1e835] [box=1759,1407,79,82]:
+                - button "Start a new chat with JavaScript QA Review Lead" [ref=f1e837] [box=1761,1432,32,32]:
+                  - generic [ref=f1e838] [box=1767,1438,20,20]: add_comment
+                  - generic [ref=f1e839] [box=1777,1447,1,1]: add comment
+                - button "Open chat history for JavaScript QA Review Lead" [ref=f1e841] [box=1797,1432,32,32]:
+                  - generic [ref=f1e842] [box=1803,1438,20,20]: history
+                  - generic [ref=f1e843] [box=1813,1447,1,1]: history
+            - listitem [ref=f1e844] [box=1372,1488,467,76]:
+              - button "Select JavaScript Solution Architect" [ref=f1e845] [cursor=pointer] [box=1373,1489,386,82]:
+                - img "JavaScript Solution Architect" [ref=f1e846] [box=1384,1514,32,32]
+                - generic [ref=f1e847] [box=1427,1498,327,64]:
+                  - generic [ref=f1e848] [box=1427,1498,327,17]: JavaScript Solution Architect
+                  - generic [ref=f1e850] [box=1427,1517,327,14]: JavaScript architecture specialist
+                  - generic [ref=f1e851] [box=1427,1532,327,30]:
+                    - generic [ref=f1e852] [box=1427,1532,70,30]: Research
+                    - generic [ref=f1e853] [box=1503,1541,60,12]: gpt-5.6-luna
+              - generic [ref=f1e854] [box=1759,1489,79,82]:
+                - button "Start a new chat with JavaScript Solution Architect" [ref=f1e856] [box=1761,1514,32,32]:
+                  - generic [ref=f1e857] [box=1767,1520,20,20]: add_comment
+                  - generic [ref=f1e858] [box=1777,1530,1,1]: add comment
+                - button "Open chat history for JavaScript Solution Architect" [ref=f1e860] [box=1797,1514,32,32]:
+                  - generic [ref=f1e861] [box=1803,1520,20,20]: history
+                  - generic [ref=f1e862] [box=1813,1530,1,1]: history
+            - listitem [ref=f1e863] [box=1372,1571,467,76]:
+              - button "Select Mail Triage Analyst" [ref=f1e864] [cursor=pointer] [box=1373,1572,386,82]:
+                - img "Mail Triage Analyst" [ref=f1e865] [box=1384,1596,32,32]
+                - generic [ref=f1e866] [box=1427,1580,327,64]:
+                  - generic [ref=f1e867] [box=1427,1580,327,17]: Mail Triage Analyst
+                  - generic [ref=f1e869] [box=1427,1599,327,14]: Mail and inbox worker
+                  - generic [ref=f1e870] [box=1427,1615,327,30]:
+                    - generic [ref=f1e871] [box=1427,1615,46,30]: Mail
+                    - generic [ref=f1e872] [box=1479,1624,60,12]: gpt-5.4-mini
+              - generic [ref=f1e873] [box=1759,1572,79,82]:
+                - button "Start a new chat with Mail Triage Analyst" [ref=f1e875] [box=1761,1596,32,32]:
+                  - generic [ref=f1e876] [box=1767,1602,20,20]: add_comment
+                  - generic [ref=f1e877] [box=1777,1612,1,1]: add comment
+                - button "Open chat history for Mail Triage Analyst" [ref=f1e879] [box=1797,1596,32,32]:
+                  - generic [ref=f1e880] [box=1803,1602,20,20]: history
+                  - generic [ref=f1e881] [box=1813,1612,1,1]: history
+            - listitem [ref=f1e882] [box=1372,1653,467,76]:
+              - button "Select Marketing Specialist" [ref=f1e883] [cursor=pointer] [box=1373,1654,386,82]:
+                - img "Marketing Specialist" [ref=f1e884] [box=1384,1679,32,32]
+                - generic [ref=f1e885] [box=1427,1663,327,64]:
+                  - generic [ref=f1e886] [box=1427,1663,327,17]: Marketing Specialist
+                  - generic [ref=f1e888] [box=1427,1682,327,14]: Marketing planning specialist
+                  - generic [ref=f1e889] [box=1427,1697,327,30]:
+                    - generic [ref=f1e890] [box=1427,1697,49,30]: Sales
+                    - generic [ref=f1e891] [box=1482,1706,60,12]: gpt-5.4-mini
+              - generic [ref=f1e892] [box=1759,1654,79,82]:
+                - button "Start a new chat with Marketing Specialist" [ref=f1e894] [box=1761,1679,32,32]:
+                  - generic [ref=f1e895] [box=1767,1685,20,20]: add_comment
+                  - generic [ref=f1e896] [box=1777,1694,1,1]: add comment
+                - button "Open chat history for Marketing Specialist" [ref=f1e898] [box=1797,1679,32,32]:
+                  - generic [ref=f1e899] [box=1803,1685,20,20]: history
+                  - generic [ref=f1e900] [box=1813,1694,1,1]: history
+            - listitem [ref=f1e901] [box=1372,1735,467,76]:
+              - button "Select Portfolio Architect" [ref=f1e902] [cursor=pointer] [box=1373,1736,386,82]:
+                - img "Portfolio Architect" [ref=f1e903] [box=1384,1761,32,32]
+                - generic [ref=f1e904] [box=1427,1745,327,64]:
+                  - generic [ref=f1e905] [box=1427,1745,327,17]: Portfolio Architect
+                  - generic [ref=f1e907] [box=1427,1764,327,14]: Architecture steward
+                  - generic [ref=f1e908] [box=1427,1779,327,30]:
+                    - generic [ref=f1e909] [box=1427,1779,70,30]: Research
+                    - generic [ref=f1e910] [box=1503,1788,60,12]: gpt-5.4-mini
+              - generic [ref=f1e911] [box=1759,1736,79,82]:
+                - button "Start a new chat with Portfolio Architect" [ref=f1e913] [box=1761,1761,32,32]:
+                  - generic [ref=f1e914] [box=1767,1767,20,20]: add_comment
+                  - generic [ref=f1e915] [box=1777,1777,1,1]: add comment
+                - button "Open chat history for Portfolio Architect" [ref=f1e917] [box=1797,1761,32,32]:
+                  - generic [ref=f1e918] [box=1803,1767,20,20]: history
+                  - generic [ref=f1e919] [box=1813,1777,1,1]: history
+            - listitem [ref=f1e920] [box=1372,1818,467,76]:
+              - button "Select Programming Workspace Analyst" [ref=f1e921] [cursor=pointer] [box=1373,1819,386,82]:
+                - img "Programming Workspace Analyst" [ref=f1e922] [box=1384,1844,32,32]
+                - generic [ref=f1e923] [box=1427,1827,327,64]:
+                  - generic [ref=f1e924] [box=1427,1827,327,17]: Programming Workspace Analyst
+                  - generic [ref=f1e926] [box=1427,1846,327,14]: Programming and repository worker
+                  - generic [ref=f1e927] [box=1427,1862,327,30]:
+                    - generic [ref=f1e928] [box=1427,1862,97,30]: Programming
+                    - generic [ref=f1e929] [box=1530,1871,60,12]: gpt-5.6-luna
+              - generic [ref=f1e930] [box=1759,1819,79,82]:
+                - button "Start a new chat with Programming Workspace Analyst" [ref=f1e932] [box=1761,1844,32,32]:
+                  - generic [ref=f1e933] [box=1767,1850,20,20]: add_comment
+                  - generic [ref=f1e934] [box=1777,1859,1,1]: add comment
+                - button "Open chat history for Programming Workspace Analyst" [ref=f1e936] [box=1797,1844,32,32]:
+                  - generic [ref=f1e937] [box=1803,1850,20,20]: history
+                  - generic [ref=f1e938] [box=1813,1859,1,1]: history
+            - listitem [ref=f1e939] [box=1372,1900,467,76]:
+              - button "Select Prompts Curator Agent" [ref=f1e940] [cursor=pointer] [box=1373,1901,386,82]:
+                - img "Prompts Curator Agent" [ref=f1e941] [box=1384,1926,32,32]
+                - generic [ref=f1e942] [box=1427,1910,327,64]:
+                  - generic [ref=f1e943] [box=1427,1910,327,17]: Prompts Curator Agent
+                  - generic [ref=f1e945] [box=1427,1929,327,14]: Prompt Gallery curator
+                  - generic [ref=f1e946] [box=1427,1944,327,30]:
+                    - generic [ref=f1e947] [box=1427,1944,95,30]: Management
+                    - generic [ref=f1e948] [box=1527,1953,60,12]: gpt-5.4-mini
+              - generic [ref=f1e949] [box=1759,1901,79,82]:
+                - button "Start a new chat with Prompts Curator Agent" [ref=f1e951] [box=1761,1926,32,32]:
+                  - generic [ref=f1e952] [box=1767,1932,20,20]: add_comment
+                  - generic [ref=f1e953] [box=1777,1942,1,1]: add comment
+                - button "Open chat history for Prompts Curator Agent" [ref=f1e955] [box=1797,1926,32,32]:
+                  - generic [ref=f1e956] [box=1803,1932,20,20]: history
+                  - generic [ref=f1e957] [box=1813,1942,1,1]: history
+            - listitem [ref=f1e958] [box=1372,1982,467,76]:
+              - button "Select Release Readiness Manager" [ref=f1e959] [cursor=pointer] [box=1373,1983,386,82]:
+                - img "Release Readiness Manager" [ref=f1e960] [box=1384,2008,32,32]
+                - generic [ref=f1e961] [box=1427,1992,327,64]:
+                  - generic [ref=f1e962] [box=1427,1992,327,17]: Release Readiness Manager
+                  - generic [ref=f1e964] [box=1427,2011,327,14]: Release readiness manager
+                  - generic [ref=f1e965] [box=1427,2027,327,30]:
+                    - generic [ref=f1e966] [box=1427,2027,95,30]: Management
+                    - generic [ref=f1e967] [box=1527,2036,60,12]: gpt-5.4-mini
+              - generic [ref=f1e968] [box=1759,1983,79,82]:
+                - button "Start a new chat with Release Readiness Manager" [ref=f1e970] [box=1761,2008,32,32]:
+                  - generic [ref=f1e971] [box=1767,2014,20,20]: add_comment
+                  - generic [ref=f1e972] [box=1777,2024,1,1]: add comment
+                - button "Open chat history for Release Readiness Manager" [ref=f1e974] [box=1797,2008,32,32]:
+                  - generic [ref=f1e975] [box=1803,2014,20,20]: history
+                  - generic [ref=f1e976] [box=1813,2024,1,1]: history
+            - listitem [ref=f1e977] [box=1372,2065,467,76]:
+              - button "Select Research Deep Dive Analyst" [ref=f1e978] [cursor=pointer] [box=1373,2066,386,82]:
+                - img "Research Deep Dive Analyst" [ref=f1e979] [box=1384,2091,32,32]
+                - generic [ref=f1e980] [box=1427,2075,327,64]:
+                  - generic [ref=f1e981] [box=1427,2075,327,17]: Research Deep Dive Analyst
+                  - generic [ref=f1e983] [box=1427,2094,327,14]: Research and long-context worker
+                  - generic [ref=f1e984] [box=1427,2109,327,30]:
+                    - generic [ref=f1e985] [box=1427,2109,70,30]: Research
+                    - generic [ref=f1e986] [box=1503,2118,60,12]: gpt-5.4-mini
+              - generic [ref=f1e987] [box=1759,2066,79,82]:
+                - button "Start a new chat with Research Deep Dive Analyst" [ref=f1e989] [box=1761,2091,32,32]:
+                  - generic [ref=f1e990] [box=1767,2097,20,20]: add_comment
+                  - generic [ref=f1e991] [box=1777,2106,1,1]: add comment
+                - button "Open chat history for Research Deep Dive Analyst" [ref=f1e993] [box=1797,2091,32,32]:
+                  - generic [ref=f1e994] [box=1803,2097,20,20]: history
+                  - generic [ref=f1e995] [box=1813,2106,1,1]: history
+            - listitem [ref=f1e996] [box=1372,2147,467,76]:
+              - button "Select Scheduler Agent" [ref=f1e997] [cursor=pointer] [box=1373,2148,386,82]:
+                - img "Scheduler Agent" [ref=f1e998] [box=1384,2173,32,32]
+                - generic [ref=f1e999] [box=1427,2157,327,64]:
+                  - generic [ref=f1e1000] [box=1427,2157,327,17]: Scheduler Agent
+                  - generic [ref=f1e1002] [box=1427,2176,327,14]: Workflow scheduling assistant
+                  - generic [ref=f1e1003] [box=1427,2191,327,30]:
+                    - generic [ref=f1e1004] [box=1427,2191,95,30]: Management
+                    - generic [ref=f1e1005] [box=1527,2200,60,12]: gpt-5.4-mini
+              - generic [ref=f1e1006] [box=1759,2148,79,82]:
+                - button "Start a new chat with Scheduler Agent" [ref=f1e1008] [box=1761,2173,32,32]:
+                  - generic [ref=f1e1009] [box=1767,2179,20,20]: add_comment
+                  - generic [ref=f1e1010] [box=1777,2189,1,1]: add comment
+                - button "Open chat history for Scheduler Agent" [ref=f1e1012] [box=1797,2173,32,32]:
+                  - generic [ref=f1e1013] [box=1803,2179,20,20]: history
+                  - generic [ref=f1e1014] [box=1813,2189,1,1]: history
+            - listitem [ref=f1e1015] [box=1372,2230,467,76]:
+              - button "Select Security Reviewer" [ref=f1e1016] [cursor=pointer] [box=1373,2231,386,82]:
+                - img "Security Reviewer" [ref=f1e1017] [box=1384,2256,32,32]
+                - generic [ref=f1e1018] [box=1427,2239,327,64]:
+                  - generic [ref=f1e1019] [box=1427,2239,327,17]: Security Reviewer
+                  - generic [ref=f1e1021] [box=1427,2258,327,14]: Security reviewer
+                  - generic [ref=f1e1022] [box=1427,2274,327,30]:
+                    - generic [ref=f1e1023] [box=1427,2274,39,30]: QA
+                    - generic [ref=f1e1024] [box=1472,2283,60,12]: gpt-5.6-luna
+              - generic [ref=f1e1025] [box=1759,2231,79,82]:
+                - button "Start a new chat with Security Reviewer" [ref=f1e1027] [box=1761,2256,32,32]:
+                  - generic [ref=f1e1028] [box=1767,2262,20,20]: add_comment
+                  - generic [ref=f1e1029] [box=1777,2271,1,1]: add comment
+                - button "Open chat history for Security Reviewer" [ref=f1e1031] [box=1797,2256,32,32]:
+                  - generic [ref=f1e1032] [box=1803,2262,20,20]: history
+                  - generic [ref=f1e1033] [box=1813,2271,1,1]: history
+            - listitem [ref=f1e1034] [box=1372,2312,467,76]:
+              - button "Select Spreadsheet Analyst" [ref=f1e1035] [cursor=pointer] [box=1373,2313,386,82]:
+                - img "Spreadsheet Analyst" [ref=f1e1036] [box=1384,2338,32,32]
+                - generic [ref=f1e1037] [box=1427,2322,327,64]:
+                  - generic [ref=f1e1038] [box=1427,2322,327,17]: Spreadsheet Analyst
+                  - generic [ref=f1e1040] [box=1427,2341,327,14]: Spreadsheet and tabular-data worker
+                  - generic [ref=f1e1041] [box=1427,2356,327,30]:
+                    - generic [ref=f1e1042] [box=1427,2356,89,30]: Spreadsheet
+                    - generic [ref=f1e1043] [box=1522,2365,60,12]: gpt-5.4-mini
+              - generic [ref=f1e1044] [box=1759,2313,79,82]:
+                - button "Start a new chat with Spreadsheet Analyst" [ref=f1e1046] [box=1761,2338,32,32]:
+                  - generic [ref=f1e1047] [box=1767,2344,20,20]: add_comment
+                  - generic [ref=f1e1048] [box=1777,2354,1,1]: add comment
+                - button "Open chat history for Spreadsheet Analyst" [ref=f1e1050] [box=1797,2338,32,32]:
+                  - generic [ref=f1e1051] [box=1803,2344,20,20]: history
+                  - generic [ref=f1e1052] [box=1813,2354,1,1]: history
+            - listitem [ref=f1e1053] [box=1372,2394,467,76]:
+              - button "Select UI Review Lead" [ref=f1e1054] [cursor=pointer] [box=1373,2395,386,82]:
+                - img "UI Review Lead" [ref=f1e1055] [box=1384,2420,32,32]
+                - generic [ref=f1e1056] [box=1427,2404,327,64]:
+                  - generic [ref=f1e1057] [box=1427,2404,327,17]: UI Review Lead
+                  - generic [ref=f1e1059] [box=1427,2423,327,14]: UI reviewer
+                  - generic [ref=f1e1060] [box=1427,2439,327,30]:
+                    - generic [ref=f1e1061] [box=1427,2439,39,30]: QA
+                    - generic [ref=f1e1062] [box=1472,2448,60,12]: gpt-5.6-luna
+              - generic [ref=f1e1063] [box=1759,2395,79,82]:
+                - button "Start a new chat with UI Review Lead" [ref=f1e1065] [box=1761,2420,32,32]:
+                  - generic [ref=f1e1066] [box=1767,2426,20,20]: add_comment
+                  - generic [ref=f1e1067] [box=1777,2436,1,1]: add comment
+                - button "Open chat history for UI Review Lead" [ref=f1e1069] [box=1797,2420,32,32]:
+                  - generic [ref=f1e1070] [box=1803,2426,20,20]: history
+                  - generic [ref=f1e1071] [box=1813,2436,1,1]: history
+            - listitem [ref=f1e1072] [box=1372,2477,467,76]:
+              - button "Select Workflow Curator Agent" [ref=f1e1073] [cursor=pointer] [box=1373,2478,386,82]:
+                - img "Workflow Curator Agent" [ref=f1e1074] [box=1384,2503,32,32]
+                - generic [ref=f1e1075] [box=1427,2487,327,64]:
+                  - generic [ref=f1e1076] [box=1427,2487,327,17]: Workflow Curator Agent
+                  - generic [ref=f1e1078] [box=1427,2506,327,14]: Workflow authoring and operations curator
+                  - generic [ref=f1e1079] [box=1427,2521,327,30]:
+                    - generic [ref=f1e1080] [box=1427,2521,95,30]: Management
+                    - generic [ref=f1e1081] [box=1527,2530,60,12]: gpt-5.4-mini
+              - generic [ref=f1e1082] [box=1759,2478,79,82]:
+                - button "Start a new chat with Workflow Curator Agent" [ref=f1e1084] [box=1761,2503,32,32]:
+                  - generic [ref=f1e1085] [box=1767,2509,20,20]: add_comment
+                  - generic [ref=f1e1086] [box=1777,2518,1,1]: add comment
+                - button "Open chat history for Workflow Curator Agent" [ref=f1e1088] [box=1797,2503,32,32]:
+                  - generic [ref=f1e1089] [box=1803,2509,20,20]: history
+                  - generic [ref=f1e1090] [box=1813,2518,1,1]: history
+  - tooltip "Open floating agent chats" [box=66,870,167,38]

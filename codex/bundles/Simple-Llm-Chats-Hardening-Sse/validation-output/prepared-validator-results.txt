@@ -1,0 +1,11 @@
+$ /opt/pyvenv/bin/python -S /tmp/Simple-Llm-Chats-Hardening-Sse/scripts/validate_bundle.py --bundle-root /tmp/Simple-Llm-Chats-Hardening-Sse --stage prepared
+exit=0
+Bundle validation passed: 14 subbundles, 35 requirements, stage=prepared.
+
+$ /opt/pyvenv/bin/python -S /tmp/Simple-Llm-Chats-Hardening-Sse/scripts/check_traceability.py --bundle-root /tmp/Simple-Llm-Chats-Hardening-Sse
+exit=0
+Traceability passed: 35 requirements and 17 findings.
+
+$ /opt/pyvenv/bin/python -S /tmp/Simple-Llm-Chats-Hardening-Sse/scripts/check_test_policy.py --bundle-root /tmp/Simple-Llm-Chats-Hardening-Sse
+exit=0
+Test-policy validation passed.

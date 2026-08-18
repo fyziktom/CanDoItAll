@@ -17,7 +17,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 [Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessLaunchExecutorResolverTests

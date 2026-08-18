@@ -197,7 +197,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 capabilityProfile.Transport,
                 capabilityProfile.Purpose,
                 capabilityProfile.ModelThinkingEffortCapabilities,
-                capabilityProfile.Tags),
+                capabilityProfile.Tags,
+                capabilityProfile.SuggestedModels),
             capabilityProfile.IsPrivateProvider,
             capabilityProfile.ModelPrices);
 

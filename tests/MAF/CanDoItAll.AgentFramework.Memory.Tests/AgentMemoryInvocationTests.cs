@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 
-namespace CanDoItAll.AgentFramework.Memory.Tests;
+namespace CanDoItAll.AgentFramework.Memory.Tests.Runtime;
 
 public sealed class AgentMemoryInvocationTests
 {

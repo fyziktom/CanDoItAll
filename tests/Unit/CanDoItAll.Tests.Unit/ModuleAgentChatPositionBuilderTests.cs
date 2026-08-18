@@ -6,7 +6,7 @@ using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.SchedulerPlanner;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ModuleAgentChatPositionBuilderTests
 {

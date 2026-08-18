@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Plugins;
 
 public sealed class PluginManifestTests
 {

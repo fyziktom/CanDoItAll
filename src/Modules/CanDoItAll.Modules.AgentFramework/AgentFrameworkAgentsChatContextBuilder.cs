@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework.Pages;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -6,6 +7,7 @@ public enum AgentFrameworkAgentsChatView
 {
     Overview,
     Agents,
+    SimpleChats,
     Providers,
     Voice,
     FloatingChat,
@@ -25,15 +27,16 @@ public static class AgentFrameworkAgentsChatContextBuilder
     public static AgentFrameworkAgentsChatView ResolveView(string view)
         => view switch
         {
-            "overview" => AgentFrameworkAgentsChatView.Overview,
-            "agents" => AgentFrameworkAgentsChatView.Agents,
-            "providers" => AgentFrameworkAgentsChatView.Providers,
-            "voice" => AgentFrameworkAgentsChatView.Voice,
-            "floating-chat" => AgentFrameworkAgentsChatView.FloatingChat,
-            "chat" => AgentFrameworkAgentsChatView.Chat,
-            "capabilities" => AgentFrameworkAgentsChatView.Capabilities,
-            "governance" => AgentFrameworkAgentsChatView.Governance,
-            "diagnostics" => AgentFrameworkAgentsChatView.Diagnostics,
+            AgentWorkspaceTabs.Overview => AgentFrameworkAgentsChatView.Overview,
+            AgentWorkspaceTabs.Agents => AgentFrameworkAgentsChatView.Agents,
+            AgentWorkspaceTabs.SimpleChats => AgentFrameworkAgentsChatView.SimpleChats,
+            AgentWorkspaceTabs.Providers => AgentFrameworkAgentsChatView.Providers,
+            AgentWorkspaceTabs.Voice => AgentFrameworkAgentsChatView.Voice,
+            AgentWorkspaceTabs.FloatingChat => AgentFrameworkAgentsChatView.FloatingChat,
+            AgentWorkspaceTabs.Chat => AgentFrameworkAgentsChatView.Chat,
+            AgentWorkspaceTabs.Capabilities => AgentFrameworkAgentsChatView.Capabilities,
+            AgentWorkspaceTabs.Governance => AgentFrameworkAgentsChatView.Governance,
+            AgentWorkspaceTabs.Diagnostics => AgentFrameworkAgentsChatView.Diagnostics,
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The Agents view is not supported.")
         };
 
@@ -164,15 +167,16 @@ public static class AgentFrameworkAgentsChatContextBuilder
     private static string ResolveViewToken(AgentFrameworkAgentsChatView view)
         => view switch
         {
-            AgentFrameworkAgentsChatView.Overview => "overview",
-            AgentFrameworkAgentsChatView.Agents => "agents",
-            AgentFrameworkAgentsChatView.Providers => "providers",
-            AgentFrameworkAgentsChatView.Voice => "voice",
-            AgentFrameworkAgentsChatView.FloatingChat => "floating-chat",
-            AgentFrameworkAgentsChatView.Chat => "chat",
-            AgentFrameworkAgentsChatView.Capabilities => "capabilities",
-            AgentFrameworkAgentsChatView.Governance => "governance",
-            AgentFrameworkAgentsChatView.Diagnostics => "diagnostics",
+            AgentFrameworkAgentsChatView.Overview => AgentWorkspaceTabs.Overview,
+            AgentFrameworkAgentsChatView.Agents => AgentWorkspaceTabs.Agents,
+            AgentFrameworkAgentsChatView.SimpleChats => AgentWorkspaceTabs.SimpleChats,
+            AgentFrameworkAgentsChatView.Providers => AgentWorkspaceTabs.Providers,
+            AgentFrameworkAgentsChatView.Voice => AgentWorkspaceTabs.Voice,
+            AgentFrameworkAgentsChatView.FloatingChat => AgentWorkspaceTabs.FloatingChat,
+            AgentFrameworkAgentsChatView.Chat => AgentWorkspaceTabs.Chat,
+            AgentFrameworkAgentsChatView.Capabilities => AgentWorkspaceTabs.Capabilities,
+            AgentFrameworkAgentsChatView.Governance => AgentWorkspaceTabs.Governance,
+            AgentFrameworkAgentsChatView.Diagnostics => AgentWorkspaceTabs.Diagnostics,
             _ => throw new ArgumentOutOfRangeException(nameof(view), view, "The Agents view is not supported.")
         };
 
@@ -181,6 +185,7 @@ public static class AgentFrameworkAgentsChatContextBuilder
         {
             AgentFrameworkAgentsChatView.Overview => "Overview",
             AgentFrameworkAgentsChatView.Agents => "Agents",
+            AgentFrameworkAgentsChatView.SimpleChats => "Simple Chats",
             AgentFrameworkAgentsChatView.Providers => "Providers",
             AgentFrameworkAgentsChatView.Voice => "Voice",
             AgentFrameworkAgentsChatView.FloatingChat => "Floating chat",

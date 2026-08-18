@@ -1,7 +1,8 @@
 using System.IO;
+using CanDoItAll.Tests.Playwright.Flows;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 public sealed partial class AppSmokeTests
 {

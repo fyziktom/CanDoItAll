@@ -1,6 +1,6 @@
 using CanDoItAll.Modules.CrmHr.Pages;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class CrmQueryLoadGenerationTests
 {

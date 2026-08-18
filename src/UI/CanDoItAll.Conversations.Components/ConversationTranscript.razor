@@ -1,0 +1,89 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="chat-conversation-flow" style="scrollbar-gutter:stable;">
+    @if (EmptyState is not null)
+    {
+        <EmptyState Eyebrow="@EmptyState.Eyebrow"
+                    Title="@EmptyState.Title"
+                    Description="@EmptyState.Description" />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium">
+            @foreach (var message in Messages)
+            {
+                <ConversationMessageBubble @key="message.Key.Value"
+                                           Message="@message" />
+            }
+
+            @AfterMessages
+
+            @foreach (var transientMessage in ResolveTransientMessages())
+            {
+                <ConversationMessageBubble @key="transientMessage.Key.Value"
+                                           Message="@transientMessage" />
+            }
+
+            @AfterPendingMessage
+        </Stack>
+    }
+</div>
+
+@code {
+    public const int MaximumTransientMessageCount = 4;
+
+    [Parameter]
+    public IReadOnlyList<ConversationMessagePresentation> Messages { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ConversationMessagePresentation> TransientMessages { get; set; } = [];
+
+    [Parameter]
+    public ConversationMessagePresentation? PendingMessage { get; set; }
+
+    [Parameter]
+    public ConversationEmptyStatePresentation? EmptyState { get; set; }
+
+    [Parameter]
+    public RenderFragment? AfterMessages { get; set; }
+
+    [Parameter]
+    public RenderFragment? AfterPendingMessage { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        TransientMessages = PresentationCollection.Snapshot(TransientMessages, nameof(TransientMessages));
+        if (TransientMessages.Count > MaximumTransientMessageCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(TransientMessages),
+                TransientMessages.Count,
+                $"A transcript supports at most {MaximumTransientMessageCount} transient messages.");
+        }
+
+        if (TransientMessages.Count(message =>
+                message.Role == ConversationMessageRole.Assistant &&
+                message.State == ConversationMessageState.Streaming) > 1)
+        {
+            throw new ArgumentException(
+                "Transient Assistant streaming content must be coalesced into one message.",
+                nameof(TransientMessages));
+        }
+    }
+
+    private IReadOnlyList<ConversationMessagePresentation> ResolveTransientMessages()
+    {
+        if (PendingMessage is null)
+        {
+            return TransientMessages;
+        }
+
+        if (TransientMessages.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(PendingMessage)} and {nameof(TransientMessages)} cannot be supplied together.");
+        }
+
+        return [PendingMessage];
+    }
+}

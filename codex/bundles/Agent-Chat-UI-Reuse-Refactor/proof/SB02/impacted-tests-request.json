@@ -1,0 +1,33 @@
+{
+  "repositoryRootPath": "C:\\repositories\\CanDoItAll",
+  "behaviorIntent": "Unknown",
+  "changesPath": "proof/SB02/changed-files-and-ranges.json",
+  "seededCodeFiles": [
+    "src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj",
+    "src/UI/CanDoItAll.Conversations.Components/_Imports.razor",
+    "src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationPresentationKey.cs",
+    "src/UI/CanDoItAll.Conversations.Components/Presentation/PresentationTone.cs",
+    "src/UI/CanDoItAll.Conversations.Components/Presentation/PresentationBadge.cs",
+    "src/UI/CanDoItAll.Conversations.Components/Presentation/PresentationMetaItem.cs",
+    "src/UI/CanDoItAll.Conversations.Components/PresentationBadgeList.razor",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+    "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+    "tests/Components/CanDoItAll.Tests.Components/Conversations/ConversationPresentationPrimitiveTests.cs",
+    "tests/Components/CanDoItAll.Tests.Components/Conversations/PresentationBadgeListTests.cs"
+  ],
+  "contextOnlyPaths": [
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentSelectionCard.razor",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+    "src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj",
+    "docs/architecture/overview.md"
+  ],
+  "testWorkspaces": [
+    {
+      "name": "Components",
+      "path": "tests/Solutions/CanDoItAll.Tests.Components.slnx"
+    }
+  ],
+  "maxSelectors": 30,
+  "maxReasonPaths": 12,
+  "maxVisitedMembers": 5000
+}

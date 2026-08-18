@@ -1,0 +1,8 @@
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Components.slnx --configuration Debug --no-build --no-restore --filter FullyQualifiedName=CanDoItAll.Tests.Components.AgentFramework.ChatWorkspacePanelTests.Running_execution_log_renders_compact_chat_stream_and_opens_details_dialog /m:1
+StartedUtc: 2026-08-16T10:43:12.3938560+00:00
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 347 ms - CanDoItAll.Tests.Components.dll (net10.0)
+CompletedUtc: 2026-08-16T10:43:14.1904239+00:00
+ExitCode: 0

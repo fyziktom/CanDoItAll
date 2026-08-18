@@ -8,7 +8,7 @@ using CanDoItAll.Modules.Resources;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class StorageObjectResourceConnectorTests
 {

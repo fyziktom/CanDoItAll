@@ -1,0 +1,101 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<FormField Text="@Label" Class="@Class" data-testid="@TestId">
+    <DropDown TValue="ConversationPresentationKey"
+              Data="@selectorOptions"
+              TextProperty="@nameof(ProviderSelectorOption.Text)"
+              ValueProperty="@nameof(ProviderSelectorOption.Key)"
+              Value="@Value"
+              ValueChanged="HandleValueChangedAsync"
+              Placeholder="@NoneLabel"
+              AllowClear="true"
+              Disabled="@IsDisabled"
+              data-testid="@InputTestId" />
+
+    @if (IsLoading)
+    {
+        <p class="mt-2 text-sm leading-6 text-slate-500">@LoadingMessage</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <p class="mt-2 text-sm leading-6 text-rose-700">@ErrorMessage</p>
+    }
+    else if (Options.Count == 0 && !string.IsNullOrWhiteSpace(EmptyMessage))
+    {
+        <p class="mt-2 text-sm leading-6 text-slate-600">@EmptyMessage</p>
+    }
+</FormField>
+
+@code {
+    private IReadOnlyList<ProviderSelectorOption> selectorOptions = [];
+
+    [Parameter]
+    public IReadOnlyList<ConversationProviderOption> Options { get; set; } = [];
+
+    [Parameter]
+    public ConversationPresentationKey? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey?> ValueChanged { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = "Provider";
+
+    [Parameter]
+    public string NoneLabel { get; set; } = "None";
+
+    [Parameter]
+    public bool ShowDisabledStatus { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string LoadingMessage { get; set; } = "Loading providers...";
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public string? EmptyMessage { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter]
+    public string? InputTestId { get; set; }
+
+    private bool IsDisabled => Disabled || IsLoading;
+
+    protected override void OnParametersSet()
+    {
+        selectorOptions = Options
+            .Select(option => new ProviderSelectorOption(option.Key, BuildOptionText(option)))
+            .ToList();
+    }
+
+    private Task HandleValueChangedAsync(ConversationPresentationKey? value)
+        => ValueChanged.InvokeAsync(value);
+
+    private string BuildOptionText(ConversationProviderOption option)
+    {
+        if (option.Badge is not null)
+        {
+            return $"{option.Name} ({option.Badge.Text})";
+        }
+
+        return ShowDisabledStatus && !option.IsEnabled
+            ? $"{option.Name} (disabled)"
+            : option.Name;
+    }
+
+    private sealed record ProviderSelectorOption(
+        ConversationPresentationKey Key,
+        string Text);
+}

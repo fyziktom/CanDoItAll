@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowFoundationHardeningCheckpointTests
 {

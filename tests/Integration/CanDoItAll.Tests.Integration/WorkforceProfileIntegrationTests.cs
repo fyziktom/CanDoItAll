@@ -2,7 +2,7 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class WorkforceProfileIntegrationTests
 {

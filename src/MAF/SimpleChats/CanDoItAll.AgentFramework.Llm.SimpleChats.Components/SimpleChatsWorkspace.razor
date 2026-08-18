@@ -1,0 +1,77 @@
+@namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components
+
+<Tabs SelectedIndex="@selectedTabIndex"
+      SelectedIndexChanged="HandleSelectedTabChangedAsync"
+      RenderMode="TabRenderMode.Server"
+      Variant="TabsVariant.WorkspacePrimary"
+      BorderMode="TabsBorderMode.Soft"
+      OverflowMode="TabsOverflowMode.Wrap"
+      AriaLabel="Simple Chat workspace tabs"
+      data-testid="llm-chats-tabs">
+    <TabsItem Text="Definitions"
+              Icon="tune"
+              data-testid="llm-chats-tab-definitions">
+        <LlmChatDefinitionCatalogPanel RequestedDefinitionId="@DefinitionId"
+                                       SelectedDefinitionIdChanged="HandleDefinitionChangedAsync" />
+    </TabsItem>
+    <TabsItem Text="Conversations"
+              Icon="chat"
+              data-testid="llm-chats-tab-conversations">
+        <LlmChatConversationWorkspace InitialConversationId="@ConversationId"
+                                      SelectedConversationIdChanged="HandleConversationChangedAsync" />
+    </TabsItem>
+</Tabs>
+
+@code {
+    [Parameter]
+    public SimpleChatWorkspaceView View { get; set; }
+
+    [Parameter]
+    public Guid? DefinitionId { get; set; }
+
+    [Parameter]
+    public Guid? ConversationId { get; set; }
+
+    [Parameter]
+    public EventCallback<SimpleChatWorkspaceRouteState> RouteStateChanged { get; set; }
+
+    private int selectedTabIndex;
+
+    protected override void OnParametersSet()
+    {
+        selectedTabIndex = View switch
+        {
+            SimpleChatWorkspaceView.Definitions => 0,
+            SimpleChatWorkspaceView.Conversations => 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(View), View, "Unknown Simple Chat workspace view.")
+        };
+    }
+
+    private Task HandleSelectedTabChangedAsync(int index)
+    {
+        var view = index switch
+        {
+            0 => SimpleChatWorkspaceView.Definitions,
+            1 => SimpleChatWorkspaceView.Conversations,
+            _ => throw new ArgumentOutOfRangeException(nameof(index), index, "Unknown Simple Chat workspace tab index.")
+        };
+
+        selectedTabIndex = index;
+        return RouteStateChanged.InvokeAsync(new(
+            view,
+            view == SimpleChatWorkspaceView.Definitions ? DefinitionId : null,
+            view == SimpleChatWorkspaceView.Conversations ? ConversationId : null));
+    }
+
+    private Task HandleConversationChangedAsync(Guid? conversationId)
+        => RouteStateChanged.InvokeAsync(new(
+            SimpleChatWorkspaceView.Conversations,
+            null,
+            conversationId));
+
+    private Task HandleDefinitionChangedAsync(Guid? definitionId)
+        => RouteStateChanged.InvokeAsync(new(
+            SimpleChatWorkspaceView.Definitions,
+            definitionId,
+            null));
+}

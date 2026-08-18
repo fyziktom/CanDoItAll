@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB03",
+  "title": "Whole-use-case profile fencing",
+  "state": "Completed",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "96f054905eecd33e04228e7837ae7850e3eeeeb4",
+  "dependencyMode": "local sibling source projects",
+  "host": "Microsoft Windows 10.0.26200 x64; .NET SDK 10.0.303",
+  "database": "local PostgreSQL ephemeral database managed by PostgresTestDatabaseLease",
+  "requirements": [
+    "RQ-011",
+    "RQ-012"
+  ],
+  "commands": [
+    {
+      "command": "historical public-use-case profile regression at 61abf5bc3 with pinned sibling roots",
+      "exitCode": 1,
+      "result": "expected red: 0 passed, 1 failed, 0 skipped; lease was not acquired"
+    },
+    {
+      "command": "focused Unit profile scope, runtime state/fence, runtime lease, and composition filter",
+      "exitCode": 0,
+      "result": "12 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "focused real-host PostgreSQL Profile_switch_before_finalization_retains_committed_usage_and_blocks_later_writes",
+      "exitCode": 0,
+      "result": "1 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "affected Unit project build",
+      "exitCode": 0,
+      "result": "0 warnings, 0 errors"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "pass"
+    }
+  ],
+  "sourceAssertions": [
+    "All public LLM Chat application interfaces resolve to internal profile-scoped decorators.",
+    "The conversation engine reuses an existing outer operation scope instead of reacquiring current identity.",
+    "Every root EF LLM Chat transaction commits through ILlmChatCommitFence.",
+    "DatabaseRuntimeState total-orders profile-switch publication and fenced transaction commits.",
+    "Lease acquisition captures ICanonicalRuntimeDatabase identity and rejects a changed runtime state.",
+    "No production partial expansion or project-reference change was introduced."
+  ],
+  "behavioralCases": [
+    "capture before first public application read",
+    "scope cleanup after profile invalidation",
+    "atomic write-before-switch ordering",
+    "stale identity rejected before entering a durable write",
+    "provider audit and usage retained when switch rejects finalization",
+    "stale host rejects later public reads and writes"
+  ],
+  "negativeCases": [
+    "pre-SB03 public query succeeds without ever acquiring a lease",
+    "profile switch between provider return and finalization cannot commit an assistant result",
+    "old-root lease acquisition cannot adopt the newly selected profile identity",
+    "caller cancellation is not mislabeled as profile invalidation"
+  ],
+  "acceptance": [
+    {
+      "criterion": "Every public LLM Chat application operation captures profile identity before its first read.",
+      "satisfied": true,
+      "evidence": "All three public application interfaces are registered through the scope runner; the exact pre/post public query regression proves acquisition ordering."
+    },
+    {
+      "criterion": "All repositories, provider resolution, transcript commands, and audit writes use the captured operation scope.",
+      "satisfied": true,
+      "evidence": "The runner pushes one ambient execution context, the engine reuses it, and the existing profile-fenced transcript/provider/audit adapters consume it."
+    },
+    {
+      "criterion": "A profile switch prevents every subsequent old-generation durable commit.",
+      "satisfied": true,
+      "evidence": "DatabaseRuntimeState serializes switch publication with ILlmChatCommitFence; focused ordering and real PostgreSQL finalization tests pass."
+    },
+    {
+      "criterion": "A switch during provider execution yields deterministic non-success or RecoveryRequired with retained usage evidence.",
+      "satisfied": true,
+      "evidence": "Real-host PostgreSQL test returns typed RuntimeProfileChanged, retains successful invocation audit/usage, leaves the active turn recoverable, and commits no assistant."
+    },
+    {
+      "criterion": "No current-profile DbContext or provider lease is cached across operations.",
+      "satisfied": true,
+      "evidence": "Scoped DbContext/UoW/engine are created per request scope; singleton factories/resolvers retain only immutable host-root dependencies and create a fresh operation lease/provider resolution per call."
+    }
+  ],
+  "architecture": {
+    "owner": "LlmChatProfileScopeRunner and internal public-interface decorators; DatabaseProfileLlmChatCommitFence for durable writes",
+    "dependencyDirection": "product contracts/application -> persistence adapters -> shared Infrastructure runtime state; no Web or EF dependency in product",
+    "cycleCheck": "CodeAnalytics snap-20260815020112-e34a58a8: no new project cycle or LLM Chat layering warning; one pre-existing same-project Infrastructure.Persistence/ControlPlane module cycle remains unchanged",
+    "partialClassCheck": "pass; no production partial expansion",
+    "oldPathRemoval": "production public interfaces cannot resolve the unscoped application services; nested engine reacquisition is bypassed when an outer scope exists"
+  },
+  "bugs": [
+    "Real-host test design previously continued through a simulated restart; split into normal-host and explicit stale-host scenarios.",
+    "Focused test compilation corrected a missing namespace import and the usage property assertion."
+  ],
+  "deviations": [
+    "The focused API command required two compile corrections and a sandbox-permission retry. Historical proof also required an unchanged outside-sandbox retry for NuGet.Config access. No broad test command was run."
+  ],
+  "knownGaps": [
+    "Durable dispatcher ownership and cross-instance cancellation are owned by SB04.",
+    "Streaming lease lifetime and SSE closure are owned by SB07-SB09."
+  ],
+  "progression": {
+    "decision": "Ready",
+    "reason": "All SB03 scope, atomic fence, historical negative, real PostgreSQL retained-evidence, and architecture proof passes at implementation commit 96f054905eecd33e04228e7837ae7850e3eeeeb4.",
+    "unlocks": [
+      "SB04"
+    ]
+  }
+}

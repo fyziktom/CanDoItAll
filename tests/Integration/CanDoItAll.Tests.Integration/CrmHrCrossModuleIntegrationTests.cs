@@ -6,7 +6,7 @@ using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class CrmHrCrossModuleIntegrationTests
 {

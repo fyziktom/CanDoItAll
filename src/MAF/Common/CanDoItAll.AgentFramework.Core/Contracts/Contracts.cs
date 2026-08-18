@@ -34,6 +34,12 @@ public interface ISandboxWorkspaceExecutionStore
         CancellationToken cancellationToken = default);
 }
 
+public interface IAgentProviderUsageEvidenceStore
+{
+    Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
+        CancellationToken cancellationToken = default);
+}
+
 public interface ISandboxWorkspaceExecutionRunStore
 {
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
@@ -386,16 +392,6 @@ public interface IProviderProfileRegistry
     Task<ProviderProfile> UpdateProviderAsync(
         Guid providerId,
         Func<ProviderProfile, ProviderProfile> update,
-        CancellationToken cancellationToken = default);
-}
-
-public interface IProviderRuntimeProfileSource
-{
-    Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(
-        CancellationToken cancellationToken = default);
-
-    Task<ProviderProfile?> GetProviderAsync(
-        Guid providerId,
         CancellationToken cancellationToken = default);
 }
 

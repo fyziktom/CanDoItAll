@@ -1,6 +1,6 @@
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Flows;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class AgentMemoryProviderSettingsPlaywrightTests

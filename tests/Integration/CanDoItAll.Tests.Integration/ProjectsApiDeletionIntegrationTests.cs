@@ -5,7 +5,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 public sealed class ProjectsApiDeletionIntegrationTests
 {

@@ -8,7 +8,7 @@ using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Manager;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class ManagerProcessOwnershipTests
 {

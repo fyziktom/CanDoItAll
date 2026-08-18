@@ -1,25 +1,18 @@
-<div class="@ResolveContainerClass()"
-     role="list"
-     aria-label="@AriaLabel"
-     data-testid="@TestId">
-    @foreach (var agent in Agents)
-    {
-        <AgentCompactListItem @key="agent.Id"
-                              Agent="@agent"
-                              IsSelected="@(SelectedAgentId == agent.Id)"
-                              IsBusy="@(BusyAgentIds?.Contains(agent.Id) == true)"
-                              ShellTestId="@BuildTestId("item", agent.Id)"
-                              SelectTestId="@BuildTestId("select", agent.Id)"
-                              NewChatTestId="@BuildTestId("new-chat", agent.Id)"
-                              HistoryTestId="@BuildTestId("history", agent.Id)"
-                              Selected="@AgentSelected"
-                              DoubleClicked="@AgentDoubleClicked"
-                              NewChatRequested="@NewChatRequested"
-                              HistoryRequested="@HistoryRequested" />
-    }
-</div>
+<ConversationParticipantCompactList Items="@items"
+                                    AriaLabel="@AriaLabel"
+                                    TestId="@TestId"
+                                    Class="@Class"
+                                    Selected="HandleSelectedAsync"
+                                    DoubleClicked="HandleDoubleClickedAsync"
+                                    ActionRequested="HandleActionRequestedAsync" />
 
 @code {
+    private static readonly ConversationPresentationKey NewChatActionKey = new("new-chat");
+    private static readonly ConversationPresentationKey HistoryActionKey = new("history");
+    private IReadOnlyDictionary<ConversationPresentationKey, AgentDefinition> agentsByKey =
+        new Dictionary<ConversationPresentationKey, AgentDefinition>();
+    private IReadOnlyList<ConversationParticipantCompactItemPresentation> items = [];
+
     [Parameter, EditorRequired]
     public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
 
@@ -50,9 +43,78 @@
     [Parameter]
     public EventCallback<AgentDefinition> HistoryRequested { get; set; }
 
-    private string ResolveContainerClass()
-        => CssClassBuilder.Join("agent-compact-list", Class);
+    protected override void OnParametersSet()
+    {
+        agentsByKey = Agents.ToDictionary(agent => AgentParticipantPresentationMapper.AgentKey(agent.Id));
+        items = Agents
+            .Select(agent => AgentParticipantPresentationMapper.MapCompactItem(
+                agent,
+                SelectedAgentId == agent.Id,
+                BusyAgentIds?.Contains(agent.Id) == true,
+                BuildTestId("item", agent.Id),
+                BuildTestId("select", agent.Id),
+                BuildActions(agent)))
+            .ToList();
+    }
+
+    private IReadOnlyList<ParticipantActionPresentation> BuildActions(AgentDefinition agent)
+    {
+        var isBusy = BusyAgentIds?.Contains(agent.Id) == true;
+        var actions = new List<ParticipantActionPresentation>();
+        if (NewChatRequested.HasDelegate)
+        {
+            actions.Add(new(
+                NewChatActionKey,
+                $"Start a new chat with {ResolveDisplayName(agent)}",
+                "add_comment",
+                BuildTestId("new-chat", agent.Id),
+                isBusy));
+        }
+
+        if (HistoryRequested.HasDelegate)
+        {
+            actions.Add(new(
+                HistoryActionKey,
+                $"Open chat history for {ResolveDisplayName(agent)}",
+                "history",
+                BuildTestId("history", agent.Id),
+                isBusy,
+                ParticipantActionStyle.Light));
+        }
+
+        return actions;
+    }
+
+    private Task HandleSelectedAsync(ConversationPresentationKey key)
+        => AgentSelected.InvokeAsync(ResolveAgent(key));
+
+    private Task HandleDoubleClickedAsync(ConversationPresentationKey key)
+        => AgentDoubleClicked.InvokeAsync(ResolveAgent(key));
+
+    private Task HandleActionRequestedAsync(ParticipantActionRequest request)
+    {
+        var agent = ResolveAgent(request.ParticipantKey);
+        if (request.ActionKey == NewChatActionKey)
+        {
+            return NewChatRequested.InvokeAsync(agent);
+        }
+
+        if (request.ActionKey == HistoryActionKey)
+        {
+            return HistoryRequested.InvokeAsync(agent);
+        }
+
+        throw new InvalidOperationException($"Unsupported participant action '{request.ActionKey}'.");
+    }
+
+    private AgentDefinition ResolveAgent(ConversationPresentationKey key)
+        => agentsByKey.TryGetValue(key, out var agent)
+            ? agent
+            : throw new InvalidOperationException($"Participant '{key}' is not present in the current agent list.");
 
     private string BuildTestId(string action, Guid agentId)
         => $"{TestId}-{action}-{agentId:N}";
+
+    private static string ResolveDisplayName(AgentDefinition agent)
+        => string.IsNullOrWhiteSpace(agent.Name) ? "Agent" : agent.Name.Trim();
 }

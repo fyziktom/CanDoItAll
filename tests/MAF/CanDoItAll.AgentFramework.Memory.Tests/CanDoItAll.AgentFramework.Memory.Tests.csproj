@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.AgentFramework.Memory.Tests" />
     <Using Include="Xunit" />
   </ItemGroup>
 

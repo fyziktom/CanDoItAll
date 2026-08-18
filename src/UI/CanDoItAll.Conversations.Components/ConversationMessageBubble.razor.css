@@ -1,0 +1,72 @@
+.chat-message-bubble {
+    overflow-wrap: anywhere;
+}
+
+.chat-message-footer {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+}
+
+.chat-message-footer-meta {
+    flex: 1 1 auto;
+    min-height: 1rem;
+}
+
+.chat-message-footer ::deep .chat-message-copy {
+    color: rgb(100 116 139);
+}
+
+.chat-message-footer ::deep .chat-message-copy:hover:not(:disabled) {
+    background: rgb(226 232 240 / 0.72);
+    color: rgb(37 99 235);
+}
+
+.chat-message-footer ::deep .chat-message-copy--user {
+    color: rgb(255 255 255 / 0.72);
+}
+
+.chat-message-footer ::deep .chat-message-copy--user:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.12);
+    color: rgb(255 255 255 / 0.96);
+}
+
+.chat-message-context {
+    border-top: 1px solid rgb(226 232 240 / 0.72);
+    margin-top: 0.75rem;
+    padding-top: 0.55rem;
+}
+
+.chat-message-context--user {
+    border-top-color: rgb(255 255 255 / 0.18);
+}
+
+.chat-message-context summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.25;
+    list-style: none;
+    opacity: 0.78;
+    width: max-content;
+}
+
+.chat-message-context summary::-webkit-details-marker {
+    display: none;
+}
+
+.chat-message-context summary:hover {
+    opacity: 1;
+}
+
+.chat-message-context pre {
+    font-family: inherit;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    margin: 0.55rem 0 0;
+    max-height: 14rem;
+    overflow: auto;
+    white-space: pre-wrap;
+}

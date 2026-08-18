@@ -1,0 +1,244 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<article class="@ResolveContainerClass()"
+         aria-busy="@(Participant.IsBusy ? "true" : "false")"
+         data-testid="@ShellTestId">
+    @if (Participant.Ribbon is not null)
+    {
+        <span class="@ResolveStatusRibbonClass(Participant.Ribbon)"
+              data-testid="@Participant.Ribbon.TestId">
+            @Participant.Ribbon.Text
+        </span>
+    }
+
+    @if (Participant.Favorite is not null)
+    {
+        <button type="button"
+                class="@ResolveFavoriteClass()"
+                aria-label="@(Participant.Favorite.IsFavorite ? Participant.Favorite.RemoveLabel : Participant.Favorite.MarkLabel)"
+                aria-pressed="@(Participant.Favorite.IsFavorite ? "true" : "false")"
+                disabled="@Participant.Favorite.IsDisabled"
+                @onclick="HandleFavoriteToggleAsync"
+                @onclick:stopPropagation="true"
+                data-testid="@Participant.Favorite.TestId">
+            <Icon Name="star" />
+        </button>
+    }
+
+    <button type="button"
+            class="agent-selection-card__select"
+            data-testid="@SelectTestId"
+            aria-label="@Participant.SelectLabel"
+            aria-pressed="@(Participant.IsSelected ? "true" : "false")"
+            disabled="@Participant.IsDisabled"
+            @onclick="HandleSelectAsync"
+            @ondblclick="HandleDoubleClickAsync">
+        <Stack GapScale="@(IsCompact ? LayoutGap.Small : LayoutGap.Medium)"
+               AlignItems="@(IsCentered ? AlignItems.Center : AlignItems.Stretch)"
+               Class="@ResolveContentClass()">
+            <div class="@ResolveIdentityClass()">
+                <div class="agent-selection-card__avatar-shell">
+                    <Avatar Alt="@Participant.DisplayName"
+                            ImageUrl="@Participant.AvatarImageUrl"
+                            FallbackText="@Participant.AvatarFallbackText"
+                            DefaultImageSeed="@Participant.AvatarSeed"
+                            Size="@(IsCompact ? AvatarSize.Medium : AvatarSize.Large)"
+                            Shape="AvatarShape.Rounded" />
+                </div>
+
+                <div class="agent-selection-card__identity-copy">
+                    @if (Participant.Badges.Count > 0 || !string.IsNullOrWhiteSpace(Participant.DetailsText))
+                    {
+                        <Cluster Gap="LayoutGap.XSmall"
+                                 Wrap="FlexWrap.Wrap"
+                                 Class="@ResolveBadgeClusterClass()">
+                            @foreach (var badge in Participant.Badges)
+                            {
+                                <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                             Text="@badge.Text"
+                                             NoWrap="true"
+                                             title="@badge.AccessibleDescription"
+                                             data-testid="@badge.TestId" />
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Participant.DetailsText))
+                            {
+                                <TooltipTarget Text="@Participant.DetailsText"
+                                               Position="TooltipPosition.Bottom"
+                                               TriggerClass="items-center">
+                                    <span class="agent-selection-card__info"
+                                          aria-label="@Participant.DetailsAriaLabel">
+                                        <Icon Name="circle_info" />
+                                    </span>
+                                </TooltipTarget>
+                            }
+                        </Cluster>
+                    }
+
+                    <TooltipTarget Text="@Participant.DisplayName"
+                                   Position="TooltipPosition.Bottom"
+                                   TriggerClass="agent-selection-card__name-target">
+                        <p class="agent-selection-card__name">@Participant.DisplayName</p>
+                    </TooltipTarget>
+
+                    @if (!string.IsNullOrWhiteSpace(Participant.Subtitle))
+                    {
+                        <TooltipTarget Text="@Participant.Subtitle"
+                                       Position="TooltipPosition.Bottom"
+                                       TriggerClass="agent-selection-card__role-target">
+                            <p class="agent-selection-card__role">@Participant.Subtitle</p>
+                        </TooltipTarget>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Participant.Summary))
+            {
+                <TooltipTarget Text="@Participant.Summary"
+                               Position="TooltipPosition.Bottom"
+                               TriggerClass="agent-selection-card__summary-target">
+                    <p class="agent-selection-card__summary">@Participant.Summary</p>
+                </TooltipTarget>
+            }
+
+            @if (Participant.Tags.Count > 0)
+            {
+                <div class="@ResolveTagClusterClass()">
+                    @foreach (var tag in Participant.Tags.Take(MaxVisibleTags))
+                    {
+                        <TooltipTarget Text="@tag"
+                                       Position="TooltipPosition.Bottom"
+                                       TriggerClass="agent-selection-card__tag-target">
+                            <StatusBadge Tone="info"
+                                         Text="@tag"
+                                         NoWrap="true" />
+                        </TooltipTarget>
+                    }
+                    @if (Participant.Tags.Count > MaxVisibleTags)
+                    {
+                        <TooltipTarget Text="@BuildHiddenTags()"
+                                       Position="TooltipPosition.Bottom"
+                                       TriggerClass="agent-selection-card__tag-target">
+                            <StatusBadge Tone="info"
+                                         Text="@($"+{Participant.Tags.Count - MaxVisibleTags}")"
+                                         NoWrap="true" />
+                        </TooltipTarget>
+                    }
+                </div>
+            }
+
+            @if (Participant.Metadata.Count > 0)
+            {
+                <TooltipTarget Text="@BuildMetaDetails()"
+                               Position="TooltipPosition.Bottom"
+                               TriggerClass="agent-selection-card__meta-target">
+                    <div class="@ResolveMetaClass()">
+                        @foreach (var item in Participant.Metadata)
+                        {
+                            <span title="@item.Tooltip">@item.DisplayText</span>
+                        }
+                    </div>
+                </TooltipTarget>
+            }
+        </Stack>
+    </button>
+
+    @if (Actions is not null)
+    {
+        <div class="agent-selection-card__actions">
+            @Actions
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversationParticipantPresentation Participant { get; set; } = default!;
+
+    [Parameter]
+    public ParticipantCardLayout Layout { get; set; }
+
+    [Parameter]
+    public int MaxVisibleTags { get; set; } = 3;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? ShellTestId { get; set; }
+
+    [Parameter]
+    public string? SelectTestId { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> DoubleClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> FavoriteToggled { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    private bool IsCompact => Layout.HasFlag(ParticipantCardLayout.Compact);
+
+    private bool IsCentered => Layout.HasFlag(ParticipantCardLayout.Centered);
+
+    private bool IsEnterprise => Layout.HasFlag(ParticipantCardLayout.Enterprise);
+
+    private Task HandleSelectAsync()
+        => Selected.InvokeAsync(Participant.Key);
+
+    private Task HandleDoubleClickAsync()
+        => DoubleClicked.InvokeAsync(Participant.Key);
+
+    private Task HandleFavoriteToggleAsync()
+        => FavoriteToggled.InvokeAsync(Participant.Key);
+
+    private string ResolveContainerClass()
+    {
+        return CssClassBuilder.Join(
+            "agent-selection-card",
+            Participant.IsSelected ? "agent-selection-card--selected" : null,
+            Participant.IsBusy ? "agent-selection-card--busy" : null,
+            IsCompact ? "agent-selection-card--compact" : null,
+            IsCentered ? "agent-selection-card--center" : null,
+            IsEnterprise ? "agent-selection-card--enterprise" : null,
+            Participant.Favorite is not null ? "agent-selection-card--has-favorite" : null,
+            Class);
+    }
+
+    private string ResolveContentClass()
+        => IsEnterprise ? "agent-selection-card__content agent-selection-card__content--enterprise" : "agent-selection-card__content";
+
+    private string ResolveFavoriteClass()
+        => CssClassBuilder.Join(
+            "agent-selection-card__favorite",
+            Participant.Favorite?.IsFavorite == true ? "agent-selection-card__favorite--active" : null);
+
+    private string ResolveIdentityClass()
+        => CssClassBuilder.Join(
+            "agent-selection-card__identity",
+            IsCentered ? "agent-selection-card__identity--center" : null);
+
+    private string ResolveBadgeClusterClass()
+        => IsCentered ? "agent-selection-card__badges justify-center" : "agent-selection-card__badges";
+
+    private string ResolveTagClusterClass()
+        => IsCentered ? "agent-selection-card__tags justify-center" : "agent-selection-card__tags";
+
+    private string ResolveMetaClass()
+        => IsCentered ? "agent-selection-card__meta agent-selection-card__meta--center" : "agent-selection-card__meta";
+
+    private static string ResolveStatusRibbonClass(PresentationBadge ribbon)
+        => CssClassBuilder.Join(
+            "agent-selection-card__status-ribbon",
+            $"agent-selection-card__status-ribbon--{PresentationToneResolver.Resolve(ribbon.Tone)}");
+
+    private string BuildHiddenTags()
+        => string.Join(", ", Participant.Tags.Skip(MaxVisibleTags));
+
+    private string BuildMetaDetails()
+        => string.Join(" / ", Participant.Metadata.Select(item => item.DisplayText));
+}

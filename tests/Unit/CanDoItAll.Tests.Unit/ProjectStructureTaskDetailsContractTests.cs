@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workbench;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureTaskDetailsContractTests
 {

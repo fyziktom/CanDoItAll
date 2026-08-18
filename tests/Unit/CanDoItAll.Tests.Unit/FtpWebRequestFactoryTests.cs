@@ -1,7 +1,7 @@
 using System.Net;
 using CanDoItAll.Infrastructure.Storage;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class FtpWebRequestFactoryTests
 {

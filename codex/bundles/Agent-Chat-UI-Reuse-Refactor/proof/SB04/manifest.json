@@ -1,0 +1,31 @@
+{
+  "subbundleId": "SB04",
+  "status": "completed",
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "repositoryHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "snapshotId": "snap-20260816115315-acdf4779",
+  "codeAnalyticsCorrelationIds": [
+    "code-analytics_2c7f14e8d906432989ccc36f61fb43d7",
+    "code-analytics_3c88dd5ee6fb467d9ea3ca239cc26e2b"
+  ],
+  "builds": [
+    { "target": "CanDoItAll.Conversations.Components", "result": "pass", "warnings": 0, "errors": 0 },
+    { "target": "CanDoItAll.AgentFramework.Components", "result": "pass", "warnings": 0, "errors": 0 },
+    { "target": "CanDoItAll.Modules.AgentFramework", "result": "pass", "warnings": 0, "errors": 0 },
+    { "target": "CanDoItAll.Tests.Components with BuildProjectReferences=false", "result": "pass", "warnings": 0, "errors": 0 }
+  ],
+  "tests": [
+    { "selector": "ConversationThreadComponentsTests|AgentChatModalTests|AgentChatPanelResponsivenessTests|ConversationParticipantComponentsTests", "discovered": 26, "passed": 26, "failed": 0 }
+  ],
+  "guards": [
+    { "name": "repository boundary", "result": "pass" },
+    { "name": "phase exclusions", "result": "pass" },
+    { "name": "neutral forbidden-source scan", "result": "pass" },
+    { "name": "git diff check", "result": "pass" }
+  ],
+  "environmentNotes": [
+    "A pre-existing CanDoItAll.Web process locked Web output during the initial transitive test build; it was left untouched.",
+    "The focused test assembly was rebuilt with BuildProjectReferences=false against the already successful project builds."
+  ],
+  "broadGatePromotion": "AllSuppliedSuites: Components 904 source tests; queued for the single SB09 broad run"
+}

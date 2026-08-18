@@ -11,7 +11,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
 {

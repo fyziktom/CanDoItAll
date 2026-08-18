@@ -10,7 +10,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Persistence;
 
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class StorageMigrationIntegrationTests

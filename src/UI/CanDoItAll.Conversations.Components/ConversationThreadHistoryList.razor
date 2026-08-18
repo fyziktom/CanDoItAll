@@ -1,0 +1,108 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="agent-thread-history-dialog" data-testid="agent-thread-history-dialog-body">
+    @if (visibleThreads.Count == 0)
+    {
+        <EmptyState Eyebrow="@EmptyEyebrow"
+                    Title="@EmptyTitle"
+                    Description="@EmptyDescription" />
+    }
+    else
+    {
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <StatusBadge Tone="info" Text="@($"{visibleThreads.Count} recent threads")" />
+                @if (!string.IsNullOrWhiteSpace(ContextLabel))
+                {
+                    <StatusBadge Tone="neutral" Text="@ContextLabel" />
+                }
+                @if (HeaderActions is not null)
+                {
+                    @HeaderActions
+                }
+            </Cluster>
+
+            <div class="agent-thread-history-dialog__list"
+                 data-testid="agent-thread-history-list">
+                @foreach (var thread in visibleThreads)
+                {
+                    <div class="conversation-thread-history-list__item">
+                        <button type="button"
+                                class="@ResolveRowClass(thread)"
+                                aria-label="@thread.SelectLabel"
+                                aria-pressed="@(thread.IsSelected ? "true" : "false")"
+                                aria-busy="@(thread.IsBusy ? "true" : "false")"
+                                disabled="@(thread.IsDisabled || thread.IsBusy)"
+                                @onclick="@(() => Selected.InvokeAsync(thread.Key))"
+                                data-testid="agent-thread-history-row">
+                            <span class="agent-thread-history-dialog__row-main">
+                                <span class="agent-thread-history-dialog__title">@thread.Title</span>
+                                <span class="agent-thread-history-dialog__preview">@thread.Preview</span>
+                            </span>
+                            <span class="agent-thread-history-dialog__row-meta">
+                                @foreach (var badge in thread.Badges)
+                                {
+                                    <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                                 Text="@badge.Text"
+                                                 title="@badge.AccessibleDescription"
+                                                 data-testid="@badge.TestId" />
+                                }
+                                <span class="agent-thread-history-dialog__time">@thread.UpdatedAtDisplay</span>
+                            </span>
+                        </button>
+                        @if (ThreadActions is not null)
+                        {
+                            <div class="conversation-thread-history-list__actions">
+                                @ThreadActions(thread)
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </Stack>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ConversationThreadPresentation> Threads { get; set; } = [];
+
+    [Parameter]
+    public int MaxItems { get; set; } = 25;
+
+    [Parameter]
+    public string? ContextLabel { get; set; }
+
+    [Parameter]
+    public string EmptyEyebrow { get; set; } = "Threads";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No recent threads";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = "This participant does not have saved chat threads yet.";
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> Selected { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment<ConversationThreadPresentation>? ThreadActions { get; set; }
+
+    private IReadOnlyList<ConversationThreadPresentation> visibleThreads = [];
+
+    protected override void OnParametersSet()
+    {
+        visibleThreads = Threads
+            .OrderByDescending(thread => thread.UpdatedAtUtc)
+            .Take(Math.Max(0, MaxItems))
+            .ToArray();
+    }
+
+    private static string ResolveRowClass(ConversationThreadPresentation thread)
+        => CssClassBuilder.Join(
+            "agent-thread-history-dialog__row",
+            thread.IsSelected ? "is-selected" : null);
+}

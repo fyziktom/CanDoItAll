@@ -18,7 +18,7 @@ using CanDoItAll.Security.Abstractions;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowExecutorTests
 {

@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.Modules.Processes;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 /// <summary>
 /// Direct unit coverage for <see cref="ProcessExecutionRunCriticalityPolicy"/> (SB13): the three-clause OR logic

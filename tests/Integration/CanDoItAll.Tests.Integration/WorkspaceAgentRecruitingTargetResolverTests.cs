@@ -6,7 +6,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Web.Api;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class WorkspaceAgentRecruitingTargetResolverTests
 {

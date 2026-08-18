@@ -1,0 +1,14 @@
+@page "/chats"
+@inject NavigationManager Navigation
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Navigation.NavigateTo(
+                AgentWorkspaceRouteState.BuildCompatibilityRedirect(Navigation.ToAbsoluteUri(Navigation.Uri)),
+                replace: true);
+        }
+    }
+}

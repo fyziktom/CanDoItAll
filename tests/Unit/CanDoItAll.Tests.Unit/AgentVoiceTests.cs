@@ -7,7 +7,7 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Voice;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentVoiceTests
 {
