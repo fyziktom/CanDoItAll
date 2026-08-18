@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Projects;
@@ -17,6 +18,105 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentDetailsDialogSettingsTests
 {
+    [Fact]
+    public void Native_external_workspace_root_survives_save()
+    {
+        using var context = CreateContext(out var workspaceProxy, out var externalTargetRegistry);
+        var editor = CreateEditor();
+        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        var externalRoot = Path.GetFullPath(Path.Combine(
+            Path.GetTempPath(),
+            $"agent-settings-root-{Guid.NewGuid():N}"));
+
+        cut.Find("[data-testid='agents-catalog-workspace-external-roots']").Change(externalRoot);
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var saved = Assert.Single(workspaceProxy.SavedModels);
+            var alias = Assert.Single(saved.WorkspaceToolAccess.AllowedExternalTargetAliases);
+            var binding = Assert.Single(saved.WorkspaceToolAccess.ExternalTargetRootBindings);
+            Assert.StartsWith("external-target/v1/", alias, StringComparison.Ordinal);
+            Assert.Contains(binding.RootId, alias, StringComparison.Ordinal);
+
+            var configurationJson = AgentWorkspaceToolAccessMetadata.Write(
+                "{}",
+                saved.WorkspaceToolAccess);
+            var reloaded = AgentWorkspaceToolAccessMetadata.Read(configurationJson);
+            Assert.Equal([alias], reloaded.AllowedExternalTargetAliases);
+            Assert.Equal([binding], reloaded.ExternalTargetRootBindings);
+
+            Assert.Equal(
+                ExternalTargetAliasResolutionKind.Resolved,
+                externalTargetRegistry.TryResolve(alias, out var resolvedPath, out _));
+            Assert.Equal(externalRoot, resolvedPath);
+
+            Assert.Equal(
+                alias,
+                cut.Find("[data-testid='agents-catalog-workspace-external-roots']")
+                    .GetAttribute("value"));
+        });
+    }
+
+    [Theory]
+    [InlineData(AgentWorkspaceToolProfileKind.SoftwareDevelopment)]
+    [InlineData(AgentWorkspaceToolProfileKind.Custom)]
+    public void Changing_workspace_profile_preserves_existing_external_root_binding(
+        AgentWorkspaceToolProfileKind selectedProfile)
+    {
+        using var context = CreateContext(out var workspaceProxy, out _);
+        var persistedRegistry = new ExternalTargetPathRegistry();
+        var externalRoot = Path.GetFullPath(Path.Combine(
+            Path.GetTempPath(),
+            $"agent-settings-existing-root-{Guid.NewGuid():N}"));
+        Assert.True(persistedRegistry.TryCreateAlias(externalRoot, out var alias));
+        var binding = Assert.Single(persistedRegistry.ExportBindings([alias]));
+        var editor = CreateEditor();
+        editor.WorkspaceToolAccess = AgentWorkspaceToolAccessProfiles.CreateSettings(
+            AgentWorkspaceToolProfileKind.ReadOnly);
+        editor.WorkspaceToolAccess.AllowedExternalTargetAliases = [alias];
+        editor.WorkspaceToolAccess.ExternalTargetRootBindings = [binding];
+        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+
+        cut.Find("[data-testid='agents-catalog-workspace-profile']")
+            .Change(selectedProfile.ToString());
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var saved = Assert.Single(workspaceProxy.SavedModels);
+            Assert.Equal([alias], saved.WorkspaceToolAccess.AllowedExternalTargetAliases);
+            Assert.Equal([binding], saved.WorkspaceToolAccess.ExternalTargetRootBindings);
+        });
+    }
+
+    [Fact]
+    public void Relative_external_workspace_root_is_rejected_without_clearing_the_editor()
+    {
+        using var context = CreateContext(out var workspaceProxy, out _);
+        var editor = CreateEditor();
+        var cut = RenderTab(context, editor, selectedTabIndex: 5);
+        const string relativeRoot = "relative-workspace-root";
+
+        cut.Find("[data-testid='agents-catalog-workspace-external-roots']")
+            .Change(relativeRoot);
+        cut.Find("[data-testid='agents-catalog-save']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(workspaceProxy.SavedModels);
+            Assert.Equal(
+                relativeRoot,
+                cut.Find("[data-testid='agents-catalog-workspace-external-roots']")
+                    .GetAttribute("value"));
+            var notification = Assert.Single(
+                context.Services.GetRequiredService<NotificationService>().Messages);
+            Assert.Equal(NotificationSeverity.Error, notification.Severity);
+            Assert.Equal("Agent save failed", notification.Summary);
+            Assert.Contains("absolute paths", notification.Detail, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     public void External_call_approval_switch_updates_the_runtime_policy()
     {
@@ -112,13 +212,21 @@ public sealed class AgentDetailsDialogSettingsTests
     }
 
     private static BunitContext CreateContext()
+        => CreateContext(out _, out _);
+
+    private static BunitContext CreateContext(
+        out RecordingWorkspaceServiceProxy workspaceProxy,
+        out IExternalTargetPathRegistry externalTargetRegistry)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
 
-        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, EmptyWorkspaceServiceProxy>();
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
+        workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
+        externalTargetRegistry = new ExternalTargetPathRegistry();
         context.Services.AddSingleton(workspaceService);
+        context.Services.AddSingleton(externalTargetRegistry);
         context.Services.AddSingleton(
             (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
         context.Services.AddSingleton(
@@ -166,6 +274,14 @@ public sealed class AgentDetailsDialogSettingsTests
         {
             SetBaseField("editorModel", TestEditor);
             SetBaseField("tagValues", TestEditor.Tags);
+            SetBaseField(
+                "externalWorkspaceRootsText",
+                string.Join(Environment.NewLine, TestEditor.WorkspaceToolAccess.AllowedExternalTargetAliases));
+            SetBaseField(
+                "allowedStorageCatalogIdsText",
+                string.Join(
+                    Environment.NewLine,
+                    TestEditor.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D"))));
             SetBaseField("selectedTabIndex", TestSelectedTabIndex);
             SetBaseField("isLoading", false);
             return Task.CompletedTask;
@@ -181,16 +297,30 @@ public sealed class AgentDetailsDialogSettingsTests
         }
     }
 
-    public class EmptyWorkspaceServiceProxy : DispatchProxy
+    public class RecordingWorkspaceServiceProxy : DispatchProxy
     {
+        public List<AgentEditorModel> SavedModels { get; } = [];
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             return targetMethod?.Name switch
             {
+                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) =>
+                    SaveAgent((AgentEditorModel)args![0]!),
+                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) =>
+                    Task.FromResult<IReadOnlyList<AgentDefinition>>([]),
+                nameof(IAgentFrameworkWorkspaceService.ListCapabilitiesAsync) =>
+                    Task.FromResult<IReadOnlyList<CapabilityCatalogItem>>([]),
                 "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
                 _ => throw new InvalidOperationException(
                     $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
             };
+        }
+
+        private Task<Guid> SaveAgent(AgentEditorModel model)
+        {
+            SavedModels.Add(model);
+            return Task.FromResult(model.Id ?? Guid.NewGuid());
         }
     }
 }

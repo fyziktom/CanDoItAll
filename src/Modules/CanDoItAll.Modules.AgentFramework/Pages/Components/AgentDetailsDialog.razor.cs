@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
@@ -35,6 +36,9 @@ public partial class AgentDetailsDialog
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    public IExternalTargetPathRegistry ExternalTargetPathRegistry { get; set; } = default!;
 
     [Inject]
     public DialogService DialogService { get; set; } = default!;
@@ -999,6 +1003,7 @@ public partial class AgentDetailsDialog
             : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
         next.Profile = profile;
         next.AllowedExternalTargetAliases = current.AllowedExternalTargetAliases.ToList();
+        next.ExternalTargetRootBindings = current.ExternalTargetRootBindings.ToList();
         next.CanReadStorage = current.CanReadStorage;
         next.CanWriteStorage = current.CanWriteStorage;
         next.AllowAllStorageCatalogs = current.AllowAllStorageCatalogs;
@@ -1090,6 +1095,7 @@ public partial class AgentDetailsDialog
             CanManageWorkspacePaths = source.CanManageWorkspacePaths,
             CanTransformArtifacts = source.CanTransformArtifacts,
             AllowedExternalTargetAliases = source.AllowedExternalTargetAliases.ToList(),
+            ExternalTargetRootBindings = source.ExternalTargetRootBindings.ToList(),
             CanReadStorage = source.CanReadStorage,
             CanWriteStorage = source.CanWriteStorage,
             AllowAllStorageCatalogs = source.AllowAllStorageCatalogs,
@@ -1423,12 +1429,13 @@ public partial class AgentDetailsDialog
 
     private void SyncWorkspaceToolAccessFromEditorText()
     {
-        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = SplitEditorLines(externalWorkspaceRootsText)
-            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
-            .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .Cast<string>()
-            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
-            .OrderBy(alias => alias, StringComparer.Ordinal)
+        var externalTargetAliases = NormalizeExternalWorkspaceRoots(
+            SplitEditorLines(externalWorkspaceRootsText));
+        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = externalTargetAliases;
+        editorModel.WorkspaceToolAccess.ExternalTargetRootBindings = editorModel.WorkspaceToolAccess
+            .ExternalTargetRootBindings
+            .Concat(ExternalTargetPathRegistry.ExportBindings(externalTargetAliases))
+            .Distinct()
             .ToList();
 
         editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = SplitEditorLines(allowedStorageCatalogIdsText)
@@ -1442,6 +1449,29 @@ public partial class AgentDetailsDialog
         editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
         externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
         allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
+    }
+
+    private List<string> NormalizeExternalWorkspaceRoots(IReadOnlyList<string> requestedRoots)
+    {
+        var aliases = new List<string>();
+        foreach (var requestedRoot in requestedRoots)
+        {
+            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                requestedRoot,
+                ExternalTargetPathRegistry);
+            if (string.IsNullOrWhiteSpace(alias))
+            {
+                throw new InvalidOperationException(
+                    "External workspace roots must be absolute paths or canonical external-target aliases below a filesystem root.");
+            }
+
+            aliases.Add(alias);
+        }
+
+        return aliases
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
+            .ToList();
     }
 
     private static IReadOnlyList<string> SplitEditorLines(string value)
