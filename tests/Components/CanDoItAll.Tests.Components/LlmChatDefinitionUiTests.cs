@@ -40,7 +40,7 @@ public sealed class LlmChatDefinitionUiTests
     }
 
     [Fact]
-    public async Task Catalog_uses_bounded_tracks_and_debounces_server_side_search_with_reset_and_status()
+    public async Task Catalog_keeps_filters_in_the_header_and_queries_search_tags_and_status_server_side()
     {
         var research = CreateEditor();
         var operations = CreateEditor(
@@ -65,11 +65,14 @@ public sealed class LlmChatDefinitionUiTests
             "Choose the provider, model, prompt, and output contract reused by conversations.",
             cut.Markup,
             StringComparison.Ordinal);
+        var header = cut.Find("[data-testid='llm-chat-definition-header']");
+        Assert.NotNull(header.QuerySelector("[data-testid='llm-chat-definition-filter-bar']"));
         var filters = cut.Find("[data-testid='llm-chat-definition-filters']");
         Assert.Contains("flex-nowrap", filters.ClassList);
         Assert.NotNull(filters.QuerySelector("[data-testid='llm-chat-definition-search']"));
-        Assert.NotNull(filters.QuerySelector("[data-testid='llm-chat-definition-search-reset']"));
+        Assert.NotNull(filters.QuerySelector("[data-testid='llm-chat-definition-tag-filter']"));
         Assert.NotNull(filters.QuerySelector("[data-testid='llm-chat-definition-status-filter']"));
+        Assert.NotNull(filters.QuerySelector("[data-testid='llm-chat-definition-filter-reset']"));
         Assert.All(
             cut.FindComponents<ConversationParticipantCard>(),
             card => Assert.True(card.Instance.Layout.HasFlag(ParticipantCardLayout.Centered)));
@@ -94,11 +97,26 @@ public sealed class LlmChatDefinitionUiTests
         Assert.Equal("incident", gateway.ListQueries[^1].SearchText);
         Assert.DoesNotContain(gateway.ListQueries.Skip(1), query => query.SearchText == "production");
 
-        cut.Find("[data-testid='llm-chat-definition-search-reset']").Click();
+        cut.Find("[data-testid='llm-chat-definition-filter-reset']").Click();
         cut.WaitForAssertion(() => Assert.Equal(
             2,
             cut.FindAll("article[data-testid^='llm-chat-definition-']").Count));
         Assert.Equal(string.Empty, gateway.ListQueries[^1].SearchText);
+
+        var tagEditor = cut.FindComponent<TagEditor>();
+        await cut.InvokeAsync(() => tagEditor.Instance.ValueChanged.InvokeAsync(["incident-response"]));
+        cut.WaitForAssertion(() =>
+        {
+            var card = Assert.Single(cut.FindAll("article[data-testid^='llm-chat-definition-']"));
+            Assert.Contains("Operations assistant", card.TextContent, StringComparison.Ordinal);
+        });
+        Assert.Equal(["incident-response"], gateway.ListQueries[^1].Tags);
+
+        cut.Find("[data-testid='llm-chat-definition-filter-reset']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(
+            2,
+            cut.FindAll("article[data-testid^='llm-chat-definition-']").Count));
+        Assert.Empty(gateway.ListQueries[^1].Tags);
 
         cut.Find("[data-testid='llm-chat-definition-status-filter']").Change("2");
         cut.WaitForAssertion(() =>
@@ -377,6 +395,8 @@ public sealed class LlmChatDefinitionUiTests
             var items = (ListItems ?? [current.Definition])
                 .Where(item => query.Status is null || item.Status == query.Status)
                 .Where(item => MatchesSearch(item, query.SearchText))
+                .Where(item => query.Tags.All(filter =>
+                    item.Tags.Contains(filter, StringComparer.OrdinalIgnoreCase)))
                 .Take(query.Take)
                 .ToArray();
             return Task.FromResult(LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>.Success(

@@ -34,6 +34,7 @@ public sealed class EfLlmChatDefinitionReadStore(AppDbContext dbContext) : ILlmC
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
         string? searchText = null,
+        IReadOnlyList<string>? tagFilters = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
@@ -53,6 +54,14 @@ public sealed class EfLlmChatDefinitionReadStore(AppDbContext dbContext) : ILlmC
                 dbContext.Set<LlmChatDefinitionTagRow>().Any(tag =>
                     tag.DefinitionId == item.Id &&
                     EF.Functions.ILike(tag.Tag, searchPattern, "\\")));
+        }
+
+        foreach (var tag in tagFilters ?? [])
+        {
+            var normalizedTag = tag;
+            query = query.Where(item => dbContext.Set<LlmChatDefinitionTagRow>().Any(candidate =>
+                candidate.DefinitionId == item.Id &&
+                candidate.Tag == normalizedTag));
         }
 
         if (cursor is { } position)

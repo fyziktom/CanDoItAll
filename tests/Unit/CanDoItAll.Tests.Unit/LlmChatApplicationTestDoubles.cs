@@ -117,12 +117,14 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
         string? searchText = null,
+        IReadOnlyList<string>? tagFilters = null,
         CancellationToken cancellationToken = default)
     {
         var normalizedSearchText = searchText?.Trim() ?? string.Empty;
         var ordered = definitions.Values
             .Where(item => status is null || item.Status == status)
             .Where(item => MatchesSearch(item, normalizedSearchText))
+            .Where(item => MatchesTags(item, tagFilters))
             .Where(item => cursor is not { } position ||
                            item.UpdatedAtUtc < position.UpdatedAtUtc ||
                            item.UpdatedAtUtc == position.UpdatedAtUtc &&
@@ -159,6 +161,11 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
                tags.GetValueOrDefault(definition.Id, [])
                    .Any(tag => tag.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
+
+    private bool MatchesTags(LlmChatDefinition definition, IReadOnlyList<string>? tagFilters)
+        => tagFilters is null || tagFilters.Count == 0 || tagFilters.All(filter =>
+            tags.GetValueOrDefault(definition.Id, [])
+                .Contains(filter, StringComparer.OrdinalIgnoreCase));
 }
 
 internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversationRepository

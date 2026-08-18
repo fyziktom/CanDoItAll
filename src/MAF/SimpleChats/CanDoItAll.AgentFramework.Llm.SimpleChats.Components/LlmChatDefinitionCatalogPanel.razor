@@ -3,17 +3,80 @@
 @inject ILlmChatUiAuthorizationFacade Authorization
 @implements IAsyncDisposable
 
-<SurfaceCard Class="llm-chat-definition-catalog" data-testid="llm-chat-definition-catalog">
+<SurfaceCard Class="min-w-0 llm-chat-definition-catalog" data-testid="llm-chat-definition-catalog">
     <Stack GapScale="LayoutGap.Large">
         <Split Breakpoint="LayoutBreakpoint.Sm"
                AlignItems="AlignItems.Center"
                JustifyContent="JustifyContent.SpaceBetween"
                Gap="LayoutGap.Medium"
-               Wrap="FlexWrap.Wrap">
-            <Stack GapScale="LayoutGap.Tiny">
-                <span class="cda-eyebrow">Reusable Simple Chats</span>
-                <h2 class="text-xl font-semibold text-slate-900">Definitions</h2>
-            </Stack>
+               Wrap="FlexWrap.Wrap"
+               Class="llm-chat-definition-catalog__header"
+               data-testid="llm-chat-definition-header">
+            <Cluster Gap="LayoutGap.Medium"
+                     Wrap="FlexWrap.Wrap"
+                     AlignItems="AlignItems.Center"
+                     Class="min-w-0 flex-1 llm-chat-definition-catalog__header-main">
+                <Stack GapScale="LayoutGap.Tiny" Class="shrink-0 llm-chat-definition-catalog__heading">
+                    <span class="cda-eyebrow">Reusable Simple Chats</span>
+                    <h2 class="text-xl font-semibold text-slate-900">Definitions</h2>
+                </Stack>
+
+                @if (authorization.CanRead)
+                {
+                    <FilterBar ResultText="@ResultText"
+                               Class="min-w-0 max-w-6xl grow basis-[52rem] llm-chat-definition-catalog__filter-bar"
+                               data-testid="llm-chat-definition-filter-bar">
+                        <Cluster Gap="LayoutGap.XSmall"
+                                 Wrap="FlexWrap.NoWrap"
+                                 AlignItems="AlignItems.Center"
+                                 Class="min-w-0 w-full flex-1 max-[80rem]:flex-wrap llm-chat-definition-catalog__filters"
+                                 data-testid="llm-chat-definition-filters">
+                            <TextBox Value="@searchText"
+                                     ValueChanged="ChangeSearchAsync"
+                                     Placeholder="Search definitions"
+                                     Immediate="true"
+                                     Class="min-w-64 max-w-md grow basis-72 llm-chat-definition-catalog__search-filter"
+                                     maxlength="@LlmChatDefinitionQuery.MaximumSearchLength"
+                                     aria-label="Search Simple Chat definitions"
+                                     data-testid="llm-chat-definition-search" />
+                            <TagEditor Value="@tagFilters"
+                                       ValueChanged="ChangeTagFiltersAsync"
+                                       Suggestions="@AvailableTagSuggestions"
+                                       Placeholder="Filter by tags"
+                                       MaxTags="@LlmChatDefinitionQuery.MaximumTagFilters"
+                                       MaxLength="@LlmChatDefinitionValidation.MaximumTagLength"
+                                       Disabled="@isLoading"
+                                       Class="min-w-64 max-w-sm grow basis-72 llm-chat-definition-catalog__tag-filter"
+                                       AriaLabel="Filter Simple Chat definitions by tags"
+                                       TestId="llm-chat-definition-tag-filter"
+                                       InputTestId="llm-chat-definition-tag-filter-input" />
+                            <DropDown TValue="LlmChatDefinitionStatusFilter"
+                                      Data="@StatusOptions"
+                                      TextProperty="@nameof(LlmChatDefinitionStatusFilterOption.Label)"
+                                      ValueProperty="@nameof(LlmChatDefinitionStatusFilterOption.Value)"
+                                      Value="@statusFilter"
+                                      ValueChanged="ChangeStatusFilterAsync"
+                                      Disabled="@isLoading"
+                                      Class="min-w-40 w-44 shrink-0 basis-44 llm-chat-definition-catalog__status-filter"
+                                      aria-label="Filter Simple Chat definitions by status"
+                                      data-testid="llm-chat-definition-status-filter" />
+                            <TooltipTarget Text="Reset definition filters"
+                                           Position="TooltipPosition.Bottom"
+                                           Duration="@((TimeSpan?)null)"
+                                           TestId="llm-chat-definition-reset-tooltip">
+                                <Button Icon="filter_alt_off"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="ResetFiltersAsync"
+                                        Disabled="@(!HasActiveFilters || isLoading)"
+                                        aria-label="Reset definition filters"
+                                        data-testid="llm-chat-definition-filter-reset" />
+                            </TooltipTarget>
+                        </Cluster>
+                    </FilterBar>
+                }
+            </Cluster>
+
             @if (authorization.CanManage)
             {
                 <Button Text="New definition"
@@ -32,44 +95,6 @@
         }
         else
         {
-            <FilterBar ResultText="@ResultText" data-testid="llm-chat-definition-filter-bar">
-                <Cluster Gap="LayoutGap.XSmall"
-                         Wrap="FlexWrap.NoWrap"
-                         Class="llm-chat-definition-catalog__filters"
-                         data-testid="llm-chat-definition-filters">
-                    <TextBox Value="@searchText"
-                             ValueChanged="ChangeSearchAsync"
-                             Placeholder="Search definitions"
-                             Immediate="true"
-                             Class="llm-chat-definition-catalog__search-filter"
-                             maxlength="@LlmChatDefinitionQuery.MaximumSearchLength"
-                             aria-label="Search Simple Chat definitions"
-                             data-testid="llm-chat-definition-search" />
-                    <TooltipTarget Text="Reset definition search"
-                                   Position="TooltipPosition.Bottom"
-                                   Duration="@((TimeSpan?)null)"
-                                   TestId="llm-chat-definition-reset-tooltip">
-                        <Button Icon="restart_alt"
-                                ButtonStyle="ButtonStyle.Light"
-                                Size="ButtonSize.Small"
-                                Click="ResetSearchAsync"
-                                Disabled="@string.IsNullOrWhiteSpace(searchText)"
-                                aria-label="Reset definition search"
-                                data-testid="llm-chat-definition-search-reset" />
-                    </TooltipTarget>
-                    <DropDown TValue="LlmChatDefinitionStatusFilter"
-                              Data="@StatusOptions"
-                              TextProperty="@nameof(LlmChatDefinitionStatusFilterOption.Label)"
-                              ValueProperty="@nameof(LlmChatDefinitionStatusFilterOption.Value)"
-                              Value="@statusFilter"
-                              ValueChanged="ChangeStatusFilterAsync"
-                              Disabled="@isLoading"
-                              Class="llm-chat-definition-catalog__status-filter"
-                              aria-label="Filter Simple Chat definitions by status"
-                              data-testid="llm-chat-definition-status-filter" />
-                </Cluster>
-            </FilterBar>
-
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
                 <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="llm-chat-definition-error">
@@ -172,14 +197,26 @@
     private bool isLoading;
     private string errorMessage = string.Empty;
     private string searchText = string.Empty;
+    private IReadOnlyList<string> tagFilters = [];
 
     private string ResultText => isLoading
         ? "Loading definitions"
         : $"{definitions.Count} definition{(definitions.Count == 1 ? string.Empty : "s")}";
 
-    private string EmptyDescription => string.IsNullOrWhiteSpace(searchText)
-        ? "Choose another status or create a reusable Simple Chat definition."
-        : "Clear the search or choose another status to see more definitions.";
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(searchText) ||
+        tagFilters.Count > 0 ||
+        statusFilter != LlmChatDefinitionStatusFilter.All;
+
+    private IReadOnlyList<string> AvailableTagSuggestions => definitions
+        .SelectMany(definition => definition.Tags)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private string EmptyDescription => HasActiveFilters
+        ? "Clear or change the filters to see more definitions."
+        : "Create a reusable Simple Chat definition.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -228,10 +265,19 @@
         }
     }
 
-    private async Task ResetSearchAsync()
+    private async Task ChangeTagFiltersAsync(IReadOnlyList<string> value)
+    {
+        CancelPendingSearch();
+        tagFilters = TagTextValueNormalizer.NormalizeTags(value, LlmChatDefinitionQuery.MaximumTagFilters);
+        await LoadAsync(append: false);
+    }
+
+    private async Task ResetFiltersAsync()
     {
         CancelPendingSearch();
         searchText = string.Empty;
+        tagFilters = [];
+        statusFilter = LlmChatDefinitionStatusFilter.All;
         await LoadAsync(append: false);
     }
 
@@ -258,7 +304,8 @@
                 take: 24,
                 status: LlmChatDefinitionPresentationMapper.ToStatus(statusFilter),
                 cursor: cursor,
-                searchText: searchText),
+                searchText: searchText,
+                tags: tagFilters),
                 loadCancellation.Token);
             if (requestSequence != loadSequence || loadCancellation.IsCancellationRequested)
             {

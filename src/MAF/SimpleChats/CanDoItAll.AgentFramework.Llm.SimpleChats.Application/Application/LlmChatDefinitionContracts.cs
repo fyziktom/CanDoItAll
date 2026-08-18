@@ -42,12 +42,14 @@ public sealed record LlmChatDefinitionQuery
 {
     public const int MaximumTake = 100;
     public const int MaximumSearchLength = 200;
+    public const int MaximumTagFilters = 6;
 
     public LlmChatDefinitionQuery(
         int take = 50,
         LlmChatDefinitionStatus? status = null,
         LlmChatDefinitionCursor? cursor = null,
-        string? searchText = null)
+        string? searchText = null,
+        IReadOnlyList<string>? tags = null)
     {
         if (take is < 1 or > MaximumTake)
         {
@@ -71,6 +73,7 @@ public sealed record LlmChatDefinitionQuery
         Status = status;
         Cursor = cursor;
         SearchText = normalizedSearchText;
+        Tags = NormalizeTagFilters(tags);
     }
 
     public int Take { get; }
@@ -80,6 +83,33 @@ public sealed record LlmChatDefinitionQuery
     public LlmChatDefinitionCursor? Cursor { get; }
 
     public string SearchText { get; }
+
+    public IReadOnlyList<string> Tags { get; }
+
+    private static IReadOnlyList<string> NormalizeTagFilters(IReadOnlyList<string>? tags)
+    {
+        if (tags is null || tags.Count == 0)
+        {
+            return [];
+        }
+
+        if (tags.Count > MaximumTagFilters)
+        {
+            throw new ArgumentException(
+                $"A definition query cannot contain more than {MaximumTagFilters} tag filters.",
+                nameof(tags));
+        }
+
+        return tags
+            .Select(tag => LlmChatDefinitionValidation.NormalizeRequired(
+                tag,
+                LlmChatDefinitionValidation.MaximumTagLength,
+                nameof(tags)))
+            .Select(tag => tag.ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
 }
 
 public sealed record LlmChatDefinitionDetails(

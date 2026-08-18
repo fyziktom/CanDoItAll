@@ -92,10 +92,24 @@
     align-items: stretch !important;
     display: grid !important;
     gap: 0.4rem !important;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 4rem 1.65rem 3rem 1.2rem 3.9rem 1.65rem minmax(2rem, 1fr);
     height: 100%;
     min-width: 0;
     padding: 0.9rem;
+    width: 100%;
+}
+
+.agent-selection-card--enterprise.agent-selection-card--center .agent-selection-card__select ::deep .agent-selection-card__content--enterprise {
+    justify-items: center;
+}
+
+.agent-selection-card--enterprise.agent-selection-card--center ::deep .agent-selection-card__name-target,
+.agent-selection-card--enterprise.agent-selection-card--center ::deep .agent-selection-card__role-target,
+.agent-selection-card--enterprise.agent-selection-card--center ::deep .agent-selection-card__summary-target,
+.agent-selection-card--enterprise.agent-selection-card--center ::deep .agent-selection-card__meta-target {
+    justify-self: center;
+    text-align: center;
     width: 100%;
 }
 

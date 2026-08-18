@@ -72,6 +72,7 @@ public interface ILlmChatDefinitionReadStore
         LlmChatDefinitionCursor? cursor,
         LlmChatDefinitionStatus? status,
         string? searchText = null,
+        IReadOnlyList<string>? tags = null,
         CancellationToken cancellationToken = default);
 }
 

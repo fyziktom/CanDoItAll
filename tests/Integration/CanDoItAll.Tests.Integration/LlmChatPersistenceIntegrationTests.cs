@@ -1488,6 +1488,17 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         Assert.Equal(2, interceptor.Commands.Count);
 
         interceptor.Clear();
+        var exactTagMatch = await definitionStore.ListPageAsync(
+            10,
+            null,
+            null,
+            null,
+            ["tag-19", "shared"]);
+
+        Assert.Equal("Definition 19", Assert.Single(exactTagMatch.Items).Definition.Name);
+        Assert.Equal(2, interceptor.Commands.Count);
+
+        interceptor.Clear();
         var conversationStore = new EfLlmChatConversationReadStore(dbContext);
         var conversations = await conversationStore.ListPageAsync(10, null, null);
 
@@ -1583,6 +1594,14 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
                 DefinitionId = definitionId,
                 Tag = $"tag-{index:D2}"
             });
+            if (index == 19)
+            {
+                dbContext.Add(new LlmChatDefinitionTagRow
+                {
+                    DefinitionId = definitionId,
+                    Tag = "shared"
+                });
+            }
         }
 
         var conversationId = LlmChatConversationId.New();
