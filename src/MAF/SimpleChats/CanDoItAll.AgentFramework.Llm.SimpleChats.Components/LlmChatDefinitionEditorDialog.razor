@@ -105,11 +105,14 @@
                                         </AvatarActions>
                                         <AdditionalFields>
                                             <FormField Text="Tags">
-                                                <TextBox Value="@form.TagsText"
-                                                         ValueChanged="HandleTagsChanged"
-                                                         Placeholder="research, summarization"
-                                                         Disabled="@isBusy"
-                                                         data-testid="llm-chat-definition-tags" />
+                                                <TagEditor Value="@form.Tags"
+                                                           ValueChanged="HandleTagsChanged"
+                                                           Placeholder="Add Simple Chat tag"
+                                                           Hint="Use Enter or comma to add tags."
+                                                           MaxTags="12"
+                                                           Disabled="@isBusy"
+                                                           TestId="llm-chat-definition-tags"
+                                                           InputTestId="llm-chat-definition-tags-input" />
                                             </FormField>
                                         </AdditionalFields>
                                     </ConversationIdentityFields>
@@ -131,6 +134,7 @@
                                             <ConversationProviderModelSelector Provider="@SelectedProviderOption"
                                                                                Value="@form.Model"
                                                                                ValueChanged="HandleModelChangedAsync"
+                                                                               UseEmptyValueForProviderDefault="false"
                                                                                Disabled="@isBusy"
                                                                                ChoiceTestId="llm-chat-definition-model"
                                                                                OverrideTestId="llm-chat-definition-model-override"
@@ -559,7 +563,7 @@
     private void HandleResponseFormatChanged(LlmChatUiResponseFormatKind value)
         => form!.ResponseFormat = value;
 
-    private void HandleTagsChanged(string? value) => form!.TagsText = value ?? string.Empty;
+    private void HandleTagsChanged(IReadOnlyList<string> value) => form!.Tags = value;
 
     private void HandleSchemaNameChanged(string? value) => form!.SchemaName = value ?? string.Empty;
 

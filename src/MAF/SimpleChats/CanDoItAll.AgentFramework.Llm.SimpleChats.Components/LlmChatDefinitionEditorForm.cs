@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.Components.BaseLib;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
@@ -35,7 +36,7 @@ internal sealed class LlmChatDefinitionEditorForm
 
     public string RevisionReason { get; set; } = string.Empty;
 
-    public string TagsText { get; set; } = string.Empty;
+    public IReadOnlyList<string> Tags { get; set; } = [];
 
     public static LlmChatDefinitionEditorForm From(LlmChatDefinitionEditor editor)
     {
@@ -57,7 +58,7 @@ internal sealed class LlmChatDefinitionEditorForm
             SchemaName = editor.SchemaName,
             SchemaDescription = editor.SchemaDescription,
             RevisionReason = string.Empty,
-            TagsText = string.Join(", ", editor.Definition.Tags)
+            Tags = TagTextValueNormalizer.NormalizeTags(editor.Definition.Tags, 12)
         };
     }
 
@@ -96,11 +97,7 @@ internal sealed class LlmChatDefinitionEditorForm
             return Invalid("JSON schema output requires a schema name and valid JSON schema.", out mutation, out validationMessage);
         }
 
-        var tags = TagsText
-            .Split([',', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(tag => tag.ToLowerInvariant())
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+        var tags = TagTextValueNormalizer.NormalizeTags(Tags, 12);
         mutation = new(
             Name,
             Summary,

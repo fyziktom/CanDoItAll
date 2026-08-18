@@ -15,14 +15,14 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
             .OrderBy(source => source.SourceName, StringComparer.Ordinal)
             .ToList();
 
-        var sourceResults = new List<ProviderUsageSourceResult>(selectedSources.Count);
-        foreach (var source in selectedSources)
+        var readTasks = new Task<ProviderUsageSourceResult>[selectedSources.Count];
+        for (var index = 0; index < selectedSources.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await source.ReadAsync(cancellationToken);
-            ValidateSourceResult(source, result);
-            sourceResults.Add(result);
+            readTasks[index] = ReadSourceAsync(selectedSources[index], cancellationToken);
         }
+
+        var sourceResults = await Task.WhenAll(readTasks).ConfigureAwait(false);
 
         var contributions = Deduplicate(sourceResults
                 .Where(result => result.State != ProviderUsageSourceState.Failed)
@@ -52,6 +52,15 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
             updatedAtUtc);
     }
 
+    private static async Task<ProviderUsageSourceResult> ReadSourceAsync(
+        IProviderUsageProjectionSource source,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.ReadAsync(cancellationToken).ConfigureAwait(false);
+        ValidateSourceResult(source, result);
+        return result;
+    }
+
     private static void ValidateSourceResult(
         IProviderUsageProjectionSource source,
         ProviderUsageSourceResult result)
@@ -69,22 +78,32 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
         }
     }
 
-    private static IEnumerable<ProviderUsageContribution> Deduplicate(
+    private static IReadOnlyList<ProviderUsageContribution> Deduplicate(
         IEnumerable<ProviderUsageContribution> contributions)
     {
-        foreach (var group in contributions.GroupBy(
-                     contribution => (contribution.WorkloadKind, contribution.ContributionId),
-                     EqualityComparer<(ProviderUsageWorkloadKind, string)>.Default))
+        var seen = new Dictionary<
+            (ProviderUsageWorkloadKind WorkloadKind, string ContributionId),
+            ProviderUsageContribution>();
+        var deduplicated = new List<ProviderUsageContribution>();
+        foreach (var contribution in contributions)
         {
-            var first = group.First();
-            if (group.Skip(1).Any(duplicate => duplicate != first))
+            var key = (contribution.WorkloadKind, contribution.ContributionId);
+            if (seen.TryGetValue(key, out var existing))
             {
-                throw new InvalidOperationException(
-                    $"Usage contribution '{first.WorkloadKind}:{first.ContributionId}' has conflicting values.");
+                if (existing != contribution)
+                {
+                    throw new InvalidOperationException(
+                        $"Usage contribution '{key.WorkloadKind}:{key.ContributionId}' has conflicting values.");
+                }
+
+                continue;
             }
 
-            yield return first with { Tokens = first.Tokens.Normalize() };
+            seen.Add(key, contribution);
+            deduplicated.Add(contribution with { Tokens = contribution.Tokens.Normalize() });
         }
+
+        return deduplicated;
     }
 
     private static IReadOnlyList<ProviderUsageConsumerRow> BuildConsumers(
@@ -140,34 +159,74 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
 
     private static ProviderUsageTotals Summarize(IEnumerable<ProviderUsageContribution> source)
     {
-        var items = source.ToList();
-        var knownUsage = items.Where(IsKnownUsage).ToList();
-        var executionOutcomes = items
-            .Where(item => !string.IsNullOrWhiteSpace(item.ExecutionId))
-            .GroupBy(item => (item.WorkloadKind, item.ExecutionId))
-            .Select(ResolveExecutionOutcome)
-            .ToList();
-        var priced = knownUsage.Where(item =>
-            item.PricingCompleteness != ProviderUsagePricingCompleteness.Unpriced &&
-            item.CostUsd is >= 0m).ToList();
+        var executionOutcomes = new Dictionary<
+            (ProviderUsageWorkloadKind WorkloadKind, string ExecutionId),
+            ProviderUsageExecutionOutcome>();
+        var usageObservationCount = 0;
+        var knownUsageObservationCount = 0;
+        var pricedObservationCount = 0;
+        var inputTokens = 0;
+        var cachedInputTokens = 0;
+        var cacheWriteTokens = 0;
+        var outputTokens = 0;
+        var reasoningTokens = 0;
+        var totalTokens = 0;
+        var knownCostUsd = 0m;
+        foreach (var item in source)
+        {
+            usageObservationCount++;
+            AccumulateExecutionOutcome(executionOutcomes, item);
+            if (!IsKnownUsage(item))
+            {
+                continue;
+            }
+
+            knownUsageObservationCount++;
+            checked
+            {
+                inputTokens += item.Tokens.InputTokens;
+                cachedInputTokens += item.Tokens.CachedInputTokens;
+                cacheWriteTokens += item.Tokens.CacheWriteTokens;
+                outputTokens += item.Tokens.OutputTokens;
+                reasoningTokens += item.Tokens.ReasoningTokens;
+                totalTokens += item.Tokens.TotalTokens;
+            }
+
+            if (item.PricingCompleteness == ProviderUsagePricingCompleteness.Unpriced ||
+                item.CostUsd is not >= 0m)
+            {
+                continue;
+            }
+
+            pricedObservationCount++;
+            knownCostUsd += item.CostUsd.Value;
+        }
+
+        var failedExecutionCount = 0;
+        var cancelledExecutionCount = 0;
+        foreach (var outcome in executionOutcomes.Values)
+        {
+            failedExecutionCount += outcome == ProviderUsageExecutionOutcome.Failed ? 1 : 0;
+            cancelledExecutionCount += outcome == ProviderUsageExecutionOutcome.Cancelled ? 1 : 0;
+        }
 
         return new ProviderUsageTotals(
             executionOutcomes.Count,
-            executionOutcomes.Count(outcome => outcome == ProviderUsageExecutionOutcome.Failed),
-            executionOutcomes.Count(outcome => outcome == ProviderUsageExecutionOutcome.Cancelled),
-            items.Count,
-            knownUsage.Count,
-            items.Count - knownUsage.Count,
-            priced.Count,
-            knownUsage.Count - priced.Count,
+            failedExecutionCount,
+            cancelledExecutionCount,
+            usageObservationCount,
+            knownUsageObservationCount,
+            usageObservationCount - knownUsageObservationCount,
+            pricedObservationCount,
+            knownUsageObservationCount - pricedObservationCount,
             new ProviderUsageTokenCounts(
-                knownUsage.Sum(item => item.Tokens.InputTokens),
-                knownUsage.Sum(item => item.Tokens.CachedInputTokens),
-                knownUsage.Sum(item => item.Tokens.CacheWriteTokens),
-                knownUsage.Sum(item => item.Tokens.OutputTokens),
-                knownUsage.Sum(item => item.Tokens.ReasoningTokens),
-                knownUsage.Sum(item => item.Tokens.TotalTokens)),
-            decimal.Round(priced.Sum(item => item.CostUsd!.Value), 6, MidpointRounding.AwayFromZero));
+                inputTokens,
+                cachedInputTokens,
+                cacheWriteTokens,
+                outputTokens,
+                reasoningTokens,
+                totalTokens),
+            decimal.Round(knownCostUsd, 6, MidpointRounding.AwayFromZero));
     }
 
     private static bool IsKnownUsage(ProviderUsageContribution contribution)
@@ -176,20 +235,35 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
             or ProviderUsageCompleteness.LegacyKnownTokens;
     }
 
-    private static ProviderUsageExecutionOutcome ResolveExecutionOutcome(
-        IGrouping<(ProviderUsageWorkloadKind WorkloadKind, string ExecutionId), ProviderUsageContribution> group)
+    private static void AccumulateExecutionOutcome(
+        IDictionary<
+            (ProviderUsageWorkloadKind WorkloadKind, string ExecutionId),
+            ProviderUsageExecutionOutcome> executionOutcomes,
+        ProviderUsageContribution contribution)
     {
-        var knownOutcomes = group
-            .Select(item => item.ExecutionOutcome)
-            .Where(outcome => outcome != ProviderUsageExecutionOutcome.Unknown)
-            .Distinct()
-            .ToList();
-        if (knownOutcomes.Count > 1)
+        if (string.IsNullOrWhiteSpace(contribution.ExecutionId))
         {
-            throw new InvalidOperationException(
-                $"Usage execution '{group.Key.WorkloadKind}:{group.Key.ExecutionId}' has conflicting terminal outcomes.");
+            return;
         }
 
-        return knownOutcomes.FirstOrDefault();
+        var key = (contribution.WorkloadKind, contribution.ExecutionId);
+        if (!executionOutcomes.TryGetValue(key, out var currentOutcome))
+        {
+            executionOutcomes.Add(key, contribution.ExecutionOutcome);
+            return;
+        }
+
+        if (currentOutcome == ProviderUsageExecutionOutcome.Unknown)
+        {
+            executionOutcomes[key] = contribution.ExecutionOutcome;
+            return;
+        }
+
+        if (contribution.ExecutionOutcome != ProviderUsageExecutionOutcome.Unknown &&
+            contribution.ExecutionOutcome != currentOutcome)
+        {
+            throw new InvalidOperationException(
+                $"Usage execution '{key.WorkloadKind}:{key.ExecutionId}' has conflicting terminal outcomes.");
+        }
     }
 }

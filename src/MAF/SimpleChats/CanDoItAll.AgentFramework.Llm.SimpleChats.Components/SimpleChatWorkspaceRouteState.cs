@@ -2,8 +2,8 @@ namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
 public enum SimpleChatWorkspaceView
 {
-    Conversations,
-    Definitions
+    Definitions,
+    Conversations
 }
 
 public sealed record SimpleChatWorkspaceRouteState(
@@ -12,7 +12,7 @@ public sealed record SimpleChatWorkspaceRouteState(
     Guid? ConversationId)
 {
     public static SimpleChatWorkspaceRouteState Default { get; } = new(
-        SimpleChatWorkspaceView.Conversations,
+        SimpleChatWorkspaceView.Definitions,
         null,
         null);
 }

@@ -31,6 +31,45 @@ public sealed class ProviderUsageWorkloadSelectionTests
 public sealed class ProviderUsageAggregationTests
 {
     [Fact]
+    public async Task Selected_sources_are_read_concurrently_and_reported_deterministically()
+    {
+        var probe = new ConcurrentReadProbe(expectedReaders: 2);
+        var service = new ProviderUsageQueryService(
+        [
+            new ConcurrentSource(
+                "z-chat",
+                ProviderUsageWorkloadKind.SimpleChat,
+                [Contribution(
+                    "chat",
+                    ProviderUsageWorkloadKind.SimpleChat,
+                    ProviderUsageConsumerKind.SimpleChatDefinition,
+                    "chat-1",
+                    "Chat",
+                    "chat-run",
+                    2m)],
+                probe),
+            new ConcurrentSource(
+                "a-agent",
+                ProviderUsageWorkloadKind.Agent,
+                [Contribution(
+                    "agent",
+                    ProviderUsageWorkloadKind.Agent,
+                    ProviderUsageConsumerKind.Agent,
+                    "agent-1",
+                    "Agent",
+                    "agent-run",
+                    1m)],
+                probe)
+        ]);
+
+        var snapshot = await service.QueryAsync(ProviderUsageWorkloadSelection.Both);
+
+        Assert.Equal(2, probe.StartedReaders);
+        Assert.Equal(["a-agent", "z-chat"], snapshot.Sources.Select(source => source.SourceName));
+        Assert.Equal(3m, snapshot.Totals.KnownCostUsd);
+    }
+
+    [Fact]
     public async Task AgentsOnlyReturnsOnlyAgentEvidence()
     {
         var service = CreateService();
@@ -244,6 +283,49 @@ public sealed class ProviderUsageAggregationTests
         public ValueTask<ProviderUsageSourceResult> ReadAsync(CancellationToken cancellationToken = default)
         {
             return ValueTask.FromResult(_result);
+        }
+    }
+
+    private sealed class ConcurrentSource(
+        string sourceName,
+        ProviderUsageWorkloadKind workloadKind,
+        IReadOnlyList<ProviderUsageContribution> contributions,
+        ConcurrentReadProbe probe) : IProviderUsageProjectionSource
+    {
+        public string SourceName => sourceName;
+
+        public ProviderUsageWorkloadKind WorkloadKind => workloadKind;
+
+        public async ValueTask<ProviderUsageSourceResult> ReadAsync(
+            CancellationToken cancellationToken = default)
+        {
+            await probe.ArriveAsync(cancellationToken);
+            return new ProviderUsageSourceResult(
+                sourceName,
+                workloadKind,
+                ProviderUsageSourceState.Complete,
+                contributions,
+                DateTimeOffset.UnixEpoch);
+        }
+    }
+
+    private sealed class ConcurrentReadProbe(int expectedReaders)
+    {
+        private readonly TaskCompletionSource allReadersStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private int startedReaders;
+
+        public int StartedReaders => Volatile.Read(ref startedReaders);
+
+        public async Task ArriveAsync(CancellationToken cancellationToken)
+        {
+            if (Interlocked.Increment(ref startedReaders) == expectedReaders)
+            {
+                allReadersStarted.TrySetResult();
+            }
+
+            await allReadersStarted.Task
+                .WaitAsync(TimeSpan.FromSeconds(2), cancellationToken);
         }
     }
 }

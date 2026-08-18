@@ -28,7 +28,7 @@ public sealed class AgentProviderUsageProjectionSourceTests
             ]
         };
         var source = new AgentProviderUsageProjectionSource(
-            new StaticExecutionStore(execution),
+            new StaticUsageEvidenceStore(execution),
             new StaticCatalogStore(SandboxWorkspaceCatalog.Empty),
             NullLogger<AgentProviderUsageProjectionSource>.Instance);
         var query = new ProviderUsageQueryService([source]);
@@ -66,33 +66,15 @@ public sealed class AgentProviderUsageProjectionSourceTests
             ToolCallCount: 0);
     }
 
-    private sealed class StaticExecutionStore(SandboxWorkspaceExecutionState state) : ISandboxWorkspaceExecutionStore
+    private sealed class StaticUsageEvidenceStore(
+        SandboxWorkspaceExecutionState state) : IAgentProviderUsageEvidenceStore
     {
-        public Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(state);
-
-        public Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(
+        public Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
             CancellationToken cancellationToken = default)
-            => Task.FromResult(new SandboxWorkspaceExecutionSummary(0, 0, 0));
-
-        public Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(AgentUsageProjection.Empty);
-
-        public Task SaveExecutionAsync(
-            SandboxWorkspaceExecutionState executionState,
-            CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<SandboxWorkspaceExecutionState> UpdateExecutionAsync(
-            Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(update(state));
-
-        public Task<SandboxWorkspaceExecutionState> UpdateExecutionAsync(
-            Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,
-            long expectedRevision,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(update(state));
+            => Task.FromResult(new AgentProviderUsageEvidence(
+                state.Version,
+                state.ExecutionRuns,
+                state.ProviderUsageObservations));
     }
 
     private sealed class StaticCatalogStore(SandboxWorkspaceCatalog catalog) : ISandboxWorkspaceCatalogStore

@@ -7,6 +7,42 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class AgentFrameworkSimpleChatsRouteTests
 {
     [Fact]
+    public void DefinitionsAreTheDefaultSimpleChatWorkspaceView()
+    {
+        var state = AgentWorkspaceRouteState.Parse(
+            AgentWorkspaceTabs.SimpleChats,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+        Assert.Equal(SimpleChatWorkspaceView.Definitions, state.SimpleChat.View);
+        Assert.Equal("/agents?tab=simple-chats", AgentWorkspaceRouteState.Build(state));
+    }
+
+    [Fact]
+    public void ConversationDeepLinksRemainExplicitAfterDefinitionsBecomeTheDefault()
+    {
+        var conversationId = Guid.NewGuid();
+        var state = AgentWorkspaceRouteState.Parse(
+            AgentWorkspaceTabs.SimpleChats,
+            null,
+            null,
+            null,
+            null,
+            conversationId.ToString("D"),
+            null);
+
+        Assert.Equal(SimpleChatWorkspaceView.Conversations, state.SimpleChat.View);
+        Assert.Equal(conversationId, state.SimpleChat.ConversationId);
+        Assert.Equal(
+            $"/agents?tab=simple-chats&simpleChatView=conversations&conversationId={conversationId:D}",
+            AgentWorkspaceRouteState.Build(state));
+    }
+
+    [Fact]
     public void ChatsRouteRedirectsAndPreservesRecognizedState()
     {
         var definitionId = Guid.NewGuid();
@@ -38,7 +74,7 @@ public sealed class AgentFrameworkSimpleChatsRouteTests
         Assert.Null(state.SimpleChat.DefinitionId);
         Assert.Equal(conversationId, state.SimpleChat.ConversationId);
         Assert.Equal(
-            $"/agents?tab=simple-chats&conversationId={conversationId:D}",
+            $"/agents?tab=simple-chats&simpleChatView=conversations&conversationId={conversationId:D}",
             AgentWorkspaceRouteState.Build(state));
     }
 

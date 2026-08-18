@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Usage;
 
 public sealed class SimpleChatProviderUsageProjectionSource(
-    AppDbContext dbContext,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<SimpleChatProviderUsageProjectionSource> logger) : IProviderUsageProjectionSource
 {
     public const string SourceIdentity = "simple-chats-ef";
@@ -23,6 +23,9 @@ public sealed class SimpleChatProviderUsageProjectionSource(
     {
         try
         {
+            await using var dbContext = await dbContextFactory
+                .CreateDbContextAsync(cancellationToken)
+                .ConfigureAwait(false);
             var rows = await (
                     from invocation in dbContext.Set<LlmChatInvocationRecordRow>().AsNoTracking()
                     join operation in dbContext.Set<LlmChatOperationRow>().AsNoTracking()

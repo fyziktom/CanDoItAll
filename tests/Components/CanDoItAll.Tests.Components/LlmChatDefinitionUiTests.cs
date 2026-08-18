@@ -56,10 +56,11 @@ public sealed class LlmChatDefinitionUiTests
         Assert.NotNull(cut.FindComponent<ConversationDefinitionEditorShell>());
         Assert.NotNull(cut.FindComponent<ConversationIdentityFields>());
         Assert.NotNull(cut.FindComponent<AvatarPicker>());
+        Assert.NotNull(cut.FindComponent<TagEditor>());
         Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-tab-identity']"));
         Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-tab-runtime']"));
         Assert.NotNull(cut.Find("[data-testid='llm-chat-definition-tab-output']"));
-        cut.Find("[data-testid='llm-chat-definition-tags']").Change("Research, Summary");
+        cut.Find("[data-testid='llm-chat-definition-tags-input']").Input("Research, Summary,");
 
         cut.Find("[data-testid='llm-chat-definition-avatar-open']").Click();
         cut.WaitForElement("[data-testid='llm-chat-definition-avatar-ai-prompt']");
@@ -190,6 +191,37 @@ public sealed class LlmChatDefinitionUiTests
         Assert.Null(gateway.UpdatedMutation);
     }
 
+    [Theory]
+    [InlineData("0", "gemma4-12b-256k")]
+    [InlineData("1", "gptoss20b64k")]
+    public void New_ollama_definition_saves_the_selected_concrete_model(
+        string modelChoiceKey,
+        string expectedModel)
+    {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(
+            gateway,
+            new StubProviderGateway("gemma4-12b-256k", "gptoss20b64k"),
+            new StubAuthorization(canRead: true, canManage: true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>();
+        cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
+
+        cut.Find("[data-testid='llm-chat-definition-name']").Change("Ollama chat");
+        cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-provider']");
+        cut.Find("[data-testid='llm-chat-definition-provider']").Change("0");
+        cut.Find("[data-testid='llm-chat-definition-model']").Change(modelChoiceKey);
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(gateway.CreatedMutation));
+        Assert.Equal(ProviderId, gateway.CreatedMutation!.ProviderProfileId);
+        Assert.Equal(expectedModel, gateway.CreatedMutation.Model);
+        Assert.DoesNotContain(
+            "Select or enter a model",
+            cut.Markup,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     private static BunitContext CreateContext(
         ILlmChatDefinitionUiGateway definitions,
         ILlmChatProviderUiGateway providers,
@@ -249,6 +281,8 @@ public sealed class LlmChatDefinitionUiTests
 
         public LlmChatDefinitionMutation? UpdatedMutation { get; private set; }
 
+        public LlmChatDefinitionMutation? CreatedMutation { get; private set; }
+
         public long? UpdateExpectedConcurrencyToken { get; private set; }
 
         public LlmChatDefinitionStatus? RequestedStatus { get; private set; }
@@ -284,7 +318,10 @@ public sealed class LlmChatDefinitionUiTests
         public Task<LlmChatUiResult<LlmChatDefinitionEditor>> CreateAsync(
             LlmChatDefinitionMutation mutation,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(current));
+        {
+            CreatedMutation = mutation;
+            return Task.FromResult(LlmChatUiResult<LlmChatDefinitionEditor>.Success(current));
+        }
 
         public Task<LlmChatUiResult<LlmChatDefinitionEditor>> UpdateAsync(
             Guid definitionId,
@@ -312,7 +349,9 @@ public sealed class LlmChatDefinitionUiTests
         }
     }
 
-    private sealed class StubProviderGateway : ILlmChatProviderUiGateway
+    private sealed class StubProviderGateway(
+        string defaultModel = "model-a",
+        string? suggestedModel = null) : ILlmChatProviderUiGateway
     {
         public Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>> ListAsync(
             CancellationToken cancellationToken = default)
@@ -323,12 +362,24 @@ public sealed class LlmChatDefinitionUiTests
                     "Primary provider",
                     [
                         new(
-                            "model-a",
+                            defaultModel,
                             new(
                                 LlmChatThinkingEffortSupport.Supported,
                                 LlmChatThinkingEffortControl.EffortLevels,
                                 [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High],
-                                LlmChatThinkingEffort.Low))
+                                LlmChatThinkingEffort.Low)),
+                        .. suggestedModel is null
+                            ? []
+                            : new LlmChatModelOptionPresentation[]
+                            {
+                                new(
+                                    suggestedModel,
+                                    new(
+                                        LlmChatThinkingEffortSupport.Supported,
+                                        LlmChatThinkingEffortControl.EffortLevels,
+                                        [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High],
+                                        LlmChatThinkingEffort.Low))
+                            }
                     ])
             ]));
     }

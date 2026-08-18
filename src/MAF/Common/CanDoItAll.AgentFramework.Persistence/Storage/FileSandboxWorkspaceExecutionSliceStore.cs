@@ -52,6 +52,57 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         return LoadOrBuildUsageProjectionAsync(cancellationToken);
     }
 
+    public async Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!ExecutionStorageExists())
+        {
+            var legacy = await TryLoadLegacyExecutionStateAsync(cancellationToken);
+            return legacy is null
+                ? AgentProviderUsageEvidence.Empty
+                : new AgentProviderUsageEvidence(
+                    legacy.Version,
+                    legacy.ExecutionRuns,
+                    legacy.ProviderUsageObservations);
+        }
+
+        var runs = new List<ExecutionRunRecord>();
+        var usageObservations = new List<ProviderUsageObservation>();
+        if (Directory.Exists(layout.ExecutionRunsRoot))
+        {
+            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
+                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
+            {
+                var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(
+                    Path.Combine(runDirectory, "run.json"),
+                    cancellationToken);
+                if (run is null)
+                {
+                    continue;
+                }
+
+                runs.Add(run);
+                usageObservations.AddRange(
+                    await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
+                        Path.Combine(runDirectory, "usage"),
+                        cancellationToken));
+            }
+        }
+
+        usageObservations.AddRange(
+            await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
+                layout.OrphanUsageRoot,
+                cancellationToken));
+        var index = await jsonStore.ReadJsonAsync<ExecutionStorageIndex>(
+            layout.ExecutionIndexPath,
+            cancellationToken);
+        return new AgentProviderUsageEvidence(
+            string.IsNullOrWhiteSpace(index?.Version) ? "1.0" : index.Version,
+            runs,
+            usageObservations);
+    }
+
     public async Task<AgentExecutionDeletionPlan> PrepareAgentDeletionAsync(
         Guid agentId,
         ExecutionStorageIndex currentIndex,
@@ -1957,41 +2008,16 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
     private async Task<SandboxWorkspaceExecutionState> LoadUsageProjectionSourceAsync(CancellationToken cancellationToken)
     {
-        if (!ExecutionStorageExists())
-        {
-            return await LoadAsync(cancellationToken);
-        }
-
-        var usageObservations = new List<ProviderUsageObservation>();
-        if (Directory.Exists(layout.ExecutionRunsRoot))
-        {
-            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
-                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
-                         .ThenBy(path => path, StringComparer.Ordinal))
-            {
-                if (!Guid.TryParse(Path.GetFileName(runDirectory), out var runId))
-                {
-                    continue;
-                }
-
-                usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
-                    layout.RunUsageRoot(runId),
-                    cancellationToken));
-            }
-        }
-
-        usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(
-            layout.OrphanUsageRoot,
-            cancellationToken));
+        var evidence = await LoadProviderUsageEvidenceAsync(cancellationToken);
 
         return new SandboxWorkspaceExecutionState(
-            Version: "3.0",
+            Version: evidence.Version,
             ChatSessions: [],
             ExecutionLog: [],
             Metrics: [])
         {
-            ExecutionRuns = await ListRunsAsync(cancellationToken),
-            ProviderUsageObservations = usageObservations
+            ExecutionRuns = evidence.ExecutionRuns,
+            ProviderUsageObservations = evidence.ProviderUsageObservations
         };
     }
 

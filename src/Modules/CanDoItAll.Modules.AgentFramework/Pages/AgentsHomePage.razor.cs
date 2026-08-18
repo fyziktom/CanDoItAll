@@ -88,6 +88,8 @@ public partial class AgentsHomePage
     private bool isUsageLoading;
     private bool refreshUsageFromRoute;
     private string? usageLoadError;
+    private IReadOnlyDictionary<string, string?> overviewConsumerAvatarImageUrls =
+        new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     private AgentChatContextSurface AgentChatSurface
         => AgentFrameworkAgentsChatContextBuilder.Build(
@@ -269,6 +271,9 @@ public partial class AgentsHomePage
             .Take(5)
             .ToArray();
 
+    private IReadOnlyDictionary<string, string?> OverviewConsumerAvatarImageUrls =>
+        overviewConsumerAvatarImageUrls;
+
     private IReadOnlyList<CdaChartSeries> ProviderUsageBarSeries =>
         OverviewProviderRows.Count == 0
             ? []
@@ -377,6 +382,10 @@ public partial class AgentsHomePage
         usageLoadError = ResolveUsageSourceError(usage);
         var hrAgentResolution = await hrAgentTask;
         hrAgent = hrAgentResolution.Agent;
+        overviewConsumerAvatarImageUrls = hrAgentResolution.Agents.ToDictionary(
+            item => item.Id.ToString("D"),
+            item => item.AvatarImageUrl,
+            StringComparer.OrdinalIgnoreCase);
         if (hrAgentResolution.ErrorMessage is { } hrAgentError)
         {
             NotificationService.Warning("HR Agent unavailable", hrAgentError);
@@ -391,19 +400,19 @@ public partial class AgentsHomePage
         isLoaded = true;
     }
 
-    private async Task<(AgentDefinition? Agent, string? ErrorMessage)> TryResolveHrAgentAsync()
+    private async Task<(AgentDefinition? Agent, IReadOnlyList<AgentDefinition> Agents, string? ErrorMessage)> TryResolveHrAgentAsync()
     {
         try
         {
             var agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
             var agent = agents.SingleOrDefault(HrAgentIdentity.Matches);
             return agent is null
-                ? (null, $"The managed agent '{HrAgentIdentity.AgentId:D}' is not available.")
-                : (agent, null);
+                ? (null, agents, $"The managed agent '{HrAgentIdentity.AgentId:D}' is not available.")
+                : (agent, agents, null);
         }
         catch (Exception exception)
         {
-            return (null, exception.Message);
+            return (null, [], exception.Message);
         }
     }
 

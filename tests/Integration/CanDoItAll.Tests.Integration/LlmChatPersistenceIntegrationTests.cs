@@ -1941,9 +1941,8 @@ public sealed class LlmChatsDatabaseTransferIntegrationTests
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatusageprojection");
         var seeded = await SeedCompleteGraphAsync(database);
-        await using var context = database.CreateDbContext();
         var source = new SimpleChatProviderUsageProjectionSource(
-            context,
+            new LlmChatTestDbContextFactory(database),
             NullLogger<SimpleChatProviderUsageProjectionSource>.Instance);
 
         var result = await source.ReadAsync();

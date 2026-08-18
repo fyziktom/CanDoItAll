@@ -140,6 +140,35 @@ public sealed class LlmChatProviderResolutionTests
         Assert.Equal(LlmChatErrorCodes.ModelNotSupported, Assert.Single(wrongModel.Errors).Code);
         Assert.Equal(LlmChatErrorCodes.ThinkingEffortNotSupported, Assert.Single(wrongEffort.Errors).Code);
     }
+
+    [Theory]
+    [InlineData("gemma4-12b-256k")]
+    [InlineData("gptoss20b64k")]
+    public async Task Configured_ollama_model_identities_are_listed_and_resolve_for_execution(string model)
+    {
+        var provider = ProviderRuntimeTestData.CreateProvider("Local Ollama") with
+        {
+            Kind = ProviderKind.Ollama,
+            BaseUrl = "http://127.0.0.1:11434",
+            ApiKeyEnvironmentVariable = string.Empty,
+            DefaultModel = "gemma4-12b-256k",
+            Transport = ProviderTransportKind.ChatCompletions,
+            SupportsBackgroundResponses = false,
+            ConfigurationJson = "{}",
+            SuggestedModels = ["gemma4-12b-256k", "gptoss20b64k"],
+            ModelThinkingEffortCapabilities = []
+        };
+        var resolver = ProviderRuntimeTestData.CreateResolver(provider);
+
+        var options = await resolver.ListOptionsAsync();
+        var resolved = await resolver.ResolveAsync(provider.Id, ProviderKind.Ollama, model, null);
+
+        Assert.True(options.IsSuccess);
+        Assert.Contains(Assert.Single(options.Value!).Models, option => option.Model == model);
+        Assert.True(resolved.IsSuccess);
+        Assert.Equal(ProviderKind.Ollama, resolved.Value!.ProviderKind);
+        Assert.Equal(model, resolved.Value.Model);
+    }
 }
 
 public sealed class LlmChatRuntimeFenceTests

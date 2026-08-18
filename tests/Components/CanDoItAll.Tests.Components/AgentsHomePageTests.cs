@@ -148,9 +148,16 @@ public sealed class AgentsHomePageTests
         FindTab(cut, "Simple Chats").Click();
 
         cut.WaitForElement("[data-testid='llm-chats-tabs']", TimeSpan.FromSeconds(10));
+        cut.WaitForElement("[data-testid='llm-chat-definition-catalog']", TimeSpan.FromSeconds(10));
         Assert.Contains("tab=simple-chats", navigation.Uri, StringComparison.Ordinal);
-        Assert.NotNull(cut.Find("[data-testid='llm-chats-tab-conversations']"));
-        Assert.NotNull(cut.Find("[data-testid='llm-chats-tab-definitions']"));
+        var workspaceTabs = cut.FindAll("[data-testid='llm-chats-tabs'] [role='tab']");
+        Assert.Collection(
+            workspaceTabs,
+            tab => Assert.EndsWith("Definitions", tab.TextContent.Trim(), StringComparison.Ordinal),
+            tab => Assert.EndsWith("Conversations", tab.TextContent.Trim(), StringComparison.Ordinal));
+        Assert.Equal(
+            "true",
+            cut.Find("[data-testid='llm-chats-tab-definitions']").GetAttribute("aria-selected"));
     }
 
     [Fact]

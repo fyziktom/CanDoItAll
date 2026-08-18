@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class AgentProviderUsageProjectionSource(
-    ISandboxWorkspaceExecutionStore executionStore,
+    IAgentProviderUsageEvidenceStore evidenceStore,
     ISandboxWorkspaceCatalogStore catalogStore,
     ILogger<AgentProviderUsageProjectionSource> logger) : IProviderUsageProjectionSource
 {
@@ -20,14 +20,14 @@ public sealed class AgentProviderUsageProjectionSource(
     {
         try
         {
-            var executionTask = executionStore.LoadExecutionAsync(cancellationToken);
+            var evidenceTask = evidenceStore.LoadProviderUsageEvidenceAsync(cancellationToken);
             var catalogTask = catalogStore.LoadCatalogAsync(cancellationToken);
-            await Task.WhenAll(executionTask, catalogTask).ConfigureAwait(false);
-            var execution = await executionTask.ConfigureAwait(false);
+            await Task.WhenAll(evidenceTask, catalogTask).ConfigureAwait(false);
+            var evidence = await evidenceTask.ConfigureAwait(false);
             var catalog = await catalogTask.ConfigureAwait(false);
-            var runs = execution.ExecutionRuns.ToDictionary(run => run.Id);
+            var runs = evidence.ExecutionRuns.ToDictionary(run => run.Id);
             var agents = catalog.Agents.ToDictionary(agent => agent.Id);
-            var contributions = execution.ProviderUsageObservations
+            var contributions = evidence.ProviderUsageObservations
                 .Select((observation, index) => Map(observation, index, runs, agents))
                 .ToList();
             var updatedAtUtc = contributions.Count == 0

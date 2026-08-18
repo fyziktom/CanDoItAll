@@ -1,42 +1,62 @@
 @using CanDoItAll.AgentFramework.Usage
+@using CanDoItAll.Components.BaseLib
 
-@if (IsLoading)
-{
-    <LoadingState Eyebrow="Usage ranking"
-                  Title="Loading consumers"
-                  Description="Combining selected provider usage sources." />
-}
-else if (Rows.Count == 0)
-{
-    <EmptyState Eyebrow="No usage"
-                Title="No consumers are ranked"
-                Description="@EmptyDescription" />
-}
-else
-{
-    <Stack GapScale="LayoutGap.Small" data-testid="@TestId">
+<Stack GapScale="LayoutGap.Small"
+       data-testid="@TestId">
+    @if (IsLoading)
+    {
+        <EmptyState Eyebrow="Loading"
+                    Title="Usage ranking is loading"
+                    Description="Combining selected provider usage sources." />
+    }
+    else if (Rows.Count == 0)
+    {
+        <EmptyState Eyebrow="No usage"
+                    Title="No consumers are ranked"
+                    Description="@EmptyDescription" />
+    }
+    else
+    {
         @foreach (var row in Rows)
         {
-            <SurfaceCard Soft="true">
-                <Cluster JustifyContent="JustifyContent.SpaceBetween"
-                         AlignItems="AlignItems.Center"
-                         Gap="LayoutGap.Medium"
-                         Wrap="FlexWrap.Wrap">
-                    <Stack Gap="0.15rem">
-                        <span class="font-medium text-slate-950">@row.ConsumerName</span>
-                        <span class="text-xs text-slate-500">@ResolveConsumerKind(row.ConsumerKind) · @AgentUsageDisplay.FormatLastUsed(row.LastUsedAtUtc)</span>
-                    </Stack>
-                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                        <StatusBadge Tone="info" Text="@($"{AgentUsageDisplay.FormatCount(row.Totals.ExecutionCount)} executions")" />
-                        <StatusBadge Tone="@(row.Totals.FailedExecutionCount > 0 ? "danger" : "success")"
-                                     Text="@($"{AgentUsageDisplay.FormatCount(row.Totals.FailedExecutionCount)} failed")" />
-                        <StatusBadge Tone="base" Text="@($"{AgentUsageDisplay.FormatTokens(row.Totals.Tokens.TotalTokens)} tokens")" />
-                    </Cluster>
-                </Cluster>
-            </SurfaceCard>
+            <div class="flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border border-slate-200 bg-white/80 px-2.5 py-1.5 shadow-sm"
+                 data-testid="@($"{TestId}-row")">
+                <span class="h-9 w-9 shrink-0"
+                      data-testid="@($"{TestId}-avatar")">
+                    <Avatar Alt="@row.ConsumerName"
+                            ImageUrl="@ResolveAvatarImageUrl(row)"
+                            FallbackText="@ResolveInitials(row.ConsumerName)"
+                            DefaultImageSeed="@ResolveAvatarSeed(row)"
+                            Size="AvatarSize.Small"
+                            Shape="AvatarShape.Rounded" />
+                </span>
+
+                <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm font-semibold text-slate-950">@row.ConsumerName</div>
+                    <div class="truncate text-xs text-slate-500">@ResolveSubtitle(row)</div>
+                </div>
+
+                <div class="flex max-w-[6rem] shrink-0 flex-col items-end gap-0.5">
+                    <StatusBadge Tone="@ResolvePrimaryTone()"
+                                 Text="@ResolvePrimaryText(row)"
+                                 NoWrap="true" />
+                    @if (ShowFailureRank)
+                    {
+                        <StatusBadge Tone="success"
+                                     Text="@ResolveRunText(row)"
+                                     NoWrap="true" />
+                    }
+                    else if (row.Totals.FailedExecutionCount > 0)
+                    {
+                        <StatusBadge Tone="danger"
+                                     Text="@ResolveFailedText(row)"
+                                     NoWrap="true" />
+                    }
+                </div>
+            </div>
         }
-    </Stack>
-}
+    }
+</Stack>
 
 @code {
     [Parameter, EditorRequired]
@@ -46,10 +66,59 @@ else
     public bool IsLoading { get; set; }
 
     [Parameter]
+    public bool ShowFailureRank { get; set; }
+
+    [Parameter]
+    public IReadOnlyDictionary<string, string?> AvatarImageUrls { get; set; } = EmptyAvatarImageUrls;
+
+    [Parameter]
     public string EmptyDescription { get; set; } = "Run an Agent or Simple Chat to populate usage.";
 
     [Parameter]
     public string TestId { get; set; } = "provider-usage-consumer-list";
+
+    private static IReadOnlyDictionary<string, string?> EmptyAvatarImageUrls { get; } =
+        new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    private string? ResolveAvatarImageUrl(ProviderUsageConsumerRow row)
+        => row.ConsumerKind == ProviderUsageConsumerKind.Agent &&
+           AvatarImageUrls.TryGetValue(row.ConsumerId, out var imageUrl)
+            ? imageUrl
+            : null;
+
+    private static string ResolveInitials(string value)
+    {
+        var words = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(item => char.ToUpperInvariant(item[0]))
+            .ToArray();
+
+        return words.Length == 0 ? "?" : new string(words);
+    }
+
+    private static string ResolveAvatarSeed(ProviderUsageConsumerRow row)
+        => $"{row.ConsumerKind}:{row.ConsumerId}:{row.ConsumerName}";
+
+    private static string ResolveSubtitle(ProviderUsageConsumerRow row)
+    {
+        var lastUsed = AgentUsageDisplay.FormatLastUsed(row.LastUsedAtUtc);
+        return row.ConsumerKind == ProviderUsageConsumerKind.Agent
+            ? lastUsed
+            : $"{ResolveConsumerKind(row.ConsumerKind)} · {lastUsed}";
+    }
+
+    private string ResolvePrimaryText(ProviderUsageConsumerRow row)
+        => ShowFailureRank ? ResolveFailedText(row) : ResolveRunText(row);
+
+    private string ResolvePrimaryTone()
+        => ShowFailureRank ? "danger" : "success";
+
+    private static string ResolveRunText(ProviderUsageConsumerRow row)
+        => $"{AgentUsageDisplay.FormatCount(row.Totals.ExecutionCount)} runs";
+
+    private static string ResolveFailedText(ProviderUsageConsumerRow row)
+        => $"{AgentUsageDisplay.FormatCount(row.Totals.FailedExecutionCount)} failed";
 
     private static string ResolveConsumerKind(ProviderUsageConsumerKind kind)
         => kind switch

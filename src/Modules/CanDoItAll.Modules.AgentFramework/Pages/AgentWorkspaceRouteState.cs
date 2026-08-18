@@ -72,7 +72,8 @@ public sealed record AgentWorkspaceRouteState(
 
         if (state.Tab == AgentWorkspaceTabs.SimpleChats)
         {
-            if (state.SimpleChat.View != SimpleChatWorkspaceView.Conversations)
+            if (state.SimpleChat.View != SimpleChatWorkspaceView.Definitions ||
+                state.SimpleChat.DefinitionId.HasValue)
             {
                 query.Add(new(SimpleChatViewQueryKey, FormatSimpleChatView(state.SimpleChat.View)));
             }
@@ -130,8 +131,8 @@ public sealed record AgentWorkspaceRouteState(
         {
             "conversations" => SimpleChatWorkspaceView.Conversations,
             "definitions" => SimpleChatWorkspaceView.Definitions,
-            null or "" when definitionId.HasValue && !conversationId.HasValue => SimpleChatWorkspaceView.Definitions,
-            _ => SimpleChatWorkspaceView.Conversations
+            null or "" when conversationId.HasValue && !definitionId.HasValue => SimpleChatWorkspaceView.Conversations,
+            _ => SimpleChatWorkspaceView.Definitions
         };
 
     private static Guid? ParseId(string? value)

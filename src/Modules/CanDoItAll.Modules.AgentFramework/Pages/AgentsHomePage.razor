@@ -217,6 +217,7 @@
 
                         <ProviderUsageConsumerList IsLoading="@(isUsageLoading || !isLoaded)"
                                                    Rows="@TopUsageConsumers"
+                                                   AvatarImageUrls="@OverviewConsumerAvatarImageUrls"
                                                    TestId="agents-overview-top-consumers-list"
                                                    EmptyDescription="Run an Agent or Simple Chat in the selected scope to populate consumer usage." />
                     </SurfaceCard>
@@ -262,6 +263,8 @@
 
                         <ProviderUsageConsumerList IsLoading="@(isUsageLoading || !isLoaded)"
                                                    Rows="@TopFailingConsumers"
+                                                   AvatarImageUrls="@OverviewConsumerAvatarImageUrls"
+                                                   ShowFailureRank="true"
                                                    TestId="agents-overview-failing-consumers-list"
                                                    EmptyDescription="No failed Agent or Simple Chat executions exist in the selected scope." />
                     </SurfaceCard>
