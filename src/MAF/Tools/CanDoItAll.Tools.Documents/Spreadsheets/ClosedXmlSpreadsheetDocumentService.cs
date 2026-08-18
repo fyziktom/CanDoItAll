@@ -198,13 +198,24 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
         foreach (var cellWrite in request.CellWrites)
         {
-            WriteCellValue(worksheet.Cell(cellWrite.CellAddress), cellWrite.Value);
+            WriteCellValue(
+                worksheet.Cell(cellWrite.CellAddress),
+                cellWrite.ScalarValue is null
+                    ? cellWrite.Value
+                    : cellWrite.ScalarValue.Value);
         }
 
         foreach (var rangeWrite in request.RangeWrites)
         {
             var range = worksheet.Range(rangeWrite.RangeAddress);
-            WriteRange(range, rangeWrite.Values);
+            if (rangeWrite.ScalarValues is null)
+            {
+                WriteRange(range, rangeWrite.Values, static value => value);
+            }
+            else
+            {
+                WriteRange(range, rangeWrite.ScalarValues, static value => value.Value);
+            }
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -822,7 +833,10 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
                endpoints.All(XLHelper.IsValidA1Address);
     }
 
-    private static void WriteRange(IXLRange range, IReadOnlyList<IReadOnlyList<string>> values)
+    private static void WriteRange<T>(
+        IXLRange range,
+        IReadOnlyList<IReadOnlyList<T>> values,
+        Func<T, object?> valueSelector)
     {
         if (values.Count > range.RowCount())
         {
@@ -846,21 +860,24 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
 
             for (var columnIndex = 0; columnIndex < row.Count; columnIndex++)
             {
-                WriteCellValue(range.Cell(rowIndex + 1, columnIndex + 1), row[columnIndex]);
+                WriteCellValue(
+                    range.Cell(rowIndex + 1, columnIndex + 1),
+                    valueSelector(row[columnIndex]));
             }
         }
     }
 
-    private static void WriteCellValue(IXLCell cell, string value)
+    private static void WriteCellValue(IXLCell cell, object? value)
     {
-        var normalized = value ?? string.Empty;
-        if (normalized.Length > 1 && normalized.StartsWith('='))
+        if (value is string text && text.Length > 1 && text.StartsWith('='))
         {
-            cell.FormulaA1 = normalized[1..];
+            cell.FormulaA1 = text[1..];
             return;
         }
 
-        cell.Value = normalized;
+        cell.Value = value is null
+            ? Blank.Value
+            : XLCellValue.FromObject(value, CultureInfo.InvariantCulture);
     }
 
     private static string BuildMarkdownTable(IReadOnlyList<IReadOnlyList<string>> rows)

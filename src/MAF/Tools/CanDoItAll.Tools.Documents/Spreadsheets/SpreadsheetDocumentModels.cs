@@ -87,11 +87,103 @@ public sealed record SpreadsheetRangeReadResult(
 
 public sealed record SpreadsheetCellWrite(
     string CellAddress,
-    string Value);
+    string Value)
+{
+    internal SpreadsheetScalarWriteValue? ScalarValue { get; init; }
+
+    public SpreadsheetCellWrite WithScalarValue(SpreadsheetScalarWriteValue scalarValue)
+    {
+        ArgumentNullException.ThrowIfNull(scalarValue);
+        return this with { ScalarValue = scalarValue };
+    }
+}
 
 public sealed record SpreadsheetRangeWrite(
     string RangeAddress,
-    IReadOnlyList<IReadOnlyList<string>> Values);
+    IReadOnlyList<IReadOnlyList<string>> Values)
+{
+    internal IReadOnlyList<IReadOnlyList<SpreadsheetScalarWriteValue>>? ScalarValues { get; init; }
+
+    public SpreadsheetRangeWrite WithScalarValues(
+        IReadOnlyList<IReadOnlyList<SpreadsheetScalarWriteValue>> scalarValues)
+    {
+        ArgumentNullException.ThrowIfNull(scalarValues);
+        if (Values is null || scalarValues.Count != Values.Count)
+        {
+            throw new ArgumentException(
+                "Scalar spreadsheet rows must match the existing string-value rows.",
+                nameof(scalarValues));
+        }
+
+        for (var rowIndex = 0; rowIndex < scalarValues.Count; rowIndex++)
+        {
+            IReadOnlyList<SpreadsheetScalarWriteValue>? scalarRow = scalarValues[rowIndex];
+            IReadOnlyList<string>? valueRow = Values[rowIndex];
+            if (scalarRow is null || valueRow is null || scalarRow.Count != valueRow.Count || scalarRow.Any(static value => value is null))
+            {
+                throw new ArgumentException(
+                    "Each scalar spreadsheet row must match its existing string-value row and contain no null scalar descriptors.",
+                    nameof(scalarValues));
+            }
+        }
+
+        return this with { ScalarValues = scalarValues };
+    }
+}
+
+public enum SpreadsheetScalarWriteValueKind
+{
+    Blank,
+    Text,
+    Integer,
+    Decimal,
+    FloatingPoint,
+    Boolean
+}
+
+public sealed class SpreadsheetScalarWriteValue
+{
+    private SpreadsheetScalarWriteValue(
+        SpreadsheetScalarWriteValueKind kind,
+        object? value)
+    {
+        Kind = kind;
+        Value = value;
+    }
+
+    public static SpreadsheetScalarWriteValue Blank { get; } = new(
+        SpreadsheetScalarWriteValueKind.Blank,
+        value: null);
+
+    public SpreadsheetScalarWriteValueKind Kind { get; }
+
+    internal object? Value { get; }
+
+    public static SpreadsheetScalarWriteValue FromText(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return new SpreadsheetScalarWriteValue(SpreadsheetScalarWriteValueKind.Text, value);
+    }
+
+    public static SpreadsheetScalarWriteValue FromInteger(long value)
+        => new(SpreadsheetScalarWriteValueKind.Integer, value);
+
+    public static SpreadsheetScalarWriteValue FromDecimal(decimal value)
+        => new(SpreadsheetScalarWriteValueKind.Decimal, value);
+
+    public static SpreadsheetScalarWriteValue FromFloatingPoint(double value)
+    {
+        if (!double.IsFinite(value))
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), "Spreadsheet floating-point values must be finite.");
+        }
+
+        return new SpreadsheetScalarWriteValue(SpreadsheetScalarWriteValueKind.FloatingPoint, value);
+    }
+
+    public static SpreadsheetScalarWriteValue FromBoolean(bool value)
+        => new(SpreadsheetScalarWriteValueKind.Boolean, value);
+}
 
 public sealed record SpreadsheetFunctionDescriptor(
     string Name,

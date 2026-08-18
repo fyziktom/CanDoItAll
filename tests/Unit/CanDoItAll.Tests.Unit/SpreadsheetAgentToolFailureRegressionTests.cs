@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tools.Documents;
+using ClosedXML.Excel;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -282,6 +283,110 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
             maxRows: 1,
             maxColumns: 3);
         Assert.Equal(["Metric", "Value", "Unit"], written.Values[0]);
+    }
+
+    [Fact]
+    public async Task Spreadsheet_function_accepts_provider_json_range_values_with_numbers_and_nulls()
+    {
+        using var temp = new SpreadsheetRegressionTempDirectory();
+        var plugin = CreatePlugin(
+            temp.Path,
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+        var function = WorkspaceSpreadsheetRuntimeToolFactory.CreateWriteTool(
+            plugin,
+            ToolContractCatalog.WorkspaceWriteSpreadsheet,
+            "Writes an XLSX workbook.");
+        Assert.Contains(
+            "\"type\":[\"string\",\"number\",\"boolean\",\"null\"]",
+            function.JsonSchema.GetRawText(),
+            StringComparison.Ordinal);
+        using var rangeWritesDocument = JsonDocument.Parse(
+            """
+            [
+              {
+                "rangeAddress": "A1:D3",
+                "values": [
+                  ["Garden Layout Proposals — Production & Watering Estimates", null, null, null],
+                  ["Assumption", "Value", "Unit", "Notes"],
+                  ["Garden area", 50, "m²", "10 m × 5 m; gross footprint including paths"]
+                ]
+              }
+            ]
+            """);
+
+        var rawResult = await function.InvokeAsync(new AIFunctionArguments
+        {
+            ["workbookPath"] = "garden-layout-estimates.xlsx",
+            ["outputWorkbookPath"] = "garden-layout-estimates.xlsx",
+            ["worksheetName"] = "Assumptions",
+            ["rangeWrites"] = rangeWritesDocument.RootElement.Clone(),
+            ["createWorkbookIfMissing"] = true,
+            ["overwrite"] = true
+        });
+
+        var result = Assert.IsType<JsonElement>(rawResult);
+        Assert.True(result.GetProperty("succeeded").GetBoolean());
+        var workbookPath = Path.Combine(temp.Path, "garden-layout-estimates.xlsx");
+        Assert.True(File.Exists(workbookPath));
+        var written = new ClosedXmlSpreadsheetDocumentService().ReadRange(
+            workbookPath,
+            "Assumptions",
+            "A1:D3",
+            maxRows: 3,
+            maxColumns: 4);
+        Assert.Equal(
+            ["Garden Layout Proposals — Production & Watering Estimates", "", "", ""],
+            written.Values[0]);
+        Assert.Equal(["Garden area", "50", "m²", "10 m × 5 m; gross footprint including paths"], written.Values[2]);
+        using var workbook = new XLWorkbook(workbookPath);
+        var worksheet = workbook.Worksheet("Assumptions");
+        Assert.Equal(XLDataType.Number, worksheet.Cell("B3").DataType);
+        Assert.Equal(50d, worksheet.Cell("B3").GetDouble());
+        Assert.True(worksheet.Cell("B1").IsEmpty());
+    }
+
+    [Fact]
+    public async Task Spreadsheet_function_rejects_non_finite_provider_number_with_actionable_validation()
+    {
+        using var temp = new SpreadsheetRegressionTempDirectory();
+        var plugin = CreatePlugin(
+            temp.Path,
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+        var function = WorkspaceSpreadsheetRuntimeToolFactory.CreateWriteTool(
+            plugin,
+            ToolContractCatalog.WorkspaceWriteSpreadsheet,
+            "Writes an XLSX workbook.");
+        using var rangeWritesDocument = JsonDocument.Parse(
+            """
+            [
+              {
+                "rangeAddress": "A1:A1",
+                "values": [[1e10000]]
+              }
+            ]
+            """);
+
+        var exception = await Assert.ThrowsAsync<AgentToolInputValidationException>(async () =>
+            await function.InvokeAsync(new AIFunctionArguments
+            {
+                ["workbookPath"] = "non-finite-number.xlsx",
+                ["worksheetName"] = "Proof",
+                ["rangeWrites"] = rangeWritesDocument.RootElement.Clone(),
+                ["createWorkbookIfMissing"] = true,
+                ["overwrite"] = true
+            }));
+
+        Assert.Contains("finite number", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("row 1 column 1", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(Path.Combine(temp.Path, "non-finite-number.xlsx")));
     }
 
     [Fact]

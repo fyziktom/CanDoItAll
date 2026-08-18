@@ -14,7 +14,7 @@ internal sealed class WorkspaceToolSet(
     StorageRuntimePlugin? storagePlugin,
     RuntimeCapabilityAccessPlan capabilityAccessPlan)
 {
-    private const string SpreadsheetWriteDescription = "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Each rangeWrites values row must fit within the columns of its rangeAddress, and the number of values rows must fit within that range. Values beginning with = are stored as formulas. Creates missing workbooks and worksheets when requested.";
+    private const string SpreadsheetWriteDescription = "Creates or updates a workspace .xlsx workbook and worksheet using typed cell and range writes. Cell values may be strings, numbers, booleans, or null; null writes a blank cell. Each rangeWrites values row must fit within the columns of its rangeAddress, and the number of values rows must fit within that range. String values beginning with = are stored as formulas. Creates missing workbooks and worksheets when requested.";
 
     private readonly AgentWorkspaceToolAccessSettings workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(workspaceToolAccess);
 
@@ -187,7 +187,7 @@ internal sealed class WorkspaceToolSet(
                 new(ToolContractCatalog.WorkspaceAppendFile, description => AIFunctionFactory.Create(filesystemPlugin.AppendWorkspaceTextFile, ToolContractCatalog.WorkspaceAppendFile, description), "Appends text to a workspace file in the managed workspace or configured external workspace root.", true),
                 new(ToolContractCatalog.WorkspaceZipPath, description => AIFunctionFactory.Create(filesystemPlugin.ZipWorkspacePath, ToolContractCatalog.WorkspaceZipPath, description), "Creates a bounded zip archive from an allowed workspace file or directory.", true),
                 new(ToolContractCatalog.WorkspaceUnzipArchive, description => AIFunctionFactory.Create(filesystemPlugin.UnzipWorkspaceArchive, ToolContractCatalog.WorkspaceUnzipArchive, description), "Extracts a bounded workspace zip archive into an allowed destination directory.", true),
-                new(ToolContractCatalog.WorkspaceWriteSpreadsheet, description => AIFunctionFactory.Create(spreadsheetPlugin.WriteSpreadsheetWorkbook, ToolContractCatalog.WorkspaceWriteSpreadsheet, description), SpreadsheetWriteDescription, true),
+                new(ToolContractCatalog.WorkspaceWriteSpreadsheet, description => WorkspaceSpreadsheetRuntimeToolFactory.CreateWriteTool(spreadsheetPlugin, ToolContractCatalog.WorkspaceWriteSpreadsheet, description), SpreadsheetWriteDescription, true),
                 new(ToolContractCatalog.WorkspaceCopyPath, description => AIFunctionFactory.Create(filesystemPlugin.CopyWorkspacePath, ToolContractCatalog.WorkspaceCopyPath, description), "Copies a file or directory inside allowed workspace roots.", true),
                 new(ToolContractCatalog.WorkspaceMovePath, description => AIFunctionFactory.Create(filesystemPlugin.MoveWorkspacePath, ToolContractCatalog.WorkspaceMovePath, description), "Moves or renames a file or directory inside allowed workspace roots.", true),
                 new(ToolContractCatalog.WorkspaceDeletePath, description => AIFunctionFactory.Create(filesystemPlugin.DeleteWorkspacePath, ToolContractCatalog.WorkspaceDeletePath, description), "Deletes a file or directory inside allowed workspace roots.", true),
