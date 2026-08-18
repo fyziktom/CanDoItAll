@@ -38,10 +38,10 @@ public partial class AgentDetailsDialog
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
-    public IExternalTargetPathRegistry ExternalTargetPathRegistry { get; set; } = default!;
+    public DialogService DialogService { get; set; } = default!;
 
     [Inject]
-    public DialogService DialogService { get; set; } = default!;
+    public IExternalTargetPathRegistryFactory ExternalTargetPathRegistryFactory { get; set; } = default!;
 
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
@@ -53,8 +53,6 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<string> tagValues = [];
-    private string externalWorkspaceRootsText = string.Empty;
-    private string allowedStorageCatalogIdsText = string.Empty;
     private string capabilitySearch = string.Empty;
     private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
     private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
@@ -225,7 +223,7 @@ public partial class AgentDetailsDialog
                 else
                 {
                     editorModel = await WorkspaceService.GetAgentEditorAsync(AgentId.Value);
-                    ApplyEditorTextState();
+                    ApplyDerivedEditorState();
                     linkedPartyId = null;
                 }
             }
@@ -357,7 +355,7 @@ public partial class AgentDetailsDialog
 
     private async Task<Guid> PersistEditorAsync()
     {
-        SyncWorkspaceToolAccessFromEditorText();
+        NormalizeWorkspaceToolAccessForSave();
         NormalizeRuntimeModelSelectionForSave();
         NormalizeImageGenerationAccessForSave();
         editorModel.ProjectStructureAccess =
@@ -695,7 +693,7 @@ public partial class AgentDetailsDialog
             await WorkspaceService.VerifyCapabilityAsync(editorModel.Id.Value, capabilityId);
             capabilities = await WorkspaceService.ListCapabilitiesAsync();
             editorModel = await WorkspaceService.GetAgentEditorAsync(editorModel.Id.Value);
-            ApplyEditorTextState();
+            ApplyDerivedEditorState();
             NotificationService.Success("Capability verified", "Capability verification completed.");
         }
         catch (Exception exception)
@@ -1082,6 +1080,29 @@ public partial class AgentDetailsDialog
         editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
     }
 
+    private void NormalizeWorkspaceToolAccessForSave()
+    {
+        var normalized = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
+        var externalTargetRegistry = ExternalTargetPathRegistryFactory.Create(
+            normalized.ExternalTargetRootBindings);
+        var canonicalAliases = normalized.AllowedExternalTargetAliases
+            .Select(alias =>
+                AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                    alias,
+                    externalTargetRegistry) ??
+                throw new InvalidOperationException(
+                    $"External workspace root '{alias}' is not a supported path or alias."))
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
+            .ToList();
+
+        normalized.AllowedExternalTargetAliases = canonicalAliases;
+        normalized.ExternalTargetRootBindings = normalized.ExternalTargetRootBindings
+            .Concat(externalTargetRegistry.ExportBindings(canonicalAliases))
+            .ToList();
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(normalized);
+    }
+
     private static AgentWorkspaceToolAccessSettings CloneWorkspaceToolAccess(AgentWorkspaceToolAccessSettings source)
     {
         return new AgentWorkspaceToolAccessSettings
@@ -1427,58 +1448,21 @@ public partial class AgentDetailsDialog
         return string.Empty;
     }
 
-    private void SyncWorkspaceToolAccessFromEditorText()
+    private void ApplyExternalWorkspaceRootSelection(ExternalWorkspaceRootSelection selection)
     {
-        var externalTargetAliases = NormalizeExternalWorkspaceRoots(
-            SplitEditorLines(externalWorkspaceRootsText));
-        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = externalTargetAliases;
-        editorModel.WorkspaceToolAccess.ExternalTargetRootBindings = editorModel.WorkspaceToolAccess
-            .ExternalTargetRootBindings
-            .Concat(ExternalTargetPathRegistry.ExportBindings(externalTargetAliases))
-            .Distinct()
-            .ToList();
-
-        editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = SplitEditorLines(allowedStorageCatalogIdsText)
-            .Where(item => Guid.TryParse(item, out _))
-            .Select(Guid.Parse)
-            .Where(item => item != Guid.Empty)
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-
-        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
-        externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
-        allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
+        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = selection.AllowedAliases.ToList();
+        editorModel.WorkspaceToolAccess.ExternalTargetRootBindings = selection.RootBindings.ToList();
+        NormalizeWorkspaceToolAccess();
     }
 
-    private List<string> NormalizeExternalWorkspaceRoots(IReadOnlyList<string> requestedRoots)
+    private void ApplyStorageCatalogSelection(IReadOnlyList<Guid> catalogIds)
     {
-        var aliases = new List<string>();
-        foreach (var requestedRoot in requestedRoots)
-        {
-            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
-                requestedRoot,
-                ExternalTargetPathRegistry);
-            if (string.IsNullOrWhiteSpace(alias))
-            {
-                throw new InvalidOperationException(
-                    "External workspace roots must be absolute paths or canonical external-target aliases below a filesystem root.");
-            }
-
-            aliases.Add(alias);
-        }
-
-        return aliases
-            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
-            .OrderBy(alias => alias, StringComparer.Ordinal)
+        editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = catalogIds
+            .Where(catalogId => catalogId != Guid.Empty)
+            .Distinct()
+            .OrderBy(catalogId => catalogId)
             .ToList();
-    }
-
-    private static IReadOnlyList<string> SplitEditorLines(string value)
-    {
-        return value
-            .Split(["\r\n", "\n", "\r", ",", ";"], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .ToList();
+        NormalizeWorkspaceToolAccess();
     }
 
     private IReadOnlyList<string> BuildAgentTagsForSave()
@@ -1550,24 +1534,20 @@ public partial class AgentDetailsDialog
             ? providers.FirstOrDefault(provider => provider.Id == providerProfileId)?.Kind
             : null;
         editorModel = AgentEditorModel.FromDefinition(definition, providerKind);
-        ApplyEditorTextState();
+        ApplyDerivedEditorState();
         ResetAvatarGenerationState();
         linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
     }
 
-    private void ApplyEditorTextState()
+    private void ApplyDerivedEditorState()
     {
         tagValues = NormalizeVisibleTags(editorModel.Tags);
-        externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
-        allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
     }
 
     private void ResetEditorState()
     {
         editorModel = new AgentEditorModel();
         tagValues = [];
-        externalWorkspaceRootsText = string.Empty;
-        allowedStorageCatalogIdsText = string.Empty;
         ResetAvatarGenerationState();
         linkedPartyId = null;
     }

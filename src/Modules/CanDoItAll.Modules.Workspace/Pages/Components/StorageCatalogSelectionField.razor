@@ -1,0 +1,60 @@
+@implements IAsyncDisposable
+
+<Stack GapScale="LayoutGap.Small"
+       AlignItems="AlignItems.Stretch"
+       data-testid="@DataTestId">
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap">
+        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+            <p class="cda-field-label m-0">@Label</p>
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p class="m-0 text-sm leading-5 text-slate-600">@Description</p>
+            }
+        </Stack>
+
+        <Button Text="Choose catalogs"
+                Icon="storage"
+                Size="ButtonSize.Small"
+                Variant="Variant.Outlined"
+                Disabled="@ChooserDisabled"
+                IsBusy="@isOpening"
+                Click="OpenPickerAsync"
+                data-testid="@($"{DataTestId}-choose")" />
+    </Split>
+
+    @if (AllowAll)
+    {
+        <Alert AlertStyle="AlertStyle.Info">
+            <p class="m-0">All current and future storage catalogs are allowed. Turn off Allow all to edit the preserved selection.</p>
+        </Alert>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(openErrorMessage))
+    {
+        <Alert AlertStyle="AlertStyle.Warning">
+            <p class="m-0">@openErrorMessage</p>
+        </Alert>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(catalogDetailsErrorMessage))
+    {
+        <Alert AlertStyle="AlertStyle.Warning"
+               data-testid="@($"{DataTestId}-details-warning")">
+            <p class="m-0">@catalogDetailsErrorMessage</p>
+        </Alert>
+    }
+
+    <SelectedReferenceTable TKey="Guid"
+                            Items="@SelectedReferences"
+                            PrimaryColumnLabel="Storage catalog"
+                            IdentifierColumnLabel="Catalog ID"
+                            EmptyTitle="No storage catalogs selected"
+                            EmptyDescription="Choose one or more enabled storage catalogs, or allow all catalogs."
+                            DataTestId="@($"{DataTestId}-selected")"
+                            Disabled="@ChooserDisabled"
+                            RemoveRequested="RemoveCatalogAsync" />
+</Stack>

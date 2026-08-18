@@ -10,6 +10,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -210,7 +211,8 @@ public sealed class AgentDetailsDialogDeletionTests
         {
             context.JSInterop.Mode = JSRuntimeMode.Loose;
             context.Services.AddCanDoItAllBaseLib();
-            context.Services.AddSingleton<IExternalTargetPathRegistry>(new ExternalTargetPathRegistry());
+            context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
+            context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
             var avatarGenerationService = new AgentAvatarGenerationService(
                 new UnavailableAgentImageGenerationService(),
                 NullLogger<AgentAvatarGenerationService>.Instance);

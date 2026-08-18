@@ -10,10 +10,13 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using ProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
@@ -78,7 +81,8 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
-        context.Services.AddSingleton<IExternalTargetPathRegistry>(new ExternalTargetPathRegistry());
+        context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
+        context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
         var generationService = new AgentAvatarGenerationService(
             imageGenerationService,
             NullLogger<AgentAvatarGenerationService>.Instance);

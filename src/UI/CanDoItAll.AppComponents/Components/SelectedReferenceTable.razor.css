@@ -1,0 +1,129 @@
+.selected-reference-table {
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    container-type: inline-size;
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+.selected-reference-table--disabled {
+    background: rgb(248 250 252);
+}
+
+.selected-reference-table__table {
+    border-collapse: collapse;
+    color: rgb(15 23 42);
+    table-layout: fixed;
+    width: 100%;
+}
+
+.selected-reference-table__table th,
+.selected-reference-table__table td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.selected-reference-table__table th {
+    background: rgb(248 250 252);
+    color: rgb(71 85 105);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+}
+
+.selected-reference-table__table tbody tr {
+    border-top: 1px solid rgb(226 232 240);
+}
+
+.selected-reference-table__table tbody tr:hover {
+    background: rgb(248 250 252 / 0.7);
+}
+
+.selected-reference-table__primary {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.selected-reference-table__primary strong {
+    font-size: 0.875rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.selected-reference-table__detail {
+    color: rgb(100 116 139);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.selected-reference-table__table code {
+    background: rgb(241 245 249);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.35rem;
+    color: rgb(51 65 85);
+    display: inline-block;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    padding: 0.2rem 0.35rem;
+    white-space: normal;
+}
+
+.selected-reference-table__actions,
+.selected-reference-table__actions-heading {
+    overflow-wrap: normal;
+    text-align: right !important;
+    white-space: nowrap;
+    width: 8.5rem;
+}
+
+.selected-reference-table__empty {
+    align-items: flex-start;
+    background: rgb(248 250 252);
+    color: rgb(71 85 105);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.8rem 0.9rem;
+}
+
+.selected-reference-table__empty strong {
+    color: rgb(30 41 59);
+    font-size: 0.875rem;
+}
+
+.selected-reference-table__empty span {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.selected-reference-table__visually-hidden {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+@container (max-width: 36rem) {
+    .selected-reference-table__table th,
+    .selected-reference-table__table td {
+        padding-inline: 0.55rem;
+    }
+
+    .selected-reference-table__actions,
+    .selected-reference-table__actions-heading {
+        width: 7.75rem;
+    }
+}

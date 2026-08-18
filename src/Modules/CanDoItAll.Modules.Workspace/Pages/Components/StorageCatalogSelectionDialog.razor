@@ -1,0 +1,65 @@
+@implements IAsyncDisposable
+
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       data-testid="@DataTestId">
+    @if (isLoading)
+    {
+        <LoadingState Eyebrow="Storage access"
+                      Title="Loading storage catalogs"
+                      Description="Reading the current workspace catalog." />
+    }
+    else if (!string.IsNullOrWhiteSpace(loadErrorMessage))
+    {
+        <EmptyState Eyebrow="Storage catalogs unavailable"
+                    Title="The storage catalog could not be loaded"
+                    Description="@loadErrorMessage">
+            <Actions>
+                <Button Text="Retry"
+                        Icon="refresh"
+                        Click="LoadCatalogsAsync"
+                        data-testid="@($"{DataTestId}-retry")" />
+            </Actions>
+        </EmptyState>
+    }
+    else
+    {
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Small"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <StatusBadge Tone="info"
+                         Text="@($"{pendingSelectedIds.Count} selected")" />
+            <p class="m-0 text-xs leading-5 text-slate-500">
+                Disabled saved references remain removable. Read-only catalogs can still be selected.
+            </p>
+        </Split>
+
+        <ResourceCardPicker TItem="Guid"
+                            Options="@PickerOptions"
+                            SelectionChanged="ToggleCatalogAsync"
+                            SearchPlaceholder="Search storage catalogs by name, provider, endpoint, or ID"
+                            EmptyEyebrow="No matches"
+                            EmptyTitle="No storage catalogs match this search"
+                            EmptyDescription="Clear the search to show the current workspace catalog."
+                            DataTestId="@($"{DataTestId}-picker")"
+                            MaxVisibleTags="4"
+                            UseBoundedResultsViewport="true" />
+    }
+
+    <Cluster Gap="LayoutGap.Small"
+             JustifyContent="JustifyContent.End"
+             Wrap="FlexWrap.Wrap">
+        <Button Text="Cancel"
+                Icon="close"
+                Variant="Variant.Outlined"
+                Click="CancelAsync"
+                data-testid="@($"{DataTestId}-cancel")" />
+        <Button Text="Apply selection"
+                Icon="check"
+                Disabled="@(isLoading || !string.IsNullOrWhiteSpace(loadErrorMessage))"
+                Click="ConfirmAsync"
+                data-testid="@($"{DataTestId}-apply")" />
+    </Cluster>
+</Stack>

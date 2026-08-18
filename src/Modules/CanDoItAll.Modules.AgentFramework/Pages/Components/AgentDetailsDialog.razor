@@ -493,14 +493,11 @@ else
                                     </p>
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
-                                    <label class="cda-field-label">External workspace roots</label>
-                                    <InputTextArea @bind-Value="externalWorkspaceRootsText"
-                                                   class="cda-input cda-input--textarea mt-2 min-h-28"
-                                                   placeholder="C:\repositories\OtherRepo&#10;external-target/D/work/repos/demo"
-                                                   data-testid="agents-catalog-workspace-external-roots" />
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">
-                                        Add persistent roots here when needed. Absolute folders mentioned in a prompt are also grounded for that run when file tools are enabled.
-                                    </p>
+                                    <ExternalWorkspaceRootSelectionField
+                                        AllowedAliases="@editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases"
+                                        RootBindings="@editorModel.WorkspaceToolAccess.ExternalTargetRootBindings"
+                                        SelectionChanged="ApplyExternalWorkspaceRootSelection"
+                                        DataTestId="agents-catalog-workspace-external-roots" />
                                 </div>
                                 <div class="cda-admin-subpanel">
                                     <p class="cda-field-label mb-2">Storage access</p>
@@ -532,15 +529,11 @@ else
                                     </p>
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
-                                    <label class="cda-field-label">Allowed storage catalog IDs</label>
-                                    <InputTextArea @bind-Value="allowedStorageCatalogIdsText"
-                                                   class="cda-input cda-input--textarea mt-2 min-h-28"
-                                                   disabled="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
-                                                   placeholder="00000000-0000-0000-0000-000000000000"
-                                                   data-testid="agents-catalog-storage-ids" />
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">
-                                        Use one catalog ID per line when the all-storage option is off. Write permission is still blocked for read-only catalogs.
-                                    </p>
+                                    <StorageCatalogSelectionField
+                                        Value="@editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds"
+                                        ValueChanged="ApplyStorageCatalogSelection"
+                                        AllowAll="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                                        DataTestId="agents-catalog-storage-selection" />
                                 </div>
                             </Grid>
                         </FormSection>
