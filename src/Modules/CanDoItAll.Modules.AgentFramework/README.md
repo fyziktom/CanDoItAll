@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Product module that exposes AgentFramework catalog, provider, governed execution, agent chat, and
-technical-agent bridge capabilities to the app runtime.
+Product module that exposes AgentFramework catalog, provider, governed execution, agent chat, Simple
+Chats presentation, shared provider-usage analytics, and technical-agent bridge capabilities to the app
+runtime.
 
 ## Project Type
 
@@ -61,10 +62,12 @@ Runtime-owned child-process leases are cleaned only through an effective workspa
 cleanup boundary re-reads durable terminal execution state and does not release leases for running or
 waiting-on-tool executions.
 
-The separate `CanDoItAll.AgentFramework.Llm.Conversations` library is an opt-in ordinary LLM
-conversation foundation. It is deliberately not registered by this product module and has no current
-HTTP API or UI. Future activation requires profile-generation fencing, retention policy, product
-surfaces, and integration proof.
+The separate `CanDoItAll.AgentFramework.Llm.Conversations` library remains an opt-in ordinary LLM
+conversation foundation and is not globally registered. The Simple Chats product composes it behind
+profile-generation fencing, PostgreSQL persistence, retention, leases, and durable operations. This
+module hosts the Simple Chats workspace, floating-shell contribution, Prompt Gallery composer action,
+and usage projection; it does not route those conversations through agent execution. Web owns the
+separate authorized HTTP/OpenAPI adapter.
 
 ## Related Docs
 
@@ -72,3 +75,5 @@ surfaces, and integration proof.
 - Current architecture: `docs/architecture/overview.md`
 - Agent execution activity and runtime snapshots: `docs/architecture/internal-communication.md`
 - Reusable floating agent chats: `docs/architecture/internal-communication.md`
+- Simple Chats product and API: `docs/llm-chats-api.md`
+- Simple Chats integration ownership: `docs/architecture/llm-chats-boundary-and-handoffs.md`

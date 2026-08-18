@@ -34,7 +34,7 @@ This repository does not own:
 |---|---|
 | [`CanDoItAll.Web`](src/App/CanDoItAll.Web/README.md) | Blazor host, HTTP API, OpenAPI, and runtime endpoints |
 | [`CanDoItAll.Composition`](src/App/CanDoItAll.Composition/README.md) | Dependency injection and application runtime composition |
-| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules, including the backend-only LLM Chats product |
+| [`src/Modules`](src/Modules/README.md) | Product-facing bounded modules, including the AgentFramework-hosted Simple Chats experience |
 | [`src/Processes`](src/Processes/README.md) | Durable process model, execution, projections, and persistence |
 | [`src/Memory`](src/Memory/README.md) | Provider-neutral Memory contracts, drivers, and persistence |
 | [`src/MAF`](src/MAF/README.md) | AgentFramework and Microsoft Agent Framework integration |
@@ -44,10 +44,12 @@ This repository does not own:
 kept out of that build graph and have suite-specific entry points under
 [`tests/Solutions`](tests/Solutions).
 
-LLM Chats currently exposes an asynchronous backend/API contract: turn admission returns a durable
-operation, a hosted dispatcher owns provider execution, and clients follow status or replayable SSE.
-It intentionally has no Razor, floating-chat, agent, tool, skill, MCP, or Project Structure integration.
-See [LLM Chats backend API](docs/llm-chats-api.md).
+Simple Chats provides provider-neutral ordinary conversations without creating agents or agent runs.
+The AgentFramework workspace hosts definition and conversation views, floating conversations,
+Prompt Gallery composer actions, and combined Agent/Simple Chat usage analytics. Its asynchronous HTTP
+contract remains available to remote clients: turn admission returns a durable operation, a hosted
+dispatcher owns provider execution, and clients follow status or replayable SSE. See
+[LLM Chats product and API](docs/llm-chats-api.md).
 
 ## Requirements
 

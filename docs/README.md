@@ -31,7 +31,7 @@ authoritative.
 ## Integration Contracts
 
 - [API control plane](api-control-plane.md)
-- [LLM Chats backend API](llm-chats-api.md)
+- [LLM Chats product and API](llm-chats-api.md)
 - [CRM/HR API](crm-hr-api.md)
 - [OAuth email plugins](oauth-email-plugins.md)
 - [Provider capability and pricing](provider-capability-and-pricing.md)

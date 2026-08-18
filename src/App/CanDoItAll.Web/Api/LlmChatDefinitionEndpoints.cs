@@ -15,17 +15,23 @@ internal static class LlmChatDefinitionEndpoints
             .DisableAntiforgery();
         definitions.MapGet("/provider-options", ListProviderOptionsAsync)
             .WithName("ListLlmChatProviderOptions")
+            .WithDescription(
+                "Lists credential-free provider, model, and thinking-effort options available to LLM Chat definitions.")
             .Produces<LlmChatProviderOptionApiResponse[]>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)
             .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         definitions.MapGet(string.Empty, ListDefinitionsAsync)
             .WithName("ListLlmChatDefinitions")
+            .WithDescription(
+                "Lists a bounded page of LLM Chat definitions, optionally filtered by lifecycle status.")
             .Produces<LlmChatApiPage<LlmChatDefinitionApiResponse>>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         definitions.MapPost(string.Empty, CreateDefinitionAsync)
             .WithName("CreateLlmChatDefinition")
+            .WithDescription(
+                "Creates a revisioned LLM Chat definition after validating its provider, model, thinking effort, and response format.")
             .Accepts<LlmChatDefinitionMutationApiRequest>("application/json")
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status201Created)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
@@ -33,18 +39,24 @@ internal static class LlmChatDefinitionEndpoints
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         definitions.MapGet("/{definitionId:guid}", GetDefinitionAsync)
             .WithName("GetLlmChatDefinition")
+            .WithDescription(
+                "Gets the safe definition detail without returning the system prompt or provider credentials.")
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         definitions.MapGet("/{definitionId:guid}/editor", GetDefinitionEditorAsync)
             .WithName("GetLlmChatDefinitionEditor")
+            .WithDescription(
+                "Gets the manage-scoped editable revision, including the system prompt and current concurrency token.")
             .Produces<LlmChatDefinitionEditorApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         definitions.MapPut("/{definitionId:guid}", UpdateDefinitionAsync)
             .WithName("UpdateLlmChatDefinition")
+            .WithDescription(
+                "Appends a validated immutable definition revision using the expected concurrency token from the body or If-Match header.")
             .Accepts<LlmChatDefinitionMutationApiRequest>("application/json")
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
@@ -79,6 +91,16 @@ internal static class LlmChatDefinitionEndpoints
                 service,
                 cancellationToken).ConfigureAwait(false))
             .WithName(operationName)
+            .WithDescription(status switch
+            {
+                LlmChatDefinitionStatus.Active =>
+                    "Activates the definition using the expected concurrency token from the body or If-Match header.",
+                LlmChatDefinitionStatus.Suspended =>
+                    "Suspends the definition using the expected concurrency token from the body or If-Match header.",
+                LlmChatDefinitionStatus.Archived =>
+                    "Archives the definition using the expected concurrency token from the body or If-Match header.",
+                _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+            })
             .Accepts<LlmChatExpectedConcurrencyApiRequest>("application/json")
             .Produces<LlmChatDefinitionApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)

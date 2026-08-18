@@ -46,6 +46,8 @@ internal static class LlmChatOperationsApi
             .DisableAntiforgery();
         operations.MapGet("/{operationId:guid}", GetOperationAsync)
             .WithName("GetLlmChatOperation")
+            .WithDescription(
+                "Gets durable operation state, result metadata, and bounded provider invocation evidence.")
             .Produces<LlmChatOperationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)

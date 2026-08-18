@@ -361,7 +361,7 @@ public sealed class LlmChatApiMetadataIntegrationTests
     }
 
     [Fact]
-    public async Task OpenApi_declares_every_implemented_llm_chat_problem_status()
+    public async Task OpenApi_documents_every_implemented_llm_chat_operation_and_problem_status()
     {
         await using var host = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
@@ -387,6 +387,7 @@ public sealed class LlmChatApiMetadataIntegrationTests
             [("/api/llm-conversations/{conversationId}/title", "patch")] = ["400", "404", "409"],
             [("/api/llm-conversations/{conversationId}/archive", "post")] = ["400", "404", "409"],
             [("/api/llm-conversations/{conversationId}/turns", "post")] = ["400", "404", "409", "422", "503", "504"],
+            [("/api/llm-conversations/{conversationId}/active-turns/{turnId}/abandon", "post")] = ["400", "404", "409"],
             [("/api/llm-chat-operations/{operationId}", "get")] = ["400", "404"],
             [("/api/llm-chat-operations/{operationId}/events", "get")] = ["400", "404", "409"],
             [("/api/llm-chat-operations/{operationId}/cancel", "post")] = ["400", "404"],
@@ -395,10 +396,14 @@ public sealed class LlmChatApiMetadataIntegrationTests
 
         foreach (var (endpoint, statuses) in expected)
         {
-            var responses = paths
+            var operation = paths
                 .GetProperty(endpoint.Path)
-                .GetProperty(endpoint.Method)
-                .GetProperty("responses");
+                .GetProperty(endpoint.Method);
+            Assert.False(
+                string.IsNullOrWhiteSpace(operation.GetProperty("description").GetString()),
+                $"{endpoint.Method.ToUpperInvariant()} {endpoint.Path} has no OpenAPI description.");
+
+            var responses = operation.GetProperty("responses");
             foreach (var status in statuses)
             {
                 Assert.True(

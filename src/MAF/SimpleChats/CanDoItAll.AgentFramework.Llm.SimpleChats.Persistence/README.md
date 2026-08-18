@@ -29,7 +29,7 @@ outside database transactions.
 It does not reference Web/Razor, Agent module execution or UI, tools, skills, MCP, memory, processes,
 Workbench, or other product UI implementations. The generic ordinary-conversation service is
 constructed only inside the scoped runtime engine; it is not globally published. The file conversation
-store is not registered in production. See [LLM Chats Backend API](../../../../docs/llm-chats-api.md).
+store is not registered in production. See [LLM Chats Product And API](../../../../docs/llm-chats-api.md).
 
 The nine `LlmChats_*` tables and their model snapshot are advanced by the append-only PostgreSQL
 migration chain beginning with `20260814163458_AddLlmChats`; pricing evidence was added by

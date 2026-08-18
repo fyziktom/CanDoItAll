@@ -6,7 +6,7 @@ first-party agent tool provider for that bounded area.
 
 | Module | Responsibility |
 |---|---|
-| [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md) | Agent catalog, provider configuration, governed execution, agent chat sessions, and capability setup |
+| [AgentFramework](../../src/Modules/CanDoItAll.Modules.AgentFramework/README.md) | Agent catalog, provider configuration, governed execution, agent chat sessions, Simple Chats presentation, usage analytics, and capability setup |
 | [Collaboration](../../src/Modules/CanDoItAll.Modules.Collaboration/README.md) | Collaboration records and collaboration-facing application surfaces |
 | [CRM/HR](../../src/Modules/CanDoItAll.Modules.CrmHr/README.md) | Parties, accounts, opportunities, workforce, recruiting, skills, staffing, and agent/person relationships |
 | [Memory](../../src/Modules/CanDoItAll.Modules.Memory/README.md) | Memory provider configuration, operations, diagnostics, and user-facing Memory surfaces |
@@ -42,6 +42,7 @@ LLM Chats persistence adapter constructs it only inside the scoped product engin
 PostgreSQL state and profile-generation fencing. Other products must opt in through their own explicit
 composition boundary rather than publishing the generic service globally.
 
-LLM Chats is the current exception to the general module expectation that a module owns pages: it is a
-backend/API product until its separate UI handoff is implemented. See
-[LLM Chats boundary and future handoffs](llm-chats-boundary-and-handoffs.md).
+The Simple Chats domain remains under `src/MAF/SimpleChats`; the AgentFramework module owns only its
+product presentation adapter, route state, Prompt Gallery action, and shared usage projection. This is
+intentional composition, not a move of conversation rules into the Agent module. See
+[LLM Chats boundary and integration ownership](llm-chats-boundary-and-handoffs.md).

@@ -1,9 +1,10 @@
-# LLM Chats Backend API
+# LLM Chats Product And API
 
 LLM Chats is the ordinary multi-turn chat product boundary. It uses the provider-neutral invocation
 runtime and canonical PostgreSQL transcript, but it does not create agents, agent runs, tools, skills,
-memory, processes, workspaces, or provider-native conversation state. This release is backend/API only;
-it adds no Razor or floating-agent-chat integration.
+memory, processes, workspaces, or provider-native conversation state. It exposes both typed Blazor
+surfaces and an external HTTP API; hosting the UI inside the AgentFramework shell does not convert a
+Simple Chat into agent execution.
 
 ## Product Model
 
@@ -19,6 +20,23 @@ lease, executes it outside the admission transaction, and persists the assistant
 operation state atomically. Expired leases are recoverable by another host. The runtime also uses the
 application database-profile generation as a fence: a profile switch cancels in-flight work and requires
 an explicit recovery decision when provider dispatch may have occurred.
+
+## Product UI
+
+The primary UI is the **Simple Chats** tab at `/agents?tab=simple-chats`. The former `/chats` route is a
+compatibility redirect that preserves supported definition, conversation, and view query state.
+
+- The definitions view lists, creates, edits, activates, suspends, and archives reusable definitions.
+- The conversations view creates and resumes revision-pinned conversations, follows durable turn
+  progress, and exposes explicit cancellation or recovery actions when required.
+- The shared conversation shell can open a Simple Chat as a floating conversation without moving
+  execution or persistence into the component layer.
+- The composer can open Prompt Gallery through the AgentFramework-owned action contributor.
+- AgentFramework overview analytics can report Agents, Simple Chats, or both, including known token and
+  cost evidence and explicit unpriced observations.
+
+The server-side UI orchestrates typed application services. Remote automation uses the HTTP routes
+below; UI components do not duplicate provider execution, transaction, lease, or transcript rules.
 
 ## Runtime Bounds And Configuration
 
@@ -106,6 +124,11 @@ All routes are under `/api`:
 | `POST /llm-chat-operations/{operationId}/reconcile` | Manage-scoped settlement from durable evidence after the live owner has drained |
 | `POST /llm-conversations/{conversationId}/active-turns/{turnId}/abandon` | Exact recovery after the live owner has drained |
 
+The running contract is authoritative at `/openapi/v1.json` and the byte-identical
+`/swagger/v1/swagger.json`; interactive Swagger UI is served at `/swagger` when enabled. The maintained
+cross-repository snapshot and the `candoitall-api-llm-chats` operator skill live in
+`CanDoItAll.SharedInfo/codex/skills`.
+
 Definition and conversation resources return strong numeric ETags. Mutation requests must supply the
 matching expected token in the body or `If-Match` where supported. Lists and transcript messages use
 bounded `take` values and opaque cursors. Read-scoped transcript pages exclude persisted `System`
@@ -181,7 +204,7 @@ and always persists `Api` origin. The checked-in trusted-local profile may leave
 disabled; any remotely reachable deployment must enable the canonical API authorization configuration
 before exposing these routes.
 
-Focused verification is documented in [Testing](testing.md). UI, shared-component isolation, Project
-Structure context, public chatbot deployment, retrieval/RAG, moderation, and external participants are
-explicitly deferred. Their ownership boundaries are recorded in
-[LLM Chats architecture and future handoffs](architecture/llm-chats-boundary-and-handoffs.md).
+Focused verification is documented in [Testing](testing.md). Project Structure context, public chatbot
+deployment, retrieval/RAG, moderation, and external participants remain explicitly deferred. Current UI
+ownership and the remaining handoffs are recorded in
+[LLM Chats boundary and integration ownership](architecture/llm-chats-boundary-and-handoffs.md).

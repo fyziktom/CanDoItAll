@@ -28,17 +28,23 @@ internal static class LlmChatConversationEndpoints
             .DisableAntiforgery();
         conversations.MapGet(string.Empty, ListConversationsAsync)
             .WithName("ListLlmChatConversations")
+            .WithDescription(
+                "Lists a bounded page of conversations, optionally filtered by definition, using an opaque cursor.")
             .Produces<LlmChatApiPage<LlmChatConversationApiResponse>>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         conversations.MapGet("/{conversationId:guid}", GetConversationAsync)
             .WithName("GetLlmChatConversation")
+            .WithDescription(
+                "Gets a conversation and a bounded page of its non-system transcript messages.")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
             .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ReadLlmChats);
         conversations.MapPatch("/{conversationId:guid}/title", RenameConversationAsync)
             .WithName("RenameLlmChatConversation")
+            .WithDescription(
+                "Renames a conversation using its expected transcript revision and concurrency token.")
             .Accepts<RenameLlmChatConversationApiRequest>("application/json")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
@@ -47,6 +53,8 @@ internal static class LlmChatConversationEndpoints
             .ApplyApiAuthorization(api, ApiAuthorizationPolicies.ManageLlmChats);
         conversations.MapPost("/{conversationId:guid}/archive", ArchiveConversationAsync)
             .WithName("ArchiveLlmChatConversation")
+            .WithDescription(
+                "Archives a conversation using the expected concurrency token from the body or If-Match header.")
             .Accepts<LlmChatExpectedConcurrencyApiRequest>("application/json")
             .Produces<LlmChatConversationApiResponse>(StatusCodes.Status200OK)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
