@@ -10,7 +10,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task GitWorkspaceTools_build_standard_read_command_plans()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -47,7 +47,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task GitWorkspaceTools_build_standard_mutation_command_plans()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "src"));
         await File.WriteAllTextAsync(Path.Combine(workspaceRoot, "src", "Feature.cs"), "namespace Sample;");
         var processHost = new FakeWorkspaceProcessHost();
@@ -91,7 +91,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task GitWorkspaceTools_reject_unsafe_inputs_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -118,7 +118,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     {
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+            $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         var privatePath = Path.Combine(
             Path.GetPathRoot(workspaceRoot)!,
@@ -147,7 +147,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     {
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+            $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         var sentinel = new IOException(
             @"Provider I/O failed while reading C:\private\command-provider-secret.txt");
@@ -170,7 +170,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_registers_declared_output_paths_as_artifacts()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workspaceRoot);
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "scripts"));
         var scriptPath = Path.Combine(workspaceRoot, "scripts", "Import-PlaywrightEvidence.ps1");
@@ -218,7 +218,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_persists_declared_product_mutation_mode_in_audit_receipt()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Apply-Update.ps1"), "Write-Output 'ok'");
@@ -339,7 +339,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             return;
         }
 
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var productRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}", "calculator-output");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         var appProjectDirectory = Path.Combine(productRoot, "src", "Calculator");
@@ -381,7 +381,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_rewrites_named_managed_path_argument_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         var inputDirectory = Path.Combine(workspaceRoot, "inputs");
         Directory.CreateDirectory(scriptDirectory);
@@ -420,7 +420,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_denies_native_external_argument_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var externalRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ScriptArgumentExternal.{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
@@ -449,7 +449,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PythonRunFile_denies_named_parent_traversal_argument_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "read_input.py"), "print('ok')");
@@ -475,7 +475,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_denies_external_target_dot_segment_argument_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
@@ -501,7 +501,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_denies_colon_attached_parent_traversal_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Read-Input.ps1"), "Write-Output 'ok'");
@@ -527,7 +527,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PythonRunFile_denies_attached_short_native_external_argument_before_process_execution()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var externalRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ScriptArgumentExternal.{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
@@ -556,7 +556,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_preserves_non_path_slash_literals()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         await File.WriteAllTextAsync(Path.Combine(scriptDirectory, "Validate.ps1"), "Write-Output 'ok'");
@@ -633,7 +633,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task PowerShellRunScript_denies_foreground_static_server_script()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
         var scriptPath = Path.Combine(scriptDirectory, "Serve-Static.ps1");
@@ -673,7 +673,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             return;
         }
 
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var productRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}", "product");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
@@ -734,7 +734,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+            $"cdia-wcmd-{Guid.NewGuid():N}");
         var productRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
@@ -819,7 +819,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+            $"cdia-wcmd-{Guid.NewGuid():N}");
         var productRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
@@ -882,7 +882,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+            $"cdia-wcmd-{Guid.NewGuid():N}");
         var productRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}",
@@ -941,7 +941,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_http_smoke_uses_project_directory_and_returns_launch_evidence_targets()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -988,7 +988,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_http_smoke_with_port_zero_probes_actual_listening_url_from_log()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -1030,7 +1030,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_http_smoke_can_keep_process_alive_for_browser_follow_up()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -1069,7 +1069,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetStop_uses_startup_receipt_and_records_cleanup_targets()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var receiptDirectory = Path.Combine(workspaceRoot, "artifacts", "process-runs", "dotnet-run", "20260616-183000000");
         Directory.CreateDirectory(receiptDirectory);
         await File.WriteAllTextAsync(
@@ -1114,7 +1114,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [InlineData("artifacts/scopes/organization/e5df9ad633dbc6974a0678a74976013c/process-runs/dotnet-run/20260624-193219617/startup.json")]
     public async Task DotnetStop_in_organization_scope_accepts_scoped_and_unscoped_startup_receipts(string startupReceiptPath)
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var workspaceScope = WorkspaceScopeDescriptor.Organization("e5df9ad633dbc6974a0678a74976013c");
         var receiptRelativeDirectory = workspaceScope.CombineArtifactPath("process-runs", "dotnet-run", "20260624-193219617");
         var receiptDirectory = Path.Combine(workspaceRoot, receiptRelativeDirectory.Replace('/', Path.DirectorySeparatorChar));
@@ -1155,7 +1155,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_http_smoke_can_mark_process_run_lifetime_for_downstream_capture()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -1976,7 +1976,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetTest_accepts_project_directory_when_target_is_unambiguous()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var testProjectDirectory = Path.Combine(workspaceRoot, "tests", "SampleWeb.Tests");
         Directory.CreateDirectory(testProjectDirectory);
         var testProjectPath = Path.Combine(testProjectDirectory, "SampleWeb.Tests.csproj");
@@ -2005,7 +2005,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRestore_disables_build_servers_to_avoid_stale_msbuild_pipes()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -2031,7 +2031,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetBuild_disables_build_servers_to_avoid_stale_msbuild_pipes()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -2058,7 +2058,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetTest_failure_result_points_agent_to_captured_diagnostics()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var testProjectDirectory = Path.Combine(workspaceRoot, "tests", "SampleWeb.Tests");
         Directory.CreateDirectory(testProjectDirectory);
         await File.WriteAllTextAsync(
@@ -2095,7 +2095,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task Process_scoped_command_receipts_use_current_run_artifact_namespace()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var workspaceScope = WorkspaceScopeDescriptor.Organization("org-001");
         var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
         Directory.CreateDirectory(scriptDirectory);
@@ -2132,7 +2132,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_accepts_project_directory_when_target_is_unambiguous()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "SampleWeb.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\" />");
@@ -2167,7 +2167,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetBuild_rejects_ambiguous_project_directory()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var appDirectory = Path.Combine(workspaceRoot, "apps", "Ambiguous");
         Directory.CreateDirectory(appDirectory);
         await File.WriteAllTextAsync(Path.Combine(appDirectory, "First.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
@@ -2191,7 +2191,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_foreground_uses_dotnet_run_for_runnable_project()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "WorkerApp");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(Path.Combine(projectDirectory, "WorkerApp.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
@@ -2222,7 +2222,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetRun_foreground_request_honors_explicit_no_http_wait_for_blazor_webassembly_project()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "TetrisGame");
         Directory.CreateDirectory(projectDirectory);
         await File.WriteAllTextAsync(
@@ -2255,7 +2255,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_accepts_razor_pages_webapp_template()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2280,7 +2280,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_accepts_blazor_webassembly_template()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2305,7 +2305,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_accepts_blazor_webassembly_pwa_template_option()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2330,7 +2330,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_rejects_a_template_option_not_supported_by_the_selected_template()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2352,7 +2352,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_accepts_target_framework_argument_with_a_valid_value()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2380,7 +2380,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_rejects_target_framework_argument_without_a_valid_value()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2406,7 +2406,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_rejects_an_inline_target_framework_value()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2428,7 +2428,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_rejects_unapproved_inline_template_option()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2450,7 +2450,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_accepts_empty_blazor_webassembly_template()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2475,7 +2475,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_accepts_solution_template()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
         var processHost = new FakeWorkspaceProcessHost();
         var service = TestWorkspaceServices.CreateCommandExecutionService(workspaceRoot, processHost);
@@ -2502,7 +2502,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     [Fact]
     public async Task DotnetNew_solution_template_allows_product_root_with_existing_solution_file()
     {
-        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"cdia-wcmd-{Guid.NewGuid():N}");
         var productRoot = Path.Combine(workspaceRoot, "calculator-output");
         Directory.CreateDirectory(productRoot);
         await File.WriteAllTextAsync(Path.Combine(productRoot, "Calculator.slnx"), string.Empty);
@@ -2529,7 +2529,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
     {
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
-            $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+            $"cdia-wcmd-{Guid.NewGuid():N}");
         var projectDirectory = Path.Combine(workspaceRoot, "apps", "SampleWeb");
         Directory.CreateDirectory(projectDirectory);
         File.WriteAllText(

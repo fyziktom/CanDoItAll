@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-13T02:53:33.221514+00:00",
+  "generated_utc": "2026-08-19T14:49:18.650232+00:00",
   "root_name": "Unix-portability",
   "payload_file_count": 339,
-  "payload_total_bytes": 4906905,
+  "payload_total_bytes": 4949887,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -1527,7 +1527,7 @@
     {
       "path": "scripts/__pycache__/enforce_portability_baseline.cpython-311.pyc",
       "size_bytes": 12895,
-      "sha256": "884839c8f7ffb2b44ee4d7fdde14e0484148073218749ff7d35dfe5f00208878"
+      "sha256": "6ee77bfcebd3753fc916a8a53706804937e5a849000cbf404b4e0f6581fe17c5"
     },
     {
       "path": "scripts/__pycache__/scan_artifacts_for_secrets.cpython-311.pyc",
@@ -1566,8 +1566,8 @@
     },
     {
       "path": "scripts/generate_b07_governed_proof.ps1",
-      "size_bytes": 9817,
-      "sha256": "c1077c44cfaa442ae44bb4895738abbe6f97eeb7a93020e17ec90212a51b3431"
+      "size_bytes": 9955,
+      "sha256": "6554bbbe89a620b0c1e91f40779717b3c228ff9b6200e98bc01bd50268af3175"
     },
     {
       "path": "scripts/materialize_bundle.py",
@@ -1656,8 +1656,8 @@
     },
     {
       "path": "shared/portability-risk-baseline.json",
-      "size_bytes": 3187085,
-      "sha256": "51eb4d037cb95b6932c096ba2f5183f2d461ada20b39b9f45883167cbe89fbb0"
+      "size_bytes": 3229929,
+      "sha256": "78810a0b5140d87bc964867bd9c28a8d502d369a1243c78b03e14018094a49ae"
     },
     {
       "path": "shared/portability-taxonomy.md",

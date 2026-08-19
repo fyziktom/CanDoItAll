@@ -182,8 +182,8 @@ def main() -> int:
         "FileTools project-reference transformation",
     )
     for marker, description in (
-        ("repository: fysiktom/CanDoItAll.Components", "pinned Components CI checkout"),
-        ("repository: fysiktom/CanDoItAll.FileTools", "pinned FileTools CI checkout"),
+        ("repository: fyziktom/CanDoItAll.Components", "pinned Components CI checkout"),
+        ("repository: fyziktom/CanDoItAll.FileTools", "pinned FileTools CI checkout"),
         ("UseLocalCanDoItAllLibraries=true", "CI sibling-source dependency mode"),
     ):
         require_marker(errors, ci_workflow, marker, description)

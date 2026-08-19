@@ -22,8 +22,8 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("fail-fast: false", workflow, StringComparison.Ordinal);
         Assert.Contains("UseLocalCanDoItAllLibraries=true", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("UseLocalCanDoItAllLibraries=false", workflow, StringComparison.Ordinal);
-        Assert.Contains("repository: fysiktom/CanDoItAll.Components", workflow, StringComparison.Ordinal);
-        Assert.Contains("repository: fysiktom/CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: fyziktom/CanDoItAll.Components", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: fyziktom/CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
         Assert.Contains("path: CanDoItAll.Components", workflow, StringComparison.Ordinal);
         Assert.Contains("path: CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_COMPONENTS_COMMIT", workflow, StringComparison.Ordinal);

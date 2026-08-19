@@ -613,10 +613,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             projectDirectory,
             "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj"));
         var references = project.Descendants("ProjectReference")
-            .Select(element => Path.GetFullPath(Path.Combine(
-                projectDirectory,
-                element.Attribute("Include")!.Value)))
-            .Select(path => Path.GetFileNameWithoutExtension(path)!)
+            .Select(element => ResolveProjectReferenceName(projectDirectory, element))
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
@@ -676,10 +673,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             projectDirectory,
             "CanDoItAll.Conversations.Shell.csproj"));
         var references = project.Descendants("ProjectReference")
-            .Select(element => Path.GetFullPath(Path.Combine(
-                projectDirectory,
-                element.Attribute("Include")!.Value)))
-            .Select(path => Path.GetFileNameWithoutExtension(path)!)
+            .Select(element => ResolveProjectReferenceName(projectDirectory, element))
             .ToArray();
 
         Assert.Equal(["CanDoItAll.Conversations.Components"], references);
@@ -696,6 +690,15 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
         Assert.DoesNotContain("CanDoItAll.Modules", source, StringComparison.Ordinal);
         Assert.DoesNotContain("AgentFramework", source, StringComparison.Ordinal);
         Assert.DoesNotContain("LlmChats", source, StringComparison.Ordinal);
+    }
+
+    private static string ResolveProjectReferenceName(string projectDirectory, XElement element)
+    {
+        string include = element.Attribute("Include")!.Value
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
+        string path = Path.GetFullPath(Path.Combine(projectDirectory, include));
+        return Path.GetFileNameWithoutExtension(path);
     }
 
     private static string FindRepositoryRoot()
