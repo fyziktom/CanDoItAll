@@ -57,14 +57,14 @@ jobs:
       - name: Check out Components source
         uses: actions/checkout@v4
         with:
-          repository: fysiktom/CanDoItAll.Components
+          repository: fyziktom/CanDoItAll.Components
           ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
           path: CanDoItAll.Components
 
       - name: Check out FileTools source
         uses: actions/checkout@v4
         with:
-          repository: fysiktom/CanDoItAll.FileTools
+          repository: fyziktom/CanDoItAll.FileTools
           ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
           path: CanDoItAll.FileTools
 
@@ -274,14 +274,14 @@ jobs:
       - name: Check out Components source
         uses: actions/checkout@v4
         with:
-          repository: fysiktom/CanDoItAll.Components
+          repository: fyziktom/CanDoItAll.Components
           ref: ${{ env.CANDOITALL_COMPONENTS_COMMIT }}
           path: CanDoItAll.Components
 
       - name: Check out FileTools source
         uses: actions/checkout@v4
         with:
-          repository: fysiktom/CanDoItAll.FileTools
+          repository: fyziktom/CanDoItAll.FileTools
           ref: ${{ env.CANDOITALL_FILETOOLS_COMMIT }}
           path: CanDoItAll.FileTools
 
