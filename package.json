@@ -5,7 +5,8 @@
   "description": "Private repository tooling for building CanDoItAll application Tailwind assets.",
   "scripts": {
     "tailwind:build": "npm --prefix Tailwind run build",
-    "tailwind:watch": "npm --prefix Tailwind run watch"
+    "tailwind:watch": "npm --prefix Tailwind run watch",
+    "watch": "dotnet watch --project ./src/App/CanDoItAll.Web"
   },
   "repository": {
     "type": "git",
