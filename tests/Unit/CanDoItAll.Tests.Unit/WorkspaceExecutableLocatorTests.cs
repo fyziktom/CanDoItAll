@@ -163,7 +163,7 @@ public sealed class WorkspaceExecutableLocatorTests
 
         var resolved = locator.ResolveExecutablePath(["portable-tool"]);
 
-        Assert.Equal(Path.GetFullPath(firstPath), resolved);
+        Assert.Equal(ResolveExpectedCanonicalPath(firstPath), resolved);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public sealed class WorkspaceExecutableLocatorTests
             targetPath,
             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
-        Assert.Equal(Path.GetFullPath(targetPath), locator.ResolveExecutablePath(["portable-tool"]));
+        Assert.Equal(ResolveExpectedCanonicalPath(targetPath), locator.ResolveExecutablePath(["portable-tool"]));
     }
 
     [Fact]
@@ -268,7 +268,7 @@ public sealed class WorkspaceExecutableLocatorTests
 
         string resolved = locator.ResolveExecutablePath(["portable-tool"]);
 
-        Assert.Equal(Path.GetFullPath(targetPath), resolved);
+        Assert.Equal(ResolveExpectedCanonicalPath(targetPath), resolved);
     }
 
     [Fact]
@@ -301,8 +301,16 @@ public sealed class WorkspaceExecutableLocatorTests
         var resolved = locator.ResolveExecutablePath(["approved-tool"]);
         var policy = new WorkspaceExecutableAuthorizationPolicy(platform, ".EXE");
 
-        Assert.Equal(Path.GetFullPath(targetPath), resolved);
+        Assert.Equal(ResolveExpectedCanonicalPath(targetPath), resolved);
         Assert.False(policy.IsAllowedResolvedPath(resolved, ["approved-tool"]));
+    }
+
+    private static string ResolveExpectedCanonicalPath(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        return OperatingSystem.IsMacOS() && fullPath.StartsWith("/var/", StringComparison.Ordinal)
+            ? $"/private{fullPath}"
+            : fullPath;
     }
 
     private static void MakeExecutable(string path)

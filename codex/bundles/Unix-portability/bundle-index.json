@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-19T14:49:18.650232+00:00",
+  "generated_utc": "2026-08-19T21:43:21.113742+00:00",
   "root_name": "Unix-portability",
-  "payload_file_count": 339,
-  "payload_total_bytes": 4949887,
+  "payload_file_count": 328,
+  "payload_total_bytes": 4891759,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -153,16 +153,6 @@
       "path": "bundles/01-core-portability-foundation/architecture/08-a02-filesystem-semantics.md",
       "size_bytes": 7414,
       "sha256": "520c3f628c6f532bcc9e8c9f751551fc2f8d58461368a4bc6252fe69e338ef74"
-    },
-    {
-      "path": "bundles/01-core-portability-foundation/evidence/README.md",
-      "size_bytes": 576,
-      "sha256": "960c14b854fbbb6771c42c6705bf6cdee7d5895a7ea6b2b549ab4c5e0eb2bb3a"
-    },
-    {
-      "path": "bundles/01-core-portability-foundation/evidence/expected-artifacts.md",
-      "size_bytes": 672,
-      "sha256": "fec391611c3208e74d8a642667861ce1ddf03516d74e3d1075b6413a96b88bc6"
     },
     {
       "path": "bundles/01-core-portability-foundation/inventories/00-preparation-inventory.md",
@@ -875,21 +865,6 @@
       "sha256": "a1d6e97fa35aa1e239f9866e38fdd93868497fdff180a7e0b06ab79a44329ed0"
     },
     {
-      "path": "bundles/02-runtime-tools-process-drivers/evidence/README.md",
-      "size_bytes": 610,
-      "sha256": "5be27e4d6cbe0a21fe437b15447c3cd9b7d9c33540f4dfd54ecf0a4ea44c2a15"
-    },
-    {
-      "path": "bundles/02-runtime-tools-process-drivers/evidence/b05-filetools-compatibility.md",
-      "size_bytes": 6805,
-      "sha256": "bd08053604ccc09b9736746a050a2f746ab58ba381434f3a276c55856117bc01"
-    },
-    {
-      "path": "bundles/02-runtime-tools-process-drivers/evidence/expected-artifacts.md",
-      "size_bytes": 763,
-      "sha256": "71308253bf16b33c11775785ff6e3d0c82d0ac80b0000f62630b76f9d61df5b8"
-    },
-    {
       "path": "bundles/02-runtime-tools-process-drivers/inventories/00-preparation-inventory.md",
       "size_bytes": 542,
       "sha256": "a41c5f3c9e3f75af58b8fbd640735868eb446551d4d412a2931bdad3f04e07a8"
@@ -1485,16 +1460,6 @@
       "sha256": "3cc8d49537db409b8ef0aae649d8b4a9c525c57008d9517aa9f0ed1658f41732"
     },
     {
-      "path": "evidence/PREPARATION-SMOKE-TESTS.md",
-      "size_bytes": 1161,
-      "sha256": "4091e61309424ffc449294f122ffb015b89aaa22c882f642c272c2765cd1ea4f"
-    },
-    {
-      "path": "evidence/README.md",
-      "size_bytes": 1006,
-      "sha256": "e55dd795e52a9e00ef1d2a4c4248c11e12408ec2aef7c148a2405b98c2a8e8df"
-    },
-    {
       "path": "manifest.json",
       "size_bytes": 3623,
       "sha256": "5929cd2b25fbd2bef393c083b8eb4a7770fdef57828893753d5c9b7b091c43d6"
@@ -1520,34 +1485,14 @@
       "sha256": "20aaaf00ecfa7d24bbe26100b627f419bf749fe9c2606a5b9f6f11adaa9f3427"
     },
     {
-      "path": "scripts/__pycache__/classify_portability_scan.cpython-311.pyc",
-      "size_bytes": 14316,
-      "sha256": "c6d87973967d412093dc0c10233743e275ab98d20188667a3fb5261284b536b5"
-    },
-    {
-      "path": "scripts/__pycache__/enforce_portability_baseline.cpython-311.pyc",
-      "size_bytes": 12895,
-      "sha256": "6ee77bfcebd3753fc916a8a53706804937e5a849000cbf404b4e0f6581fe17c5"
-    },
-    {
-      "path": "scripts/__pycache__/scan_artifacts_for_secrets.cpython-311.pyc",
-      "size_bytes": 11443,
-      "sha256": "183fef090ed0ce237927d95c6c87b88601a63b553c0f6ec01de98106d9a07895"
-    },
-    {
-      "path": "scripts/__pycache__/test_scan_artifacts_for_secrets.cpython-311.pyc",
-      "size_bytes": 9642,
-      "sha256": "1ab885c534df88c9224a88d2e034e5e2c746ec4cff7d3cd2e8c603f577818874"
-    },
-    {
       "path": "scripts/b06_focused_test_selection.ps1",
       "size_bytes": 2917,
       "sha256": "f91643faac203a28ca3f117400690c230915bea9bcfd1baf4496004a0f4fc5d7"
     },
     {
       "path": "scripts/calculate_checksums.py",
-      "size_bytes": 6016,
-      "sha256": "74a59508934779c119c9b8060be282cd74d7525c5c1aa1b3cb7bc0fbe39726dc"
+      "size_bytes": 6353,
+      "sha256": "997fb19e6abf5802290d5e89885b03eacad172017b15f68e505399b1d432fdfc"
     },
     {
       "path": "scripts/classify_portability_scan.py",
@@ -1616,8 +1561,8 @@
     },
     {
       "path": "scripts/validate_bundle.py",
-      "size_bytes": 31019,
-      "sha256": "7709bba19c567aa674b2cdf21b8cdd998bda88f8c11ee0128a1ad31f64ed14ad"
+      "size_bytes": 31349,
+      "sha256": "6e34dd14aed1cc95b4dcc91a8200012577741df0640a91767278ddbed9752920"
     },
     {
       "path": "scripts/verify_project_graph.ps1",
@@ -1656,8 +1601,8 @@
     },
     {
       "path": "shared/portability-risk-baseline.json",
-      "size_bytes": 3229929,
-      "sha256": "78810a0b5140d87bc964867bd9c28a8d502d369a1243c78b03e14018094a49ae"
+      "size_bytes": 3231023,
+      "sha256": "10f5455cd147c359a18cc0ddc887e6c4dc517549d57459f86410ac64ef8c1dcb"
     },
     {
       "path": "shared/portability-taxonomy.md",

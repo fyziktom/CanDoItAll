@@ -123,6 +123,25 @@ public sealed class EfLlmChatOperationEventRepository(AppDbContext dbContext)
         int take,
         CancellationToken cancellationToken = default)
     {
+        if (!dbContext.Database.IsRelational())
+        {
+            var candidates = await (
+                    from operation in dbContext.Set<LlmChatOperationRow>()
+                    join operationEvent in dbContext.Set<LlmChatOperationEventRow>()
+                        on operation.Id equals operationEvent.OperationId
+                    where (operation.Status == LlmChatOperationStatus.Succeeded ||
+                           operation.Status == LlmChatOperationStatus.Failed ||
+                           operation.Status == LlmChatOperationStatus.Cancelled) &&
+                          operation.CompletedAtUtc < completedBeforeUtc
+                    orderby operation.CompletedAtUtc, operationEvent.OperationId, operationEvent.Sequence
+                    select operationEvent)
+                .Take(take)
+                .ToArrayAsync(cancellationToken)
+                .ConfigureAwait(false);
+            dbContext.RemoveRange(candidates);
+            return candidates.Length;
+        }
+
         if (dbContext.Database.CurrentTransaction is null)
         {
             throw new InvalidOperationException("Deleting LLM Chat operation events requires an active transaction.");

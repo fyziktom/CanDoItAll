@@ -207,15 +207,6 @@ public static class ServerSentEventResponseWriter
                     streamCancellationToken);
             }
         }
-        finally
-        {
-            if (streamLifetime.IsCancellationRequested &&
-                !context.RequestAborted.IsCancellationRequested &&
-                context.Response.HasStarted)
-            {
-                await context.Response.CompleteAsync();
-            }
-        }
     }
 
     private static async Task DrainReadAfterCancellationAsync<T>(

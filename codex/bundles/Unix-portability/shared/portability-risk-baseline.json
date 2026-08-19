@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-19T14:48:24.807073+00:00",
+  "generated_utc": "2026-08-19T21:43:15.190454+00:00",
   "review_gate": "A07 Core Gate C4 portability static guard",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 13754,
+  "allowance_count": 13757,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7907,6 +7907,12 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
       "category": "filesystem-enumeration",
       "source_fingerprint": "4b253e5f553ce83f15f38fc81be7bd14fa65f44b9703ef1f97fb280c0adbcc20",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DataProtectionKeyRingProtection.cs",
+      "category": "os-branch",
+      "source_fingerprint": "342b23dd507aea05147ed2ebeb5e0b31ff31ea09bf70a58f0c184846797f76d2",
       "count": 1
     },
     {
@@ -23332,14 +23338,20 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "21586782ac7f5c718511e83e6ebe8bc5e17e7cf4280ecb14ef3c1defc3736ead",
+      "source_fingerprint": "200deb9f2f280ef1afd1d994e31cefff676ce441878f52d8324023268206fcf9",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "229966156ca6b98fb3d20ddabafac5b59997e82caa9a7115d12a86622c50b068",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "23ef5cd4db4b7a8954e5a75ec2a41dfc061981c3967ec33a4b102cc358d14be6",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
@@ -23368,6 +23380,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "5bc256e2d2cceacfccd54ea00d0789f732e973322d8837a1b09638577536a148",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "870f199aa5983fea3d357573e894e42a9c4a23261fe1cf6cc29ecab3c9857923",
       "count": 1
     },
@@ -23381,6 +23399,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "adeb4aa2e5b254bb241a9da21268fcb132ea7dd9d7bc9b5807ea651341c5b929",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "baaa0e42bd1475505a8638be98e183108aa06e2b27bf6b7bf719141c0230fe04",
       "count": 1
     },
     {
@@ -23404,13 +23428,13 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "d0a372444d357e36ecbdeebee7e1ae08c4f38d3a0ac49ebd9dce1683c19e48fa",
+      "source_fingerprint": "d1c25ea79bdf35739a3bc75327f6d2701019643f3f2c50eb85c8d71ca9cb56e9",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
       "category": "absolute-path-field",
-      "source_fingerprint": "d1c25ea79bdf35739a3bc75327f6d2701019643f3f2c50eb85c8d71ca9cb56e9",
+      "source_fingerprint": "dc583eeabb0ba089146f0a94267d65f1e295db4fc81306f64ffcc368b7cd1c8d",
       "count": 1
     },
     {
@@ -72028,7 +72052,7 @@
     {
       "path": "tools/Validation/RuntimePortabilityCatalog.json",
       "category": "mcp",
-      "source_fingerprint": "549d89387aa3ea2eb69c770966e717f446db1e588a346d41df4fb49c9337e03e",
+      "source_fingerprint": "5075f9cebe7654b4763a3c460b1f292920ea14dc1ac4c066dc2642ef0b926563",
       "count": 1
     },
     {

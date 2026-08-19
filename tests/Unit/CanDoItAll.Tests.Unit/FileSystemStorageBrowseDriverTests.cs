@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -378,7 +379,8 @@ public sealed class FileSystemStorageBrowseDriverTests(ITestOutputHelper output)
             var pathPolicy = new FileSystemStoragePathPolicy(
                 new TestWorkspacePathResolver(workspaceRoot));
 
-            if (OperatingSystem.IsWindows())
+            if (new PhysicalFileSystemPathPolicyFactory().Create(workspaceRoot).CaseSensitivity ==
+                PhysicalFileSystemCaseSensitivity.Insensitive)
             {
                 Assert.Equal(
                     Path.GetFullPath(caseDifferentPath),

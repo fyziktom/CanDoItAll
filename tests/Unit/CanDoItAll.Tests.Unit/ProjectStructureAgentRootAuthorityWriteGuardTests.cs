@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
@@ -211,9 +213,10 @@ public sealed class ProjectStructureAgentRootAuthorityWriteGuardTests : IDisposa
     }
 
     [Fact]
-    public void Managed_workspace_containment_is_case_sensitive_on_unix()
+    public void Managed_workspace_containment_is_case_sensitive_when_the_filesystem_is()
     {
-        if (OperatingSystem.IsWindows())
+        if (new PhysicalFileSystemPathPolicyFactory().Create(workspaceRoot).CaseSensitivity !=
+            PhysicalFileSystemCaseSensitivity.Sensitive)
         {
             return;
         }

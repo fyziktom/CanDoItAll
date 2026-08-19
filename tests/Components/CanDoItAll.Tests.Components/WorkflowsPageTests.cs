@@ -384,7 +384,21 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_ignores_late_history_page_and_run_selection_results()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
+        var runtimeManager = new RacingWorkflowRuntimeManager();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IWorkflowRunStore>();
+            services.RemoveAll<IWorkflowArtifactStore>();
+            services.RemoveAll<IWorkflowExternalRequestStore>();
+            services.RemoveAll<IWorkflowCheckpointStore>();
+            services.RemoveAll<IWorkflowRuntimeManager>();
+            services.AddSingleton<IWorkflowRunStore>(runStore);
+            services.AddSingleton<IWorkflowArtifactStore>(runStore);
+            services.AddSingleton<IWorkflowExternalRequestStore>(runStore);
+            services.AddSingleton<IWorkflowCheckpointStore>(runStore);
+            services.AddSingleton<IWorkflowRuntimeManager>(runtimeManager);
+        });
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var firstDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
@@ -393,16 +407,16 @@ public sealed class WorkflowsPageTests
         var firstRun = CreateRun(firstDefinition, "first-definition-run", now.AddMinutes(-2));
         var secondRun = CreateRun(secondDefinition, "second-definition-run", now.AddMinutes(-1));
         var newestSecondRun = CreateRun(secondDefinition, "newest-second-run", now);
-        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
         await runStore.SaveRunAsync(firstRun);
         await runStore.SaveRunAsync(secondRun);
         await runStore.SaveRunAsync(newestSecondRun);
-        var runtimeManager = new RacingWorkflowRuntimeManager(firstRun, secondRun, newestSecondRun);
+        runtimeManager.AddRuns(firstRun, secondRun, newestSecondRun);
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
-        cut.Instance.RunStore = runStore;
-        cut.Instance.RuntimeManager = runtimeManager;
+        cut.WaitForAssertion(
+            () => Assert.Empty(cut.FindAll("[data-testid='workflows-loading']")),
+            TimeSpan.FromSeconds(10));
         await cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
 
         runStore.DelayRunPages(firstDefinition.Id, secondDefinition.Id);
@@ -2864,8 +2878,16 @@ public sealed class WorkflowsPageTests
 
     private sealed class RacingWorkflowRuntimeManager(params WorkflowRunSnapshot[] runs) : IWorkflowRuntimeManager
     {
-        private readonly IReadOnlyDictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
+        private readonly Dictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
         private readonly Dictionary<WorkflowRunId, PendingRunRequest> pendingRuns = [];
+
+        public void AddRuns(params WorkflowRunSnapshot[] addedRuns)
+        {
+            foreach (var run in addedRuns)
+            {
+                runsById.Add(run.RunId, run);
+            }
+        }
 
         public void DelayRuns(params WorkflowRunId[] runIds)
         {

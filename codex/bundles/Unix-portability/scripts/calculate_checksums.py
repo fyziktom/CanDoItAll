@@ -31,8 +31,22 @@ def sha256_file(path: Path) -> str:
 
 def all_files(root: Path, *, exclude: set[str]) -> list[Path]:
     return sorted(
-        (path for path in root.rglob("*") if path.is_file() and path.name not in exclude),
+        (
+            path
+            for path in root.rglob("*")
+            if is_integrity_file(root, path) and path.name not in exclude
+        ),
         key=lambda path: path.relative_to(root).as_posix(),
+    )
+
+
+def is_integrity_file(root: Path, path: Path) -> bool:
+    relative_parts = path.relative_to(root).parts
+    return (
+        path.is_file()
+        and "evidence" not in relative_parts
+        and "__pycache__" not in relative_parts
+        and path.suffix != ".pyc"
     )
 
 

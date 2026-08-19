@@ -239,6 +239,49 @@ internal sealed class LlmChatTestDbContextFactory(
 public sealed class LlmChatConversationTransactionIntegrationTests
 {
     [Fact]
+    public async Task InMemory_unit_of_work_deletes_expired_events_and_publishes_after_commit()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"llm-chat-unit-of-work-{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        var now = DateTimeOffset.UtcNow;
+        var operationId = Guid.NewGuid();
+        dbContext.Add(new LlmChatOperationRow
+        {
+            Id = operationId,
+            Status = LlmChatOperationStatus.Succeeded,
+            StartedAtUtc = now.AddDays(-2),
+            CompletedAtUtc = now.AddDays(-1),
+            LastEventSequence = 1
+        });
+        dbContext.Add(new LlmChatOperationEventRow
+        {
+            OperationId = operationId,
+            Sequence = 1,
+            Kind = LlmChatOperationEventKind.StateChanged,
+            Status = LlmChatOperationStatus.Succeeded,
+            OccurredAtUtc = now.AddDays(-1)
+        });
+        await dbContext.SaveChangesAsync();
+        var unitOfWork = new EfLlmChatUnitOfWork(dbContext, UnfencedLlmChatCommitFence.Instance);
+        var repository = new EfLlmChatOperationEventRepository(dbContext);
+        var callbackInvoked = false;
+
+        var result = await unitOfWork.ExecuteAsync(async cancellationToken =>
+        {
+            unitOfWork.RegisterPostCommit(() => callbackInvoked = true);
+            return await repository.DeleteExpiredTerminalEventsAsync(now, 10, cancellationToken);
+        });
+
+        Assert.Equal(1, result);
+        Assert.True(callbackInvoked);
+        Assert.Null(dbContext.Database.CurrentTransaction);
+        Assert.Empty(await dbContext.Set<LlmChatOperationEventRow>().ToArrayAsync());
+    }
+
+    [Fact]
     public async Task Create_rolls_back_product_and_transcript_when_the_command_fails_after_store_flush()
     {
         await using var database = await LlmChatsPostgreSqlTestDatabase.CreateAsync("llmchatcreateatomic");
