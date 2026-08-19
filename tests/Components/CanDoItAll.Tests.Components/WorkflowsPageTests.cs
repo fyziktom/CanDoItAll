@@ -315,7 +315,7 @@ public sealed class WorkflowsPageTests
         cut.FindAll("[data-testid='workflows-catalog-item']")
             .First(item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal))
             .Click();
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
 
         cut.WaitForAssertion(() =>
