@@ -43,6 +43,15 @@ public interface IProviderChatCompletionDriver : IAgentProviderDriver
         CancellationToken cancellationToken = default);
 }
 
+public interface IProviderStreamingChatCompletionDriver : IAgentProviderDriver
+{
+    ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request);
+
+    IAsyncEnumerable<ProviderChatStreamingUpdate> StreamChatAsync(
+        ProviderChatCompletionRequest request,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IProviderImageGenerationDriver : IAgentProviderDriver
 {
     Task<ProviderImageGenerationResult> GenerateImageAsync(

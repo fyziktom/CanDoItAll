@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -13,6 +14,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
 {
     private readonly string workspaceRoot;
+    private readonly PhysicalFileSystemCaseSensitivity workspaceRootCaseSensitivity;
     private readonly WorkspaceScopeDescriptor workspaceScope;
     private readonly IWorkspaceRuntimeServicesFactory workspaceRuntimeServicesFactory;
     private readonly MafRuntimeAgentFactory runtimeAgentFactory;
@@ -22,6 +24,7 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
     public MafAgentContinuationAdapter(
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         IWorkspaceRuntimeServicesFactory workspaceRuntimeServicesFactory,
         MafRuntimeAgentFactory runtimeAgentFactory,
         IMafApprovalContinuationDriver approvalContinuationDriver,
@@ -32,7 +35,12 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
             throw new ArgumentException("Workspace root must be provided.", nameof(workspaceRoot));
         }
 
-        this.workspaceRoot = Path.GetFullPath(workspaceRoot);
+        this.workspaceRoot = MafRuntimePathResolver.ResolvePathFromWorkspace(
+            workspaceRoot,
+            string.Empty,
+            allowExternal: false,
+            physicalPathPolicyFactory: physicalPathPolicyFactory);
+        workspaceRootCaseSensitivity = physicalPathPolicyFactory.Create(this.workspaceRoot).CaseSensitivity;
         this.workspaceScope = workspaceScope ?? throw new ArgumentNullException(nameof(workspaceScope));
         this.workspaceRuntimeServicesFactory = workspaceRuntimeServicesFactory ?? throw new ArgumentNullException(nameof(workspaceRuntimeServicesFactory));
         this.runtimeAgentFactory = runtimeAgentFactory ?? throw new ArgumentNullException(nameof(runtimeAgentFactory));
@@ -94,7 +102,12 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
             runtimeOptions,
             workspaceScope);
         var workspaceRuntimeServices = workspaceRuntimeServicesFactory.Create(
-            WorkspaceExecutionScope.ForRun(workspaceRoot, effectiveWorkspaceScope, runtimeOptions.Governance));
+            WorkspaceExecutionScope.ForRun(
+                workspaceRoot,
+                effectiveWorkspaceScope,
+                runtimeOptions.Governance,
+                externalTargetRootBindings: ExternalTargetRootBindingScope.Resolve(agent),
+                rootCaseSensitivity: workspaceRootCaseSensitivity));
         RuntimeBuildResult runtimeBuild;
         try
         {
@@ -162,6 +175,9 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
                 forceOmitTemperature: forceOmitTemperature,
                 runtimeOptions);
             var inputMessages = approvalContinuationDriver.CreateApprovalInputMessages(session, decisions).ToList();
+            var resolvedApprovalRequestIds = request.ResolvedApprovalRequestIds
+                .Concat(decisions.Select(decision => decision.ProposalId))
+                .ToHashSet(StringComparer.Ordinal);
             var contextManifest = MafContextManifestBuilder.Create(
                 agent,
                 runtimeBuild.Provider,
@@ -197,7 +213,8 @@ internal sealed class MafAgentContinuationAdapter : IAgentContinuationRuntime
                 runtimeBuild.SnapshotContextContributionTraces,
                 contextManifest,
                 runtimeBuild.IsTerminalResponseUpdate,
-                runtimeBuild.EntryAgentRequestCompatibilityEvidence);
+                runtimeBuild.EntryAgentRequestCompatibilityEvidence,
+                resolvedApprovalRequestIds);
         }
     }
 }

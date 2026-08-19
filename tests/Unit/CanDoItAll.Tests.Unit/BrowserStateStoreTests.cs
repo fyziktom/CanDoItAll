@@ -6,7 +6,7 @@ using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class BrowserStateStoreTests
 {
@@ -74,7 +74,7 @@ public sealed class BrowserStateStoreTests
                 },
                 Storage = new DatabaseProfileStorageDescriptor
                 {
-                    WorkspaceRoot = @"C:\workspace"
+                    WorkspaceRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll", "browser-state")
                 },
                 Runtime = new DatabaseProfileRuntimeMetadata
                 {

@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A00",
+  "title": "Anchor, baseline, and current portability inventory",
+  "critical": true,
+  "conditional": false,
+  "status": "Completed — Gate C0 GO",
+  "depends_on": [],
+  "unlocks": [
+    "A01"
+  ],
+  "requirements": [
+    "PREP-001",
+    "PREP-002",
+    "PREP-003",
+    "PREP-004"
+  ],
+  "source_hotspots": [
+    "global.json",
+    "Directory.Build.props",
+    "CanDoItAll.slnx",
+    ".github/workflows-disabled/ci.yml",
+    "src/App/CanDoItAll.Web/Program.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs",
+    "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+    "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+    "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+    "codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md"
+  ],
+  "tasks": [
+    {
+      "id": "A00-T01",
+      "title": "Anchor and preserve the checkout",
+      "description": "Record branch, HEAD, merge base against prepared anchor, SDK, OS/architecture, git status, submodules, and every unrelated change. Stop rather than reset, clean, or overwrite operator work.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T02",
+      "title": "Revalidate the source-reference manifest",
+      "description": "Verify every exact path, classify renamed/deleted files, add newly discovered portability surfaces, and update evidence status from Search-confirmed to Inspected where applicable.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T03",
+      "title": "Run stable baseline and host characterization",
+      "description": "Run restore/build/stable tests on the available Windows host and on real Ubuntu/macOS runners or machines. Capture failures without making portability edits.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T04",
+      "title": "Generate the full portability scan",
+      "description": "Run the supplied scanner, review every hit, and classify by logical path, physical path, filesystem, secret, process, desktop, hosting, test, or external dependency.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T05",
+      "title": "Build the path-field inventory",
+      "description": "Map every persisted/configured/runtime string that can represent a route, logical locator, physical path, executable, URL, script, or opaque command. Record writer, reader, comparer, migration owner, and trust boundary.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T06",
+      "title": "Build the persistence and migration inventory",
+      "description": "Map database columns, control-plane JSON, vault payloads, Data Protection key ring, storage tokens, runtime-node metadata, and host-bound preferences. Include backup/rollback and restart dependencies.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T07",
+      "title": "Reconfirm architecture ownership",
+      "description": "Use the latest MAF refactor ADRs and project graph to approve owners for platform primitives, security, Workbench presentation, Manager supervision, MAF runtime, Plugins, and Processes semantics.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A00-T08",
+      "title": "Issue Gate C0",
+      "description": "No implementation starts until all P0/P1 findings are classified, the source anchor is current, baseline evidence is stored, and the revised work graph is internally consistent.",
+      "requirements": [
+        "PREP-001",
+        "PREP-002",
+        "PREP-003",
+        "PREP-004"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

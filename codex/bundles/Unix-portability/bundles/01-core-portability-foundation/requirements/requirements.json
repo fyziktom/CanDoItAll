@@ -1,0 +1,526 @@
+{
+  "schema_version": 1,
+  "bundle_id": "candoitall-core-portability-foundation",
+  "requirements": [
+    {
+      "id": "PREP-001",
+      "priority": "P0",
+      "owner": "A00",
+      "requirement": "The execution checkout is anchored, dirty-state-safe, and compared with the prepared commit before edits.",
+      "acceptance": "Anchor report records branch, HEAD, merge-base/delta, SDK, OS, architecture, and preserved working-tree changes.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PREP-002",
+      "priority": "P0",
+      "owner": "A00",
+      "requirement": "Every platform-sensitive source/project is inventoried and classified by path, filesystem, secret, process, desktop, hosting, test, or external-dependency concern.",
+      "acceptance": "Generated inventory covers all projects and has no unclassified P0/P1 item at gate C0.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PREP-003",
+      "priority": "P0",
+      "owner": "A00",
+      "requirement": "Every persisted path/key/secret record and migration boundary affected by portability is mapped before schema or provider changes.",
+      "acceptance": "Persistence map identifies writer, reader, format, migration owner, rollback, and host affinity.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PREP-004",
+      "priority": "P1",
+      "owner": "A00",
+      "requirement": "Existing stable Windows behavior and available Linux/macOS baselines are captured before implementation.",
+      "acceptance": "Baseline evidence includes exact commands, exit codes, logs, and known pre-existing failures.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-001",
+      "priority": "P0",
+      "owner": "A01",
+      "requirement": "Persisted logical workspace/storage/artifact paths use '/' as their canonical serialized separator.",
+      "acceptance": "New writers emit only canonical logical paths; round-trip tests pass on all target OSes.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-002",
+      "priority": "P0",
+      "owner": "A01",
+      "requirement": "Known legacy logical-path fields accept Windows backslashes on read without treating every Unix backslash as a separator.",
+      "acceptance": "Compatibility is field-scoped, versioned, tested, and does not rewrite arbitrary physical paths or filenames.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-003",
+      "priority": "P0",
+      "owner": "A01",
+      "requirement": "Logical paths, physical host paths, routes/URIs, executable identifiers, and opaque command/script text have distinct contracts.",
+      "acceptance": "Inventory and APIs prevent a normalization routine from crossing categories.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-004",
+      "priority": "P1",
+      "owner": "A01",
+      "requirement": "Portable configuration roots support '~' and an explicit environment-token syntax, while legacy Windows tokens remain readable where required.",
+      "acceptance": "Windows, Linux, and macOS tests cover expansion, unset variables, escaping, and fail-safe diagnostics.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-005",
+      "priority": "P0",
+      "owner": "A01",
+      "requirement": "Foreign absolute path syntax is never silently reinterpreted as a relative path on another OS.",
+      "acceptance": "Windows drive/UNC and Unix absolute paths are detected, marked host-bound/unresolved, and require explicit rebind or migration.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-006",
+      "priority": "P0",
+      "owner": "A01",
+      "requirement": "Infrastructure, storage, MAF workspace, and MAF runtime containment share compatible semantics without creating reverse project references.",
+      "acceptance": "Contract tests feed identical logical/physical cases through each owner and prove equivalent outcomes.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-007",
+      "priority": "P1",
+      "owner": "A01",
+      "requirement": "External-root aliases use a versioned platform-neutral format.",
+      "acceptance": "Aliases round-trip Unix roots, Windows roots, and multiple allowed roots without exposing physical paths to untrusted output.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-008",
+      "priority": "P0",
+      "owner": "A01",
+      "requirement": "Traversal, rooted input, dot segments, empty segments, and invalid logical names fail consistently.",
+      "acceptance": "Named negative tests cover '/', '\\', '..', drive roots, UNC, symlink candidates, and Unicode edge cases.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-009",
+      "priority": "P1",
+      "owner": "A01",
+      "requirement": "All persisted logical path writers are deterministic and independent of host separators.",
+      "acceptance": "Golden serialization fixtures are byte-equivalent across Windows, Linux, and macOS.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "PATH-010",
+      "priority": "P1",
+      "owner": "A01",
+      "requirement": "Path conversion is localized to typed boundaries rather than a repository-wide string replacement.",
+      "acceptance": "Architecture scan shows no blanket slash rewrite in URLs, project files, scripts, or opaque command content.",
+      "status": "Satisfied"
+    },
+    {
+      "id": "FS-001",
+      "priority": "P0",
+      "owner": "A02",
+      "requirement": "Logical identifiers use ordinal semantics; physical path equality uses a root/volume-specific filesystem policy.",
+      "acceptance": "Case-sensitive and case-insensitive volume fixtures or actual-host probes are covered, including macOS uncertainty.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-002",
+      "priority": "P1",
+      "owner": "A02",
+      "requirement": "All decision-bearing or persisted filesystem enumeration is explicitly sorted by normalized logical key.",
+      "acceptance": "Determinism tests randomize source enumeration and assert identical results.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-003",
+      "priority": "P0",
+      "owner": "A02",
+      "requirement": "Managed roots and trusted operations have one documented symlink/reparse policy applied to reads, writes, opens, process targets, and migrations.",
+      "acceptance": "Linux symlink and Windows reparse/junction tests prove containment; unsupported ambiguous cases fail closed.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-004",
+      "priority": "P0",
+      "owner": "A02",
+      "requirement": "Path checks and file operations minimize time-of-check/time-of-use gaps and document residual platform limits.",
+      "acceptance": "Security review accepts the implementation and failure cases cannot escape a managed root in test fixtures.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-005",
+      "priority": "P0",
+      "owner": "A02",
+      "requirement": "Catalog, storage, control-plane, key, and vault writes use a shared atomic same-volume commit pattern where applicable.",
+      "acceptance": "Crash/failure injection leaves either the previous complete generation or the new complete generation, never truncation.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-006",
+      "priority": "P1",
+      "owner": "A02",
+      "requirement": "Concurrent application processes coordinate writes with bounded cross-process locking or a transactional authority.",
+      "acceptance": "Two-process contention tests prove timeout, recovery, and no corruption.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-007",
+      "priority": "P0",
+      "owner": "A02",
+      "requirement": "Secret-bearing directories and files receive restrictive Unix modes and are verified after creation/migration.",
+      "acceptance": "Linux/macOS tests verify expected modes; hardening failure blocks secret use with actionable diagnostics.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-008",
+      "priority": "P1",
+      "owner": "A02",
+      "requirement": "Physical artifact filenames follow an application-level portable policy independent of Path.GetInvalidFileNameChars.",
+      "acceptance": "Golden cases produce the same physical name on all OSes while preserving original display names.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-009",
+      "priority": "P1",
+      "owner": "A02",
+      "requirement": "File watchers are treated as hints and recover through deterministic rescan/fingerprint or polling.",
+      "acceptance": "Overflow, duplicate, rename, and dropped-event tests converge to correct state.",
+      "status": "Verified"
+    },
+    {
+      "id": "FS-010",
+      "priority": "P1",
+      "owner": "A02",
+      "requirement": "Temporary files, locks, and migration markers are cleaned safely without following links or deleting outside owned roots.",
+      "acceptance": "Failure-injection and malicious-link fixtures prove bounded cleanup.",
+      "status": "Verified"
+    },
+    {
+      "id": "STO-001",
+      "priority": "P0",
+      "owner": "A03",
+      "requirement": "Windows, Linux, and macOS have explicit default roots for workspace, control-plane data, keys, logs/state, and temporary runtime artifacts.",
+      "acceptance": "Root matrix is documented and actual-host tests confirm writable, owned, non-repository locations.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-002",
+      "priority": "P1",
+      "owner": "A03",
+      "requirement": "Interactive-user and service/headless profiles can override roots without changing persisted logical locators.",
+      "acceptance": "systemd/launchd/service-user scenarios use explicit configuration and retain identical application semantics.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-003",
+      "priority": "P0",
+      "owner": "A03",
+      "requirement": "Storage locators and related JSON/database records are versioned and migrate legacy separator formats transactionally.",
+      "acceptance": "Migration can dry-run, back up, resume, roll back, and produce a redacted report.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-004",
+      "priority": "P0",
+      "owner": "A03",
+      "requirement": "Absolute workspace roots, storage roots, repository paths, and executable preferences are explicitly host-bound.",
+      "acceptance": "Foreign records become unresolved with a safe UX/API status rather than being executed or opened.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-005",
+      "priority": "P0",
+      "owner": "A03",
+      "requirement": "Database profile control-plane records preserve password decryptability while workspace roots are migrated/rebound.",
+      "acceptance": "Profile selection, restart, old-data read, and rollback tests pass.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-006",
+      "priority": "P1",
+      "owner": "A03",
+      "requirement": "Preferred application records are versioned by platform/host and never auto-launch a foreign executable path.",
+      "acceptance": "Cross-host import requires explicit confirmation/rebind and desktop launch remains disabled by default.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-007",
+      "priority": "P0",
+      "owner": "A03",
+      "requirement": "FileSystemStorageDriver Save/Replace semantics are atomic, conflict-aware, and consistent across processes.",
+      "acceptance": "Concurrent writes, revision conflicts, cancellation, and crash simulation pass on Windows/Linux/macOS.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-008",
+      "priority": "P1",
+      "owner": "A03",
+      "requirement": "Storage bootstrap authority compares canonical roots using the owning filesystem semantics and migration state.",
+      "acceptance": "Copied or rebound profiles select the intended authoritative storage and reject ambiguous duplicates.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "STO-009",
+      "priority": "P0",
+      "owner": "A03",
+      "requirement": "A pre-migration backup and rollback path exists for control-plane files, storage catalog records, and path-bearing database data.",
+      "acceptance": "Operator rehearsal restores the previous application version and data without loss.",
+      "status": "Satisfied — Gate C2a GO"
+    },
+    {
+      "id": "SEC-001",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Auto secret-provider selection never returns an unsupported provider.",
+      "acceptance": "Startup either registers a proven provider or fails fast with a non-secret remediation message.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-002",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "The macOS interactive profile has a real Keychain-backed secret implementation or an explicitly supported secure alternative.",
+      "acceptance": "Native contracts prove create/read/update/delete/restart/concurrency/access-control behavior now; genuine macOS execution is tracked as non-blocking follow-up MACOS-KEYCHAIN-VALIDATION-001, and support remains actual-host unverified until it passes.",
+      "status": "Implemented — actual macOS validation explicitly deferred; Gate C2 GO"
+    },
+    {
+      "id": "SEC-003",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "The Linux interactive profile has a real Secret Service implementation with explicit session/availability semantics.",
+      "acceptance": "Tests cover available service, locked/unavailable service, and headless absence; no silent fallback occurs.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-004",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Linux/macOS headless operation has an explicit secure provider that does not depend on an interactive keyring.",
+      "acceptance": "A configured certificate, remote vault, or externally supplied wrapping-key mode is documented and restart-tested.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-005",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "The Data Protection key ring is protected at rest in supported production profiles.",
+      "acceptance": "The selected protector is bootstrapped independently, restart-tested, and its files/keys meet permission policy.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-006",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Key-ring protection has no circular dependency on secrets encrypted by that same key ring.",
+      "acceptance": "Architecture test/review traces bootstrap dependencies and detects cycles.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-007",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "The legacy DataProtectionFile provider remains Development/migration-only; Unix may use its encrypted file format only through the explicitly named and honestly classified LocalUserFile basic tier.",
+      "acceptance": "Windows Auto selects DPAPI; Unix Auto selects LocalUserFile with 0700 directories, 0600 files, a typed BasicLocal capability, and a same-user threat-model warning; explicit strong providers fail closed and the legacy provider name is rejected in production.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-008",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Legacy DPAPI-protected data has a Windows-side transactional export/re-encryption path before Unix migration.",
+      "acceptance": "Dry-run, interruption, retry, verification, and rollback preserve every source record.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-009",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Legacy Data Protection secret records and control-plane database passwords remain readable through migration and restart.",
+      "acceptance": "Golden fixtures from the old key ring decrypt before and after staged migration.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-010",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Vault payloads and key metadata are versioned, atomic, cross-process safe, permission-hardened, and rotatable.",
+      "acceptance": "Rotation interruption/recovery tests prove no key/payload orphaning and old generation retention until commit.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-011",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Secret values never enter logs, exceptions, receipts, migration reports, scanner output, or test artifacts.",
+      "acceptance": "Automated redaction tests and artifact scan pass with seeded sentinel secrets.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-012",
+      "priority": "P1",
+      "owner": "A04",
+      "requirement": "Provider capability and health diagnostics reveal only provider type/state and remediation, never identifiers or values.",
+      "acceptance": "Readiness/UI/API snapshots are security-reviewed.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-013",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "Secret migration and deletion are auditable without exposing values and have explicit orphan cleanup semantics.",
+      "acceptance": "Staged reference cleanup and old-payload deletion are idempotent and tested.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "SEC-014",
+      "priority": "P0",
+      "owner": "A04",
+      "requirement": "A local installation can start without an interactive or externally managed vault by using an honestly classified basic local provider.",
+      "acceptance": "Windows startup/restart uses DPAPI with typed Strong protection; Unix startup/restart uses LocalUserFile with enforced 0700/0600 modes, typed BasicLocal protection, and a same-user warning; explicit strong-provider selection, legacy Development compatibility, and non-disclosure remain proven.",
+      "status": "Satisfied — Gate C2 GO"
+    },
+    {
+      "id": "PLAT-001",
+      "priority": "P0",
+      "owner": "A05",
+      "requirement": "Portability uses narrow purpose-owned ports/adapters rather than a broad IPlatformService or scattered feature branches.",
+      "acceptance": "Dependency and code scan show OS checks only in composition, root resolvers, and leaf native adapters unless justified.",
+      "status": "Satisfied — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-002",
+      "priority": "P0",
+      "owner": "A05",
+      "requirement": "Composition selects exactly one implementation for mandatory path/secret primitives and truthful zero-or-one implementations for optional desktop/runtime capabilities.",
+      "acceptance": "Startup tests cover every target profile and missing-dependency path.",
+      "status": "Satisfied — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-003",
+      "priority": "P1",
+      "owner": "A05",
+      "requirement": "Capability descriptors include availability, reason, remediation, execution boundary, and tested support level.",
+      "acceptance": "Workbench/settings/readiness surfaces consume descriptors without inferring support from OS name alone.",
+      "status": "Satisfied — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-004",
+      "priority": "P1",
+      "owner": "A05",
+      "requirement": "External package and native-service capabilities can be quarantined independently without blocking headless core startup.",
+      "acceptance": "FileTools, Secret Service, Keychain, terminal, and process-discovery failures degrade only their declared optional capabilities.",
+      "status": "Satisfied — Gate C3a GO"
+    },
+    {
+      "id": "PLAT-005",
+      "priority": "P0",
+      "owner": "A05",
+      "requirement": "Current MAF/process ownership boundaries remain intact after platform composition changes.",
+      "acceptance": "Architecture tests preserve no reverse MAF-to-product/process semantic dependency.",
+      "status": "Satisfied — Gate C3a GO"
+    },
+    {
+      "id": "HOST-001",
+      "priority": "P0",
+      "owner": "A06",
+      "requirement": "The Web host starts headlessly on Windows and Ubuntu with desktop launch disabled; macOS publish/service contracts remain explicitly unverified until A07 actual-host execution.",
+      "acceptance": "Bounded Windows/Ubuntu startup, health, restart, rollback, and shutdown smoke tests pass from clean publish output; macOS is labeled ActualHostUnverified and tracked as A07-MACOS-HEADLESS-ACTUALHOST-001.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-002",
+      "priority": "P1",
+      "owner": "A06",
+      "requirement": "Framework-dependent publish is proven for win-x64, linux-x64, osx-x64, and osx-arm64; additional RIDs are claims only after proof.",
+      "acceptance": "Artifacts run outside the repository and include a support manifest.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-003",
+      "priority": "P1",
+      "owner": "A06",
+      "requirement": "Linux systemd and macOS launchd runbooks define service user, roots, environment, restart, logs, permissions, upgrade, and rollback.",
+      "acceptance": "Runbooks are rehearsed or clearly mark unexecuted optional desktop steps.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-004",
+      "priority": "P1",
+      "owner": "A06",
+      "requirement": "Installation logic separates cross-platform publish/configuration from Windows shortcuts and Unix service integration.",
+      "acceptance": "The existing PowerShell installer remains valid while Unix entry points do not duplicate security/path policy.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "HOST-005",
+      "priority": "P1",
+      "owner": "A06",
+      "requirement": "Operational diagnostics report platform, configured roots, provider/capability state, and support profile without exposing secrets or unnecessary absolute paths.",
+      "acceptance": "Redacted diagnostic bundle is validated on each target OS.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "DOC-001",
+      "priority": "P1",
+      "owner": "A06",
+      "requirement": "Developer and operator documentation no longer presents %LOCALAPPDATA%, PowerShell, or Windows desktop behavior as universal.",
+      "acceptance": "Documentation includes Linux/macOS prerequisites, limitations, migrations, and explicit unsupported features.",
+      "status": "Satisfied — Gate C3b/Hosting GO"
+    },
+    {
+      "id": "CI-001",
+      "priority": "P0",
+      "owner": "A07",
+      "requirement": "An active GitHub Actions workflow restores, builds, and runs the stable test gate on Windows, Ubuntu, and macOS.",
+      "acceptance": "All three jobs are required checks or otherwise protected by repository policy evidence.",
+      "status": "Implemented — hosted checks and repository policy evidence deferred under HOSTED-PORTABILITY-VALIDATION-001"
+    },
+    {
+      "id": "CI-002",
+      "priority": "P0",
+      "owner": "A07",
+      "requirement": "Actual-host tests cover path, filesystem, storage, secret-provider selection, permissions, and headless startup.",
+      "acceptance": "Tests cannot pass solely through a mocked OS enum.",
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS operator-deferred"
+    },
+    {
+      "id": "CI-003",
+      "priority": "P0",
+      "owner": "A07",
+      "requirement": "Linux and macOS restart tests prove protected state, storage catalogs, and migrated records remain readable.",
+      "acceptance": "At least one old-format fixture and one new-format fixture survive restart on each supported migration route.",
+      "status": "Implemented — Ubuntu restart passes; genuine macOS operator-deferred"
+    },
+    {
+      "id": "CI-004",
+      "priority": "P1",
+      "owner": "A07",
+      "requirement": "Publish artifacts and service/headless smoke tests run from clean directories outside the repository.",
+      "acceptance": "No success depends on bin/obj, developer profile, global npm cache, or repository-relative mutable state.",
+      "status": "Implemented — Windows/Ubuntu pass; genuine macOS operator-deferred"
+    },
+    {
+      "id": "CI-005",
+      "priority": "P0",
+      "owner": "A07",
+      "requirement": "Windows stable behavior remains green after every core portability phase.",
+      "acceptance": "No compatibility change is accepted with unexplained Windows regression.",
+      "status": "Satisfied locally — hosted Windows confirmation operator-deferred"
+    },
+    {
+      "id": "CI-006",
+      "priority": "P1",
+      "owner": "A07",
+      "requirement": "Static scanning blocks new unowned OS checks, raw Windows-only tokens, unsafe absolute-path persistence, and insecure secret fallbacks.",
+      "acceptance": "Allowlist entries are narrow, reviewed, and source-linked.",
+      "status": "Implemented and locally enforced — hosted static check operator-deferred"
+    },
+    {
+      "id": "CI-007",
+      "priority": "P0",
+      "owner": "A07",
+      "requirement": "Core Gate C4 produces a versioned handoff anchor and evidence pack that is sufficient to start the runtime bundle.",
+      "acceptance": "Runtime bundle remains blocked until C4 is GO, or an explicit operator deferral identifies immutable provisional anchors and preserves all unverified support limitations, and B00 refreshes its source references.",
+      "status": "Satisfied for implementation progression only — exact pushed anchors recorded; C4 remains deferred"
+    }
+  ]
+}

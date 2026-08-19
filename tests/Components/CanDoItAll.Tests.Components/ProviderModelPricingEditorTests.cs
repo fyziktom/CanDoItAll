@@ -3,7 +3,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class ProviderModelPricingEditorTests : BunitContext
 {

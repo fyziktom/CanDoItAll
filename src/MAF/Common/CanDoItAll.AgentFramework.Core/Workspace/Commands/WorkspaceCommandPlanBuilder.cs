@@ -1,8 +1,9 @@
 using System.Net;
-using System.Text;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Git;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -415,23 +416,26 @@ internal sealed class WorkspaceCommandPlanBuilder
                 stderrLimitCharacters: 96 * 1024);
         }
 
+        var managedUrls = ResolveManagedDotnetRunUrls(urls);
         var boundedStartupTimeoutSeconds = Math.Clamp(startupTimeoutSeconds, 1, 600);
         var artifactPaths = BuildDotnetRunArtifactPaths();
-        var script = BuildDotnetHttpRunPowerShellScript(
+        var managedArguments = new List<string>
+        {
+            "run",
+            "--project",
             target.ProjectArgument,
-            target.WorkingDirectoryPath,
-            pathPolicy.WorkspaceRoot,
+            "--configuration",
             normalizedConfiguration,
-            noBuild,
-            urls.ListenUrl,
-            urls.ProbeUrl,
-            artifactPaths.StdoutLogFullPath,
-            artifactPaths.StderrLogFullPath,
-            artifactPaths.StartupReceiptFullPath,
-            boundedStartupTimeoutSeconds,
-            keepAlive,
-            lifetimeScope);
-        WriteDotnetRunScript(artifactPaths.ScriptFullPath, script);
+            "--no-launch-profile"
+        };
+        if (noBuild)
+        {
+            managedArguments.Add("--no-build");
+        }
+
+        managedArguments.Add("--");
+        managedArguments.Add("--urls");
+        managedArguments.Add(managedUrls.ListenUrl!);
         var planTimeoutSeconds = Math.Max(timeoutSeconds, boundedStartupTimeoutSeconds + 10);
 
         return CreatePlan(
@@ -444,20 +448,30 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: target.TargetPaths.Concat(artifactPaths.TargetPaths).ToArray(),
             workingDirectory: target.WorkingDirectoryRelative,
             workingDirectoryPath: target.WorkingDirectoryPath,
-            executableCandidates: ["pwsh", "powershell"],
-            arguments:
-            [
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                artifactPaths.ScriptFullPath
-            ],
+            executableCandidates: ["dotnet"],
+            arguments: managedArguments,
             timeoutSeconds: planTimeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
-            stderrLimitCharacters: 128 * 1024);
+            stderrLimitCharacters: 128 * 1024,
+            environmentVariables: new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                ["DOTNET_ENVIRONMENT"] = "Development"
+            },
+            dotnetRunLifecycle: new WorkspaceDotnetRunLifecyclePlan(
+                managedUrls.ListenUrl!,
+                managedUrls.ProbeUrl!,
+                boundedStartupTimeoutSeconds,
+                keepAlive,
+                lifetimeScope,
+                artifactPaths.StdoutLogFullPath,
+                artifactPaths.StdoutLogRelativePath,
+                artifactPaths.StderrLogFullPath,
+                artifactPaths.StderrLogRelativePath,
+                artifactPaths.StartupReceiptFullPath,
+                artifactPaths.StartupReceiptRelativePath,
+                artifactPaths.CleanupReceiptFullPath,
+                artifactPaths.CleanupReceiptRelativePath));
     }
 
     public WorkspaceCommandPlan BuildDotnetStop(string startupReceiptPath, int timeoutSeconds = 30)
@@ -479,11 +493,6 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         var boundedTimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 120);
         var artifactPaths = BuildDotnetStopArtifactPaths(startupReceipt);
-        var script = BuildDotnetStopPowerShellScript(
-            startupReceipt.FullPath,
-            artifactPaths.CleanupReceiptFullPath);
-        WriteDotnetRunScript(artifactPaths.ScriptFullPath, script);
-
         return CreatePlan(
             toolName: "workspace_dotnet_stop",
             recipeId: "dotnet_stop",
@@ -494,20 +503,16 @@ internal sealed class WorkspaceCommandPlanBuilder
             targetPaths: new[] { startupReceipt.RelativePath }.Concat(artifactPaths.TargetPaths).ToArray(),
             workingDirectory: artifactPaths.WorkingDirectoryRelative,
             workingDirectoryPath: artifactPaths.WorkingDirectoryPath,
-            executableCandidates: ["pwsh", "powershell"],
-            arguments:
-            [
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                artifactPaths.ScriptFullPath
-            ],
+            executableCandidates: [],
+            arguments: [],
             timeoutSeconds: boundedTimeoutSeconds,
             stdoutLimitCharacters: 64 * 1024,
-            stderrLimitCharacters: 64 * 1024);
+            stderrLimitCharacters: 64 * 1024,
+            dotnetStopLifecycle: new WorkspaceDotnetStopLifecyclePlan(
+                startupReceipt.FullPath,
+                startupReceipt.RelativePath,
+                artifactPaths.CleanupReceiptFullPath,
+                artifactPaths.CleanupReceiptRelativePath));
     }
 
     public WorkspaceCommandPlan BuildDotnetNew(
@@ -551,17 +556,14 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "workspace_dotnet_new targetFramework must be a supported value such as 'net8.0'.");
         }
 
-        if (string.IsNullOrWhiteSpace(name)
-            || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
-            || name.Contains(Path.DirectorySeparatorChar)
-            || name.Contains(Path.AltDirectorySeparatorChar))
+        string trimmedName = name?.Trim() ?? string.Empty;
+        if (trimmedName.Length == 0 || !PortablePhysicalFileNamePolicy.IsPortable(trimmedName))
         {
             throw WorkspaceCommandInputException.Create(
                 "Provide a project name without path separators or invalid file-name characters.",
                 "Provide a project name without path separators or invalid file-name characters.");
         }
 
-        var trimmedName = name.Trim();
         var workingDirectoryRelative = pathPolicy.ResolveWorkingDirectory(parentDirectory, createIfMissing: true, out var workingDirectoryResolution);
         if (AllowedProjectExtensions.Contains(Path.GetExtension(workingDirectoryRelative)))
         {
@@ -705,7 +707,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
     }
 
-    private static bool InspectTopLevelProjectFiles(
+    private bool InspectTopLevelProjectFiles(
         string directory,
         string displayPath,
         bool includeSolutionFiles)
@@ -748,32 +750,36 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
     }
 
-    private static bool ContainsProjectFileInAccessibleTree(string directory)
+    private bool ContainsProjectFileInAccessibleTree(string directory)
     {
+        var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(directory);
         var pendingDirectories = new Stack<string>();
         pendingDirectories.Push(directory);
 
         while (pendingDirectories.TryPop(out var currentDirectory))
         {
-            foreach (var entry in Directory.EnumerateFileSystemEntries(
-                         currentDirectory,
-                         "*",
-                         new EnumerationOptions
-                         {
-                             RecurseSubdirectories = false,
-                             IgnoreInaccessible = false,
-                             AttributesToSkip = 0
-                         }))
+            var entries = Directory.EnumerateFileSystemEntries(
+                    currentDirectory,
+                    "*",
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = false,
+                        IgnoreInaccessible = false,
+                        AttributesToSkip = 0
+                    })
+                .OrderBy(
+                    entry => NormalizeEnumerationKey(Path.GetRelativePath(directory, entry)),
+                    StringComparer.Ordinal)
+                .ThenBy(entry => entry, StringComparer.Ordinal)
+                .ToArray();
+            var childDirectories = new List<string>();
+            foreach (var entry in entries)
             {
+                physicalPathPolicy.EnsureSafePath(entry);
                 var attributes = File.GetAttributes(entry);
-                if (attributes.HasFlag(FileAttributes.ReparsePoint))
-                {
-                    throw new IOException("Project-target inspection cannot cross a filesystem reparse point.");
-                }
-
                 if (attributes.HasFlag(FileAttributes.Directory))
                 {
-                    pendingDirectories.Push(entry);
+                    childDirectories.Add(entry);
                     continue;
                 }
 
@@ -782,16 +788,30 @@ internal sealed class WorkspaceCommandPlanBuilder
                     return true;
                 }
             }
+
+            for (var index = childDirectories.Count - 1; index >= 0; index--)
+            {
+                pendingDirectories.Push(childDirectories[index]);
+            }
         }
 
         return false;
     }
 
-    private static bool ContainsTopLevelProjectFile(
+    private bool ContainsTopLevelProjectFile(
         string directory,
         bool includeSolutionFiles = true)
-        => Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
-            .Any(path => IsProjectFileExtension(Path.GetExtension(path), includeSolutionFiles));
+    {
+        var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(directory);
+        return Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .Any(path =>
+            {
+                physicalPathPolicy.EnsureSafePath(path);
+                return IsProjectFileExtension(Path.GetExtension(path), includeSolutionFiles);
+            });
+    }
 
     private static bool IsProjectFileExtension(
         string extension,
@@ -808,6 +828,11 @@ internal sealed class WorkspaceCommandPlanBuilder
     private static bool IsSolutionExtension(string extension)
         => string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeEnumerationKey(string path)
+        => path
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 
     public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
@@ -1078,7 +1103,10 @@ internal sealed class WorkspaceCommandPlanBuilder
         int timeoutSeconds,
         int stdoutLimitCharacters,
         int stderrLimitCharacters,
-        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified)
+        ToolExecutionSideEffectMode declaredSideEffectMode = ToolExecutionSideEffectMode.Unspecified,
+        IReadOnlyDictionary<string, string?>? environmentVariables = null,
+        WorkspaceDotnetRunLifecyclePlan? dotnetRunLifecycle = null,
+        WorkspaceDotnetStopLifecyclePlan? dotnetStopLifecycle = null)
     {
         var externalRootsAllowed = WorkspacePathPolicy.IsExternalTargetAliasPath(workingDirectory)
             || targetPaths.Any(WorkspacePathPolicy.IsExternalTargetAliasPath);
@@ -1106,7 +1134,10 @@ internal sealed class WorkspaceCommandPlanBuilder
             TimeoutSeconds: Math.Clamp(timeoutSeconds, 1, 3600),
             StdoutLimitCharacters: stdoutLimitCharacters,
             StderrLimitCharacters: stderrLimitCharacters,
-            DeclaredSideEffectMode: declaredSideEffectMode);
+            EnvironmentVariables: environmentVariables,
+            DeclaredSideEffectMode: declaredSideEffectMode,
+            DotnetRunLifecycle: dotnetRunLifecycle,
+            DotnetStopLifecycle: dotnetStopLifecycle);
     }
 
     private WorkspaceCommandPlan CreateGitPlan(
@@ -1166,7 +1197,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         var resolvedPaths = (paths ?? [])
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => ResolveWorkspacePath(path))
-            .DistinctBy(path => path.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(path => path.RelativePath, ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         var pathSpecs = resolvedPaths
             .Select(path => BuildGitPathSpec(repositoryPath, path))
@@ -1180,11 +1211,14 @@ internal sealed class WorkspaceCommandPlanBuilder
             resolvedPaths.Select(path => path.RelativePath).ToArray());
     }
 
-    private static GitPathSpec BuildGitPathSpec(
+    private GitPathSpec BuildGitPathSpec(
         GitRepositoryPath repositoryPath,
         WorkspacePathResolution resolution)
     {
-        var authorization = GitPathAuthorizer.Authorize(repositoryPath, resolution.FullPath);
+        var authorization = GitPathAuthorizer.Authorize(
+            repositoryPath,
+            resolution.FullPath,
+            pathPolicy.PhysicalPathPolicyFactory);
         if (!authorization.IsAuthorized || authorization.Path is null)
         {
             throw WorkspaceCommandInputException.Create(
@@ -1267,16 +1301,19 @@ internal sealed class WorkspaceCommandPlanBuilder
         var stdoutRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stdout.log"));
         var stderrRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stderr.log"));
         var startupReceiptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "startup.json"));
-        var scriptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "run.ps1"));
+        var cleanupReceiptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "cleanup.json"));
 
         return new DotnetRunArtifactPaths(
-            ScriptFullPath: Path.Combine(fullDirectory, "run.ps1"),
             StdoutLogFullPath: Path.Combine(fullDirectory, "app.stdout.log"),
+            StdoutLogRelativePath: stdoutRelativePath,
             StderrLogFullPath: Path.Combine(fullDirectory, "app.stderr.log"),
+            StderrLogRelativePath: stderrRelativePath,
             StartupReceiptFullPath: Path.Combine(fullDirectory, "startup.json"),
+            StartupReceiptRelativePath: startupReceiptRelativePath,
+            CleanupReceiptFullPath: Path.Combine(fullDirectory, "cleanup.json"),
+            CleanupReceiptRelativePath: cleanupReceiptRelativePath,
             TargetPaths:
             [
-                scriptRelativePath,
                 stdoutRelativePath,
                 stderrRelativePath,
                 startupReceiptRelativePath
@@ -1291,27 +1328,17 @@ internal sealed class WorkspaceCommandPlanBuilder
         var directoryRelativePath = slashIndex < 0
             ? "."
             : startupReceipt.RelativePath[..slashIndex];
-        var scriptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(directoryRelativePath, "stop.ps1"));
         var cleanupRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(directoryRelativePath, "cleanup.json"));
 
         return new DotnetStopArtifactPaths(
             WorkingDirectoryPath: directoryFullPath,
             WorkingDirectoryRelative: pathPolicy.ToDisplayPath(directoryFullPath),
-            ScriptFullPath: Path.Combine(directoryFullPath, "stop.ps1"),
             CleanupReceiptFullPath: Path.Combine(directoryFullPath, "cleanup.json"),
+            CleanupReceiptRelativePath: cleanupRelativePath,
             TargetPaths:
             [
-                scriptRelativePath,
                 cleanupRelativePath
             ]);
-    }
-
-    private static void WriteDotnetRunScript(string scriptPath, string script)
-    {
-        var scriptDirectory = Path.GetDirectoryName(scriptPath)
-            ?? throw new InvalidOperationException($"Could not resolve dotnet run script directory for '{scriptPath}'.");
-        Directory.CreateDirectory(scriptDirectory);
-        File.WriteAllText(scriptPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     private static DotnetRunUrls ResolveDotnetRunUrls(string? url)
@@ -1342,6 +1369,49 @@ internal sealed class WorkspaceCommandPlanBuilder
             ProbeUrl: trimmed);
     }
 
+    private static DotnetRunUrls ResolveManagedDotnetRunUrls(DotnetRunUrls requested)
+    {
+        if (string.IsNullOrWhiteSpace(requested.ListenUrl))
+        {
+            var reservedPort = ReserveLoopbackPort();
+            var url = $"http://127.0.0.1:{reservedPort}";
+            return new DotnetRunUrls(url, url);
+        }
+
+        var listenUri = new Uri(requested.ListenUrl, UriKind.Absolute);
+        if (listenUri.Port != 0)
+        {
+            return requested;
+        }
+
+        var dynamicPort = ReserveLoopbackPort();
+        var concreteListenUrl = new UriBuilder(listenUri)
+        {
+            Port = dynamicPort
+        }.Uri.GetLeftPart(UriPartial.Authority);
+        var concreteProbeUrl = string.IsNullOrWhiteSpace(requested.ProbeUrl)
+            ? concreteListenUrl
+            : new UriBuilder(new Uri(requested.ProbeUrl, UriKind.Absolute))
+            {
+                Port = dynamicPort
+            }.Uri.AbsoluteUri;
+        return new DotnetRunUrls(concreteListenUrl, concreteProbeUrl);
+    }
+
+    private static int ReserveLoopbackPort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        try
+        {
+            listener.Start();
+            return ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
     private static bool IsLoopbackHost(string host)
     {
         if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
@@ -1351,483 +1421,6 @@ internal sealed class WorkspaceCommandPlanBuilder
 
         return IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address);
     }
-
-    private static string BuildDotnetHttpRunPowerShellScript(
-        string projectPath,
-        string workingDirectory,
-        string workspaceRoot,
-        string configuration,
-        bool noBuild,
-        string? listenUrl,
-        string? probeUrl,
-        string stdoutLogPath,
-        string stderrLogPath,
-        string startupReceiptPath,
-        int startupTimeoutSeconds,
-        bool keepAlive,
-        WorkspaceProcessLifetimeScope lifetimeScope)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("$ErrorActionPreference = 'Stop'");
-        builder.AppendLine("$ProgressPreference = 'SilentlyContinue'");
-        builder.AppendLine("$projectPath = " + ToPowerShellSingleQuotedString(projectPath));
-        builder.AppendLine("$workingDirectory = " + ToPowerShellSingleQuotedString(workingDirectory));
-        builder.AppendLine("$workspaceRoot = " + ToPowerShellSingleQuotedString(workspaceRoot));
-        builder.AppendLine("$configuration = " + ToPowerShellSingleQuotedString(configuration));
-        builder.AppendLine("$listenUrl = " + ToPowerShellSingleQuotedString(listenUrl ?? string.Empty));
-        builder.AppendLine("$probeUrl = " + ToPowerShellSingleQuotedString(probeUrl ?? string.Empty));
-        builder.AppendLine("$stdoutLog = " + ToPowerShellSingleQuotedString(stdoutLogPath));
-        builder.AppendLine("$stderrLog = " + ToPowerShellSingleQuotedString(stderrLogPath));
-        builder.AppendLine("$startupReceipt = " + ToPowerShellSingleQuotedString(startupReceiptPath));
-        builder.AppendLine("$cleanupReceipt = Join-Path (Split-Path -Parent $startupReceipt) 'cleanup.json'");
-        builder.AppendLine("$startupTimeoutSeconds = " + startupTimeoutSeconds.ToString());
-        builder.AppendLine("$noBuild = " + (noBuild ? "$true" : "$false"));
-        builder.AppendLine("$keepAlive = " + (keepAlive ? "$true" : "$false"));
-        builder.AppendLine("$lifetimeScope = " + ToPowerShellSingleQuotedString(lifetimeScope.ToString()));
-        builder.AppendLine("$appProcess = $null");
-        builder.AppendLine("$staticWebAssetsAliasMappings = @()");
-        builder.AppendLine("function Read-LogTail {");
-        builder.AppendLine("    param([string]$Path)");
-        builder.AppendLine("    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }");
-        builder.AppendLine("    try {");
-        builder.AppendLine("        $content = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop");
-        builder.AppendLine("        if ($content.Length -le 4000) { return $content }");
-        builder.AppendLine("        return $content.Substring($content.Length - 4000)");
-        builder.AppendLine("    } catch { return '' }");
-        builder.AppendLine("}");
-        builder.AppendLine("function Test-DynamicPortUrl {");
-        builder.AppendLine("    param([string]$Url)");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($Url)) { return $false }");
-        builder.AppendLine("    try { return ([System.Uri]$Url).Port -eq 0 } catch { return $false }");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-ListeningUrlFromLog {");
-        builder.AppendLine("    param([string]$Path)");
-        builder.AppendLine("    $tail = Read-LogTail $Path");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($tail)) { return '' }");
-        builder.AppendLine("    $matches = [System.Text.RegularExpressions.Regex]::Matches($tail, 'Now listening on:\\s*(https?://[^\\s]+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)");
-        builder.AppendLine("    if ($matches.Count -eq 0) { return '' }");
-        builder.AppendLine("    for ($i = $matches.Count - 1; $i -ge 0; $i--) {");
-        builder.AppendLine("        $candidate = $matches[$i].Groups[1].Value.TrimEnd('/')");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $uri = [System.Uri]$candidate");
-        builder.AppendLine("            if ($uri.IsLoopback -and $uri.Port -gt 0) { return $candidate }");
-        builder.AppendLine("        } catch { }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return ''");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-EffectiveProbeUrl {");
-        builder.AppendLine("    param([string]$CurrentProbeUrl, [string]$CurrentListenUrl, [string]$StdoutPath)");
-        builder.AppendLine("    if (-not [string]::IsNullOrWhiteSpace($CurrentProbeUrl) -and -not (Test-DynamicPortUrl $CurrentProbeUrl)) { return $CurrentProbeUrl }");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($CurrentProbeUrl) -and -not [string]::IsNullOrWhiteSpace($CurrentListenUrl) -and -not (Test-DynamicPortUrl $CurrentListenUrl)) { return $CurrentListenUrl }");
-        builder.AppendLine("    $loggedUrl = Resolve-ListeningUrlFromLog $StdoutPath");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($loggedUrl)) { return $CurrentProbeUrl }");
-        builder.AppendLine("    if (-not [string]::IsNullOrWhiteSpace($CurrentProbeUrl)) {");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $requested = [System.Uri]$CurrentProbeUrl");
-        builder.AppendLine("            $builder = [System.UriBuilder]::new([System.Uri]$loggedUrl)");
-        builder.AppendLine("            $builder.Path = $requested.AbsolutePath");
-        builder.AppendLine("            $builder.Query = $requested.Query.TrimStart('?')");
-        builder.AppendLine("            return $builder.Uri.AbsoluteUri.TrimEnd('/')");
-        builder.AppendLine("        } catch { return $loggedUrl }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return $loggedUrl");
-        builder.AppendLine("}");
-        builder.AppendLine("function Quote-ProcessArgument {");
-        builder.AppendLine("    param([string]$Value)");
-        builder.AppendLine("    if ($null -eq $Value -or $Value.Length -eq 0) { return '\"\"' }");
-        builder.AppendLine("    if ($Value.IndexOfAny([char[]](\" `\"`t`r`n\")) -lt 0) { return $Value }");
-        builder.AppendLine("    return '\"' + $Value.Replace('\"', '\\\"') + '\"'");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-ProcessTreeIds {");
-        builder.AppendLine("    param([int]$RootProcessId)");
-        builder.AppendLine("    $orderedIds = [System.Collections.Generic.List[int]]::new()");
-        builder.AppendLine("    function Add-DescendantProcessIds {");
-        builder.AppendLine("        param([int]$ParentProcessId)");
-        builder.AppendLine("        $children = @()");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $children = Get-CimInstance Win32_Process -Filter \"ParentProcessId = $ParentProcessId\" -ErrorAction Stop");
-        builder.AppendLine("        } catch {");
-        builder.AppendLine("            $children = @()");
-        builder.AppendLine("        }");
-        builder.AppendLine("        foreach ($childProcess in $children) {");
-        builder.AppendLine("            $childProcessId = [int]$childProcess.ProcessId");
-        builder.AppendLine("            Add-DescendantProcessIds $childProcessId");
-        builder.AppendLine("            if (-not $orderedIds.Contains($childProcessId)) { [void]$orderedIds.Add($childProcessId) }");
-        builder.AppendLine("        }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    Add-DescendantProcessIds $RootProcessId");
-        builder.AppendLine("    if (-not $orderedIds.Contains($RootProcessId)) { [void]$orderedIds.Add($RootProcessId) }");
-        builder.AppendLine("    return @($orderedIds)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Stop-AppProcessTree {");
-        builder.AppendLine("    param([int[]]$ProcessIds)");
-        builder.AppendLine("    foreach ($processIdToStop in $ProcessIds) {");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            Stop-Process -Id $processIdToStop -Force -ErrorAction SilentlyContinue");
-        builder.AppendLine("            Wait-Process -Id $processIdToStop -Timeout 5 -ErrorAction SilentlyContinue");
-        builder.AppendLine("        } catch { }");
-        builder.AppendLine("    }");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-StaticWebAssetsAliasMappings {");
-        builder.AppendLine("    param([string]$ProjectPath, [string]$WorkspaceRoot, [string]$Configuration)");
-        builder.AppendLine("    if (-not ($IsWindows -eq $true -or $env:OS -eq 'Windows_NT')) { return @() }");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($WorkspaceRoot) -or -not (Test-Path -LiteralPath $WorkspaceRoot -PathType Container)) { return @() }");
-        builder.AppendLine("    $projectDirectory = Split-Path -Parent $ProjectPath");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($projectDirectory) -or -not (Test-Path -LiteralPath $projectDirectory -PathType Container)) { return @() }");
-        builder.AppendLine("    $manifestFiles = [System.Collections.Generic.List[object]]::new()");
-        builder.AppendLine("    foreach ($rootName in @('bin', 'obj')) {");
-        builder.AppendLine("        $configurationRoot = Join-Path (Join-Path $projectDirectory $rootName) $Configuration");
-        builder.AppendLine("        if (-not (Test-Path -LiteralPath $configurationRoot -PathType Container)) { continue }");
-        builder.AppendLine("        foreach ($manifestFile in Get-ChildItem -LiteralPath $configurationRoot -Filter '*.staticwebassets*.json' -Recurse -ErrorAction SilentlyContinue) {");
-        builder.AppendLine("            [void]$manifestFiles.Add($manifestFile)");
-        builder.AppendLine("        }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    $mappings = [System.Collections.Generic.List[object]]::new()");
-        builder.AppendLine("    foreach ($manifestFile in $manifestFiles) {");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop");
-        builder.AppendLine("        } catch {");
-        builder.AppendLine("            continue");
-        builder.AppendLine("        }");
-        builder.AppendLine("        if (-not ($manifest.PSObject.Properties.Name -contains 'ContentRoots')) { continue }");
-        builder.AppendLine("        foreach ($contentRootValue in @($manifest.ContentRoots)) {");
-        builder.AppendLine("            $contentRoot = [string]$contentRootValue");
-        builder.AppendLine("            if ([string]::IsNullOrWhiteSpace($contentRoot)) { continue }");
-        builder.AppendLine("            if ($contentRoot -notmatch '^[A-Za-z]:[\\\\/]') { continue }");
-        builder.AppendLine("            if (Test-Path -LiteralPath $contentRoot -PathType Container) { continue }");
-        builder.AppendLine("            $driveLetter = [char]::ToUpperInvariant($contentRoot[0])");
-        builder.AppendLine("            $suffix = $contentRoot.Substring(3).TrimStart([char[]]@('\\', '/'))");
-        builder.AppendLine("            $workspaceCandidate = if ([string]::IsNullOrWhiteSpace($suffix)) { $WorkspaceRoot } else { Join-Path $WorkspaceRoot $suffix }");
-        builder.AppendLine("            if (-not (Test-Path -LiteralPath $workspaceCandidate -PathType Container)) { continue }");
-        builder.AppendLine("            $driveName = \"${driveLetter}:\"");
-        builder.AppendLine("            if (@($mappings | Where-Object { $_.drive -eq $driveName }).Count -gt 0) { continue }");
-        builder.AppendLine("            [void]$mappings.Add([pscustomobject]@{");
-        builder.AppendLine("                drive = $driveName");
-        builder.AppendLine("                driveLetter = [string]$driveLetter");
-        builder.AppendLine("                workspaceRoot = $WorkspaceRoot");
-        builder.AppendLine("                manifestPath = $manifestFile.FullName");
-        builder.AppendLine("                contentRoot = $contentRoot");
-        builder.AppendLine("                verifiedPath = $workspaceCandidate");
-        builder.AppendLine("                mounted = $false");
-        builder.AppendLine("            })");
-        builder.AppendLine("        }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return @($mappings)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Mount-StaticWebAssetsAliasMappings {");
-        builder.AppendLine("    param([object[]]$Mappings)");
-        builder.AppendLine("    if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return @() }");
-        builder.AppendLine("    foreach ($mapping in @($Mappings)) {");
-        builder.AppendLine("        if ($null -eq $mapping) { continue }");
-        builder.AppendLine("        if (Test-Path -LiteralPath $mapping.contentRoot -PathType Container) { continue }");
-        builder.AppendLine("        $existingDrive = Get-PSDrive -Name $mapping.driveLetter -ErrorAction SilentlyContinue");
-        builder.AppendLine("        if ($existingDrive -ne $null) {");
-        builder.AppendLine("            throw \"Static web assets manifest '$($mapping.manifestPath)' requires $($mapping.drive) for '$($mapping.contentRoot)', but that drive is already assigned and does not expose the expected workspace path '$($mapping.verifiedPath)'.\"");
-        builder.AppendLine("        }");
-        builder.AppendLine("        $substOutput = & subst $mapping.drive $mapping.workspaceRoot 2>&1");
-        builder.AppendLine("        if ($LASTEXITCODE -ne 0) {");
-        builder.AppendLine("            throw \"Failed to create static web assets workspace drive alias $($mapping.drive) -> '$($mapping.workspaceRoot)'. $substOutput\"");
-        builder.AppendLine("        }");
-        builder.AppendLine("        if (-not (Test-Path -LiteralPath $mapping.contentRoot -PathType Container)) {");
-        builder.AppendLine("            & subst $mapping.drive /d 2>$null | Out-Null");
-        builder.AppendLine("            throw \"Created static web assets workspace drive alias $($mapping.drive), but manifest content root is still unavailable: $($mapping.contentRoot).\"");
-        builder.AppendLine("        }");
-        builder.AppendLine("        $mapping.mounted = $true");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return @($Mappings)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Dismount-StaticWebAssetsAliasMappings {");
-        builder.AppendLine("    param([object[]]$Mappings)");
-        builder.AppendLine("    if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return }");
-        builder.AppendLine("    foreach ($mapping in @($Mappings | Where-Object { $_.mounted })) {");
-        builder.AppendLine("        if ($null -eq $mapping) { continue }");
-        builder.AppendLine("        try { & subst $mapping.drive /d 2>$null | Out-Null } catch { }");
-        builder.AppendLine("    }");
-        builder.AppendLine("}");
-        builder.AppendLine("function Write-StartupReceipt {");
-        builder.AppendLine("    param([bool]$Succeeded, [string]$Message, [bool]$CleanupAttempted = $false, [int[]]$CleanupProcessIds = @())");
-        builder.AppendLine("    $processTreeIds = if ($CleanupProcessIds.Count -gt 0) { @($CleanupProcessIds) } elseif ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
-        builder.AppendLine("    $payload = [ordered]@{");
-        builder.AppendLine("        succeeded = $Succeeded");
-        builder.AppendLine("        message = $Message");
-        builder.AppendLine("        projectPath = $projectPath");
-        builder.AppendLine("        workingDirectory = $workingDirectory");
-        builder.AppendLine("        workspaceRoot = $workspaceRoot");
-        builder.AppendLine("        listenUrl = $listenUrl");
-        builder.AppendLine("        probeUrl = $probeUrl");
-        builder.AppendLine("        hostUrl = $probeUrl");
-        builder.AppendLine("        databaseProfileId = $env:CANDOITALL_DATABASE_PROFILE_ID");
-        builder.AppendLine("        databaseProfileFingerprint = $env:CANDOITALL_DATABASE_PROFILE_FINGERPRINT");
-        builder.AppendLine("        databaseProfileKey = $env:CANDOITALL_DATABASE_PROFILE_KEY");
-        builder.AppendLine("        appProcessId = if ($appProcess -ne $null) { $appProcess.Id } else { $null }");
-        builder.AppendLine("        appProcessTreeIds = @($processTreeIds)");
-        builder.AppendLine("        keepAlive = $keepAlive");
-        builder.AppendLine("        lifetimeScope = $lifetimeScope");
-        builder.AppendLine("        aspNetCoreEnvironment = $env:ASPNETCORE_ENVIRONMENT");
-        builder.AppendLine("        dotnetEnvironment = $env:DOTNET_ENVIRONMENT");
-        builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
-        builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
-        builder.AppendLine("        cleanupReceiptPath = $cleanupReceipt");
-        builder.AppendLine("        stopTool = 'workspace_dotnet_stop'");
-        builder.AppendLine("        stopToolStartupReceiptPath = $startupReceipt");
-        builder.AppendLine("        staticWebAssetsAliasMappings = @($staticWebAssetsAliasMappings)");
-        builder.AppendLine("        stdoutLog = $stdoutLog");
-        builder.AppendLine("        stderrLog = $stderrLog");
-        builder.AppendLine("        stdoutTail = Read-LogTail $stdoutLog");
-        builder.AppendLine("        stderrTail = Read-LogTail $stderrLog");
-        builder.AppendLine("        capturedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')");
-        builder.AppendLine("    }");
-        builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $startupReceipt) | Out-Null");
-        builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 6");
-        builder.AppendLine("    Set-Content -LiteralPath $startupReceipt -Value $json -Encoding UTF8");
-        builder.AppendLine("    return $json");
-        builder.AppendLine("}");
-        builder.AppendLine("try {");
-        builder.AppendLine("    if (-not (Test-Path -LiteralPath $projectPath -PathType Leaf)) { throw \"Project file not found: $projectPath\" }");
-        builder.AppendLine("    if (-not (Test-Path -LiteralPath $workingDirectory -PathType Container)) { throw \"Working directory not found: $workingDirectory\" }");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($listenUrl)) {");
-        builder.AppendLine("        $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $listener.Start()");
-        builder.AppendLine("            $port = ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port");
-        builder.AppendLine("        } finally {");
-        builder.AppendLine("            $listener.Stop()");
-        builder.AppendLine("        }");
-        builder.AppendLine("        $listenUrl = \"http://127.0.0.1:$port\"");
-        builder.AppendLine("    }");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($probeUrl) -and -not (Test-DynamicPortUrl $listenUrl)) { $probeUrl = $listenUrl }");
-        builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $stdoutLog) | Out-Null");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:ASPNETCORE_ENVIRONMENT)) { $env:ASPNETCORE_ENVIRONMENT = 'Development' }");
-        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:DOTNET_ENVIRONMENT)) { $env:DOTNET_ENVIRONMENT = 'Development' }");
-        builder.AppendLine("    if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings -Mappings @(Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }");
-        builder.AppendLine("    $dotnetPath = (Get-Command dotnet -ErrorAction Stop).Source");
-        builder.AppendLine("    $argumentList = @('run', '--project', $projectPath, '--configuration', $configuration, '--no-launch-profile')");
-        builder.AppendLine("    if ($noBuild) { $argumentList += '--no-build' }");
-        builder.AppendLine("    $argumentList += @('--', '--urls', $listenUrl)");
-        builder.AppendLine("    $argumentString = ($argumentList | ForEach-Object { Quote-ProcessArgument $_ }) -join ' '");
-        builder.AppendLine("    $startParameters = @{");
-        builder.AppendLine("        FilePath = $dotnetPath");
-        builder.AppendLine("        ArgumentList = $argumentString");
-        builder.AppendLine("        WorkingDirectory = $workingDirectory");
-        builder.AppendLine("        RedirectStandardOutput = $stdoutLog");
-        builder.AppendLine("        RedirectStandardError = $stderrLog");
-        builder.AppendLine("        PassThru = $true");
-        builder.AppendLine("    }");
-        builder.AppendLine("    if ($IsWindows -or $env:OS -eq 'Windows_NT') { $startParameters['WindowStyle'] = 'Hidden' }");
-        builder.AppendLine("    $appProcess = Start-Process @startParameters");
-        builder.AppendLine("    $deadline = [DateTimeOffset]::UtcNow.AddSeconds($startupTimeoutSeconds)");
-        builder.AppendLine("    $lastError = ''");
-        builder.AppendLine("    $ready = $false");
-        builder.AppendLine("    while ([DateTimeOffset]::UtcNow -lt $deadline) {");
-        builder.AppendLine("        $appProcess.Refresh()");
-        builder.AppendLine("        if ($appProcess.HasExited) { throw \"dotnet run exited before $probeUrl returned success. Exit code $($appProcess.ExitCode). stderr tail: $(Read-LogTail $stderrLog)\" }");
-        builder.AppendLine("        $resolvedProbeUrl = Resolve-EffectiveProbeUrl $probeUrl $listenUrl $stdoutLog");
-        builder.AppendLine("        if (-not [string]::IsNullOrWhiteSpace($resolvedProbeUrl) -and -not (Test-DynamicPortUrl $resolvedProbeUrl)) {");
-        builder.AppendLine("            $probeUrl = $resolvedProbeUrl");
-        builder.AppendLine("            if (Test-DynamicPortUrl $listenUrl) { $listenUrl = ([System.Uri]$probeUrl).GetLeftPart([System.UriPartial]::Authority) }");
-        builder.AppendLine("        }");
-        builder.AppendLine("        if ([string]::IsNullOrWhiteSpace($probeUrl) -or (Test-DynamicPortUrl $probeUrl)) {");
-        builder.AppendLine("            $lastError = 'Waiting for dotnet run to report a concrete listening URL.'");
-        builder.AppendLine("            Start-Sleep -Milliseconds 500");
-        builder.AppendLine("            continue");
-        builder.AppendLine("        }");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $response = Invoke-WebRequest -Uri $probeUrl -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop");
-        builder.AppendLine("            $statusCode = [int]$response.StatusCode");
-        builder.AppendLine("            if ($statusCode -ge 200 -and $statusCode -lt 400) { $ready = $true; break }");
-        builder.AppendLine("            $lastError = \"HTTP $statusCode\"");
-        builder.AppendLine("        } catch {");
-        builder.AppendLine("            $lastError = $_.Exception.Message");
-        builder.AppendLine("        }");
-        builder.AppendLine("        Start-Sleep -Milliseconds 500");
-        builder.AppendLine("    }");
-        builder.AppendLine("    if (-not $ready) { throw \"Timed out after $startupTimeoutSeconds second(s) waiting for $probeUrl. Last error: $lastError. stderr tail: $(Read-LogTail $stderrLog)\" }");
-        builder.AppendLine("    if ($keepAlive) {");
-        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. The process tree is still running for follow-up browser proof; call workspace_dotnet_stop with startup.json when proof is complete.\"");
-        builder.AppendLine("    } else {");
-        builder.AppendLine("        $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
-        builder.AppendLine("        Stop-AppProcessTree $processTreeIds");
-        builder.AppendLine("        Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings");
-        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. Process tree was stopped after smoke validation.\" ($processTreeIds.Count -gt 0) $processTreeIds");
-        builder.AppendLine("    }");
-        builder.AppendLine("    Write-Output $successJson");
-        builder.AppendLine("} catch {");
-        builder.AppendLine("    $message = $_.Exception.Message");
-        builder.AppendLine("    $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
-        builder.AppendLine("    Stop-AppProcessTree $processTreeIds");
-        builder.AppendLine("    Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings");
-        builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds");
-        builder.AppendLine("    Write-Error $failureJson");
-        builder.AppendLine("    exit 1");
-        builder.AppendLine("}");
-        return builder.ToString();
-    }
-
-    private static string BuildDotnetStopPowerShellScript(
-        string startupReceiptPath,
-        string cleanupReceiptPath)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("$ErrorActionPreference = 'Stop'");
-        builder.AppendLine("$ProgressPreference = 'SilentlyContinue'");
-        builder.AppendLine("$startupReceipt = " + ToPowerShellSingleQuotedString(startupReceiptPath));
-        builder.AppendLine("$cleanupReceipt = " + ToPowerShellSingleQuotedString(cleanupReceiptPath));
-        builder.AppendLine("$startedAtUtc = [DateTimeOffset]::UtcNow");
-        builder.AppendLine("function Test-JsonProperty {");
-        builder.AppendLine("    param([object]$Value, [string]$Name)");
-        builder.AppendLine("    return $null -ne $Value -and $Value.PSObject.Properties.Name -contains $Name");
-        builder.AppendLine("}");
-        builder.AppendLine("function Add-ProcessId {");
-        builder.AppendLine("    param([System.Collections.Generic.List[int]]$Ids, [object]$Value)");
-        builder.AppendLine("    if ($null -eq $Value) { return }");
-        builder.AppendLine("    try {");
-        builder.AppendLine("        $id = [int]$Value");
-        builder.AppendLine("        if ($id -gt 0 -and -not $Ids.Contains($id)) { [void]$Ids.Add($id) }");
-        builder.AppendLine("    } catch { }");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-StartupProcessIds {");
-        builder.AppendLine("    param([object]$Startup)");
-        builder.AppendLine("    $ids = [System.Collections.Generic.List[int]]::new()");
-        builder.AppendLine("    if (Test-JsonProperty $Startup 'appProcessTreeIds') {");
-        builder.AppendLine("        foreach ($processId in @($Startup.appProcessTreeIds)) { Add-ProcessId $ids $processId }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    if (Test-JsonProperty $Startup 'appProcessId') { Add-ProcessId $ids $Startup.appProcessId }");
-        builder.AppendLine("    return @($ids)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-ProcessTreeIds {");
-        builder.AppendLine("    param([int]$RootProcessId)");
-        builder.AppendLine("    $orderedIds = [System.Collections.Generic.List[int]]::new()");
-        builder.AppendLine("    function Add-DescendantProcessIds {");
-        builder.AppendLine("        param([int]$ParentProcessId)");
-        builder.AppendLine("        $children = @()");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $children = Get-CimInstance Win32_Process -Filter \"ParentProcessId = $ParentProcessId\" -ErrorAction Stop");
-        builder.AppendLine("        } catch {");
-        builder.AppendLine("            $children = @()");
-        builder.AppendLine("        }");
-        builder.AppendLine("        foreach ($childProcess in $children) {");
-        builder.AppendLine("            $childProcessId = [int]$childProcess.ProcessId");
-        builder.AppendLine("            Add-DescendantProcessIds $childProcessId");
-        builder.AppendLine("            if (-not $orderedIds.Contains($childProcessId)) { [void]$orderedIds.Add($childProcessId) }");
-        builder.AppendLine("        }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    try {");
-        builder.AppendLine("        if ($null -eq (Get-Process -Id $RootProcessId -ErrorAction SilentlyContinue)) { return @() }");
-        builder.AppendLine("        Add-DescendantProcessIds $RootProcessId");
-        builder.AppendLine("        if (-not $orderedIds.Contains($RootProcessId)) { [void]$orderedIds.Add($RootProcessId) }");
-        builder.AppendLine("    } catch { }");
-        builder.AppendLine("    return @($orderedIds)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-ExpandedProcessTreeIds {");
-        builder.AppendLine("    param([int[]]$RootProcessIds)");
-        builder.AppendLine("    $ids = [System.Collections.Generic.List[int]]::new()");
-        builder.AppendLine("    foreach ($processId in @($RootProcessIds)) {");
-        builder.AppendLine("        foreach ($treeProcessId in @(Resolve-ProcessTreeIds $processId)) {");
-        builder.AppendLine("            if ($treeProcessId -gt 0 -and -not $ids.Contains($treeProcessId)) { [void]$ids.Add($treeProcessId) }");
-        builder.AppendLine("        }");
-        builder.AppendLine("        if ($processId -gt 0 -and -not $ids.Contains($processId)) { [void]$ids.Add($processId) }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return @($ids)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Stop-AppProcessTree {");
-        builder.AppendLine("    param([int[]]$ProcessIds)");
-        builder.AppendLine("    $stopped = [System.Collections.Generic.List[int]]::new()");
-        builder.AppendLine("    foreach ($processIdToStop in @($ProcessIds)) {");
-        builder.AppendLine("        if ($processIdToStop -eq $PID) { continue }");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            $process = Get-Process -Id $processIdToStop -ErrorAction SilentlyContinue");
-        builder.AppendLine("            if ($null -eq $process) { continue }");
-        builder.AppendLine("            Stop-Process -Id $processIdToStop -Force -ErrorAction SilentlyContinue");
-        builder.AppendLine("            Wait-Process -Id $processIdToStop -Timeout 5 -ErrorAction SilentlyContinue");
-        builder.AppendLine("            [void]$stopped.Add($processIdToStop)");
-        builder.AppendLine("        } catch { }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return @($stopped)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Resolve-StillRunningProcessIds {");
-        builder.AppendLine("    param([int[]]$ProcessIds)");
-        builder.AppendLine("    $running = [System.Collections.Generic.List[int]]::new()");
-        builder.AppendLine("    foreach ($processId in @($ProcessIds)) {");
-        builder.AppendLine("        if ($processId -eq $PID) { continue }");
-        builder.AppendLine("        if ($null -ne (Get-Process -Id $processId -ErrorAction SilentlyContinue)) { [void]$running.Add($processId) }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return @($running)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Dismount-StaticWebAssetsAliasMappings {");
-        builder.AppendLine("    param([object[]]$Mappings)");
-        builder.AppendLine("    $dismounted = [System.Collections.Generic.List[string]]::new()");
-        builder.AppendLine("    if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return @($dismounted) }");
-        builder.AppendLine("    foreach ($mapping in @($Mappings)) {");
-        builder.AppendLine("        if ($null -eq $mapping) { continue }");
-        builder.AppendLine("        if (Test-JsonProperty $mapping 'mounted' -and -not ([bool]$mapping.mounted)) { continue }");
-        builder.AppendLine("        $drive = if (Test-JsonProperty $mapping 'drive') { [string]$mapping.drive } else { '' }");
-        builder.AppendLine("        if ([string]::IsNullOrWhiteSpace($drive)) { continue }");
-        builder.AppendLine("        try {");
-        builder.AppendLine("            & subst $drive /d 2>$null | Out-Null");
-        builder.AppendLine("            if ($LASTEXITCODE -eq 0) { [void]$dismounted.Add($drive) }");
-        builder.AppendLine("        } catch { }");
-        builder.AppendLine("    }");
-        builder.AppendLine("    return @($dismounted)");
-        builder.AppendLine("}");
-        builder.AppendLine("function Write-CleanupReceipt {");
-        builder.AppendLine("    param([bool]$Succeeded, [string]$Message, [int[]]$RequestedProcessIds, [int[]]$ResolvedProcessTreeIds, [int[]]$StoppedProcessIds, [int[]]$StillRunningProcessIds, [string[]]$DismountedDrives)");
-        builder.AppendLine("    $completedAtUtc = [DateTimeOffset]::UtcNow");
-        builder.AppendLine("    $payload = [ordered]@{");
-        builder.AppendLine("        succeeded = $Succeeded");
-        builder.AppendLine("        message = $Message");
-        builder.AppendLine("        startupReceiptPath = $startupReceipt");
-        builder.AppendLine("        cleanupReceiptPath = $cleanupReceipt");
-        builder.AppendLine("        requestedProcessIds = @($RequestedProcessIds)");
-        builder.AppendLine("        resolvedProcessTreeIds = @($ResolvedProcessTreeIds)");
-        builder.AppendLine("        stoppedProcessIds = @($StoppedProcessIds)");
-        builder.AppendLine("        stillRunningProcessIds = @($StillRunningProcessIds)");
-        builder.AppendLine("        dismountedStaticWebAssetDrives = @($DismountedDrives)");
-        builder.AppendLine("        startedAtUtc = $startedAtUtc.ToString('O')");
-        builder.AppendLine("        completedAtUtc = $completedAtUtc.ToString('O')");
-        builder.AppendLine("    }");
-        builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $cleanupReceipt) | Out-Null");
-        builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 8");
-        builder.AppendLine("    Set-Content -LiteralPath $cleanupReceipt -Value $json -Encoding UTF8");
-        builder.AppendLine("    return $json");
-        builder.AppendLine("}");
-        builder.AppendLine("function Update-StartupReceiptCleanupState {");
-        builder.AppendLine("    param([object]$Startup, [bool]$Succeeded, [int[]]$StoppedProcessIds, [int[]]$StillRunningProcessIds)");
-        builder.AppendLine("    try {");
-        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupAttempted -NotePropertyValue $true -Force");
-        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupReceiptPath -NotePropertyValue $cleanupReceipt -Force");
-        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupSucceeded -NotePropertyValue $Succeeded -Force");
-        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupStoppedProcessIds -NotePropertyValue @($StoppedProcessIds) -Force");
-        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupStillRunningProcessIds -NotePropertyValue @($StillRunningProcessIds) -Force");
-        builder.AppendLine("        $Startup | Add-Member -NotePropertyName cleanupCompletedAtUtc -NotePropertyValue ([DateTimeOffset]::UtcNow.ToString('O')) -Force");
-        builder.AppendLine("        Set-Content -LiteralPath $startupReceipt -Value ($Startup | ConvertTo-Json -Depth 8) -Encoding UTF8");
-        builder.AppendLine("    } catch { }");
-        builder.AppendLine("}");
-        builder.AppendLine("try {");
-        builder.AppendLine("    if (-not (Test-Path -LiteralPath $startupReceipt -PathType Leaf)) { throw \"Startup receipt not found: $startupReceipt\" }");
-        builder.AppendLine("    $startup = Get-Content -LiteralPath $startupReceipt -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop");
-        builder.AppendLine("    $requestedProcessIds = @(Resolve-StartupProcessIds $startup)");
-        builder.AppendLine("    $resolvedProcessTreeIds = @(Resolve-ExpandedProcessTreeIds $requestedProcessIds)");
-        builder.AppendLine("    $stoppedProcessIds = @(Stop-AppProcessTree $resolvedProcessTreeIds)");
-        builder.AppendLine("    $stillRunningProcessIds = @(Resolve-StillRunningProcessIds $resolvedProcessTreeIds)");
-        builder.AppendLine("    $mappings = if (Test-JsonProperty $startup 'staticWebAssetsAliasMappings') { @($startup.staticWebAssetsAliasMappings) } else { @() }");
-        builder.AppendLine("    $dismountedDrives = @(Dismount-StaticWebAssetsAliasMappings $mappings)");
-        builder.AppendLine("    $succeeded = $stillRunningProcessIds.Count -eq 0");
-        builder.AppendLine("    $message = if ($succeeded) { \"Stopped recorded workspace_dotnet_run process tree and static web assets aliases.\" } else { \"Failed to stop every recorded workspace_dotnet_run process. Still running process ids: $($stillRunningProcessIds -join ',').\" }");
-        builder.AppendLine("    Update-StartupReceiptCleanupState $startup $succeeded $stoppedProcessIds $stillRunningProcessIds");
-        builder.AppendLine("    $json = Write-CleanupReceipt $succeeded $message $requestedProcessIds $resolvedProcessTreeIds $stoppedProcessIds $stillRunningProcessIds $dismountedDrives");
-        builder.AppendLine("    Write-Output $json");
-        builder.AppendLine("    if (-not $succeeded) { exit 1 }");
-        builder.AppendLine("} catch {");
-        builder.AppendLine("    $message = $_.Exception.Message");
-        builder.AppendLine("    $json = Write-CleanupReceipt $false $message @() @() @() @() @()");
-        builder.AppendLine("    Write-Error $json");
-        builder.AppendLine("    exit 1");
-        builder.AppendLine("}");
-        return builder.ToString();
-    }
-
-    private static string ToPowerShellSingleQuotedString(string value)
-        => "'" + value.Replace("'", "''") + "'";
 
     private string ResolveOutputWorkspacePath(string outputPath, out string outputFullPath)
     {
@@ -1894,15 +1487,22 @@ internal sealed class WorkspaceCommandPlanBuilder
             return resolution;
         }
 
+        var physicalPathPolicy = pathPolicy.GetPhysicalPathPolicy(resolution.FullPath);
         var candidates = Directory.EnumerateFiles(resolution.FullPath, "*", SearchOption.TopDirectoryOnly)
             .Where(file => allowedExtensions.Contains(Path.GetExtension(file)))
-            .Select(file => new
+            .Select(file =>
             {
-                FullPath = Path.GetFullPath(file),
-                DisplayPath = pathPolicy.ToDisplayPath(Path.GetFullPath(file)),
-                Extension = Path.GetExtension(file)
+                physicalPathPolicy.EnsureSafePath(file);
+                var fullPath = Path.GetFullPath(file);
+                return new
+                {
+                    FullPath = fullPath,
+                    DisplayPath = pathPolicy.ToDisplayPath(fullPath),
+                    Extension = Path.GetExtension(fullPath)
+                };
             })
-            .OrderBy(item => item.DisplayPath, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item.DisplayPath, StringComparer.Ordinal)
+            .ThenBy(item => item.FullPath, StringComparer.Ordinal)
             .ToList();
 
         if (allowedExtensions.Contains(".sln") || allowedExtensions.Contains(".slnx"))
@@ -1964,7 +1564,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(ResolveWorkspacePath)
             .Select(resolution => resolution.RelativePath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToList();
     }
 
@@ -2027,17 +1627,21 @@ internal sealed class WorkspaceCommandPlanBuilder
         IReadOnlyList<string> TargetPaths);
 
     private sealed record DotnetRunArtifactPaths(
-        string ScriptFullPath,
         string StdoutLogFullPath,
+        string StdoutLogRelativePath,
         string StderrLogFullPath,
+        string StderrLogRelativePath,
         string StartupReceiptFullPath,
+        string StartupReceiptRelativePath,
+        string CleanupReceiptFullPath,
+        string CleanupReceiptRelativePath,
         IReadOnlyList<string> TargetPaths);
 
     private sealed record DotnetStopArtifactPaths(
         string WorkingDirectoryPath,
         string WorkingDirectoryRelative,
-        string ScriptFullPath,
         string CleanupReceiptFullPath,
+        string CleanupReceiptRelativePath,
         IReadOnlyList<string> TargetPaths);
 
     private sealed record DotnetNewTemplateSpec(

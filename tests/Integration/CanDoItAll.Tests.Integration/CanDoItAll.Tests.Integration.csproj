@@ -15,10 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.Tests.Integration" />
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Support\CanDoItAll.McpTestHost\CanDoItAll.McpTestHost.csproj" />
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj" />
@@ -29,12 +31,16 @@
     <ProjectReference Include="..\..\..\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj" />
     <ProjectReference Include="..\..\..\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj" />
+    <ProjectReference Include="..\..\..\src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Usage\CanDoItAll.AgentFramework.Usage.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
@@ -50,4 +56,3 @@
   </ItemGroup>
 
 </Project>
-

@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Conversation context affinity: binding lifecycle, epochs, transitions, and
@@ -316,7 +316,7 @@ public sealed class AgentConversationContextServiceTests
 
         foreach (var relativePath in affinitySources)
         {
-            var text = File.ReadAllText(Path.Combine(root, relativePath));
+            var text = File.ReadAllText(TestRepositoryPath.Resolve(root, relativePath));
             Assert.DoesNotContain("IAgentRuntime", text, StringComparison.Ordinal);
             Assert.DoesNotContain("ExecutionService", text, StringComparison.Ordinal);
             Assert.DoesNotContain("ProviderProfile", text, StringComparison.Ordinal);

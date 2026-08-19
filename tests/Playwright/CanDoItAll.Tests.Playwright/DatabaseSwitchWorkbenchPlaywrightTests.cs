@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Flows;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class DatabaseSwitchWorkbenchPlaywrightTests

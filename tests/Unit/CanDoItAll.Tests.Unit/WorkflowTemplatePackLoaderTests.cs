@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowTemplatePackLoaderTests
 {
@@ -33,6 +33,46 @@ public sealed class WorkflowTemplatePackLoaderTests
         var projectStructure = Assert.Contains(WorkflowExecutorIds.ProjectStructure.Value, previewCatalog.Executors);
         Assert.Contains(nameof(WorkflowProjectStructureOperation.CreateAsset), projectStructure.Operations.Keys);
         Assert.Contains(nameof(WorkflowProjectStructureOperation.CreateTaskNodes), projectStructure.Operations.Keys);
+    }
+
+    [Fact]
+    public void Load_canonicalizes_legacy_manifest_path_at_the_known_logical_boundary()
+    {
+        using var packDirectory = TemporaryWorkflowTemplatePack.Create(
+            "legacy-path.yaml",
+            CreateLinearExecutorWorkflow("legacy-path", "known.executor"));
+        var manifestPath = Path.Combine(packDirectory.RootPath, "manifest.yaml");
+        File.WriteAllText(
+            manifestPath,
+            File.ReadAllText(manifestPath).Replace(
+                "workflows/legacy-path.yaml",
+                @"workflows\legacy-path.yaml",
+                StringComparison.Ordinal));
+
+        var pack = new WorkflowTemplatePackLoader(packDirectory.RootPath).Load();
+
+        Assert.Equal("workflows/legacy-path.yaml", Assert.Single(pack.Manifest.WorkflowFiles).RelativePath);
+    }
+
+    [Fact]
+    public void Load_rejects_manifest_path_with_dot_segments()
+    {
+        using var packDirectory = TemporaryWorkflowTemplatePack.Create(
+            "invalid-path.yaml",
+            CreateLinearExecutorWorkflow("invalid-path", "known.executor"));
+        var manifestPath = Path.Combine(packDirectory.RootPath, "manifest.yaml");
+        File.WriteAllText(
+            manifestPath,
+            File.ReadAllText(manifestPath).Replace(
+                "workflows/invalid-path.yaml",
+                "workflows/../invalid-path.yaml",
+                StringComparison.Ordinal));
+
+        var exception = Assert.Throws<WorkflowTemplatePackException>(() =>
+            new WorkflowTemplatePackLoader(packDirectory.RootPath).Load());
+
+        Assert.Equal(WorkflowTemplateFailureKind.ManifestLoadFailed, exception.FailureKind);
+        Assert.Contains("workflowFiles[0].relativePath", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

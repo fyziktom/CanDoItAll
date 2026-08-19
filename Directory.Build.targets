@@ -1,7 +1,65 @@
 <Project>
   <PropertyGroup>
     <CopyRepositoryTemplatesToOutput Condition="'$(CopyRepositoryTemplatesToOutput)' == ''">true</CopyRepositoryTemplatesToOutput>
+    <CanDoItAllComponentsRepositoryRoot Condition="'$(CanDoItAllComponentsRepositoryRoot)' == ''">$(MSBuildThisFileDirectory)..\CanDoItAll.Components</CanDoItAllComponentsRepositoryRoot>
+    <CanDoItAllFileToolsRepositoryRoot Condition="'$(CanDoItAllFileToolsRepositoryRoot)' == ''">$(MSBuildThisFileDirectory)..\CanDoItAll.FileTools</CanDoItAllFileToolsRepositoryRoot>
+    <UseLocalCanDoItAllLibraries Condition="'$(UseLocalCanDoItAllLibraries)' == ''">true</UseLocalCanDoItAllLibraries>
+    <ShouldUnsetParentConfigurationAndPlatform Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">false</ShouldUnsetParentConfigurationAndPlatform>
   </PropertyGroup>
+
+  <Target
+    Name="ValidateLocalCanDoItAllLibraryRepositories"
+    BeforeTargets="CollectPackageReferences;PrepareForBuild"
+    Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
+    <Error
+      Condition="!Exists('$(CanDoItAllComponentsRepositoryRoot)\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj')"
+      Text="The current build requires the CanDoItAll.Components source repository at '$(CanDoItAllComponentsRepositoryRoot)'. Configure CanDoItAllComponentsRepositoryRoot when the repositories are not siblings." />
+    <Error
+      Condition="!Exists('$(CanDoItAllFileToolsRepositoryRoot)\src\CanDoItAll.FileTools.Abstractions\CanDoItAll.FileTools.Abstractions.csproj')"
+      Text="The current build requires the CanDoItAll.FileTools source repository at '$(CanDoItAllFileToolsRepositoryRoot)'. Configure CanDoItAllFileToolsRepositoryRoot when the repositories are not siblings." />
+  </Target>
+
+  <Target Name="ValidateCanDoItAllLibraryMode" BeforeTargets="CollectPackageReferences;PrepareForBuild">
+    <Error
+      Condition="'$(UseLocalCanDoItAllLibraries)' != 'true' and '$(UseLocalCanDoItAllLibraries)' != 'false'"
+      Text="UseLocalCanDoItAllLibraries must be explicitly true or false." />
+  </Target>
+
+  <ItemGroup Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
+    <_NonCanDoItAllComponentsPackage Include="@(PackageReference)" Exclude="CanDoItAll.Components.*" />
+    <_LocalCanDoItAllComponentsPackage Include="@(PackageReference)" Exclude="@(_NonCanDoItAllComponentsPackage)" />
+    <_NonCanDoItAllFileToolsPackage Include="@(PackageReference)" Exclude="CanDoItAll.FileTools.*" />
+    <_LocalCanDoItAllFileToolsPackage Include="@(PackageReference)" Exclude="@(_NonCanDoItAllFileToolsPackage)" />
+
+    <PackageReference Remove="@(_LocalCanDoItAllComponentsPackage);@(_LocalCanDoItAllFileToolsPackage)" />
+    <ProjectReference Include="@(_LocalCanDoItAllComponentsPackage->'$(CanDoItAllComponentsRepositoryRoot)\src\%(Identity)\%(Identity).csproj')">
+      <CanDoItAllLocalLibrary>true</CanDoItAllLocalLibrary>
+    </ProjectReference>
+    <ProjectReference Include="@(_LocalCanDoItAllFileToolsPackage->'$(CanDoItAllFileToolsRepositoryRoot)\src\%(Identity)\%(Identity).csproj')">
+      <CanDoItAllLocalLibrary>true</CanDoItAllLocalLibrary>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target
+    Name="ValidateResolvedLocalCanDoItAllLibraryReferences"
+    BeforeTargets="CollectPackageReferences;PrepareForBuild"
+    Condition="'$(UseLocalCanDoItAllLibraries)' == 'true'">
+    <ItemGroup>
+      <_UnconvertedCanDoItAllLibraryPackage
+        Include="@(PackageReference)"
+        Condition="$([System.String]::Copy('%(Identity)').StartsWith('CanDoItAll.Components.')) or $([System.String]::Copy('%(Identity)').StartsWith('CanDoItAll.FileTools.'))" />
+      <_MissingCanDoItAllLocalProject
+        Include="@(ProjectReference)"
+        Condition="'%(ProjectReference.CanDoItAllLocalLibrary)' == 'true' and !Exists('%(ProjectReference.FullPath)')" />
+    </ItemGroup>
+
+    <Error
+      Condition="'@(_UnconvertedCanDoItAllLibraryPackage)' != ''"
+      Text="Source dependency mode could not convert these package references to sibling projects: @(_UnconvertedCanDoItAllLibraryPackage, ', '). Project IDs must follow the sibling src/&lt;ID&gt;/&lt;ID&gt;.csproj convention." />
+    <Error
+      Condition="'@(_MissingCanDoItAllLocalProject)' != ''"
+      Text="Source dependency mode resolved missing sibling projects: @(_MissingCanDoItAllLocalProject, ', '). Check the repository roots and project mapping." />
+  </Target>
 
   <ItemGroup>
     <RepositoryTemplateContent Include="$(MSBuildThisFileDirectory)Templates\**\*.*" />

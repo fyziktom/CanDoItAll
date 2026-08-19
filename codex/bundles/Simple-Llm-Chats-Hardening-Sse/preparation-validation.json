@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "state": "Prepared",
+  "checks": [
+    {
+      "name": "python-script-syntax",
+      "result": "Pass",
+      "count": 6
+    },
+    {
+      "name": "bundle-validation-prepared",
+      "result": "Pass"
+    },
+    {
+      "name": "traceability",
+      "result": "Pass",
+      "requirements": 35,
+      "findings": 17
+    },
+    {
+      "name": "test-policy",
+      "result": "Pass"
+    },
+    {
+      "name": "repository-independent-tests",
+      "result": "NotRun",
+      "reason": "Local clone unavailable because github.com DNS resolution failed in the review environment."
+    }
+  ]
+}

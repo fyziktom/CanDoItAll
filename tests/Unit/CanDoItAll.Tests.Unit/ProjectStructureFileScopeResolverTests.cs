@@ -1,3 +1,5 @@
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.Integration;
@@ -7,7 +9,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureFileScopeResolverTests
 {
@@ -192,7 +194,7 @@ public sealed class ProjectStructureFileScopeResolverTests
     public async Task ResolveKnownFileAsync_rejects_absolute_or_escaped_metadata_before_a_provider(
         string locator)
     {
-        await using var fixture = await ResolverFixture.CreateAsync(
+        await using var fixture = await ResolverFixture.CreateLegacyPersistedReferenceAsync(
             ProjectObjectType.File,
             new StorageObjectReference(
                 ResolverFixture.StorageId,
@@ -283,9 +285,30 @@ public sealed class ProjectStructureFileScopeResolverTests
         FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
 
         Assert.Equal(ResolverFixture.StorageId, binding.StorageId);
-        Assert.Equal(root, binding.Root.Value);
+        Assert.Equal(
+            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+                .CombineArtifactPath("process-runs", runId.ToString("D")),
+            binding.Root.Value);
         Assert.Equal(FileToolsHostBrowseCacheMode.Disabled, binding.HostCacheMode);
         Assert.Contains(":v2:collection:", scope.Id.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveNodeCollectionAsync_maps_projected_product_output_to_the_project_output_scope()
+    {
+        Guid runId = Guid.NewGuid();
+        string root = $"output/process-runs/{runId:D}/Calculator";
+        await using var fixture = await ResolverFixture.CreateProjectedCollectionAsync(runId, root);
+
+        FileToolsSemanticScope scope = await fixture.Sut.ResolveNodeCollectionAsync(
+            fixture.ProjectId,
+            fixture.NodeKey);
+        FileToolsStorageBinding binding = Assert.Single(await fixture.Sut.ResolveAsync(scope));
+
+        Assert.Equal(
+            WorkspaceScopeDescriptor.Project(fixture.ProjectId.ToString("D"))
+                .CombineOutputPath("process-runs", runId.ToString("D"), "Calculator"),
+            binding.Root.Value);
     }
 
     [Theory]
@@ -345,7 +368,7 @@ public sealed class ProjectStructureFileScopeResolverTests
         FileBrowserProviderException exception = await Assert.ThrowsAsync<FileBrowserProviderException>(
             () => fixture.Sut.ResolveNodeCollectionAsync(fixture.ProjectId, fixture.NodeKey).AsTask());
 
-        Assert.Equal(FileBrowserErrorCode.Forbidden, exception.Error.Code);
+        Assert.Equal(FileBrowserErrorCode.InvalidOperation, exception.Error.Code);
     }
 
     [Fact]
@@ -446,6 +469,21 @@ public sealed class ProjectStructureFileScopeResolverTests
             ProjectObjectType objectType,
             StorageObjectReference? reference)
         {
+            return await CreateAsync(objectType, reference, preserveUnvalidatedReference: false);
+        }
+
+        public static async Task<ResolverFixture> CreateLegacyPersistedReferenceAsync(
+            ProjectObjectType objectType,
+            StorageObjectReference reference)
+        {
+            return await CreateAsync(objectType, reference, preserveUnvalidatedReference: true);
+        }
+
+        private static async Task<ResolverFixture> CreateAsync(
+            ProjectObjectType objectType,
+            StorageObjectReference? reference,
+            bool preserveUnvalidatedReference)
+        {
             AppDbContextModelRegistry.ConfigureAssemblies([typeof(WorkbenchModuleAssemblyMarker).Assembly]);
             var options = AppDbContextTestOptionsBuilder.Create()
                 .UseInMemoryDatabase($"project-structure-file-scope-{Guid.NewGuid():N}")
@@ -470,7 +508,9 @@ public sealed class ProjectStructureFileScopeResolverTests
                     ProjectObjectId = node.Id,
                     MediaContentType = reference.ContentType,
                     MediaOriginalFileName = reference.DisplayName,
-                    StorageObjectReferenceJson = StorageJson.SerializeReference(reference)
+                    StorageObjectReferenceJson = preserveUnvalidatedReference
+                        ? JsonSerializer.Serialize(reference, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                        : StorageJson.SerializeReference(reference)
                 });
             }
 
@@ -494,11 +534,11 @@ public sealed class ProjectStructureFileScopeResolverTests
                 NodeKey = nodeKey,
                 ObjectType = ProjectObjectType.Infrastructure,
                 Title = "Report storage",
-                MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope
+                MetadataJson = JsonSerializer.Serialize(new
                 {
-                    Infrastructure = new ProjectInfrastructureMetadata
+                    infrastructure = new
                     {
-                        StoragePathPrefix = prefix
+                        storagePathPrefix = prefix
                     }
                 })
             };

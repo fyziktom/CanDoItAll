@@ -6,7 +6,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureAssetContentReaderTests
 {
@@ -553,12 +553,15 @@ public sealed class ProjectStructureAssetContentReaderTests
             NullLogger<ProjectStructureAssetContentReader>.Instance);
 
     private static ProjectManagedStoragePhysicalIdentityPolicy CreateIdentityPolicy(string workspaceRoot)
-        => new(new FileSystemStoragePathPolicy(new StaticWorkspacePathResolver(workspaceRoot)));
+        => new(
+            new FileSystemStoragePathPolicy(new StaticWorkspacePathResolver(workspaceRoot)),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
     private static StorageCatalogRecord CreateStorage(
         StorageProviderKind providerKind,
         string workspaceRoot)
-        => new()
+    {
+        var storage = new StorageCatalogRecord
         {
             Id = Guid.NewGuid(),
             Name = $"{providerKind} test storage",
@@ -574,6 +577,13 @@ public sealed class ProjectStructureAssetContentReaderTests
             },
             CapabilityMask = StorageCapability.Read
         };
+        if (providerKind == StorageProviderKind.FileSystem)
+        {
+            StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, DateTimeOffset.UtcNow);
+        }
+
+        return storage;
+    }
 
     private static StorageObjectReference CreateV2Reference(
         StorageProviderKind providerKind,

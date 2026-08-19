@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScope;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class CrmHrResourceSourceGatewayAdapterTests

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentCatalogPanelTests
 {

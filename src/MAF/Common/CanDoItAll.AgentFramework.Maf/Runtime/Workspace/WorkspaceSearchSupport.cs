@@ -123,6 +123,7 @@ internal static class WorkspaceSearchSupport
             }
 
             var enumerate = enumerateDirectoryEntries ?? EnumerateDirectoryEntries;
+            var files = new List<string>();
             var pendingDirectories = new Stack<string>();
             pendingDirectories.Push(rootPath);
             while (pendingDirectories.TryPop(out var directory))
@@ -138,7 +139,12 @@ internal static class WorkspaceSearchSupport
                     continue;
                 }
 
-                foreach (var entry in entries.Order(StringComparer.OrdinalIgnoreCase))
+                var childDirectories = new List<string>();
+                foreach (var entry in entries
+                             .OrderBy(
+                                 path => NormalizeEnumerationKey(Path.GetRelativePath(rootPath, path)),
+                                 StringComparer.Ordinal)
+                             .ThenBy(path => path, StringComparer.Ordinal))
                 {
                     FileAttributes attributes;
                     try
@@ -161,7 +167,7 @@ internal static class WorkspaceSearchSupport
                     {
                         if (!IsBuildNoiseDirectory(entry))
                         {
-                            pendingDirectories.Push(entry);
+                            childDirectories.Add(entry);
                         }
 
                         continue;
@@ -174,8 +180,22 @@ internal static class WorkspaceSearchSupport
                         continue;
                     }
 
-                    yield return entry;
+                    files.Add(entry);
                 }
+
+                for (var index = childDirectories.Count - 1; index >= 0; index--)
+                {
+                    pendingDirectories.Push(childDirectories[index]);
+                }
+            }
+
+            foreach (var file in files
+                         .OrderBy(
+                             path => NormalizeEnumerationKey(Path.GetRelativePath(rootPath, path)),
+                             StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
+            {
+                yield return file;
             }
         }
 
@@ -188,8 +208,15 @@ internal static class WorkspaceSearchSupport
                         RecurseSubdirectories = false,
                         IgnoreInaccessible = false,
                         AttributesToSkip = FileAttributes.ReparsePoint
-                    })
+                })
+                .OrderBy(path => Path.GetFileName(path), StringComparer.Ordinal)
+                .ThenBy(path => path, StringComparer.Ordinal)
                 .ToArray();
+
+        private static string NormalizeEnumerationKey(string path)
+            => path
+                .Replace(Path.DirectorySeparatorChar, '/')
+                .Replace(Path.AltDirectorySeparatorChar, '/');
 
         private static bool IsRegularFile(string path)
         {

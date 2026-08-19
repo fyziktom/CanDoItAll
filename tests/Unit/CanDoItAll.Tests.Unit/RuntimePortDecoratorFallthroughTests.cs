@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// SB18 negative-path proof for the port-level mock/scenario decorators: the deterministic

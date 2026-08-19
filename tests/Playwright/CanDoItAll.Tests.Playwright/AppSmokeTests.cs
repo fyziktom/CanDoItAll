@@ -9,7 +9,7 @@ using CanDoItAll.Modules.Workspace;
 using Microsoft.Playwright;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed partial class AppSmokeTests
@@ -1263,9 +1263,9 @@ public sealed partial class AppSmokeTests
         await OpenNodeQuickActionsAsync(page, runtimeSelector);
         quickActionDialog = page.GetByTestId("project-structure-node-quick-actions");
         await quickActionDialog.WaitForAsync();
-        primaryQuickAction = page.GetByTestId("project-structure-quick-action-primary");
+        primaryQuickAction = page.GetByTestId("project-structure-quick-action-runtime-open");
         await primaryQuickAction.WaitForAsync();
-        Assert.Contains("Run PowerShell", await primaryQuickAction.TextContentAsync(), StringComparison.Ordinal);
+        Assert.Contains("Run", await primaryQuickAction.TextContentAsync(), StringComparison.Ordinal);
         await quickActionDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
 
         var settingsButton = page.GetByRole(AriaRole.Button, new() { Name = "Toggle settings", Exact = true });

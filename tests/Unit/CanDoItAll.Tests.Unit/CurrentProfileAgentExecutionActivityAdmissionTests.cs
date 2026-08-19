@@ -9,7 +9,7 @@ using CanDoItAll.SharedKernel.Streaming;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CurrentProfileAgentExecutionActivityAdmissionTests
 {

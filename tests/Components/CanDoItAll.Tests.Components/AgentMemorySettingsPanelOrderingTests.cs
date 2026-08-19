@@ -2,7 +2,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class AgentMemorySettingsPanelOrderingTests : AgentMemorySettingsPanelTestBase
 {

@@ -14,12 +14,14 @@ internal sealed class AgentFrameworkProcessExecutionAdapter(IAgentFrameworkProce
     IProcessExecutionAdapter,
     IProcessStepExecutionDriver
 {
+    internal static ProcessStepExecutionDriverDescriptor DriverDescriptor { get; } = new(
+        StandardProcessAdapterDriverIds.Workflow,
+        StandardProcessAdapterDescriptors.WorkflowAdapter,
+        StandardProcessAdapterDescriptors.WorkflowAdapter.Strategy);
+
     public ProcessExecutionAdapterDescriptor Descriptor => StandardProcessAdapterDescriptors.WorkflowAdapter;
 
-    ProcessStepExecutionDriverDescriptor IProcessStepExecutionDriver.Descriptor => new(
-        StandardProcessAdapterDriverIds.Workflow,
-        Descriptor,
-        Descriptor.Strategy);
+    ProcessStepExecutionDriverDescriptor IProcessStepExecutionDriver.Descriptor => DriverDescriptor;
 
     public ValueTask<ProcessExecutionAdapterResult> ExecuteStepAsync(
         ProcessExecutionAdapterRequest request,

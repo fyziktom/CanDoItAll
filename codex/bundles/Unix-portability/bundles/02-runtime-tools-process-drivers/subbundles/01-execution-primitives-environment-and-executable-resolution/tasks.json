@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B01",
+  "title": "Execution primitives, environment semantics, and executable resolution",
+  "critical": true,
+  "conditional": false,
+  "status": "Completed — Gate R1a GO",
+  "depends_on": [
+    "B00",
+    "Gate R0"
+  ],
+  "unlocks": [
+    "B02"
+  ],
+  "requirements": [
+    "EXEC-001",
+    "EXEC-002",
+    "EXEC-003",
+    "EXEC-004",
+    "EXEC-005",
+    "EXEC-006",
+    "EXEC-007",
+    "EXEC-008"
+  ],
+  "source_hotspots": [
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceGitCommandExecutor.cs",
+    "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/WorkspaceExternalProcessRunner.cs"
+  ],
+  "tasks": [
+    {
+      "id": "B01-T01",
+      "title": "Define the canonical execution plan",
+      "description": "Use immutable executable/argv/working-directory/environment/timeout/output/boundary/side-effect metadata. Display command text is a projection only.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T02",
+      "title": "Consolidate low-level process semantics",
+      "description": "Make LocalWorkspaceProcessHost or a smaller extracted primitive authoritative. External tools and injected plugin runtimes wrap/reuse it rather than copy Process code.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T03",
+      "title": "Implement host-correct executable resolution",
+      "description": "Handle explicit paths, PATH order, Windows PATHEXT, Unix execute bits and shebang expectations, case behavior, symlinks, missing/ambiguous candidates, and stable diagnostics.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T04",
+      "title": "Implement environment semantics",
+      "description": "Preserve OS key comparison, define safe common and OS/tool-specific inherited sets, require explicit secret bindings, and keep values out of receipts.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T05",
+      "title": "Prove cancellation and process-tree cleanup",
+      "description": "Characterize existing Kill(entireProcessTree). Add TERM/grace/KILL or native process-group/Job Object behavior only where tests prove it is required.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T06",
+      "title": "Unify lifecycle ownership",
+      "description": "Ensure one process host/registry instance per workspace/runtime aggregate, one disposal path, and explicit kept-alive process leases.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T07",
+      "title": "Normalize/redact receipts",
+      "description": "Record logical paths and approved environment names, cap stdout/stderr, redact sentinel secrets, and report actual isolation strength rather than aspirational sandbox claims.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T08",
+      "title": "Remove neutral Windows suffix assumptions",
+      "description": "No `.exe/.cmd/.bat` probing or case-insensitive allowlist remains in OS-neutral code except explicit compatibility fixtures.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B01-T09",
+      "title": "Issue execution foundation gate R1a",
+      "description": "Independent runtime/security review must accept cancellation, ownership, environment, executable, and receipt behavior.",
+      "requirements": [
+        "EXEC-001",
+        "EXEC-002",
+        "EXEC-003",
+        "EXEC-004",
+        "EXEC-005",
+        "EXEC-006",
+        "EXEC-007",
+        "EXEC-008"
+      ],
+      "status": "Completed",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

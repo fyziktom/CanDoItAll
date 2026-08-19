@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using CanDoItAll.Infrastructure.Storage;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class StorageTransferPipelineTests
 {
@@ -47,6 +47,7 @@ public sealed class StorageTransferPipelineTests
                     })));
 
             Assert.Equal(1, result.TotalCount);
+            Assert.True(result.Items[0].IsSuccess, result.Items[0].Message);
             Assert.Equal(1, result.SuccessCount);
             Assert.Equal(0, result.FailureCount);
             Assert.Single(progressUpdates);
@@ -108,7 +109,43 @@ public sealed class StorageTransferPipelineTests
         Assert.Contains("not flagged for batch transfer", result.Items[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static StorageCatalogRecord CreateStorage(string rootPath, bool canWrite)
+    [Fact]
+    public async Task ExecuteAsync_orders_case_distinct_logical_paths_ordinally()
+    {
+        var sourceDriver = new MemoryStorageDriver(StorageProviderKind.FileSystem);
+        var targetDriver = new MemoryStorageDriver(StorageProviderKind.Ftp);
+        var pipeline = new StorageTransferPipeline(
+            new TestStorageCatalogService(),
+            new TestStorageDriverRegistry(sourceDriver, targetDriver),
+            new NullStorageSecretResolver(),
+            NullLogger<StorageTransferPipeline>.Instance);
+        StorageCatalogRecord sourceStorage = CreateStorage(
+            "source",
+            canWrite: false,
+            providerKind: StorageProviderKind.FileSystem);
+        StorageCatalogRecord targetStorage = CreateStorage(
+            "target",
+            canWrite: true,
+            providerKind: StorageProviderKind.Ftp);
+
+        StorageTransferResult result = await pipeline.ExecuteAsync(new StorageTransferManifest(
+            null,
+            null,
+            [
+                new StorageTransferItem("reports/foo.txt", "imports/foo.txt", "text/plain", StorageUsagePurpose.ProjectAsset),
+                new StorageTransferItem("reports/Foo.txt", "imports/Foo.txt", "text/plain", StorageUsagePurpose.ProjectAsset)
+            ],
+            sourceStorage,
+            targetStorage,
+            new StorageTransferOptions(MaxConcurrency: 2)));
+
+        Assert.Equal(["reports/Foo.txt", "reports/foo.txt"], result.Items.Select(item => item.SourcePath));
+    }
+
+    private static StorageCatalogRecord CreateStorage(
+        string rootPath,
+        bool canWrite,
+        StorageProviderKind providerKind = StorageProviderKind.FileSystem)
     {
         var capabilityMask = StorageCapability.Read |
                              StorageCapability.Download |
@@ -121,14 +158,20 @@ public sealed class StorageTransferPipelineTests
                               StorageCapability.BatchFolderUpload;
         }
 
-        return new StorageCatalogRecord
+        var storage = new StorageCatalogRecord
         {
             Id = Guid.NewGuid(),
             Name = canWrite ? "Target" : "Source",
-            ProviderKind = StorageProviderKind.FileSystem,
+            ProviderKind = providerKind,
             EndpointOrRoot = rootPath,
             CapabilityMask = capabilityMask
         };
+        if (providerKind == StorageProviderKind.FileSystem && Path.IsPathFullyQualified(rootPath))
+        {
+            StorageCatalogHostBindingPolicy.BindCurrent(storage, rootPath, DateTimeOffset.UtcNow);
+        }
+
+        return storage;
     }
 
     private sealed class TestStorageCatalogService : IStorageCatalogService
@@ -191,6 +234,62 @@ public sealed class StorageTransferPipelineTests
             StorageObjectReference reference,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task DeleteAsync(
+            StorageCatalogRecord storage,
+            StorageObjectReference reference,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class MemoryStorageDriver(StorageProviderKind providerKind) : IStorageDriver
+    {
+        public StorageProviderKind ProviderKind => providerKind;
+
+        public StorageCapability SupportedCapabilities =>
+            StorageCapability.Read |
+            StorageCapability.Write |
+            StorageCapability.BatchTransfer;
+
+        public Task<StorageConnectionTestResult> TestConnectionAsync(
+            StorageCatalogRecord storage,
+            string? secretValue,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<StorageWriteResult> SaveAsync(
+            StorageCatalogRecord storage,
+            StorageWriteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var reference = new StorageObjectReference(
+                storage.Id,
+                storage.ProviderKind,
+                StorageLocatorKind.RemotePath,
+                request.RelativePathHint ?? request.FileName,
+                request.FileName,
+                request.ContentType,
+                request.Content.LongLength);
+            return Task.FromResult(new StorageWriteResult(
+                reference,
+                new StorageAccessDescriptor(
+                    string.Empty,
+                    string.Empty,
+                    null,
+                    false,
+                    false,
+                    false,
+                    request.FileName,
+                    request.ContentType,
+                    request.Content.LongLength,
+                    string.Empty)));
+        }
+
+        public Task<Stream> OpenReadAsync(
+            StorageCatalogRecord storage,
+            StorageObjectReference reference,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult<Stream>(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(reference.Locator)));
 
         public Task DeleteAsync(
             StorageCatalogRecord storage,

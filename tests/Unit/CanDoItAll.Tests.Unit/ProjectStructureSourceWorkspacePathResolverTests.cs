@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureSourceWorkspacePathResolverTests
 {
@@ -20,11 +20,15 @@ public sealed class ProjectStructureSourceWorkspacePathResolverTests
         File.WriteAllText(escapedFile, "must not be imported through a traversal path");
         var projectId = Guid.NewGuid();
         var projectScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+        var externalTargets = TestExternalTargetPathRegistry.Create();
         var resolver = new ProjectStructureSourceWorkspacePathResolver(
-            new WorkspacePathResolutionService(
+            TestWorkspaceServices.CreatePathResolutionService(
                 temp.Path,
-                WorkspaceScopeDescriptor.Organization("active-organization")),
-            new StaticWorkspacePathResolver(temp.Path));
+                WorkspaceScopeDescriptor.Organization("active-organization"),
+                externalTargets),
+            new StaticWorkspacePathResolver(temp.Path),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            externalTargets);
         var scopedRoot = ResolveManagedRoot(projectScope, managedRootName);
         var traversalPath = $"{scopedRoot}/../../../../escaped.xlsx";
 
@@ -42,9 +46,14 @@ public sealed class ProjectStructureSourceWorkspacePathResolverTests
     public void ResolveExistingFile_maps_typed_workspace_path_failure_to_agent_visible_input()
     {
         using var temp = new ProjectStructureSourceWorkspaceTempDirectory();
+        var externalTargets = TestExternalTargetPathRegistry.Create();
         var resolver = new ProjectStructureSourceWorkspacePathResolver(
-            new WorkspacePathResolutionService(temp.Path),
-            new StaticWorkspacePathResolver(temp.Path));
+            TestWorkspaceServices.CreatePathResolutionService(
+                temp.Path,
+                externalTargetRegistry: externalTargets),
+            new StaticWorkspacePathResolver(temp.Path),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            externalTargets);
         var outsidePath = Path.Combine(
             Path.GetTempPath(),
             $"outside-{Guid.NewGuid():N}.xlsx");
@@ -78,7 +87,9 @@ public sealed class ProjectStructureSourceWorkspacePathResolverTests
         };
         var resolver = new ProjectStructureSourceWorkspacePathResolver(
             new ThrowingWorkspacePathResolutionService(expected),
-            new StaticWorkspacePathResolver(temp.Path));
+            new StaticWorkspacePathResolver(temp.Path),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            TestExternalTargetPathRegistry.Create());
 
         var exception = Record.Exception(() =>
             resolver.ResolveExistingFile(Guid.NewGuid(), "source.xlsx"));

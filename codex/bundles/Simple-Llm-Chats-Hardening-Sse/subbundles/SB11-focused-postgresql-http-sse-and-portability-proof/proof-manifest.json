@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "subbundle": "SB11",
+  "title": "Focused PostgreSQL, HTTP, SSE, and portability proof",
+  "state": "Completed",
+  "proofTier": "Governed",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "simple-chats",
+  "implementationCommit": "4ec4d2694d980d52936b4679ae676a0624d5c6fb",
+  "dependencyMode": "package references (UseLocalCanDoItAllLibraries=false); exact unpublished Spreadsheet dependency supplied from clean sibling source in a container-only feed",
+  "host": "Ubuntu 24.04.4 LTS x64 on Linux 6.18.33.2-microsoft-standard-WSL2; .NET SDK 10.0.302",
+  "database": "PostgreSQL 16 on Docker Desktop host, reached from the disposable Linux proof container",
+  "requirements": [
+    "RQ-019",
+    "RQ-020",
+    "RQ-021",
+    "RQ-022",
+    "RQ-023",
+    "RQ-024",
+    "RQ-025",
+    "RQ-026",
+    "RQ-027",
+    "RQ-028",
+    "RQ-029",
+    "RQ-030",
+    "RQ-031"
+  ],
+  "commands": [
+    {
+      "command": "docker exec candoitall-sb11-proof dotnet build /src/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj --configuration Release --artifacts-path /tmp/sb11-artifacts -p:UseLocalCanDoItAllLibraries=false -nologo -v:minimal /m:1",
+      "exitCode": 1,
+      "result": "Cold nuget.org-only restore failed with NU1101 because CanDoItAll.FileTools.FileInteraction.Spreadsheet 0.1.18 is not published; 0 warnings and 6 restore errors"
+    },
+    {
+      "command": "dotnet pack clean sibling Spreadsheet source at PackageVersion=0.1.18 into container-only feed, then repeat the affected Linux Web package-mode build with RestoreConfigFile=/tmp/SB11.NuGet.Config",
+      "exitCode": 0,
+      "result": "Exact sibling commit c95dd07208a6d48724443317cdc6cfe67a13020a packed successfully; Web graph built with 0 warnings and 0 errors in 4:35.84"
+    },
+    {
+      "command": "focused Linux Unit union: provider streaming/concrete drivers, streaming/non-streaming adapters, LlmChatOperation, durable events, application boundary, and backend composition",
+      "exitCode": 1,
+      "result": "105 passed, 1 failed, 0 skipped; only isolated-artifact repository-root discovery failed, while every semantic provider/parser/retry/state/event case passed"
+    },
+    {
+      "command": "exact Linux rerun of ConcreteDrivers_ConsumersUseProviderRuntimeAdoptionBoundaries after explicit repository-root repair",
+      "exitCode": 0,
+      "result": "1 passed, 0 failed, 0 skipped in 54 ms"
+    },
+    {
+      "command": "dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration Release --artifacts-path /tmp/sb11-artifacts -p:UseLocalCanDoItAllLibraries=false --filter \"FullyQualifiedName~LlmChat|FullyQualifiedName~ApiStreamingTransportTests\"",
+      "exitCode": 0,
+      "result": "43 passed, 0 failed, 0 skipped in 1 minute 17 seconds against PostgreSQL 16 and real hosted HTTP/SSE"
+    },
+    {
+      "command": "CodeAnalytics Web/Workspace/product/persistence snapshot and architecture/SSE/source guards",
+      "exitCode": 0,
+      "result": "snap-20260815080824-3b5bd776; 4 projects, 609 types, 4140 members, 53 DI registrations, 0 cycles, 0 blocking errors; all guards passed"
+    }
+  ],
+  "sourceAssertions": [
+    "No production source changed from the SB10 proof head to the SB11 implementation commit.",
+    "ProviderBackedLlmStreamingInvocationAdapter retains incremental delivery, completed fallback labelling, and the no-retry-after-delta boundary.",
+    "The PostgreSQL event store remains the durable monotonic replay authority; Web remains only the typed SSE transport owner.",
+    "The real-host slow-provider test now observes a real endpoint heartbeat while the operation remains nonterminal.",
+    "The isolated-output test locator accepts the standard CANDOITALL_TEST_REPOSITORY_ROOT identity and rejects an invalid configured path explicitly.",
+    "No production LLM Chat partial, forbidden reference, schema change, alternate executor, or UI dependency was added."
+  ],
+  "behavioralCases": [
+    "OpenAI Chat Completions/Responses and Azure SSE plus Ollama NDJSON parse fragmented UTF-8 and protocol terminal frames without live provider calls",
+    "completed-only drivers emit one CompletedFallback delta/completion and existing non-streaming callers remain compatible",
+    "PostgreSQL admission/finalization atomicity, profile fencing, distributed leases, remote cancellation, event sequence, retention, transfer, migration, and bounded reads pass",
+    "real-host turn admission returns 202 before the slow provider completes and publishes incremental delta plus heartbeat",
+    "Last-Event-ID reconnect avoids duplicate text and redispatch, retained-history gap points to status, and success/cancel/failure each close with one terminal event",
+    "exact authorization scopes, server-owned Api origin, stable v1 envelopes, and secret/error redaction remain green on Linux"
+  ],
+  "negativeCases": [
+    "retry before first delta is allowed, but a visible delta prevents retry and partial failure creates no canonical assistant message",
+    "rollback publishes no event and stale profile/lease owners cannot finalize",
+    "request/SSE disconnect does not cancel or redispatch the durable operation; explicit cancellation does",
+    "conflicting cursors, stale revisions, duplicate operation bodies, malformed provider frames, and raw provider secrets fail predictably",
+    "invalid configured repository root fails rather than silently searching another checkout",
+    "nuget.org-only cold restore remains red until the exact Spreadsheet package is published or the dependency source is corrected"
+  ],
+  "acceptance": [
+    {
+      "criterion": "Atomicity, profile fencing, distributed lease, cancellation, and idempotency scenarios pass against PostgreSQL.",
+      "satisfied": true,
+      "evidence": "The 43-case Linux Integration union includes transaction rollback/finalization, profile switch, two-service lease/remote cancellation, and same/different operation-ID scenarios."
+    },
+    {
+      "criterion": "A slow streaming provider produces incremental SSE before terminal completion.",
+      "satisfied": true,
+      "evidence": "The real host receives 'First ' while the controllable provider is still blocked, observes a heartbeat, and only then releases completion."
+    },
+    {
+      "criterion": "Reconnect, gap, heartbeat, disconnect, explicit cancellation, and terminal closure pass through the real host.",
+      "satisfied": true,
+      "evidence": "DurableSse_ReconnectsAfterDeltaWithoutRedispatchAndClosesAfterOneTerminalEvent and adjacent request/profile cases pass against the PostgreSQL host, including the new endpoint-heartbeat assertion."
+    },
+    {
+      "criterion": "OpenAI/Azure/Ollama parser tests cover fragmented frames and failures without live network access.",
+      "satisfied": true,
+      "evidence": "All provider/parser/retry cases in the 105 semantic Unit passes completed on Linux with fake HttpMessageHandler transports."
+    },
+    {
+      "criterion": "Migration, model snapshot, database transfer, and restart tests pass.",
+      "satisfied": true,
+      "evidence": "Linux Integration covers canonical migration success/fail-closed, full LLM Chat transfer, event retention/restart gaps; SB08 pending-model proof remains current because SB09-SB11 contain no persistence-model changes."
+    },
+    {
+      "criterion": "Affected projects build with the CI package graph on the available Linux host.",
+      "satisfied": true,
+      "evidence": "UseLocalCanDoItAllLibraries=false Web graph built on Ubuntu with 0 warnings/errors after the exact clean sibling Spreadsheet source was supplied as package 0.1.18; public-feed availability is retained as an SB13 prerequisite, not hidden."
+    },
+    {
+      "criterion": "CP2 explicitly declares the backend/API ready or blocked.",
+      "satisfied": true,
+      "evidence": "reviews/CP2-STREAMING-API.md declares Ready and unlocks SB12 at implementation commit 4ec4d2694d980d52936b4679ae676a0624d5c6fb."
+    }
+  ],
+  "architecture": {
+    "owner": "Unchanged: provider drivers own wire parsing, ProviderRuntime owns retry/fallback, LlmChats product owns durable lifecycle/events, Persistence owns PostgreSQL authority, and Web owns typed HTTP/SSE transport",
+    "dependencyDirection": "Web -> LlmChats product and Workspace; Persistence -> LlmChats product; product and Workspace have no scoped project references",
+    "cycleCheck": "CodeAnalytics snap-20260815080824-3b5bd776: zero cycles and zero blocking errors",
+    "partialClassCheck": "pass; no production LLM Chat partial declaration",
+    "oldPathRemoval": "No old production path was reintroduced; real-host proof reaches the existing durable dispatcher, event journal, replay session, and shared SSE writer"
+  },
+  "bugs": [
+    "Real-host SSE proof did not observe a heartbeat while the operation was nonterminal; the existing slow-provider scenario now does.",
+    "Concrete provider architecture proof could not locate repository source under isolated Linux artifacts; it now honors the standard explicit repository-root environment variable and fails invalid configuration explicitly.",
+    "CI package-mode cold restore revealed that CanDoItAll.FileTools.FileInteraction.Spreadsheet 0.1.18 is absent from nuget.org; exact sibling packaging proves the graph but publication remains a release prerequisite."
+  ],
+  "deviations": [
+    "The prescribed PostgreSQL/backend and HTTP/SSE Integration filters were consolidated into one 43-case focused command after the Unit portability fixture required an exact rerun; this preserved CP2's three-test-command ceiling and did not broaden outside LlmChat/ApiStreamingTransportTests.",
+    "The Linux package graph used a container-only package built from clean sibling commit c95dd07208a6d48724443317cdc6cfe67a13020a because the requested package is not yet published; this is recorded as a final-gate prerequisite."
+  ],
+  "knownGaps": [
+    "SB13 cold CI restore will remain red until CanDoItAll.FileTools.FileInteraction.Spreadsheet 0.1.18 is published to the configured feed or an equivalent reviewed repository dependency correction is made.",
+    "Windows and macOS execution remain owned by the single final SB13 CI matrix.",
+    "SB12 owns documentation/source guard cleanup; SB13 owns the immutable-head broad stable gate and release decision."
+  ],
+  "progression": {
+    "decision": "Ready",
+    "reason": "Provider streams, retry/audit, PostgreSQL lifecycle/event authority, real-host 202/SSE replay-gap-heartbeat-disconnect-terminal behavior, security/redaction, and Linux package-mode compilation pass at 4ec4d2694d980d52936b4679ae676a0624d5c6fb; package publication is isolated to the final CI feed prerequisite.",
+    "unlocks": [
+      "SB12"
+    ]
+  }
+}

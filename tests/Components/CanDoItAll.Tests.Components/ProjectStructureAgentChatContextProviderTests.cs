@@ -2,23 +2,34 @@ using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using CanDoItAll.Modules.Workbench.ProjectStructure;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureAgentChatContextProviderTests
 {
     private static readonly DateTimeOffset InitialUtc =
         new(2026, 7, 27, 12, 0, 0, TimeSpan.Zero);
 
+    private static BunitContext CreateContext(
+        IExternalTargetPathRegistry? externalTargetRegistry = null)
+    {
+        var context = new BunitContext();
+        context.Services.AddSingleton(
+            externalTargetRegistry ?? new ExternalTargetPathRegistry());
+        return context;
+    }
+
     [Fact]
     public void Provider_recaptures_held_module_state_at_the_attachment_deadline()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var clock = new ManualTimerTimeProvider(InitialUtc);
         var registry = new AgentChatContextRegistry(clock);
         var agent = CreateAgent();
@@ -86,7 +97,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public async Task Provider_does_not_publish_parent_ready_while_agent_access_reload_is_loading_or_failed()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var referenceDataProvider = new ControllableAgentReferenceDataProvider(agent);
@@ -158,7 +169,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_blocks_parent_transition_context_and_recovers_on_the_same_project_scope()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         context.Services.AddLogging();
@@ -209,7 +220,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_replaces_canvas_and_gantt_fragments_without_leaking_context()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var notificationHub = new RecordingNotificationHub();
         var cacheInvalidator = new RecordingReferenceDataCacheInvalidator();
@@ -351,7 +362,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_publishes_bounded_typed_selection_details_and_refreshes_when_node_data_changes()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
@@ -494,13 +505,21 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     }
 
     [Fact]
-    public void CTX_AUTH_001_Provider_publishes_only_the_selected_nodes_typed_owning_root()
+    public async Task CTX_AUTH_001_Provider_publishes_only_the_selected_nodes_typed_owning_root()
     {
-        using var context = new BunitContext();
+        await using var environment = CanDoItAllTestEnvironment.CreateUnder(
+            AppContext.BaseDirectory,
+            "project-structure-context-authority");
+        IExternalTargetPathRegistry externalTargetRegistry = new ExternalTargetPathRegistry();
+        using var context = CreateContext(externalTargetRegistry);
         var clock = new ManualTimerTimeProvider(InitialUtc);
         var registry = new AgentChatContextRegistry(clock);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
+        var authorityRoot = Path.Combine(environment.RootPath, "external-target-authority-tests");
+        var unrelatedRoot = Path.Combine(authorityRoot, "sensitive", "unrelated");
+        var selectedRoot = Path.Combine(authorityRoot, "calculator-e2e-test");
+        Directory.CreateDirectory(selectedRoot);
         var projectRootId = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
         var projectRoot = CreateNode(projectRootId, "Project root");
         var unrelatedOwner = CreateNode(
@@ -514,7 +533,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
                 {
                     ProjectBlock = new ProjectBlockMetadata
                     {
-                        OutputRoot = @"C:\sensitive\unrelated"
+                        OutputRoot = unrelatedRoot
                     }
                 }));
         var selectedOwner = CreateNode(
@@ -528,7 +547,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
                 {
                     ProjectBlock = new ProjectBlockMetadata
                     {
-                        OutputRoot = @"C:\programovani\dotnet\calculator-e2e-test"
+                        OutputRoot = selectedRoot
                     }
                 }));
         var runtime = CreateNode(
@@ -537,7 +556,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             parentId: selectedOwner.Id,
             objectType: ProjectObjectType.Script,
             objectSubtype: "powershell",
-            notes: @"Do not trust C:\sensitive\notes as authority.");
+            notes: $"Do not trust {Path.Combine(authorityRoot, "sensitive", "notes")} as authority.");
         var surface = CreateSurface(
             projectId,
             "Calculator",
@@ -569,24 +588,22 @@ public sealed class ProjectStructureAgentChatContextProviderTests
                 AgentChatExternalTargetAccessAttachmentFactory.AttachmentKindValue);
             Assert.True(accessEnvelope.TryGetAttachment<
                 AgentChatExternalTargetAccessAttachment>(out var access));
+            var selectedAlias = Assert.Single(access.ReadOnlyAliases);
             Assert.Equal(
-                "external-target/C/programovani/dotnet/calculator-e2e-test",
-                Assert.Single(access.ReadOnlyAliases));
-            Assert.DoesNotContain(
-                "external-target/C/sensitive/unrelated",
-                access.ReadOnlyAliases,
-                StringComparer.OrdinalIgnoreCase);
-            Assert.DoesNotContain(
-                "external-target/C/sensitive/notes",
-                access.ReadOnlyAliases,
-                StringComparer.OrdinalIgnoreCase);
+                ExternalTargetAliasResolutionKind.Resolved,
+                externalTargetRegistry.TryResolve(selectedAlias, out var resolvedRoot, out var validationMessage));
+            Assert.Empty(validationMessage);
+            Assert.Equal(
+                Path.GetFullPath(selectedRoot),
+                resolvedRoot,
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         });
     }
 
     [Fact]
     public void Provider_does_not_mint_external_authority_from_user_authored_hierarchy_links()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var clock = new ManualTimerTimeProvider(InitialUtc);
         var registry = new AgentChatContextRegistry(clock);
         var agent = CreateAgent();
@@ -648,30 +665,42 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     }
 
     [Fact]
-    public void Provider_derives_external_authority_only_from_the_normalized_capped_selection()
+    public async Task Provider_derives_external_authority_only_from_the_normalized_capped_selection()
     {
-        using var context = new BunitContext();
+        await using var environment = CanDoItAllTestEnvironment.CreateUnder(
+            AppContext.BaseDirectory,
+            "project-structure-context-capped-authority");
+        IExternalTargetPathRegistry externalTargetRegistry = new ExternalTargetPathRegistry();
+        using var context = CreateContext(externalTargetRegistry);
         var clock = new ManualTimerTimeProvider(InitialUtc);
         var registry = new AgentChatContextRegistry(clock);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
+        string BuildSelectedRoot(int index) => Path.Combine(
+            environment.RootPath,
+            "external-target-authority-tests",
+            $"selected-{index:D2}");
         var selectedNodes = Enumerable.Range(
                 0,
                 AgentChatPositionLimits.MaximumSelectedEntities + 1)
-            .Select(index => CreateNode(
-                $"selected-{index:D2}",
-                $"Selected {index:D2}",
-                objectType: ProjectObjectType.ProjectBlock,
-                objectSubtype: "delivery",
-                metadataJson: ProjectObjectMetadataSerializer.Serialize(
-                    new ProjectObjectMetadataEnvelope
-                    {
-                        ProjectBlock = new ProjectBlockMetadata
+            .Select(index =>
+            {
+                var selectedRoot = BuildSelectedRoot(index);
+                Directory.CreateDirectory(selectedRoot);
+                return CreateNode(
+                    $"selected-{index:D2}",
+                    $"Selected {index:D2}",
+                    objectType: ProjectObjectType.ProjectBlock,
+                    objectSubtype: "delivery",
+                    metadataJson: ProjectObjectMetadataSerializer.Serialize(
+                        new ProjectObjectMetadataEnvelope
                         {
-                            OutputRoot =
-                                $@"C:\programovani\dotnet\selected-{index:D2}"
-                        }
-                    })))
+                            ProjectBlock = new ProjectBlockMetadata
+                            {
+                                OutputRoot = selectedRoot
+                            }
+                        }));
+            })
             .ToArray();
         var surface = CreateSurface(projectId, "Capped selection", selectedNodes);
         context.Services.AddLogging();
@@ -704,21 +733,27 @@ public sealed class ProjectStructureAgentChatContextProviderTests
             Assert.Equal(
                 AgentChatPositionLimits.MaximumSelectedEntities,
                 access.ReadOnlyAliases.Length);
+            Assert.True(externalTargetRegistry.TryCreateAlias(
+                BuildSelectedRoot(AgentChatPositionLimits.MaximumSelectedEntities - 1),
+                out var lastIncludedAlias));
             Assert.Contains(
-                "external-target/C/programovani/dotnet/selected-63",
+                lastIncludedAlias,
                 access.ReadOnlyAliases,
-                StringComparer.OrdinalIgnoreCase);
+                ExternalTargetAliasCodec.EqualityComparer);
+            Assert.True(externalTargetRegistry.TryCreateAlias(
+                BuildSelectedRoot(AgentChatPositionLimits.MaximumSelectedEntities),
+                out var firstExcludedAlias));
             Assert.DoesNotContain(
-                "external-target/C/programovani/dotnet/selected-64",
+                firstExcludedAlias,
                 access.ReadOnlyAliases,
-                StringComparer.OrdinalIgnoreCase);
+                ExternalTargetAliasCodec.EqualityComparer);
         });
     }
 
     [Fact]
     public void Provider_without_a_held_structure_surface_publishes_no_usable_snapshot()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         context.Services.AddLogging();
@@ -748,7 +783,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Provider_replaces_scope_fragments_and_snapshot_as_one_atomic_publication()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
@@ -888,7 +923,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Gantt_view_publishes_explicit_loading_facts_when_observation_is_missing()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
@@ -920,7 +955,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Gantt_view_publishes_bounded_projection_facts_and_typed_attachment()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();
@@ -974,7 +1009,7 @@ public sealed class ProjectStructureAgentChatContextProviderTests
     [Fact]
     public void Canvas_view_does_not_publish_gantt_observation_contributor()
     {
-        using var context = new BunitContext();
+        using var context = CreateContext();
         var registry = new AgentChatContextRegistry(TimeProvider.System);
         var agent = CreateAgent();
         var projectId = Guid.NewGuid();

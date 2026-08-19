@@ -32,6 +32,7 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<ConnectorOutboxService>();
         services.AddScoped<ProviderExecutionService>();
         services.AddScoped<WorkspaceService>();
+        services.TryAddScoped<IStorageCatalogSelectionSource, WorkspaceStorageCatalogSelectionSource>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
         services.AddScoped<IDatabaseTransferHandler, AiProvidersDatabaseTransferHandler>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
@@ -41,4 +42,3 @@ public static class WorkspaceModuleServiceCollectionExtensions
 }
 
 public static class WorkspaceModuleAssemblyMarker;
-

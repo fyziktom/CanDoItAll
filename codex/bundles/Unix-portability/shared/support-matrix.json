@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "rows": [
+    {
+      "profile": "windows-interactive",
+      "os_runner": "windows-latest / real Windows",
+      "architecture": "x64 first",
+      "core_target": "Required regression",
+      "runtime_target": "Required",
+      "secret_profile": "DPAPI or approved configured provider",
+      "desktop_terminal": "Optional/interactive",
+      "database": "PostgreSQL integration",
+      "support_state": "Target after R4"
+    },
+    {
+      "profile": "windows-headless",
+      "os_runner": "windows-latest / service host",
+      "architecture": "x64 first",
+      "core_target": "Required",
+      "runtime_target": "Runtime features disable-able",
+      "secret_profile": "DPAPI machine/user scope decision",
+      "desktop_terminal": "Disabled",
+      "database": "PostgreSQL integration",
+      "support_state": "Target after C4"
+    },
+    {
+      "profile": "linux-headless",
+      "os_runner": "ubuntu-latest / Ubuntu 24.04 LTS x64",
+      "architecture": "x64",
+      "core_target": "Primary required",
+      "runtime_target": "Required direct execution",
+      "secret_profile": "Explicit headless secure provider",
+      "desktop_terminal": "Disabled",
+      "database": "PostgreSQL integration",
+      "support_state": "Target after C4/R4"
+    },
+    {
+      "profile": "linux-interactive",
+      "os_runner": "real Ubuntu desktop/session",
+      "architecture": "x64",
+      "core_target": "Required provider characterization",
+      "runtime_target": "Optional desktop/terminal",
+      "secret_profile": "Secret Service",
+      "desktop_terminal": "Capability-tested",
+      "database": "PostgreSQL integration",
+      "support_state": "Bounded claim after evidence"
+    },
+    {
+      "profile": "macos-interactive-arm64",
+      "os_runner": "macos-latest / real Apple Silicon",
+      "architecture": "arm64",
+      "core_target": "Required",
+      "runtime_target": "Required direct execution; desktop optional",
+      "secret_profile": "Keychain",
+      "desktop_terminal": "Capability-tested",
+      "database": "PostgreSQL integration or documented CI fixture",
+      "support_state": "Target after C4/R4"
+    },
+    {
+      "profile": "macos-headless-arm64",
+      "os_runner": "macos-latest / launchd profile",
+      "architecture": "arm64",
+      "core_target": "Required",
+      "runtime_target": "Runtime features disable-able/direct",
+      "secret_profile": "Explicit headless secure provider",
+      "desktop_terminal": "Disabled",
+      "database": "PostgreSQL integration or documented CI fixture",
+      "support_state": "Target after C4"
+    },
+    {
+      "profile": "macos-x64-publish",
+      "os_runner": "publish gate; real Intel runtime when available",
+      "architecture": "x64",
+      "core_target": "Publish required",
+      "runtime_target": "Support only after actual runtime evidence",
+      "secret_profile": "Same profile rules",
+      "desktop_terminal": "Not claimed from publish alone",
+      "database": "Not claimed from publish alone",
+      "support_state": "Artifact claim only until runtime proof"
+    }
+  ],
+  "claim_rule": "Build or publish success alone does not establish runtime support."
+}

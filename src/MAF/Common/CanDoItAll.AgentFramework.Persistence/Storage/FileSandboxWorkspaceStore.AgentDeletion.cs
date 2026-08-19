@@ -75,7 +75,7 @@ public sealed partial class FileSandboxWorkspaceStore
                 currentWorkspaceIndex,
                 targetWorkspaceIndex);
             ValidateAgentDeletionCommitJournal(journal);
-            Directory.CreateDirectory(layout.ExecutionStorageRoot);
+            jsonStore.EnsureDirectory(layout.ExecutionStorageRoot);
             await jsonStore.WriteJsonAtomicallyAsync(
                 PendingAgentDeletionCommitJournalPath,
                 journal,
@@ -121,7 +121,7 @@ public sealed partial class FileSandboxWorkspaceStore
             cancellationToken);
         agentDeletionCommitBoundary?.Invoke(
             AgentDeletionCommitStage.WorkspaceIndexPersisted);
-        File.Delete(PendingAgentDeletionCommitJournalPath);
+        await jsonStore.DeleteFileAsync(PendingAgentDeletionCommitJournalPath, cancellationToken);
     }
 
     private async Task RecoverPendingAgentDeletionAsync(

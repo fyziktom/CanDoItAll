@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 /// <summary>
 /// Direct unit coverage for <see cref="ProcessExecutionProviderSelectionPolicy"/> (SB13), instantiating it

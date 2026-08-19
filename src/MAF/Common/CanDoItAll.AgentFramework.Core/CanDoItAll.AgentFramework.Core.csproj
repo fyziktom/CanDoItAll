@@ -3,11 +3,14 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\CanDoItAll.Memory.SourceGateway.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Runtime.Abstractions\CanDoItAll.AgentFramework.Runtime.Abstractions.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Usage\CanDoItAll.AgentFramework.Usage.csproj" />
     <ProjectReference Include="..\..\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj" />
     <ProjectReference Include="..\..\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +24,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

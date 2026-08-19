@@ -12,7 +12,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowExecutorCategoryIsolationTests
 {
@@ -143,11 +143,11 @@ public sealed class WorkflowExecutorCategoryIsolationTests
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.Infrastructure.Abstractions", "CanDoItAll.SharedKernel"],
             ["ExcelDataReader", "Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj",
-            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.Security.Abstractions"],
+            ["CanDoItAll.AgentFramework.Core", "CanDoItAll.AgentFramework.Models", "CanDoItAll.AgentFramework.WorkflowExecutors.Core", "CanDoItAll.AgentFramework.Workflows.Core", "CanDoItAll.Security.Abstractions", "CanDoItAll.SharedKernel"],
             ["Microsoft.Extensions.DependencyInjection.Abstractions"]);
         AssertProjectReferences(
             "src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj",

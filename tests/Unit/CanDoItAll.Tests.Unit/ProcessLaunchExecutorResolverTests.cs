@@ -17,10 +17,37 @@ using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessLaunchExecutorResolverTests
 {
+    private static readonly IProcessHostCapabilitySnapshotProvider AvailableHostCapabilities =
+        new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("test"),
+                new[]
+                {
+                    ProcessHostCapabilityIds.DirectExecution,
+                    ProcessHostCapabilityIds.ManagedProcessAdapter,
+                    ProcessHostCapabilityIds.PowerShellScript,
+                    ProcessHostCapabilityIds.PosixScript,
+                    ProcessHostCapabilityIds.DotNetRuntime,
+                    ProcessHostCapabilityIds.PythonRuntime,
+                    ProcessHostCapabilityIds.NodeRuntime,
+                    ProcessHostCapabilityIds.NodePackageManager,
+                    ProcessHostCapabilityIds.Docker,
+                    ProcessHostCapabilityIds.LocalStdioMcp,
+                    ProcessHostCapabilityIds.DesktopOpen,
+                    ProcessHostCapabilityIds.InteractiveTerminal
+                }
+                .Select(id => new ProcessHostCapabilityFact(
+                    id,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ResolveExecutionPort(id)))
+                .ToArray()));
+
     private static readonly DateTimeOffset Now = new(2026, 6, 17, 9, 30, 0, TimeSpan.Zero);
     private static readonly ProcessInstancePlanId PlanId = new(new Guid("04991f6e-a37d-45f7-9a65-362c2cb4fef4"));
     private static readonly ProcessStepInstanceId StepId = new(new Guid("f0fcfb5c-4b35-475a-a9a7-bfe3c7bc270d"));
@@ -43,12 +70,9 @@ public sealed class ProcessLaunchExecutorResolverTests
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = new AgentFrameworkProcessLaunchExecutorResolver(
             CreateReferenceDataProvider(workspace),
-            new ProcessMockAgentCatalogService(
-                workspaceFactory,
-                new NoOpAiTechnicalAgentBridge(),
-                Options.Create(new ProcessMockAgentOptions { Enabled = false })),
             new ProviderProfileService(),
-            new ResolverWorkflowCatalog());
+            new ResolverWorkflowCatalog(),
+            workspaceFactory: workspaceFactory);
 
         var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
             CreateDefinition(),
@@ -153,6 +177,313 @@ public sealed class ProcessLaunchExecutorResolverTests
             finding.Severity == ProcessLaunchReadinessSeverity.Error);
         Assert.Null(catalog.LatestActiveWorkflowId);
         Assert.False(catalog.ListDefinitionsCalled);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_rejects_workflow_when_required_executor_host_capability_is_unavailable()
+    {
+        const string sentinel = "secret: docker-host-detail";
+        var workflowId = WorkflowId.New();
+        var executor = BuiltInWorkflowExecutorDescriptors.Delay with
+        {
+            Availability = WorkflowExecutorAvailabilityDescriptor.Unavailable(
+                "docker-daemon-unavailable",
+                sentinel)
+        };
+        var workflow = CreateWorkflowDefinition(
+            workflowId,
+            WorkflowVersionId.New(),
+            WorkflowLifecycleStatus.Active,
+            executor.Id);
+        var catalog = new ResolverWorkflowCatalog
+        {
+            LatestActive = new WorkflowDefinitionDetail(workflow, WorkflowValidationResult.Success)
+        };
+        var availability = new StaticWorkflowExecutorRuntimeAvailabilityCatalog([executor]);
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog, availability);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+        definition.RoleUsages[0].WorkflowBinding = new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(workflowId.Value));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        var finding = Assert.Single(result.Findings, finding =>
+            finding.Code == "process.launch.workflow_executor_capability_unavailable");
+        Assert.Equal(ProcessLaunchReadinessSeverity.Error, finding.Severity);
+        Assert.Contains(executor.Id.Value, finding.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(sentinel, finding.Message, StringComparison.Ordinal);
+        Assert.True(finding.MustBlockLaunch);
+    }
+
+    [Theory]
+    [InlineData("host.exec.posix-script")]
+    [InlineData("host.runtime.node")]
+    [InlineData("host.runtime.node-package-manager")]
+    [InlineData("host.container.docker")]
+    [InlineData("host.mcp.local-stdio")]
+    [InlineData("host.desktop.open")]
+    [InlineData("host.terminal.interactive")]
+    public async Task ResolveAsync_blocks_declared_special_host_capability_before_catalog_or_agent_resolution(
+        string capabilityValue)
+    {
+        var capabilityId = new ProcessHostCapabilityId(capabilityValue);
+        var workspace = new ResolverWorkspaceService([], []);
+        var hostCapabilities = new StaticProcessHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        capabilityId,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ]));
+        var resolver = CreateResolver(
+            new ResolverWorkspaceFactory(workspace),
+            hostCapabilitySnapshotProvider: hostCapabilities);
+        var definition = CreateDefinition();
+        definition.Steps[0].ExecutionContract = new ProcessTemplateStepExecutionContractDocument
+        {
+            RequiredHostCapabilities = [capabilityValue]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(requiredHostCapabilities: new HashSet<ProcessHostCapabilityId> { capabilityId }),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal("process.launch.host_capability_unavailable", finding.Code);
+        Assert.True(finding.MustBlockLaunch);
+        Assert.Contains(capabilityValue, finding.Message, StringComparison.Ordinal);
+        Assert.Equal(0, workspace.ListAgentsCallCount);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_blocks_runtime_tool_derived_host_capability_before_agent_resolution()
+    {
+        var unavailablePython = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Unavailable,
+            ProcessHostCapabilityReason.DependencyMissing,
+            ProcessHostExecutionPort.None);
+        var snapshot = new ProcessHostCapabilitySnapshot(
+            new ProcessHostProfileId("linux"),
+            [unavailablePython]);
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(
+            new ResolverWorkspaceFactory(workspace),
+            hostCapabilitySnapshotProvider: new StaticProcessHostCapabilitySnapshotProvider(snapshot));
+        var definition = CreateDefinition();
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>())
+        {
+            StepVariablesByKey = new Dictionary<string, IReadOnlyDictionary<string, string>>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["record-runtime-commands"] = new Dictionary<string, string>
+                {
+                    [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts] =
+                        JsonSerializer.Serialize(new[] { "workspace_python_run_file" })
+                }
+            }
+        });
+
+        Assert.Empty(result.Bindings);
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal("process.launch.host_capability_unavailable", finding.Code);
+        Assert.True(finding.MustBlockLaunch);
+        Assert.Equal(snapshot, result.HostCapabilities);
+        Assert.Contains(
+            ProcessHostCapabilityIds.PythonRuntime,
+            result.EffectiveHostCapabilitiesByStep["record-runtime-commands"]);
+        Assert.Equal(0, workspace.ListAgentsCallCount);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_blocks_local_browser_transport_before_any_catalog_mutation()
+    {
+        var providerId = Guid.Parse("424c6bb5-e768-4ce0-b758-25822a5c1276");
+        var localMcp = CreateMcpCatalogCapability("playwright-local-mcp", "stdio", "npx");
+        var agent = CreateAgent(
+            providerId,
+            Guid.Parse("f33a5080-f7a1-4c4f-8305-861f75a6c218"),
+            "Delivery Manager",
+            "Delivery Manager",
+            "Coordinates browser validation.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.BusinessAnalysis,
+            ["delivery-manager", "browser"],
+            [CreateCapabilityAssignment(localMcp)]);
+        var workspace = new ResolverWorkspaceService(
+            [agent],
+            [CreateProvider(providerId)],
+            [localMcp]);
+        var snapshot = new ProcessHostCapabilitySnapshot(
+            new ProcessHostProfileId("linux"),
+            [
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.LocalStdioMcp,
+                    ProcessHostCapabilityAvailability.Unavailable,
+                    ProcessHostCapabilityReason.DependencyMissing,
+                    ProcessHostExecutionPort.None),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.NodeRuntime,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessHost),
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.NodePackageManager,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessHost)
+            ]);
+        var resolver = CreateResolver(
+            new ResolverWorkspaceFactory(workspace),
+            hostCapabilitySnapshotProvider: new StaticProcessHostCapabilitySnapshotProvider(snapshot));
+        var definition = CreateDefinition();
+        definition.Steps[0].ExecutionContract = new ProcessTemplateStepExecutionContractDocument
+        {
+            RequiredRuntimeToolNames = ["browser_navigate"]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Empty(result.Bindings);
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal("process.launch.host_capability_unavailable", finding.Code);
+        Assert.True(finding.MustBlockLaunch);
+        Assert.Equal(1, workspace.ListAgentsCallCount);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_does_not_require_local_browser_host_for_remote_http_transport()
+    {
+        var providerId = Guid.Parse("c201ab58-cbe0-4618-badf-44f60454dcc2");
+        var remoteMcp = CreateMcpCatalogCapability("playwright-remote-mcp", "http");
+        var agent = CreateAgent(
+            providerId,
+            Guid.Parse("36fba10e-b184-4ff4-9f58-c4b6119f37d4"),
+            "Delivery Manager",
+            "Delivery Manager",
+            "Coordinates browser validation.",
+            AgentWorkloadKind.Management,
+            AgentWorkspaceToolProfileKind.BusinessAnalysis,
+            ["delivery-manager", "browser"],
+            [CreateCapabilityAssignment(remoteMcp)]);
+        var workspace = new ResolverWorkspaceService(
+            [agent],
+            [CreateProvider(providerId)],
+            [remoteMcp]);
+        var resolver = CreateResolver(
+            new ResolverWorkspaceFactory(workspace),
+            hostCapabilitySnapshotProvider: new StaticProcessHostCapabilitySnapshotProvider(
+                new ProcessHostCapabilitySnapshot(
+                    new ProcessHostProfileId("linux"),
+                    [
+                        new ProcessHostCapabilityFact(
+                            ProcessHostCapabilityIds.LocalStdioMcp,
+                            ProcessHostCapabilityAvailability.Unavailable,
+                            ProcessHostCapabilityReason.DependencyMissing,
+                            ProcessHostExecutionPort.None)
+                    ])));
+        var definition = CreateDefinition();
+        definition.Steps[0].ExecutionContract = new ProcessTemplateStepExecutionContractDocument
+        {
+            RequiredRuntimeToolNames = ["browser_navigate"]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.Single(result.Bindings);
+        Assert.DoesNotContain(
+            ProcessHostCapabilityIds.LocalStdioMcp,
+            result.EffectiveHostCapabilitiesByStep["record-runtime-commands"]);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_uses_immutable_plan_host_contract_instead_of_unsealed_template_values()
+    {
+        var workspace = new ResolverWorkspaceService([], []);
+        var hostCapabilities = new CountingProcessHostCapabilitySnapshotProvider(
+            ProcessHostCapabilitySnapshot.Unknown);
+        var resolver = CreateResolver(
+            new ResolverWorkspaceFactory(workspace),
+            hostCapabilitySnapshotProvider: hostCapabilities);
+        var definition = CreateDefinition();
+        definition.Steps[0].ExecutionContract = new ProcessTemplateStepExecutionContractDocument
+        {
+            RequiredHostCapabilities = ["host/runtime/invalid"]
+        };
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal("process.launch.agent_missing", finding.Code);
+        Assert.Equal(1, hostCapabilities.CallCount);
+        Assert.Equal(1, workspace.ListAgentsCallCount);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_binds_workflow_when_required_executor_is_runnable()
+    {
+        var workflowId = WorkflowId.New();
+        var executor = BuiltInWorkflowExecutorDescriptors.Delay with
+        {
+            Availability = WorkflowExecutorAvailabilityDescriptor.Available()
+        };
+        var workflow = CreateWorkflowDefinition(
+            workflowId,
+            WorkflowVersionId.New(),
+            WorkflowLifecycleStatus.Active,
+            executor.Id);
+        var catalog = new ResolverWorkflowCatalog
+        {
+            LatestActive = new WorkflowDefinitionDetail(workflow, WorkflowValidationResult.Success)
+        };
+        var availability = new StaticWorkflowExecutorRuntimeAvailabilityCatalog([executor]);
+        var workspace = new ResolverWorkspaceService([], []);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace), catalog, availability);
+        var definition = CreateDefinition();
+        definition.RoleUsages[0].PreferredExecutorKind = ProcessLaunchExecutorKinds.Workflow;
+        definition.RoleUsages[0].WorkflowBinding = new ProcessWorkflowExecutorBinding(
+            new ProcessWorkflowId(workflowId.Value));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            definition,
+            CreatePlan(),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>()));
+
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal(ProcessLaunchExecutorKinds.Workflow, binding.ExecutorKind);
+        Assert.StartsWith("sha256:", binding.ReadinessHash, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -922,6 +1253,33 @@ public sealed class ProcessLaunchExecutorResolverTests
             finding.Message.Contains("workspace_dotnet_run", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Theory]
+    [InlineData("{ malformed-json")]
+    [InlineData("[]")]
+    public async Task ResolveAsync_rejects_malformed_by_step_receipt_container_without_binding(string byStep)
+    {
+        var providerId = Guid.Parse("a7e02a87-0f51-49e4-a38a-4253eac29c18");
+        var qaAgent = CreateAgent(providerId);
+        var workspace = new ResolverWorkspaceService([qaAgent], [CreateProvider(providerId)]);
+        var resolver = CreateResolver(new ResolverWorkspaceFactory(workspace));
+
+        var result = await resolver.ResolveAsync(new ProcessLaunchExecutorResolutionRequest(
+            CreateScreenshotSubprocessDefinition(),
+            CreatePlan("capture-ui-screenshots"),
+            LiveRunProfile: null,
+            Variables: new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = byStep
+            }));
+
+        Assert.Empty(result.Bindings);
+        Assert.Contains(result.Findings, finding =>
+            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
+            finding.Code == "process.launch.runtime_tool_contract_invalid" &&
+            finding.MustBlockLaunch);
+        Assert.DoesNotContain(byStep, JsonSerializer.Serialize(result.Findings), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ResolveAsync_keeps_unconditional_receipts_and_ignores_branch_scoped_receipts_before_branch_selection()
     {
@@ -1109,7 +1467,9 @@ public sealed class ProcessLaunchExecutorResolverTests
         var workspace = new ResolverWorkspaceService([qaReviewLead, architectAgent], [CreateProvider(providerId)]);
         var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             CreateReferenceDataProvider(workspace),
-            new ProviderProfileService());
+            new ProviderProfileService(),
+            new SinglePlanStore(CreatePlan("architecture-review")),
+            new ResolverWorkspaceFactory(workspace));
         var assignment = CreateArchitectureReviewAssignment(qaReviewLead);
 
         var result = await repairService.RepairAsync(assignment, "Operator approved manager-guided rework.");
@@ -1141,7 +1501,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             ".NET Solution Architect",
             "Reviews .NET solution architecture.",
             AgentWorkloadKind.Research,
-            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
             ["dotnet", "architecture", "blazor"]);
         var architectWithUnconditionalTools = CreateAgent(
             providerId,
@@ -1150,7 +1510,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             ".NET Solution Architect",
             "Reviews .NET solution architecture.",
             AgentWorkloadKind.Research,
-            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
             ["dotnet", "architecture", "blazor"],
             [
                 CreateToolCapability("workspace-read-file"),
@@ -1159,9 +1519,26 @@ public sealed class ProcessLaunchExecutorResolverTests
         var workspace = new ResolverWorkspaceService(
             [qaReviewLead, architectWithoutUnconditionalTools, architectWithUnconditionalTools],
             [CreateProvider(providerId)]);
+        var plan = CreatePlan("architecture-review");
+        plan = plan with
+        {
+            Steps =
+            [
+                plan.Steps[0] with
+                {
+                    RequiredRuntimeToolNames =
+                    [
+                        "workspace_read_file",
+                        "workspace_stat_path"
+                    ]
+                }
+            ]
+        };
         var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
             CreateReferenceDataProvider(workspace),
-            new ProviderProfileService());
+            new ProviderProfileService(),
+            new SinglePlanStore(plan),
+            new ResolverWorkspaceFactory(workspace));
         var assignment = CreateArchitectureReviewAssignment(qaReviewLead) with
         {
             LaunchVariables = new Dictionary<string, string>
@@ -1206,6 +1583,191 @@ public sealed class ProcessLaunchExecutorResolverTests
         Assert.True(result.Repaired);
         Assert.Equal(architectWithUnconditionalTools.Id.ToString("D"), result.Assignment.ExecutorId);
         Assert.NotEqual(architectWithoutUnconditionalTools.Id.ToString("D"), result.Assignment.ExecutorId);
+    }
+
+    [Fact]
+    public async Task Runtime_assignment_repair_uses_sealed_plan_runtime_tool_requirements()
+    {
+        var providerId = Guid.Parse("2072c6a1-4450-459e-aa89-28ca6e06d957");
+        var architectWithoutPython = CreateAgent(
+            providerId,
+            Guid.Parse("d74eeb8e-fea4-4b3d-89d3-e746f5557dbc"),
+            "A .NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["dotnet", "architecture", "blazor"]);
+        var architectWithPython = CreateAgent(
+            providerId,
+            Guid.Parse("a6f1d615-682e-497d-b8da-52371a5abdd1"),
+            "Z .NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            ["dotnet", "architecture", "blazor"],
+            [CreateToolCapability("workspace-python-run-file")]);
+        var workspace = new ResolverWorkspaceService(
+            [architectWithoutPython, architectWithPython],
+            [CreateProvider(providerId)]);
+        var plan = CreatePlan("architecture-review");
+        plan = plan with
+        {
+            Steps =
+            [
+                plan.Steps[0] with
+                {
+                    RequiredRuntimeToolNames = ["workspace_python_run_file"]
+                }
+            ]
+        };
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            CreateReferenceDataProvider(workspace),
+            new ProviderProfileService(),
+            new SinglePlanStore(plan),
+            new ResolverWorkspaceFactory(workspace));
+        var assignment = CreateArchitectureReviewAssignment(architectWithoutPython);
+
+        var result = await repairService.RepairAsync(
+            assignment,
+            "Operator requested capability-aware repair.");
+
+        Assert.True(result.Repaired);
+        Assert.Equal(architectWithPython.Id.ToString("D"), result.Assignment.ExecutorId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Runtime_assignment_repair_refuses_browser_transport_class_change(
+        bool sealedLocalTransport)
+    {
+        var providerId = Guid.Parse("5c914a3c-b668-4bee-955a-5ddd9049018a");
+        var localMcp = CreateMcpCatalogCapability("playwright-local-mcp", "stdio", "npx");
+        var remoteMcp = CreateMcpCatalogCapability("playwright-remote-mcp", "http");
+        var current = CreateAgent(
+            providerId,
+            Guid.Parse("ea874c96-2567-452e-9f07-ed6a16ed6638"),
+            "A .NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "browser"]);
+        var alternateCapability = sealedLocalTransport ? remoteMcp : localMcp;
+        var alternate = CreateAgent(
+            providerId,
+            Guid.Parse("7a28ec63-1f73-432f-a5fb-b2c90b36e7c6"),
+            "Z .NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "browser"],
+            [CreateCapabilityAssignment(alternateCapability)]);
+        var workspace = new ResolverWorkspaceService(
+            [current, alternate],
+            [CreateProvider(providerId)],
+            [localMcp, remoteMcp]);
+        var plan = CreatePlan("architecture-review");
+        plan = plan with
+        {
+            Steps =
+            [
+                plan.Steps[0] with
+                {
+                    RequiredRuntimeToolNames = ["browser_navigate"],
+                    RequiredHostCapabilities = sealedLocalTransport
+                        ? new HashSet<ProcessHostCapabilityId>
+                        {
+                            ProcessHostCapabilityIds.LocalStdioMcp,
+                            ProcessHostCapabilityIds.NodeRuntime,
+                            ProcessHostCapabilityIds.NodePackageManager
+                        }
+                        : new HashSet<ProcessHostCapabilityId>()
+                }
+            ]
+        };
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            CreateReferenceDataProvider(workspace),
+            new ProviderProfileService(),
+            new SinglePlanStore(plan),
+            new ResolverWorkspaceFactory(workspace));
+        var assignment = CreateArchitectureReviewAssignment(current);
+
+        var result = await repairService.RepairAsync(
+            assignment,
+            "Operator requested browser-capable repair.");
+
+        Assert.False(result.Repaired);
+        Assert.Equal(assignment.ExecutorId, result.Assignment.ExecutorId);
+    }
+
+    [Fact]
+    public async Task Runtime_assignment_repair_rejects_malformed_by_step_receipt_container()
+    {
+        var providerId = Guid.Parse("6f0b8b79-58e9-4b52-a991-0be90ea34b5e");
+        var current = CreateAgent(providerId);
+        var alternate = CreateAgent(
+            providerId,
+            Guid.Parse("c217dd86-134a-469d-bbd5-9ad63101f105"),
+            ".NET Solution Architect",
+            ".NET Solution Architect",
+            "Reviews .NET solution architecture.",
+            AgentWorkloadKind.Research,
+            AgentWorkspaceToolProfileKind.ArchitectureReview,
+            ["dotnet", "architecture", "blazor"]);
+        var workspace = new ResolverWorkspaceService([current, alternate], [CreateProvider(providerId)]);
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            CreateReferenceDataProvider(workspace),
+            new ProviderProfileService(),
+            new SinglePlanStore(CreatePlan("architecture-review")),
+            new ResolverWorkspaceFactory(workspace));
+        var assignment = CreateArchitectureReviewAssignment(current) with
+        {
+            LaunchVariables = new Dictionary<string, string>
+            {
+                [ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceiptsByStep] = "{ malformed-json"
+            }
+        };
+
+        var result = await repairService.RepairAsync(assignment, "Operator requested repair.");
+
+        Assert.False(result.Repaired);
+        Assert.Equal(assignment.ExecutorId, result.Assignment.ExecutorId);
+    }
+
+    [Fact]
+    public async Task Runtime_assignment_repair_rejects_valid_assignment_tool_drift_before_reference_data_lookup()
+    {
+        var providerId = Guid.Parse("9a199607-ad89-4aeb-9864-c3ff5d3b03ca");
+        var current = CreateAgent(providerId);
+        var workspace = new ResolverWorkspaceService([current], [CreateProvider(providerId)]);
+        var repairService = new AgentFrameworkProcessRuntimeStepAssignmentRepairService(
+            new UnexpectedAgentReferenceDataProvider(),
+            new ProviderProfileService(),
+            new SinglePlanStore(CreatePlan("architecture-review")),
+            new ResolverWorkspaceFactory(workspace));
+        var assignment = CreateArchitectureReviewAssignment(current) with
+        {
+            CapabilityScope = new ProcessCapabilityScope
+            {
+                RequiredReceipts =
+                [
+                    new ProcessRequiredToolReceipt
+                    {
+                        Key = "drifted-python",
+                        ToolName = "workspace_python_run_file"
+                    }
+                ]
+            }
+        };
+
+        var result = await repairService.RepairAsync(assignment, "Operator requested repair.");
+
+        Assert.False(result.Repaired);
+        Assert.Equal(assignment.ExecutorId, result.Assignment.ExecutorId);
     }
 
     [Fact]
@@ -1258,17 +1820,34 @@ public sealed class ProcessLaunchExecutorResolverTests
 
     private static AgentFrameworkProcessLaunchExecutorResolver CreateResolver(
         ResolverWorkspaceFactory workspaceFactory,
-        IWorkflowCatalogService? workflowCatalog = null)
+        IWorkflowCatalogService? workflowCatalog = null,
+        IWorkflowExecutorRuntimeAvailabilityCatalog? workflowExecutorAvailabilityCatalog = null,
+        IProcessHostCapabilitySnapshotProvider? hostCapabilitySnapshotProvider = null)
     {
         return new AgentFrameworkProcessLaunchExecutorResolver(
             CreateReferenceDataProvider(workspaceFactory.WorkspaceService),
-            new ProcessMockAgentCatalogService(
-                workspaceFactory,
-                new NoOpAiTechnicalAgentBridge(),
-                Options.Create(new ProcessMockAgentOptions { Enabled = false })),
             new ProviderProfileService(),
-            workflowCatalog ?? new ResolverWorkflowCatalog());
+            workflowCatalog ?? new ResolverWorkflowCatalog(),
+            workflowExecutorAvailabilityCatalog,
+            hostCapabilitySnapshotProvider ?? AvailableHostCapabilities,
+            workspaceFactory);
     }
+
+    private static ProcessHostExecutionPort ResolveExecutionPort(ProcessHostCapabilityId id)
+        => id switch
+        {
+            var value when value == ProcessHostCapabilityIds.ManagedProcessAdapter =>
+                ProcessHostExecutionPort.ManagedProcessAdapter,
+            var value when value == ProcessHostCapabilityIds.Docker =>
+                ProcessHostExecutionPort.DockerHostTool,
+            var value when value == ProcessHostCapabilityIds.LocalStdioMcp =>
+                ProcessHostExecutionPort.LocalStdioMcpClient,
+            var value when value == ProcessHostCapabilityIds.DesktopOpen =>
+                ProcessHostExecutionPort.DesktopLauncher,
+            var value when value == ProcessHostCapabilityIds.InteractiveTerminal =>
+                ProcessHostExecutionPort.InteractiveTerminal,
+            _ => ProcessHostExecutionPort.ManagedProcessHost
+        };
 
     private static IAgentReferenceDataProvider CreateReferenceDataProvider(IAgentFrameworkWorkspaceService workspaceService)
     {
@@ -1361,7 +1940,8 @@ public sealed class ProcessLaunchExecutorResolverTests
     private static WorkflowDefinition CreateWorkflowDefinition(
         WorkflowId workflowId,
         WorkflowVersionId versionId,
-        WorkflowLifecycleStatus status)
+        WorkflowLifecycleStatus status,
+        WorkflowExecutorId? executorId = null)
     {
         var start = new WorkflowNode(
             new WorkflowNodeId("start"),
@@ -1374,8 +1954,11 @@ public sealed class ProcessLaunchExecutorResolverTests
                 SubworkflowId: null,
                 ExternalRequestKind: null,
                 Instructions: string.Empty,
-                    InputShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON input"),
-                    ResultShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON result")));
+                InputShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON input"),
+                ResultShape: new WorkflowValueShape(WorkflowValueShapeKind.Json, "{}", "JSON result"))
+            {
+                ExecutorId = executorId
+            });
         return new WorkflowDefinition(
             workflowId,
             versionId,
@@ -1836,7 +2419,9 @@ public sealed class ProcessLaunchExecutorResolverTests
             Now);
     }
 
-    private static ProcessInstancePlan CreatePlan(string stepKey = "record-runtime-commands")
+    private static ProcessInstancePlan CreatePlan(
+        string stepKey = "record-runtime-commands",
+        IReadOnlySet<ProcessHostCapabilityId>? requiredHostCapabilities = null)
     {
         return new ProcessInstancePlan(
             new ProcessInstancePlanHeader(PlanId, PlanId, null, null, "processes.instance-plan.v1", Now, 0),
@@ -1851,7 +2436,19 @@ public sealed class ProcessLaunchExecutorResolverTests
                 []),
             new DriverStackSnapshot([]),
             new StrategyBindingSet([Binding], [], [], []),
-            [new StepInstancePlan(StepId, ProcessStepDefinitionId.New(), stepKey, ProcessStepKind.Activity, true, false, Binding)],
+            [
+                new StepInstancePlan(
+                    StepId,
+                    ProcessStepDefinitionId.New(),
+                    stepKey,
+                    ProcessStepKind.Activity,
+                    true,
+                    false,
+                    Binding)
+                {
+                    RequiredHostCapabilities = requiredHostCapabilities ?? new HashSet<ProcessHostCapabilityId>()
+                }
+            ],
             new ArtifactPlan([], []),
             new BranchRouteTable([]),
             [],
@@ -1967,6 +2564,40 @@ public sealed class ProcessLaunchExecutorResolverTests
             CapabilityProofStatus.Verified,
             Now,
             "Capability is available in this unit-test fixture.");
+    }
+
+    private static CapabilityCatalogItem CreateMcpCatalogCapability(
+        string capabilityKey,
+        string transport,
+        string? command = null)
+    {
+        return new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.McpServer,
+            capabilityKey,
+            capabilityKey,
+            string.Empty,
+            string.Empty,
+            JsonSerializer.Serialize(new
+            {
+                transport,
+                command
+            }),
+            CapabilityProofStatus.Verified,
+            string.Empty,
+            LastVerifiedAtUtc: null,
+            IsBuiltIn: true);
+    }
+
+    private static AgentCapabilityAssignment CreateCapabilityAssignment(CapabilityCatalogItem capability)
+    {
+        return new AgentCapabilityAssignment(
+            capability.Id,
+            capability.Key,
+            capability.Kind,
+            capability.ProofStatus,
+            capability.LastVerifiedAtUtc,
+            capability.ProofNotes);
     }
 
     private static ProviderProfile CreateProvider(
@@ -2117,8 +2748,11 @@ public sealed class ProcessLaunchExecutorResolverTests
 
     private sealed class ResolverWorkspaceService(
         IReadOnlyList<AgentDefinition> agents,
-        IReadOnlyList<ProviderProfile> providers) : IAgentFrameworkWorkspaceService
+        IReadOnlyList<ProviderProfile> providers,
+        IReadOnlyList<CapabilityCatalogItem>? capabilities = null) : IAgentFrameworkWorkspaceService
     {
+        public int ListAgentsCallCount { get; private set; }
+
         public event EventHandler<ExecutionLogEntry>? ExecutionUpdated
         {
             add { }
@@ -2126,7 +2760,10 @@ public sealed class ProcessLaunchExecutorResolverTests
         }
 
         public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
-            => Task.FromResult(agents);
+        {
+            ListAgentsCallCount++;
+            return Task.FromResult(agents);
+        }
 
         public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(providers);
@@ -2177,7 +2814,11 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         public Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default) => throw Unused();
+        public Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(capabilities ?? []);
+        }
 
         public Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default) => throw Unused();
 
@@ -2244,6 +2885,74 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         private static InvalidOperationException Unused()
             => new("This fake workspace method is not used by the resolver test.");
+    }
+
+    private sealed class StaticWorkflowExecutorRuntimeAvailabilityCatalog(
+        IReadOnlyList<WorkflowExecutorDescriptor> descriptors)
+        : IWorkflowExecutorRuntimeAvailabilityCatalog
+    {
+        public Task<IReadOnlyList<WorkflowExecutorDescriptor>> ListExecutorsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(descriptors);
+        }
+    }
+
+    private sealed class StaticProcessHostCapabilitySnapshotProvider(
+        ProcessHostCapabilitySnapshot snapshot) : IProcessHostCapabilitySnapshotProvider
+    {
+        public ValueTask<ProcessHostCapabilitySnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(snapshot);
+        }
+    }
+
+    private sealed class SinglePlanStore(ProcessInstancePlan plan) : IProcessInstancePlanStore
+    {
+        public ValueTask<PersistedProcessInstancePlan> PersistAsync(
+            ProcessInstancePlan processPlan,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(
+                new PersistedProcessInstancePlan(processPlan.Header.PlanId, processPlan.PlanHash));
+        }
+
+        public ValueTask<ProcessInstancePlan?> LoadAsync(
+            ProcessInstancePlanId planId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<ProcessInstancePlan?>(
+                plan.Header.PlanId == planId ? plan : null);
+        }
+    }
+
+    private sealed class UnexpectedAgentReferenceDataProvider : IAgentReferenceDataProvider
+    {
+        public Task<AgentReferenceDataSnapshot> GetAsync(
+            AgentReferenceDataRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("Reference data must not be queried for a drifted assignment contract.");
+        }
+    }
+
+    private sealed class CountingProcessHostCapabilitySnapshotProvider(
+        ProcessHostCapabilitySnapshot snapshot) : IProcessHostCapabilitySnapshotProvider
+    {
+        public int CallCount { get; private set; }
+
+        public ValueTask<ProcessHostCapabilitySnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
+            return ValueTask.FromResult(snapshot);
+        }
     }
 
     private sealed class NoOpAiTechnicalAgentBridge : IAiTechnicalAgentBridge

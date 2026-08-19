@@ -1,4 +1,4 @@
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 public sealed class PlaywrightTestHostPathsTests
 {

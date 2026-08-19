@@ -22,7 +22,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.External;
 
 public sealed class PluginCatalogIntegrationTests
 {

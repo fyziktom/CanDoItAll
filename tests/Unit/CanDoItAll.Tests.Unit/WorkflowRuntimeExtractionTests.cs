@@ -2,10 +2,12 @@ using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 using WorkflowRuntimeManagerContract = CanDoItAll.AgentFramework.Workflows.Abstractions.IWorkflowRuntimeManager;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowRuntimeExtractionTests
 {
@@ -91,6 +93,7 @@ public sealed class WorkflowRuntimeExtractionTests
         try
         {
             var services = new ServiceCollection();
+            services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
             services.AddWorkflowRuntimeServices();
             services.AddInMemoryWorkflowRuntimeStores(workspaceRoot);
 
@@ -161,7 +164,7 @@ public sealed class WorkflowRuntimeExtractionTests
             "CanDoItAll.AgentFramework.Workflows.MafAdapter",
             "MafWorkflowAdapterServiceCollectionExtensions.cs"));
 
-        Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Singleton)", hostingSource, StringComparison.Ordinal);
+        Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)", hostingSource, StringComparison.Ordinal);
         Assert.Contains("AddInMemoryWorkflowRuntimeStores", hostingSource, StringComparison.Ordinal);
         Assert.Contains("AddMafWorkflowAdapterServices(ServiceLifetime.Scoped)", moduleSource, StringComparison.Ordinal);
         Assert.Contains("AddFileWorkflowArtifactContentStore", moduleSource, StringComparison.Ordinal);

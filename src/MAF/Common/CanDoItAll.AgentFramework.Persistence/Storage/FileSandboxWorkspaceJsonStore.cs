@@ -1,5 +1,9 @@
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Persistence;
 
@@ -38,22 +42,34 @@ internal sealed class FileSandboxWorkspaceJsonReadDiagnostics
 
 internal sealed class FileSandboxWorkspaceJsonStore
 {
-    private static readonly char[] InvalidFileNameCharacters = Path.GetInvalidFileNameChars();
     private static readonly FileShare SharedReadFileShare = FileShare.ReadWrite | FileShare.Delete;
-    private static readonly TimeSpan[] AtomicWriteRetryDelays =
-    [
-        TimeSpan.FromMilliseconds(25),
-        TimeSpan.FromMilliseconds(50),
-        TimeSpan.FromMilliseconds(100),
-        TimeSpan.FromMilliseconds(200),
-        TimeSpan.FromMilliseconds(400)
-    ];
     private readonly FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
+    private readonly DurableFileWriter durableFileWriter;
+    private readonly string? managedRoot;
 
     public FileSandboxWorkspaceJsonStore(
         FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics = null)
+        : this(
+            readDiagnostics,
+            new PhysicalFileSystemPathPolicyFactory(),
+            durableFileWriter: null,
+            managedRoot: null)
+    {
+    }
+
+    internal FileSandboxWorkspaceJsonStore(
+        FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+        DurableFileWriter? durableFileWriter,
+        string? managedRoot = null)
     {
         this.readDiagnostics = readDiagnostics;
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory));
+        this.durableFileWriter = durableFileWriter ?? new DurableFileWriter(physicalPathPolicyFactory);
+        this.managedRoot = string.IsNullOrWhiteSpace(managedRoot)
+            ? null
+            : physicalPathPolicyFactory.Create(managedRoot).RootPath;
     }
 
     public JsonSerializerOptions SerializerOptions { get; } = new(JsonSerializerDefaults.Web)
@@ -68,7 +84,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     public string NormalizeFileName(string value)
     {
-        return string.Concat(value.Select(character => InvalidFileNameCharacters.Contains(character) ? '-' : character));
+        return PortablePhysicalFileNamePolicy.Encode(value).PhysicalName;
     }
 
     public async Task<T?> ReadJsonAsync<T>(string fullPath, CancellationToken cancellationToken)
@@ -120,6 +136,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     public async Task<string> ReadTextAsync(string fullPath, CancellationToken cancellationToken)
     {
+        EnsureSafeFilePath(fullPath, allowMissingLeaf: true);
         var stream = TryOpenSharedReadStream(fullPath);
         if (stream is null)
         {
@@ -148,8 +165,11 @@ internal sealed class FileSandboxWorkspaceJsonStore
             return [];
         }
 
+        EnsureSafeDirectory(directoryPath);
         var records = new List<T>();
-        foreach (var filePath in Directory.EnumerateFiles(directoryPath, "*.json").OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+        foreach (var filePath in Directory.EnumerateFiles(directoryPath, "*.json")
+                     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                     .ThenBy(path => path, StringComparer.Ordinal))
         {
             var record = await ReadJsonAsync<T>(filePath, cancellationToken);
             if (record is not null)
@@ -175,15 +195,17 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 return false;
             }
 
-            Directory.Delete(directoryPath, recursive: true);
+            DeleteDirectory(directoryPath);
             return true;
         }
 
-        Directory.CreateDirectory(directoryPath);
+        EnsureDirectory(directoryPath);
         var existingFiles = Directory.EnumerateFiles(directoryPath, "*.json")
-            .ToDictionary(path => Path.GetFileName(path)!, StringComparer.OrdinalIgnoreCase);
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .ToDictionary(path => Path.GetFileName(path)!, StringComparer.Ordinal);
         var changed = false;
-        var desiredFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var desiredFiles = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var item in materialized)
         {
@@ -199,7 +221,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 continue;
             }
 
-            File.Delete(existingFile.Value);
+            await DeleteFileAsync(existingFile.Value, cancellationToken);
             changed = true;
         }
 
@@ -213,8 +235,8 @@ internal sealed class FileSandboxWorkspaceJsonStore
         Func<T, string> fileNameSelector,
         CancellationToken cancellationToken)
     {
-        var previousByFileName = previousItems.ToDictionary(fileNameSelector, item => item, StringComparer.OrdinalIgnoreCase);
-        var currentByFileName = items.ToDictionary(fileNameSelector, item => item, StringComparer.OrdinalIgnoreCase);
+        var previousByFileName = previousItems.ToDictionary(fileNameSelector, item => item, StringComparer.Ordinal);
+        var currentByFileName = items.ToDictionary(fileNameSelector, item => item, StringComparer.Ordinal);
 
         if (currentByFileName.Count == 0)
         {
@@ -223,11 +245,11 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 return false;
             }
 
-            Directory.Delete(directoryPath, recursive: true);
+            DeleteDirectory(directoryPath);
             return true;
         }
 
-        Directory.CreateDirectory(directoryPath);
+        EnsureDirectory(directoryPath);
         var changed = false;
 
         foreach (var current in currentByFileName)
@@ -243,7 +265,9 @@ internal sealed class FileSandboxWorkspaceJsonStore
             changed |= await WriteJsonIfChangedAsync(filePath, current.Value, cancellationToken);
         }
 
-        foreach (var removedFileName in previousByFileName.Keys.Except(currentByFileName.Keys, StringComparer.OrdinalIgnoreCase))
+        foreach (var removedFileName in previousByFileName.Keys
+                     .Except(currentByFileName.Keys, StringComparer.Ordinal)
+                     .Order(StringComparer.Ordinal))
         {
             var filePath = Path.Combine(directoryPath, removedFileName);
             if (!File.Exists(filePath))
@@ -251,7 +275,7 @@ internal sealed class FileSandboxWorkspaceJsonStore
                 continue;
             }
 
-            File.Delete(filePath);
+            await DeleteFileAsync(filePath, cancellationToken);
             changed = true;
         }
 
@@ -282,8 +306,9 @@ internal sealed class FileSandboxWorkspaceJsonStore
             cancellationToken);
     }
 
-    private static FileStream? TryOpenSharedReadStream(string fullPath)
+    private FileStream? TryOpenSharedReadStream(string fullPath)
     {
+        EnsureSafeFilePath(fullPath, allowMissingLeaf: true);
         if (!File.Exists(fullPath))
         {
             return null;
@@ -327,22 +352,13 @@ internal sealed class FileSandboxWorkspaceJsonStore
 
     private async Task WriteJsonAtomicallyAsync(string fullPath, string serialized, CancellationToken cancellationToken)
     {
-        var directory = Path.GetDirectoryName(fullPath)!;
-        Directory.CreateDirectory(directory);
-
-        var tempPath = Path.Combine(directory, $"{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-        try
-        {
-            await File.WriteAllTextAsync(tempPath, serialized, Encoding.UTF8, cancellationToken);
-            await ReplaceAtomicallyWithRetryAsync(tempPath, fullPath, cancellationToken);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-        }
+        string directory = Path.GetDirectoryName(fullPath)
+            ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
+        await durableFileWriter.WriteTextAsync(
+            ResolveManagedRoot(directory),
+            fullPath,
+            serialized,
+            cancellationToken: cancellationToken);
     }
 
     private static FileStream OpenSharedReadStream(string fullPath)
@@ -356,58 +372,38 @@ internal sealed class FileSandboxWorkspaceJsonStore
             options: FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 
-    private static async Task ReplaceAtomicallyWithRetryAsync(
-        string tempPath,
-        string fullPath,
-        CancellationToken cancellationToken)
+    private void EnsureSafeFilePath(string fullPath, bool allowMissingLeaf)
     {
-        for (var attempt = 0; ; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                if (File.Exists(fullPath))
-                {
-                    File.Replace(tempPath, fullPath, destinationBackupFileName: null, ignoreMetadataErrors: true);
-                }
-                else
-                {
-                    File.Move(tempPath, fullPath);
-                }
-
-                return;
-            }
-            catch (IOException) when (attempt < AtomicWriteRetryDelays.Length)
-            {
-                await Task.Delay(AtomicWriteRetryDelays[attempt], cancellationToken);
-            }
-            catch (IOException)
-            {
-                await ReplaceByOverwriteWithRetryAsync(tempPath, fullPath, cancellationToken);
-                return;
-            }
-        }
+        string directory = Path.GetDirectoryName(fullPath)
+            ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
+        physicalPathPolicyFactory.Create(ResolveManagedRoot(directory)).EnsureSafePath(fullPath, allowMissingLeaf);
     }
 
-    private static async Task ReplaceByOverwriteWithRetryAsync(
-        string tempPath,
-        string fullPath,
-        CancellationToken cancellationToken)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+    public void EnsureDirectory(string directoryPath)
+        => durableFileWriter.EnsureDirectory(
+            ResolveManagedRoot(directoryPath),
+            directoryPath,
+            requirePrivateUnixMode: false);
 
-            try
-            {
-                File.Copy(tempPath, fullPath, overwrite: true);
-                return;
-            }
-            catch (IOException) when (attempt < AtomicWriteRetryDelays.Length)
-            {
-                await Task.Delay(AtomicWriteRetryDelays[attempt], cancellationToken);
-            }
-        }
+    private void EnsureSafeDirectory(string directoryPath)
+        => physicalPathPolicyFactory.Create(ResolveManagedRoot(directoryPath)).EnsureSafePath(directoryPath);
+
+    public void DeleteDirectory(string directoryPath)
+    {
+        EnsureSafeDirectory(directoryPath);
+        Directory.Delete(directoryPath, recursive: true);
     }
+
+    public async Task DeleteFileAsync(string fullPath, CancellationToken cancellationToken)
+    {
+        string directory = Path.GetDirectoryName(fullPath)
+            ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
+        await durableFileWriter.DeleteAsync(
+            ResolveManagedRoot(directory),
+            fullPath,
+            cancellationToken: cancellationToken);
+    }
+
+    private string ResolveManagedRoot(string fallbackRoot)
+        => managedRoot ?? fallbackRoot;
 }

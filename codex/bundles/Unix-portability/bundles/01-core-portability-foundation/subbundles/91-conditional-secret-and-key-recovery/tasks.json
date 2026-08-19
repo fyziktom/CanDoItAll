@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Core Portability Foundation",
+  "subbundle_id": "A91",
+  "title": "Conditional secret and key recovery",
+  "critical": true,
+  "conditional": true,
+  "status": "Not invoked",
+  "depends_on": [
+    "Any secret/key migration incident"
+  ],
+  "unlocks": [
+    "Security Gate C2 re-review"
+  ],
+  "requirements": [],
+  "source_hotspots": [
+    "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+    "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+    "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs"
+  ],
+  "tasks": [
+    {
+      "id": "A91-T01",
+      "title": "Stop all destructive cleanup",
+      "description": "Preserve old key rings, DPAPI payloads, vault generations, database backups, and migration journals.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A91-T02",
+      "title": "Classify committed generations",
+      "description": "Identify source/destination/provider/key IDs without logging values.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A91-T03",
+      "title": "Restore read capability on the source host",
+      "description": "Use the original authorized Windows/profile context where DPAPI or old key protection requires it.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A91-T04",
+      "title": "Resume or roll back transactionally",
+      "description": "Verify every record before pointer commit; clean orphans only after independent confirmation.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "A91-T05",
+      "title": "Produce a redacted incident/recovery report",
+      "description": "Include root cause, affected records count, proof, residual risk, and prevention tests.",
+      "requirements": [],
+      "status": "Planned",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

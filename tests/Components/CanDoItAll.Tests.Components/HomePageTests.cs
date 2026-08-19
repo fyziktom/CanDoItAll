@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using DashboardHome = CanDoItAll.Web.Components.Pages.Home;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class HomePageTests
 {

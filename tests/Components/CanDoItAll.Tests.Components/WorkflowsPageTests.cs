@@ -13,6 +13,7 @@ using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -29,7 +30,7 @@ using WorkflowFailureKind = CanDoItAll.AgentFramework.Workflows.Abstractions.Wor
 using WorkflowFailureRetryability = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureRetryability;
 using WorkflowFailureSourceContext = CanDoItAll.AgentFramework.Workflows.Abstractions.WorkflowFailureSourceContext;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowsPageTests
 {
@@ -165,7 +166,7 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain("disabled", cut.Find("[data-testid='workflows-create-starter']").OuterHtml, StringComparison.OrdinalIgnoreCase);
         });
 
-        cut.Find("[data-testid='workflows-create-starter']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-create-starter']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -185,15 +186,15 @@ public sealed class WorkflowsPageTests
 
         var workflowsTab = cut.Find("[data-testid='workflows-tab-workflows']");
         Assert.Contains("Workflows", workflowsTab.TextContent);
-        workflowsTab.Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForAssertion(() =>
         {
             Assert.NotEmpty(cut.FindAll("[data-testid='workflows-catalog-item']"));
         });
 
-        cut.Find("[data-testid='workflows-tab-history']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-history']").Click());
         cut.WaitForElement("[data-testid='workflows-run-test']");
-        cut.Find("[data-testid='workflows-run-test']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-run-test']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -341,6 +342,9 @@ public sealed class WorkflowsPageTests
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
+        cut.WaitForAssertion(
+            () => Assert.Empty(cut.FindAll("[data-testid='workflows-loading']")),
+            TimeSpan.FromSeconds(10));
         racingCatalog.Delay(firstDefinition.Id, secondDefinition.Id);
 
         var firstSelection = cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
@@ -1540,15 +1544,17 @@ public sealed class WorkflowsPageTests
     public async Task Workflow_example_seed_creates_production_examples_when_enabled()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
         var store = new InMemoryWorkflowCatalogStore();
         var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
         var templatePack = new WorkflowTemplatePackLoader().Load();
+        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         var seeder = new WorkflowExampleCatalogSeedService(
             catalogService,
             catalogService,
             catalogService,
-            new WorkspaceFileService(workspaceRoot),
-            new WorkspacePathResolutionService(workspaceRoot),
+            new WorkspaceFileService(workspaceRoot, physicalPathPolicyFactory),
+            new WorkspacePathResolutionService(workspaceRoot, physicalPathPolicyFactory),
             new ClosedXmlSpreadsheetDocumentService(),
             Options.Create(new WorkflowExampleCatalogSeedOptions
             {
@@ -1650,12 +1656,13 @@ public sealed class WorkflowsPageTests
                 RequireDurableProductionRuns: false,
                 ExposeAzureFunctionsStatusEndpoint: false,
                 ExposeAzureFunctionsMcpTool: false)));
+        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
         var seeder = new WorkflowExampleCatalogSeedService(
             catalogService,
             catalogService,
             catalogService,
-            new WorkspaceFileService(workspaceRoot),
-            new WorkspacePathResolutionService(workspaceRoot),
+            new WorkspaceFileService(workspaceRoot, physicalPathPolicyFactory),
+            new WorkspacePathResolutionService(workspaceRoot, physicalPathPolicyFactory),
             new ClosedXmlSpreadsheetDocumentService(),
             Options.Create(new WorkflowExampleCatalogSeedOptions
             {

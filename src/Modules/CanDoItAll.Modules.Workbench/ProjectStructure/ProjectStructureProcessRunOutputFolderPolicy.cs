@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 
@@ -5,6 +6,40 @@ namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureProcessRunOutputFolderPolicy
 {
+    public static string ResolveProjectScopedDirectoryPath(
+        Guid projectId,
+        ProcessRunArtifactRootResolution outputFolder)
+    {
+        if (projectId == Guid.Empty)
+        {
+            throw new ArgumentException("A project identifier is required.", nameof(projectId));
+        }
+
+        ArgumentNullException.ThrowIfNull(outputFolder);
+        if (!outputFolder.ShouldProject)
+        {
+            throw new ArgumentException("A projectable process-run output folder is required.", nameof(outputFolder));
+        }
+
+        var projectScope = WorkspaceScopeDescriptor.Project(projectId.ToString("D"));
+        (string logicalRoot, string scopedRoot) = outputFolder.Kind switch
+        {
+            ProcessRunArtifactRootKind.ManagedArtifactRunRoot =>
+                (WorkspaceScopeDescriptor.ArtifactManagedRootName, projectScope.ArtifactRootRelativePath),
+            ProcessRunArtifactRootKind.ManagedRunRoot or ProcessRunArtifactRootKind.ManagedProductOutputRoot =>
+                (WorkspaceScopeDescriptor.OutputManagedRootName, projectScope.OutputRootRelativePath),
+            _ => throw new ArgumentException("The process-run output folder kind is not projectable.", nameof(outputFolder))
+        };
+        string normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(outputFolder.DirectoryPath);
+        if (!normalizedPath.StartsWith(logicalRoot + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The process-run output folder does not match its managed root.", nameof(outputFolder));
+        }
+
+        string suffix = normalizedPath[(logicalRoot.Length + 1)..];
+        return WorkspaceScopeDescriptor.NormalizeRelativePath($"{scopedRoot}/{suffix}");
+    }
+
     public static bool TryResolve(
         ProjectStructureNode node,
         out ProcessRunArtifactRootResolution outputFolder)

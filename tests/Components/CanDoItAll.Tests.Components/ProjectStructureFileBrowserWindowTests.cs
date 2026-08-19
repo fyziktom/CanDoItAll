@@ -5,6 +5,7 @@ using CanDoItAll.FileTools.FileBrowser.Components;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
+using CanDoItAll.FileTools.FileInteraction.Spreadsheet;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workbench;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureFileBrowserWindowTests
 {
@@ -215,7 +216,7 @@ public sealed class ProjectStructureFileBrowserWindowTests
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
-            .AddWorkbenchSpreadsheetPreview()
+            .AddSpreadsheet()
             .Build());
         context.Services.AddSingleton<IProjectFileScopeProvider>(
             new StaticProjectFileScopeProvider(projectScopes));

@@ -1,7 +1,9 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.Memory.DependencyInjection;
@@ -9,14 +11,19 @@ using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.AgentFramework.Tools;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.AgentFramework.Usage;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Git;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.CrmHr;
@@ -24,12 +31,14 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Conversations.Shell;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Tools.Documents;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Memory.Application;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -39,6 +48,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddConversationShell();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IProjectTransferTargetStateParticipant,
             AgentFrameworkProjectTransferTargetStateParticipant>());
@@ -60,6 +70,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddSingleton<ICapabilityProofService, CapabilityProofService>();
         services.AddSingleton<IAgentProviderCredentialResolver, SecretStoreAgentProviderCredentialResolver>();
         services.AddMafProviderRuntimeServices();
+        services.AddDataProtection();
+        services.TryAddSingleton<IExternalTargetPathRegistryFactory, ExternalTargetPathRegistryFactory>();
+        services.TryAddScoped<IExternalTargetPathRegistry, ExternalTargetPathRegistry>();
+        services.TryAddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
+        services.TryAddScoped<IExternalProcessRunner, WorkspaceExternalProcessRunner>();
+        services.TryAddScoped<IGitCommandExecutor, WorkspaceGitCommandExecutor>();
         services.TryAddScoped<IExternalProcessToolInvoker, ExternalProcessToolInvoker>();
         services.TryAddScoped<IExternalHttpToolInvoker, ExternalHttpToolInvoker>();
         services.TryAddScoped<IToolSetupTestService, ToolSetupTestService>();
@@ -76,40 +92,74 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return new WorkspaceFileService(workspaceRoot, scope);
+            return new WorkspaceFileService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                scope,
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
+        });
+        services.TryAddScoped<WorkspaceFileInspectionScopeFactory>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new WorkspaceFileInspectionScopeFactory(
+                workspaceRoot,
+                scope,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>());
         });
         services.TryAddScoped<IPluginWorkspaceFiles, PluginWorkspaceFiles>();
         services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return new WorkspacePathResolutionService(workspaceRoot, scope);
+            return new WorkspacePathResolutionService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                scope,
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.TryAddScoped<IWorkspaceProcessHost, LocalWorkspaceProcessHost>();
+        services.TryAddScoped<IWorkspaceLongRunningProcessHost>(serviceProvider =>
+            serviceProvider.GetRequiredService<IWorkspaceProcessHost>() as IWorkspaceLongRunningProcessHost
+            ?? throw new InvalidOperationException(
+                "The configured workspace process host does not implement managed process sessions."));
         services.TryAddScoped<IWorkspaceCommandExecutionService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
             return new WorkspaceCommandExecutionService(
                 workspaceRoot,
                 serviceProvider.GetRequiredService<IWorkspaceProcessHost>(),
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
                 scope,
-                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>());
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>(),
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>(serviceProvider =>
             new WorkspaceExecutionRunProcessLeaseCleanupScopeFactory(
-                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList()));
+                serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
         services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            IPhysicalFileSystemPathPolicyFactory pathPolicyFactory =
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>();
             return new WorkspaceExecutionRunProcessLeaseCleaner(
                 serviceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(),
-                new WorkspaceExecutionScope(workspaceRoot, scope),
+                new WorkspaceExecutionScope(
+                    workspaceRoot,
+                    scope,
+                    rootCaseSensitivity: pathPolicyFactory.Create(workspaceRoot).CaseSensitivity),
                 serviceProvider.GetRequiredService<IWorkspaceExecutionRunProcessLeaseCleanupScopeFactory>());
         });
         services.TryAddScoped<IWorkspaceDocumentMarkdownConverter, ManagedCodeMarkItDownDocumentMarkdownConverter>();
         services.TryAddScoped<IWorkspaceImageOperationService>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return new WorkspaceImageOperationService(workspaceRoot, scope);
+            return new WorkspaceImageOperationService(
+                workspaceRoot,
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                scope,
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.TryAddScoped<IWorkspaceArtifactToolService>(serviceProvider =>
         {
@@ -118,12 +168,16 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
                 workspaceRoot,
                 serviceProvider.GetRequiredService<IWorkspaceCommandExecutionService>(),
                 serviceProvider.GetRequiredService<IWorkspaceDocumentMarkdownConverter>(),
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
                 scope,
-                serviceProvider.GetRequiredService<IWorkspaceImageOperationService>());
+                serviceProvider.GetRequiredService<IWorkspaceImageOperationService>(),
+                serviceProvider.GetRequiredService<IExternalTargetPathRegistry>());
         });
         services.TryAddScoped<IWorkspaceRuntimeServicesFactory>(serviceProvider => new WorkspaceRuntimeServicesFactory(
             serviceProvider.GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>().ToList(),
-            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter()));
+            serviceProvider.GetService<IWorkspaceDocumentMarkdownConverter>() ?? new ManagedCodeMarkItDownDocumentMarkdownConverter(),
+            serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+            serviceProvider.GetRequiredService<IExternalTargetPathRegistryFactory>()));
         services.TryAddScoped<MafAgentRuntime>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
@@ -144,8 +198,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>
+            (IAgentProviderUsageEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceCatalogStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
+            AgentProviderUsageProjectionSource>());
+        services.TryAddScoped<ProviderUsageQueryService>();
         services.TryAddScoped<IAgentRecruitingEvidenceStore>(serviceProvider =>
             (IAgentRecruitingEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentRecruitingEvidenceService, AgentRecruitingEvidenceService>();
@@ -206,9 +265,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<AgentChatContextRegistry>();
         services.AddScoped<IAgentChatContextRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatContextRegistry>());
+        services.AddScoped<IAgentWorkspaceScopeAccessor, AgentChatWorkspaceScopeAccessor>();
         services.AddScoped<AgentChatExecutionNotificationHub>();
         services.AddScoped<IAgentChatExecutionNotificationHub>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentChatExecutionNotificationHub>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IAgentExecutionSourceAuthorityProvider,
+            AgentFrameworkAgentsExecutionAuthorityProvider>());
         services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
@@ -221,10 +284,17 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentChatPreparationPool>());
         services.AddScoped<IFloatingAgentChatSettingsService, FloatingAgentChatSettingsService>();
         services.AddScoped<FloatingAgentChatCoordinator>();
-        services.AddScoped<IAgentChatLauncher>(serviceProvider =>
-            serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
         services.AddScoped<IFloatingAgentChatCoordinator>(serviceProvider =>
             serviceProvider.GetRequiredService<FloatingAgentChatCoordinator>());
+        services.AddScoped<AgentChatLauncherCompatibilityFacade>();
+        services.AddScoped<IAgentChatLauncher>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentChatLauncherCompatibilityFacade>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IConversationShellContributor,
+            AgentConversationShellContributor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            ILlmChatComposerActionContributor,
+            PromptGalleryLlmChatComposerActionContributor>());
         services.Replace(
             ServiceDescriptor.Scoped<IPromptGalleryCuratorLauncher, AgentFrameworkPromptGalleryCuratorLauncher>());
         services.AddScoped<ICanDoItAllAgentWorkspaceFactory, CanDoItAllAgentWorkspaceFactory>();
@@ -241,6 +311,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddScoped<AgentAvatarGenerationService>();
+        services.TryAddScoped<IAvatarGenerationGateway, AgentAvatarGenerationGateway>();
         services.TryAddScoped<HrAgentAdministrationService>();
         services.TryAddScoped<HrAgentAvatarGenerationService>();
         services.TryAddScoped<HrAgentUsageAnalyticsService>();

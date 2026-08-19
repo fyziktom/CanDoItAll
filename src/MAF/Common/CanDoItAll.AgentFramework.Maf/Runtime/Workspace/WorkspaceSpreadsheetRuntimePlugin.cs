@@ -1,5 +1,8 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Tools.Documents;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -7,14 +10,24 @@ namespace CanDoItAll.AgentFramework.Maf;
 internal sealed class WorkspaceSpreadsheetRuntimePlugin(
     ISpreadsheetDocumentService spreadsheets,
     string workspaceRoot,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     WorkspaceScopeDescriptor workspaceScope,
-    AgentWorkspaceToolAccessSettings accessSettings)
+    AgentWorkspaceToolAccessSettings accessSettings,
+    IExternalTargetPathRegistry externalTargetPathRegistry)
 {
     private const string SpreadsheetPreviewOperation = "workspace_spreadsheet_preview";
 
     private readonly ISpreadsheetDocumentService spreadsheets = spreadsheets ?? throw new ArgumentNullException(nameof(spreadsheets));
-    private readonly WorkspacePathResolutionService paths = new(workspaceRoot, workspaceScope);
-    private readonly WorkspaceRuntimeFileAccessGuard pathAccess = new(workspaceRoot, workspaceScope, accessSettings);
+    private readonly WorkspacePathResolutionService paths = new(
+        workspaceRoot,
+        physicalPathPolicyFactory,
+        workspaceScope,
+        externalTargetPathRegistry);
+    private readonly WorkspaceRuntimeFileAccessGuard pathAccess = new(
+        workspaceRoot,
+        physicalPathPolicyFactory,
+        workspaceScope,
+        accessSettings);
     private readonly WorkspaceSpreadsheetReceiptWriter receiptWriter = new(workspaceRoot, workspaceScope);
 
     public WorkspaceSpreadsheetSummaryToolResult InspectWorkbook(string workbookPath)
@@ -203,6 +216,23 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             Receipt: receipt);
     }
 
+    internal WorkspaceSpreadsheetWriteToolResult WriteSpreadsheetWorkbookFromToolArguments(
+        string workbookPath,
+        string worksheetName,
+        string? outputWorkbookPath = null,
+        WorkspaceSpreadsheetCellWriteArgument[]? cellWrites = null,
+        WorkspaceSpreadsheetRangeWriteArgument[]? rangeWrites = null,
+        bool createWorkbookIfMissing = true,
+        bool overwrite = false)
+        => WriteSpreadsheetWorkbook(
+            workbookPath,
+            worksheetName,
+            outputWorkbookPath,
+            NormalizeToolCellWrites(cellWrites),
+            NormalizeToolRangeWrites(rangeWrites),
+            createWorkbookIfMissing,
+            overwrite);
+
     public WorkspaceSpreadsheetFunctionCatalogResult ListSpreadsheetFunctions(
         string? query = null,
         string? category = null,
@@ -271,6 +301,148 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
             ? throw AgentToolInputValidationException.Create(
                 $"Spreadsheet tool argument '{name}' is required. Supply it and retry.")
             : value.Trim();
+
+    private static SpreadsheetCellWrite[]? NormalizeToolCellWrites(
+        WorkspaceSpreadsheetCellWriteArgument[]? cellWrites)
+    {
+        if (cellWrites is null)
+        {
+            return null;
+        }
+
+        var normalized = new SpreadsheetCellWrite[cellWrites.Length];
+        for (var writeIndex = 0; writeIndex < cellWrites.Length; writeIndex++)
+        {
+            var write = cellWrites[writeIndex];
+            if (write is null)
+            {
+                normalized[writeIndex] = null!;
+                continue;
+            }
+
+            var value = NormalizeToolCellValue(
+                write.Value,
+                $"cellWrites item {writeIndex + 1} value");
+            normalized[writeIndex] = new SpreadsheetCellWrite(
+                write.CellAddress,
+                value.LegacyText).WithScalarValue(value.ScalarValue);
+        }
+
+        return normalized;
+    }
+
+    private static SpreadsheetRangeWrite[]? NormalizeToolRangeWrites(
+        WorkspaceSpreadsheetRangeWriteArgument[]? rangeWrites)
+    {
+        if (rangeWrites is null)
+        {
+            return null;
+        }
+
+        var normalized = new SpreadsheetRangeWrite[rangeWrites.Length];
+        for (var writeIndex = 0; writeIndex < rangeWrites.Length; writeIndex++)
+        {
+            var write = rangeWrites[writeIndex];
+            if (write is null)
+            {
+                normalized[writeIndex] = null!;
+                continue;
+            }
+
+            if (write.Values is null)
+            {
+                normalized[writeIndex] = new SpreadsheetRangeWrite(write.RangeAddress, null!);
+                continue;
+            }
+
+            var rows = new IReadOnlyList<string>[write.Values.Count];
+            var scalarRows = new IReadOnlyList<SpreadsheetScalarWriteValue>[write.Values.Count];
+            var canAttachScalarValues = true;
+            for (var rowIndex = 0; rowIndex < write.Values.Count; rowIndex++)
+            {
+                var row = write.Values[rowIndex];
+                if (row is null)
+                {
+                    rows[rowIndex] = null!;
+                    scalarRows[rowIndex] = null!;
+                    canAttachScalarValues = false;
+                    continue;
+                }
+
+                var values = new string[row.Count];
+                var scalarValues = new SpreadsheetScalarWriteValue[row.Count];
+                for (var columnIndex = 0; columnIndex < row.Count; columnIndex++)
+                {
+                    var value = NormalizeToolCellValue(
+                        row[columnIndex],
+                        $"rangeWrites item {writeIndex + 1} values row {rowIndex + 1} column {columnIndex + 1}");
+                    values[columnIndex] = value.LegacyText;
+                    scalarValues[columnIndex] = value.ScalarValue;
+                }
+
+                rows[rowIndex] = values;
+                scalarRows[rowIndex] = scalarValues;
+            }
+
+            var normalizedWrite = new SpreadsheetRangeWrite(write.RangeAddress, rows);
+            normalized[writeIndex] = canAttachScalarValues
+                ? normalizedWrite.WithScalarValues(scalarRows)
+                : normalizedWrite;
+        }
+
+        return normalized;
+    }
+
+    private static NormalizedToolCellValue NormalizeToolCellValue(JsonElement value, string location)
+        => value.ValueKind switch
+        {
+            JsonValueKind.Undefined or JsonValueKind.Null => new NormalizedToolCellValue(
+                string.Empty,
+                SpreadsheetScalarWriteValue.Blank),
+            JsonValueKind.String => NormalizeToolText(value),
+            JsonValueKind.Number => NormalizeToolNumber(value, location),
+            JsonValueKind.True or JsonValueKind.False => new NormalizedToolCellValue(
+                value.GetRawText(),
+                SpreadsheetScalarWriteValue.FromBoolean(value.GetBoolean())),
+            _ => throw AgentToolInputValidationException.Create(
+                $"Spreadsheet {location} must be a string, number, boolean, or null. Replace the structured value with a scalar value and retry.")
+        };
+
+    private static NormalizedToolCellValue NormalizeToolText(JsonElement value)
+    {
+        var text = value.GetString() ?? string.Empty;
+        return new NormalizedToolCellValue(
+            text,
+            SpreadsheetScalarWriteValue.FromText(text));
+    }
+
+    private static NormalizedToolCellValue NormalizeToolNumber(JsonElement value, string location)
+    {
+        if (value.TryGetInt64(out var integer))
+        {
+            return new NormalizedToolCellValue(
+                value.GetRawText(),
+                SpreadsheetScalarWriteValue.FromInteger(integer));
+        }
+
+        if (value.TryGetDecimal(out var decimalValue))
+        {
+            return new NormalizedToolCellValue(
+                value.GetRawText(),
+                SpreadsheetScalarWriteValue.FromDecimal(decimalValue));
+        }
+
+        var floatingPointValue = value.GetDouble();
+        if (!double.IsFinite(floatingPointValue))
+        {
+            throw AgentToolInputValidationException.Create(
+                $"Spreadsheet {location} must be a finite number. Replace the value with a finite numeric scalar and retry.");
+        }
+
+        return new NormalizedToolCellValue(
+            value.GetRawText(),
+            SpreadsheetScalarWriteValue.FromFloatingPoint(floatingPointValue));
+    }
 
     private static AgentToolInputValidationException CreateRangeCapacityFailure(
         SpreadsheetRangeCapacityExceededException exception)
@@ -411,6 +583,18 @@ internal sealed class WorkspaceSpreadsheetRuntimePlugin(
         return $"{argumentName} must be between {exception.Minimum} and {exception.Maximum}. Supply a value in that range and retry.";
     }
 }
+
+internal sealed record WorkspaceSpreadsheetCellWriteArgument(
+    string CellAddress,
+    JsonElement Value);
+
+internal sealed record WorkspaceSpreadsheetRangeWriteArgument(
+    string RangeAddress,
+    IReadOnlyList<IReadOnlyList<JsonElement>> Values);
+
+internal sealed record NormalizedToolCellValue(
+    string LegacyText,
+    SpreadsheetScalarWriteValue ScalarValue);
 
 internal sealed record WorkspaceSpreadsheetSummaryToolResult(
     string WorkbookPath,

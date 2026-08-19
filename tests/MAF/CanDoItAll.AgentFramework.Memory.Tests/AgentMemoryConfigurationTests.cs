@@ -1,7 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Memory.Abstractions;
 
-namespace CanDoItAll.AgentFramework.Memory.Tests;
+namespace CanDoItAll.AgentFramework.Memory.Tests.Configuration;
 
 public sealed class AgentMemoryConfigurationTests
 {

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureGanttMutationServiceTests
 {

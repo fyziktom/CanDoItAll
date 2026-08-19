@@ -1,7 +1,7 @@
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class SettingsRendererTests
 {

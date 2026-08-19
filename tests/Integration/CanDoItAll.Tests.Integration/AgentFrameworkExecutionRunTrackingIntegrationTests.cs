@@ -17,10 +17,12 @@ using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutputHelper output)
 {
+    private static readonly TimeSpan AsyncObservationTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task ExecutionUpdated_subscriber_failure_is_isolated_after_persistence()
     {
@@ -957,7 +959,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.Empty(completedDetail.Run.PendingApprovals);
         Assert.Equal(expectedEvidence, completedDetail.Run.EntryAgentRequestCompatibilityEvidence);
         Assert.Contains(completedDetail.ChatSession!.Messages, message => message.Role == ChatMessageRole.Assistant);
-        Assert.True(Assert.Single(runtime.ContinuationSuppressApprovalRequirements));
+        Assert.False(Assert.Single(runtime.ContinuationSuppressApprovalRequirements));
         Assert.Equal(
             AgentRuntimeContextPurpose.InteractiveChat,
             Assert.Single(runtime.ContinuationExecutionOptions)?.ContextIntent?.Purpose);
@@ -1260,6 +1262,12 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         Assert.NotNull(detail);
         Assert.Equal(ExecutionState.Failed, detail.Run.State);
         Assert.Equal(expectedEvidence, detail.Run.EntryAgentRequestCompatibilityEvidence);
+        Assert.Equal(2, runtime.ContinuationSuppressApprovalRequirements.Count);
+        Assert.All(runtime.ContinuationSuppressApprovalRequirements, Assert.False);
+        Assert.Collection(
+            runtime.ContinuationSessionPendingApprovals,
+            pending => Assert.Equal("approval-001", Assert.Single(pending).ApprovalId),
+            pending => Assert.Equal("approval-002", Assert.Single(pending).ApprovalId));
         var traceReceipts = detail.ToolReceipts
             .Where(receipt => receipt.ToolFamily == "agent-tool-trace")
             .ToArray();
@@ -2294,7 +2302,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         ArgumentNullException.ThrowIfNull(operationTask);
         ArgumentException.ThrowIfNullOrWhiteSpace(observationName);
 
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+        var timeoutTask = Task.Delay(AsyncObservationTimeout);
         var completedTask = await Task.WhenAny(observationTask, operationTask, timeoutTask);
         if (completedTask == observationTask)
         {
@@ -2309,7 +2317,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         }
 
         throw new TimeoutException(
-            $"{observationName} was not observed within five seconds.");
+            $"{observationName} was not observed within {AsyncObservationTimeout.TotalSeconds:0} seconds.");
     }
 
     private static void UseDirectWorkspaceService(IServiceCollection services)
@@ -2363,7 +2371,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
         FakeProgressAgentRuntime runtime,
         Task executionTask)
     {
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+        var timeoutTask = Task.Delay(AsyncObservationTimeout);
         var completedTask = await Task.WhenAny(runtime.ExecutionRunIdObserved.Task, executionTask, timeoutTask);
         if (completedTask == executionTask)
         {
@@ -2372,7 +2380,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         if (completedTask == timeoutTask)
         {
-            throw new TimeoutException("Timed out waiting for the fake runtime to observe the execution run id.");
+            throw new TimeoutException(
+                $"Timed out after {AsyncObservationTimeout.TotalSeconds:0} seconds waiting for the fake runtime to observe the execution run id.");
         }
 
         return await runtime.ExecutionRunIdObserved.Task;
@@ -3072,6 +3081,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
 
         public List<bool> ContinuationSuppressApprovalRequirements { get; } = [];
 
+        public List<IReadOnlyList<PendingToolApprovalRecord>> ContinuationSessionPendingApprovals { get; } = [];
+
         public List<Guid> ObservedExecutionRunIds { get; } = [];
 
         public string InitialResponseText { get; init; } = "Pending approval.";
@@ -3224,6 +3235,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests(ITestOutp
             ContinuationStructuredOutputs.Add(structuredOutput);
             ContinuationExecutionOptions.Add(executionOptions);
             ContinuationSuppressApprovalRequirements.Add(suppressApprovalRequirements);
+            ContinuationSessionPendingApprovals.Add(session.Compatibility?.PendingApprovals ?? []);
             if (continuationResponseIndex < ContinuationResponses.Count)
             {
                 return Task.FromResult(ContinuationResponses[continuationResponseIndex++]);

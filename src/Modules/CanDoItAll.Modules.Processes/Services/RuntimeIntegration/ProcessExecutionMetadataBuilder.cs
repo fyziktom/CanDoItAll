@@ -17,6 +17,7 @@ using CanDoItAll.Processes.Persistence;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -97,6 +98,13 @@ internal static class ProcessExecutionMetadataBuilder
             metadata[allowsProductMutation
                 ? ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey
                 : ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] = trustedAliases;
+            var bindings = ProcessExternalTargetRootBindingResolver.Resolve(
+                assignment.LaunchVariables,
+                trustedAliases);
+            if (bindings.Count > 0)
+            {
+                metadata[ExecutionInvocationMetadata.ExternalTargetRootBindingsMetadataKey] = bindings;
+            }
         }
 
         foreach (var item in metadataAdditions)
@@ -189,7 +197,8 @@ internal static class ProcessExecutionMetadataBuilder
         IReadOnlyDictionary<string, string> launchVariables,
         string key)
     {
-        return launchVariables.TryGetValue(key, out var value)
+        return launchVariables.TryGetValue(key, out var value) &&
+               !string.IsNullOrWhiteSpace(value)
             ? value.Trim()
             : string.Empty;
     }
@@ -290,8 +299,8 @@ internal static class ProcessExecutionMetadataBuilder
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Cast<string>()
             .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(item => item, StringComparer.Ordinal)
             .ToArray();
     }
 

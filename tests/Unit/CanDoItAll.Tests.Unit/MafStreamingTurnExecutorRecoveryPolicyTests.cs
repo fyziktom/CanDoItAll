@@ -8,7 +8,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Exercises <see cref="MafStreamingTurnExecutor"/>'s generic recovery coordinator directly (internal method,
@@ -54,6 +54,7 @@ public sealed class MafStreamingTurnExecutorRecoveryPolicyTests
                 new NeverInvokedProviderAgentFactory(),
                 new MafApprovalContinuationDriver(),
                 new MafRuntimeSessionPersistenceDriver(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 [new ProcessAgentExecutionOutcomeRecoveryPolicy()]);
             AgentFinalizerPolicies.TryResolveForStructuredOutput(
                 AgentStructuredOutputContracts.ProcessStepOutcomeResult,
@@ -138,6 +139,7 @@ public sealed class MafStreamingTurnExecutorRecoveryPolicyTests
                 new NeverInvokedProviderAgentFactory(),
                 new MafApprovalContinuationDriver(),
                 new MafRuntimeSessionPersistenceDriver(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 executionOutcomeRecoveryPolicies: []);
             AgentFinalizerPolicies.TryResolveForStructuredOutput(
                 AgentStructuredOutputContracts.ProcessStepOutcomeResult,

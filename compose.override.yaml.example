@@ -1,0 +1,10 @@
+# Optional override for running the web host directly on the workstation while keeping
+# PostgreSQL in Compose. Copy this file to ignored compose.override.yaml.
+services:
+  app:
+    profiles:
+      - container-app
+
+  db:
+    ports:
+      - "${CDA_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"

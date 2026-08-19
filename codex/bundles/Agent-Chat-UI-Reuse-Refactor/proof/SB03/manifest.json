@@ -1,0 +1,33 @@
+{
+  "subbundleId": "SB03",
+  "status": "completed",
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "repositoryHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "snapshotId": "snap-20260816112732-fa75493b",
+  "codeAnalyticsCorrelationIds": [
+    "code-analytics_ae2d4d4a5aab41008b0a8577cd0937b6",
+    "code-analytics_20ae022eb2f745be8b5706fc19704864",
+    "code-analytics_f8da214f0e404c11a6a3375ccc73801a"
+  ],
+  "builds": [
+    { "target": "CanDoItAll.Conversations.Components", "result": "pass", "warnings": 0, "errors": 0 },
+    { "target": "CanDoItAll.AgentFramework.Components", "result": "pass", "warnings": 0, "errors": 0 }
+  ],
+  "tests": [
+    { "selector": "ConversationParticipantComponentsTests|AgentCompactListTests|AgentChatModalTests|AgentCatalogPanelTests", "discovered": 23, "passed": 23, "failed": 0 }
+  ],
+  "guards": [
+    { "name": "repository boundary", "result": "pass" },
+    { "name": "phase exclusions", "result": "pass" },
+    { "name": "neutral forbidden-source scan", "result": "pass" },
+    { "name": "git diff check", "result": "pass" }
+  ],
+  "browser": {
+    "viewport": "1920x1080",
+    "catalogCards": 28,
+    "floatingRows": 28,
+    "horizontalOverflow": false,
+    "screenshot": "proof/SB03/browser/floating-list.png"
+  },
+  "broadGatePromotion": "AllSuppliedSuites: Components 902 source tests; queued for the single SB09 broad run"
+}

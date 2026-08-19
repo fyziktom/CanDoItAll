@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
 {
@@ -12,7 +12,7 @@ public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
         var workspaceRoot = CreateWorkspaceRoot();
         try
         {
-            var executor = new WorkspaceFileWorkflowExecutor(new WorkspaceFileService(workspaceRoot));
+            var executor = new WorkspaceFileWorkflowExecutor(TestWorkspaceServices.CreateFileService(workspaceRoot));
 
             var result = await ExecuteAsync(
                 executor,
@@ -39,7 +39,7 @@ public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
         var workspaceRoot = CreateWorkspaceRoot();
         try
         {
-            var executor = new WorkspaceFileWorkflowExecutor(new WorkspaceFileService(workspaceRoot));
+            var executor = new WorkspaceFileWorkflowExecutor(TestWorkspaceServices.CreateFileService(workspaceRoot));
 
             var result = await ExecuteAsync(
                 executor,
@@ -65,7 +65,7 @@ public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
         var workspaceRoot = CreateWorkspaceRoot();
         try
         {
-            var executor = new WorkspaceFileWorkflowExecutor(new WorkspaceFileService(workspaceRoot));
+            var executor = new WorkspaceFileWorkflowExecutor(TestWorkspaceServices.CreateFileService(workspaceRoot));
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteAsync(
                 executor,
@@ -90,7 +90,7 @@ public sealed class WorkspaceFileWorkflowExecutorTypedResultTests
         try
         {
             const string missingPath = "missing/source.md";
-            var files = new WorkspaceFileService(workspaceRoot);
+            var files = TestWorkspaceServices.CreateFileService(workspaceRoot);
             var failedResult = files.ReadTextFile(missingPath);
             var executor = new WorkspaceFileWorkflowExecutor(files);
             var context = new WorkflowExecutorExecutionContext(

@@ -7,7 +7,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class PromptGalleryAgentRuntimeToolProviderTests

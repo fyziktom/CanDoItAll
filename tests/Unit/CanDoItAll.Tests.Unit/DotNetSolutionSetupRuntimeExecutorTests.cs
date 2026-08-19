@@ -1,16 +1,21 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
+using Microsoft.AspNetCore.DataProtection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class DotNetSolutionSetupRuntimeExecutorTests
 {
+    private const string WorkspacePathAliasToolName = "workspace_path_alias";
+
     [Fact]
     public void ExecutorKey_is_the_stable_dotnet_solution_setup_driver_key()
     {
@@ -50,6 +55,12 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             receipt.ToolName == "workspace_pwsh_run_script" &&
             receipt.ExitSummary.Contains("Succeeded", StringComparison.OrdinalIgnoreCase) &&
             receipt.DeclaredSideEffectMode == ToolExecutionSideEffectMode.ProductMutation);
+        Assert.All(
+            result.ToolReceipts.Where(receipt => !string.IsNullOrWhiteSpace(receipt.WorkingDirectory)),
+            receipt => Assert.DoesNotContain(productRoot, receipt.WorkingDirectory, StringComparison.Ordinal));
+        Assert.Contains(
+            result.ToolReceipts,
+            receipt => receipt.WorkingDirectory.StartsWith("external-target/v1/", StringComparison.Ordinal));
         Assert.Equal(3, processHost.Requests.Count);
         Assert.Contains("src/Calculator/Calculator.csproj", await File.ReadAllTextAsync(Path.Combine(productRoot, "Calculator.slnx")), StringComparison.OrdinalIgnoreCase);
     }
@@ -110,8 +121,30 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         Assert.NotNull(result);
         Assert.True(result!.Succeeded, result.Summary);
         Assert.True(File.Exists(generatedSolutionFile));
-        Assert.Null(ProcessProductCompletionPathGate.ValidateRequiredProductFilesystemState(
-            assignment,
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var launchRegistry = new ExternalTargetPathRegistry(dataProtectionProvider);
+        Assert.True(launchRegistry.TryCreateAlias(productRoot, out var productRootAlias));
+        var completionLaunchVariables = new Dictionary<string, string>(
+            assignment.LaunchVariables,
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ProductRootAlias] = productRootAlias,
+            [ProcessRuntimeLaunchVariables.ExternalTargetRootBindings] =
+                JsonSerializer.Serialize(launchRegistry.ExportBindings([productRootAlias]))
+        };
+        var completionAssignment = assignment with
+        {
+            LaunchVariables = completionLaunchVariables
+        };
+        var completionPathGate = new ProcessProductCompletionPathGate(
+            new ProcessProductFilesystemInspector(
+                new WorkspaceFileInspectionScopeFactory(
+                    workspace.WorkspaceRoot,
+                    WorkspaceScopeDescriptor.Sandbox,
+                    TestWorkspaceServices.PhysicalPathPolicyFactory,
+                    new ExternalTargetPathRegistryFactory(dataProtectionProvider))));
+        Assert.Null(completionPathGate.ValidateRequiredProductFilesystemState(
+            completionAssignment,
             result.Output!));
         Assert.Contains(
             result.ToolReceipts,
@@ -388,6 +421,37 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
     }
 
     [Fact]
+    public async Task Linux_verify_existing_requires_case_exact_solution_membership()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        using var workspace = new RuntimeExecutorWorkspace();
+        string productRoot = workspace.CreateProductRoot();
+        string projectFile = Path.Combine(productRoot, "modules", "Portal", "Portal.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+        await File.WriteAllTextAsync(projectFile, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
+        Directory.CreateDirectory(Path.Combine(productRoot, "build"));
+        await File.WriteAllTextAsync(
+            Path.Combine(productRoot, "build", "EnterpriseSuite.sln"),
+            "modules/portal/Portal.csproj");
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace, processHost);
+
+        ProcessRuntimeOwnedStepExecutionResult? result = await executor.TryExecuteAsync(CreateAssignment(
+            productRoot,
+            "template-owned-existing-solution-verification",
+            CreateVerifyExistingLaunchVariables(productRoot, [projectFile])));
+
+        Assert.NotNull(result);
+        Assert.False(result!.Succeeded);
+        Assert.Contains("does not include required project", result.Summary, StringComparison.Ordinal);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
     public async Task TryExecuteAsync_rejects_missing_existing_context_file_without_mutation_tools()
     {
         using var workspace = new RuntimeExecutorWorkspace();
@@ -443,7 +507,9 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             "template-owned-existing-solution-verification",
             CreateVerifyExistingLaunchVariables(productRoot, [Path.Combine(productRoot, "modules", "Portal", "Portal.csproj")]));
 
-        var result = DotNetSolutionSetupToolPlanGuard.Evaluate(assignment);
+        var result = DotNetSolutionSetupToolPlanGuard.Evaluate(
+            assignment,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
         Assert.True(result.IsSatisfied);
         Assert.Null(result.Plan);
@@ -1042,11 +1108,25 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
         RuntimeExecutorWorkspace workspace,
         IWorkspaceProcessHost processHost)
     {
-        var workspaceFiles = new WorkspaceFileService(workspace.WorkspaceRoot);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.WorkspaceRoot, processHost);
+        var externalTargets = workspace.ExternalTargets;
+        var workspaceFiles = TestWorkspaceServices.CreateFileService(
+            workspace.WorkspaceRoot,
+            externalTargetRegistry: externalTargets);
+        var workspaceCommands = TestWorkspaceServices.CreateCommandExecutionService(
+            workspace.WorkspaceRoot,
+            processHost,
+            externalTargetRegistry: externalTargets);
         return new DotNetSolutionSetupRuntimeExecutor(
+            workspaceFiles,
             workspaceCommands,
-            new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands));
+            new WorkspaceManagedScriptPlanExecutor(
+                workspaceFiles,
+                workspaceCommands,
+                externalTargets,
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
+            externalTargets,
+            new DotNetExistingSolutionVerifier(TestWorkspaceServices.PhysicalPathPolicyFactory),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
     }
 
     private static ProcessRuntimeStepAssignment CreateAssignment(
@@ -1347,35 +1427,33 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
 
     private static string ToExternalTargetAlias(string path)
     {
-        var fullPath = Path.GetFullPath(path);
-        var rootPath = Path.GetPathRoot(fullPath)
-            ?? throw new InvalidOperationException($"Path '{path}' has no root.");
-        var trimmedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmedRoot.Length != 2 ||
-            trimmedRoot[1] != ':' ||
-            !char.IsLetter(trimmedRoot[0]))
+        if (!RuntimeExecutorWorkspace.CurrentExternalTargets.TryCreateAlias(path, out var alias))
         {
-            return fullPath;
+            throw new InvalidOperationException($"Path '{path}' could not be represented as an external-target alias.");
         }
 
-        var relativePath = fullPath.Length <= rootPath.Length
-            ? string.Empty
-            : fullPath[rootPath.Length..]
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .TrimStart(Path.DirectorySeparatorChar);
-        return string.IsNullOrWhiteSpace(relativePath)
-            ? $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}"
-            : $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
+        return alias;
     }
 
     private sealed class RuntimeExecutorWorkspace : IDisposable
     {
+        private static readonly AsyncLocal<IExternalTargetPathRegistry?> AmbientExternalTargets = new();
         private readonly List<string> roots = [];
+        private readonly IExternalTargetPathRegistry? previousExternalTargets;
 
         public RuntimeExecutorWorkspace()
         {
+            previousExternalTargets = AmbientExternalTargets.Value;
+            ExternalTargets = TestExternalTargetPathRegistry.Create();
+            AmbientExternalTargets.Value = ExternalTargets;
             WorkspaceRoot = CreateRoot("Workspace");
         }
+
+        public static IExternalTargetPathRegistry CurrentExternalTargets
+            => AmbientExternalTargets.Value
+               ?? throw new InvalidOperationException("A runtime executor workspace scope is required.");
+
+        public IExternalTargetPathRegistry ExternalTargets { get; }
 
         public string WorkspaceRoot { get; }
 
@@ -1384,6 +1462,11 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
 
         public void Dispose()
         {
+            if (ReferenceEquals(AmbientExternalTargets.Value, ExternalTargets))
+            {
+                AmbientExternalTargets.Value = previousExternalTargets;
+            }
+
             foreach (var root in roots)
             {
                 try
@@ -1440,10 +1523,20 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
             WorkspaceProcessExecutionRequest request,
             CancellationToken cancellationToken = default)
         {
-            Requests.Add(request);
-            onExecute?.Invoke(request);
+            var isPathAliasOperation = string.Equals(
+                request.ToolName,
+                WorkspacePathAliasToolName,
+                StringComparison.Ordinal);
+            if (!isPathAliasOperation)
+            {
+                Requests.Add(request);
+                onExecute?.Invoke(request);
+            }
+
             var now = DateTimeOffset.UtcNow;
-            var exitCode = ExitCodeResolver?.Invoke(request) ?? ExitCode;
+            var exitCode = isPathAliasOperation
+                ? 0
+                : ExitCodeResolver?.Invoke(request) ?? ExitCode;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,
                 ExitCode: exitCode,

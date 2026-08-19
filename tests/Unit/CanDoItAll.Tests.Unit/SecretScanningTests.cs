@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class SecretScanningTests
 {
@@ -69,8 +69,10 @@ public sealed class SecretScanningTests
     [InlineData("artifacts/gpu-profile/Default/Local Storage/state.json", true)]
     [InlineData("artifacts/gpu-profile-evidence/report.txt", false)]
     [InlineData("artifacts/acceptance/provider-output.json", false)]
+    [InlineData(".playwright-cli/page.yml", true)]
+    [InlineData(".playwright-mcp/page.yml", true)]
     [InlineData("src/Modules/Feature.cs", false)]
-    public void Secret_scanner_skips_only_the_generated_gpu_browser_profile_subtree(
+    public void Secret_scanner_skips_only_approved_generated_browser_subtrees(
         string relativePath,
         bool expectedToSkip)
     {
@@ -87,7 +89,7 @@ public sealed class SecretScanningTests
     private static IEnumerable<string> ScanRepositoryFiles()
     {
         var root = FindRepositoryRoot();
-        foreach (var filePath in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (var filePath in EnumerateRepositoryFiles(root))
         {
             if (ShouldSkipPath(root, filePath) || !IsTextFile(filePath))
             {
@@ -116,6 +118,46 @@ public sealed class SecretScanningTests
         }
     }
 
+    private static IEnumerable<string> EnumerateRepositoryFiles(string root)
+    {
+        var pendingDirectories = new Stack<string>();
+        pendingDirectories.Push(root);
+        while (pendingDirectories.TryPop(out string? directory))
+        {
+            IEnumerable<string> files;
+            IEnumerable<string> childDirectories;
+            try
+            {
+                files = Directory.EnumerateFiles(directory).ToArray();
+                childDirectories = Directory.EnumerateDirectories(directory).ToArray();
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (string file in files)
+            {
+                yield return file;
+            }
+
+            foreach (string childDirectory in childDirectories)
+            {
+                if (ShouldSkipPath(root, childDirectory) ||
+                    new DirectoryInfo(childDirectory).Attributes.HasFlag(FileAttributes.ReparsePoint))
+                {
+                    continue;
+                }
+
+                pendingDirectories.Push(childDirectory);
+            }
+        }
+    }
+
     private static bool ShouldSkipPath(string root, string filePath)
     {
         var relativePath = Path.GetRelativePath(root, filePath);
@@ -129,6 +171,7 @@ public sealed class SecretScanningTests
         return segments.Any(segment =>
             string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, ".artifacts", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, ".playwright-cli", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||

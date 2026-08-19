@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "F03",
+  "title": "Legacy Manager registry compatibility",
+  "goal": "Read old Manager ownership records without crashes and without granting unsafe termination authority.",
+  "tasks": [
+    {
+      "id": "T01",
+      "description": "Introduce a current registry schema version and an explicit schema-1 legacy DTO.",
+      "status": "planned"
+    },
+    {
+      "id": "T02",
+      "description": "Detect missing process Boundary before current-record validation.",
+      "status": "planned"
+    },
+    {
+      "id": "T03",
+      "description": "Convert legacy records to OwnershipUnverified with stable diagnostic legacy-process-boundary-missing.",
+      "status": "planned"
+    },
+    {
+      "id": "T04",
+      "description": "Never call TerminateOwnedProcessAsync for converted legacy records.",
+      "status": "planned"
+    },
+    {
+      "id": "T05",
+      "description": "Atomically rewrite converted records in the current schema, or retain an explicit migration-pending state with deterministic next-write behavior.",
+      "status": "planned"
+    },
+    {
+      "id": "T06",
+      "description": "Validate current boundary kind/native-id/instance-id combinations.",
+      "status": "planned"
+    },
+    {
+      "id": "T07",
+      "description": "Add real JSON fixture tests and fake-host termination-count assertions.",
+      "status": "planned"
+    }
+  ]
+}

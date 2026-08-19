@@ -1,0 +1,40 @@
+M07 validation summary
+Repository commit: 386d8beb6038035f89a9a6961ec017d8213879a5
+Dependency mode: package
+Runtime catalog version: 2026-08-12.1
+
+Test-RuntimePortability.ps1 -SelfTest
+PASS: 7/7 negative fixtures
+Covered: stale source, wrong dependency mode, wrong commit, assembly hash drift, duplicate catalog entry, missing fully qualified test, zero tests
+
+Test-RuntimePortability.ps1 -SkipBuild with absent stamp
+EXPECTED FAIL-CLOSED RESULT: rejected before any test process
+
+CrossPlatformCiWorkflowTests targeted Release build/test
+PASS: build 0 warnings/errors; tests 3/3
+
+RuntimePortabilityCatalog.json
+PASS: Unit 422; Integration 45; Browser 1; exact browser FQN
+
+Canonical source-reference manifest check
+PASS: shared 58 references, Core 53 references, Runtime 182 references; unique IDs and no missing repository paths
+
+Fresh portability scan with untracked source included
+PASS: 5,036 files; 30,195 findings classified
+Reviewed delta: 1,129 added fingerprint occurrences; 607 stale fingerprint occurrences
+Regenerated baseline enforcement: PASS, 13,562 reviewed executable-source findings unchanged
+
+Test-Documentation.ps1
+PASS: 172 maintained Markdown files
+
+validate_bundle.py --stage prepared --allow-different-commit --skip-checksums
+EXPECTED MODE MISMATCH: portable template retains {{REPO_ROOT}} and is not materialized
+
+validate_bundle.py --stage portable --skip-checksums
+PASS: 341 files; 0 warnings; 0 errors
+
+calculate_checksums.py and --verify
+PASS: original portability bundle and follow-up bundle
+
+git diff --check
+PASS: no whitespace errors; existing CRLF-to-LF advisory on generated EF model snapshot

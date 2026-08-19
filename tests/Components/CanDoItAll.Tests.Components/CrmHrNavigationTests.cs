@@ -2,7 +2,7 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Web.Composition;
 using WebMainLayout = CanDoItAll.Web.Components.Layout.MainLayout;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class CrmHrNavigationTests
 {

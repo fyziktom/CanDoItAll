@@ -8,7 +8,7 @@ using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.SharedKernel.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class WorkflowImageGenerationSettingsRendererTests
 {

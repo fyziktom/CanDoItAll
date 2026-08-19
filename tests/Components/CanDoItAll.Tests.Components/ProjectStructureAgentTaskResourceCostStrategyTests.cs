@@ -6,7 +6,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureAgentTaskResourceCostStrategyTests
 {

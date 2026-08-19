@@ -194,7 +194,6 @@ public partial class ProjectStructurePage
         {
             isPartyEditorLoading = false;
             ResetPartyEditor();
-            await InvokeAsync(StateHasChanged);
             return;
         }
 

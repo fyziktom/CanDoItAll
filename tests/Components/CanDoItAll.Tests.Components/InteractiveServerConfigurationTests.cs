@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class InteractiveServerConfigurationTests
 {

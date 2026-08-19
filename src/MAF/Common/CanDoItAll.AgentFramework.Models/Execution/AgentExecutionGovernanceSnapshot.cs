@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -60,11 +61,11 @@ public sealed record AgentExecutionGovernanceSnapshot
         MutationAllowed = mutationAllowed;
         PolicyVersion = policyVersion.Trim();
         PolicyFingerprint = policyFingerprint.Trim();
-        AllowedOperations = NormalizeSet(allowedOperations);
-        AllowedCapabilityKeys = NormalizeSet(allowedCapabilityKeys);
-        WritableExternalTargetAliases = NormalizeSet(writableExternalTargetAliases);
-        ReadOnlyExternalTargetAliases = NormalizeSet(readOnlyExternalTargetAliases);
-        AllowedManagedArtifactReadRefs = NormalizeSet(allowedManagedArtifactReadRefs);
+        AllowedOperations = NormalizeSet(allowedOperations, StringComparer.OrdinalIgnoreCase);
+        AllowedCapabilityKeys = NormalizeSet(allowedCapabilityKeys, StringComparer.OrdinalIgnoreCase);
+        WritableExternalTargetAliases = NormalizeSet(writableExternalTargetAliases, ExternalTargetAliasCodec.EqualityComparer);
+        ReadOnlyExternalTargetAliases = NormalizeSet(readOnlyExternalTargetAliases, ExternalTargetAliasCodec.EqualityComparer);
+        AllowedManagedArtifactReadRefs = NormalizeSet(allowedManagedArtifactReadRefs, StringComparer.OrdinalIgnoreCase);
     }
 
     public AgentExecutionAuthorityId AuthorityId { get; }
@@ -122,14 +123,16 @@ public sealed record AgentExecutionGovernanceSnapshot
             authority.ReadOnlyExternalTargetAliases);
     }
 
-    private static ImmutableHashSet<string> NormalizeSet(IReadOnlyList<string>? entries)
+    private static ImmutableHashSet<string> NormalizeSet(
+        IReadOnlyList<string>? entries,
+        IEqualityComparer<string> comparer)
     {
         if (entries is null || entries.Count == 0)
         {
             return [];
         }
 
-        var builder = ImmutableHashSet.CreateBuilder<string>(StringComparer.OrdinalIgnoreCase);
+        var builder = ImmutableHashSet.CreateBuilder(comparer);
         foreach (var entry in entries)
         {
             if (!string.IsNullOrWhiteSpace(entry))

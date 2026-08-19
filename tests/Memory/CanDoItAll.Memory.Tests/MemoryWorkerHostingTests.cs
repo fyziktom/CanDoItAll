@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Runtime;
 
 public sealed class MemoryWorkerHostingTests
 {
@@ -34,7 +34,7 @@ public sealed class MemoryWorkerHostingTests
             })
             .Build();
 
-        services.AddCanDoItAllRuntimeModules(configuration);
+        services.AddCanDoItAllRuntimeModules(configuration, MemoryTestHostEnvironment.Instance);
 
         var options = Assert.IsType<MemoryWorkerHostingOptions>(services
             .Single(descriptor => descriptor.ServiceType == typeof(MemoryWorkerHostingOptions))

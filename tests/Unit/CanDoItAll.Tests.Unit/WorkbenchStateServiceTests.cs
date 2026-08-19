@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class WorkbenchStateServiceTests
 {

@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Projects;
@@ -14,6 +16,7 @@ namespace CanDoItAll.Modules.Workbench;
 public sealed class ProjectManagerSummaryQueryService(
     ProjectPlanAnalyticsQueryService planAnalytics,
     IAgentExecutionReportReader agentWorkspace,
+    ILlmChatProjectStructureReportStore simpleChatProjectStructureReportStore,
     IWorkflowProjectStructureReportStore workflowProjectStructureReportStore,
     IProcessRunRecordStore processRunRecordStore,
     ProcessDefinitionCatalogProjectionService processDefinitionCatalog,
@@ -72,7 +75,7 @@ public sealed class ProjectManagerSummaryQueryService(
             "Reading historical activity",
             uncategorizedOnly
                 ? "Reading the lightweight uncategorized conversation index without loading run payloads."
-                : "Reading lightweight conversations, standalone workflows, and root process projections in parallel.",
+                : "Reading lightweight conversations, Simple Chats, standalone workflows, and root process projections in parallel.",
             1,
             4);
         var agentReportTask = agentWorkspace.QueryExecutionReportAsync(
@@ -96,6 +99,18 @@ public sealed class ProjectManagerSummaryQueryService(
                 requestedPageSize: LatestActivityCount,
                 includeAggregate: true,
                 cancellationToken);
+        var simpleChatReportTask = uncategorizedOnly
+            ? Task.FromResult(ProjectManagerSimpleChatSummaryInput.Empty)
+            : ReadSimpleChatReportAsync(
+                scope.ProjectIds,
+                historyFromUtc,
+                asOfUtc,
+                chartFromUtc,
+                ProjectManagerActivityStatusFilter.All,
+                requestedPageIndex: 0,
+                requestedPageSize: LatestActivityCount,
+                includeAggregate: true,
+                cancellationToken);
         var processSummaryTask = uncategorizedOnly
             ? Task.FromResult(ProcessSummary.Empty)
             : ReadProcessSummaryAsync(
@@ -107,9 +122,11 @@ public sealed class ProjectManagerSummaryQueryService(
                 cancellationToken);
         await Task.WhenAll(
             agentReportTask,
+            simpleChatReportTask,
             workflowReportTask,
             processSummaryTask);
         var agentReport = await agentReportTask;
+        var simpleChatReport = await simpleChatReportTask;
         var workflowReport = await workflowReportTask;
         var processSummary = await processSummaryTask;
 
@@ -122,6 +139,7 @@ public sealed class ProjectManagerSummaryQueryService(
                 clock.GetUtcNow(),
                 plans,
                 MapAgentSummaryInput(agentReport),
+                simpleChatReport,
                 workflowReport,
                 processSummary.Report with
                 {
@@ -147,6 +165,7 @@ public sealed class ProjectManagerSummaryQueryService(
         return request.Kind switch
         {
             ProjectManagerActivityKind.Conversation => await QueryConversationPageAsync(request, cancellationToken),
+            ProjectManagerActivityKind.SimpleChat => await QuerySimpleChatPageAsync(request, cancellationToken),
             ProjectManagerActivityKind.Workflow => await QueryWorkflowPageAsync(request, cancellationToken),
             ProjectManagerActivityKind.Process => await QueryProcessPageAsync(request, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(
@@ -205,6 +224,46 @@ public sealed class ProjectManagerSummaryQueryService(
             report.Items.Select(MapAgentActivity).ToArray(),
             report.PageIndex,
             report.PageSize,
+            aggregate.TotalCount,
+            aggregate.Totals,
+            aggregate.TotalDurationMilliseconds);
+    }
+
+    private async Task<ProjectManagerActivityPage> QuerySimpleChatPageAsync(
+        ProjectManagerActivityPageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var summary = request.Summary;
+        if (summary.Scope.Scope == ProjectManagerSummaryScope.UncategorizedAgentActivity)
+        {
+            return EmptyActivityPage(request);
+        }
+
+        var chartFromUtc = summary.HistoryFromUtc ??
+            summary.AsOfUtc.AddDays(-MaximumChartDayCount);
+        var knownAggregate = request.KnownAggregate;
+        var report = await ReadSimpleChatReportAsync(
+            summary.Scope.ProjectIds,
+            summary.HistoryFromUtc,
+            summary.AsOfUtc,
+            chartFromUtc,
+            request.StatusFilter,
+            request.PageIndex,
+            request.PageSize,
+            includeAggregate: knownAggregate is null,
+            cancellationToken);
+        var aggregate = knownAggregate ?? new ProjectManagerActivityAggregate(
+            report.TotalCount,
+            new ProjectManagerCostTotals(
+                report.KnownCostUsd,
+                HistoricalEstimatedUsd: 0m,
+                FuturePlannedUsd: 0m,
+                report.UnknownCostRunCount),
+            report.DurationMilliseconds);
+        return new ProjectManagerActivityPage(
+            report.Activities,
+            request.PageIndex,
+            request.PageSize,
             aggregate.TotalCount,
             aggregate.Totals,
             aggregate.TotalDurationMilliseconds);
@@ -301,6 +360,42 @@ public sealed class ProjectManagerSummaryQueryService(
         {
             NextProcessCursor = page.NextCursor
         };
+    }
+
+    private async Task<ProjectManagerSimpleChatSummaryInput> ReadSimpleChatReportAsync(
+        IReadOnlyList<Guid> projectIds,
+        DateTimeOffset? historyFromUtc,
+        DateTimeOffset asOfUtc,
+        DateTimeOffset chartFromUtc,
+        ProjectManagerActivityStatusFilter statusFilter,
+        int requestedPageIndex,
+        int requestedPageSize,
+        bool includeAggregate,
+        CancellationToken cancellationToken)
+    {
+        var report = await simpleChatProjectStructureReportStore.QueryProjectStructureReportAsync(
+            new LlmChatProjectStructureReportQuery(
+                projectIds,
+                historyFromUtc,
+                asOfUtc,
+                chartFromUtc,
+                ResolveSimpleChatStatuses(statusFilter),
+                requestedPageIndex,
+                requestedPageSize,
+                includeAggregate),
+            cancellationToken);
+
+        return new ProjectManagerSimpleChatSummaryInput(
+            report.TotalCount,
+            report.KnownCostUsd,
+            report.TotalDurationMilliseconds,
+            report.UnknownCostRunCount,
+            report.DailyCost
+                .Select(static item => new ProjectManagerKnownExpensePoint(
+                    item.Date,
+                    item.KnownCostUsd))
+                .ToArray(),
+            report.Runs.Select(MapSimpleChatActivity).ToArray());
     }
 
     private async Task<ProjectManagerWorkflowSummaryInput> ReadWorkflowReportAsync(
@@ -576,6 +671,27 @@ public sealed class ProjectManagerSummaryQueryService(
         };
     }
 
+    private static IReadOnlyList<LlmChatOperationStatus> ResolveSimpleChatStatuses(
+        ProjectManagerActivityStatusFilter statusFilter)
+        => statusFilter switch
+        {
+            ProjectManagerActivityStatusFilter.All => [],
+            ProjectManagerActivityStatusFilter.Active =>
+            [
+                LlmChatOperationStatus.Pending,
+                LlmChatOperationStatus.Running,
+                LlmChatOperationStatus.CancellationRequested,
+                LlmChatOperationStatus.RecoveryRequired
+            ],
+            ProjectManagerActivityStatusFilter.Succeeded => [LlmChatOperationStatus.Succeeded],
+            ProjectManagerActivityStatusFilter.Failed => [LlmChatOperationStatus.Failed],
+            ProjectManagerActivityStatusFilter.Cancelled => [LlmChatOperationStatus.Cancelled],
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(statusFilter),
+                statusFilter,
+                "The manager activity status filter is not supported.")
+        };
+
     private static IReadOnlyList<WorkflowRunState> ResolveWorkflowStates(
         ProjectManagerActivityStatusFilter statusFilter)
         => statusFilter switch
@@ -629,6 +745,32 @@ public sealed class ProjectManagerSummaryQueryService(
             EstimatedCostUsd: 0m,
             run.HasUnknownCost,
             run.Tags);
+    }
+
+    private static ProjectManagerActivity MapSimpleChatActivity(
+        LlmChatProjectStructureReportRun run)
+    {
+        var title = string.IsNullOrWhiteSpace(run.ConversationTitle)
+            ? $"{run.DefinitionName} chat"
+            : run.ConversationTitle.Trim();
+        var summary = $"{run.DefinitionName} · Revision {run.DefinitionRevision:N0} · " +
+            $"{run.ProviderName} / {run.Model}";
+        return new ProjectManagerActivity(
+            new ProjectManagerActivityId(run.OperationId.Value),
+            ProjectManagerActivityKind.SimpleChat,
+            title,
+            summary,
+            MapSimpleChatStatus(run.Status),
+            run.ActivityAtUtc,
+            run.DurationMilliseconds,
+            run.KnownCostUsd,
+            EstimatedCostUsd: 0m,
+            run.HasUnknownCost,
+            [
+                $"simple-chat:{run.DefinitionId.Value:D}",
+                $"provider:{run.ProviderName}",
+                $"model:{run.Model}"
+            ]);
     }
 
     private static ProjectManagerActivity MapWorkflowActivity(
@@ -711,6 +853,23 @@ public sealed class ProjectManagerSummaryQueryService(
                 nameof(run),
                 run.State,
                 "The agent execution report status is not supported.")
+        };
+
+    private static ProjectManagerActivityStatus MapSimpleChatStatus(
+        LlmChatOperationStatus status)
+        => status switch
+        {
+            LlmChatOperationStatus.Pending => ProjectManagerActivityStatus.Active,
+            LlmChatOperationStatus.Running => ProjectManagerActivityStatus.Active,
+            LlmChatOperationStatus.CancellationRequested => ProjectManagerActivityStatus.Waiting,
+            LlmChatOperationStatus.RecoveryRequired => ProjectManagerActivityStatus.Waiting,
+            LlmChatOperationStatus.Succeeded => ProjectManagerActivityStatus.Succeeded,
+            LlmChatOperationStatus.Failed => ProjectManagerActivityStatus.Failed,
+            LlmChatOperationStatus.Cancelled => ProjectManagerActivityStatus.Cancelled,
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                status,
+                "The Simple Chat operation status is not supported.")
         };
 
     private static ProjectManagerActivityStatus MapWorkflowStatus(WorkflowRunState state)

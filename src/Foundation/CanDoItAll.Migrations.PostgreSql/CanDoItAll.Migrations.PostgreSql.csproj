@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\App\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>

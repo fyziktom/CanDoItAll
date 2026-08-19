@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/tests/Unit/">
+    <Project Path="../Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj" />
+  </Folder>
+  <Folder Name="/tests/Components/">
+    <Project Path="../Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
+  </Folder>
+  <Folder Name="/tests/Integration/">
+    <Project Path="../Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
+  </Folder>
+  <Folder Name="/tests/Memory/">
+    <Project Path="../Memory/CanDoItAll.Memory.Tests/CanDoItAll.Memory.Tests.csproj" />
+    <Project Path="../MAF/CanDoItAll.AgentFramework.Memory.Tests/CanDoItAll.AgentFramework.Memory.Tests.csproj" />
+  </Folder>
+</Solution>

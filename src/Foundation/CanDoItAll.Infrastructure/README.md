@@ -26,3 +26,4 @@ Infrastructure owns persistence, storage, background runtime primitives, health,
 
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`
+- Storage and host-path portability: `docs/architecture/storage-and-path-portability.md`

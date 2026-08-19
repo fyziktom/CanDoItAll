@@ -1,0 +1,133 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="flex @(IsUserMessage ? "justify-end" : "justify-start")"
+     data-testid="conversation-message"
+     data-state="@Message.State.ToString().ToLowerInvariant()"
+     aria-busy="@BusyState"
+     aria-live="@LiveRegionPoliteness"
+     role="@LiveRegionRole">
+    <div class="flex max-w-[44rem] flex-col gap-2 @(IsUserMessage ? "items-end" : "items-start")">
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            @if (!IsUserMessage && Message.Avatar is not null)
+            {
+                <Avatar Alt="@Message.Avatar.Alt"
+                        ImageUrl="@Message.Avatar.ImageUrl"
+                        FallbackText="@Message.Avatar.FallbackText"
+                        DefaultImageSeed="@Message.Avatar.Seed"
+                        Size="AvatarSize.Small"
+                        Shape="AvatarShape.Rounded" />
+            }
+
+            <StatusBadge Tone="@PresentationToneResolver.Resolve(Message.RoleTone)"
+                         Text="@Message.RoleLabel" />
+            @if (StateLabel is not null)
+            {
+                <StatusBadge Tone="@StateTone" Text="@StateLabel" />
+            }
+            <TextBlock TextStyle="TextStyle.Caption" Value="@Message.CreatedAtDisplay" />
+        </Cluster>
+
+        <div class="@ResolveBubbleClass()">
+            @if (IsUserMessage)
+            {
+                <p class="text-sm leading-6">@Message.Content</p>
+                @if (!string.IsNullOrWhiteSpace(Message.HiddenContext))
+                {
+                    <details class="chat-message-context chat-message-context--user"
+                             data-testid="@(Message.State == ConversationMessageState.Pending ? "chat-pending-hidden-context" : "chat-message-hidden-context")">
+                        <summary>...more</summary>
+                        <pre>@Message.HiddenContext</pre>
+                    </details>
+                }
+            }
+            else
+            {
+                <ConversationMarkdownRenderer Markdown="@Message.Content"
+                                              Class="text-sm leading-6" />
+            }
+
+            @if (ShouldRenderFooter)
+            {
+                <div class="chat-message-footer">
+                    <span class="chat-message-footer-meta">
+                        @if (Message.TokenEstimate > 0)
+                        {
+                            <span class="text-xs @(IsUserMessage ? "text-white/70" : "text-slate-400")">~@Message.TokenEstimate tokens</span>
+                        }
+                    </span>
+
+                    @if (CanCopy)
+                    {
+                        <CopyButton Value="@Message.CopyValue"
+                                    DisplayMode="CopyButtonDisplayMode.IconOnly"
+                                    Size="CopyButtonSize.ExtraSmall"
+                                    AriaLabel="@Message.CopyAriaLabel"
+                                    Class="@(IsUserMessage ? "chat-message-copy chat-message-copy--user" : "chat-message-copy")" />
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ConversationMessagePresentation Message { get; set; } = default!;
+
+    private bool IsUserMessage => Message.Role == ConversationMessageRole.User;
+
+    private bool IsSupportedConversationRole
+        => Message.Role is ConversationMessageRole.User or ConversationMessageRole.Assistant;
+
+    private bool CanCopy
+        => IsSupportedConversationRole && !string.IsNullOrWhiteSpace(Message.CopyValue);
+
+    private bool ShouldRenderFooter
+        => CanCopy || IsSupportedConversationRole && Message.TokenEstimate > 0;
+
+    private string? BusyState
+        => Message.State is ConversationMessageState.Pending or ConversationMessageState.Streaming
+            ? "true"
+            : null;
+
+    private string? LiveRegionRole
+        => Message.State switch
+        {
+            ConversationMessageState.Failed => "alert",
+            ConversationMessageState.Pending or ConversationMessageState.Streaming or ConversationMessageState.Cancelled => "status",
+            _ => null
+        };
+
+    private string? LiveRegionPoliteness
+        => Message.State switch
+        {
+            ConversationMessageState.Failed => "assertive",
+            ConversationMessageState.Pending or ConversationMessageState.Streaming or ConversationMessageState.Cancelled => "polite",
+            _ => null
+        };
+
+    private string? StateLabel
+        => Message.State switch
+        {
+            ConversationMessageState.Pending => "Sending...",
+            ConversationMessageState.Streaming => "Responding...",
+            ConversationMessageState.Failed => "Failed",
+            ConversationMessageState.Cancelled => "Cancelled",
+            _ => null
+        };
+
+    private string StateTone
+        => Message.State switch
+        {
+            ConversationMessageState.Streaming => "info",
+            ConversationMessageState.Failed => "danger",
+            _ => "neutral"
+        };
+
+    private string ResolveBubbleClass()
+        => CssClassBuilder.Join(
+            "chat-message-bubble rounded-[1.4rem] border px-4 py-3.5 shadow-sm",
+            IsUserMessage
+                ? "border-slate-900 bg-slate-900 text-white"
+                : "border-slate-200 bg-slate-50 text-slate-700");
+}

@@ -7,7 +7,7 @@ using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentExternalProvisioningApiIntegrationTests
 {

@@ -17,11 +17,13 @@ internal static class AgentFrameworkProviderMetadata
     private const string ConfigSchemaVersionPropertyName = "configSchemaVersion";
     private const string SecretRecordIdPropertyName =
         ProviderProfileMetadataPropertyNames.SecretRecordId;
+    private const string SecretReferencePrefix = "secret:";
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
     private const string PurposePropertyName = "providerPurpose";
     private const string ProviderKindPropertyName =
         ProviderProfileMetadataPropertyNames.ProviderKind;
+    private const string SuggestedModelsPropertyName = "suggestedModels";
     private const string TagsPropertyName = "tags";
     private const string SupportsVisionPropertyName = "supportsVision";
     private const string ThinkingEffortCapabilitiesPropertyName =
@@ -36,6 +38,7 @@ internal static class AgentFrameworkProviderMetadata
         ProviderKindPropertyName,
         TransportPropertyName,
         PurposePropertyName,
+        SuggestedModelsPropertyName,
         TagsPropertyName,
         SupportsVisionPropertyName,
         ThinkingEffortCapabilitiesPropertyName
@@ -92,7 +95,8 @@ internal static class AgentFrameworkProviderMetadata
         ProviderTransportKind transport,
         ProviderProfilePurpose purpose,
         IReadOnlyList<ProviderModelThinkingEffortCapability> thinkingEffortCapabilities,
-        IEnumerable<string>? tags = null)
+        IEnumerable<string>? tags = null,
+        IEnumerable<string>? suggestedModels = null)
     {
         var configuration = ParseObject(configurationJson);
         configuration[ConnectorPluginKeyPropertyName] = connectorPluginKey;
@@ -102,6 +106,7 @@ internal static class AgentFrameworkProviderMetadata
         configuration[TransportPropertyName] = transport.ToString();
         configuration[PurposePropertyName] = purpose.ToString();
         WriteThinkingEffortCapabilities(configuration, thinkingEffortCapabilities);
+        WriteSuggestedModels(configuration, suggestedModels);
         WriteTags(configuration, tags);
         if (secretRecordId.HasValue)
         {
@@ -113,6 +118,47 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         return configuration.ToJsonString();
+    }
+
+    public static IReadOnlyList<string> ReadSuggestedModels(
+        WorkspaceProviderProfile provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        return ReadSuggestedModels(provider.ExtraSettingsJson);
+    }
+
+    public static IReadOnlyList<string> ReadSuggestedModels(
+        string? configurationJson)
+    {
+        var configuration = ParseObjectStrict(configurationJson);
+        if (!configuration.TryGetPropertyValue(
+                SuggestedModelsPropertyName,
+                out var suggestedModelsNode))
+        {
+            return [];
+        }
+
+        if (suggestedModelsNode is not JsonArray suggestedModelsArray)
+        {
+            throw new InvalidOperationException(
+                $"Provider configuration property '{SuggestedModelsPropertyName}' must be an array of non-empty model names.");
+        }
+
+        var suggestedModels = new List<string>(suggestedModelsArray.Count);
+        foreach (var item in suggestedModelsArray)
+        {
+            if (item is not JsonValue value ||
+                !value.TryGetValue<string>(out var model) ||
+                string.IsNullOrWhiteSpace(model))
+            {
+                throw new InvalidOperationException(
+                    $"Provider configuration property '{SuggestedModelsPropertyName}' must contain only non-empty model names.");
+            }
+
+            suggestedModels.Add(model);
+        }
+
+        return NormalizeSuggestedModels(suggestedModels);
     }
 
     public static IReadOnlyList<string> ReadTags(
@@ -277,6 +323,18 @@ internal static class AgentFrameworkProviderMetadata
             configuredSecretRecordId,
             inlineSecretRecordId);
         return inlineSecretRecordId ?? configuredSecretRecordId;
+    }
+
+    public static string CreateSecretReference(Guid secretRecordId)
+    {
+        if (secretRecordId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "A secret reference requires a non-empty record id.",
+                nameof(secretRecordId));
+        }
+
+        return $"{SecretReferencePrefix}{secretRecordId:D}";
     }
 
     public static string ResolveConnectorPluginKey(
@@ -525,9 +583,8 @@ internal static class AgentFrameworkProviderMetadata
             return null;
         }
 
-        const string SecretPrefix = "secret:";
         if (!normalizedReference.StartsWith(
-                SecretPrefix,
+                SecretReferencePrefix,
                 StringComparison.OrdinalIgnoreCase))
         {
             if (!rejectEnvironmentVariableName)
@@ -540,7 +597,7 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         if (Guid.TryParse(
-                normalizedReference[SecretPrefix.Length..],
+                normalizedReference[SecretReferencePrefix.Length..],
                 out var secretRecordId) &&
             secretRecordId != Guid.Empty)
         {
@@ -589,6 +646,37 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         configuration[TagsPropertyName] = tagArray;
+    }
+
+    private static void WriteSuggestedModels(
+        JsonObject configuration,
+        IEnumerable<string>? suggestedModels)
+    {
+        var normalizedModels = NormalizeSuggestedModels(suggestedModels);
+        if (normalizedModels.Count == 0)
+        {
+            configuration.Remove(SuggestedModelsPropertyName);
+            return;
+        }
+
+        var modelArray = new JsonArray();
+        foreach (var model in normalizedModels)
+        {
+            modelArray.Add(JsonValue.Create(model));
+        }
+
+        configuration[SuggestedModelsPropertyName] = modelArray;
+    }
+
+    private static IReadOnlyList<string> NormalizeSuggestedModels(
+        IEnumerable<string>? suggestedModels)
+    {
+        return suggestedModels?
+            .Where(model => !string.IsNullOrWhiteSpace(model))
+            .Select(model => model.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
     }
 
     private static void WriteThinkingEffortCapabilities(

@@ -3,14 +3,20 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using static CanDoItAll.Modules.Processes.ProcessRuntimeOwnedToolReceiptFactory;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetSolutionSetupRuntimeExecutor(
+    IWorkspaceFileService workspaceFiles,
     IWorkspaceCommandExecutionService workspaceCommands,
     WorkspaceManagedScriptPlanExecutor managedScriptPlanExecutor,
-    DotNetExistingSolutionVerifier? existingSolutionVerifier = null) : IProcessRuntimeOwnedStepExecutor
+    IExternalTargetPathRegistry externalTargetPathRegistry,
+    DotNetExistingSolutionVerifier existingSolutionVerifier,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory) : IProcessRuntimeOwnedStepExecutor
 {
     internal const string DriverKey = "dotnet.solution-setup";
     private const string WorkspaceDotnetNew = "workspace_dotnet_new";
@@ -20,7 +26,8 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     private const string CreateAppProjectOperationKey = "create-app-project";
     private const string IdempotentSkipRiskClass = "RuntimeOwned:IdempotentSkip";
     private const string PostconditionVerifiedRiskClass = "RuntimeOwned:PostconditionVerified";
-    private readonly DotNetExistingSolutionVerifier existingSolutionVerifier = existingSolutionVerifier ?? new DotNetExistingSolutionVerifier();
+    private readonly DotNetExistingSolutionVerifier existingSolutionVerifier = existingSolutionVerifier
+        ?? throw new ArgumentNullException(nameof(existingSolutionVerifier));
 
     public string ExecutorKey => DriverKey;
 
@@ -57,7 +64,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                  ProcessRuntimeOwnedStepFailures.ContractInvalid);
         }
 
-        var guard = DotNetSolutionSetupToolPlanGuard.Evaluate(assignment);
+        var guard = DotNetSolutionSetupToolPlanGuard.Evaluate(assignment, physicalPathPolicyFactory);
         var plan = guard.Plan;
         if (plan is null && guard.IsSatisfied)
         {
@@ -297,23 +304,35 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var existingTarget = FindExistingTarget(targetPaths);
+        var existingTarget = FindExistingTarget(targetPaths, receipts, executionRunId);
         if (existingTarget is not null)
         {
             receipts.Add(CreateIdempotentSkipReceipt(
                 executionRunId,
                 WorkspaceDotnetNew,
                 $"new {template} idempotent-skip existing target",
-                ToExternalTargetAliasOrNative(parentDirectory),
+                ToExternalTargetAlias(parentDirectory),
                 $"Succeeded: Existing .NET target '{Path.GetFileName(existingTarget)}' was verified; destructive regeneration was skipped."));
             return DotNetSolutionSetupOperationResult.Ok;
         }
 
-        Directory.CreateDirectory(parentDirectory);
+        var createParentDirectory = workspaceFiles.CreateDirectory(ToExternalTargetAlias(parentDirectory));
+        receipts.Add(From(executionRunId, createParentDirectory));
+        if (!createParentDirectory.Succeeded)
+        {
+            return new DotNetSolutionSetupOperationResult(
+                false,
+                $"Runtime-owned .NET setup could not prepare the parent directory for '{name}'.",
+                $"dotnet-new-parent-directory:{template}:{name}:{createParentDirectory.Message}",
+                ApplyExecutionPolicy(
+                    ProcessRuntimeOwnedStepFailures.ExecutionFailed,
+                    idempotency));
+        }
+
         var dotnetNew = await workspaceCommands.DotnetNew(
                 template,
                 name,
-                ToExternalTargetAliasOrNative(parentDirectory),
+                ToExternalTargetAlias(parentDirectory),
                 force: false,
                 timeoutSeconds: 300,
                 targetFramework: targetFramework)
@@ -321,7 +340,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         receipts.Add(From(executionRunId, dotnetNew));
         if (!dotnetNew.Succeeded)
         {
-            var reconciledTarget = FindExistingTarget(targetPaths);
+            var reconciledTarget = FindExistingTarget(targetPaths, receipts, executionRunId);
             if (reconciledTarget is not null &&
                 string.Equals(
                     dotnetNew.Receipt.Outcome,
@@ -332,7 +351,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     executionRunId,
                     WorkspaceDotnetNew,
                     $"new {template} postcondition-reconciled existing target",
-                    ToExternalTargetAliasOrNative(parentDirectory),
+                    ToExternalTargetAlias(parentDirectory),
                     $"Succeeded: Contracted .NET target '{Path.GetFileName(reconciledTarget)}' exists after the command result; destructive regeneration was skipped and downstream readback remains required."));
                 return DotNetSolutionSetupOperationResult.Ok;
             }
@@ -346,7 +365,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                     idempotency));
         }
 
-        var createdTarget = targetPaths.FirstOrDefault(File.Exists);
+        var createdTarget = FindExistingTarget(targetPaths, receipts, executionRunId);
         if (createdTarget is null)
         {
             return new DotNetSolutionSetupOperationResult(
@@ -421,7 +440,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         return true;
     }
 
-    private static bool TryResolveExecutionInputs(
+    private bool TryResolveExecutionInputs(
         ProcessRuntimeStepAssignment assignment,
         DotNetSolutionSetupToolPlan plan,
         out DotNetSolutionSetupRuntimeExecutionInputs inputs,
@@ -437,11 +456,22 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return false;
         }
 
+        IPhysicalFileSystemPathPolicy productRootPolicy;
         try
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(
+                productRoot,
+                "runtime-owned .NET setup ProductRoot");
+            if (!Path.IsPathRooted(productRoot))
+            {
+                issue = "Runtime-owned .NET setup requires ProductRoot or ExternalTargetRoot to be an absolute path.";
+                return false;
+            }
+
             productRoot = Path.GetFullPath(productRoot);
+            productRootPolicy = physicalPathPolicyFactory.Create(productRoot);
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException or PhysicalPathValidationException)
         {
             issue = "Runtime-owned .NET setup received an invalid ProductRoot or ExternalTargetRoot.";
             return false;
@@ -450,19 +480,19 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
         if (!TryResolveContractedProductFile(
                 assignment.LaunchVariables,
                 "DotNetSolutionFile",
-                productRoot,
+                productRootPolicy,
                 out var solutionFile,
                 out issue) ||
             !TryResolveSolutionCandidateFiles(
                 assignment.LaunchVariables,
-                productRoot,
+                productRootPolicy,
                 solutionFile,
                 out var solutionCandidateFiles,
                 out issue) ||
             !TryResolveContractedProductFile(
                 assignment.LaunchVariables,
                 "DotNetAppProjectFile",
-                productRoot,
+                productRootPolicy,
                 out var appProjectFile,
                 out issue))
         {
@@ -474,16 +504,22 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             !TryResolveContractedProductFile(
                 assignment.LaunchVariables,
                 "DotNetTestProjectFile",
-                productRoot,
+                productRootPolicy,
                 out testProjectFile,
                 out issue))
         {
             return false;
         }
 
+        if (!externalTargetPathRegistry.TryCreateAlias(productRoot, out var productRootAlias))
+        {
+            issue = "Runtime-owned .NET setup could not bind ProductRoot to an opaque external-target alias on this host.";
+            return false;
+        }
+
         inputs = new DotNetSolutionSetupRuntimeExecutionInputs(
             productRoot,
-            ToExternalTargetAliasOrNative(productRoot),
+            productRootAlias,
             solutionFile,
             solutionCandidateFiles,
             appProjectFile,
@@ -494,7 +530,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
     private static bool TryResolveContractedProductFile(
         IReadOnlyDictionary<string, string> launchVariables,
         string variableKey,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         out string path,
         out string issue)
     {
@@ -506,12 +542,12 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return false;
         }
 
-        return TryNormalizeContractedProductFile(configuredPath, variableKey, productRoot, out path, out issue);
+        return TryNormalizeContractedProductFile(configuredPath, variableKey, productRootPolicy, out path, out issue);
     }
 
     private static bool TryResolveSolutionCandidateFiles(
         IReadOnlyDictionary<string, string> launchVariables,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         string solutionFile,
         out IReadOnlyList<string> candidateFiles,
         out string issue)
@@ -525,7 +561,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             if (!TryNormalizeContractedProductFile(
                     configuredCandidate,
                     "DotNetSolutionFileCandidates",
-                    productRoot,
+                    productRootPolicy,
                     out var candidate,
                     out issue))
             {
@@ -533,25 +569,44 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
                 return false;
             }
 
-            if (!normalizedCandidates.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+            if (!normalizedCandidates.Contains(candidate, productRootPolicy.PathComparer))
             {
                 normalizedCandidates.Add(candidate);
             }
         }
 
         candidateFiles = DotNetSolutionContextPathResolver
-            .IncludeSupportedSolutionFormatAlternatives(normalizedCandidates);
+            .IncludeSupportedSolutionFormatAlternatives(
+                normalizedCandidates,
+                productRootPolicy.PathComparer);
         issue = string.Empty;
         return true;
     }
 
-    private static string? FindExistingTarget(IReadOnlyList<string> targetPaths)
-        => targetPaths.FirstOrDefault(File.Exists);
+    private string? FindExistingTarget(
+        IReadOnlyList<string> targetPaths,
+        List<ToolExecutionReceiptRecord> receipts,
+        Guid executionRunId)
+    {
+        foreach (var targetPath in targetPaths)
+        {
+            var targetStat = workspaceFiles.StatPath(ToExternalTargetAlias(targetPath));
+            receipts.Add(From(executionRunId, targetStat));
+            if (targetStat.Succeeded &&
+                targetStat.Exists &&
+                string.Equals(targetStat.PathKind, "file", StringComparison.OrdinalIgnoreCase))
+            {
+                return targetPath;
+            }
+        }
+
+        return null;
+    }
 
     private static bool TryNormalizeContractedProductFile(
         string configuredPath,
         string variableKey,
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         out string path,
         out string issue)
     {
@@ -565,16 +620,18 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
 
         try
         {
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(
+                path,
+                $"runtime-owned .NET setup {variableKey}");
             path = Path.GetFullPath(path);
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException)
         {
             issue = $"Runtime-owned .NET setup received an invalid '{variableKey}' path.";
             return false;
         }
 
-        var normalizedRoot = EnsureTrailingDirectorySeparator(productRoot);
-        if (!path.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        if (!productRootPolicy.IsWithinRoot(path))
         {
             issue = $"Runtime-owned .NET setup requires '{variableKey}' to remain under ProductRoot.";
             return false;
@@ -582,11 +639,6 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
 
         return true;
     }
-
-    private static string EnsureTrailingDirectorySeparator(string path)
-        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
 
     private static bool TryResolveReadbackChecks(
         IReadOnlyDictionary<string, string> launchVariables,
@@ -630,7 +682,7 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             return productRoot;
         }
 
-        return Directory.GetParent(projectDirectory)?.FullName ?? productRoot;
+        return Path.GetDirectoryName(projectDirectory) ?? productRoot;
     }
 
     private static string ResolveLaunchVariable(
@@ -686,36 +738,20 @@ internal sealed class DotNetSolutionSetupRuntimeExecutor(
             DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow);
 
-    private static string ToExternalTargetAliasOrNative(string path)
+    private string ToExternalTargetAlias(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
             return path;
         }
 
-        var fullPath = Path.GetFullPath(path);
-        var rootPath = Path.GetPathRoot(fullPath);
-        if (string.IsNullOrWhiteSpace(rootPath))
+        if (externalTargetPathRegistry.TryCreateAlias(path, out var alias))
         {
-            return fullPath;
+            return alias;
         }
 
-        var trimmedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmedRoot.Length != 2 ||
-            trimmedRoot[1] != ':' ||
-            !char.IsLetter(trimmedRoot[0]))
-        {
-            return fullPath;
-        }
-
-        var relative = fullPath.Length <= rootPath.Length
-            ? string.Empty
-            : fullPath[rootPath.Length..]
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .TrimStart(Path.DirectorySeparatorChar);
-        return string.IsNullOrWhiteSpace(relative)
-            ? $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}"
-            : $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}/{relative.Replace(Path.DirectorySeparatorChar, '/')}";
+        throw new InvalidOperationException(
+            "The .NET solution setup target could not be bound to an opaque external-target alias on this host.");
     }
 
     private sealed record DotNetSolutionSetupRuntimeExecutionInputs(

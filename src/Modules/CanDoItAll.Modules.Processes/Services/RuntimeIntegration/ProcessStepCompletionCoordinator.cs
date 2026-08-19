@@ -18,6 +18,9 @@ internal sealed class ProcessStepCompletionCoordinator(
     ProcessExecutionResultConverter resultConverter,
     ILogger<ProcessStepCompletionCoordinator> logger)
 {
+    internal const string InvalidStructuredOutcomeShapeDiagnosticCode =
+        "process.adapter.structured_outcome_shape_invalid";
+
     internal ProcessManagedArtifactService.ManagedOutcomeArtifactMaterialization Materialize(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
@@ -25,6 +28,22 @@ internal sealed class ProcessStepCompletionCoordinator(
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts,
         ProcessStepExecutionContract? stepContract = null)
     {
+        if (!ProcessReceiptNarrativeSanitizer.IsBoundedShape(output))
+        {
+            var primaryRef = ProcessManagedArtifactEvidence.BuildManagedStepArtifactPath(assignment);
+            return ProcessManagedArtifactService.ManagedOutcomeArtifactMaterialization.Failed(
+                ProcessReceiptNarrativeSanitizer.Sanitize(assignment, output),
+                toolReceipts,
+                primaryRef,
+                new ProcessCompletionIssue(
+                    InvalidStructuredOutcomeShapeDiagnosticCode,
+                    $"Step '{assignment.StepKey}' returned a structured outcome outside the bounded runtime contract. The managed artifact was left unchanged.",
+                    $"{assignment.RunId}:{assignment.StepInstanceId}:structured-outcome-shape-invalid",
+                    assignment.ProducedArtifactSlotIds,
+                    ProcessDiagnosticRetrySafety.SafeToRetry,
+                    ProcessDiagnosticIdempotencyClassification.Idempotent));
+        }
+
         var normalizedOutput = ProcessOutcomeCitationSanitizer.RemoveNonCitableSourceMetadataFromOutcome(output);
         normalizedOutput = groundingValidator.RemoveUngroundedNonAuthoritativeCriterionEvidenceRefs(
             assignment,
@@ -59,6 +78,8 @@ internal sealed class ProcessStepCompletionCoordinator(
                 assignment.StepKey,
                 executionRunId);
         }
+
+        normalizedOutput = ProcessReceiptNarrativeSanitizer.Sanitize(assignment, normalizedOutput);
 
         return managedArtifactService.MaterializeManagedOutcomeArtifactIfNeeded(
             assignment,

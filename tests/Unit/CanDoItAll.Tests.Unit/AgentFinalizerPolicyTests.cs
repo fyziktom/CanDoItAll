@@ -8,7 +8,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OllamaSharp.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentFinalizerPolicyTests
 {
@@ -36,6 +36,7 @@ public sealed class AgentFinalizerPolicyTests
             var recovered = MafStreamingTurnExecutor.TryReadCompleteRecoveryArtifact(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 artifactRef,
                 out var artifactMarkdown);
 

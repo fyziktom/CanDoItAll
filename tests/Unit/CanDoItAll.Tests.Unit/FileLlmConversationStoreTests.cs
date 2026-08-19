@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.Conversations;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.LlmChats;
 
 /// <summary>
 /// SB15: persistence behavior of the file-backed ordinary LLM conversation store — durable round trips
@@ -224,10 +224,10 @@ public sealed class FileLlmConversationStoreTests : IDisposable
     [Fact]
     public async Task Failed_atomic_write_removes_the_temporary_file()
     {
-        var store = new FileLlmConversationStore(_root, async (path, payload, cancellationToken) =>
+        var store = new FileLlmConversationStore(_root, cancellationToken =>
         {
-            await File.WriteAllTextAsync(path, payload, cancellationToken);
-            throw new IOException("Injected write failure.");
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromException(new IOException("Injected write failure."));
         });
         var document = CreateDocument();
 
@@ -241,11 +241,11 @@ public sealed class FileLlmConversationStoreTests : IDisposable
     public async Task Canceled_atomic_write_removes_the_temporary_file()
     {
         using var cancellation = new CancellationTokenSource();
-        var store = new FileLlmConversationStore(_root, async (path, payload, cancellationToken) =>
+        var store = new FileLlmConversationStore(_root, cancellationToken =>
         {
-            await File.WriteAllTextAsync(path, payload, cancellationToken);
             cancellation.Cancel();
             cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.CompletedTask;
         });
         var document = CreateDocument();
 
@@ -257,14 +257,16 @@ public sealed class FileLlmConversationStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task Coordinator_releases_the_canonical_path_entry_after_an_operation()
+    public async Task Operation_releases_the_cross_process_coordination_handle()
     {
         var store = new FileLlmConversationStore(Path.Combine(_root, "."));
         var document = CreateDocument();
 
         await store.CreateAsync(document);
 
-        Assert.False(LlmConversationFileCoordinator.IsTracked(DocumentPath(document.ConversationId)));
+        string lockPath = DocumentPath(document.ConversationId) + ".conversation-transaction.candoitall.lock";
+        using var exclusive = new FileStream(lockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Assert.True(exclusive.CanWrite);
     }
 
     [Fact]
@@ -456,6 +458,6 @@ public sealed class FileLlmConversationStoreTests : IDisposable
 
     private IEnumerable<string> EnumerateTemporaryFiles()
         => Directory.Exists(Path.Combine(_root, "conversations"))
-            ? Directory.EnumerateFiles(Path.Combine(_root, "conversations"), "*.tmp-*", SearchOption.TopDirectoryOnly)
+            ? Directory.EnumerateFiles(Path.Combine(_root, "conversations"), "*.tmp", SearchOption.TopDirectoryOnly)
             : [];
 }

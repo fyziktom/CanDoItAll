@@ -3,7 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskResourceCostEstimatorTests : BunitContext
 {

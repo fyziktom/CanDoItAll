@@ -5,7 +5,7 @@ using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class CrmHrAgentQueryIntegrationTests
 {

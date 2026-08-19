@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
 {
@@ -306,7 +306,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                         RiskClass: "LocalExecution:Mcp",
                         ApprovalMode: "NotRequired",
                         IsolationGuarantee: "PolicyOnlyLocal",
-                        RequestSummary: "--yes, @playwright/mcp@latest, --headless, --caps, vision",
+                        RequestSummary: "--yes, @playwright/mcp@0.0.78, --headless, --caps, vision",
                             WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
                             ExitSummary: "Prepared",
                             StartedAtUtc: now,
@@ -425,7 +425,7 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                     RiskClass: "LocalExecution:Mcp",
                     ApprovalMode: "NotRequired",
                     IsolationGuarantee: "PolicyOnlyLocal",
-                    RequestSummary: "--yes, @playwright/mcp@latest, --headless, --caps, vision",
+                    RequestSummary: "--yes, @playwright/mcp@0.0.78, --headless, --caps, vision",
                     WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
                     ExitSummary: "Prepared",
                     StartedAtUtc: now,

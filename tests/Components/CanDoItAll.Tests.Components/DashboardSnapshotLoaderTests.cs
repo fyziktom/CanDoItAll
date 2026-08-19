@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Web.Dashboard;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class DashboardSnapshotLoaderTests
 {

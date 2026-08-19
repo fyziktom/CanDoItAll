@@ -2,7 +2,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessCoreKernelTests
 {

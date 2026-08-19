@@ -1,10 +1,29 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceExternalTargetAliasTests : IDisposable
 {
     private readonly string rootPath = Path.Combine(Path.GetTempPath(), "CanDoItAll.WorkspaceExternalTargetAliasTests", Guid.NewGuid().ToString("N"));
+    private readonly ExternalTargetPathRegistry externalTargets = new();
+
+    [Fact]
+    public void Receipt_writer_keeps_case_distinct_versioned_alias_targets()
+    {
+        const string rootId = "0123456789abcdef01234567";
+        var upperAlias = ExternalTargetAliasCodec.BuildAlias(rootId, ["Foo"]);
+        var lowerAlias = ExternalTargetAliasCodec.BuildAlias(rootId, ["foo"]);
+        var writer = new WorkspaceFileReceiptWriter(CreateDirectory("workspace"));
+
+        var references = writer.BuildTargetArtifactReferences([upperAlias, lowerAlias], "test");
+
+        Assert.Equal(2, references.Count);
+        Assert.Contains(references, item => string.Equals(item.RelativePath, upperAlias, StringComparison.Ordinal));
+        Assert.Contains(references, item => string.Equals(item.RelativePath, lowerAlias, StringComparison.Ordinal));
+    }
 
     [Fact]
     public void TryResolveWorkspacePath_maps_external_target_alias_to_real_external_path()
@@ -12,7 +31,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Workflow.sln");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
 
         var succeeded = policy.TryResolveWorkspacePath(aliasPath, allowWorkspaceRoot: false, out var resolution, out var validationMessage);
 
@@ -28,7 +47,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     public void TryResolveWorkspacePath_rejects_external_drive_root()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
 
         var succeeded = policy.TryResolveWorkspacePath(
             "external-target/C",
@@ -37,8 +56,16 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
             out var validationMessage);
 
         Assert.False(succeeded);
-        Assert.Contains("external drive root", validationMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("specific grounded path", validationMessage, StringComparison.OrdinalIgnoreCase);
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Contains("external drive root", validationMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("specific grounded path", validationMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains("legacy Windows drive alias", validationMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("rebind", validationMessage, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     [Theory]
@@ -50,7 +77,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     public void TryResolveWorkspacePath_rejects_external_target_dot_segments(string aliasPath)
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
 
         var succeeded = policy.TryResolveWorkspacePath(
             aliasPath,
@@ -70,7 +97,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         File.WriteAllText(Path.Combine(outsideRoot, "secret.txt"), "secret");
         var linkedRoot = Path.Combine(workspaceRoot, "linked");
         Directory.CreateSymbolicLink(linkedRoot, outsideRoot);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
 
         var succeeded = policy.TryResolveWorkspacePath(
             "linked/secret.txt",
@@ -90,8 +117,9 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         var workspaceRoot = CreateDirectory("workspace");
         var externalDirectory = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Workflow.App");
         var externalFilePath = Path.Combine(externalDirectory, "WorkflowService.cs");
+        Directory.CreateDirectory(externalDirectory);
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
 
@@ -108,8 +136,9 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     {
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
+        Directory.CreateDirectory(Path.GetDirectoryName(externalFilePath)!);
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -137,8 +166,9 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
     {
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
+        Directory.CreateDirectory(Path.GetDirectoryName(externalFilePath)!);
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -163,7 +193,7 @@ public sealed class WorkspaceExternalTargetAliasTests : IDisposable
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "InventoryApp", "tests", "InventoryApp.Tests", "TestingFallback.cs");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -185,8 +215,9 @@ public sealed class TestMethodAttribute : Attribute;
     {
         var workspaceRoot = CreateDirectory("workspace");
         var externalFilePath = Path.Combine(CreateDirectory("external-target-root"), "Workflow", "Components", "Pages", "Home.razor");
+        Directory.CreateDirectory(Path.GetDirectoryName(externalFilePath)!);
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -212,7 +243,7 @@ public sealed class TestMethodAttribute : Attribute;
         var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
         var hostFilePath = Path.Combine(projectDirectory, "Pages", "_Host.cshtml");
         var aliasPath = BuildExternalTargetAlias(hostFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -234,7 +265,7 @@ public sealed class TestMethodAttribute : Attribute;
         var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
         var programFilePath = Path.Combine(projectDirectory, "Program.cs");
         var aliasPath = BuildExternalTargetAlias(programFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -262,7 +293,7 @@ app.Run();
         var projectDirectory = CreateCurrentBlazorWebAppProject("FerryKiosk");
         var programFilePath = Path.Combine(projectDirectory, "Program.cs");
         var aliasPath = BuildExternalTargetAlias(programFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileMutationService(policy, receiptWriter);
         var content = """
@@ -294,7 +325,7 @@ app.Run();
         var externalFilePath = Path.Combine(externalDirectory, "WorkflowService.cs");
         File.WriteAllText(externalFilePath, "public static class WorkflowService { public static int Add(int left, int right) => left + right; }");
         var aliasPath = BuildExternalTargetAlias(externalFilePath);
-        var policy = new WorkspacePathPolicy(workspaceRoot);
+        var policy = TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets);
         var receiptWriter = new WorkspaceFileReceiptWriter(workspaceRoot);
         var service = new WorkspaceFileQueryService(policy, receiptWriter, new WorkspaceTextContentGuard());
 
@@ -314,7 +345,8 @@ app.Run();
         var externalSolutionPath = Path.Combine(externalDirectory, "Workflow.sln");
         File.WriteAllText(externalSolutionPath, string.Empty);
         var aliasPath = BuildExternalTargetAlias(externalSolutionPath);
-        var builder = new WorkspaceCommandPlanBuilder(new WorkspacePathPolicy(workspaceRoot));
+        var builder = new WorkspaceCommandPlanBuilder(
+            TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets));
 
         var plan = builder.BuildDotnetBuild(aliasPath);
 
@@ -328,7 +360,8 @@ app.Run();
     public void BuildDotnetNew_includes_force_argument_when_requested()
     {
         var workspaceRoot = CreateDirectory("workspace");
-        var builder = new WorkspaceCommandPlanBuilder(new WorkspacePathPolicy(workspaceRoot));
+        var builder = new WorkspaceCommandPlanBuilder(
+            TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets));
 
         var plan = builder.BuildDotnetNew("blazor", "WorkflowApp", force: true);
 
@@ -341,7 +374,7 @@ app.Run();
         var workspaceRoot = CreateDirectory("workspace-inaccessible-target");
         Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps", "WorkflowApp"));
         var builder = new WorkspaceCommandPlanBuilder(
-            new WorkspacePathPolicy(workspaceRoot),
+            TestWorkspaceServices.CreatePathPolicy(workspaceRoot, externalTargetRegistry: externalTargets),
             _ => throw new UnauthorizedAccessException(@"C:\private\native-path"));
 
         var exception = Assert.Throws<WorkspaceToolAccessDeniedException>(
@@ -392,26 +425,10 @@ app.Run();
         return projectDirectory;
     }
 
-    private static string BuildExternalTargetAlias(string fullPath)
+    private string BuildExternalTargetAlias(string fullPath)
     {
-        var normalizedFullPath = Path.GetFullPath(fullPath);
-        var root = Path.GetPathRoot(normalizedFullPath)
-            ?? throw new InvalidOperationException($"Could not resolve a drive root for '{fullPath}'.");
-        var trimmedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmedRoot.Length != 2 || trimmedRoot[1] != ':')
-        {
-            throw new InvalidOperationException($"External-target alias tests require a drive-letter path. Received '{fullPath}'.");
-        }
-
-        var driveLetter = char.ToUpperInvariant(trimmedRoot[0]);
-        var relativeWithinDrive = normalizedFullPath.Length <= root.Length
-            ? string.Empty
-            : normalizedFullPath[root.Length..]
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .TrimStart(Path.DirectorySeparatorChar);
-
-        return string.IsNullOrWhiteSpace(relativeWithinDrive)
-            ? $"external-target/{driveLetter}"
-            : WorkspacePathPolicy.NormalizeRelativePath(Path.Combine("external-target", driveLetter.ToString(), relativeWithinDrive));
+        return externalTargets.TryCreateAlias(fullPath, out var alias)
+            ? alias
+            : throw new InvalidOperationException($"Could not create an external-target alias for '{fullPath}'.");
     }
 }

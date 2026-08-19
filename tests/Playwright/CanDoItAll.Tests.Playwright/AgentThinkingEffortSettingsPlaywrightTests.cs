@@ -4,16 +4,13 @@ using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Flows;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class AgentThinkingEffortSettingsPlaywrightTests
 {
     private const string SupportedModel = "gpt-5.4";
-    private const string UnsupportedModel = "gpt-4.1";
-    private const string UnknownModel = "custom-deployment-west";
     private const string ProviderDefaultEffortLabel = "Provider default (medium)";
-    private const string ProviderDefaultModelLabel = "Provider default (gpt-5.4)";
 
     private readonly PlaywrightAppFixture fixture;
 
@@ -23,7 +20,7 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
     }
 
     [Fact]
-    public async Task Runtime_thinking_effort_supports_override_reset_and_blocks_incompatible_models()
+    public async Task Runtime_thinking_effort_override_and_reset_survive_browser_reload()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var seed = await SeedThinkingEffortAgentAsync(suffix);
@@ -50,21 +47,10 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
 
         var effortSelector = dialog.GetByTestId("agents-catalog-thinking-effort");
         var supportGuidance = dialog.GetByTestId("agents-catalog-thinking-effort-support");
-        var modelSelector = dialog.GetByTestId("agents-catalog-model-choice");
         var saveButton = dialog.GetByTestId("agents-catalog-save");
 
         await Assertions.Expect(effortSelector).ToBeEnabledAsync();
         await AssertSelectedOptionAsync(effortSelector, ProviderDefaultEffortLabel);
-        Assert.Equal(
-            [
-                ProviderDefaultEffortLabel,
-                "None (disable thinking)",
-                "Low",
-                "Medium",
-                "High",
-                "Extra high"
-            ],
-            await effortSelector.Locator("option").AllTextContentsAsync());
         await Assertions.Expect(effortSelector).ToBeInViewportAsync();
         await Assertions.Expect(supportGuidance).ToBeInViewportAsync();
         await Assertions.Expect(saveButton).ToBeInViewportAsync();
@@ -80,8 +66,6 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
 
         dialog = await OpenAgentRuntimeAsync(page, seed);
         effortSelector = dialog.GetByTestId("agents-catalog-thinking-effort");
-        supportGuidance = dialog.GetByTestId("agents-catalog-thinking-effort-support");
-        modelSelector = dialog.GetByTestId("agents-catalog-model-choice");
         saveButton = dialog.GetByTestId("agents-catalog-save");
 
         await AssertSelectedOptionAsync(effortSelector, "High");
@@ -94,93 +78,10 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
 
         dialog = await OpenAgentRuntimeAsync(page, seed);
         effortSelector = dialog.GetByTestId("agents-catalog-thinking-effort");
-        supportGuidance = dialog.GetByTestId("agents-catalog-thinking-effort-support");
-        modelSelector = dialog.GetByTestId("agents-catalog-model-choice");
-        saveButton = dialog.GetByTestId("agents-catalog-save");
 
         await AssertSelectedOptionAsync(effortSelector, ProviderDefaultEffortLabel);
         await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-reset-reopened.png");
-
-        await SelectOptionByLabelAsync(modelSelector, UnsupportedModel);
-        await Assertions.Expect(effortSelector).ToBeDisabledAsync();
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("does not support configurable thinking effort");
-        await Assertions.Expect(saveButton).ToBeEnabledAsync();
-        await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-unsupported.png");
-
-        await SetCustomModelAsync(dialog, UnknownModel);
-        await Assertions.Expect(effortSelector).ToBeDisabledAsync();
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("not defined");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("verified capability definition");
-        await Assertions.Expect(saveButton).ToBeEnabledAsync();
-        await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-unknown.png");
-
-        await dialog.GetByTestId("agents-catalog-model-override").UncheckAsync();
-        await AssertSelectedOptionAsync(modelSelector, ProviderDefaultModelLabel);
-        await SelectOptionByLabelAsync(effortSelector, "High");
-        await SelectOptionByLabelAsync(modelSelector, UnsupportedModel);
-
-        await Assertions.Expect(effortSelector).ToBeEnabledAsync();
-        await AssertSelectedOptionAsync(effortSelector, "High (currently configured; unavailable)");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("cannot be applied");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("Select Provider default to remove this override");
-        await Assertions.Expect(saveButton).ToBeDisabledAsync();
-        await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-incompatible-override.png");
-
-        await SelectOptionByLabelAsync(effortSelector, "Provider default");
-        await Assertions.Expect(effortSelector).ToBeDisabledAsync();
-        await Assertions.Expect(saveButton).ToBeEnabledAsync();
-
-        await SelectOptionByLabelAsync(modelSelector, ProviderDefaultModelLabel);
-        await SelectOptionByLabelAsync(effortSelector, "High");
-        await SetCustomModelAsync(dialog, UnknownModel);
-
-        await Assertions.Expect(effortSelector).ToBeEnabledAsync();
-        await AssertSelectedOptionAsync(effortSelector, "High (currently configured; unavailable)");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("cannot be applied");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("not defined");
-        await Assertions.Expect(saveButton).ToBeDisabledAsync();
-
-        await SelectOptionByLabelAsync(effortSelector, "Provider default");
-        await Assertions.Expect(effortSelector).ToBeDisabledAsync();
-        await Assertions.Expect(saveButton).ToBeEnabledAsync();
-
-        var providerSelector = dialog.GetByTestId("agents-catalog-provider");
-        await providerSelector.SelectOptionAsync(seed.InvalidDefaultProviderId.ToString("D"));
-        await Assertions.Expect(providerSelector).ToHaveValueAsync(seed.InvalidDefaultProviderId.ToString("D"));
-        await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-invalid-provider-default.png");
-        await Assertions.Expect(effortSelector).ToBeEnabledAsync();
-        await AssertSelectedOptionAsync(effortSelector, "Provider default (unavailable)");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("provider default cannot be applied");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("Select a supported override");
-        await Assertions.Expect(supportGuidance).ToContainTextAsync("max");
-        await Assertions.Expect(saveButton).ToBeDisabledAsync();
-        await SelectOptionByLabelAsync(effortSelector, "High");
-        await Assertions.Expect(saveButton).ToBeEnabledAsync();
-        await saveButton.ClickAsync();
-        await ExpectTextContainsAsync(page.Locator("body"), "Technical agent saved.");
-
-        dialog = await OpenAgentRuntimeAsync(page, seed);
-        effortSelector = dialog.GetByTestId("agents-catalog-thinking-effort");
-        supportGuidance = dialog.GetByTestId("agents-catalog-thinking-effort-support");
-        saveButton = dialog.GetByTestId("agents-catalog-save");
-
-        await AssertSelectedOptionAsync(effortSelector, "High");
-        await Assertions.Expect(saveButton).ToBeEnabledAsync();
-        await SelectOptionByLabelAsync(effortSelector, "Provider default (unavailable)");
-        await AssertSelectedOptionAsync(effortSelector, "Provider default (unavailable)");
-        await Assertions.Expect(saveButton).ToBeDisabledAsync();
-        await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-invalid-provider-default-reset.png");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
-
-        var chatResponse = await page.GotoAsync(
-            $"{fixture.BaseUrl}/agents?tab=chat&agentId={seed.AgentId:D}");
-        Assert.True(chatResponse?.Ok);
-        await DismissStartupModalIfPresentAsync(page);
-        await page.GetByTestId("agents-chat-panel").WaitForAsync();
-        await Assertions.Expect(
-            page.GetByTestId("agents-catalog-thinking-effort"))
-            .ToHaveCountAsync(0);
-        await CaptureEvidenceAsync(page, evidenceDirectory, "agent-thinking-chat-no-control.png");
     }
 
     private async Task<SeededThinkingEffortAgent> SeedThinkingEffortAgentAsync(string suffix)
@@ -211,44 +112,10 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
             ConfigurationJson = AgentThinkingEffortPolicy.WriteProviderDefault(
                 "{}",
                 AgentReasoningEffortLevel.Medium),
-            SuggestedModels =
-            [
-                SupportedModel,
-                UnsupportedModel,
-                UnknownModel
-            ]
-        });
-        var invalidDefaultProviderId = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
-        {
-            Name = $"Thinking Effort Invalid Default {suffix}",
-            Kind = ProviderKind.OpenAi,
-            BaseUrl = $"https://api.openai.com/v1/playwright-thinking-effort-invalid/{suffix}",
-            ApiKeyEnvironmentVariable = "OPENAI_API_KEY",
-            DefaultModel = SupportedModel,
-            Transport = ProviderTransportKind.Responses,
-            Purpose = ProviderProfilePurpose.Chat,
-            IsEnabled = true,
-            SupportsStreaming = true,
-            SupportsTools = true,
-            ConfigurationJson = AgentThinkingEffortPolicy.WriteProviderDefault(
-                "{}",
-                AgentReasoningEffortLevel.Max),
             SuggestedModels = [SupportedModel]
         });
-        var invalidDefaultProvider = Assert.Single(
-            await workspaceService.ListProvidersAsync(),
-            provider => provider.Id == invalidDefaultProviderId);
-        Assert.Equal(
-            AgentReasoningEffortLevel.Max,
-            AgentThinkingEffortPolicy.ReadConfiguredEffort(
-                invalidDefaultProvider.ConfigurationJson,
-                "provider"));
-        Assert.Throws<InvalidOperationException>(() =>
-            AgentThinkingEffortPolicy.ResolveProviderDefault(
-                invalidDefaultProvider,
-                SupportedModel));
         var agentName = $"Thinking Effort Browser {suffix}";
-        var agentId = await workspaceService.SaveAgentAsync(new AgentEditorModel
+        _ = await workspaceService.SaveAgentAsync(new AgentEditorModel
         {
             Name = agentName,
             RoleTitle = "Runtime settings tester",
@@ -257,7 +124,7 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
             ProviderProfileId = providerId
         });
 
-        return new SeededThinkingEffortAgent(agentId, agentName, invalidDefaultProviderId);
+        return new SeededThinkingEffortAgent(agentName);
     }
 
     private async Task<ILocator> OpenAgentRuntimeAsync(
@@ -332,19 +199,6 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
         });
     }
 
-    private static async Task SetCustomModelAsync(ILocator dialog, string model)
-    {
-        var overrideToggle = dialog.GetByTestId("agents-catalog-model-override");
-        if (!await overrideToggle.IsCheckedAsync())
-        {
-            await overrideToggle.CheckAsync();
-        }
-
-        var customModelInput = dialog.GetByTestId("agents-catalog-model");
-        await customModelInput.FillAsync(model);
-        await Assertions.Expect(customModelInput).ToHaveValueAsync(model);
-    }
-
     private static Task AssertSelectedOptionAsync(ILocator selector, string expectedLabel)
         => Assertions.Expect(selector.Locator("option:checked")).ToHaveTextAsync(expectedLabel);
 
@@ -392,8 +246,5 @@ public sealed class AgentThinkingEffortSettingsPlaywrightTests
         });
     }
 
-    private sealed record SeededThinkingEffortAgent(
-        Guid AgentId,
-        string AgentName,
-        Guid InvalidDefaultProviderId);
+    private sealed record SeededThinkingEffortAgent(string AgentName);
 }

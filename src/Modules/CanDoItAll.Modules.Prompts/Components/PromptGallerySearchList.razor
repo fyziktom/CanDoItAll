@@ -93,7 +93,26 @@
         </Grid>
     </FilterBar>
 
-    @if (!string.IsNullOrWhiteSpace(Provider) || !string.IsNullOrWhiteSpace(Model))
+    @if (ShowActualChatModelFilter && HasActualChatModel)
+    {
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
+            <label class="prompt-gallery-search-list__choice">
+                <CheckBox TValue="bool"
+                          Value="@showActualChatModelOnly"
+                          ValueChanged="HandleActualChatModelFilterChangedAsync"
+                          aria-label="Show actual chat model only"
+                          data-testid="prompt-gallery-actual-model-filter" />
+                <span>Show actual chat model only</span>
+            </label>
+            @if (!string.IsNullOrWhiteSpace(Provider))
+            {
+                <StatusBadge Tone="info" Text="@Provider" />
+            }
+            <StatusBadge Tone="accent" Text="@Model" />
+        </Cluster>
+    }
+    else if (UseContextProviderModel &&
+             (!string.IsNullOrWhiteSpace(Provider) || !string.IsNullOrWhiteSpace(Model)))
     {
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Compatibility filter" />
@@ -255,7 +274,9 @@
     private PromptGalleryConsumer? previousConsumer;
     private string? previousProvider;
     private string? previousModel;
+    private bool previousShowActualChatModelFilter;
     private bool isLoading = true;
+    private bool showActualChatModelOnly = true;
     private bool favoritesOnly;
     private bool includeArchived;
     private bool disposed;
@@ -268,6 +289,9 @@
 
     [Parameter]
     public string? Model { get; set; }
+
+    [Parameter]
+    public bool ShowActualChatModelFilter { get; set; }
 
     [Parameter]
     public bool Compact { get; set; }
@@ -292,6 +316,11 @@
 
     private string ResultText => isLoading ? "Searching" : $"{page.TotalCount:N0} matching item(s)";
 
+    private bool HasActualChatModel => !string.IsNullOrWhiteSpace(Model);
+
+    private bool UseContextProviderModel
+        => !ShowActualChatModelFilter || !HasActualChatModel || showActualChatModelOnly;
+
     private string FilterColumnTemplate => Compact
         ? "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.2fr) auto auto"
         : "minmax(18rem,2fr) minmax(8rem,.7fr) minmax(8rem,.7fr) minmax(13rem,1.25fr) minmax(9rem,.8fr) minmax(10rem,.9fr) auto auto auto";
@@ -305,6 +334,7 @@
         previousConsumer = Consumer;
         previousProvider = Provider;
         previousModel = Model;
+        previousShowActualChatModelFilter = ShowActualChatModelFilter;
         await LoadPageAsync(0);
     }
 
@@ -312,7 +342,8 @@
     {
         if (previousConsumer == Consumer &&
             string.Equals(previousProvider, Provider, StringComparison.Ordinal) &&
-            string.Equals(previousModel, Model, StringComparison.Ordinal))
+            string.Equals(previousModel, Model, StringComparison.Ordinal) &&
+            previousShowActualChatModelFilter == ShowActualChatModelFilter)
         {
             return;
         }
@@ -320,6 +351,8 @@
         previousConsumer = Consumer;
         previousProvider = Provider;
         previousModel = Model;
+        previousShowActualChatModelFilter = ShowActualChatModelFilter;
+        showActualChatModelOnly = true;
         if (!isLoading)
         {
             await LoadPageAsync(0);
@@ -358,6 +391,7 @@
         status = null;
         providerFilter = string.Empty;
         modelFilter = string.Empty;
+        showActualChatModelOnly = false;
         favoritesOnly = false;
         includeArchived = false;
         await LoadPageAsync(0);
@@ -384,6 +418,12 @@
     private async Task HandleFavoritesOnlyChangedAsync(bool value)
     {
         favoritesOnly = value;
+        await LoadPageAsync(0);
+    }
+
+    private async Task HandleActualChatModelFilterChangedAsync(bool value)
+    {
+        showActualChatModelOnly = value;
         await LoadPageAsync(0);
     }
 
@@ -473,8 +513,12 @@
                     Kind: kind,
                     Status: status,
                     IncludeArchived: includeArchived,
-                    Provider: string.IsNullOrWhiteSpace(Provider) ? providerFilter : Provider,
-                    Model: string.IsNullOrWhiteSpace(Model) ? modelFilter : Model,
+                    Provider: UseContextProviderModel
+                        ? string.IsNullOrWhiteSpace(Provider) ? providerFilter : Provider
+                        : Compact ? null : providerFilter,
+                    Model: UseContextProviderModel
+                        ? string.IsNullOrWhiteSpace(Model) ? modelFilter : Model
+                        : Compact ? null : modelFilter,
                     PageIndex: pageIndex,
                     PageSize: requestedPageSize,
                     Consumer: Consumer,

@@ -1,0 +1,37 @@
+{
+  "server": "CanDoItAll.Mcp.Components 1.0.0.0",
+  "protocolVersion": "2025-06-18",
+  "calls": [
+    {
+      "tool": "component_get",
+      "component": "Badge",
+      "correlationId": "corr_a7d1a70460dc4350baa2ee8e64521cb8b",
+      "decision": "Use typed BadgeTone and compact text; badges do not replace headings or summaries."
+    },
+    {
+      "tool": "component_usage_examples",
+      "component": "Badge",
+      "correlationId": "corr_ae2492c8bb364220a1996fa91778ba55",
+      "decision": "Follow the BaseLib Badge Text/Tone composition proven in the sandbox."
+    },
+    {
+      "tool": "component_get",
+      "component": "Stack",
+      "correlationId": "corr_5ee9e5bf1ce64ca880ce7cad6d849e06",
+      "decision": "Use horizontal Stack with typed Wrap and GapScale before custom flex CSS."
+    },
+    {
+      "tool": "component_usage_examples",
+      "component": "Stack",
+      "correlationId": "corr_4d03a38b71be4ab3b82c5cb878a9e2c1",
+      "decision": "Reuse sandbox-proven typed spacing rather than add structural CSS."
+    },
+    {
+      "tool": "component_get",
+      "component": "Icon",
+      "correlationId": "corr_750e72ef0f7b4a2ab17f707e85919603",
+      "decision": "Render optional recognition icons only when supplied by presentation state."
+    }
+  ],
+  "warnings": []
+}

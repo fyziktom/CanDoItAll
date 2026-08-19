@@ -3,7 +3,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class PostgreSqlStartupReadinessPolicyTests
 {

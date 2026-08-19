@@ -1,4 +1,8 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -11,7 +15,9 @@ internal sealed record DotNetResolvedSolutionContext(
     IReadOnlyList<string> TestProjectFiles,
     string WorkspaceAlias);
 
-internal sealed class DotNetSolutionContextPathResolver
+internal sealed class DotNetSolutionContextPathResolver(
+    IExternalTargetPathRegistry externalTargetPathRegistry,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
 {
     public bool TryResolve(
         DotNetSolutionContext context,
@@ -23,21 +29,25 @@ internal sealed class DotNetSolutionContextPathResolver
         ArgumentNullException.ThrowIfNull(variables);
 
         resolved = null!;
-        if (!TryResolveProductRoot(variables, out var productRoot, out issue) ||
-            !TryResolveRelativePath(productRoot, context.SolutionFile, "solution.file", out var solutionFile, out issue) ||
-            !TryResolveRelativePaths(productRoot, context.SolutionCandidateFiles, "solution.candidateFiles", out var solutionCandidates, out issue) ||
-            !TryResolveRelativePaths(productRoot, context.RequiredProjectFiles, "requiredProjectFiles", out var requiredProjectFiles, out issue) ||
-            !TryResolveRelativePaths(productRoot, context.TestProjectFiles, "testProjectFiles", out var testProjectFiles, out issue))
+        if (!TryResolveProductRoot(variables, out var productRootPolicy, out issue) ||
+            !TryResolveRelativePath(productRootPolicy, context.SolutionFile, "solution.file", out var solutionFile, out issue) ||
+            !TryResolveRelativePaths(productRootPolicy, context.SolutionCandidateFiles, "solution.candidateFiles", out var solutionCandidates, out issue) ||
+            !TryResolveRelativePaths(productRootPolicy, context.RequiredProjectFiles, "requiredProjectFiles", out var requiredProjectFiles, out issue) ||
+            !TryResolveRelativePaths(productRootPolicy, context.TestProjectFiles, "testProjectFiles", out var testProjectFiles, out issue))
         {
             return false;
         }
 
-        if (!solutionCandidates.Contains(solutionFile, StringComparer.OrdinalIgnoreCase))
+        string productRoot = productRootPolicy.RootPath;
+
+        if (!solutionCandidates.Contains(solutionFile, productRootPolicy.PathComparer))
         {
             solutionCandidates = [solutionFile, .. solutionCandidates];
         }
 
-        solutionCandidates = IncludeSupportedSolutionFormatAlternatives(solutionCandidates);
+        solutionCandidates = IncludeSupportedSolutionFormatAlternatives(
+            solutionCandidates,
+            productRootPolicy.PathComparer);
 
         resolved = new DotNetResolvedSolutionContext(
             productRoot,
@@ -52,7 +62,8 @@ internal sealed class DotNetSolutionContextPathResolver
     }
 
     internal static IReadOnlyList<string> IncludeSupportedSolutionFormatAlternatives(
-        IEnumerable<string> candidates)
+        IEnumerable<string> candidates,
+        StringComparer pathComparer)
     {
         ArgumentNullException.ThrowIfNull(candidates);
 
@@ -77,15 +88,31 @@ internal sealed class DotNetSolutionContextPathResolver
 
         void Add(string candidate)
         {
-            if (!resolved.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+            if (!resolved.Contains(candidate, pathComparer))
             {
                 resolved.Add(candidate);
             }
         }
     }
 
-    public static bool TryResolveRelativePath(
+    public bool TryResolveRelativePath(
         string productRoot,
+        string value,
+        string fieldName,
+        out string path,
+        out string issue)
+    {
+        if (!TryCreateProductRootPolicy(productRoot, out var productRootPolicy, out issue))
+        {
+            path = string.Empty;
+            return false;
+        }
+
+        return TryResolveRelativePath(productRootPolicy, value, fieldName, out path, out issue);
+    }
+
+    private static bool TryResolveRelativePath(
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         string value,
         string fieldName,
         out string path,
@@ -93,7 +120,8 @@ internal sealed class DotNetSolutionContextPathResolver
     {
         path = string.Empty;
         issue = string.Empty;
-        if (string.IsNullOrWhiteSpace(value) || Path.IsPathRooted(value.Trim()))
+        if (string.IsNullOrWhiteSpace(value) ||
+            PhysicalPathSyntaxClassifier.Classify(value.Trim()) != PhysicalPathSyntax.Relative)
         {
             issue = $"The .NET solution context field '{fieldName}' must be a non-empty product-relative path.";
             return false;
@@ -109,20 +137,16 @@ internal sealed class DotNetSolutionContextPathResolver
 
         try
         {
-            var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(productRoot));
-            var root = EnsureTrailingSeparator(normalizedRoot);
-            var candidate = Path.GetFullPath(Path.Combine(productRoot, value.Trim()));
-            if (!string.Equals(candidate, normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
-                !candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            {
-                issue = $"The .NET solution context field '{fieldName}' escapes ProductRoot.";
-                return false;
-            }
-
-            path = candidate;
+            path = productRootPolicy.ResolveContainedPath(value.Trim());
             return true;
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (PhysicalPathValidationException exception) when (
+            exception.ErrorCode == PhysicalPathValidationErrorCode.OutsideRoot)
+        {
+            issue = $"The .NET solution context field '{fieldName}' escapes ProductRoot.";
+            return false;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException or PhysicalPathValidationException)
         {
             issue = $"The .NET solution context field '{fieldName}' is not a valid product-relative path.";
             return false;
@@ -130,7 +154,7 @@ internal sealed class DotNetSolutionContextPathResolver
     }
 
     private static bool TryResolveRelativePaths(
-        string productRoot,
+        IPhysicalFileSystemPathPolicy productRootPolicy,
         IReadOnlyList<string> values,
         string fieldName,
         out IReadOnlyList<string> paths,
@@ -139,13 +163,13 @@ internal sealed class DotNetSolutionContextPathResolver
         var resolved = new List<string>();
         foreach (var value in values)
         {
-            if (!TryResolveRelativePath(productRoot, value, fieldName, out var path, out issue))
+            if (!TryResolveRelativePath(productRootPolicy, value, fieldName, out var path, out issue))
             {
                 paths = [];
                 return false;
             }
 
-            if (!resolved.Contains(path, StringComparer.OrdinalIgnoreCase))
+            if (!resolved.Contains(path, productRootPolicy.PathComparer))
             {
                 resolved.Add(path);
             }
@@ -156,12 +180,12 @@ internal sealed class DotNetSolutionContextPathResolver
         return true;
     }
 
-    private static bool TryResolveProductRoot(
+    private bool TryResolveProductRoot(
         IDictionary<string, string> variables,
-        out string productRoot,
+        out IPhysicalFileSystemPathPolicy productRootPolicy,
         out string issue)
     {
-        productRoot = ResolveVariable(variables, "ProductRoot");
+        string productRoot = ResolveVariable(variables, "ProductRoot");
         if (string.IsNullOrWhiteSpace(productRoot))
         {
             productRoot = ResolveVariable(variables, "OutputRoot");
@@ -169,18 +193,38 @@ internal sealed class DotNetSolutionContextPathResolver
 
         if (string.IsNullOrWhiteSpace(productRoot))
         {
+            productRootPolicy = null!;
             issue = "The .NET solution context requires ProductRoot or OutputRoot.";
             return false;
         }
 
+        return TryCreateProductRootPolicy(productRoot, out productRootPolicy, out issue);
+    }
+
+    internal bool TryCreateProductRootPolicy(
+        string productRoot,
+        out IPhysicalFileSystemPathPolicy productRootPolicy,
+        out string issue)
+    {
         try
         {
-            productRoot = Path.GetFullPath(productRoot);
+            PhysicalPathSyntaxPolicy.EnsureNativeOrRelative(
+                productRoot,
+                ".NET solution context ProductRoot");
+            if (!Path.IsPathRooted(productRoot))
+            {
+                productRootPolicy = null!;
+                issue = "The .NET solution context requires ProductRoot or OutputRoot to be an absolute path.";
+                return false;
+            }
+
+            productRootPolicy = physicalPathPolicyFactory.Create(Path.GetFullPath(productRoot));
             issue = string.Empty;
             return true;
         }
-        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException or PhysicalPathValidationException)
         {
+            productRootPolicy = null!;
             issue = "The .NET solution context has an invalid product root.";
             return false;
         }
@@ -191,11 +235,9 @@ internal sealed class DotNetSolutionContextPathResolver
             ? value?.Trim() ?? string.Empty
             : string.Empty;
 
-    private static string Alias(string path)
-        => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(path) ?? string.Empty;
+    private string Alias(string path)
+        => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            path,
+            externalTargetPathRegistry) ?? string.Empty;
 
-    private static string EnsureTrailingSeparator(string path)
-        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
-            ? path
-            : path + Path.DirectorySeparatorChar;
 }

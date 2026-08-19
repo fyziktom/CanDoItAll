@@ -1,0 +1,70 @@
+{
+  "subbundleId": "SB09",
+  "status": "completed",
+  "proofTier": "Governed",
+  "repositoryBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "repositoryHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "semanticInvariants": "proof/SB09/semantic-invariants.md",
+  "changedFilesAndRanges": "proof/SB09/final-changed-files-and-ranges.json",
+  "impactedTestsRequest": "proof/SB09/final-impacted-tests-request.json",
+  "impactedTestsResponse": "proof/SB09/final-impacted-tests-response.json",
+  "buildExecution": "proof/SB09/final-build-execution.json",
+  "testExecution": "proof/SB09/final-test-execution.json",
+  "sourceGuards": "proof/SB09/final-source-and-dependency-guards.txt",
+  "uiParity": "proof/SB09/final-ui-parity.md",
+  "broadGateDecision": "proof/SB09/broad-gate-decision.md",
+  "userHandoff": "proof/SB09/user-regression-handoff.md",
+  "transcripts": [
+    "proof/SB09/transcripts/validation.txt"
+  ],
+  "snapshotIds": [
+    "snap-20260816102508-c82f9e5f",
+    "snap-20260816142006-84a4f698"
+  ],
+  "codeAnalyticsCorrelationIds": [
+    "code-analytics_403408ed1a9148948214668d3c5f696d"
+  ],
+  "tests": [
+    {
+      "selection": "AllSuppliedSuites Components",
+      "discovered": 990,
+      "passed": 990,
+      "failed": 0
+    },
+    {
+      "selection": "Stable aggregate",
+      "total": 8289,
+      "passed": 8284,
+      "failed": 3,
+      "skipped": 2,
+      "classification": "Three unrelated untouched LlmChats integration failures."
+    }
+  ],
+  "browserProof": [
+    "proof/SB09/browser/final-floating-agent-chat-completed.png",
+    "proof/SB09/browser/final-agent-settings-runtime.png",
+    "proof/SB09/browser/final-process-manager-chat.png",
+    "proof/SB09/browser/final-console-warnings.txt",
+    "proof/SB09/browser/final-network-requests.txt"
+  ],
+  "requirementsClosed": [
+    "UIR-002",
+    "UIR-003",
+    "UIR-005",
+    "UIR-070",
+    "UIR-071",
+    "UIR-072",
+    "UIR-073",
+    "UIR-074",
+    "UIR-075",
+    "UIR-076",
+    "UIR-077",
+    "UIR-078",
+    "UIR-079",
+    "UIR-080",
+    "UIR-081",
+    "UIR-082"
+  ],
+  "requirementsReopened": [],
+  "checkpointDecision": "pass-awaiting-user-agent-chat-regression"
+}

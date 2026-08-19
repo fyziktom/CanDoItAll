@@ -45,7 +45,12 @@ public sealed record ResolvedTemplateComponentSnapshot(
     string ContentHash);
 
 public sealed record DriverStackSnapshot(
-    IReadOnlyList<ResolvedDriverSnapshot> Drivers);
+    IReadOnlyList<ResolvedDriverSnapshot> Drivers)
+{
+    public ProcessHostProfileId HostProfileId { get; init; } = new("unknown");
+
+    public IReadOnlyList<ProcessHostCapabilityFact> HostCapabilities { get; init; } = [];
+}
 
 public sealed record ResolvedDriverSnapshot(
     DriverId DriverId,
@@ -53,7 +58,11 @@ public sealed record ResolvedDriverSnapshot(
     ProcessDriverLayer Layer,
     string MinRuntimeSchema,
     string MaxRuntimeSchema,
-    IReadOnlySet<CapabilityTag> CapabilityTags);
+    IReadOnlySet<CapabilityTag> CapabilityTags)
+{
+    public IReadOnlySet<ProcessHostCapabilityId> RequiredHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
+}
 
 public sealed record StrategyBindingSet(
     IReadOnlyList<ProcessStrategyBindingSnapshot> ExecutionBindings,
@@ -68,7 +77,13 @@ public sealed record StepInstancePlan(
     ProcessStepKind Kind,
     bool IsExecutable,
     bool StartsSubprocess,
-    ProcessStrategyBindingSnapshot? ExecutionStrategyBinding);
+    ProcessStrategyBindingSnapshot? ExecutionStrategyBinding)
+{
+    public IReadOnlySet<ProcessHostCapabilityId> RequiredHostCapabilities { get; init; } =
+        new HashSet<ProcessHostCapabilityId>();
+
+    public IReadOnlyList<string> RequiredRuntimeToolNames { get; init; } = [];
+}
 
 public sealed record ArtifactPlan(
     IReadOnlyList<ArtifactSlotPlan> Slots,

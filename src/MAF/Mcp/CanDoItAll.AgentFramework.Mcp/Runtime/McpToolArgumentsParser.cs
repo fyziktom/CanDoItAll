@@ -17,7 +17,15 @@ internal static class McpToolArgumentsParser
 
         try
         {
-            using var document = JsonDocument.Parse(jsonArguments);
+            if (System.Text.Encoding.UTF8.GetByteCount(jsonArguments) >
+                McpPayloadSizeLimit.Default.MaximumBytes)
+            {
+                throw new JsonException("The MCP tool arguments exceeded the payload limit.");
+            }
+
+            using var document = JsonDocument.Parse(
+                jsonArguments,
+                new JsonDocumentOptions { MaxDepth = 64 });
             if (document.RootElement.ValueKind != JsonValueKind.Object)
             {
                 throw new JsonException("The root value is not an object.");

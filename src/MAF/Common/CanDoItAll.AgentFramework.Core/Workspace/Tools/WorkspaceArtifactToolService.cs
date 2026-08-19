@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -28,28 +30,20 @@ public sealed class WorkspaceArtifactToolService(
     string workspaceRoot,
     IWorkspaceCommandExecutionService commandExecutionService,
     IWorkspaceDocumentMarkdownConverter documentMarkdownConverter,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     WorkspaceScopeDescriptor? workspaceScope,
-    IWorkspaceImageOperationService imageOperationService) : IWorkspaceArtifactToolService
+    IWorkspaceImageOperationService imageOperationService,
+    IExternalTargetPathRegistry externalTargetPathRegistry) : IWorkspaceArtifactToolService
 {
-    private readonly WorkspacePathPolicy pathPolicy = new(workspaceRoot, workspaceScope);
+    private readonly WorkspacePathPolicy pathPolicy = new(
+        workspaceRoot,
+        physicalPathPolicyFactory ?? throw new ArgumentNullException(nameof(physicalPathPolicyFactory)),
+        workspaceScope,
+        externalTargetPathRegistry ?? throw new ArgumentNullException(nameof(externalTargetPathRegistry)));
     private readonly WorkspaceFileReceiptWriter receiptWriter = new(workspaceRoot, workspaceScope);
     private readonly WorkspaceScopeDescriptor workspaceScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
     private readonly IWorkspaceImageOperationService imageOperationService = imageOperationService
         ?? throw new ArgumentNullException(nameof(imageOperationService));
-
-    public WorkspaceArtifactToolService(
-        string workspaceRoot,
-        IWorkspaceCommandExecutionService commandExecutionService,
-        IWorkspaceDocumentMarkdownConverter documentMarkdownConverter,
-        WorkspaceScopeDescriptor? workspaceScope = null)
-        : this(
-            workspaceRoot,
-            commandExecutionService,
-            documentMarkdownConverter,
-            workspaceScope,
-            new WorkspaceImageOperationService(workspaceRoot, workspaceScope))
-    {
-    }
 
     public async Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(
         string path,

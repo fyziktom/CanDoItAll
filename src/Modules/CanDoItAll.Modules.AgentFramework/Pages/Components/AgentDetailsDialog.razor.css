@@ -6,14 +6,6 @@
     min-height: min(60vh, 42rem);
 }
 
-.agent-details-dialog__full-field {
-    width: 100%;
-}
-
-.agent-details-dialog__avatar-summary {
-    width: 100%;
-}
-
 .agent-details-dialog__custom-avatar {
     width: 100%;
 }
@@ -42,21 +34,6 @@
     background: rgb(239 246 255);
     border-color: rgb(37 99 235);
     box-shadow: 0 0 0 3px rgb(191 219 254 / 0.7);
-}
-
-.agent-details-dialog__summary-textarea,
-.agent-details-dialog__instructions-textarea {
-    display: block;
-    resize: vertical;
-    width: 100%;
-}
-
-.agent-details-dialog__summary-textarea {
-    min-height: 9rem;
-}
-
-.agent-details-dialog__instructions-textarea {
-    min-height: 18rem;
 }
 
 .agent-details-dialog__capability-actions {

@@ -1,7 +1,7 @@
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectPackageStorageCatalogSnapshotTests
 {

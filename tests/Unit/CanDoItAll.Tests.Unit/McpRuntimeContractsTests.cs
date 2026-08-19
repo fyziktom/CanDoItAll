@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Capabilities.Access;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Mcp;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using System.Text;
@@ -7,10 +9,12 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Protocol;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class McpRuntimeContractsTests
 {
+    private const string SupportedProtocolVersion = "2025-06-18";
+
     [Fact]
     public async Task INV_INTERNAL_001_internal_hosted_mcp_setup_uses_application_lifecycle_and_implementation_key()
     {
@@ -335,7 +339,7 @@ public sealed class McpRuntimeContractsTests
     [Fact]
     public async Task Mcp_factory_creates_local_and_remote_http_clients()
     {
-        var factory = new LocalStdioMcpClientFactory();
+        var factory = CreateLocalFactory();
         var local = BrowserDescriptor([McpToolName.Create("browser_snapshot")]);
         var remote = McpDescriptorFactory.RemoteHttp(
             CapabilityKey.Create("remote-browser-mcp"),
@@ -362,6 +366,51 @@ public sealed class McpRuntimeContractsTests
     }
 
     [Fact]
+    public async Task Local_stdio_client_rejects_a_tool_outside_its_typed_allowlist_before_protocol_access()
+    {
+        var client = await CreateLocalFactory().CreateAsync(
+            BrowserDescriptor([McpToolName.Create("SafeTool")]),
+            "LOCAL_STDIO_ALLOWLIST",
+            CancellationToken.None);
+
+        var exception = await Assert.ThrowsAsync<McpSetupException>(() =>
+            client.CallToolAsync(
+                McpToolName.Create("safetool"),
+                "{}",
+                CancellationToken.None));
+
+        Assert.Equal(CapabilityDiagnosticCategory.AccessPolicy, exception.Category);
+        Assert.Equal("$.allowedTools", exception.FieldPath);
+        await client.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public void Local_stdio_descriptor_preserves_path_authority_and_argv_bytes()
+    {
+        var descriptor = McpDescriptorFactory.LocalStdio(
+            CapabilityKey.Create("path-authority-mcp"),
+            McpServerKey.Create("path-authority-mcp"),
+            "Path authority MCP",
+            "Path authority MCP.",
+            "node",
+            ["", " value ", " "],
+            " /workspace/ folder ",
+            ["/workspace/Foo", "/workspace/foo", " /workspace/ folder "],
+            [McpToolName.Create("echo")],
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>(),
+            McpApprovalMode.AlwaysRequire,
+            TimeSpan.FromSeconds(5));
+
+        Assert.Equal(["", " value ", " "], descriptor.Arguments);
+        Assert.Equal(" /workspace/ folder ", descriptor.WorkingDirectory);
+        Assert.Equal(3, descriptor.AllowedWorkingDirectories.Count);
+        Assert.Contains("/workspace/Foo", descriptor.AllowedWorkingDirectories);
+        Assert.Contains("/workspace/foo", descriptor.AllowedWorkingDirectories);
+        Assert.Contains(" /workspace/ folder ", descriptor.AllowedWorkingDirectories);
+    }
+
+    [Fact]
     public async Task Remote_http_client_rejects_missing_environment_backed_header_before_connecting()
     {
         const string environmentVariable = "CANDOITALL_TEST_MISSING_MCP_CREDENTIAL";
@@ -380,7 +429,7 @@ public sealed class McpRuntimeContractsTests
             rawHeaders: new Dictionary<string, string>(),
             approvalMode: McpApprovalMode.NeverRequire,
             timeout: TimeSpan.FromSeconds(3));
-        var client = await new LocalStdioMcpClientFactory().CreateAsync(
+        var client = await CreateLocalFactory().CreateAsync(
             descriptor,
             "REMOTE_HTTP_MISSING_SECRET",
             CancellationToken.None);
@@ -390,6 +439,35 @@ public sealed class McpRuntimeContractsTests
 
         Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, exception.Category);
         await client.StopAsync(CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData("""{"jsonrpc":"2.0","id":1}""")]
+    [InlineData("""{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"1900-01-01","capabilities":{},"serverInfo":{"name":"unsupported","version":"1.0"}}}""")]
+    public void Local_stdio_initialize_rejects_malformed_or_unsupported_handshake(
+        string payload)
+    {
+        using var response = JsonDocument.Parse(payload);
+
+        var exception = Assert.Throws<McpSetupException>(() =>
+            LocalStdioMcpResponseParser.ValidateInitializeResponse(
+                response,
+                SupportedProtocolVersion));
+
+        Assert.Equal(CapabilityDiagnosticCategory.McpHandshake, exception.Category);
+        Assert.Equal("$.initialize.result", exception.FieldPath);
+    }
+
+    [Fact]
+    public void MCP_tool_arguments_require_a_JSON_object_for_every_transport()
+    {
+        var exception = Assert.Throws<McpSetupException>(() =>
+            McpToolArgumentsParser.Parse(
+                "[]",
+                McpServerKey.Create("portable-local-mcp")));
+
+        Assert.Equal(CapabilityDiagnosticCategory.JsonParse, exception.Category);
+        Assert.Equal("$.tools.call.arguments", exception.FieldPath);
     }
 
     [Fact]
@@ -718,5 +796,44 @@ public sealed class McpRuntimeContractsTests
             rawEnvironmentVariables: new Dictionary<string, string>(),
             approvalMode: McpApprovalMode.AlwaysRequire,
             timeout: TimeSpan.FromSeconds(5));
+    }
+
+    private static LocalStdioMcpClientFactory CreateLocalFactory()
+        => new(new NonStartingProcessHost(), new CurrentDirectoryPathResolver());
+
+    private sealed class CurrentDirectoryPathResolver : IWorkspacePathResolutionService
+    {
+        public WorkspaceResolvedPath ResolveFilePath(string path, bool allowMissing)
+            => Resolve(path);
+
+        public WorkspaceResolvedPath ResolveDirectoryPath(string path, bool allowMissing)
+            => Resolve(path);
+
+        private static WorkspaceResolvedPath Resolve(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            return new WorkspaceResolvedPath(fullPath, path, IsWorkspacePath: true);
+        }
+    }
+
+    private sealed class NonStartingProcessHost : IWorkspaceLongRunningProcessHost
+    {
+        public ExecutionBoundaryDescriptor DescribeBoundary()
+            => throw new NotSupportedException();
+
+        public Task<WorkspaceProcessExecutionResult> ExecuteAsync(
+            WorkspaceProcessExecutionRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IWorkspaceProcessSession> StartSessionAsync(
+            WorkspaceProcessSessionRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkspaceProcessTerminationResult> TerminateOwnedProcessAsync(
+            WorkspaceOwnedProcessIdentity identity,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }

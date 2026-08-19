@@ -1,13 +1,14 @@
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed partial class AgentCapabilitySetupFlowService
 {
-    private static McpServerDescriptor BuildMcpDescriptor(
+    internal static McpServerDescriptor BuildMcpDescriptor(
         CapabilityEditorModel capability,
         string correlationId,
         out IReadOnlyList<CapabilityDiagnostic> diagnostics)
@@ -16,14 +17,53 @@ public sealed partial class AgentCapabilitySetupFlowService
         var identity = ReadMcpIdentity(capability, correlationId, errors);
         var configuration = ReadMcpConfiguration(capability, correlationId, identity, errors);
         var serverKey = ReadMcpServerKey(configuration.ServerName, identity.Key.Value, correlationId, identity, errors);
-        var approvalMode = CapabilityText.TryParseEnum<McpApprovalMode>(configuration.ApprovalMode, out var parsedApprovalMode)
-            ? parsedApprovalMode
+        var transport = NormalizeMcpTransport(configuration.Transport, configuration.Command, configuration.Endpoint);
+        var hasValidApprovalMode = !string.IsNullOrWhiteSpace(configuration.ApprovalMode) &&
+                                   Enum.GetNames<McpApprovalMode>()
+                                       .Contains(configuration.ApprovalMode, StringComparer.OrdinalIgnoreCase);
+        var approvalMode = hasValidApprovalMode
+            ? Enum.Parse<McpApprovalMode>(configuration.ApprovalMode!, ignoreCase: true)
             : McpApprovalMode.NeverRequire;
-        var allowedTools = (configuration.AllowedTools ?? [])
-            .Where(tool => !string.IsNullOrWhiteSpace(tool))
-            .Select(tool => McpToolName.TryCreate(tool, out var parsed) ? parsed : default)
-            .Where(tool => tool != default)
-            .ToHashSet();
+        if (transport == "local-stdio" && string.IsNullOrWhiteSpace(configuration.ApprovalMode))
+        {
+            errors.Add(Diagnostic(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                identity,
+                "$.approvalMode",
+                "Local MCP setup requires an explicit approval mode.",
+                "Use NeverRequire or AlwaysRequire.",
+                correlationId,
+                mcpServerKey: serverKey));
+        }
+        else if (!string.IsNullOrWhiteSpace(configuration.ApprovalMode) && !hasValidApprovalMode)
+        {
+            errors.Add(Diagnostic(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                identity,
+                "$.approvalMode",
+                "MCP setup requires a supported approval mode.",
+                "Use NeverRequire or AlwaysRequire.",
+                correlationId,
+                mcpServerKey: serverKey));
+        }
+        var allowedTools = new HashSet<McpToolName>();
+        foreach (var tool in configuration.AllowedTools ?? [])
+        {
+            if (McpToolName.TryCreate(tool, out var parsed))
+            {
+                allowedTools.Add(parsed);
+                continue;
+            }
+
+            errors.Add(Diagnostic(
+                CapabilityDiagnosticCategory.TemplateValidation,
+                identity,
+                "$.allowedTools",
+                "MCP setup contains an invalid allowed-tool name.",
+                "Use a non-empty MCP tool name without whitespace.",
+                correlationId,
+                mcpServerKey: serverKey));
+        }
         var timeout = TimeSpan.FromSeconds(configuration.TimeoutSeconds is > 0 ? configuration.TimeoutSeconds.Value : DefaultTimeoutSeconds);
         var classifications = ReadDiagnosticClassifications(
             configuration.OperationClassifications,
@@ -31,7 +71,6 @@ public sealed partial class AgentCapabilitySetupFlowService
         var tags = ReadDiagnosticTags(capability.Tags)
             .Concat([CapabilityTag.Create("mcp")])
             .ToHashSet();
-        var transport = NormalizeMcpTransport(configuration.Transport, configuration.Command, configuration.Endpoint);
         var messageFraming = ReadMcpMessageFraming(configuration.MessageFraming, identity, serverKey, correlationId, errors);
 
         McpServerDescriptor descriptor;
@@ -45,6 +84,19 @@ public sealed partial class AgentCapabilitySetupFlowService
                     "$.command",
                     "Local stdio MCP setup requires a command.",
                     "Set the MCP command before running setup discovery.",
+                    correlationId,
+                    mcpServerKey: serverKey,
+                    transport: CapabilityTransportKind.LocalStdio));
+            }
+
+            if (SensitiveTextRedactor.ContainsSecretBearingArguments(configuration.Arguments ?? []))
+            {
+                errors.Add(Diagnostic(
+                    CapabilityDiagnosticCategory.SecretBinding,
+                    identity,
+                    "$.arguments",
+                    "Local MCP setup cannot launch a persisted secret-bearing argument.",
+                    "Use an environment-variable or stored-secret binding instead.",
                     correlationId,
                     mcpServerKey: serverKey,
                     transport: CapabilityTransportKind.LocalStdio));
@@ -64,9 +116,9 @@ public sealed partial class AgentCapabilitySetupFlowService
                 timeout,
                 string.IsNullOrWhiteSpace(configuration.Command) ? "missing-command" : configuration.Command.Trim(),
                 configuration.Arguments ?? [],
-                string.IsNullOrWhiteSpace(configuration.WorkingDirectory) ? "." : configuration.WorkingDirectory.Trim(),
+                string.IsNullOrWhiteSpace(configuration.WorkingDirectory) ? "." : configuration.WorkingDirectory,
                 messageFraming,
-                NormalizeStringSet(configuration.AllowedWorkingDirectories),
+                NormalizeAuthoritySet(configuration.AllowedWorkingDirectories),
                 configuration.EnvironmentVariableBindings ?? new Dictionary<string, string>(),
                 configuration.EnvironmentVariables ?? new Dictionary<string, string>());
         }

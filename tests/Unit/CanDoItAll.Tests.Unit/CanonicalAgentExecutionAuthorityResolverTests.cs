@@ -10,7 +10,7 @@ using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Canonical authority resolution: durable agent configuration decides
@@ -130,7 +130,72 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
     }
 
     [Fact]
-    public void Authority_provider_composition_is_owned_by_the_module_registration_root()
+    public async Task Agents_surface_admits_mutation_for_tool_enabled_agent()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings());
+        var resolver = CreateResolverWithProviders(
+            [new AgentFrameworkAgentsExecutionAuthorityProvider()],
+            agent);
+
+        var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+            agent.Id,
+            new AgentChatContextSourceKind(AgentFrameworkAgentsChatContextBuilder.SourceKind),
+            new AgentChatContextSourceId("chat"),
+            ObservedWorkspaceScope: null,
+            new DatabaseProfileGeneration(1),
+            UiAccessHint: null));
+
+        Assert.Equal(WorkspaceScopeDescriptor.Sandbox, authority.WorkspaceScope);
+        Assert.True(authority.ReadAllowed);
+        Assert.True(authority.MutationAllowed);
+        Assert.Equal(
+            CanonicalAgentExecutionAuthorityResolver.CanonicalPolicyVersion,
+            authority.PolicyVersion);
+    }
+
+    [Fact]
+    public async Task Agents_surface_keeps_tool_disabled_agent_read_only()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings()) with
+        {
+            Permissions = AgentPermissionsPolicy.Default with { CanUseTools = false }
+        };
+        var resolver = CreateResolverWithProviders(
+            [new AgentFrameworkAgentsExecutionAuthorityProvider()],
+            agent);
+
+        var authority = await resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+            agent.Id,
+            new AgentChatContextSourceKind(AgentFrameworkAgentsChatContextBuilder.SourceKind),
+            new AgentChatContextSourceId("chat"),
+            ObservedWorkspaceScope: null,
+            new DatabaseProfileGeneration(1),
+            UiAccessHint: null));
+
+        Assert.True(authority.ReadAllowed);
+        Assert.False(authority.MutationAllowed);
+    }
+
+    [Fact]
+    public async Task Agents_surface_rejects_published_workspace_scope()
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings());
+        var resolver = CreateResolverWithProviders(
+            [new AgentFrameworkAgentsExecutionAuthorityProvider()],
+            agent);
+
+        await Assert.ThrowsAsync<AgentExecutionAuthorityMismatchException>(
+            () => resolver.ResolveAsync(new AgentExecutionAuthorityResolutionRequest(
+                agent.Id,
+                new AgentChatContextSourceKind(AgentFrameworkAgentsChatContextBuilder.SourceKind),
+                new AgentChatContextSourceId("chat"),
+                WorkspaceScopeDescriptor.Organization(ProfileId.ToString("N")),
+                new DatabaseProfileGeneration(1),
+                UiAccessHint: null)).AsTask());
+    }
+
+    [Fact]
+    public void Authority_provider_implementations_remain_with_source_owning_modules()
     {
         var moduleRoot = Path.Combine(
             FindRepositoryRoot(),
@@ -141,7 +206,7 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
                 .Select(File.ReadAllText));
 
         Assert.DoesNotContain("CreateDefaultProviders", source, StringComparison.Ordinal);
-        Assert.DoesNotContain(": IAgentExecutionSourceAuthorityProvider", source, StringComparison.Ordinal);
+        Assert.Contains("AgentFrameworkAgentsExecutionAuthorityProvider", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectStructureExecutionAuthorityProvider", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectsExecutionAuthorityProvider", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessesExecutionAuthorityProvider", source, StringComparison.Ordinal);
@@ -150,6 +215,12 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
     [Fact]
     public void Source_authority_providers_are_registered_by_their_owning_modules()
     {
+        var configuration = new ConfigurationBuilder().Build();
+        var agentFrameworkServices = new ServiceCollection();
+        agentFrameworkServices.AddAgentFrameworkModule(configuration);
+        agentFrameworkServices.AddAgentFrameworkModule(configuration);
+        AssertProviderRegistration(agentFrameworkServices, "AgentFrameworkAgentsExecutionAuthorityProvider");
+
         var projectsServices = new ServiceCollection();
         projectsServices.AddProjectsModule();
         projectsServices.AddProjectsModule();
@@ -161,7 +232,6 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
         AssertProviderRegistration(workbenchServices, "ProjectStructureExecutionAuthorityProvider");
 
         var processesServices = new ServiceCollection();
-        var configuration = new ConfigurationBuilder().Build();
         processesServices.AddProcessesModule(configuration);
         processesServices.AddProcessesModule(configuration);
         AssertProviderRegistration(processesServices, "ProcessesExecutionAuthorityProvider");

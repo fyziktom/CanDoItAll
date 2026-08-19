@@ -4,7 +4,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class OllamaChatResponseResilienceHandlerTests
 {

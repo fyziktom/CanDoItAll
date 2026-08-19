@@ -1,0 +1,153 @@
+@namespace CanDoItAll.AppComponents
+@typeparam TKey where TKey : notnull
+
+<div class="@ResolveRootClass()"
+     aria-disabled="@(Disabled ? "true" : "false")"
+     data-testid="@DataTestId">
+    @if (Items.Count == 0)
+    {
+        <div class="selected-reference-table__empty"
+             role="status"
+             data-testid="@($"{DataTestId}-empty")">
+            <strong data-testid="@($"{DataTestId}-empty-title")">@EmptyTitle</strong>
+            @if (!string.IsNullOrWhiteSpace(EmptyDescription))
+            {
+                <span data-testid="@($"{DataTestId}-empty-description")">@EmptyDescription</span>
+            }
+        </div>
+    }
+    else
+    {
+        <table class="selected-reference-table__table"
+               data-testid="@($"{DataTestId}-table")">
+            <thead>
+                <tr>
+                    <th scope="col">@PrimaryColumnLabel</th>
+                    <th scope="col">@IdentifierColumnLabel</th>
+                    @if (RemoveRequested.HasDelegate)
+                    {
+                        <th class="selected-reference-table__actions-heading"
+                            scope="col">
+                            <span class="selected-reference-table__visually-hidden">Actions</span>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Items)
+                {
+                    var rowTestId = ResolveRowTestId(item);
+                    <tr @key="item.Key"
+                        data-testid="@rowTestId">
+                        <td data-testid="@($"{rowTestId}-primary")">
+                            <div class="selected-reference-table__primary">
+                                <strong>@item.PrimaryText</strong>
+                                @if (!string.IsNullOrWhiteSpace(item.DetailText))
+                                {
+                                    <span class="selected-reference-table__detail"
+                                          data-testid="@($"{rowTestId}-detail")">
+                                        @item.DetailText
+                                    </span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.StatusText))
+                                {
+                                    <StatusBadge Tone="@ResolveStatusTone(item.StatusTone)"
+                                                 Text="@item.StatusText"
+                                                 data-testid="@($"{rowTestId}-status")" />
+                                }
+                            </div>
+                        </td>
+                        <td data-testid="@($"{rowTestId}-identifier")">
+                            <code title="@item.IdentifierText">@item.IdentifierText</code>
+                        </td>
+                        @if (RemoveRequested.HasDelegate)
+                        {
+                            <td class="selected-reference-table__actions">
+                                <Button Text="@RemoveText"
+                                        Icon="delete"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Disabled="@(Disabled || !item.CanRemove)"
+                                        aria-label="@($"{RemoveText} {item.PrimaryText}")"
+                                        data-testid="@($"{rowTestId}-remove")"
+                                        Click="@(() => RemoveRequested.InvokeAsync(item.Key))" />
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<SelectedReferenceItem<TKey>> Items { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<TKey> RemoveRequested { get; set; }
+
+    [Parameter]
+    public string PrimaryColumnLabel { get; set; } = "Name";
+
+    [Parameter]
+    public string IdentifierColumnLabel { get; set; } = "Identifier";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No items selected";
+
+    [Parameter]
+    public string EmptyDescription { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RemoveText { get; set; } = "Remove";
+
+    [Parameter]
+    public string DataTestId { get; set; } = "selected-reference-table";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(PrimaryColumnLabel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(IdentifierColumnLabel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(EmptyTitle);
+        ArgumentException.ThrowIfNullOrWhiteSpace(RemoveText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(DataTestId);
+    }
+
+    private string ResolveRootClass()
+    {
+        return Disabled
+            ? "selected-reference-table selected-reference-table--disabled"
+            : "selected-reference-table";
+    }
+
+    private string ResolveRowTestId(SelectedReferenceItem<TKey> item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.TestId))
+        {
+            return item.TestId;
+        }
+
+        var safeIdentifier = new string(item.IdentifierText
+            .Select(character => char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-')
+            .ToArray())
+            .Trim('-');
+
+        return $"{DataTestId}-row-{(safeIdentifier.Length == 0 ? "item" : safeIdentifier)}";
+    }
+
+    private static string ResolveStatusTone(SelectedReferenceStatusTone tone)
+    {
+        return tone switch
+        {
+            SelectedReferenceStatusTone.Info => "info",
+            SelectedReferenceStatusTone.Success => "success",
+            SelectedReferenceStatusTone.Warning => "warning",
+            SelectedReferenceStatusTone.Danger => "danger",
+            _ => "neutral"
+        };
+    }
+}

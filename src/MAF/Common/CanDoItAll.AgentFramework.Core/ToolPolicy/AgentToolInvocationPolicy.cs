@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -410,7 +411,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 {
     public const int MaxRepeatedMutationOrValidationInvocations = 3;
     private static readonly Regex ExternalTargetAliasRegex = new(
-        @"\bexternal-target/[A-Za-z](?:/[^\s,;`""'\]\)}]+)?",
+        @"\bexternal-target/(?:v1/[0-9a-f]{24}|[A-Za-z])(?:/[^\s,;`""'\]\)}]+)?",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private static readonly Regex ConsecutiveSlashRegex = new(
         "/{2,}",
@@ -915,7 +916,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var normalizedAliases = context.AllowedExternalTargetAliases
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Select(NormalizeManagedWorkspacePath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         return context.RecentToolInvocationTraces.Any(trace =>
             trace.Succeeded &&
@@ -1162,7 +1163,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var referencedAliases = ResolveReferencedExternalTargetAliases(context)
             .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
             .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
         var hasProductMutationIntent = analysis.HasWriteSignal ||
@@ -1341,7 +1342,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         var readableAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases)
             .Concat(NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         var matchedAlias = referencedAliases.FirstOrDefault(alias => IsAllowedExternalTargetAlias(alias, readableAliases))
             ?? referencedAliases[0];
@@ -1440,13 +1441,13 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var referencedAliases = ResolveReferencedExternalTargetAliases(context)
             .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
             .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
         var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
         var readableAliases = allowedAliases
             .Concat(readOnlyAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
 
         foreach (var referencedAlias in referencedAliases)
@@ -1491,7 +1492,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     {
         var declaredWritePaths = ResolveScriptDeclaredOutputPaths(context)
             .Concat(manifest.DeclaredWritePaths)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
 
         if (analysis.EncodedCommandSignals.Count > 0)
@@ -1648,7 +1649,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .Matches(text)
             .Select(match => NormalizeExternalTargetAlias(match.Value))
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
     }
 
@@ -1664,7 +1665,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .Concat(manifest.DeclaredWritePaths)
             .Concat(manifest.DeclaredChildScripts)
             .SelectMany(ResolveExternalTargetAliasesFromText)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
     }
 
@@ -1900,7 +1901,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
         var readableAliases = allowedAliases
             .Concat(readOnlyAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .OrderByDescending(alias => alias.Length)
             .ToArray();
         foreach (var pathArgument in pathArguments)
@@ -1950,7 +1951,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
         var readableAliases = allowedAliases
             .Concat(readOnlyAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .OrderByDescending(alias => alias.Length)
             .ToArray();
         if (readableAliases.Length == 0)
@@ -1987,7 +1988,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
         var readableAliases = allowedAliases
             .Concat(readOnlyAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .OrderByDescending(alias => alias.Length)
             .ToArray();
         if (readableAliases.Length == 0)
@@ -2049,7 +2050,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
         var readableAliases = allowedAliases
             .Concat(readOnlyAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .OrderByDescending(alias => alias.Length)
             .ToArray();
         if (readableAliases.Length == 0)
@@ -2361,7 +2362,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 .Matches(argument.Value ?? string.Empty)
                 .Select(match => NormalizeExternalTargetAlias(match.Value)))
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
     }
 
@@ -2371,7 +2372,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return aliases?
             .Select(NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .OrderByDescending(alias => alias.Length)
             .ToArray() ?? [];
     }
@@ -2381,8 +2382,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         IReadOnlyList<string> allowedAliases)
     {
         return allowedAliases.Any(allowedAlias =>
-            string.Equals(referencedAlias, allowedAlias, StringComparison.OrdinalIgnoreCase) ||
-            referencedAlias.StartsWith(allowedAlias + "/", StringComparison.OrdinalIgnoreCase));
+            ExternalTargetAliasCodec.IsAliasWithinRoot(referencedAlias, allowedAlias));
     }
 
     private static string NormalizeExternalTargetAlias(string? alias)
@@ -2731,11 +2731,26 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return string.Empty;
         }
 
+        var syntax = PhysicalPathSyntaxClassifier.Classify(path);
+        if (syntax is PhysicalPathSyntax.WindowsDriveAbsolute or PhysicalPathSyntax.WindowsUnc)
+        {
+            return OperatingSystem.IsWindows()
+                ? path.Replace('\\', '/')
+                : string.Empty;
+        }
+
+        if (syntax == PhysicalPathSyntax.UnixAbsolute)
+        {
+            return OperatingSystem.IsWindows()
+                ? string.Empty
+                : path;
+        }
+
         var normalizedPath = path
-            .Replace('\\', '/')
             .Trim()
             .Trim('`', '"', '\'')
             .TrimEnd('.', ',', ';', ':', ')', ']', '}');
+        normalizedPath = normalizedPath.Replace('\\', '/');
         normalizedPath = ConsecutiveSlashRegex.Replace(normalizedPath, "/");
 
         while (normalizedPath.StartsWith("./", StringComparison.Ordinal))

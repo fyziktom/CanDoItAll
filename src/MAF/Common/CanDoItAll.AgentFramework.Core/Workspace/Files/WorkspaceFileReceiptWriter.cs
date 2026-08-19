@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -102,7 +103,9 @@ internal sealed class WorkspaceFileReceiptWriter
     public IReadOnlyList<WorkspaceArtifactReference> BuildTargetArtifactReferences(IEnumerable<string> targetPaths, string operation)
     {
         var references = new List<WorkspaceArtifactReference>();
-        foreach (var targetPath in targetPaths.Where(path => !string.IsNullOrWhiteSpace(path) && path != ".").Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var targetPath in targetPaths
+                     .Where(path => !string.IsNullOrWhiteSpace(path) && path != ".")
+                     .Distinct(ExternalTargetAliasCodec.EqualityComparer))
         {
             if (!TryClassifyArtifactZone(targetPath, out var zone))
             {
@@ -219,7 +222,7 @@ internal sealed class WorkspaceFileReceiptWriter
 
     private static bool IsWithinScopedRoot(string relativePath, string rootRelativePath)
     {
-        return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase)
-               || relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(relativePath, rootRelativePath, StringComparison.Ordinal)
+               || relativePath.StartsWith(rootRelativePath + "/", StringComparison.Ordinal);
     }
 }

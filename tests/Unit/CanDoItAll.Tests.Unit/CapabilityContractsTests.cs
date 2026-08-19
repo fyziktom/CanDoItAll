@@ -6,7 +6,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CapabilityContractsTests
 {

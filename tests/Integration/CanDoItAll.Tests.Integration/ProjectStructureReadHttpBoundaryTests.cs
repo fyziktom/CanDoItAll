@@ -4,7 +4,7 @@ using System.Text.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 public sealed class ProjectStructureReadHttpBoundaryTests
 {

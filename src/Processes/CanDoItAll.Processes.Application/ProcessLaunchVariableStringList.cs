@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -44,6 +45,6 @@ public static class ProcessLaunchVariableStringList
         => values
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value!.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
 }

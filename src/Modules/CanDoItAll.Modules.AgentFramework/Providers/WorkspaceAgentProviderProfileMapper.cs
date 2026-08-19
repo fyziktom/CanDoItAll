@@ -141,14 +141,20 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
             string.IsNullOrWhiteSpace(provider.DefaultModel)
                 ? []
                 : [provider.DefaultModel.Trim()];
+        var persistedModels =
+            AgentFrameworkProviderMetadata.ReadSuggestedModels(provider);
         if (provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey ||
             mappedKind != AgentFrameworkProviderKind.OpenAi ||
             mappedPurpose != ProviderProfilePurpose.Chat)
         {
-            return defaultModels;
+            return defaultModels
+                .Concat(persistedModels)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         return ManagedSeedProviderFallbacks.OpenAiSuggestedModels
+            .Concat(persistedModels)
             .Concat(defaultModels)
             .Where(model => !string.IsNullOrWhiteSpace(model))
             .Select(model => model.Trim())
@@ -300,7 +306,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
         WorkspaceProviderProfile provider)
     {
         return provider.ApiKeySecretId.HasValue
-            ? $"secret:{provider.ApiKeySecretId.Value:D}"
+            ? AgentFrameworkProviderMetadata.CreateSecretReference(provider.ApiKeySecretId.Value)
             : string.Empty;
     }
 

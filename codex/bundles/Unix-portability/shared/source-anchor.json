@@ -1,0 +1,22 @@
+{
+  "current": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "development",
+    "commit": "62ea8ee0cc42c1c06da934d126a5c18f8237a89f",
+    "commit_message": "Merge branch 'maf-refactor' into development",
+    "dotnet_sdk": "10.0.302",
+    "prepared_date": "2026-08-08",
+    "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
+    "local_build_reproduction": false
+  },
+  "previous_bundle": {
+    "commit": "d44faef347be128eb85856a18c6fe253ce6fc1ee",
+    "commit_message": "Merge branch 'processes-refactor-3' into development",
+    "dotnet_sdk": "10.0.200",
+    "prepared_date": "2026-07-31",
+    "delta_to_current": {
+      "ahead": 64,
+      "behind": 0
+    }
+  }
+}

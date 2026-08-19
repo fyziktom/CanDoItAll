@@ -7,8 +7,9 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Runtime;
 
+[Trait("Category", "FileSystemPortability")]
 public sealed class FileSandboxWorkspaceStoreLockIntegrationTests
 {
     [Fact]

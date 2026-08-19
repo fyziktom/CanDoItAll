@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class ProjectPartyAssignmentRevisionPricingTests
 {

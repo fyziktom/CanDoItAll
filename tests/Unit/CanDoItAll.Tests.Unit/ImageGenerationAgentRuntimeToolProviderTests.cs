@@ -7,7 +7,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ImageGenerationAgentRuntimeToolProviderTests
 {
@@ -19,7 +19,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new ThrowingProviderProfileRegistry(),
-            new WorkspacePathResolutionService(Path.GetTempPath()),
+            TestWorkspaceServices.CreatePathResolutionService(Path.GetTempPath()),
             new FakeAgentImageGenerationService(),
             services);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
@@ -51,7 +51,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         using var services = new ServiceCollection().BuildServiceProvider();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new ThrowingProviderProfileRegistry(),
-            new WorkspacePathResolutionService(Path.GetTempPath()),
+            TestWorkspaceServices.CreatePathResolutionService(Path.GetTempPath()),
             new FakeAgentImageGenerationService(),
             services);
         var chatProvider = CreateProvider(ProviderProfilePurpose.Chat);
@@ -78,7 +78,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var workspaceRoot = CreateTempWorkspaceRoot();
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([runtimeProvider, secondaryProvider]),
-            new WorkspacePathResolutionService(workspaceRoot),
+            TestWorkspaceServices.CreatePathResolutionService(workspaceRoot),
             imageService,
             services);
         var agent = CreateAgent(
@@ -118,7 +118,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([imageProvider]),
-            new WorkspacePathResolutionService(CreateTempWorkspaceRoot()),
+            TestWorkspaceServices.CreatePathResolutionService(CreateTempWorkspaceRoot()),
             imageService,
             services);
         var agent = CreateAgent(
@@ -163,7 +163,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         };
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([localProvider, cloudProvider, chatProvider]),
-            new WorkspacePathResolutionService(CreateTempWorkspaceRoot()),
+            TestWorkspaceServices.CreatePathResolutionService(CreateTempWorkspaceRoot()),
             imageService,
             services);
         var agent = CreateAgent(
@@ -198,7 +198,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         };
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([imageProvider]),
-            new WorkspacePathResolutionService(CreateTempWorkspaceRoot()),
+            TestWorkspaceServices.CreatePathResolutionService(CreateTempWorkspaceRoot()),
             imageService,
             services);
         var agent = CreateAgent(
@@ -244,7 +244,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([imageProvider]),
-            new WorkspacePathResolutionService(workspace.Path),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path),
             imageService,
             services);
         var agent = CreateAgent(
@@ -295,7 +295,7 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
         var imageProvider = CreateProvider(ProviderProfilePurpose.ImageGeneration);
         var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
             new InMemoryProviderProfileRegistry([imageProvider]),
-            new WorkspacePathResolutionService(workspace.Path),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path),
             imageService,
             services);
         var agent = CreateAgent(

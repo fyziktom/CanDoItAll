@@ -1,0 +1,466 @@
+- generic [ref=e1] [box=0,0,1920,1080]:
+  - generic [ref=e1328] [box=0,0,1920,1080]:
+    - complementary [ref=e1430] [box=16,8,76,1064]:
+      - generic [ref=e1431] [box=27,19,54,1042]:
+        - generic [ref=e1432] [box=27,19,54,40]:
+          - generic [ref=e1433] [box=27,19,54,40]:
+            - generic [ref=e1434] [box=34,19,40,40]: apps
+            - generic [ref=e1436] [box=54,39,1,1]: CanDoItAll local delivery workbench
+          - button "Expand navigation" [ref=e1437] [box=69,25,28,28]:
+            - generic [ref=e1438] [box=73,29,20,20]: chevron_right
+        - navigation "Primary navigation" [ref=e1439] [box=27,67,54,783]:
+          - button "Dashboard" [ref=e1441] [box=32,71,44,44]:
+            - generic [ref=e1442] [box=34,73,40,40]: dashboard
+          - button "Projects" [ref=e1445] [box=32,121,44,44]:
+            - generic [ref=e1446] [box=34,123,40,40]: folder_open
+          - button "Collaboration" [ref=e1449] [box=32,171,44,44]:
+            - generic [ref=e1450] [box=34,173,40,40]: forum
+            - generic [ref=e1452] [box=56,173,18,16]: "90"
+          - button "CRM / HR" [ref=e1454] [box=32,221,44,44]:
+            - generic [ref=e1455] [box=34,223,40,40]: groups
+          - button "Agents" [ref=e1458] [box=32,271,44,44]:
+            - generic [ref=e1459] [box=34,273,40,40]: smart_toy
+          - button "Workflows" [ref=e1462] [box=32,321,44,44]:
+            - generic [ref=e1463] [box=34,323,40,40]: account_tree
+          - button "Processes" [ref=e1466] [box=32,371,44,44]:
+            - generic [ref=e1467] [box=34,373,40,40]: account_tree
+          - button "Live Processes" [ref=e1470] [box=32,421,44,44]:
+            - generic [ref=e1471] [box=34,423,40,40]: monitor_heart
+          - button "Memory Providers" [ref=e1474] [box=32,471,44,44]:
+            - generic [ref=e1475] [box=34,473,40,40]: psychology
+          - button "Resources" [ref=e1478] [box=32,521,44,44]:
+            - generic [ref=e1479] [box=34,523,40,40]: inventory_2
+          - button "Plugins" [ref=e1482] [box=32,571,44,44]:
+            - generic [ref=e1483] [box=34,573,40,40]: extension
+          - button "Prompt Gallery" [ref=e1486] [box=32,621,44,44]:
+            - generic [ref=e1487] [box=34,623,40,40]: library_books
+          - button "Test Lab" [ref=e1490] [box=32,671,44,44]:
+            - generic [ref=e1491] [box=34,673,40,40]: science
+          - button "More pages" [ref=e1494] [box=32,721,44,44]:
+            - generic [ref=e1495] [box=34,723,40,40]: expand_less
+        - generic [ref=e1498] [box=27,867,54,194]:
+          - button "Agent chats" [ref=e1500] [box=27,867,54,44]:
+            - generic [ref=e1501] [box=36,871,36,36]: smart_toy
+          - button "Settings" [ref=e1505] [box=27,917,54,44]:
+            - generic [ref=e1506] [box=36,921,36,36]: settings
+          - button "Runtime capabilities" [ref=e1510] [box=27,967,54,44]:
+            - generic [ref=e1511] [box=36,971,36,36]: health_and_safety
+          - button "Switch Database" [ref=e1515] [box=27,1017,54,44]:
+            - generic [ref=e1516] [box=36,1021,36,36]: storage
+    - main [ref=e1329] [box=100,8,1804,1064]:
+      - generic [ref=e1332] [box=100,8,1804,42]:
+        - generic [ref=e1335] [box=100,8,1764,38]:
+          - tablist "Open workspace tabs" [ref=e1336] [box=100,8,1487,38]:
+            - tab "Dashboard" [ref=e1338] [box=111,17,721,20]:
+              - generic [ref=e1340] [box=176,17,20,20]: push_pin
+            - tab "Agents" [selected] [ref=e1343] [box=858,19,721,16]
+          - textbox "Search tabs" [ref=e1346] [box=1595,10,269,34]
+        - button "Workspace status" [ref=e1350] [cursor=pointer] [box=1872,13,32,32]:
+          - generic [ref=e1351] [box=1886,23,3,11]: i
+      - generic [ref=e1519] [box=125,83,1754,964]:
+        - generic [ref=e1521] [box=125,83,1739,70]:
+          - generic [ref=e1522] [box=125,83,1539,70]:
+            - generic [ref=e1523] [box=125,83,1021,70]:
+              - paragraph [ref=e1524] [box=125,89,119,15]: AgentFramework
+              - heading "Integrated technical agent runtime" [level=1] [ref=e1525] [box=254,83,299,28]
+              - paragraph [ref=e1526] [box=125,121,896,32]: This shell owns the technical agent catalog, durable execution evidence, and provider diagnostics. CRM-HR consumes that catalog through its business-facing directory and bridge surfaces, while Processes and Collaboration stay canonical for launch, run, and approval governance.
+            - generic [ref=e1527] [box=1158,92,506,52]:
+              - generic [ref=e1528] [box=1158,92,127,22]: 28 technical agents
+              - generic [ref=e1531] [box=1292,92,83,22]: 6 providers
+              - generic [ref=e1534] [box=1384,92,129,22]: 28 bound resources
+              - generic [ref=e1537] [box=1521,92,104,22]: 127 capabilities
+              - generic [ref=e1540] [box=1158,122,89,22]: 1 active runs
+              - generic [ref=e1543] [box=1255,122,89,22]: 6 failed runs
+          - generic [ref=e1546] [box=1672,100,192,36]:
+            - button "Open HR Agent" [ref=e1548] [box=1672,100,36,36]:
+              - img "HR Agent" [ref=e1550] [box=1674,102,32,32]
+            - button "Show AgentFramework shell help" [ref=e1552] [cursor=pointer] [box=1716,110,16,16]:
+              - generic [ref=e1553] [box=1722,113,4,10]: "?"
+            - button "Open CRM / HR agents" [ref=e1555] [box=1740,100,36,36]:
+              - generic [ref=e1556] [box=1748,108,20,20]: groups
+              - generic [ref=e1557] [box=1758,117,1,1]: groups
+            - button "Open workflows" [ref=e1559] [box=1784,100,36,36]:
+              - generic [ref=e1560] [box=1792,108,20,20]: account_tree
+              - generic [ref=e1561] [box=1802,117,1,1]: flow
+            - button "Open processes" [ref=e1563] [box=1828,100,36,36]:
+              - generic [ref=e1564] [box=1836,108,20,20]: account_tree
+              - generic [ref=e1565] [box=1846,117,1,1]: flow
+        - generic [ref=e1567] [box=125,169,1739,42]:
+          - generic [ref=e1569] [box=125,169,1134,42]:
+            - button "Overview" [ref=e1570] [box=125,169,99,42]
+            - button "Agents28" [ref=e1571] [box=232,169,122,42]
+            - button "Providers6" [ref=e1572] [box=362,169,131,42]
+            - button "Voice" [ref=e1573] [box=501,169,72,42]
+            - button "Floating chat" [ref=e1574] [box=581,169,125,42]
+            - button "Chat" [ref=e1575] [box=714,169,67,42]
+            - button "Capabilities127" [ref=e1576] [box=789,169,159,42]
+            - button "Governance1" [ref=e1577] [box=956,169,148,42]
+            - button "Diagnostics6" [ref=e1578] [box=1112,169,147,42]
+          - button "Load default agents and providers" [ref=e1580] [box=1828,172,36,36]:
+            - generic [ref=e1581] [box=1836,180,20,20]: sync
+            - generic [ref=e1582] [box=1846,189,1,1]: cloud sync
+        - generic [ref=e3523] [box=125,227,1739,827]:
+          - generic [ref=e3525] [box=125,227,810,44]:
+            - generic [ref=e3526] [box=125,227,149,44]:
+              - paragraph [ref=e3527] [box=125,227,149,16]: Technical agents
+              - heading "Agent cards" [level=2] [ref=e3528] [box=125,243,149,28]
+            - generic [ref=e3529] [box=290,228,644,42]:
+              - generic [ref=e3530] [box=290,234,114,30]: 28 of 28 agent(s)
+              - button "New team" [ref=e3531] [box=413,228,126,42]:
+                - generic [ref=e3532] [box=426,239,20,20]: groups
+              - button "New agent" [ref=e3534] [box=547,228,131,42]:
+                - generic [ref=e3535] [box=560,239,20,20]: add
+              - search [ref=e3537] [box=685,228,250,42]:
+                - textbox "Search agents" [ref=e3538] [box=685,228,201,42]
+                - button "Reset agent search" [ref=e3540] [box=894,230,41,38]:
+                  - generic [ref=e3541] [box=904,239,20,20]: restart_alt
+                  - generic [ref=e3542] [box=914,248,1,1]: restart alt
+          - generic [ref=e3543] [box=125,301,1739,752]:
+            - generic [ref=e3544] [box=125,301,467,736]:
+              - generic [ref=e3545] [box=142,318,418,30]:
+                - generic [ref=e3546] [box=142,322,131,22]:
+                  - paragraph [ref=e3547] [box=142,325,51,16]: Teams
+                  - heading "All agents" [level=3] [ref=e3548] [box=199,322,75,22]
+                - generic [ref=e3549] [box=531,318,29,30]: "5"
+              - generic [ref=e3550] [box=142,363,418,42]:
+                - button "New" [ref=e3551] [box=142,363,86,42]:
+                  - generic [ref=e3552] [box=155,374,20,20]: add
+                - button "Edit" [disabled] [ref=e3554] [box=234,363,81,42]:
+                  - generic [ref=e3555] [box=247,374,20,20]: edit
+                - button "Members" [disabled] [ref=e3557] [box=321,363,121,42]:
+                  - generic [ref=e3558] [box=334,374,20,20]: group_add
+                - button "Delete" [disabled] [ref=e3560] [box=447,363,100,42]:
+                  - generic [ref=e3561] [box=460,374,20,20]: delete
+              - tree "Agent teams and members" [ref=e3564] [box=142,419,418,1446]:
+                - treeitem "All agents 28" [level=1] [selected] [ref=e3568] [box=178,419,382,38]:
+                  - generic [ref=e3569] [box=189,428,20,20]: support_agent
+                  - generic [ref=e3571] [box=217,428,293,20]: All agents
+                  - generic [ref=e3572] [box=518,429,31,18]: "28"
+                - generic [ref=e3573] [box=142,461,418,38]:
+                  - button "Collapse Teams" [ref=e3574] [box=142,461,32,32]:
+                    - generic [ref=e3575] [box=148,467,20,20]: expand_more
+                  - treeitem "Teams 5" [expanded] [level=1] [ref=e3577] [box=178,461,382,38]:
+                    - generic [ref=e3578] [box=189,470,20,20]: account_tree
+                    - generic [ref=e3580] [box=217,470,300,20]: Teams
+                    - generic [ref=e3581] [box=525,471,23,18]: "5"
+                - group [ref=e3582] [box=142,499,418,1366]:
+                  - generic [ref=e3583] [box=142,499,418,38]:
+                    - button "Collapse .NET Delivery Team" [ref=e3584] [box=156,499,32,32]
+                    - treeitem ".NET Delivery Team 5" [expanded] [level=2] [ref=e3587] [box=192,499,368,38]
+                  - group [ref=e3592] [box=142,537,418,206]:
+                    - treeitem ".NET Application Developer" [level=3] [selected] [ref=e3596] [box=205,537,354,38]
+                    - treeitem ".NET QA Review Lead" [level=3] [ref=e3603] [box=205,579,354,38]
+                    - treeitem ".NET Runtime Failure Analyst" [level=3] [ref=e3610] [box=205,621,354,38]
+                    - treeitem ".NET Solution Architect" [level=3] [ref=e3617] [box=205,663,354,38]
+                    - treeitem "Blazor Application Developer" [level=3] [ref=e3624] [box=205,705,354,38]
+                  - generic [ref=e3628] [box=142,747,418,38]:
+                    - button "Collapse Business And Research Team" [ref=e3629] [box=156,747,32,32]
+                    - treeitem "Business And Research Team 6" [expanded] [level=2] [ref=e3632] [box=192,747,368,38]
+                  - group [ref=e3637] [box=142,785,418,248]:
+                    - treeitem "Business Strategist" [level=3] [ref=e3641] [box=205,785,354,38]
+                    - treeitem "Financial Strategist" [level=3] [ref=e3648] [box=205,827,354,38]
+                    - treeitem "Mail Triage Analyst" [level=3] [ref=e3655] [box=205,869,354,38]
+                    - treeitem "Marketing Specialist" [level=3] [ref=e3662] [box=205,911,354,38]
+                    - treeitem "Research Deep Dive Analyst" [level=3] [ref=e3669] [box=205,953,354,38]
+                    - treeitem "Spreadsheet Analyst" [level=3] [ref=e3676] [box=205,995,354,38]
+                  - generic [ref=e3680] [box=142,1037,418,38]:
+                    - button "Collapse Delivery Platform Team" [ref=e3681] [box=156,1037,32,32]
+                    - treeitem "Delivery Platform Team 14" [expanded] [level=2] [ref=e3684] [box=192,1037,368,38]
+                  - group [ref=e3689] [box=142,1075,418,584]:
+                    - treeitem "Capability Curator Agent" [level=3] [ref=e3693] [box=205,1075,354,38]
+                    - treeitem "Code Review Lead" [level=3] [ref=e3700] [box=205,1117,354,38]
+                    - treeitem "Delivery Manager" [level=3] [ref=e3707] [box=205,1159,354,38]
+                    - treeitem "Delivery QA Observer" [level=3] [ref=e3714] [box=205,1201,354,38]
+                    - treeitem "HR Agent" [level=3] [ref=e3721] [box=205,1243,354,38]
+                    - treeitem "HR Staffing Manager" [level=3] [ref=e3728] [box=205,1285,354,38]
+                    - treeitem "Portfolio Architect" [level=3] [ref=e3735] [box=205,1327,354,38]
+                    - treeitem "Programming Workspace Analyst" [level=3] [ref=e3742] [box=205,1369,354,38]
+                    - treeitem "Prompts Curator Agent" [level=3] [ref=e3749] [box=205,1411,354,38]
+                    - treeitem "Release Readiness Manager" [level=3] [ref=e3756] [box=205,1453,354,38]
+                    - treeitem "Scheduler Agent" [level=3] [ref=e3763] [box=205,1495,354,38]
+                    - treeitem "Security Reviewer" [level=3] [ref=e3770] [box=205,1537,354,38]
+                    - treeitem "UI Review Lead" [level=3] [ref=e3777] [box=205,1579,354,38]
+                    - treeitem "Workflow Curator Agent" [level=3] [ref=e3784] [box=205,1621,354,38]
+                  - generic [ref=e3788] [box=142,1663,418,38]:
+                    - button "Collapse JavaScript Delivery Team" [ref=e3789] [box=156,1663,32,32]
+                    - treeitem "JavaScript Delivery Team 3" [expanded] [level=2] [ref=e3792] [box=192,1663,368,38]
+                  - group [ref=e3797] [box=142,1701,418,122]:
+                    - treeitem "JavaScript Application Developer" [level=3] [ref=e3801] [box=205,1701,354,38]
+                    - treeitem "JavaScript QA Review Lead" [level=3] [ref=e3808] [box=205,1743,354,38]
+                    - treeitem "JavaScript Solution Architect" [level=3] [ref=e3815] [box=205,1785,354,38]
+                  - treeitem "Visual Automation Template Team 3" [level=2] [ref=e3822] [box=192,1827,368,38]:
+                    - generic [ref=e3823] [box=203,1836,20,20]: visibility
+                    - generic [ref=e3825] [box=231,1836,287,20]: Visual Automation Template Team
+                    - generic [ref=e3826] [box=525,1837,23,18]: "3"
+            - generic [ref=e3829] [box=608,301,1236,2888]:
+              - article [ref=e3830] [box=608,301,300,396]:
+                - button "Select .NET Application Developer" [ref=e3831] [cursor=pointer] [box=609,302,298,394]:
+                  - generic [ref=e3832] [box=625,318,266,362]:
+                    - generic [ref=e3833] [box=625,318,266,197]
+                    - paragraph [ref=e3850] [box=625,527,266,63]: Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.
+                    - generic [ref=e3851] [box=625,602,266,30]
+                    - generic [ref=e3859] [box=625,644,266,36]
+              - article [ref=e3863] [box=920,301,300,396]:
+                - button "Select .NET QA Review Lead" [ref=e3864] [cursor=pointer] [box=921,302,298,394]:
+                  - generic [ref=e3865] [box=937,354,266,290]:
+                    - generic [ref=e3866] [box=937,354,266,125]
+                    - paragraph [ref=e3882] [box=937,491,266,63]: Reviews C#, ASP.NET Core, and Blazor deliverables with build, test, launch, browser, and durable artifact proof.
+                    - generic [ref=e3883] [box=937,566,266,30]
+                    - generic [ref=e3893] [box=937,608,266,36]
+              - article [ref=e3897] [box=1232,301,300,396]:
+                - button "Select .NET Runtime Failure Analyst" [ref=e3898] [cursor=pointer] [box=1233,302,298,394]:
+                  - generic [ref=e3899] [box=1249,318,266,362]:
+                    - generic [ref=e3900] [box=1249,318,266,161]
+                    - paragraph [ref=e3916] [box=1249,491,266,63]: Investigates concrete .NET and Blazor runtime failures, isolates their owning boundary, and hands a falsifiable repair plan to an implementation agent without changing product code.
+                    - generic [ref=e3917] [box=1249,566,266,66]
+                    - generic [ref=e3927] [box=1249,644,266,36]
+              - article [ref=e3931] [box=1543,301,300,396]:
+                - button "Select .NET Solution Architect" [ref=e3932] [cursor=pointer] [box=1544,302,298,394]:
+                  - generic [ref=e3933] [box=1560,348,266,303]:
+                    - generic [ref=e3934] [box=1560,348,266,138]
+                    - paragraph [ref=e3950] [box=1560,497,266,63]: Designs maintainable C#, ASP.NET Core, and Blazor project structures with explicit boundaries and validation plans.
+                    - generic [ref=e3951] [box=1560,573,266,30]
+                    - generic [ref=e3959] [box=1560,615,266,36]
+              - article [ref=e3963] [box=608,710,300,373]:
+                - button "Select Blazor Application Developer" [ref=e3964] [cursor=pointer] [box=609,711,298,371]:
+                  - generic [ref=e3965] [box=625,733,266,326]:
+                    - generic [ref=e3966] [box=625,733,266,161]
+                    - paragraph [ref=e3982] [box=625,906,266,63]: Builds Blazor Web App and component-driven ASP.NET Core UI deliverables with BaseLib/component-library guidance, focused tests, startup proof, and browser evidence.
+                    - generic [ref=e3983] [box=625,981,266,30]
+                    - generic [ref=e3993] [box=625,1023,266,36]
+              - article [ref=e3997] [box=920,710,300,373]:
+                - button "Select Business Strategist" [ref=e3998] [cursor=pointer] [box=921,711,298,371]:
+                  - generic [ref=e3999] [box=937,744,266,303]:
+                    - generic [ref=e4000] [box=937,744,266,138]
+                    - paragraph [ref=e4016] [box=937,894,266,63]: Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.
+                    - generic [ref=e4017] [box=937,969,266,30]
+                    - generic [ref=e4025] [box=937,1011,266,36]
+              - article [ref=e4029] [box=1232,710,300,373]:
+                - button "Select Capability Curator Agent" [ref=e4030] [cursor=pointer] [box=1233,711,298,371]:
+                  - generic [ref=e4031] [box=1249,727,266,339]:
+                    - generic [ref=e4032] [box=1249,727,266,138]
+                    - paragraph [ref=e4048] [box=1249,876,266,63]: Searches, creates, configures, tests, assigns, and verifies governed skills, tools, and MCP servers through canonical capability services and identity-gated tools.
+                    - generic [ref=e4049] [box=1249,952,266,66]
+                    - generic [ref=e4059] [box=1249,1029,266,36]
+              - article [ref=e4063] [box=1543,710,300,373]:
+                - button "Select Code Review Lead" [ref=e4064] [cursor=pointer] [box=1544,711,298,371]:
+                  - generic [ref=e4065] [box=1560,751,266,290]:
+                    - generic [ref=e4066] [box=1560,751,266,125]
+                    - paragraph [ref=e4082] [box=1560,888,266,63]: Reviews source-backed changes for regressions, architectural drift, weak evidence, and reviewable quality.
+                    - generic [ref=e4083] [box=1560,963,266,30]
+                    - generic [ref=e4093] [box=1560,1005,266,36]
+              - article [ref=e4097] [box=608,1095,300,454]:
+                - button "Select Delivery Manager" [ref=e4098] [cursor=pointer] [box=609,1096,298,452]:
+                  - generic [ref=e4099] [box=625,1159,266,326]:
+                    - generic [ref=e4100] [box=625,1159,266,125]
+                    - paragraph [ref=e4116] [box=625,1295,266,63]: Coordinates governed delivery, evidence handoff, process result recording, and project-structure writeback without taking over implementation work.
+                    - generic [ref=e4117] [box=625,1370,266,66]
+                    - generic [ref=e4127] [box=625,1448,266,36]
+              - article [ref=e4131] [box=920,1095,300,454]:
+                - button "Select Delivery QA Observer" [ref=e4132] [cursor=pointer] [box=921,1096,298,452]:
+                  - generic [ref=e4133] [box=937,1170,266,303]:
+                    - generic [ref=e4134] [box=937,1170,266,138]
+                    - paragraph [ref=e4150] [box=937,1320,266,63]: Owns validation depth, screenshot-backed browser proof, and explicit QA gating for governed delivery work.
+                    - generic [ref=e4151] [box=937,1395,266,30]
+                    - generic [ref=e4159] [box=937,1437,266,36]
+              - article [ref=e4163] [box=1232,1095,300,454]:
+                - button "Select Financial Strategist" [ref=e4164] [cursor=pointer] [box=1233,1096,298,452]:
+                  - generic [ref=e4165] [box=1249,1170,266,303]:
+                    - generic [ref=e4166] [box=1249,1170,266,138]
+                    - paragraph [ref=e4182] [box=1249,1320,266,63]: Builds assumption-driven budgets, unit economics, spreadsheet analysis, and sensitivity views for planning processes.
+                    - generic [ref=e4183] [box=1249,1395,266,30]
+                    - generic [ref=e4191] [box=1249,1437,266,36]
+              - article [ref=e4195] [box=1543,1095,300,454]:
+                - button "Select HR Agent" [ref=e4196] [cursor=pointer] [box=1544,1096,298,387]:
+                  - generic [ref=e4197] [box=1560,1112,266,355]:
+                    - generic [ref=e4198] [box=1560,1112,266,153]
+                    - paragraph [ref=e4214] [box=1560,1277,266,63]: Creates and maintains technical agents, audits their usage and process performance, generates safe avatars, and reads privacy-safe CRM/HR evidence.
+                    - generic [ref=e4215] [box=1560,1352,266,66]
+                    - generic [ref=e4225] [box=1560,1430,266,36]
+                - button "Open chat" [ref=e4230] [box=1699,1494,127,42]:
+                  - generic [ref=e4231] [box=1712,1505,20,20]: forum
+              - article [ref=e4233] [box=608,1561,300,376]:
+                - button "Select HR Staffing Manager" [ref=e4234] [cursor=pointer] [box=609,1562,298,374]:
+                  - generic [ref=e4235] [box=625,1597,266,303]:
+                    - generic [ref=e4236] [box=625,1597,266,138]
+                    - paragraph [ref=e4252] [box=625,1747,266,63]: Matches governed process roles to actual project assignments, workforce records, and AI agents using factual fit instead of convenience or guesswork.
+                    - generic [ref=e4253] [box=625,1822,266,30]
+                    - generic [ref=e4261] [box=625,1864,266,36]
+              - article [ref=e4265] [box=920,1561,300,376]:
+                - button "Select JavaScript Application Developer" [ref=e4266] [cursor=pointer] [box=921,1562,298,374]:
+                  - generic [ref=e4267] [box=937,1578,266,342]:
+                    - generic [ref=e4268] [box=937,1578,266,176]
+                    - paragraph [ref=e4284] [box=937,1766,266,63]: Implements JavaScript and TypeScript deliverables with package-script validation and browser proof when needed.
+                    - generic [ref=e4285] [box=937,1841,266,30]
+                    - generic [ref=e4293] [box=937,1883,266,36]
+              - article [ref=e4297] [box=1232,1561,300,376]:
+                - button "Select JavaScript QA Review Lead" [ref=e4298] [cursor=pointer] [box=1233,1562,298,374]:
+                  - generic [ref=e4299] [box=1249,1592,266,313]:
+                    - generic [ref=e4300] [box=1249,1592,266,148]
+                    - paragraph [ref=e4316] [box=1249,1751,266,63]: Reviews JavaScript and TypeScript deliverables with package-script, browser, console, and screenshot evidence.
+                    - generic [ref=e4317] [box=1249,1827,266,30]
+                    - generic [ref=e4325] [box=1249,1869,266,36]
+              - article [ref=e4329] [box=1543,1561,300,376]:
+                - button "Select JavaScript Solution Architect" [ref=e4330] [cursor=pointer] [box=1544,1562,298,374]:
+                  - generic [ref=e4331] [box=1560,1585,266,326]:
+                    - generic [ref=e4332] [box=1560,1585,266,161]
+                    - paragraph [ref=e4348] [box=1560,1758,266,63]: Designs maintainable JavaScript and TypeScript app structures, package boundaries, and validation paths.
+                    - generic [ref=e4349] [box=1560,1833,266,30]
+                    - generic [ref=e4357] [box=1560,1875,266,36]
+              - article [ref=e4361] [box=608,1948,300,360]:
+                - button "Select Mail Triage Analyst" [ref=e4362] [cursor=pointer] [box=609,1949,298,358]:
+                  - generic [ref=e4363] [box=625,1983,266,290]:
+                    - generic [ref=e4364] [box=625,1983,266,125]
+                    - paragraph [ref=e4380] [box=625,2120,266,63]: Uses inline skill instructions, AI context, and workspace document tools to summarize mail-like artifacts and extract participant-owned tasks.
+                    - generic [ref=e4381] [box=625,2195,266,30]
+                    - generic [ref=e4389] [box=625,2237,266,36]
+              - article [ref=e4393] [box=920,1948,300,360]:
+                - button "Select Marketing Specialist" [ref=e4394] [cursor=pointer] [box=921,1949,298,358]:
+                  - generic [ref=e4395] [box=937,1977,266,303]:
+                    - generic [ref=e4396] [box=937,1977,266,138]
+                    - paragraph [ref=e4412] [box=937,2127,266,63]: Creates positioning, messaging, go-to-market plans, campaign briefs, and validation experiments for non-code processes.
+                    - generic [ref=e4413] [box=937,2202,266,30]
+                    - generic [ref=e4421] [box=937,2244,266,36]
+              - article [ref=e4425] [box=1232,1948,300,360]:
+                - button "Select Portfolio Architect" [ref=e4426] [cursor=pointer] [box=1233,1949,298,358]:
+                  - generic [ref=e4427] [box=1249,1983,266,290]:
+                    - generic [ref=e4428] [box=1249,1983,266,125]
+                    - paragraph [ref=e4444] [box=1249,2120,266,63]: Owns architecture direction, source-of-truth choices, and bounded design guidance for governed delivery work.
+                    - generic [ref=e4445] [box=1249,2195,266,30]
+                    - generic [ref=e4453] [box=1249,2237,266,36]
+              - article [ref=e4457] [box=1543,1948,300,360]:
+                - button "Select Programming Workspace Analyst" [ref=e4458] [cursor=pointer] [box=1544,1949,298,358]:
+                  - generic [ref=e4459] [box=1560,1965,266,326]:
+                    - generic [ref=e4460] [box=1560,1965,266,161]
+                    - paragraph [ref=e4476] [box=1560,2138,266,63]: Implements source-backed changes with bounded inspection, concrete validation, and real user-facing proof when needed.
+                    - generic [ref=e4477] [box=1560,2213,266,30]
+                    - generic [ref=e4485] [box=1560,2255,266,36]
+              - article [ref=e4489] [box=608,2321,300,403]:
+                - button "Select Prompts Curator Agent" [ref=e4490] [cursor=pointer] [box=609,2322,298,335]:
+                  - generic [ref=e4491] [box=625,2338,266,303]:
+                    - generic [ref=e4492] [box=625,2338,266,138]
+                    - paragraph [ref=e4508] [box=625,2488,266,63]: Searches the full Prompt Gallery catalog, creates and updates drafts with optimistic concurrency, and publishes immutable prompt versions after approval.
+                    - generic [ref=e4509] [box=625,2563,266,30]
+                    - generic [ref=e4517] [box=625,2605,266,36]
+                - button "Open chat" [ref=e4522] [box=763,2669,127,42]:
+                  - generic [ref=e4523] [box=776,2680,20,20]: forum
+              - article [ref=e4525] [box=920,2321,300,403]:
+                - button "Select Release Readiness Manager" [ref=e4526] [cursor=pointer] [box=921,2322,298,401]:
+                  - generic [ref=e4527] [box=937,2359,266,326]:
+                    - generic [ref=e4528] [box=937,2359,266,161]
+                    - paragraph [ref=e4544] [box=937,2532,266,63]: Synthesizes QA, security, rollback, and smoke-proof evidence into an explicit release-readiness decision.
+                    - generic [ref=e4545] [box=937,2607,266,30]
+                    - generic [ref=e4553] [box=937,2649,266,36]
+              - article [ref=e4557] [box=1232,2321,300,403]:
+                - button "Select Research Deep Dive Analyst" [ref=e4558] [cursor=pointer] [box=1233,2322,298,401]:
+                  - generic [ref=e4559] [box=1249,2359,266,326]:
+                    - generic [ref=e4560] [box=1249,2359,266,161]
+                    - paragraph [ref=e4576] [box=1249,2532,266,63]: Uses provider-managed responses, RAG, memory, and framework-native tools for multi-step research and generated-app summary flows.
+                    - generic [ref=e4577] [box=1249,2607,266,30]
+                    - generic [ref=e4585] [box=1249,2649,266,36]
+              - article [ref=e4589] [box=1543,2321,300,403]:
+                - button "Select Scheduler Agent" [ref=e4590] [cursor=pointer] [box=1544,2322,298,335]:
+                  - generic [ref=e4591] [box=1560,2338,266,303]:
+                    - generic [ref=e4592] [box=1560,2338,266,138]
+                    - paragraph [ref=e4608] [box=1560,2488,266,63]: Finds schedulable workflows, reviews existing workflow schedules, and creates approved Quartz CRON plans through the canonical Scheduler service.
+                    - generic [ref=e4609] [box=1560,2563,266,30]
+                    - generic [ref=e4619] [box=1560,2605,266,36]
+                - button "Open chat" [ref=e4624] [box=1699,2669,127,42]:
+                  - generic [ref=e4625] [box=1712,2680,20,20]: event_repeat
+              - article [ref=e4627] [box=608,2736,300,454]:
+                - button "Select Security Reviewer" [ref=e4628] [cursor=pointer] [box=609,2737,298,452]:
+                  - generic [ref=e4629] [box=625,2817,266,290]:
+                    - generic [ref=e4630] [box=625,2817,266,125]
+                    - paragraph [ref=e4646] [box=625,2954,266,63]: Reviews delivery changes for trust-boundary risk, hidden fallbacks, and explicit security posture.
+                    - generic [ref=e4647] [box=625,3029,266,30]
+                    - generic [ref=e4655] [box=625,3071,266,36]
+              - article [ref=e4659] [box=920,2736,300,454]:
+                - button "Select Spreadsheet Analyst" [ref=e4660] [cursor=pointer] [box=921,2737,298,452]:
+                  - generic [ref=e4661] [box=937,2811,266,303]:
+                    - generic [ref=e4662] [box=937,2811,266,138]
+                    - paragraph [ref=e4678] [box=937,2961,266,63]: Uses spreadsheet skill guidance plus framework-native tools to inspect workbook-like artifacts, compare purchasing documents, and call out concrete findings.
+                    - generic [ref=e4679] [box=937,3036,266,30]
+                    - generic [ref=e4687] [box=937,3078,266,36]
+              - article [ref=e4691] [box=1232,2736,300,454]:
+                - button "Select UI Review Lead" [ref=e4692] [cursor=pointer] [box=1233,2737,298,452]:
+                  - generic [ref=e4693] [box=1249,2817,266,290]:
+                    - generic [ref=e4694] [box=1249,2817,266,125]
+                    - paragraph [ref=e4710] [box=1249,2954,266,63]: Reviews rendered user interfaces with browser automation, screenshot analysis, and evidence-backed usability expectations.
+                    - generic [ref=e4711] [box=1249,3029,266,30]
+                    - generic [ref=e4719] [box=1249,3071,266,36]
+              - article [ref=e4723] [box=1543,2736,300,454]:
+                - button "Select Workflow Curator Agent" [ref=e4724] [cursor=pointer] [box=1544,2737,298,387]:
+                  - generic [ref=e4725] [box=1560,2753,266,355]:
+                    - generic [ref=e4726] [box=1560,2753,266,153]
+                    - paragraph [ref=e4742] [box=1560,2918,266,63]: Searches, creates, validates, revises, activates, and runs governed workflows through canonical workflow services and identity-gated tools.
+                    - generic [ref=e4743] [box=1560,2993,266,66]
+                    - generic [ref=e4753] [box=1560,3071,266,36]
+                - button "Open chat" [ref=e4758] [box=1699,3135,127,42]:
+                  - generic [ref=e4759] [box=1712,3146,20,20]: account_tree
+  - dialog "Agent details editor" [ref=e4761] [box=0,0,1920,1080]:
+    - generic [ref=e4764] [box=192,12,1536,1056]:
+      - generic [ref=e4766] [box=205,23,1510,72]:
+        - generic [ref=e4767] [box=205,23,1412,72]:
+          - generic [ref=e4768] [box=205,23,146,16]: Technical editor
+          - heading ".NET Application Developer" [level=2] [ref=e4770] [box=205,43,236,28]
+          - paragraph [ref=e4771] [box=205,75,466,20]: Edit identity, runtime, access policy, and capabilities for this technical agent.
+        - button "Close" [active] [ref=e4773] [box=1629,23,86,38]:
+          - generic [ref=e4774] [box=1640,32,20,20]: close
+      - generic [ref=e4778] [box=205,118,1510,743]:
+        - generic [ref=e4779] [box=205,118,1510,644]:
+          - tablist "Agent details sections" [ref=e4780] [box=205,118,1510,44]:
+            - tab "Identity" [selected] [ref=e4781] [box=209,119,83,39]
+            - tab "Runtime" [ref=e4783] [box=300,118,88,39]
+            - tab "Memory" [ref=e4785] [box=396,118,88,39]
+            - tab "Images" [ref=e4787] [box=492,118,80,39]
+            - tab "Project Structure Access" [ref=e4789] [box=580,118,198,39]
+            - tab "Workspace Tools" [ref=e4791] [box=786,118,147,39]
+            - tab "Secrets" [ref=e4793] [box=941,118,80,39]
+            - tab "Process Access" [ref=e4795] [box=1029,118,134,39]
+            - tab "Capabilities" [ref=e4797] [box=1171,118,110,39]
+            - tab "Voice" [ref=e4799] [box=1289,118,67,39]
+          - tabpanel "Identity" [ref=e4802] [box=205,161,1510,600]:
+            - generic [ref=e4803] [box=206,176,1493,585]:
+              - generic [ref=e4805] [box=223,193,737,48]:
+                - heading "Identity" [level=2] [ref=e4807] [box=223,193,56,24]
+                - paragraph [ref=e4808] [box=223,221,737,20]: Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.
+              - generic [ref=e4809] [box=223,253,1459,66]:
+                - generic [ref=e4810] [box=223,253,722,66]:
+                  - generic [ref=e4811] [box=223,253,722,20]: Name
+                  - textbox [ref=e4812] [box=223,277,722,42]: .NET Application Developer
+                - generic [ref=e4813] [box=961,253,722,66]:
+                  - generic [ref=e4814] [box=961,253,722,20]: Role title
+                  - textbox [ref=e4815] [box=961,277,722,42]: .NET implementation specialist
+              - generic [ref=e4817] [box=240,348,1425,80]:
+                - generic [ref=e4818] [box=240,348,511,80]:
+                  - img ".NET Application Developer" [ref=e4819] [box=240,360,56,56]
+                  - generic [ref=e4820] [box=308,348,443,80]:
+                    - generic [ref=e4821] [box=308,348,443,20]: Avatar
+                    - strong [ref=e4822] [box=308,378,180,24]: Bundled avatar selected
+                    - generic [ref=e4823] [box=308,408,443,20]: Stored with the technical agent identity and reused by runtime surfaces.
+                - generic [ref=e4824] [box=1371,367,294,42]:
+                  - button "Choose avatar" [ref=e4825] [box=1371,367,154,42]:
+                    - generic [ref=e4826] [box=1384,378,20,20]: face
+                  - button "Use default" [ref=e4828] [box=1531,367,134,42]:
+                    - generic [ref=e4829] [box=1544,378,20,20]: restart_alt
+              - generic [ref=e4831] [box=223,457,1459,83]:
+                - generic [ref=e4832] [box=223,457,1459,16]: Tags
+                - generic [ref=e4835] [box=223,479,1459,61]:
+                  - generic [ref=e4836] [box=223,479,1459,39]:
+                    - button "blazor" [ref=e4837] [cursor=pointer] [box=232,484,74,29]
+                    - button "dotnet" [ref=e4841] [cursor=pointer] [box=312,484,77,29]
+                    - button "programming" [ref=e4845] [cursor=pointer] [box=395,484,128,29]
+                    - textbox "Tags" [ref=e4849] [box=529,486,1144,24]:
+                      - /placeholder: Add agent tag
+                  - generic [ref=e4850] [box=223,522,1459,18]: Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent.
+              - generic [ref=e4851] [box=223,552,1459,90]:
+                - generic [ref=e4852] [box=223,552,1459,20]: Summary
+                - textbox [ref=e4853] [box=223,576,1459,66]: Implements C#, ASP.NET Core, and Blazor deliverables with real source changes, focused tests, and runnable proof.
+              - generic [ref=e4854] [box=223,654,1459,90]:
+                - generic [ref=e4855] [box=223,654,1459,20]: Instructions
+                - textbox [ref=e4856] [box=223,678,1459,66]: "You are the .NET application developer for C#, ASP.NET Core, Blazor, worker, console, and library tasks. Use the attached concrete deliverable delivery skill as the generic delivery contract, then layer on .NET app delivery, ASP.NET Core, component-library, frontend, Playwright, and test skills when they match the work. Inspect existing files before editing and keep the change narrowly scoped. For greenfield .NET apps, create a real runnable project instead of loose source files. Prefer `workspace_dotnet_new` only when the authoritative solution context declares `initialize`; preserve that mode, solution/app/test paths, project names, templates, target framework, test framework, and any existing repository topology verbatim. The upstream `ProductTargetState` is the semantic decision, while `ProductTargetFilesystemState` is only a read-only observation; do not change a declared `initialize` or `verify-existing` mode because a directory is missing, empty, populated, or preliminary. Do not infer or prefer a `src`/`tests`, inside-root, sibling-project, or product-root-host layout. If a required topology or template choice is absent, inspect authoritative current-run context, record a bounded assumption in the setup decision, and block only when no safe decision can be made. For existing apps, repair in place; do not force-regenerate over working source. Treat the process step `allowedOperations` and `operationTargetScope` as canonical contracts backed by the process operation catalog, not as advisory text. If the step lacks `MutateProductTarget`, do not edit product files. If the step lacks `CaptureRuntimeProof`, do not use browser tools as completion proof. If the step requires runtime/browser proof, keep it current-run and process-visible with startup, route or command, validation output, browser state when applicable, console, and cleanup receipts. For a mutation-authorized implementation or repair step, once current product readback proves a product defect, the next work action must mutate the owning product source, test, content, or configuration through a product-target tool. Do not write the managed step artifact, rerun an unchanged validation chain, or submit a repair decision first. If the coherent repair spans several related files, write them directly or use one reviewed bounded helper; implement the smallest working behavior now rather than substituting an intended change list for source changes. Before implementation, consume the current architecture and validation-plan artifacts when they are supplied. Keep every assigned required `ProductAcceptance` criterion attached to its declared owning boundary and proof; do not reinterpret a missing implementation detail as permission to drop the criterion. Preserve `DeliveryPlanning` entries as non-blocking planning context instead of implementing them as product behavior or requesting human reconfirmation unless a typed decision gate requires it. After a repair attempt, compare the new source readback, diagnostic signature, and targeted proof with the prior attempt. If the same failure remains and the evidence does not support a materially different mutation, do not repeat the same write, validation command, or managed artifact. Produce a precise diagnosis handoff through the process's negative branch, naming the failed criterion, owning source, observed signature, attempted change, and unresolved hypothesis so a specialist or manager can choose the next lane. When a solution file is created or inherited, verify the actual emitted `.sln` or `.slnx` path before adding projects. Add the runnable host and test projects to that exact solution file, then read the solution file or use a solution-list command to prove it contains those project references. Do not cite a solution build as validation when the solution is empty or missing the host/test projects; repair the solution membership first or target the concrete project files explicitly and record why no solution is authoritative. When host and test projects share a directory tree, inspect the actual SDK item globs and build diagnostics before changing project files. Add exclusions or explicit item rules only when the chosen topology requires them; do not rearrange the solution to match a preferred layout. If build/test output shows recursive nested paths, copy failures, static web asset conflicts, or missing runtime configuration/assets, repair the concrete project-item or topology defect before rerunning and do not add test packages to the production host as a workaround. If you are assigned an intake, scope, planning, or architecture-preparation step and the current run already identifies a concrete deliverable plus target boundary, do not block only because preferences are incomplete. Write the required artifact with explicit assumptions, exclusions, `not applicable` entries, unresolved follow-up questions, and validation hooks. Return `Blocked` only when the core deliverable, writable target, mandatory upstream artifact, required authority, required credential, or safe execution boundary is genuinely missing. Treat the current run as isolated from prior examples. Use only the app topic, paths, constraints, and acceptance checks grounded in this run's project structure, work brief, upstream artifacts, or tool outputs. If tool policy blocks an external-target path, abandon that denied path immediately and use the current grounded product root or current-run artifacts instead of retrying or deriving requirements from the blocked path. Never inspect, cite, copy, or infer implementation patterns from sibling external-target applications on the same host. The scaffold parent directory is only a `workspace_dotnet_new` argument; it is not a product root, source corpus, evidence source, or permission to read sibling folders. Do not claim contextual examples, source files, templates, or implementation references were reviewed unless this execution actually inspected them through current-run tools or loaded them from attached skill/template resources. When the launch context contains `ProductAcceptanceCriteriaContract`, entries with `kind=ProductAcceptance` and `required=true` are the authoritative non-droppable behavior ledger for the current slice. Implement every such criterion id owned by the step, preserve the ids in implementation and test evidence, and explicitly report incomplete required product criteria for the validation repair branch. Entries with `kind=DeliveryPlanning` remain non-blocking planning context and do not authorize product mutation, no-go, escalation, or human reconfirmation absent a typed decision gate. A narrower child summary, approach note, or green test set does not authorize omitting required `ProductAcceptance` criteria from this contract. For Blazor, preserve the routed-page and hosting conventions that the inspected project actually uses, use strongly typed state, and move reusable behavior into public domain or application classes with tests. Use component-library wrappers and existing CSS/theme patterns before raw markup. Do not leave starter content, stock navigation, placeholder routes, or a normally visible framework error surface as the delivered product. For a greenfield user-facing app, replace any visible template or demonstration content that is not requested. Identify it from the generated or existing files rather than assuming particular pages, links, or sample data exist. The primary route must look and behave like the requested product, not like a template with a small feature added. When the acceptance contract names a browser persistence mechanism, implement that exact mechanism; do not silently substitute local storage, session storage, in-memory state, cookies, or a different database. Persistence proof must cover both writing and loading in a fresh service/page lifecycle, including the required fallback behavior when browser storage is unavailable. Keep browser interop behind a typed application or infrastructure boundary and test reload/restoration behavior rather than only an in-memory cache. For framework-specific hosting, preserve the inspected product model and keep document, routing, and application-root ownership unambiguous. If browser proof exposes an invalid document shape, duplicated application root, or incompatible hosting composition, repair the source that owns that composition; do not weaken proof selectors or change the framework merely to make validation pass. When the project structure includes a source visual target ImageAsset, treat it as implementation input. Inspect or resolve its media path when available, derive the visible composition and interaction state it implies, and make the primary route materially align with that target within the requested scope. If you cannot access or analyze the image with the assigned tools, record that blocker instead of building from memory. Validation is part of the implementation. Final product-validation order is: complete the last source/content/configuration mutation, rerun every affected restore/build/test/run/browser check, read back representative changed product files, write required durable evidence artifacts, then submit the governed outcome. Use `workspace_dotnet_restore`, `workspace_dotnet_build`, `workspace_dotnet_test`, and `workspace_dotnet_run` as the task requires, targeting explicit project or solution files when the directory is ambiguous. If you mutate another product file after the read, repeat the read and rerun required validation before writing evidence or finalizing. Use `waitForHttp: false` for console or worker-style runtime smoke. For HTTP startup proof without same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and does not lock later builds. For web UI/API work that must use Playwright in the same implementation step, set `keepAlive: true` with `lifetimeScope: ExecutionRun`, interact with the primary workflow so the evidence shows a meaningful changed state, capture browser proof with screenshot `.png`, browser_snapshot `.yml` or browser_evaluate `.json`/`.txt`/`.md` state output, cite the returned screenshot, snapshot or state output, and console filenames in durable evidence, and then call `workspace_dotnet_stop` with the recorded `startup.json` receipt before finalizing. Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence, not chat-only claims or stale prior-run files. If browser tools return provider-native filenames before managed artifact import, cite those filenames; do not fail or escalate solely because workspace file tools cannot see the managed browser folder during the same attempt. Use `lifetimeScope: ProcessRun` only when a later process step owns browser proof and a later cleanup step owns shutdown. Write required implementation notes only after source, content, configuration, or deliverable changes and validation are complete. During a repair step, distinguish product defects from proof-recipe defects by inspecting the product itself. If an expected control, state transition, interaction, visible surface, or real browser-console behavior is missing or broken, the product requires a source/configuration repair even when restore, build, and tests pass. Use a proof-only branch only when the expected behavior already exists and works and the prior route, selector, or proof recipe was wrong; absent behavior is never merely missing proof. For implementation and validation work, a visible control or product-specific page without its assigned event wiring and state transition is incomplete. Do not use tests that only read Razor, HTML, CSS, or configuration text as proof of interaction, calculation, persistence, reload restoration, timing, or recovery behavior. Those checks may supplement content-hygiene proof only. Execute deterministic behavior through the real typed production boundary, and do not defer acceptance criteria already assigned to the current slice merely to make the change smaller. For `workspace_dotnet_run`, the run target must be the runnable project file, not a solution or directory. Prefer `DotNetAppProjectFileAlias` and then `DotNetAppProjectFile` when launch variables provide them; otherwise select the concrete `.csproj`, `.fsproj`, or `.vbproj` host project. Workspace command timeout arguments are seconds, not milliseconds. Prefer the tool defaults unless diagnostics show a real timeout; when setting one explicitly, use values such as `120`, `300`, `600`, or `1200`. If a build, test, restore, launch, or browser check fails, inspect the diagnostics and fix the cause before rerunning. For `workspace_dotnet_restore`, `workspace_dotnet_build`, `workspace_dotnet_test`, and `workspace_dotnet_run`, read the returned stdout/stderr previews and any referenced `stdout.txt`, `stderr.txt`, request, or receipt artifacts before changing files or retrying. Do not repair from exit code alone, and do not repeatedly rewrite `.csproj`, framework, package, or test-runner settings without citing the concrete diagnostic that requires it. Do not hide failure behind fallback behavior or claim completion with only markdown evidence. Never write local fake package, framework, runtime, browser, or test-tool shim types to satisfy compilation. Fix real dependencies/project references or return a blocker with the exact failed dependency or environment issue. ## Template Revision Notes - This file is the editable source for the default agent template; keep role behavior here instead of in C# seed code. - Ground each response in the current team settings, attached skills, and durable proof. If evidence is missing but the step has a negative branch that expresses the gap, select that completed branch; otherwise say what is missing and keep the outcome blocked or partial. - Preserve the agent's specialty: do not absorb another team member's role unless the process step explicitly assigns that work."
+        - generic [ref=e4858] [box=217,807,1486,42]:
+          - paragraph [ref=e4860] [box=217,814,111,27]: Technical agents
+          - generic [ref=e4861] [box=340,807,1363,42]:
+            - button "Clear" [ref=e4862] [box=1481,807,70,42]
+            - button "Save agent" [ref=e4864] [box=1559,807,111,42]

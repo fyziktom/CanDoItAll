@@ -4,7 +4,7 @@ using System.Text.Json;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class CrmHrApiIntegrationTests
 {

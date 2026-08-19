@@ -11,16 +11,18 @@
 else
 {
     <EditForm Model="editorModel" OnValidSubmit="SaveAgentAsync">
-        <Stack Class="agent-details-dialog min-h-0" GapScale="LayoutGap.Large">
-            @if (linkedPartyId.HasValue)
-            {
-                <Alert AlertStyle="AlertStyle.Info">
-                    <p class="font-semibold">Bound CRM-HR resource</p>
-                    <p class="mt-1">This technical agent is linked to business resource <a class="text-slate-900 underline" href="@($"/crm-hr/agents?partyId={linkedPartyId.Value:D}")">/crm-hr/agents</a>.</p>
-                </Alert>
-            }
-
-            <Tabs data-testid="agents-details-tabs"
+        <ConversationDefinitionEditorShell Class="agent-details-dialog min-h-0">
+            <Header>
+                @if (linkedPartyId.HasValue)
+                {
+                    <Alert AlertStyle="AlertStyle.Info">
+                        <p class="font-semibold">Bound CRM-HR resource</p>
+                        <p class="mt-1">This technical agent is linked to business resource <a class="text-slate-900 underline" href="@($"/crm-hr/agents?partyId={linkedPartyId.Value:D}")">/crm-hr/agents</a>.</p>
+                    </Alert>
+                }
+            </Header>
+            <Sections>
+                <Tabs data-testid="agents-details-tabs"
                   SelectedIndex="@selectedTabIndex"
                   SelectedIndexChanged="HandleSelectedTabIndexChanged"
                   Variant="@(TabsVariant.ModalCompact)"
@@ -34,112 +36,61 @@ else
                 <TabItems>
                     <TabsItem Text="Identity">
                         <FormSection Title="Identity" Description="Keep the technical identity explicit and strongly typed. Business metadata stays in CRM-HR; runtime behavior lives here.">
-                            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Name</label>
-                                    <InputText @bind-Value="editorModel.Name" class="cda-input" data-testid="agents-catalog-name" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Role title</label>
-                                    <InputText @bind-Value="editorModel.RoleTitle" class="cda-input" data-testid="agents-catalog-role" />
-                                </div>
-                            </Grid>
-
-                            <SurfaceCard Soft="true" Class="agent-details-dialog__avatar-summary" data-testid="agents-catalog-avatar-summary">
-                                <Stack Orientation="Orientation.Horizontal"
-                                       AlignItems="AlignItems.Center"
-                                       JustifyContent="JustifyContent.SpaceBetween"
-                                       GapScale="LayoutGap.Medium">
-                                    <Stack Orientation="Orientation.Horizontal"
-                                           AlignItems="AlignItems.Center"
-                                           GapScale="LayoutGap.Medium">
-                                        <Avatar Alt="@ResolveAvatarAltText()"
-                                                ImageUrl="@editorModel.AvatarImageUrl"
-                                                FallbackText="@ResolveAvatarFallbackText()"
-                                                DefaultImageSeed="@ResolveAvatarSeed()"
-                                                Size="AvatarSize.Large"
-                                                Shape="AvatarShape.Rounded" />
-                                        <Stack GapScale="LayoutGap.XSmall">
-                                            <span class="cda-field-label">Avatar</span>
-                                            <strong>@ResolveAvatarSelectionText()</strong>
-                                            <small class="text-sm text-slate-600">Stored with the technical agent identity and reused by runtime surfaces.</small>
-                                        </Stack>
-                                    </Stack>
-                                    <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
-                                        <Button Text="Choose avatar"
-                                                Icon="face"
-                                                ButtonStyle="ButtonStyle.Light"
-                                                Size="ButtonSize.Small"
-                                                Click="OpenAvatarSelectorAsync"
-                                                data-testid="agents-catalog-avatar-open" />
-                                        <Button Text="Use default"
-                                                Icon="restart_alt"
-                                                ButtonStyle="ButtonStyle.Light"
-                                                Size="ButtonSize.Small"
-                                                Disabled="@string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)"
-                                                Click="ClearAvatarAsync"
-                                                data-testid="agents-catalog-avatar-clear" />
-                                    </Cluster>
-                                </Stack>
-                            </SurfaceCard>
-
-                            <FormField Text="Tags"
-                                       Class="agent-details-dialog__full-field"
-                                       data-testid="agents-catalog-tags-section">
-                                <TagEditor Value="@tagValues"
-                                           ValueChanged="HandleTagsChangedAsync"
-                                           Suggestions="@VisibleTagSuggestions"
-                                           Placeholder="Add agent tag"
-                                           Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
-                                           MaxTags="12"
-                                           TestId="agents-catalog-tags"
-                                           InputTestId="agents-catalog-tags-input" />
-                            </FormField>
-
-                            <div class="agent-details-dialog__full-field">
-                                <label class="cda-field-label">Summary</label>
-                                <InputTextArea @bind-Value="editorModel.Summary"
-                                               class="cda-input cda-input--textarea agent-details-dialog__summary-textarea"
-                                               data-testid="agents-catalog-summary" />
-                            </div>
-
-                            <div class="agent-details-dialog__full-field">
-                                <label class="cda-field-label">Instructions</label>
-                                <InputTextArea @bind-Value="editorModel.Instructions"
-                                               class="cda-input cda-input--textarea agent-details-dialog__instructions-textarea"
-                                               data-testid="agents-catalog-instructions" />
-                            </div>
+                            <ConversationIdentityFields Name="@editorModel.Name"
+                                                        NameChanged="HandleNameChangedAsync"
+                                                        Role="@editorModel.RoleTitle"
+                                                        RoleChanged="HandleRoleChangedAsync"
+                                                        Summary="@editorModel.Summary"
+                                                        SummaryChanged="HandleSummaryChangedAsync"
+                                                        Instructions="@editorModel.Instructions"
+                                                        InstructionsChanged="HandleInstructionsChangedAsync"
+                                                        Avatar="@IdentityAvatar"
+                                                        AvatarStatus="@ResolveAvatarSelectionText()"
+                                                        AvatarDescription="Stored with the technical agent identity and reused by runtime surfaces."
+                                                        RoleLabel="Role title"
+                                                        InstructionsLabel="Instructions"
+                                                        NameTestId="agents-catalog-name"
+                                                        RoleTestId="agents-catalog-role"
+                                                        AvatarTestId="agents-catalog-avatar-summary"
+                                                        SummaryTestId="agents-catalog-summary"
+                                                        InstructionsTestId="agents-catalog-instructions">
+                                <AvatarActions>
+                                    <AvatarPicker Value="@editorModel.AvatarImageUrl"
+                                                  ValueChanged="HandleAvatarChangedAsync"
+                                                  EntityName="@editorModel.Name"
+                                                  EntityDescription="@editorModel.RoleTitle"
+                                                  EntityKind="Agent"
+                                                  GenerationSource="@AvatarGenerationSource"
+                                                  Disabled="@isBusy"
+                                                  TestIdPrefix="agents-catalog-avatar" />
+                                </AvatarActions>
+                                <AdditionalFields>
+                                    <FormField Text="Tags"
+                                               data-testid="agents-catalog-tags-section">
+                                        <TagEditor Value="@tagValues"
+                                                   ValueChanged="HandleTagsChangedAsync"
+                                                   Suggestions="@VisibleTagSuggestions"
+                                                   Placeholder="Add agent tag"
+                                                   Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
+                                                   MaxTags="12"
+                                                   TestId="agents-catalog-tags"
+                                                   InputTestId="agents-catalog-tags-input" />
+                                    </FormField>
+                                </AdditionalFields>
+                            </ConversationIdentityFields>
                         </FormSection>
                     </TabsItem>
 
                     <TabsItem Text="Runtime">
                         <FormSection Title="Runtime" Description="Pick the provider and model that the imported AgentFramework runtime will actually execute.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Provider</label>
-                                    <InputSelect TValue="Guid?"
-                                                 Value="@editorModel.ProviderProfileId"
-                                                 ValueChanged="HandleRuntimeProviderChangedAsync"
-                                                 ValueExpression="@(() => editorModel.ProviderProfileId)"
-                                                 class="cda-input"
-                                                 disabled="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
-                                                 data-testid="agents-catalog-provider">
-                                        <option value="">None</option>
-                                        @foreach (var provider in providers)
-                                        {
-                                            <option value="@provider.Id">@provider.Name</option>
-                                        }
-                                    </InputSelect>
-                                    @if (!areProvidersLoaded &&
-                                         string.IsNullOrWhiteSpace(providerLoadErrorMessage))
-                                    {
-                                        <p class="mt-2 text-sm leading-6 text-slate-500">Loading providers for runtime binding...</p>
-                                    }
-                                    else if (!string.IsNullOrWhiteSpace(providerLoadErrorMessage))
-                                    {
-                                        <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
-                                    }
-                                </div>
+                                <ConversationProviderSelector Options="@RuntimeProviderOptions"
+                                                              Value="@SelectedRuntimeProviderKey"
+                                                              ValueChanged="HandleRuntimeProviderPresentationChangedAsync"
+                                                              IsLoading="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                              LoadingMessage="Loading providers for runtime binding..."
+                                                              ErrorMessage="@providerLoadErrorMessage"
+                                                              InputTestId="agents-catalog-provider" />
                                 <ProviderModelSelector Provider="@SelectedRuntimeProvider"
                                                        Value="@editorModel.Model"
                                                        ValueChanged="HandleRuntimeModelChangedAsync"
@@ -258,35 +209,18 @@ else
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Image provider</label>
-                                            <InputSelect TValue="Guid?"
-                                                         Value="@editorModel.ImageGenerationAccess.PreferredProviderProfileId"
-                                                         ValueChanged="HandleImageGenerationProviderChangedAsync"
-                                                         ValueExpression="@(() => editorModel.ImageGenerationAccess.PreferredProviderProfileId)"
-                                                         class="cda-input"
-                                                         disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages || !areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
-                                                         data-testid="agents-catalog-image-generation-provider">
-                                                <option value="">Choose recommended image provider on save</option>
-                                                @foreach (var provider in ImageGenerationProviderOptions)
-                                                {
-                                                    <option value="@provider.Id">@($"{provider.Name}{(provider.IsEnabled ? string.Empty : " (disabled)")}")</option>
-                                                }
-                                            </InputSelect>
-                                            @if (!areProvidersLoaded &&
-                                                 string.IsNullOrWhiteSpace(providerLoadErrorMessage))
-                                            {
-                                                <p class="mt-2 text-sm leading-6 text-slate-500">Loading image-generation providers...</p>
-                                            }
-                                            else if (!string.IsNullOrWhiteSpace(providerLoadErrorMessage))
-                                            {
-                                                <p class="mt-2 text-sm leading-6 text-rose-700">@providerLoadErrorMessage</p>
-                                            }
-                                            else if (ImageGenerationProviderOptions.Count == 0)
-                                            {
-                                                <p class="mt-2 text-sm leading-6 text-slate-600">No image-generation provider profiles are configured.</p>
-                                            }
-                                        </div>
+                                        <ConversationProviderSelector Options="@ImageGenerationProviderPresentationOptions"
+                                                                      Value="@SelectedImageGenerationProviderKey"
+                                                                      ValueChanged="HandleImageGenerationProviderPresentationChangedAsync"
+                                                                      Label="Image provider"
+                                                                      NoneLabel="Choose recommended image provider on save"
+                                                                      ShowDisabledStatus="true"
+                                                                      Disabled="@(!editorModel.ImageGenerationAccess.CanGenerateImages)"
+                                                                      IsLoading="@(!areProvidersLoaded && string.IsNullOrWhiteSpace(providerLoadErrorMessage))"
+                                                                      LoadingMessage="Loading image-generation providers..."
+                                                                      ErrorMessage="@providerLoadErrorMessage"
+                                                                      EmptyMessage="No image-generation provider profiles are configured."
+                                                                      InputTestId="agents-catalog-image-generation-provider" />
                                         <ProviderModelSelector Provider="@SelectedImageGenerationProvider"
                                                                Value="@editorModel.ImageGenerationAccess.DefaultModel"
                                                                ValueChanged="HandleImageGenerationModelChangedAsync"
@@ -559,14 +493,11 @@ else
                                     </p>
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
-                                    <label class="cda-field-label">External workspace roots</label>
-                                    <InputTextArea @bind-Value="externalWorkspaceRootsText"
-                                                   class="cda-input cda-input--textarea mt-2 min-h-28"
-                                                   placeholder="C:\repositories\OtherRepo&#10;external-target/D/work/repos/demo"
-                                                   data-testid="agents-catalog-workspace-external-roots" />
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">
-                                        Add persistent roots here when needed. Absolute folders mentioned in a prompt are also grounded for that run when file tools are enabled.
-                                    </p>
+                                    <ExternalWorkspaceRootSelectionField
+                                        AllowedAliases="@editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases"
+                                        RootBindings="@editorModel.WorkspaceToolAccess.ExternalTargetRootBindings"
+                                        SelectionChanged="ApplyExternalWorkspaceRootSelection"
+                                        DataTestId="agents-catalog-workspace-external-roots" />
                                 </div>
                                 <div class="cda-admin-subpanel">
                                     <p class="cda-field-label mb-2">Storage access</p>
@@ -598,15 +529,11 @@ else
                                     </p>
                                 </div>
                                 <div class="cda-admin-subpanel md:col-span-2">
-                                    <label class="cda-field-label">Allowed storage catalog IDs</label>
-                                    <InputTextArea @bind-Value="allowedStorageCatalogIdsText"
-                                                   class="cda-input cda-input--textarea mt-2 min-h-28"
-                                                   disabled="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
-                                                   placeholder="00000000-0000-0000-0000-000000000000"
-                                                   data-testid="agents-catalog-storage-ids" />
-                                    <p class="mt-2 text-sm leading-6 text-slate-600">
-                                        Use one catalog ID per line when the all-storage option is off. Write permission is still blocked for read-only catalogs.
-                                    </p>
+                                    <StorageCatalogSelectionField
+                                        Value="@editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds"
+                                        ValueChanged="ApplyStorageCatalogSelection"
+                                        AllowAll="@editorModel.WorkspaceToolAccess.AllowAllStorageCatalogs"
+                                        DataTestId="agents-catalog-storage-selection" />
                                 </div>
                             </Grid>
                         </FormSection>
@@ -854,167 +781,34 @@ else
                     </TabsItem>
 
                 </TabItems>
-            </Tabs>
-
-            <StickyActionFooter StatusLabel="Technical agents">
-                <SecondaryActions>
-                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
-                </SecondaryActions>
-                <PrimaryActions>
-                    <Button Text="Save agent"
-                            Type="submit"
-                            Disabled="@(isBusy || HasIncompatibleThinkingEffortOverride)"
-                            IsBusy="@isBusy"
-                            data-testid="agents-catalog-save" />
-                </PrimaryActions>
-                <DangerActions>
-                    @if (editorModel.Id.HasValue && !IsManagedSeedAgent)
-                    {
-                        <Button Text="Delete"
-                                Icon="delete"
-                                ButtonStyle="ButtonStyle.Danger"
-                                Disabled="@(isBusy || isConfirmingDelete)"
+                </Tabs>
+            </Sections>
+            <Actions>
+                <StickyActionFooter StatusLabel="Technical agents">
+                    <SecondaryActions>
+                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
+                    </SecondaryActions>
+                    <PrimaryActions>
+                        <Button Text="Save agent"
+                                Type="submit"
+                                Disabled="@(isBusy || HasIncompatibleThinkingEffortOverride)"
                                 IsBusy="@isBusy"
-                                Click="DeleteAgentAsync"
-                                data-testid="agents-catalog-delete" />
-                    }
-                </DangerActions>
-            </StickyActionFooter>
-        </Stack>
+                                data-testid="agents-catalog-save" />
+                    </PrimaryActions>
+                    <DangerActions>
+                        @if (editorModel.Id.HasValue && !IsManagedSeedAgent)
+                        {
+                            <Button Text="Delete"
+                                    Icon="delete"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Disabled="@(isBusy || isConfirmingDelete)"
+                                    IsBusy="@isBusy"
+                                    Click="DeleteAgentAsync"
+                                    data-testid="agents-catalog-delete" />
+                        }
+                    </DangerActions>
+                </StickyActionFooter>
+            </Actions>
+        </ConversationDefinitionEditorShell>
     </EditForm>
-}
-
-@if (avatarSelectorOpen)
-{
-    <Dialog IsOpen="true"
-            Eyebrow="Agent identity"
-            Title="Choose avatar"
-            Subtitle="@ResolveAvatarAltText()"
-            Size="ModalSize.Wide"
-            DenseChrome="true"
-            TestId="agents-catalog-avatar-dialog"
-            OnClose="CloseAvatarSelectorAsync">
-        <ChildContent>
-            <Stack GapScale="LayoutGap.Medium">
-                <SurfaceCard Soft="true">
-                    <Stack Orientation="Orientation.Horizontal"
-                           AlignItems="AlignItems.Center"
-                           GapScale="LayoutGap.Medium">
-                        <Avatar Alt="@ResolveAvatarAltText()"
-                                ImageUrl="@editorModel.AvatarImageUrl"
-                                FallbackText="@ResolveAvatarFallbackText()"
-                                DefaultImageSeed="@ResolveAvatarSeed()"
-                                Size="AvatarSize.Large"
-                                Shape="AvatarShape.Rounded" />
-                        <Stack GapScale="LayoutGap.XSmall">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
-                            <strong>@ResolveAvatarSelectionText()</strong>
-                            <small class="text-sm text-slate-600">Avatar changes are saved when you save the agent.</small>
-                        </Stack>
-                    </Stack>
-                </SurfaceCard>
-                <SurfaceCard Soft="true" Class="agent-details-dialog__custom-avatar">
-                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                        <div>
-                            <label class="cda-field-label" for="agents-catalog-avatar-upload">Custom image</label>
-                            <InputFile id="agents-catalog-avatar-upload"
-                                       class="cda-input"
-                                       accept="image/png,image/jpeg,image/webp,image/gif"
-                                       OnChange="LoadCustomAvatarAsync"
-                                       data-testid="agents-catalog-avatar-upload" />
-                            @if (!string.IsNullOrWhiteSpace(customAvatarFileName))
-                            {
-                                <p class="mt-2 break-all text-sm text-slate-600" data-testid="agents-catalog-avatar-upload-file">@customAvatarFileName</p>
-                            }
-                        </div>
-                        <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Start">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Custom avatar" />
-                            <p class="text-sm leading-6 text-slate-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
-                            @if (isAvatarUploadBusy)
-                            {
-                                <StatusBadge Tone="info" Text="Loading" />
-                            }
-                            else if (IsCustomAvatarLoaded())
-                            {
-                                <StatusBadge Tone="success" Text="Loaded" />
-                            }
-                        </Stack>
-                    </Grid>
-                </SurfaceCard>
-                <SurfaceCard Soft="true" data-testid="agents-catalog-avatar-ai">
-                    <Stack GapScale="LayoutGap.Small">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Create with AI" />
-                        @if (DefaultAvatarImageProvider is { } avatarProvider)
-                        {
-                            <TextBlock TextStyle="TextStyle.Body2"
-                                       Value="@($"Uses the default image provider '{avatarProvider.Name}' and model '{ResolveAvatarImageModel(avatarProvider)}'.")" />
-                            <FormField Text="Creative direction">
-                                <TextArea Value="@avatarGenerationPrompt"
-                                          ValueChanged="@(value => avatarGenerationPrompt = value ?? string.Empty)"
-                                          Size="TextAreaSize.Compact"
-                                          Immediate="true"
-                                          Disabled="@isAvatarGenerationBusy"
-                                          maxlength="@AgentAvatarGenerationService.MaximumVisualBriefLength"
-                                          data-testid="agents-catalog-avatar-ai-prompt" />
-                            </FormField>
-                            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-                                <Button Text="Create avatar with AI"
-                                        Icon="auto_awesome"
-                                        ButtonStyle="ButtonStyle.Primary"
-                                        Size="ButtonSize.Small"
-                                        IsBusy="@isAvatarGenerationBusy"
-                                        Disabled="@(isAvatarGenerationBusy || string.IsNullOrWhiteSpace(avatarGenerationPrompt))"
-                                        Click="GenerateAvatarAsync"
-                                        data-testid="agents-catalog-avatar-ai-generate" />
-                            </Cluster>
-                        }
-                        else
-                        {
-                            <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-catalog-avatar-ai-unavailable">
-                                No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.
-                            </Alert>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(avatarGenerationErrorMessage))
-                        {
-                            <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-catalog-avatar-ai-error">
-                                @avatarGenerationErrorMessage
-                            </Alert>
-                        }
-                    </Stack>
-                </SurfaceCard>
-                <Grid Gap="LayoutGap.Medium"
-                      ColumnTemplate="repeat(4,minmax(0,1fr))"
-                      data-testid="agents-catalog-avatar-options">
-                    @foreach (var option in AvatarOptions.Select((url, index) => new { Url = url, Number = index + 1 }))
-                    {
-                        <button type="button"
-                                class="@ResolveAvatarOptionClass(option.Url)"
-                                @onclick="@(() => SelectAvatar(option.Url))"
-                                data-testid="@($"agents-catalog-avatar-option-{option.Number}")">
-                            <Avatar Alt="@($"Avatar {option.Number}")"
-                                    ImageUrl="@option.Url"
-                                    FallbackText="@option.Number.ToString()"
-                                    UseDefaultImageWhenMissing="false"
-                                    Size="AvatarSize.Large"
-                                    Shape="AvatarShape.Rounded" />
-                            <span>Avatar @option.Number</span>
-                            @if (IsSelectedAvatar(option.Url))
-                            {
-                                <StatusBadge Tone="success" Text="Selected" />
-                            }
-                        </button>
-                    }
-                </Grid>
-            </Stack>
-        </ChildContent>
-        <Footer>
-            <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-                <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
-                        Size="ButtonSize.Small"
-                        Click="CloseAvatarSelectorAsync" />
-            </Cluster>
-        </Footer>
-    </Dialog>
 }

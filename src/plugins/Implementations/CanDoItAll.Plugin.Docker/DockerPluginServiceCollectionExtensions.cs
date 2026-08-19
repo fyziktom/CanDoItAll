@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Plugins.Abstractions;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -18,7 +19,17 @@ public static class DockerPluginServiceCollectionExtensions
         }
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPluginHostToolRecipeCatalogSource, DockerHostToolRecipeCatalogSource>());
-        services.AddScoped<IPluginHostToolService, DockerHostToolService>();
+        services.TryAddSingleton<WorkspaceExecutableLocator>();
+        services.TryAddSingleton<WorkspaceCommandEnvironmentPolicy>();
+        services.AddScoped<DockerHostToolService>();
+        services.AddScoped<IPluginHostToolService>(serviceProvider =>
+            serviceProvider.GetRequiredService<DockerHostToolService>());
+        services.AddScoped<IDockerHostCapabilityProbe>(serviceProvider =>
+            serviceProvider.GetRequiredService<DockerHostToolService>());
+        services.AddScoped<IDockerHostCapabilitySnapshotProvider, DockerHostCapabilitySnapshotProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProcessHostCapabilitySource,
+            DockerProcessHostCapabilitySource>());
         if (registerWorkflowExecutors)
         {
             services.AddWorkflowExecutorContribution<DockerListContainersWorkflowExecutor>(DockerWorkflowExecutorDescriptors.ListContainers, ServiceLifetime.Scoped);

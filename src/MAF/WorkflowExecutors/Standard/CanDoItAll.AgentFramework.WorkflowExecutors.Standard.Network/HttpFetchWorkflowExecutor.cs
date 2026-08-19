@@ -5,6 +5,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Security.Abstractions;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
 
@@ -173,19 +174,13 @@ public sealed class HttpFetchWorkflowExecutor(
             return settings.OutputPath.Trim();
         }
 
-        var fileName = Path.GetFileName(uri.LocalPath);
+        string fileName = Uri.UnescapeDataString(uri.Segments.LastOrDefault()?.Trim('/') ?? string.Empty);
         if (string.IsNullOrWhiteSpace(fileName))
         {
             fileName = "download.txt";
         }
 
-        if (fileName.Contains("..", StringComparison.Ordinal) ||
-            fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-        {
-            throw new InvalidOperationException("HTTP download output filename is unsafe.");
-        }
-
-        return $"downloads/{fileName}";
+        return $"downloads/{PortablePhysicalFileNamePolicy.Encode(fileName).PhysicalName}";
     }
 
     private static T EnsureSucceeded<T>(T result)
@@ -420,4 +415,3 @@ public sealed class HttpFetchWorkflowExecutor(
         return (Encoding.UTF8.GetString(memory.ToArray()), truncated);
     }
 }
-

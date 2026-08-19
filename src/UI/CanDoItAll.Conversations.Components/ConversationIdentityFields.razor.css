@@ -1,0 +1,19 @@
+.conversation-identity-fields__full-field,
+.conversation-identity-fields__avatar-summary {
+    width: 100%;
+}
+
+.conversation-identity-fields__summary,
+.conversation-identity-fields__instructions {
+    display: block;
+    resize: vertical;
+    width: 100%;
+}
+
+.conversation-identity-fields__summary {
+    min-height: 9rem;
+}
+
+.conversation-identity-fields__instructions {
+    min-height: 18rem;
+}

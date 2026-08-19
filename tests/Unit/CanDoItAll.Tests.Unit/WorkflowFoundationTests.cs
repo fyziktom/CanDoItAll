@@ -6,7 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using Microsoft.Agents.AI.Workflows;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowFoundationTests
 {

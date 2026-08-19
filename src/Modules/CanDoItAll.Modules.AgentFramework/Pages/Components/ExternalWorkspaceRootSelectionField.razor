@@ -1,0 +1,58 @@
+<Stack GapScale="LayoutGap.Medium"
+       AlignItems="AlignItems.Stretch"
+       Class="external-workspace-root-selection-field"
+       data-testid="@($"{DataTestId}-field")">
+    <div>
+        <label class="cda-field-label"
+               for="@InputId">
+            External workspace root
+        </label>
+        <div class="external-workspace-root-selection-field__entry mt-2">
+            <input id="@InputId"
+                   type="text"
+                   class="cda-input"
+                   value="@candidate"
+                   disabled="@Disabled"
+                   placeholder="C:\repositories\OtherRepo or external-target/v1/..."
+                   aria-invalid="@(HasValidationMessage ? "true" : "false")"
+                   aria-describedby="@InputDescriptionIds"
+                   data-testid="@($"{DataTestId}-input")"
+                   @oninput="HandleCandidateInput" />
+            <Button Text="Add root"
+                    Icon="add"
+                    Type="button"
+                    ButtonStyle="ButtonStyle.Light"
+                    Disabled="@Disabled"
+                    Click="AddCandidateAsync"
+                    data-testid="@($"{DataTestId}-add")" />
+        </div>
+        <p id="@HintId"
+           class="mt-2 text-sm leading-6 text-slate-600">
+            Enter one native absolute folder path or canonical <code>external-target/v1/...</code> alias.
+        </p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(validationMessage))
+    {
+        <Alert id="@ValidationId"
+               AlertStyle="AlertStyle.Warning"
+               data-testid="@($"{DataTestId}-validation")">
+            @validationMessage
+        </Alert>
+    }
+
+    <SelectedReferenceTable TKey="string"
+                            Items="@SelectedRoots"
+                            PrimaryColumnLabel="Folder path"
+                            IdentifierColumnLabel="Internal alias"
+                            EmptyTitle="No external workspace roots"
+                            EmptyDescription="Add an absolute folder path when this agent needs access outside the active workspace."
+                            DataTestId="@DataTestId"
+                            Disabled="@Disabled"
+                            RemoveRequested="RemoveAsync" />
+
+    <p class="text-sm leading-6 text-slate-600"
+       data-testid="@($"{DataTestId}-metadata-explanation")">
+        Readable folder paths are shown here for review. Agent metadata uses the stable internal alias shown beside each path.
+    </p>
+</Stack>

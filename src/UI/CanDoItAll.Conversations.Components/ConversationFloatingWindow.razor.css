@@ -1,0 +1,11 @@
+.conversation-floating-window {
+    display: contents;
+}
+
+.conversation-floating-window ::deep .conversation-floating-window__body {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+}

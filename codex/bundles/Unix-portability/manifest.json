@@ -1,0 +1,111 @@
+{
+  "schema_version": 2,
+  "program_id": "candoitall-unix-portability",
+  "title": "CanDoItAll Unix Portability Program",
+  "prepared_date": "2026-08-08",
+  "language": {
+    "execution_bundle": "English",
+    "human_summary": "Czech",
+    "source_code_comments": "English"
+  },
+  "source_anchor": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "development",
+    "commit": "62ea8ee0cc42c1c06da934d126a5c18f8237a89f",
+    "commit_message": "Merge branch 'maf-refactor' into development",
+    "dotnet_sdk": "10.0.302",
+    "prepared_date": "2026-08-08",
+    "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
+    "local_build_reproduction": false
+  },
+  "previous_bundle_anchor": {
+    "commit": "d44faef347be128eb85856a18c6fe253ce6fc1ee",
+    "commit_message": "Merge branch 'processes-refactor-3' into development",
+    "dotnet_sdk": "10.0.200",
+    "prepared_date": "2026-07-31",
+    "delta_to_current": {
+      "ahead": 64,
+      "behind": 0
+    }
+  },
+  "decision": {
+    "package_shape": "One ZIP containing two separately executable sequential bundles",
+    "reason": "Core path/storage/secret migrations and runtime/tools/process integration have different owners, risk profiles, and stabilization gates.",
+    "execution_order": [
+      "core-portability-foundation",
+      "runtime-tools-process-drivers"
+    ],
+    "runtime_entry_dependency": "Core Gate C4 GO or an explicit immutable provisional handoff with deferred support claims, followed by B00 rebase and ownership review"
+  },
+  "support_targets": {
+    "regression": [
+      "Windows interactive/headless"
+    ],
+    "primary_linux": [
+      "Ubuntu 24.04 LTS x64 headless",
+      "Ubuntu interactive profile when a desktop/keyring is available"
+    ],
+    "macos": [
+      "macOS interactive",
+      "macOS headless/service",
+      "osx-x64 publish",
+      "osx-arm64 publish"
+    ],
+    "support_claim_rule": "Only actual-host tested OS/profile/RID/dependency combinations may be called supported."
+  },
+  "bundles": [
+    {
+      "id": "core",
+      "directory": "bundles/01-core-portability-foundation",
+      "status": "Prepared",
+      "first_eligible_subbundle": "A00",
+      "mandatory_subbundles": [
+        "A00",
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07"
+      ],
+      "conditional_subbundles": [
+        "A90",
+        "A91",
+        "A92"
+      ],
+      "final_gate": "C4"
+    },
+    {
+      "id": "runtime",
+      "directory": "bundles/02-runtime-tools-process-drivers",
+      "status": "In progress — Gate R3a GO; B05 eligible under provisional core and macOS-validation deferrals",
+      "first_eligible_subbundle": "B05 against the current working tree and independent Gate R3a review",
+      "mandatory_subbundles": [
+        "B00",
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B05",
+        "B06",
+        "B07"
+      ],
+      "conditional_subbundles": [
+        "B90",
+        "B91"
+      ],
+      "entry_gate": "C4 or operator-authorized provisional core handoff",
+      "final_gate": "R4"
+    }
+  ],
+  "portable_source_token": "{{REPO_ROOT}}",
+  "integrity": {
+    "checksums_file": "CHECKSUMS.sha256",
+    "index_file": "bundle-index.json",
+    "portable_validation": "Passed on 2026-08-08 by scripts/validate_bundle.py",
+    "utility_smoke_tests": "Passed against disposable synthetic inputs",
+    "source_head_reverified": "62ea8ee0cc42c1c06da934d126a5c18f8237a89f",
+    "product_build_validation": "Not run during preparation; mandatory in A00 and B00"
+  }
+}

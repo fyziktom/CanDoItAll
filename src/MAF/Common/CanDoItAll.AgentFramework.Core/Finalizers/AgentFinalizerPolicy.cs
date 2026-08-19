@@ -88,7 +88,8 @@ public static class AgentFinalizerPolicies
     // Moved verbatim from MafFinalizerToolFactory (MAF) so the generic finalizer tool mechanism no longer needs to
     // know the process-step outcome contract by name; only the Core policy catalog references it.
     private const string ProcessStepOutcomeResultParameterDescription =
-        "Final governed process-step outcome. Include status, reason, branchOutcomeKey, branchOutcomeTitle, evidenceRefs, nextActions, and humanReadableSummaryMarkdown. " +
+        "Final governed process-step outcome. Include status, reason, branchOutcomeKey, branchOutcomeTitle, evidenceRefs, acceptanceCriteriaEvidence, nextActions, and humanReadableSummaryMarkdown. " +
+        "acceptanceCriteriaEvidence must be an array whose entries use criterionId, status, summary, and evidenceRefs. " +
         "branchOutcomeTitle requires a non-empty stable branchOutcomeKey declared by the current process brief. When no branch is selected, both branch fields must be empty strings. " +
         "Completed outcomes require at least one concrete current-run evidence reference.";
 

@@ -1,6 +1,6 @@
 using CanDoItAll.Infrastructure.Storage;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class StorageAccessServiceTests
 {
@@ -23,12 +23,16 @@ public sealed class StorageAccessServiceTests
                                  StorageCapability.InlinePreview |
                                  StorageCapability.OpenLocally
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(
+                storage,
+                storage.EndpointOrRoot,
+                DateTimeOffset.UtcNow);
             var sut = new StorageAccessService(
                 new TestStorageCatalogService(storage),
                 new TestStorageDriverRegistry(new TestStorageDriver(
                     StorageProviderKind.FileSystem,
                     storage.CapabilityMask)),
-                new TestWorkspacePathResolver(workspaceRoot));
+                new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(workspaceRoot)));
 
             var descriptor = await sut.DescribeAsync(new StorageObjectReference(
                 storage.Id,
@@ -67,7 +71,7 @@ public sealed class StorageAccessServiceTests
             new TestStorageDriverRegistry(new TestStorageDriver(
                 StorageProviderKind.Ftp,
                 storage.CapabilityMask)),
-            new TestWorkspacePathResolver(Path.GetTempPath()));
+            new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(Path.GetTempPath())));
 
         var descriptor = await sut.DescribeAsync(new StorageObjectReference(
             storage.Id,
@@ -91,7 +95,7 @@ public sealed class StorageAccessServiceTests
         var sut = new StorageAccessService(
             new TestStorageCatalogService(),
             new TestStorageDriverRegistry(),
-            new TestWorkspacePathResolver(Path.GetTempPath()));
+            new FileSystemStoragePathPolicy(new TestWorkspacePathResolver(Path.GetTempPath())));
         var reference = new StorageObjectReference(
             null,
             StorageProviderKind.Ipfs,

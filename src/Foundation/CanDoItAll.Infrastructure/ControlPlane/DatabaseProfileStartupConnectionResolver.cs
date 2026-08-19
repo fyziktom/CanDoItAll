@@ -1,8 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 
 namespace CanDoItAll.Infrastructure.ControlPlane;
@@ -15,11 +17,13 @@ public sealed record DatabaseStartupConnectionOptions(
 
 public static class DatabaseProfileStartupConnectionResolver
 {
+    private const string DefaultEnvironmentName = "Production";
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
     public static DatabaseStartupConnectionOptions? TryResolve(
         IConfiguration configuration,
-        string? contentRootPath)
+        string? contentRootPath,
+        string environmentName = DefaultEnvironmentName)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
@@ -28,19 +32,23 @@ public static class DatabaseProfileStartupConnectionResolver
         if (!string.IsNullOrWhiteSpace(configuredProvider) ||
             !string.IsNullOrWhiteSpace(configuredConnection))
         {
+            DatabaseProviderKind providerKind = ParseProviderKind(configuredProvider, configuredConnection);
             return new DatabaseStartupConnectionOptions(
-                ParseProviderKind(configuredProvider, configuredConnection),
-                configuredConnection,
+                providerKind,
+                providerKind == DatabaseProviderKind.InMemory
+                    ? InMemoryDatabaseIdentity.ResolveOverrideName(configuredConnection)
+                    : configuredConnection,
                 DatabaseProfileResolutionSource.ExplicitOverride,
                 ProfileId: null);
         }
 
-        return TryResolvePersistedActiveProfile(configuration, contentRootPath);
+        return TryResolvePersistedActiveProfile(configuration, contentRootPath, environmentName);
     }
 
     private static DatabaseStartupConnectionOptions? TryResolvePersistedActiveProfile(
         IConfiguration configuration,
-        string? contentRootPath)
+        string? contentRootPath,
+        string environmentName)
     {
         var controlPlaneRoot = ResolveControlPlaneRootPath(configuration, contentRootPath);
         var databaseProfilesRoot = Path.Combine(controlPlaneRoot, "database-profiles");
@@ -50,9 +58,16 @@ public static class DatabaseProfileStartupConnectionResolver
             return CreateDefaultPostgreSqlStartupOptions();
         }
 
+        var durableFileWriter = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        using IDisposable coordination = ControlPlaneFileCoordination.Acquire(
+            durableFileWriter,
+            controlPlaneRoot,
+            ControlPlaneCoordinationScope.DatabaseProfiles);
         LegacyDatabaseProfileCatalogQuarantine.QuarantineIfNeeded(
+            controlPlaneRoot,
             catalogPath,
             Path.Combine(databaseProfilesRoot, "active-profile.json"),
+            durableFileWriter,
             logger: null);
 
         var catalog = ReadDocument(
@@ -79,9 +94,16 @@ public static class DatabaseProfileStartupConnectionResolver
             resolutionSource = DatabaseProfileResolutionSource.PersistedCatalogFallback;
         }
 
+        EnsureWorkspacePathReady(activeProfile, contentRootPath);
+
         return new DatabaseStartupConnectionOptions(
             activeProfile.ProviderKind,
-            BuildConnectionString(activeProfile, controlPlaneRoot),
+            BuildConnectionString(
+                activeProfile,
+                configuration,
+                contentRootPath,
+                environmentName,
+                controlPlaneRoot),
             resolutionSource,
             activeProfile.Id);
     }
@@ -95,17 +117,32 @@ public static class DatabaseProfileStartupConnectionResolver
             ProfileId: null);
     }
 
-    private static string? BuildConnectionString(DatabaseProfileRecord profile, string controlPlaneRoot)
+    private static string? BuildConnectionString(
+        DatabaseProfileRecord profile,
+        IConfiguration configuration,
+        string? contentRootPath,
+        string environmentName,
+        string controlPlaneRoot)
     {
         return profile.ProviderKind switch
         {
-            DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile, controlPlaneRoot),
+            DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(
+                profile,
+                configuration,
+                contentRootPath,
+                environmentName,
+                controlPlaneRoot),
             DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
             _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
         };
     }
 
-    private static string BuildPostgreSqlConnectionString(DatabaseProfileRecord profile, string controlPlaneRoot)
+    private static string BuildPostgreSqlConnectionString(
+        DatabaseProfileRecord profile,
+        IConfiguration configuration,
+        string? contentRootPath,
+        string environmentName,
+        string controlPlaneRoot)
     {
         var descriptor = profile.PostgreSql
             ?? throw new InvalidOperationException("PostgreSQL profile is missing connection metadata.");
@@ -119,25 +156,61 @@ public static class DatabaseProfileStartupConnectionResolver
 
         if (!string.IsNullOrWhiteSpace(descriptor.EncryptedPassword))
         {
-            builder.Password = UnprotectControlPlaneSecret(controlPlaneRoot, descriptor.EncryptedPassword);
+            builder.Password = UnprotectControlPlaneSecret(
+                configuration,
+                contentRootPath,
+                environmentName,
+                controlPlaneRoot,
+                descriptor.EncryptedPassword);
         }
 
         return builder.ConnectionString;
     }
 
-    private static string UnprotectControlPlaneSecret(string controlPlaneRoot, string protectedValue)
+    private static string UnprotectControlPlaneSecret(
+        IConfiguration configuration,
+        string? contentRootPath,
+        string environmentName,
+        string controlPlaneRoot,
+        string protectedValue)
     {
-        var keysPath = Path.Combine(controlPlaneRoot, "dataprotection-keys");
+        string keysPath = ResolveDataProtectionKeysPath(configuration, contentRootPath, controlPlaneRoot);
+        string resolvedContentRoot = string.IsNullOrWhiteSpace(contentRootPath)
+            ? Directory.GetCurrentDirectory()
+            : contentRootPath;
+        var durableFileWriter = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
         var services = new ServiceCollection();
-        services.AddDataProtection()
-            .SetApplicationName("CanDoItAll")
-            .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        DataProtectionKeyRingProtection.Configure(
+            services.AddDataProtection(),
+            configuration,
+            string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase),
+            resolvedContentRoot,
+            keysPath,
+            durableFileWriter);
 
         using var provider = services.BuildServiceProvider();
         return provider
             .GetRequiredService<IDataProtectionProvider>()
             .CreateProtector("CanDoItAll.ControlPlaneSecrets")
             .Unprotect(protectedValue);
+    }
+
+    private static string ResolveDataProtectionKeysPath(
+        IConfiguration configuration,
+        string? contentRootPath,
+        string controlPlaneRoot)
+    {
+        string? configuredPath = configuration["ControlPlane:DataProtectionKeysPath"];
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return ControlPlanePathDefaults.ResolveConfiguredPath(
+                contentRootPath ?? Directory.GetCurrentDirectory(),
+                configuredPath);
+        }
+
+        return !string.IsNullOrWhiteSpace(configuration["ControlPlane:RootPath"])
+            ? Path.Combine(controlPlaneRoot, "dataprotection-keys")
+            : ApplicationPurposeRootPolicy.ResolveCurrent().DataProtectionKeysRoot;
     }
 
     private static string ResolveControlPlaneRootPath(
@@ -153,13 +226,33 @@ public static class DatabaseProfileStartupConnectionResolver
             return ControlPlanePathDefaults.ResolveConfiguredPath(rootBasePath, configuredRoot);
         }
 
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (!string.IsNullOrWhiteSpace(localAppData))
+        return ApplicationPurposeRootPolicy.ResolveCurrent().ControlPlaneRoot;
+    }
+
+    private static void EnsureWorkspacePathReady(
+        DatabaseProfileRecord profile,
+        string? contentRootPath)
+    {
+        if (profile.Storage.WorkspacePath is null &&
+            !string.IsNullOrWhiteSpace(profile.Storage.LegacyWorkspaceRoot))
         {
-            return Path.Combine(localAppData, "CanDoItAll", "control-plane");
+            string legacyRoot = profile.Storage.LegacyWorkspaceRoot;
+            if (PhysicalPathSyntaxPolicy.Classify(legacyRoot) == PhysicalPathSyntax.Relative)
+            {
+                legacyRoot = ControlPlanePathDefaults.ResolveConfiguredPath(
+                    contentRootPath ?? Directory.GetCurrentDirectory(),
+                    legacyRoot);
+            }
+
+            profile.Storage.WorkspacePath = HostBoundPathPolicy.ImportLegacy(
+                legacyRoot,
+                HostPathContext.CaptureCurrent());
+            profile.Storage.LegacyWorkspaceRoot = null;
         }
 
-        return Path.Combine(contentRootPath ?? Directory.GetCurrentDirectory(), ".artifacts", "control-plane");
+        HostBoundPathPolicy.ResolveRequired(
+            profile.Storage.WorkspacePath,
+            "database profile workspace");
     }
 
     private static T ReadDocument<T>(string path, Func<T> createDefault)

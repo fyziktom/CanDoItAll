@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using GenericMemorySourceScope = CanDoItAll.Memory.Abstractions.MemorySourceScope;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 public sealed class WorkbenchSourceSnapshotIntegrationTests
 {

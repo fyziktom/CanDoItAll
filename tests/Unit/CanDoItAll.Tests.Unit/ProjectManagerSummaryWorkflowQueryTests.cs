@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Projections;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectManagerSummaryWorkflowQueryTests
 {
@@ -39,6 +39,7 @@ public sealed class ProjectManagerSummaryWorkflowQueryTests
         var service = new ProjectManagerSummaryQueryService(
             planAnalytics: null!,
             agentWorkspace: null!,
+            simpleChatProjectStructureReportStore: null!,
             workflowProjectStructureReportStore: reportStore,
             processRunRecordStore: null!,
             processDefinitionCatalog:

@@ -1,11 +1,12 @@
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
+using CanDoItAll.FileTools.FileInteraction.Spreadsheet;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureFileInteractionPolicyTests
 {
@@ -18,7 +19,7 @@ public sealed class ProjectStructureFileInteractionPolicyTests
     [InlineData("hostile.svg", "image/png", FileInteractionBuiltInProfileIds.Svg, false)]
     [InlineData("clip.mp4", "video/mp4", FileInteractionBuiltInProfileIds.Object, false)]
     [InlineData("archive.zip", "application/zip", FileInteractionBuiltInProfileIds.Object, false)]
-    [InlineData("forecast.xlsx", "application/octet-stream", WorkbenchFileInteractionProfileIds.SpreadsheetPreview, false)]
+    [InlineData("forecast.xlsx", "application/octet-stream", FileInteractionSpreadsheetProfileIds.Spreadsheet, false)]
     public void Explicit_composition_resolves_only_claimed_profiles(
         string fileName,
         string rawMediaType,
@@ -103,7 +104,7 @@ public sealed class ProjectStructureFileInteractionPolicyTests
         FileInteractionComponentComposition composition = BuildComposition();
 
         FileInteractionRendererResolution resolution = composition.Renderers.Resolve(
-            WorkbenchFileInteractionProfileIds.SpreadsheetPreview,
+            FileInteractionSpreadsheetProfileIds.Spreadsheet,
             FileInteractionMode.View);
 
         Assert.True(resolution.IsResolved);
@@ -133,7 +134,7 @@ public sealed class ProjectStructureFileInteractionPolicyTests
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
-            .AddWorkbenchSpreadsheetPreview()
+            .AddSpreadsheet()
             .Build();
 
     private static StorageCatalogRecord CreateStorage(bool isReadOnly)

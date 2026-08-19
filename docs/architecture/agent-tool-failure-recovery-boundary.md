@@ -144,8 +144,9 @@ No project-specific or business-domain rule belongs in these boundaries.
   minimal safe projection.
 - Command input/path failures are actionable without physical paths, while injected
   process-host and skill-script failures are unmapped and opaque at MAF.
-- Focused unit/integration coverage, the stable Release gate, and a real UI run on the
-  rebuilt application all pass.
+- Focused unit/integration coverage and a real UI run on the rebuilt application pass.
+  The broad stable gate is additional only for CI, release/merge closure, a frozen
+  checkpoint, or a named cross-cutting invalidation trigger.
 
 The final UI acceptance used execution run
 `0314b84d-83dc-4fef-a6b9-016f823ca8c5` for creation and same-path worksheet updates,

@@ -1,6 +1,6 @@
 using CanDoItAll.AgentFramework.Maf;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafWorkspaceSearchSupportTests
 {

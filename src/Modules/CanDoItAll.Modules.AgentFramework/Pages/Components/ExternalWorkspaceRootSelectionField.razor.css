@@ -1,0 +1,12 @@
+.external-workspace-root-selection-field__entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: end;
+}
+
+@media (max-width: 40rem) {
+    .external-workspace-root-selection-field__entry {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

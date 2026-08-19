@@ -2,12 +2,17 @@ using System.Data.Common;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Infrastructure.Persistence;
 
 public sealed class LegacyCognitiveMemoryExportService(
     ILegacyCognitiveMemoryDataReader dataReader,
+    IPhysicalFileSystemPathPolicyFactory pathPolicyFactory,
+    DurableFileWriter durableFileWriter,
     TimeProvider? timeProvider = null,
     ILogger<LegacyCognitiveMemoryExportService>? logger = null) : ILegacyCognitiveMemoryExportService
 {
@@ -56,7 +61,16 @@ public sealed class LegacyCognitiveMemoryExportService(
                 FailureMessage: "Legacy Cognitive Memory compatibility is disabled.");
         }
 
-        var exportDirectory = ResolveExportDirectory(request.ExportRootPath, request.ExportId);
+        string exportId = ValidateExportId(request.ExportId);
+        string exportRoot = pathPolicyFactory.Create(request.ExportRootPath).RootPath;
+        using IDisposable coordination = durableFileWriter.AcquireCoordination(
+            exportRoot,
+            Path.Combine(exportRoot, ".legacy-memory-exports.candoitall.lock"),
+            TimeSpan.FromSeconds(15),
+            requirePrivateUnixMode: true,
+            cancellationToken);
+        IPhysicalFileSystemPathPolicy pathPolicy = pathPolicyFactory.Create(exportRoot);
+        var exportDirectory = ResolveExportDirectory(pathPolicy, exportId);
         var manifestPath = Path.Combine(exportDirectory, LegacyCognitiveMemoryExportConstants.ManifestFileName);
         if (File.Exists(manifestPath) && !request.OverwriteExisting) {
             return new LegacyCognitiveMemoryExportResult(
@@ -69,7 +83,10 @@ public sealed class LegacyCognitiveMemoryExportService(
                 FailureMessage: "An export manifest already exists for this export id.");
         }
 
-        Directory.CreateDirectory(exportDirectory);
+        durableFileWriter.EnsureDirectory(
+            exportRoot,
+            exportDirectory,
+            requirePrivateUnixMode: true);
 
         try {
             var tables = await dataReader.ReadLegacyTablesAsync(cancellationToken);
@@ -77,7 +94,11 @@ public sealed class LegacyCognitiveMemoryExportService(
 
             foreach (var table in tables.OrderBy(table => table.TableName, StringComparer.Ordinal)) {
                 ValidateTableSnapshot(table);
-                tableManifests.Add(await WriteTableAsync(exportDirectory, table, cancellationToken));
+                tableManifests.Add(await WriteTableAsync(
+                    exportRoot,
+                    exportDirectory,
+                    table,
+                    cancellationToken));
             }
 
             var rowCount = tableManifests.Sum(table => table.RowCount);
@@ -90,7 +111,7 @@ public sealed class LegacyCognitiveMemoryExportService(
                 tableManifests,
                 failureMessage: null);
 
-            await WriteManifestAsync(manifestPath, manifest, cancellationToken);
+            await WriteManifestAsync(exportRoot, manifestPath, manifest, cancellationToken);
             return new LegacyCognitiveMemoryExportResult(
                 resultKind,
                 request.ExportId,
@@ -113,7 +134,12 @@ public sealed class LegacyCognitiveMemoryExportService(
                 [],
                 exception.Message);
 
-            await TryWriteFailureManifestAsync(manifestPath, manifest, cancellationToken, logger);
+            await WriteFailureManifestAsync(
+                exportRoot,
+                manifestPath,
+                manifest,
+                exception,
+                cancellationToken);
             return new LegacyCognitiveMemoryExportResult(
                 LegacyCognitiveMemoryExportResultKind.Failed,
                 request.ExportId,
@@ -126,6 +152,7 @@ public sealed class LegacyCognitiveMemoryExportService(
     }
 
     private async Task<LegacyCognitiveMemoryTableExportManifest> WriteTableAsync(
+        string exportRoot,
         string exportDirectory,
         LegacyCognitiveMemoryTableSnapshot table,
         CancellationToken cancellationToken) {
@@ -134,8 +161,8 @@ public sealed class LegacyCognitiveMemoryExportService(
         var dataFilePath = Path.Combine(exportDirectory, dataFileName);
         var idMapFilePath = Path.Combine(exportDirectory, idMapFileName);
 
-        await WriteRowsAsync(dataFilePath, table.Rows, cancellationToken);
-        await WriteReferenceMapAsync(idMapFilePath, table, cancellationToken);
+        await WriteRowsAsync(exportRoot, dataFilePath, table.Rows, cancellationToken);
+        await WriteReferenceMapAsync(exportRoot, idMapFilePath, table, cancellationToken);
 
         return new LegacyCognitiveMemoryTableExportManifest(
             table.TableName,
@@ -147,44 +174,68 @@ public sealed class LegacyCognitiveMemoryExportService(
             ComputeSha256(idMapFilePath));
     }
 
-    private static async Task WriteRowsAsync(
+    private Task WriteRowsAsync(
+        string exportRoot,
         string path,
         IReadOnlyList<LegacyCognitiveMemoryRow> rows,
         CancellationToken cancellationToken) {
-        await using var stream = File.Create(path);
-        await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return durableFileWriter.WriteStreamAsync(
+            exportRoot,
+            path,
+            async (stream, token) => {
+                await using var writer = new StreamWriter(
+                    stream,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                    bufferSize: 64 * 1024,
+                    leaveOpen: true);
+                foreach (var row in rows) {
+                    token.ThrowIfCancellationRequested();
+                    var normalized = NormalizeValues(row.Values);
+                    var json = JsonSerializer.Serialize(normalized, LineJsonOptions);
+                    await writer.WriteLineAsync(json.AsMemory(), token);
+                }
 
-        foreach (var row in rows) {
-            cancellationToken.ThrowIfCancellationRequested();
-            var normalized = NormalizeValues(row.Values);
-            var json = JsonSerializer.Serialize(normalized, LineJsonOptions);
-            await writer.WriteLineAsync(json);
-        }
+                await writer.FlushAsync(token);
+            },
+            DurableFileWriteOptions.Private,
+            cancellationToken);
     }
 
-    private static async Task WriteReferenceMapAsync(
+    private Task WriteReferenceMapAsync(
+        string exportRoot,
         string path,
         LegacyCognitiveMemoryTableSnapshot table,
         CancellationToken cancellationToken) {
-        await using var stream = File.Create(path);
-        await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return durableFileWriter.WriteStreamAsync(
+            exportRoot,
+            path,
+            async (stream, token) => {
+                await using var writer = new StreamWriter(
+                    stream,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                    bufferSize: 64 * 1024,
+                    leaveOpen: true);
+                for (var index = 0; index < table.Rows.Count; index++) {
+                    token.ThrowIfCancellationRequested();
+                    var references = ExtractReferences(table.Rows[index].Values);
+                    if (references.Count == 0) {
+                        continue;
+                    }
 
-        for (var index = 0; index < table.Rows.Count; index++) {
-            cancellationToken.ThrowIfCancellationRequested();
-            var references = ExtractReferences(table.Rows[index].Values);
-            if (references.Count == 0) {
-                continue;
-            }
+                    references.TryGetValue("Id", out var primaryId);
+                    var entry = new LegacyCognitiveMemoryReferenceMapEntry(
+                        table.TableName,
+                        index,
+                        primaryId,
+                        references);
+                    var json = JsonSerializer.Serialize(entry, LineJsonOptions);
+                    await writer.WriteLineAsync(json.AsMemory(), token);
+                }
 
-            references.TryGetValue("Id", out var primaryId);
-            var entry = new LegacyCognitiveMemoryReferenceMapEntry(
-                table.TableName,
-                index,
-                primaryId,
-                references);
-            var json = JsonSerializer.Serialize(entry, LineJsonOptions);
-            await writer.WriteLineAsync(json);
-        }
+                await writer.FlushAsync(token);
+            },
+            DurableFileWriteOptions.Private,
+            cancellationToken);
     }
 
     private static SortedDictionary<string, string?> NormalizeValues(
@@ -248,34 +299,40 @@ public sealed class LegacyCognitiveMemoryExportService(
             tableManifests,
             failureMessage);
 
-    private static async Task WriteManifestAsync(
+    private Task WriteManifestAsync(
+        string exportRoot,
         string manifestPath,
         LegacyCognitiveMemoryExportManifest manifest,
         CancellationToken cancellationToken) {
         var json = JsonSerializer.Serialize(manifest, JsonOptions);
-        await File.WriteAllTextAsync(manifestPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+        return durableFileWriter.WriteTextAsync(
+            exportRoot,
+            manifestPath,
+            json,
+            DurableFileWriteOptions.Private,
+            cancellationToken);
     }
 
-    private static async Task TryWriteFailureManifestAsync(
+    private async Task WriteFailureManifestAsync(
+        string exportRoot,
         string manifestPath,
         LegacyCognitiveMemoryExportManifest manifest,
-        CancellationToken cancellationToken,
-        ILogger<LegacyCognitiveMemoryExportService>? logger) {
+        Exception exportFailure,
+        CancellationToken cancellationToken) {
         try {
-            await WriteManifestAsync(manifestPath, manifest, cancellationToken);
+            await WriteManifestAsync(exportRoot, manifestPath, manifest, cancellationToken);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException) {
-            logger?.LogWarning(
-                exception,
-                "Failed to write legacy Cognitive Memory export failure manifest. ExportId={ExportId}",
-                manifest.ExportId);
+        catch (Exception manifestFailure) when (manifestFailure is not OperationCanceledException) {
+            throw new AggregateException(
+                "The legacy Cognitive Memory export failed and its failure manifest could not be persisted.",
+                exportFailure,
+                manifestFailure);
         }
     }
 
-    private static string ResolveExportDirectory(string exportRootPath, string exportId) {
+    private static string ValidateExportId(string exportId) {
         var trimmedExportId = exportId.Trim();
-        if (trimmedExportId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
-            trimmedExportId is "." or ".." ||
+        if (trimmedExportId is "." or ".." ||
             trimmedExportId.Contains('/') ||
             trimmedExportId.Contains('\\')) {
             throw new ArgumentException(
@@ -283,22 +340,15 @@ public sealed class LegacyCognitiveMemoryExportService(
                 nameof(exportId));
         }
 
-        var rootFullPath = Path.GetFullPath(exportRootPath);
-        var exportFullPath = Path.GetFullPath(Path.Combine(rootFullPath, trimmedExportId));
-        var rootWithSeparator = Path.EndsInDirectorySeparator(rootFullPath)
-            ? rootFullPath
-            : rootFullPath + Path.DirectorySeparatorChar;
-        var comparison = OperatingSystem.IsWindows()
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
+        return trimmedExportId;
+    }
 
-        if (!exportFullPath.StartsWith(rootWithSeparator, comparison)) {
-            throw new ArgumentException(
-                "Export id must resolve inside the export root path.",
-                nameof(exportId));
-        }
+    private static string ResolveExportDirectory(
+        IPhysicalFileSystemPathPolicy pathPolicy,
+        string exportId) {
+        PortablePhysicalFileName encoded = PortablePhysicalFileNamePolicy.Encode(exportId);
 
-        return exportFullPath;
+        return pathPolicy.ResolveContainedPath(encoded.PhysicalName);
     }
 
     private static string ComputeSha256(string path) {
@@ -308,12 +358,16 @@ public sealed class LegacyCognitiveMemoryExportService(
 }
 
 public sealed class LegacyCognitiveMemoryExportServiceFactory(
+    IPhysicalFileSystemPathPolicyFactory pathPolicyFactory,
+    DurableFileWriter durableFileWriter,
     ILoggerFactory loggerFactory) : ILegacyCognitiveMemoryExportServiceFactory
 {
     public ILegacyCognitiveMemoryExportService Create(DbConnection legacyMainDatabaseConnection) {
         ArgumentNullException.ThrowIfNull(legacyMainDatabaseConnection);
         return new LegacyCognitiveMemoryExportService(
             new PostgreSqlLegacyCognitiveMemoryDataReader(legacyMainDatabaseConnection),
+            pathPolicyFactory,
+            durableFileWriter,
             logger: loggerFactory.CreateLogger<LegacyCognitiveMemoryExportService>());
     }
 }

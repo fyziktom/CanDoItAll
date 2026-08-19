@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -272,7 +273,7 @@ internal sealed class ToolInvocationTraceRecorder
                 string.Equals(argument.Name, "targetPath", StringComparison.OrdinalIgnoreCase))
             .Select(argument => argument.Value)
             .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .Take(2)
             .ToArray();
         return targetPaths.Length == 1
@@ -320,6 +321,32 @@ internal sealed class ToolInvocationTraceRecorder
 
 internal sealed record FinalizerSubmissionResult(bool Succeeded, string Message);
 
+internal sealed class ExactFinalizerArgumentsAIFunction(
+    AIFunction innerFunction,
+    AgentFinalizerPolicy policy) : DelegatingAIFunction(innerFunction)
+{
+    protected override ValueTask<object?> InvokeCoreAsync(
+        AIFunctionArguments arguments,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        if (arguments.Count == 1 &&
+            string.Equals(arguments.Keys.Single(), "result", StringComparison.Ordinal))
+        {
+            return base.InvokeCoreAsync(arguments, cancellationToken);
+        }
+
+        var suppliedArguments = arguments.Count == 0
+            ? "none"
+            : string.Join(", ", arguments.Keys
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .Select(name => $"`{name}`"));
+        return ValueTask.FromResult<object?>(new FinalizerSubmissionResult(
+            false,
+            $"Finalizer payload for '{policy.ToolName}' was rejected before binding: expected exactly one argument named `result`; received {suppliedArguments}. Move every structured output field inside `result` and call '{policy.ToolName}' again."));
+    }
+}
+
 internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
 {
     private static readonly MethodInfo SubmitMethodDefinition =
@@ -337,10 +364,9 @@ internal sealed class FinalizerCapture(AgentFinalizerPolicy policy)
     /// <summary>
     /// Builds the delegate the generic finalizer tool factory binds for this policy's contract. Contracts that
     /// declare a <see cref="AgentFinalizerPolicy.KnownOutputNormalizer"/> capture a raw <see cref="JsonElement"/>
-    /// (tolerant path, unconstrained schema); every other contract captures its own strictly typed output (schema
-    /// reflects the concrete CLR shape). Either way the closed generic method is reflected by
-    /// <c>AIFunctionFactory.Create</c>, so the produced JSON schema matches what a hand-written typed delegate
-    /// would have produced.
+    /// while the factory projects the policy's typed output schema; every other contract captures its own
+    /// strictly typed output. Either way the closed generic method is reflected by
+    /// <c>AIFunctionFactory.Create</c>, and the provider sees the governed CLR contract shape.
     /// </summary>
     internal Delegate CreateSubmitDelegate()
     {

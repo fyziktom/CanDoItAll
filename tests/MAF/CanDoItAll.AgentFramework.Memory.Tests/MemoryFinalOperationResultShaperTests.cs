@@ -2,7 +2,7 @@ using System.Text.Json;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 
-namespace CanDoItAll.AgentFramework.Memory.Tests;
+namespace CanDoItAll.AgentFramework.Memory.Tests.Shaping;
 
 public sealed class MemoryFinalOperationResultShaperTests
 {

@@ -1,8 +1,10 @@
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureAgentTransferFailureMapperTests
 {
@@ -22,6 +24,122 @@ public sealed class ProjectStructureAgentTransferFailureMapperTests
         { ProjectStructureTransferRejectionReason.SelectedNodesUnavailable, 400, "SelectedNodesTransferUnavailable" },
         { ProjectStructureTransferRejectionReason.TargetProjectMismatch, 500, "SubprojectTransferTargetMismatch" }
     };
+
+    [Fact]
+    public void Deletion_disposition_mismatch_maps_to_a_correctable_safe_conflict()
+    {
+        var applicationFailure = new ProjectStructureDeletionDispositionMismatchException(
+            Guid.NewGuid(),
+            "deleted-root",
+            Guid.NewGuid(),
+            ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            completedNodeCount: 2);
+
+        var wasMapped = ProjectStructureAgentTransferFailureMapper.TryMap(
+            applicationFailure,
+            out var agentFailure);
+
+        Assert.True(wasMapped);
+        Assert.Equal(409, agentFailure.StatusCode);
+        Assert.Equal("ProjectStructureDeletionDispositionMismatch", agentFailure.ErrorCode);
+        Assert.True(agentFailure.IsSafeToExpose);
+        Assert.True(agentFailure.CanRetryWithCorrectedInput);
+        var details = JsonSerializer.Serialize(agentFailure.Details);
+        Assert.Contains("RetainManagedFiles", details, StringComparison.Ordinal);
+        Assert.Contains("DeleteOwnedManagedFiles", details, StringComparison.Ordinal);
+        Assert.Contains("deleted-root", agentFailure.SafeMessage, StringComparison.Ordinal);
+        Assert.Contains("2 node(s)", agentFailure.SafeMessage, StringComparison.Ordinal);
+        Assert.Contains("DeleteOwnedManagedFiles", agentFailure.SafeMessage, StringComparison.Ordinal);
+        Assert.Same(applicationFailure, agentFailure.InnerException);
+
+        Assert.True(MafAgentToolFailureMapper.TryMap(agentFailure, out var toolFailure));
+        Assert.True(toolFailure.CanRetryWithCorrectedInput);
+        Assert.Contains("deleted-root", toolFailure.Message, StringComparison.Ordinal);
+        Assert.Contains("DeleteOwnedManagedFiles", toolFailure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Batch_storage_validation_failure_maps_truthful_completed_evidence_as_a_correctable_conflict()
+    {
+        var branchFailure = new ProjectStructureDeletionBranchFailure(
+            "invalid-root",
+            ProjectStructureDeletionBranchFailureKind.ManagedStorageValidation,
+            ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+            Guid.NewGuid(),
+            "Managed-file ownership could not be verified.",
+            "Retry with the node-only deletion option.")
+        {
+            SuggestedRetryDisposition = ProjectStructureManagedStorageDisposition.RetainManagedFiles
+        };
+        var recovery = new ProjectStructureDeletionBatchRecovery(
+            Guid.NewGuid(),
+            [],
+            CompletedNodeCount: 2,
+            Warnings: [])
+        {
+            BranchFailures = [branchFailure]
+        };
+        var applicationFailure = new ProjectStructureDeletionBatchPartialCommitException(
+            recovery,
+            "Two nodes were deleted, but one branch failed before deletion.");
+
+        var wasMapped = ProjectStructureAgentTransferFailureMapper.TryMap(
+            applicationFailure,
+            out var agentFailure);
+
+        Assert.True(wasMapped);
+        Assert.Equal(409, agentFailure.StatusCode);
+        Assert.Equal("ProjectStructureDeletionBatchPartialCommit", agentFailure.ErrorCode);
+        Assert.Same(recovery, agentFailure.Details);
+        Assert.True(agentFailure.IsSafeToExpose);
+        Assert.True(agentFailure.CanRetryWithCorrectedInput);
+        Assert.Contains("invalid-root", agentFailure.SafeMessage, StringComparison.Ordinal);
+        Assert.Contains("ManagedStorageValidation", agentFailure.SafeMessage, StringComparison.Ordinal);
+        Assert.Contains("RetainManagedFiles", agentFailure.SafeMessage, StringComparison.Ordinal);
+        Assert.Same(applicationFailure, agentFailure.InnerException);
+
+        Assert.True(MafAgentToolFailureMapper.TryMap(agentFailure, out var toolFailure));
+        Assert.True(toolFailure.CanRetryWithCorrectedInput);
+        Assert.Contains("invalid-root", toolFailure.Message, StringComparison.Ordinal);
+        Assert.Contains("RetainManagedFiles", toolFailure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Batch_unexpected_branch_failure_does_not_claim_corrected_input_can_fix_it()
+    {
+        var recovery = new ProjectStructureDeletionBatchRecovery(
+            Guid.NewGuid(),
+            [],
+            CompletedNodeCount: 1,
+            Warnings: [])
+        {
+            BranchFailures =
+            [
+                new ProjectStructureDeletionBranchFailure(
+                    "failed-root",
+                    ProjectStructureDeletionBranchFailureKind.OperationFailed,
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+                    BindingId: null,
+                    "Unexpected failure.",
+                    "Inspect the server log.")
+            ]
+        };
+        var applicationFailure = new ProjectStructureDeletionBatchPartialCommitException(
+            recovery,
+            "One node was deleted before an unexpected failure.");
+
+        var wasMapped = ProjectStructureAgentTransferFailureMapper.TryMap(
+            applicationFailure,
+            out var agentFailure);
+
+        Assert.True(wasMapped);
+        Assert.False(agentFailure.CanRetryWithCorrectedInput);
+        Assert.True(MafAgentToolFailureMapper.TryMap(agentFailure, out var toolFailure));
+        Assert.False(toolFailure.CanRetryWithCorrectedInput);
+        Assert.Contains("failed-root", toolFailure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Synthetic", toolFailure.Message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void Creation_rejection_maps_to_the_existing_agent_transport_contract()

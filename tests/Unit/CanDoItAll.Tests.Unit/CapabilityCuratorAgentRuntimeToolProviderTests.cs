@@ -13,11 +13,84 @@ using Microsoft.Extensions.DependencyInjection;
 using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CapabilityCuratorAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+    [Fact]
+    public void MCP_curator_preserves_case_distinct_path_authority_and_exact_runtime_data()
+    {
+        var editor = CapabilityCuratorCapabilityConfigurationMapper.BuildEditor(
+            new CapabilityCuratorSaveInput(
+                CapabilityId: null,
+                ExpectedFingerprint: null,
+                Kind: ModelCapabilityKind.McpServer,
+                Key: "exact-mcp-authority",
+                Name: "Exact MCP authority",
+                Description: "Exact MCP authority.",
+                McpConfiguration: new CapabilityCuratorMcpConfigurationInput(
+                    CapabilityCuratorMcpTransport.Stdio,
+                    Command: "node",
+                    Arguments: ["", " value ", " "],
+                    WorkingDirectory: " /workspace/ folder ",
+                    AllowedWorkingDirectories:
+                    [
+                        "/workspace/Foo",
+                        "/workspace/foo",
+                        " /workspace/ folder "
+                    ],
+                    AllowedTools: ["SafeTool", "safetool"],
+                    ApprovalMode: McpApprovalMode.AlwaysRequire)),
+            current: null);
+
+        var configuration = Assert.IsType<CapabilityCuratorMcpConfigurationInput>(
+            CapabilityCuratorCapabilityConfigurationMapper.ReadConfiguration(editor).Mcp);
+        Assert.Equal(["", " value ", " "], configuration.Arguments);
+        Assert.Equal(" /workspace/ folder ", configuration.WorkingDirectory);
+        Assert.Equal(3, configuration.AllowedWorkingDirectories!.Count);
+        Assert.Equal(2, configuration.AllowedTools!.Count);
+    }
+
+    [Fact]
+    public void MCP_curator_environment_bindings_follow_host_case_semantics_and_reject_collisions()
+    {
+        var input = new CapabilityCuratorSaveInput(
+            CapabilityId: null,
+            ExpectedFingerprint: null,
+            Kind: ModelCapabilityKind.McpServer,
+            Key: "environment-case-semantics",
+            Name: "Environment case semantics",
+            Description: "Environment case semantics.",
+            McpConfiguration: new CapabilityCuratorMcpConfigurationInput(
+                CapabilityCuratorMcpTransport.Stdio,
+                Command: "node",
+                Arguments: ["server.js"],
+                WorkingDirectory: ".",
+                AllowedTools: ["browser_snapshot"],
+                EnvironmentVariableBindings: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["MCP_CASE_TARGET"] = "MCP_SOURCE_ONE",
+                    ["mcp_case_target"] = "MCP_SOURCE_TWO"
+                },
+                ApprovalMode: McpApprovalMode.AlwaysRequire));
+
+        if (OperatingSystem.IsWindows())
+        {
+            var exception = Assert.Throws<ArgumentException>(() =>
+                CapabilityCuratorCapabilityConfigurationMapper.BuildEditor(input, current: null));
+            Assert.Contains("ambiguous", exception.Message, StringComparison.OrdinalIgnoreCase);
+            return;
+        }
+
+        var editor = CapabilityCuratorCapabilityConfigurationMapper.BuildEditor(input, current: null);
+        var configuration = Assert.IsType<CapabilityCuratorMcpConfigurationInput>(
+            CapabilityCuratorCapabilityConfigurationMapper.ReadConfiguration(editor).Mcp);
+        Assert.Equal(2, configuration.EnvironmentVariableBindings!.Count);
+        Assert.True(configuration.EnvironmentVariableBindings.ContainsKey("MCP_CASE_TARGET"));
+        Assert.True(configuration.EnvironmentVariableBindings.ContainsKey("mcp_case_target"));
+    }
 
     [Fact]
     public async Task Provider_fails_closed_for_identity_spoofs_and_reauthorizes_each_invocation()

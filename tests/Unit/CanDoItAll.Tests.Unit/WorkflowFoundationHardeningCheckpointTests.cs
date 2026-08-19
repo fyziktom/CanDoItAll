@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowFoundationHardeningCheckpointTests
 {
@@ -55,7 +55,9 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
                     "CanDoItAll.AgentFramework.Models",
                     "CanDoItAll.AgentFramework.WorkflowExecutors.Core",
                     "CanDoItAll.AgentFramework.Workflows.Abstractions",
-                    "CanDoItAll.AgentFramework.Workflows.Core"
+                    "CanDoItAll.AgentFramework.Workflows.Core",
+                    "CanDoItAll.Infrastructure.Abstractions",
+                    "CanDoItAll.SharedKernel"
                 ],
                 ["Microsoft.Extensions.DependencyInjection.Abstractions"])
         };
@@ -64,7 +66,7 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
         {
             var project = XDocument.Load(GetProjectPath(rule.ProjectName));
             var projectReferences = ReadReferences(project, "ProjectReference")
-                .Select(Path.GetFileNameWithoutExtension)
+                .Select(GetProjectReferenceName)
                 .Order(StringComparer.Ordinal)
                 .ToArray();
             var packageReferences = ReadReferences(project, "PackageReference")
@@ -217,6 +219,9 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value!)
             .ToArray();
+
+    private static string GetProjectReferenceName(string reference)
+        => Path.GetFileNameWithoutExtension(reference.Replace('\\', '/'));
 
     private static IReadOnlyList<string> FindPublicTypeNames(string source)
     {

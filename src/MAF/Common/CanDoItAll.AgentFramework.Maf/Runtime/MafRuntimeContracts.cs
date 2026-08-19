@@ -36,6 +36,38 @@ internal sealed class RuntimeCapabilityState
     public List<IDisposable> Disposables { get; } = [];
 
     public bool HasApprovalTools { get; set; }
+
+    public async Task<IReadOnlyList<Exception>> DisposeAcquiredResourcesAsync()
+    {
+        var failures = new List<Exception>();
+        for (var index = AsyncDisposables.Count - 1; index >= 0; index--)
+        {
+            try
+            {
+                await AsyncDisposables[index].DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+        }
+
+        AsyncDisposables.Clear();
+        for (var index = Disposables.Count - 1; index >= 0; index--)
+        {
+            try
+            {
+                Disposables[index].Dispose();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+        }
+
+        Disposables.Clear();
+        return failures;
+    }
 }
 
 internal sealed record RuntimeCapabilityAccessPlan(

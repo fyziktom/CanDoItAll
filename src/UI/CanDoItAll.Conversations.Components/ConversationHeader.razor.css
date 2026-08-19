@@ -1,0 +1,57 @@
+.chat-panel-header {
+    border-bottom: 1px solid rgb(226 232 240);
+    flex: 0 0 auto;
+    padding-bottom: 0.55rem;
+}
+
+.chat-panel-header__row {
+    align-items: center;
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.chat-panel-header__identity {
+    align-items: center;
+    display: flex;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.chat-panel-header__main {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.chat-panel-header__meta {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.chat-panel-header__meta .cda-status-badge,
+.chat-panel-header__meta ::deep .cda-status-badge {
+    flex: 0 0 auto;
+    white-space: nowrap !important;
+}
+
+.chat-panel-header__title-row {
+    align-items: center;
+    display: flex;
+    flex: 0 0 min(12rem, 45%);
+    min-width: 0;
+    order: -1;
+}
+
+.chat-panel-header__actions {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+}

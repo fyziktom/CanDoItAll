@@ -1,19 +1,22 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentDetailsDialogDeletionTests
 {
@@ -208,15 +211,20 @@ public sealed class AgentDetailsDialogDeletionTests
         {
             context.JSInterop.Mode = JSRuntimeMode.Loose;
             context.Services.AddCanDoItAllBaseLib();
-            context.Services.AddSingleton(new AgentAvatarGenerationService(
+            context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
+            context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
+            var avatarGenerationService = new AgentAvatarGenerationService(
                 new UnavailableAgentImageGenerationService(),
-                NullLogger<AgentAvatarGenerationService>.Instance));
+                NullLogger<AgentAvatarGenerationService>.Instance);
 
             var workspaceService = DispatchProxy.Create<
                 IAgentFrameworkWorkspaceService,
                 RecordingWorkspaceServiceProxy>();
             Workspace = (RecordingWorkspaceServiceProxy)(object)workspaceService;
+            context.Services.AddSingleton(avatarGenerationService);
             context.Services.AddSingleton(workspaceService);
+            context.Services.AddSingleton<IAvatarGenerationGateway>(
+                new AgentAvatarGenerationGateway(workspaceService, avatarGenerationService));
             context.Services.AddSingleton(
                 (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
             context.Services.AddSingleton(

@@ -3,7 +3,7 @@ namespace CanDoItAll.Infrastructure.Storage;
 public sealed class StorageAccessService(
     IStorageCatalogService catalogService,
     IStorageDriverRegistry driverRegistry,
-    IWorkspacePathResolver workspacePathResolver) : IStorageAccessService
+    FileSystemStoragePathPolicy fileSystemPathPolicy) : IStorageAccessService
 {
     public async Task<StorageAccessDescriptor> DescribeAsync(
         StorageObjectReference reference,
@@ -76,9 +76,7 @@ public sealed class StorageAccessService(
             return reference.LocatorKind == StorageLocatorKind.RelativePath;
         }
 
-        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        var storageRoot = Path.GetFullPath(storage.EndpointOrRoot);
-        return storageRoot.StartsWith(workspaceRoot, StringComparison.OrdinalIgnoreCase);
+        return fileSystemPathPolicy.IsTrustedForLocalOpen(storage);
     }
 
     private static string? ResolveDirectUrl(StorageObjectReference reference, StorageCatalogRecord? storage)

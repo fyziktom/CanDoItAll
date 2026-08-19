@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Prompts;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class PromptGalleryServiceValidationTests

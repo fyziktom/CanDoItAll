@@ -1,4 +1,4 @@
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowAdoptionHardeningCheckpointTests
 {
@@ -40,16 +40,16 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
     public void WorkflowUiAndWorkbenchAdoptionUseTypedFailureDisplayBoundary()
     {
         var root = FindRepositoryRoot();
-        var formatterSource = File.ReadAllText(Path.Combine(
+        var formatterSource = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\WorkflowFailureDisplayFormatter.cs"));
-        var workflowsPageCode = File.ReadAllText(Path.Combine(
+        var workflowsPageCode = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs"));
-        var workflowNodeService = File.ReadAllText(Path.Combine(
+        var workflowNodeService = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs"));
-        var workbenchContracts = File.ReadAllText(Path.Combine(
+        var workbenchContracts = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAgentContracts.cs"));
 
@@ -68,13 +68,13 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
     public void WorkflowUiAndWorkbenchDoNotUseRawEventMessageDisplayOrMessageOnlyStatus()
     {
         var root = FindRepositoryRoot();
-        var workflowsPageMarkup = File.ReadAllText(Path.Combine(
+        var workflowsPageMarkup = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor"));
-        var workflowsPageCode = File.ReadAllText(Path.Combine(
+        var workflowsPageCode = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs"));
-        var workflowNodeService = File.ReadAllText(Path.Combine(
+        var workflowNodeService = File.ReadAllText(TestRepositoryPath.Resolve(
             root,
             @"src\Modules\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureWorkflowNodeService.cs"));
 
@@ -120,7 +120,7 @@ public sealed class WorkflowAdoptionHardeningCheckpointTests
         var root = FindRepositoryRoot();
         return string.Join(
             Environment.NewLine,
-            relativePaths.Select(relativePath => File.ReadAllText(Path.Combine(root, relativePath))));
+            relativePaths.Select(relativePath => File.ReadAllText(TestRepositoryPath.Resolve(root, relativePath))));
     }
 
     private static string FindRepositoryRoot()

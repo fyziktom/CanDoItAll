@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Infrastructure.Storage;
@@ -47,7 +50,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
     public StorageBrowseCapability Capabilities =>
         StorageBrowseCapability.Browse |
         StorageBrowseCapability.Stat |
-        StorageBrowseCapability.ProviderNativeOrdering |
+        StorageBrowseCapability.GlobalNameOrdering |
         StorageBrowseCapability.ConsistentContinuation |
         StorageBrowseCapability.Metadata;
 
@@ -73,7 +76,14 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
         {
             string directoryPath = _pathPolicy.ResolveDirectory(storage, request.Container);
             var directory = new DirectoryInfo(directoryPath);
-            long directoryVersion = directory.LastWriteTimeUtc.Ticks;
+            var stopwatch = Stopwatch.StartNew();
+            IReadOnlyList<FileSystemInfo> orderedEntries = EnumerateDeterministically(
+                directory,
+                request,
+                stopwatch,
+                cancellationToken,
+                out int inspectedItems,
+                out long directoryVersion);
             int offset = ResolveOffset(storage, request, directoryVersion);
             if (offset >= request.Budget.MaximumInspectedItems)
             {
@@ -82,16 +92,12 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
                     "The filesystem continuation offset exceeds the current inspection budget."));
             }
 
-            var stopwatch = Stopwatch.StartNew();
             var entries = new List<StorageBrowseEntry>(request.PageSize);
-            int enumeratedIndex = 0;
-            int inspectedItems = 0;
             int metadataProbes = 0;
             int nextOffset = offset;
             bool hasMore = false;
             StorageBrowseCompleteness completeness = StorageBrowseCompleteness.Complete;
-            using IEnumerator<FileSystemInfo> enumerator = _enumerateEntries(directory).GetEnumerator();
-            while (true)
+            for (var currentIndex = offset; currentIndex < orderedEntries.Count; currentIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (stopwatch.Elapsed >= request.Budget.MaximumDuration)
@@ -99,32 +105,6 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
                     completeness = StorageBrowseCompleteness.PartialTimeLimit;
                     hasMore = true;
                     break;
-                }
-
-                if (inspectedItems >= request.Budget.MaximumInspectedItems)
-                {
-                    completeness = StorageBrowseCompleteness.PartialInspectionLimit;
-                    hasMore = true;
-                    break;
-                }
-
-                if (!enumerator.MoveNext())
-                {
-                    break;
-                }
-
-                FileSystemInfo info = enumerator.Current;
-                int currentIndex = enumeratedIndex++;
-                inspectedItems++;
-                if (currentIndex < offset)
-                {
-                    continue;
-                }
-
-                if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                {
-                    nextOffset = currentIndex + 1;
-                    continue;
                 }
 
                 if (entries.Count == request.PageSize)
@@ -143,6 +123,7 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
                     break;
                 }
 
+                FileSystemInfo info = orderedEntries[currentIndex];
                 entries.Add(FileSystemStorageBrowseEntryMapper.CreateEntry(request.Container, info, request.Metadata));
                 nextOffset = currentIndex + 1;
                 if (request.Metadata != StorageBrowseMetadataField.None)
@@ -155,7 +136,6 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
                 ? CreateCursor(storage, request, nextOffset, directoryVersion)
                 : null;
             stopwatch.Stop();
-            EnsureDirectoryUnchanged(directory, directoryVersion);
             var metrics = new StorageBrowseOperationMetrics(
                 entries.Count,
                 inspectedItems,
@@ -244,12 +224,68 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
                 "The filesystem browse request exceeds provider limits."));
         }
 
-        if (request.Sort != StorageBrowseSort.ProviderOrder)
+        if (request.Sort != StorageBrowseSort.ProviderOrder &&
+            request.Sort != new StorageBrowseSort(
+                StorageBrowseSortField.Name,
+                StorageBrowseSortDirection.Ascending))
         {
             throw new StorageBrowseException(new StorageBrowseError(
                 StorageBrowseErrorCode.UnsupportedOperation,
-                "The filesystem provider supports only its native forward ordering."));
+                "The filesystem provider supports only deterministic ascending logical-name ordering."));
         }
+    }
+
+    private IReadOnlyList<FileSystemInfo> EnumerateDeterministically(
+        DirectoryInfo directory,
+        StorageBrowseRequest request,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken,
+        out int inspectedItems,
+        out long directoryVersion)
+    {
+        inspectedItems = 0;
+        var candidates = new List<(string LogicalKey, string PhysicalName, FileSystemInfo Info)>();
+        foreach (FileSystemInfo info in _enumerateEntries(directory))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (stopwatch.Elapsed >= request.Budget.MaximumDuration)
+            {
+                throw new StorageBrowseException(new StorageBrowseError(
+                    StorageBrowseErrorCode.BudgetExceeded,
+                    "Deterministic filesystem ordering could not inspect the complete container within the time budget."));
+            }
+
+            inspectedItems++;
+            if (inspectedItems > request.Budget.MaximumInspectedItems)
+            {
+                throw new StorageBrowseException(new StorageBrowseError(
+                    StorageBrowseErrorCode.BudgetExceeded,
+                    "Deterministic filesystem ordering requires a complete container snapshot within the inspection budget."));
+            }
+
+            if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                continue;
+            }
+
+            if (info.Name.EndsWith(".candoitall.lock", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            candidates.Add((
+                FileSystemStorageKeyCodec.Append(request.Container.Key, info.Name),
+                info.Name,
+                info));
+        }
+
+        FileSystemInfo[] orderedEntries = candidates
+            .OrderBy(candidate => candidate.LogicalKey, StringComparer.Ordinal)
+            .ThenBy(candidate => candidate.PhysicalName, StringComparer.Ordinal)
+            .Select(candidate => candidate.Info)
+            .ToArray();
+        directoryVersion = ComputeSnapshotVersion(request.Container.Key, orderedEntries);
+        return orderedEntries;
     }
 
     private int ResolveOffset(
@@ -302,15 +338,36 @@ public sealed class FileSystemStorageBrowseDriver : IStorageBrowseDriver, IStora
             request.Metadata,
             directoryVersion));
 
-    private static void EnsureDirectoryUnchanged(DirectoryInfo directory, long directoryVersion)
+    private static long ComputeSnapshotVersion(
+        string containerKey,
+        IReadOnlyList<FileSystemInfo> entries)
     {
-        directory.Refresh();
-        if (directory.LastWriteTimeUtc.Ticks != directoryVersion)
+        using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        AppendString(hash, containerKey);
+        Span<byte> metadata = stackalloc byte[20];
+        foreach (FileSystemInfo entry in entries)
         {
-            throw new StorageBrowseException(new StorageBrowseError(
-                StorageBrowseErrorCode.SourceChanged,
-                "The filesystem container changed during the browse operation."));
+            entry.Refresh();
+            AppendString(hash, entry.Name);
+            BinaryPrimitives.WriteInt32LittleEndian(metadata, (int)entry.Attributes);
+            BinaryPrimitives.WriteInt64LittleEndian(metadata[4..], entry.LastWriteTimeUtc.Ticks);
+            BinaryPrimitives.WriteInt64LittleEndian(
+                metadata[12..],
+                entry is FileInfo file ? file.Length : -1L);
+            hash.AppendData(metadata);
         }
+
+        byte[] digest = hash.GetHashAndReset();
+        return BinaryPrimitives.ReadInt64LittleEndian(digest);
+    }
+
+    private static void AppendString(IncrementalHash hash, string value)
+    {
+        int byteCount = Encoding.UTF8.GetByteCount(value);
+        Span<byte> length = stackalloc byte[4];
+        BinaryPrimitives.WriteInt32LittleEndian(length, byteCount);
+        hash.AppendData(length);
+        hash.AppendData(Encoding.UTF8.GetBytes(value));
     }
 
     private void LogCompleted(StorageCatalogRecord storage, StorageBrowsePage page)

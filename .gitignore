@@ -17,6 +17,14 @@ output/
 outputs/
 evidence/
 proof/
+!codex/bundles/Agent-Chat-UI-Reuse-Refactor/proof/
+!codex/bundles/Agent-Chat-UI-Reuse-Refactor/proof/**
+!codex/bundles/Simple-Llm-Chats-UI-Integration/proof/
+!codex/bundles/Simple-Llm-Chats-UI-Integration/proof/**
+!codex/bundles/unix-merge-readiness-followup/proof/
+!codex/bundles/unix-merge-readiness-followup/proof/**
+!codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/
+!codex/bundles/Simple-Llm-Chats-Hardening-Sse/proof/**
 *.nupkg
 *.snupkg
 *.binlog
@@ -46,6 +54,7 @@ __pycache__/
 .codex-tmp/
 .codex-temp/
 .codex-obj/
+.local/
 .mcp-state/
 .playwright/
 .playwright-cli/
@@ -70,3 +79,4 @@ docker-compose.override.yml
 *~
 .DS_Store
 Thumbs.db
+.dotnet_cli_home

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace CanDoItAll.Manager;
@@ -22,7 +21,9 @@ public interface ITuningExecutionAdapter
     Task<TuningExecutionResult> ExecuteAsync(TuningExecutionContext context, CancellationToken cancellationToken = default);
 }
 
-public sealed class LocalProcessTuningExecutionAdapter(IConfiguration configuration) : ITuningExecutionAdapter
+public sealed class LocalProcessTuningExecutionAdapter(
+    IConfiguration configuration,
+    IManagerProcessCoordinator processCoordinator) : ITuningExecutionAdapter
 {
     private readonly ManagerOptions _options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new();
 
@@ -33,34 +34,33 @@ public sealed class LocalProcessTuningExecutionAdapter(IConfiguration configurat
             throw new InvalidOperationException("No local tuning adapter command is configured.");
         }
 
-        var startInfo = new ProcessStartInfo(_options.TuningCommand, FormatArguments(context))
-        {
-            WorkingDirectory = ResolveWorkingDirectory(context),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        startInfo.Environment["CANDOITALL_TUNING_REQUEST_ID"] = context.RequestId.ToString("N");
-        startInfo.Environment["CANDOITALL_TUNING_REQUEST_PATH"] = context.RequestJsonPath;
-        startInfo.Environment["CANDOITALL_TUNING_EVENTS_PATH"] = context.EventsPath;
-
-        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start the local tuning adapter process.");
-        await using var stdoutStream = new FileStream(context.StdOutPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        await using var stderrStream = new FileStream(context.StdErrPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-
-        var stdoutTask = process.StandardOutput.BaseStream.CopyToAsync(stdoutStream, cancellationToken);
-        var stderrTask = process.StandardError.BaseStream.CopyToAsync(stderrStream, cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        await Task.WhenAll(stdoutTask, stderrTask);
+        await using var process = await processCoordinator.StartAsync(
+            new ManagerProcessLaunchRequest(
+                ManagerProcessPurpose.Tuning,
+                "manager_tuning_adapter",
+                "manager.tuning.v1",
+                _options.TuningCommand,
+                BuildArguments(context),
+                ResolveWorkingDirectory(context),
+                new Dictionary<string, string?>
+                {
+                    ["CANDOITALL_TUNING_REQUEST_ID"] = context.RequestId.ToString("N"),
+                    ["CANDOITALL_TUNING_REQUEST_PATH"] = context.RequestJsonPath,
+                    ["CANDOITALL_TUNING_EVENTS_PATH"] = context.EventsPath
+                },
+                context.WorkspaceRoot,
+                $"Tuning:{context.RequestId:N}"),
+            cancellationToken);
+        var execution = await process.WaitForExitAsync(cancellationToken);
+        await File.WriteAllTextAsync(context.StdOutPath, execution.Stdout, cancellationToken);
+        await File.WriteAllTextAsync(context.StdErrPath, execution.Stderr, cancellationToken);
 
         return new TuningExecutionResult(
             Guid.NewGuid().ToString("N"),
-            process.ExitCode,
-            process.ExitCode == 0
+            execution.ExitCode,
+            execution.ExitCode == 0
                 ? "Local tuning adapter completed successfully."
-                : $"Local tuning adapter exited with code {process.ExitCode}.");
+                : $"Local tuning adapter exited with code {execution.ExitCode}.");
     }
 
     private string ResolveWorkingDirectory(TuningExecutionContext context)
@@ -68,11 +68,81 @@ public sealed class LocalProcessTuningExecutionAdapter(IConfiguration configurat
             ? context.WorkspaceRoot
             : Path.GetFullPath(_options.TuningWorkingDirectory, context.WorkspaceRoot);
 
-    private string FormatArguments(TuningExecutionContext context)
-        => (_options.TuningArguments ?? string.Empty)
-            .Replace("{requestPath}", context.RequestJsonPath, StringComparison.Ordinal)
-            .Replace("{requestDirectory}", context.RequestDirectory, StringComparison.Ordinal)
-            .Replace("{workspaceRoot}", context.WorkspaceRoot, StringComparison.Ordinal);
+    private IReadOnlyList<string> BuildArguments(TuningExecutionContext context)
+        => ManagerTuningArgumentBuilder.Build(_options.TuningArguments, context);
+}
+
+internal static class ManagerTuningArgumentBuilder
+{
+    public static IReadOnlyList<string> Build(
+        string? template,
+        TuningExecutionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return ManagerCommandLineTokenizer.Tokenize(template ?? string.Empty)
+            .Select(argument => argument
+                .Replace("{requestPath}", context.RequestJsonPath, StringComparison.Ordinal)
+                .Replace("{requestDirectory}", context.RequestDirectory, StringComparison.Ordinal)
+                .Replace("{workspaceRoot}", context.WorkspaceRoot, StringComparison.Ordinal))
+            .ToArray();
+    }
+}
+
+internal static class ManagerCommandLineTokenizer
+{
+    public static IReadOnlyList<string> Tokenize(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        var arguments = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var inQuotes = false;
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+            if (character == '\\' &&
+                index + 1 < value.Length &&
+                value[index + 1] is '"' or '\\')
+            {
+                current.Append(value[++index]);
+                continue;
+            }
+
+            if (character == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(character) && !inQuotes)
+            {
+                if (current.Length > 0)
+                {
+                    arguments.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(character);
+        }
+
+        if (inQuotes)
+        {
+            throw new InvalidOperationException("The configured tuning arguments contain an unterminated quote.");
+        }
+
+        if (current.Length > 0)
+        {
+            arguments.Add(current.ToString());
+        }
+
+        return arguments;
+    }
 }
 
 internal sealed record TuningRequestPacket(

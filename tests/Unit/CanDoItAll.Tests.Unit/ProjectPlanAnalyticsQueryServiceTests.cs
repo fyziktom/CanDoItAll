@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectPlanAnalyticsQueryServiceTests
 {

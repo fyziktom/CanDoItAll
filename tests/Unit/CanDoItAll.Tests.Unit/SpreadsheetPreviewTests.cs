@@ -6,7 +6,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Tools.Documents;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class SpreadsheetPreviewTests
 {
@@ -455,13 +455,15 @@ public sealed class SpreadsheetPreviewTests
         => new(
             documents,
             workspaceRoot,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
             new AgentWorkspaceToolAccessSettings
             {
                 CanReadFiles = canReadFiles,
                 CanWriteFiles = false,
                 CanTransformArtifacts = false
-            });
+            },
+            TestExternalTargetPathRegistry.Create());
 
     private static IReadOnlyList<ToolExecutionReceiptRecord> ReadReceipts(string workspaceRoot, Guid runId)
     {

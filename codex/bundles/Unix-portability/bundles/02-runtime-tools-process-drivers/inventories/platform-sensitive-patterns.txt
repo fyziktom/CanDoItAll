@@ -1,0 +1,13 @@
+# category<TAB>regular expression
+process-start	ProcessStartInfo|new\s+Process\b|Process\.Start|Kill\s*\(
+shell	powershell(?:\.exe)?|pwsh|cmd(?:\.exe)?|/bin/(?:sh|bash|zsh)|UseShellExecute|Verb\s*=\s*["']runas
+windows-executable	\.exe|\.cmd|\.bat|PATHEXT
+environment	EnvironmentVariables|ProcessStartInfo\.Environment|GetEnvironmentVariable
+case-policy	StringComparer\.OrdinalIgnoreCase|StringComparison\.OrdinalIgnoreCase
+manager-discovery	System\.Management|ManagementObject|/proc|GetProcessesByName
+watcher	FileSystemWatcher|WatcherChangeTypes
+mcp	Mcp|stdio|PlaywrightMcp|npx|npm\.cmd
+external-tool	ExternalProcess|DockerHostTool|DesktopFileLauncher|FileTools
+terminal-elevation	terminal|runas|sudo|pkexec|osascript|xdg-open|open\s+-a
+process-domain	ProcessDriverLayer|ProcessDriverDescriptor|ProcessRecovery|Escalation
+direct-host-construction	new\s+LocalWorkspaceProcessHost

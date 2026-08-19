@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class ResourceFileBrowsePaneTests
 {

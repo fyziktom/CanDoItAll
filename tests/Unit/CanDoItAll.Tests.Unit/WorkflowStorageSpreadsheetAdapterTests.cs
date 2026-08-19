@@ -6,7 +6,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tools.Documents;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowStorageSpreadsheetAdapterTests
 {
@@ -58,7 +58,7 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
         await File.WriteAllTextAsync(Path.Combine(items, "keep.txt"), "keep");
         await File.WriteAllTextAsync(Path.Combine(items, "skip.log"), "skip");
         await File.WriteAllTextAsync(Path.Combine(items, "folder", "nested.txt"), "nested");
-        var files = new RecordingWorkspaceFileService(new WorkspaceFileService(temp.Path));
+        var files = new RecordingWorkspaceFileService(TestWorkspaceServices.CreateFileService(temp.Path));
 
         var result = await ExecuteAsync(
             new WorkspaceFileWorkflowExecutor(files),
@@ -92,7 +92,7 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
         await File.WriteAllTextAsync(Path.Combine(items, "a.txt"), "a");
         await File.WriteAllTextAsync(Path.Combine(items, "b.txt"), "b");
         await File.WriteAllTextAsync(Path.Combine(items, "c.txt"), "c");
-        var files = new RecordingWorkspaceFileService(new WorkspaceFileService(temp.Path));
+        var files = new RecordingWorkspaceFileService(TestWorkspaceServices.CreateFileService(temp.Path));
 
         var result = await ExecuteAsync(
             new WorkspaceFileWorkflowExecutor(files),
@@ -117,7 +117,7 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
     public async Task Storage_list_directory_propagates_traversal_and_service_failures(string path)
     {
         using var temp = new TempDirectory();
-        var files = new RecordingWorkspaceFileService(new WorkspaceFileService(temp.Path));
+        var files = new RecordingWorkspaceFileService(TestWorkspaceServices.CreateFileService(temp.Path));
         var executor = new WorkspaceFileWorkflowExecutor(files);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteAsync(
@@ -261,13 +261,22 @@ public sealed class WorkflowStorageSpreadsheetAdapterTests
             throw new InvalidOperationException("ListDirectory must not delegate to ListFiles.");
         }
 
+        public WorkspaceFileListResult ListFiles(string path, string searchPattern, int maxResults, string authorityRootPath)
+            => inner.ListFiles(path, searchPattern, maxResults, authorityRootPath);
+
         public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20)
             => throw new NotSupportedException();
 
         public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
             => throw new NotSupportedException();
 
+        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters, string authorityRootPath)
+            => throw new NotSupportedException();
+
         public WorkspacePathStatResult StatPath(string path)
+            => throw new NotSupportedException();
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
             => throw new NotSupportedException();
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)

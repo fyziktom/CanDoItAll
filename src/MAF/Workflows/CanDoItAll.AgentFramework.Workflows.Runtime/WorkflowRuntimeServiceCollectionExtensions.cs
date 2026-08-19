@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -41,7 +42,21 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
-        services.TryAddSingleton<IWorkflowArtifactContentStore>(_ => new FileWorkflowArtifactContentStore(normalizedWorkspaceRoot, resolvedScope));
+        services.TryAddScoped<IWorkflowArtifactContentStore>(serviceProvider =>
+        {
+            IPhysicalFileSystemPathPolicyFactory pathPolicyFactory =
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>();
+            return new FileWorkflowArtifactContentStore(
+                resolvedScope,
+                new WorkspacePathResolutionService(
+                    normalizedWorkspaceRoot,
+                    pathPolicyFactory,
+                    resolvedScope),
+                new WorkspaceFileService(
+                    normalizedWorkspaceRoot,
+                    pathPolicyFactory,
+                    resolvedScope));
+        });
 
         return services;
     }
@@ -56,7 +71,10 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         services.TryAddScoped<IWorkflowArtifactContentStore>(serviceProvider =>
         {
             var (workspaceRoot, scope) = scopeFactory(serviceProvider);
-            return new FileWorkflowArtifactContentStore(workspaceRoot, scope);
+            return new FileWorkflowArtifactContentStore(
+                scope,
+                serviceProvider.GetRequiredService<IWorkspacePathResolutionService>(),
+                serviceProvider.GetRequiredService<IWorkspaceFileService>());
         });
 
         return services;

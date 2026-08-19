@@ -53,6 +53,36 @@ public interface IStorageCatalogService
     Task<StorageRoutingRule> SaveRuleAsync(StorageRoutingRule rule, CancellationToken cancellationToken = default);
 }
 
+public enum StorageCatalogPathMigrationState
+{
+    NoChanges,
+    Discovered,
+    PointerCommitted,
+    RolledBack
+}
+
+public sealed record StorageCatalogPathMigrationReport(
+    bool IsDryRun,
+    StorageCatalogPathMigrationState State,
+    int RecordCount,
+    IReadOnlyList<Guid> StorageIds,
+    string BackupSha256,
+    string TargetSha256);
+
+public interface IStorageCatalogPathMigrationService
+{
+    Task<StorageCatalogPathMigrationReport> DryRunAsync(CancellationToken cancellationToken = default);
+
+    Task<StorageCatalogPathMigrationReport> ExecuteAsync(CancellationToken cancellationToken = default);
+
+    Task<StorageCatalogPathMigrationReport> RollbackAsync(CancellationToken cancellationToken = default);
+
+    Task<StorageCatalogRecord> RebindRootAsync(
+        Guid storageId,
+        string rootPath,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IStorageRoutingService
 {
     Task<StorageRecommendation> RecommendAsync(StorageSelectionContext context, CancellationToken cancellationToken = default);

@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using System.Threading.Channels;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure.FileSystem;
 
 namespace CanDoItAll.Manager;
 
@@ -58,44 +59,15 @@ outputs: TailwindWatchStatusSnapshot, TailwindLogEntry stream
 */
 public sealed class TailwindWatchSupervisorService(
     ILogger<TailwindWatchSupervisorService> logger,
-    IConfiguration configuration) : BackgroundService
+    IConfiguration configuration,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+    IManagerProcessCoordinator processCoordinator) : BackgroundService
 {
-    private static readonly HashSet<string> IgnoredPathSegments = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".artifacts",
-        ".git",
-        "bin",
-        "node_modules",
-        "obj"
-    };
-
-    private static readonly HashSet<string> TailwindWorkspaceExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".css"
-    };
-
-    private static readonly HashSet<string> TailwindWorkspaceFileNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "package-lock.json",
-        "package.json"
-    };
-
-    private static readonly HashSet<string> TailwindContentSourceExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".cs",
-        ".cshtml",
-        ".html",
-        ".js",
-        ".jsx",
-        ".razor",
-        ".ts",
-        ".tsx"
-    };
-
+    private static readonly TimeSpan ShutdownPhaseTimeout = TimeSpan.FromSeconds(15);
     private readonly ManagerOptions _options = configuration.GetSection("Manager").Get<ManagerOptions>() ?? new();
     private readonly object _gate = new();
     private readonly List<TailwindLogEntry> _logs = [];
-    private Process? _activeProcess;
+    private IManagerProcessLease? _activeProcess;
     private long _lastLogId;
     private TailwindWatchStatusSnapshot _status = new(TailwindWatchState.Idle, "Idle", 0, DateTimeOffset.UtcNow, false, null);
 
@@ -117,8 +89,28 @@ public sealed class TailwindWatchSupervisorService(
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await StopActiveProcessAsync("Manager shutdown requested.", cancellationToken);
-        await base.StopAsync(cancellationToken);
+        using (var stopTimeout = new CancellationTokenSource(ShutdownPhaseTimeout))
+        {
+            try
+            {
+                await base.StopAsync(stopTimeout.Token);
+            }
+            catch (OperationCanceledException) when (stopTimeout.IsCancellationRequested)
+            {
+                logger.LogWarning("Timed out while stopping the Manager Tailwind background loop; mandatory process cleanup will continue.");
+            }
+        }
+
+        await StopActiveProcessAsync("Manager shutdown requested.", CancellationToken.None);
+        using var cleanupTimeout = new CancellationTokenSource(ShutdownPhaseTimeout);
+        try
+        {
+            await CleanupRegisteredProcessesAsync(cleanupTimeout.Token);
+        }
+        catch (OperationCanceledException) when (cleanupTimeout.IsCancellationRequested)
+        {
+            logger.LogError("Timed out while reconciling registered Manager Tailwind processes during shutdown.");
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -140,57 +132,86 @@ public sealed class TailwindWatchSupervisorService(
         var inputPath = ManagerStatusResponseFactory.ResolveTailwindInputPath(workspaceRoot, _options);
         var outputPath = ManagerStatusResponseFactory.ResolveTailwindOutputPath(workspaceRoot, _options);
 
-        await EnsureTailwindDependenciesAsync(tailwindWorkspacePath, outputPath, stoppingToken);
-
-        var watchRoots = ResolveWatchRoots(workspaceRoot, tailwindWorkspacePath);
-        var triggers = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        try
         {
-            SingleReader = true,
-            SingleWriter = false
-        });
-        var watchers = CreateWatchers(
-            watchRoots,
-            outputPath,
-            changedPath => triggers.Writer.TryWrite(changedPath));
-
-        if (watchers.Count == 0)
+            await EnsureTailwindDependenciesAsync(tailwindWorkspacePath, outputPath, stoppingToken);
+        }
+        catch (InvalidOperationException)
         {
-            Transition(TailwindWatchState.Faulted, "Tailwind watch could not start because no source roots were available.", outputPath);
+            logger.LogError("Tailwind supervision stopped because dependency process ownership or launch evidence was unavailable.");
+            Transition(TailwindWatchState.Faulted, "Tailwind dependency process could not be started safely.", outputPath);
             return;
         }
 
+        var watchRoots = ResolveWatchRoots(workspaceRoot, tailwindWorkspacePath);
+        var signals = new TailwindWatchSignalQueue();
+        var watchers = CreateWatchers(watchRoots, outputPath, signals);
+        var debounceWindow = TimeSpan.FromMilliseconds(Math.Clamp(_options.TailwindWatchDebounceMilliseconds, 50, 2_000));
+        var pollingInterval = TimeSpan.FromMilliseconds(Math.Clamp(_options.TailwindWatchPollingMilliseconds, 250, 60_000));
+        string? lastFingerprint = null;
+
         try
         {
-            await RunTailwindBuildAsync(
+            var initialBuildSucceeded = await RunTailwindBuildAsync(
                 "Initial Tailwind build completed.",
                 tailwindWorkspacePath,
                 inputPath,
                 outputPath,
                 stoppingToken);
+            if (initialBuildSucceeded)
+            {
+                lastFingerprint = TryComputeFingerprint(watchRoots, outputPath);
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var firstChangedPath = await triggers.Reader.ReadAsync(stoppingToken);
-                var changedPaths = await DrainChangedPathsAsync(triggers.Reader, firstChangedPath, stoppingToken);
-                var changeSummary = BuildChangeSummary(workspaceRoot, changedPaths);
+                Task<TailwindWatchSignalBatch> signalTask = signals.ReadBatchAsync(debounceWindow, stoppingToken);
+                using var pollingCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                Task pollingTask = Task.Delay(pollingInterval, pollingCancellation.Token);
+                if (await Task.WhenAny(signalTask, pollingTask) == pollingTask)
+                {
+                    TailwindWatchRoot pollingRoot = watchRoots[0];
+                    signals.Signal(pollingRoot, pollingRoot.FullPath, TailwindWatchSignalKind.Poll);
+                }
+                else
+                {
+                    await pollingCancellation.CancelAsync();
+                }
+
+                TailwindWatchSignalBatch batch = await signalTask;
+                string? fingerprint = TryComputeFingerprint(watchRoots, outputPath);
+                if (fingerprint is null || string.Equals(lastFingerprint, fingerprint, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string changeSummary = BuildChangeSummary(workspaceRoot, batch);
 
                 AppendLog(changeSummary, isError: false);
                 EchoTailwindLineToConsole(changeSummary, LogLevel.Information);
 
-                await RunTailwindBuildAsync(
+                if (await RunTailwindBuildAsync(
                     changeSummary,
                     tailwindWorkspacePath,
                     inputPath,
                     outputPath,
-                    stoppingToken);
+                    stoppingToken))
+                {
+                    lastFingerprint = fingerprint;
+                }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
         }
+        catch (InvalidOperationException)
+        {
+            logger.LogError("Tailwind supervision stopped because process ownership or launch evidence was unavailable.");
+            Transition(TailwindWatchState.Faulted, "Tailwind process could not be started safely.", outputPath);
+        }
         finally
         {
-            triggers.Writer.TryComplete();
+            signals.Complete();
             foreach (var watcher in watchers)
             {
                 watcher.Dispose();
@@ -203,7 +224,7 @@ public sealed class TailwindWatchSupervisorService(
     private IReadOnlyList<FileSystemWatcher> CreateWatchers(
         IReadOnlyList<TailwindWatchRoot> watchRoots,
         string outputPath,
-        Action<string> queueChange)
+        TailwindWatchSignalQueue signals)
     {
         var watchers = new List<FileSystemWatcher>();
 
@@ -215,151 +236,121 @@ public sealed class TailwindWatchSupervisorService(
                 continue;
             }
 
-            var watcher = new FileSystemWatcher(root.FullPath)
+            try
             {
-                Filter = "*.*",
-                IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.CreationTime |
-                               NotifyFilters.DirectoryName |
-                               NotifyFilters.FileName |
-                               NotifyFilters.LastWrite |
-                               NotifyFilters.Size
-            };
+                root.PathPolicy.EnsureSafePath(root.FullPath);
+                var watcher = new FileSystemWatcher(root.FullPath)
+                {
+                    Filter = "*.*",
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.CreationTime |
+                                   NotifyFilters.DirectoryName |
+                                   NotifyFilters.FileName |
+                                   NotifyFilters.LastWrite |
+                                   NotifyFilters.Size
+                };
 
-            watcher.Changed += (_, args) => OnWatchEvent(root, args.FullPath, outputPath, queueChange);
-            watcher.Created += (_, args) => OnWatchEvent(root, args.FullPath, outputPath, queueChange);
-            watcher.Deleted += (_, args) => OnWatchEvent(root, args.FullPath, outputPath, queueChange);
-            watcher.Renamed += (_, args) =>
+                watcher.Changed += (_, args) => OnWatchEvent(root, args.FullPath, outputPath, signals);
+                watcher.Created += (_, args) => OnWatchEvent(root, args.FullPath, outputPath, signals);
+                watcher.Deleted += (_, args) => OnWatchEvent(root, args.FullPath, outputPath, signals);
+                watcher.Renamed += (_, args) =>
+                {
+                    OnWatchEvent(root, args.OldFullPath, outputPath, signals);
+                    OnWatchEvent(root, args.FullPath, outputPath, signals);
+                };
+                watcher.Error += (_, args) =>
+                {
+                    string message = args.GetException()?.Message ?? "Unknown file watcher error.";
+                    string line = $"Tailwind file watcher reported an error under {root.FullPath}: {message}. Polling will reconcile the source state.";
+                    AppendLog(line, isError: false);
+                    EchoTailwindLineToConsole(line, LogLevel.Warning);
+                    signals.Signal(root, root.FullPath, TailwindWatchSignalKind.WatcherError);
+                };
+
+                watcher.EnableRaisingEvents = true;
+                watchers.Add(watcher);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException or ArgumentException)
             {
-                OnWatchEvent(root, args.OldFullPath, outputPath, queueChange);
-                OnWatchEvent(root, args.FullPath, outputPath, queueChange);
-            };
-            watcher.Error += (_, args) =>
-            {
-                var message = args.GetException()?.Message ?? "Unknown file watcher error.";
-                var line = $"Tailwind file watcher reported an error under {root.FullPath}: {message}. Scheduling a full rebuild.";
+                string line = $"Tailwind file watcher is unavailable under {root.FullPath}: {exception.Message}. Polling will reconcile the source state.";
                 AppendLog(line, isError: false);
                 EchoTailwindLineToConsole(line, LogLevel.Warning);
-                queueChange(root.FullPath);
-            };
+                signals.Signal(root, root.FullPath, TailwindWatchSignalKind.WatcherError);
+            }
+        }
 
-            watcher.EnableRaisingEvents = true;
-            watchers.Add(watcher);
+        if (watchers.Count == 0)
+        {
+            string line = "Tailwind file watchers are unavailable. Deterministic polling remains active.";
+            AppendLog(line, isError: false);
+            EchoTailwindLineToConsole(line, LogLevel.Warning);
         }
 
         return watchers;
     }
 
-    private async Task<IReadOnlyCollection<string>> DrainChangedPathsAsync(
-        ChannelReader<string> reader,
-        string firstChangedPath,
-        CancellationToken cancellationToken)
+    private static void OnWatchEvent(
+        TailwindWatchRoot root,
+        string fullPath,
+        string outputPath,
+        TailwindWatchSignalQueue signals)
     {
-        var changedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            firstChangedPath
-        };
-
-        var debounceWindow = TimeSpan.FromMilliseconds(Math.Clamp(_options.TailwindWatchDebounceMilliseconds, 50, 2_000));
-        var quietUntilUtc = DateTime.UtcNow + debounceWindow;
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            while (reader.TryRead(out var nextChangedPath))
-            {
-                changedPaths.Add(nextChangedPath);
-                quietUntilUtc = DateTime.UtcNow + debounceWindow;
-            }
-
-            var remaining = quietUntilUtc - DateTime.UtcNow;
-            if (remaining <= TimeSpan.Zero)
-            {
-                return changedPaths;
-            }
-
-            var delay = remaining > TimeSpan.FromMilliseconds(50)
-                ? TimeSpan.FromMilliseconds(50)
-                : remaining;
-
-            await Task.Delay(delay, cancellationToken);
-        }
-
-        return changedPaths;
-    }
-
-    private void OnWatchEvent(TailwindWatchRoot root, string fullPath, string outputPath, Action<string> queueChange)
-    {
-        if (!IsRelevantWatchPath(root, fullPath, outputPath))
+        if (!TailwindSourcePathPolicy.IsRelevant(root, fullPath, outputPath))
         {
             return;
         }
 
-        queueChange(fullPath);
+        signals.Signal(root, fullPath, TailwindWatchSignalKind.FileSystemEvent);
     }
 
-    private static bool IsRelevantWatchPath(TailwindWatchRoot root, string fullPath, string outputPath)
+    private string? TryComputeFingerprint(IReadOnlyList<TailwindWatchRoot> watchRoots, string outputPath)
     {
-        if (string.IsNullOrWhiteSpace(fullPath))
+        try
         {
-            return false;
+            return TailwindSourceFingerprint.Compute(watchRoots, outputPath);
         }
-
-        var normalizedPath = Path.GetFullPath(fullPath);
-        if (PathContainsIgnoredSegment(normalizedPath) ||
-            string.Equals(normalizedPath, Path.GetFullPath(outputPath), StringComparison.OrdinalIgnoreCase))
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return false;
+            string line = $"Tailwind source fingerprint could not be captured: {exception.Message}. The next poll will retry.";
+            AppendLog(line, isError: false);
+            EchoTailwindLineToConsole(line, LogLevel.Warning);
+            return null;
         }
-
-        var fileName = Path.GetFileName(normalizedPath);
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return false;
-        }
-
-        var extension = Path.GetExtension(normalizedPath);
-        return root.Kind switch
-        {
-            TailwindWatchRootKind.TailwindWorkspace => TailwindWorkspaceFileNames.Contains(fileName) ||
-                                                       TailwindWorkspaceExtensions.Contains(extension),
-            TailwindWatchRootKind.ContentSource => TailwindContentSourceExtensions.Contains(extension),
-            _ => false
-        };
-    }
-
-    private static bool PathContainsIgnoredSegment(string fullPath)
-    {
-        var segments = fullPath.Split(
-            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-            StringSplitOptions.RemoveEmptyEntries);
-        return segments.Any(IgnoredPathSegments.Contains);
     }
 
     private IReadOnlyList<TailwindWatchRoot> ResolveWatchRoots(string workspaceRoot, string tailwindWorkspacePath)
     {
-        var roots = new List<TailwindWatchRoot>
-        {
-            new(tailwindWorkspacePath, TailwindWatchRootKind.TailwindWorkspace)
-        };
+        var roots = new List<TailwindWatchRoot>();
+        AddRoot(tailwindWorkspacePath, TailwindWatchRootKind.TailwindWorkspace);
 
-        foreach (var relativePath in _options.TailwindContentWatchPaths)
+        foreach (string relativePath in _options.TailwindContentWatchPaths)
         {
             if (string.IsNullOrWhiteSpace(relativePath))
             {
                 continue;
             }
 
-            var fullPath = Path.GetFullPath(Path.Combine(workspaceRoot, relativePath));
-            if (roots.All(existing => !string.Equals(existing.FullPath, fullPath, StringComparison.OrdinalIgnoreCase)))
-            {
-                roots.Add(new(fullPath, TailwindWatchRootKind.ContentSource));
-            }
+            AddRoot(Path.GetFullPath(Path.Combine(workspaceRoot, relativePath)), TailwindWatchRootKind.ContentSource);
         }
 
         return roots;
+
+        void AddRoot(string path, TailwindWatchRootKind kind)
+        {
+            string fullPath = Path.GetFullPath(path);
+            IPhysicalFileSystemPathPolicy pathPolicy = physicalPathPolicyFactory.Create(fullPath);
+            if (roots.Any(existing =>
+                    existing.PathPolicy.PathComparer.Equals(existing.FullPath, fullPath) ||
+                    pathPolicy.PathComparer.Equals(existing.FullPath, fullPath)))
+            {
+                return;
+            }
+
+            roots.Add(new TailwindWatchRoot(roots.Count, fullPath, kind, pathPolicy));
+        }
     }
 
-    private async Task RunTailwindBuildAsync(
+    private async Task<bool> RunTailwindBuildAsync(
         string reason,
         string tailwindWorkspacePath,
         string inputPath,
@@ -368,59 +359,91 @@ public sealed class TailwindWatchSupervisorService(
     {
         Transition(TailwindWatchState.Starting, $"{reason} Rebuilding Tailwind output.", outputPath);
 
-        var startInfo = new ProcessStartInfo(WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(tailwindWorkspacePath))
-        {
-            WorkingDirectory = tailwindWorkspacePath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
         var inputArgument = Path.GetRelativePath(tailwindWorkspacePath, inputPath);
         var outputArgument = Path.GetRelativePath(tailwindWorkspacePath, outputPath);
-        foreach (var argument in WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(inputArgument, outputArgument))
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+        var arguments = new[] { WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath) }
+            .Concat(WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(inputArgument, outputArgument))
+            .ToArray();
         var stopwatch = Stopwatch.StartNew();
-
-        process.Start();
+        var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, _options);
+        var process = await processCoordinator.StartAsync(
+            new ManagerProcessLaunchRequest(
+                ManagerProcessPurpose.TailwindBuild,
+                "manager_tailwind_build",
+                "manager.tailwind-build.v1",
+                "node",
+                arguments,
+                tailwindWorkspacePath,
+                new Dictionary<string, string?>(),
+                workspaceRoot,
+                "TailwindWatchSupervisorService"),
+            cancellationToken);
         Interlocked.Exchange(ref _activeProcess, process);
 
+        WorkspaceProcessExecutionResult result;
         try
         {
-            var stdoutTask = ReadStreamAsync(process.StandardOutput, false, outputPath, cancellationToken);
-            var stderrTask = ReadStreamAsync(process.StandardError, true, outputPath, cancellationToken);
-            await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(cancellationToken));
+            var outputTask = ManagerProcessOutputPump.PumpAsync(
+                process,
+                (line, isError, _) =>
+                {
+                    HandleOutputLine(line, isError, outputPath);
+                    return Task.CompletedTask;
+                },
+                cancellationToken);
+            result = await process.WaitForExitAsync(cancellationToken);
+            await outputTask;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await TerminateProcessAsync(process, "Tailwind build cancellation requested.", cancellationToken);
+            await process.TerminateAsync("tailwind-build-cancelled", CancellationToken.None);
             throw;
         }
         finally
         {
             Interlocked.CompareExchange(ref _activeProcess, null, process);
+            await process.DisposeAsync();
         }
 
         stopwatch.Stop();
         RefreshOutputSnapshot(outputPath);
 
-        if (process.ExitCode != 0)
+        if (result.ExitCode != 0)
         {
-            Transition(TailwindWatchState.Faulted, $"Tailwind build failed with code {process.ExitCode}.", outputPath);
-            return;
+            Transition(TailwindWatchState.Faulted, $"Tailwind build failed with code {result.ExitCode}.", outputPath);
+            return false;
         }
 
         var outputLastWriteUtc = GetOutputSnapshot(outputPath).OutputLastWriteUtc;
-        var completedSummary = outputLastWriteUtc.HasValue
-            ? $"{reason} Tailwind output propagated in {stopwatch.ElapsedMilliseconds} ms at {outputLastWriteUtc:O}."
-            : $"{reason} Tailwind build completed in {stopwatch.ElapsedMilliseconds} ms, but the output file was not found.";
+        if (!outputLastWriteUtc.HasValue)
+        {
+            Transition(
+                TailwindWatchState.Faulted,
+                $"{reason} Tailwind build completed, but the output file was not published.",
+                outputPath);
+            return false;
+        }
 
-        Transition(TailwindWatchState.Ready, completedSummary, outputPath);
+        Transition(
+            TailwindWatchState.Ready,
+            $"{reason} Tailwind output propagated in {stopwatch.ElapsedMilliseconds} ms at {outputLastWriteUtc:O}.",
+            outputPath);
+        return true;
+    }
+
+    private async Task CleanupRegisteredProcessesAsync(CancellationToken cancellationToken)
+    {
+        foreach (var purpose in new[]
+                 {
+                     ManagerProcessPurpose.TailwindBuild,
+                     ManagerProcessPurpose.TailwindDependencyInstall
+                 })
+        {
+            await processCoordinator.ReclaimRegisteredAsync(
+                purpose,
+                "tailwind-shutdown-recovery",
+                cancellationToken);
+        }
     }
 
     private async Task EnsureTailwindDependenciesAsync(string tailwindWorkspacePath, string outputPath, CancellationToken cancellationToken)
@@ -430,7 +453,7 @@ public sealed class TailwindWatchSupervisorService(
             return;
         }
 
-        var tailwindCliPath = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(tailwindWorkspacePath);
+        var tailwindCliPath = WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath);
         if (File.Exists(tailwindCliPath))
         {
             return;
@@ -438,61 +461,34 @@ public sealed class TailwindWatchSupervisorService(
 
         Transition(TailwindWatchState.Starting, "Installing Tailwind workspace dependencies.", outputPath);
 
-        ProcessStartInfo startInfo;
-        if (OperatingSystem.IsWindows())
-        {
-            startInfo = new ProcessStartInfo(WorkspaceRuntimeProcessTools.ResolvePowerShellCommand())
+        var plan = WorkspaceRuntimeProcessTools.BuildNpmInstallPlan();
+        var workspaceRoot = ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, _options);
+        await using var process = await processCoordinator.StartAsync(
+            new ManagerProcessLaunchRequest(
+                ManagerProcessPurpose.TailwindDependencyInstall,
+                "manager_npm_install",
+                "manager.tailwind-dependencies.v1",
+                plan.ExecutablePath,
+                plan.Arguments,
+                tailwindWorkspacePath,
+                new Dictionary<string, string?>(),
+                workspaceRoot,
+                "TailwindWatchSupervisorService"),
+            cancellationToken);
+        var outputTask = ManagerProcessOutputPump.PumpAsync(
+            process,
+            (line, isError, _) =>
             {
-                WorkingDirectory = tailwindWorkspacePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            startInfo.ArgumentList.Add("-NoProfile");
-            startInfo.ArgumentList.Add("-ExecutionPolicy");
-            startInfo.ArgumentList.Add("Bypass");
-            startInfo.ArgumentList.Add("-Command");
-            startInfo.ArgumentList.Add("npm install");
-        }
-        else
+                HandleOutputLine(line, isError, outputPath);
+                return Task.CompletedTask;
+            },
+            cancellationToken);
+        var result = await process.WaitForExitAsync(cancellationToken);
+        await outputTask;
+        if (result.ExitCode != 0)
         {
-            startInfo = new ProcessStartInfo(WorkspaceRuntimeProcessTools.ResolveNpmCommand())
-            {
-                WorkingDirectory = tailwindWorkspacePath,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            startInfo.ArgumentList.Add("install");
-        }
-
-        using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        process.Start();
-
-        var stdoutTask = ReadStreamAsync(process.StandardOutput, false, outputPath, cancellationToken);
-        var stderrTask = ReadStreamAsync(process.StandardError, true, outputPath, cancellationToken);
-
-        await Task.WhenAll(stdoutTask, stderrTask, process.WaitForExitAsync(cancellationToken));
-        if (process.ExitCode != 0)
-        {
-            Transition(TailwindWatchState.Faulted, $"Tailwind dependency install failed with code {process.ExitCode}.", outputPath);
-            throw new InvalidOperationException($"Tailwind dependency install failed with code {process.ExitCode}.");
-        }
-    }
-
-    private async Task ReadStreamAsync(StreamReader reader, bool isError, string outputPath, CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var line = await reader.ReadLineAsync(cancellationToken);
-            if (line is null)
-            {
-                break;
-            }
-
-            HandleOutputLine(line, isError, outputPath);
+            Transition(TailwindWatchState.Faulted, $"Tailwind dependency install failed with code {result.ExitCode}.", outputPath);
+            throw new InvalidOperationException($"Tailwind dependency install failed with code {result.ExitCode}.");
         }
     }
 
@@ -597,27 +593,17 @@ public sealed class TailwindWatchSupervisorService(
             return;
         }
 
-        await TerminateProcessAsync(activeProcess, reason, cancellationToken);
-    }
-
-    private async Task TerminateProcessAsync(Process process, string reason, CancellationToken cancellationToken)
-    {
+        logger.LogInformation(
+            "Stopping registered Manager Tailwind process. LeaseId={LeaseId}. Reason={Reason}",
+            activeProcess.Record.LeaseId,
+            reason);
         try
         {
-            if (process.HasExited)
-            {
-                return;
-            }
-
-            logger.LogInformation("Stopping Tailwind process {ProcessId}. Reason: {Reason}", process.Id, reason);
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync(CancellationToken.None);
+            await activeProcess.TerminateAsync("tailwind-stop", CancellationToken.None);
         }
-        catch (InvalidOperationException)
+        finally
         {
-        }
-        catch (ArgumentException)
-        {
+            await activeProcess.DisposeAsync();
         }
     }
 
@@ -626,35 +612,33 @@ public sealed class TailwindWatchSupervisorService(
             ManagerStatusResponseFactory.ResolveWorkspaceRoot(AppContext.BaseDirectory, _options),
             _options);
 
-    private static string BuildChangeSummary(string workspaceRoot, IReadOnlyCollection<string> changedPaths)
+    private static string BuildChangeSummary(string workspaceRoot, TailwindWatchSignalBatch batch)
     {
-        var relativePaths = changedPaths
+        string[] relativePaths = batch.ChangedPaths
             .Select(path => Path.GetRelativePath(workspaceRoot, path))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
+        string reason = batch.Kinds switch
+        {
+            TailwindWatchSignalKind.Poll => "Periodic Tailwind source reconciliation",
+            _ when batch.Kinds.HasFlag(TailwindWatchSignalKind.WatcherError) => "Tailwind watcher recovery reconciliation",
+            _ => "Tailwind source change"
+        };
 
         if (relativePaths.Length == 0)
         {
-            return "Tailwind sources changed.";
+            return $"{reason} detected at generation {batch.Generation}.";
         }
 
         if (relativePaths.Length == 1)
         {
-            return $"Detected Tailwind-relevant change in {relativePaths[0]}.";
+            return $"{reason} detected in {relativePaths[0]} at generation {batch.Generation}.";
         }
 
-        var preview = string.Join(", ", relativePaths.Take(3));
-        var remainingCount = relativePaths.Length - 3;
+        string preview = string.Join(", ", relativePaths.Take(3));
+        int remainingCount = relativePaths.Length - 3;
         return remainingCount > 0
-            ? $"Detected {relativePaths.Length} Tailwind-relevant changes: {preview}, and {remainingCount} more."
-            : $"Detected {relativePaths.Length} Tailwind-relevant changes: {preview}.";
-    }
-
-    private sealed record TailwindWatchRoot(string FullPath, TailwindWatchRootKind Kind);
-
-    private enum TailwindWatchRootKind
-    {
-        TailwindWorkspace,
-        ContentSource
+            ? $"{reason} detected {relativePaths.Length} relevant paths at generation {batch.Generation}: {preview}, and {remainingCount} more."
+            : $"{reason} detected {relativePaths.Length} relevant paths at generation {batch.Generation}: {preview}.";
     }
 }

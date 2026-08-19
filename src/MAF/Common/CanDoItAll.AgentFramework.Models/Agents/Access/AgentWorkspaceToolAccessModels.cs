@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -184,6 +186,8 @@ public sealed class AgentWorkspaceToolAccessSettings
 
     public List<string> AllowedExternalTargetAliases { get; set; } = [];
 
+    public List<ExternalTargetRootBinding> ExternalTargetRootBindings { get; set; } = [];
+
     public bool CanReadStorage { get; set; }
 
     public bool CanWriteStorage { get; set; }
@@ -229,7 +233,8 @@ public sealed record EffectiveExternalTargetAccessScope(
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(readOnlyAlias =>
                 !string.IsNullOrWhiteSpace(readOnlyAlias) &&
-                readOnlyAlias.StartsWith(normalizedAlias + "/", StringComparison.OrdinalIgnoreCase))
+                !ExternalTargetAliasCodec.EqualityComparer.Equals(readOnlyAlias, normalizedAlias) &&
+                ExternalTargetAliasCodec.IsAliasWithinRoot(readOnlyAlias, normalizedAlias))
             .Any(readOnlyAlias => !CanWrite(readOnlyAlias));
     }
 
@@ -247,8 +252,7 @@ public sealed record EffectiveExternalTargetAccessScope(
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(rootAlias =>
                 !string.IsNullOrWhiteSpace(rootAlias) &&
-                (string.Equals(normalizedAlias, rootAlias, StringComparison.OrdinalIgnoreCase) ||
-                 normalizedAlias.StartsWith(rootAlias + "/", StringComparison.OrdinalIgnoreCase)))
+                ExternalTargetAliasCodec.IsAliasWithinRoot(normalizedAlias, rootAlias))
             .Select(rootAlias => rootAlias!.Length)
             .DefaultIfEmpty(-1)
             .Max();
@@ -271,10 +275,12 @@ public static class EffectiveExternalTargetAccessResolver
                     configuredAlias,
                     invocationReadOnlyAliases))
             .Concat(invocationWritableAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray();
         var readOnlyAliases = invocationReadOnlyAliases
-            .Where(alias => !invocationWritableAliases.Contains(alias, StringComparer.OrdinalIgnoreCase))
+            .Where(alias => !invocationWritableAliases.Contains(
+                alias,
+                ExternalTargetAliasCodec.EqualityComparer))
             .ToArray();
 
         return new EffectiveExternalTargetAccessScope(writableAliases, readOnlyAliases);
@@ -286,7 +292,7 @@ public static class EffectiveExternalTargetAccessResolver
             .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToArray()
             ?? [];
     }
@@ -304,12 +310,11 @@ public static class AgentWorkspaceToolAccessMetadata
     private const string CanManageWorkspacePathsPropertyName = "canManageWorkspacePaths";
     private const string CanTransformArtifactsPropertyName = "canTransformArtifacts";
     private const string AllowedExternalTargetAliasesPropertyName = "allowedExternalTargetAliases";
+    private const string ExternalTargetRootBindingsPropertyName = "externalTargetRootBindings";
     private const string CanReadStoragePropertyName = "canReadStorage";
     private const string CanWriteStoragePropertyName = "canWriteStorage";
     private const string AllowAllStorageCatalogsPropertyName = "allowAllStorageCatalogs";
     private const string AllowedStorageCatalogIdsPropertyName = "allowedStorageCatalogIds";
-    private const string ExternalTargetAliasRoot = "external-target";
-
     public static AgentWorkspaceToolAccessSettings Read(string? configurationJson)
     {
         if (string.IsNullOrWhiteSpace(configurationJson))
@@ -341,6 +346,19 @@ public static class AgentWorkspaceToolAccessMetadata
                 AllowAllStorageCatalogs = TryReadBoolean(workspaceTools, AllowAllStorageCatalogsPropertyName)
             };
 
+            if (workspaceTools[ExternalTargetRootBindingsPropertyName] is JsonArray rootBindings)
+            {
+                settings.ExternalTargetRootBindings = rootBindings
+                    .Select(item => item as JsonObject ??
+                        throw new InvalidOperationException(
+                            "An external-target root binding must be a JSON object."))
+                    .Select(binding => new ExternalTargetRootBinding(
+                        binding["rootId"]?.GetValue<string>() ?? string.Empty,
+                        binding["hostPlatform"]?.GetValue<string>() ?? string.Empty,
+                        binding["protectedRootToken"]?.GetValue<string>() ?? string.Empty))
+                    .ToList();
+            }
+
             if (workspaceTools[AllowedExternalTargetAliasesPropertyName] is JsonArray externalAliases)
             {
                 settings.AllowedExternalTargetAliases = externalAliases
@@ -349,8 +367,8 @@ public static class AgentWorkspaceToolAccessMetadata
                     .Select(NormalizeExternalTargetAlias)
                     .Where(item => !string.IsNullOrWhiteSpace(item))
                     .Cast<string>()
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(item => item, StringComparer.Ordinal)
                     .ToList();
             }
 
@@ -377,6 +395,14 @@ public static class AgentWorkspaceToolAccessMetadata
         string? configurationJson,
         AgentWorkspaceToolAccessSettings? settings)
     {
+        return Write(configurationJson, settings, externalTargetRegistry: null);
+    }
+
+    public static string Write(
+        string? configurationJson,
+        AgentWorkspaceToolAccessSettings? settings,
+        IExternalTargetPathRegistry? externalTargetRegistry)
+    {
         var normalized = Normalize(settings ?? new AgentWorkspaceToolAccessSettings());
         var root = ParseObject(configurationJson);
 
@@ -386,6 +412,25 @@ public static class AgentWorkspaceToolAccessMetadata
             return root.ToJsonString();
         }
 
+        var persistedAliases = normalized.AllowedExternalTargetAliases
+            .Select(alias => ExternalTargetAliasCodec.NormalizeVersionedAlias(alias) ??
+                externalTargetRegistry?.MigrateLegacyAliasForWrite(alias) ??
+                throw new InvalidOperationException(
+                    "A legacy external-target alias requires an Infrastructure-owned registry to migrate it for writing."))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
+            .ToArray();
+        var generatedBindings = externalTargetRegistry?.ExportBindings(persistedAliases) ?? [];
+        var rootBindings = normalized.ExternalTargetRootBindings
+            .Concat(generatedBindings)
+            .GroupBy(binding => binding.RootId, StringComparer.Ordinal)
+            .Select(group => group.Distinct().Count() == 1
+                ? group.First()
+                : throw new InvalidOperationException(
+                    $"Conflicting external-target root bindings use identity '{group.Key}'."))
+            .Where(binding => persistedAliases.Any(alias => AliasUsesRoot(alias, binding.RootId)))
+            .OrderBy(binding => binding.RootId, StringComparer.Ordinal)
+            .ToArray();
         root[RootPropertyName] = new JsonObject
         {
             [ProfilePropertyName] = AgentWorkspaceToolAccessProfiles.GetProfileKey(normalized.Profile),
@@ -397,8 +442,17 @@ public static class AgentWorkspaceToolAccessMetadata
             [CanManageWorkspacePathsPropertyName] = normalized.CanManageWorkspacePaths,
             [CanTransformArtifactsPropertyName] = normalized.CanTransformArtifacts,
             [AllowedExternalTargetAliasesPropertyName] = new JsonArray(
-                normalized.AllowedExternalTargetAliases
+                persistedAliases
                     .Select(alias => JsonValue.Create(alias))
+                    .ToArray()),
+            [ExternalTargetRootBindingsPropertyName] = new JsonArray(
+                rootBindings
+                    .Select(binding => new JsonObject
+                    {
+                        ["rootId"] = binding.RootId,
+                        ["hostPlatform"] = binding.HostPlatform,
+                        ["protectedRootToken"] = binding.ProtectedRootToken
+                    })
                     .ToArray()),
             [CanReadStoragePropertyName] = normalized.CanReadStorage,
             [CanWriteStoragePropertyName] = normalized.CanWriteStorage,
@@ -426,8 +480,34 @@ public static class AgentWorkspaceToolAccessMetadata
             .Select(NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
+            .ToList();
+        var referencedRootIds = allowedExternalAliases
+            .Select(alias => ExternalTargetAliasCodec.TryParseVersionedAlias(alias, out var rootId, out _, out _)
+                ? rootId
+                : null)
+            .Where(rootId => rootId is not null)
+            .ToHashSet(StringComparer.Ordinal);
+        if (settings.ExternalTargetRootBindings.Any(binding =>
+                binding is null ||
+                binding.RootId.Length != ExternalTargetAliasCodec.RootIdLength ||
+                !binding.RootId.All(Uri.IsHexDigit) ||
+                string.IsNullOrWhiteSpace(binding.HostPlatform) ||
+                string.IsNullOrWhiteSpace(binding.ProtectedRootToken)))
+        {
+            throw new InvalidOperationException("An external-target root binding is malformed.");
+        }
+
+        var externalTargetRootBindings = settings.ExternalTargetRootBindings
+            .Select(binding => binding with
+            {
+                RootId = binding.RootId.ToLowerInvariant(),
+                HostPlatform = binding.HostPlatform.Trim().ToLowerInvariant()
+            })
+            .Where(binding => referencedRootIds.Contains(binding.RootId))
+            .Distinct()
+            .OrderBy(binding => binding.RootId, StringComparer.Ordinal)
             .ToList();
 
         var allowedStorageIds = settings.AllowedStorageCatalogIds
@@ -463,6 +543,7 @@ public static class AgentWorkspaceToolAccessMetadata
             CanManageWorkspacePaths = canManageWorkspacePaths,
             CanTransformArtifacts = canTransformArtifacts,
             AllowedExternalTargetAliases = allowedExternalAliases,
+            ExternalTargetRootBindings = externalTargetRootBindings,
             CanReadStorage = settings.CanReadStorage || settings.CanWriteStorage,
             CanWriteStorage = settings.CanWriteStorage,
             AllowAllStorageCatalogs = settings.AllowAllStorageCatalogs,
@@ -577,78 +658,48 @@ public static class AgentWorkspaceToolAccessMetadata
             return null;
         }
 
+        var trimmed = pathOrAlias.Trim();
+        if (!ExternalTargetAliasCodec.IsAnyAlias(trimmed))
+        {
+            return null;
+        }
+
         var annotationStripped = StripInlineExternalTargetAliasAnnotations(
-            StripEscapedLineBreakPathAnnotations(
-                ExpandPortablePath(pathOrAlias)
-                    .Replace('\\', '/')
-                    .Trim()));
-        if (annotationStripped.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase) &&
-            ContainsDotPathSegment(annotationStripped.TrimEnd(',', ';', ':', ')', ']', '}')))
+                StripEscapedLineBreakPathAnnotations(trimmed))
+            .TrimEnd(',', ';', ':', ')', ']', '}');
+
+        var versionedAlias = ExternalTargetAliasCodec.NormalizeVersionedAlias(annotationStripped);
+        if (!string.IsNullOrWhiteSpace(versionedAlias))
+        {
+            return versionedAlias;
+        }
+
+        return ExternalTargetAliasCodec.TryNormalizeLegacyAlias(annotationStripped, out var legacyAlias)
+            ? legacyAlias
+            : null;
+    }
+
+    public static string? NormalizeExternalTargetAlias(
+        string? pathOrAlias,
+        IExternalTargetPathRegistry externalTargetRegistry)
+    {
+        ArgumentNullException.ThrowIfNull(externalTargetRegistry);
+        var normalizedAlias = NormalizeExternalTargetAlias(pathOrAlias);
+        if (!string.IsNullOrWhiteSpace(normalizedAlias))
+        {
+            return ExternalTargetAliasCodec.IsVersionedAlias(normalizedAlias)
+                ? normalizedAlias
+                : externalTargetRegistry.MigrateLegacyAliasForWrite(normalizedAlias);
+        }
+
+        if (string.IsNullOrWhiteSpace(pathOrAlias))
         {
             return null;
         }
 
-        var trimmed = annotationStripped
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-        while (trimmed.Contains("//", StringComparison.Ordinal))
-        {
-            trimmed = trimmed.Replace("//", "/", StringComparison.Ordinal);
-        }
-
-        if (trimmed.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase))
-        {
-            var normalizedAlias = NormalizeAliasCase(trimmed);
-            return IsUsableExternalTargetAlias(normalizedAlias) ? normalizedAlias : null;
-        }
-
-        if (trimmed.Length == 2 &&
-            char.IsLetter(trimmed[0]) &&
-            trimmed[1] == ':')
-        {
-            return null;
-        }
-
-        string fullPath;
-        try
-        {
-            if (!Path.IsPathRooted(trimmed))
-            {
-                return null;
-            }
-
-            fullPath = Path.GetFullPath(trimmed);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-
-        var root = Path.GetPathRoot(fullPath);
-        if (string.IsNullOrWhiteSpace(root))
-        {
-            return null;
-        }
-
-        var trimmedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmedRoot.Length != 2 ||
-            trimmedRoot[1] != ':' ||
-            !char.IsLetter(trimmedRoot[0]))
-        {
-            return null;
-        }
-
-        var relativeWithinDrive = fullPath.Length <= root.Length
-            ? string.Empty
-            : fullPath[root.Length..]
-                .Replace(Path.DirectorySeparatorChar, '/')
-                .Replace(Path.AltDirectorySeparatorChar, '/')
-                .Trim('/');
-        if (string.IsNullOrWhiteSpace(relativeWithinDrive))
-        {
-            return null;
-        }
-
-        return $"{ExternalTargetAliasRoot}/{char.ToUpperInvariant(trimmedRoot[0])}/{relativeWithinDrive}";
+        return externalTargetRegistry.TryCreateAlias(pathOrAlias.Trim(), out var alias)
+            ? alias
+            : null;
     }
 
     public static bool IsExternalTargetAliasAllowed(
@@ -671,7 +722,7 @@ public static class AgentWorkspaceToolAccessMetadata
             .Select(NormalizeExternalTargetAlias)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
             .ToList()
             ?? [];
     }
@@ -687,6 +738,7 @@ public static class AgentWorkspaceToolAccessMetadata
                !settings.CanManageWorkspacePaths &&
                !settings.CanTransformArtifacts &&
                settings.AllowedExternalTargetAliases.Count == 0 &&
+               settings.ExternalTargetRootBindings.Count == 0 &&
                !settings.CanReadStorage &&
                !settings.CanWriteStorage &&
                !settings.AllowAllStorageCatalogs &&
@@ -736,22 +788,6 @@ public static class AgentWorkspaceToolAccessMetadata
         }
     }
 
-    private static string ExpandPortablePath(string path)
-    {
-        var expanded = Environment.ExpandEnvironmentVariables(path.Trim());
-        if (string.Equals(expanded, "~", StringComparison.Ordinal))
-        {
-            return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        }
-
-        if (expanded.StartsWith("~/", StringComparison.Ordinal) || expanded.StartsWith("~\\", StringComparison.Ordinal))
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), expanded[2..]);
-        }
-
-        return expanded;
-    }
-
     private static string StripEscapedLineBreakPathAnnotations(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -782,41 +818,14 @@ public static class AgentWorkspaceToolAccessMetadata
             .Trim();
     }
 
-    private static string NormalizeAliasCase(string alias)
-    {
-        var segments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return segments.Length == 0
-            ? string.Empty
-            : string.Join('/', segments.Select((segment, index) =>
-                index == 0
-                    ? ExternalTargetAliasRoot
-                    : index == 1 && segment.Length == 1 && char.IsLetter(segment[0])
-                        ? char.ToUpperInvariant(segment[0]).ToString()
-                        : segment));
-    }
-
-    private static bool IsUsableExternalTargetAlias(string alias)
-    {
-        var segments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return segments.Length > 2 &&
-               string.Equals(segments[0], ExternalTargetAliasRoot, StringComparison.OrdinalIgnoreCase) &&
-               segments[1].Length == 1 &&
-               char.IsLetter(segments[1][0]) &&
-               !segments.Skip(2).Any(IsDotPathSegment);
-    }
-
-    private static bool IsDotPathSegment(string segment)
-        => string.Equals(segment, ".", StringComparison.Ordinal) ||
-           string.Equals(segment, "..", StringComparison.Ordinal);
-
-    private static bool ContainsDotPathSegment(string alias)
-        => alias
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(IsDotPathSegment);
-
     private static bool IsAliasWithinRoot(string alias, string rootAlias)
     {
-        return string.Equals(alias, rootAlias, StringComparison.OrdinalIgnoreCase) ||
-               alias.StartsWith(rootAlias.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase);
+        return ExternalTargetAliasCodec.IsAliasWithinRoot(alias, rootAlias);
+    }
+
+    private static bool AliasUsesRoot(string alias, string rootId)
+    {
+        return ExternalTargetAliasCodec.TryParseVersionedAlias(alias, out var aliasRootId, out _, out _) &&
+               string.Equals(aliasRootId, rootId, StringComparison.Ordinal);
     }
 }

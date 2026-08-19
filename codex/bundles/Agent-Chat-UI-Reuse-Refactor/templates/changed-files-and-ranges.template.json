@@ -1,0 +1,17 @@
+{
+  "baseSha": "",
+  "headSha": "",
+  "changes": [
+    {
+      "path": "",
+      "status": "modified",
+      "lineRanges": [
+        {
+          "startLine": 1,
+          "endLine": 1
+        }
+      ]
+    }
+  ],
+  "contextOnlyPaths": []
+}

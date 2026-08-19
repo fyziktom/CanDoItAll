@@ -1,0 +1,77 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="conversation-active-list"
+     role="list"
+     aria-label="@AriaLabel"
+     data-testid="@TestId">
+    <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+        @foreach (var item in Items)
+        {
+            <SurfaceCard @key="item.Key"
+                         Soft="true"
+                         Class="conversation-active-list__card"
+                         role="listitem"
+                         data-testid="@ResolveItemTestId(item.Key)">
+                <Split Gap="LayoutGap.Small">
+                    <Stack GapScale="LayoutGap.XSmall">
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@item.DisplayName" />
+                        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                            @foreach (var badge in item.Badges)
+                            {
+                                <StatusBadge Tone="@PresentationToneResolver.Resolve(badge.Tone)"
+                                             Text="@badge.Text"
+                                             Icon="@badge.Icon"
+                                             data-testid="@badge.TestId" />
+                            }
+                        </Cluster>
+                    </Stack>
+                    <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                        @foreach (var action in item.Actions)
+                        {
+                            <Button @key="action.Key"
+                                    Text="@action.Label"
+                                    Icon="@action.Icon"
+                                    Size="ButtonSize.Small"
+                                    ButtonStyle="@ResolveButtonStyle(action.Style)"
+                                    Disabled="@action.IsDisabled"
+                                    Click="@(() => HandleActionAsync(item.Key, action.Key))"
+                                    data-testid="@ResolveActionTestId(item.Key, action)" />
+                        }
+                    </Cluster>
+                </Split>
+            </SurfaceCard>
+        }
+    </Stack>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConversationActiveItemPresentation> Items { get; set; } = [];
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Active conversations";
+
+    [Parameter]
+    public string TestId { get; set; } = "conversation-active-list";
+
+    [Parameter]
+    public EventCallback<ConversationActionRequest> ActionRequested { get; set; }
+
+    private string ResolveItemTestId(ConversationPresentationKey key)
+        => $"{TestId}-{key.Value}";
+
+    private Task HandleActionAsync(
+        ConversationPresentationKey itemKey,
+        ConversationPresentationKey actionKey)
+        => ActionRequested.InvokeAsync(new(itemKey, actionKey));
+
+    private string ResolveActionTestId(
+        ConversationPresentationKey itemKey,
+        ConversationActionPresentation action)
+        => string.IsNullOrWhiteSpace(action.TestId)
+            ? $"{ResolveItemTestId(itemKey)}-{action.Key.Value}"
+            : action.TestId;
+
+    private static ButtonStyle ResolveButtonStyle(ConversationActionStyle style)
+        => style == ConversationActionStyle.Danger ? ButtonStyle.Danger : ButtonStyle.Primary;
+}

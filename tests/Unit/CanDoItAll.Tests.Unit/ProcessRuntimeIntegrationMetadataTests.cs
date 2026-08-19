@@ -3,6 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
@@ -10,9 +11,10 @@ using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
+using CanDoItAll.SharedKernel;
 using Capabilities = CanDoItAll.AgentFramework.Capabilities.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRuntimeIntegrationMetadataTests
 {
@@ -44,7 +46,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         Assert.Equal("codex-process-e2e-session", launchAgent.SessionId);
         Assert.Contains(ProcessOperationContractNames.ReadProjectStructure, allowedOperations);
         Assert.Contains(ProcessOperationContractNames.ExecuteExternalAction, allowedOperations);
-        Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+        Assert.Contains(ResolveTestProductAlias(assignment), writableAliases);
         Assert.Equal(
             AgentFinalizerPolicies.RequiredFinalizerModeValue,
             metadataRoot.GetProperty(AgentFinalizerPolicies.FinalizerModeMetadataKey).GetString());
@@ -197,7 +199,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         var readOnlyAliases = ExecutionInvocationMetadata.ResolveReadOnlyExternalTargetAliases(run);
 
         Assert.Empty(writableAliases);
-        Assert.Contains("external-target/C/programovani/dotnet/output", readOnlyAliases);
+        Assert.Contains(ResolveTestProductAlias(assignment), readOnlyAliases);
         Assert.False(ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(run));
     }
 
@@ -1038,7 +1040,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
 
         var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
 
-        Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+        Assert.Contains(ResolveTestProductAlias(assignment), writableAliases);
         Assert.DoesNotContain("external-target/C/repositories/CanDoItAll", writableAliases);
     }
 
@@ -1063,7 +1065,7 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
 
         var writableAliases = ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(run);
 
-        Assert.Contains("external-target/C/programovani/dotnet/output", writableAliases);
+        Assert.Contains(ResolveTestProductAlias(assignment), writableAliases);
     }
 
     private static WorkflowUsageTelemetryFixture CreateWorkflowUsageTelemetryFixture()
@@ -1198,6 +1200,19 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
         IReadOnlyDictionary<string, string>? launchVariables = null,
         string stepKey = "resolve-blazor-contract")
     {
+        var resolvedLaunchVariables = AddTestExternalTargetAuthority(
+            launchVariables ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProjectId"] = projectId.ToString("D"),
+                ["AgentId"] = "codex-process-e2e",
+                ["AgentName"] = "Codex Process E2E",
+                ["MachineName"] = "LUCYSPOWER",
+                ["RepositoryRoot"] = @"C:\programovani\dotnet\output",
+                ["OutputRoot"] = @"C:\programovani\dotnet\output",
+                ["ProductRoot"] = @"C:\programovani\dotnet\output",
+                ["BranchName"] = "main",
+                ["SessionId"] = "codex-process-e2e-session"
+            });
         return new ProcessRuntimeStepAssignment(
             ProcessRunId.New(),
             ProcessInstancePlanId.New(),
@@ -1221,21 +1236,38 @@ public sealed class ProcessRuntimeIntegrationMetadataTests
                 ProcessOperationContractNames.MutateProductTarget
             ],
             operationTargetScope ?? ProcessOperationContractNames.ExternalProductTargetMutable,
-            launchVariables ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["ProjectId"] = projectId.ToString("D"),
-                ["AgentId"] = "codex-process-e2e",
-                ["AgentName"] = "Codex Process E2E",
-                ["MachineName"] = "LUCYSPOWER",
-                ["RepositoryRoot"] = @"C:\programovani\dotnet\output",
-                ["OutputRoot"] = @"C:\programovani\dotnet\output",
-                ["ProductRoot"] = @"C:\programovani\dotnet\output",
-                ["BranchName"] = "main",
-                ["SessionId"] = "codex-process-e2e-session"
-            },
+            resolvedLaunchVariables,
             BranchGate: null,
             DateTimeOffset.UtcNow);
     }
+
+    private static IReadOnlyDictionary<string, string> AddTestExternalTargetAuthority(
+        IReadOnlyDictionary<string, string> launchVariables)
+    {
+        const string rootId = "0123456789abcdef01234567";
+        var productAlias = ExternalTargetAliasCodec.BuildAlias(
+            rootId,
+            ["programovani", "dotnet", "output"]);
+        var resolved = new Dictionary<string, string>(launchVariables, StringComparer.OrdinalIgnoreCase)
+        {
+            [ProcessRuntimeLaunchVariables.ExternalTargetRoot] = productAlias,
+            [ProcessRuntimeLaunchVariables.OutputRootAlias] = productAlias,
+            [ProcessRuntimeLaunchVariables.ProductRootAlias] = productAlias,
+            [ProcessRuntimeLaunchVariables.WorkspaceAlias] = productAlias,
+            [ProcessRuntimeLaunchVariables.ExternalTargetRootBindings] = JsonSerializer.Serialize(
+                new[]
+                {
+                    new ExternalTargetRootBinding(
+                        rootId,
+                        "test-host",
+                        "test-protected-root-token")
+                })
+        };
+        return resolved;
+    }
+
+    private static string ResolveTestProductAlias(ProcessRuntimeStepAssignment assignment)
+        => assignment.LaunchVariables[ProcessRuntimeLaunchVariables.ProductRootAlias];
 
     private static string BuildProcessExecutionMetadata(ProcessRuntimeStepAssignment assignment)
         => new ProcessExecutionMetadataComposer(

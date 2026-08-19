@@ -8,6 +8,7 @@ internal sealed record ProjectManagerSummaryCompositionInput(
     DateTimeOffset GeneratedAtUtc,
     IReadOnlyList<ProjectPlanManagerSummary> Plans,
     ProjectManagerAgentSummaryInput Agent,
+    ProjectManagerSimpleChatSummaryInput SimpleChat,
     ProjectManagerWorkflowSummaryInput Workflow,
     ProjectManagerProcessSummaryInput Process);
 
@@ -29,6 +30,23 @@ internal sealed record ProjectManagerWorkflowSummaryInput(
     IReadOnlyList<ProjectManagerActivity> Activities)
 {
     public static ProjectManagerWorkflowSummaryInput Empty { get; } = new(
+        0,
+        0m,
+        0L,
+        0,
+        [],
+        []);
+}
+
+internal sealed record ProjectManagerSimpleChatSummaryInput(
+    int TotalCount,
+    decimal KnownCostUsd,
+    long DurationMilliseconds,
+    int UnknownCostRunCount,
+    IReadOnlyList<ProjectManagerKnownExpensePoint> DailyCost,
+    IReadOnlyList<ProjectManagerActivity> Activities)
+{
+    public static ProjectManagerSimpleChatSummaryInput Empty { get; } = new(
         0,
         0m,
         0L,
@@ -81,6 +99,7 @@ internal static class ProjectManagerSummarySnapshotCalculator
                 static _ => new CostAccumulator());
         var expense = new SortedDictionary<DateOnly, ExpenseAccumulator>();
         AddAgentCosts(costs, expense, input.Agent);
+        AddSimpleChatCosts(costs, expense, input.SimpleChat);
         AddWorkflowCosts(costs, expense, input.Workflow);
         AddProcessCosts(costs, expense, input.Process);
 
@@ -101,6 +120,7 @@ internal static class ProjectManagerSummarySnapshotCalculator
             costBreakdown.Sum(static item => item.FuturePlannedUsd),
             costBreakdown.Sum(static item => item.UnknownHistoricalCostCount));
         var latestActivities = input.Agent.Activities
+            .Concat(input.SimpleChat.Activities)
             .Concat(input.Workflow.Activities)
             .Concat(input.Process.Activities)
             .OrderByDescending(static activity => activity.ActivityAtUtc)
@@ -159,6 +179,18 @@ internal static class ProjectManagerSummarySnapshotCalculator
         ProjectManagerWorkflowSummaryInput input)
     {
         costs[ProjectManagerCostCategory.Workflows].AddHistory(
+            input.KnownCostUsd,
+            estimatedUsd: 0m,
+            input.UnknownCostRunCount);
+        AddKnownExpense(expense, input.DailyCost);
+    }
+
+    private static void AddSimpleChatCosts(
+        IReadOnlyDictionary<ProjectManagerCostCategory, CostAccumulator> costs,
+        IDictionary<DateOnly, ExpenseAccumulator> expense,
+        ProjectManagerSimpleChatSummaryInput input)
+    {
+        costs[ProjectManagerCostCategory.ChatsAndAgents].AddHistory(
             input.KnownCostUsd,
             estimatedUsd: 0m,
             input.UnknownCostRunCount);

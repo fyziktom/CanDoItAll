@@ -17,6 +17,8 @@ public sealed class FakeMcpClientFactory(FakeMcpServerScript script) : IMcpClien
 
     public FakeMcpRuntimeClient? LastClient { get; private set; }
 
+    public McpServerDescriptor? LastDescriptor { get; private set; }
+
     public Task<IMcpRuntimeClient> CreateAsync(
         McpServerDescriptor descriptor,
         string correlationId,
@@ -24,6 +26,7 @@ public sealed class FakeMcpClientFactory(FakeMcpServerScript script) : IMcpClien
     {
         cancellationToken.ThrowIfCancellationRequested();
         CreatedClients++;
+        LastDescriptor = descriptor;
         LastClient = new FakeMcpRuntimeClient(script);
         return Task.FromResult<IMcpRuntimeClient>(LastClient);
     }

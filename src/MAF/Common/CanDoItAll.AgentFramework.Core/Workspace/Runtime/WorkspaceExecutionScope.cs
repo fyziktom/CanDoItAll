@@ -1,4 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -7,8 +10,8 @@ namespace CanDoItAll.AgentFramework.Core;
 /// plus the effective workspace scope descriptor for the run, annotated with
 /// the admission facts that produced it. Every scope-bound workspace service
 /// used by one execution shares exactly this identity; scope mismatches fail
-/// at construction instead of during a tool call. Root identity comparison is
-/// OS-aware: case-insensitive on Windows and macOS, case-sensitive on Linux.
+/// at construction instead of during a tool call. Root identity comparison
+/// uses the case model detected for the owned filesystem root.
 /// </summary>
 public sealed record WorkspaceExecutionScope
 {
@@ -19,7 +22,9 @@ public sealed record WorkspaceExecutionScope
         DatabaseProfileGeneration? databaseProfileGeneration = null,
         AgentExecutionAuthorityId? authorityId = null,
         string authorityFingerprint = "",
-        Guid? executionRunId = null)
+        Guid? executionRunId = null,
+        IEnumerable<ExternalTargetRootBinding>? externalTargetRootBindings = null,
+        PhysicalFileSystemCaseSensitivity rootCaseSensitivity = PhysicalFileSystemCaseSensitivity.Unknown)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
         {
@@ -27,6 +32,7 @@ public sealed record WorkspaceExecutionScope
         }
 
         ArgumentNullException.ThrowIfNull(scope);
+        WorkspacePhysicalPathSyntaxPolicy.EnsureNativeOrRelative(workspaceRoot);
         WorkspaceRoot = Path.GetFullPath(workspaceRoot);
         Scope = scope;
         DatabaseProfileId = databaseProfileId;
@@ -34,6 +40,10 @@ public sealed record WorkspaceExecutionScope
         AuthorityId = authorityId;
         AuthorityFingerprint = authorityFingerprint?.Trim() ?? string.Empty;
         ExecutionRunId = executionRunId;
+        ExternalTargetRootBindings = externalTargetRootBindings?.ToArray() ?? [];
+        RootCaseSensitivity = Enum.IsDefined(rootCaseSensitivity)
+            ? rootCaseSensitivity
+            : throw new ArgumentOutOfRangeException(nameof(rootCaseSensitivity));
     }
 
     public string WorkspaceRoot { get; }
@@ -50,6 +60,10 @@ public sealed record WorkspaceExecutionScope
 
     public Guid? ExecutionRunId { get; }
 
+    public IReadOnlyList<ExternalTargetRootBinding> ExternalTargetRootBindings { get; }
+
+    public PhysicalFileSystemCaseSensitivity RootCaseSensitivity { get; }
+
     /// <summary>
     /// Stable identity used to prove that two scope-bound services belong to
     /// the same execution scope. Annotation fields (profile, authority, run)
@@ -60,7 +74,8 @@ public sealed record WorkspaceExecutionScope
 
     public bool SharesIdentityWith(WorkspaceExecutionScope? other)
         => other is not null &&
-           string.Equals(Identity, other.Identity, RootIdentityComparison);
+           Scope == other.Scope &&
+           ResolveRootComparer(this, other).Equals(WorkspaceRoot, other.WorkspaceRoot);
 
     /// <summary>
     /// Builds the per-run execution scope with full provenance from the
@@ -72,9 +87,16 @@ public sealed record WorkspaceExecutionScope
         string workspaceRoot,
         WorkspaceScopeDescriptor scope,
         AgentExecutionGovernanceSnapshot? governance,
-        Guid? executionRunId = null)
+        Guid? executionRunId = null,
+        IEnumerable<ExternalTargetRootBinding>? externalTargetRootBindings = null,
+        PhysicalFileSystemCaseSensitivity rootCaseSensitivity = PhysicalFileSystemCaseSensitivity.Unknown)
         => governance is null
-            ? new WorkspaceExecutionScope(workspaceRoot, scope, executionRunId: executionRunId)
+            ? new WorkspaceExecutionScope(
+                workspaceRoot,
+                scope,
+                executionRunId: executionRunId,
+                externalTargetRootBindings: externalTargetRootBindings,
+                rootCaseSensitivity: rootCaseSensitivity)
             : new WorkspaceExecutionScope(
                 workspaceRoot,
                 scope,
@@ -82,16 +104,15 @@ public sealed record WorkspaceExecutionScope
                 governance.DatabaseProfileGeneration,
                 governance.AuthorityId,
                 governance.PolicyFingerprint,
-                executionRunId);
+                executionRunId,
+                externalTargetRootBindings,
+                rootCaseSensitivity);
 
-    /// <summary>
-    /// The current process's root identity comparison: Linux compares roots
-    /// case-sensitively, Windows and macOS case-insensitively.
-    /// </summary>
-    public static StringComparison RootIdentityComparison { get; } =
-        ResolveRootIdentityComparison(caseSensitiveFileSystem: OperatingSystem.IsLinux());
-
-    /// <summary>Pure decision seam so both branches stay testable on any OS.</summary>
-    internal static StringComparison ResolveRootIdentityComparison(bool caseSensitiveFileSystem)
-        => caseSensitiveFileSystem ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+    private static StringComparer ResolveRootComparer(
+        WorkspaceExecutionScope left,
+        WorkspaceExecutionScope right)
+        => left.RootCaseSensitivity == PhysicalFileSystemCaseSensitivity.Insensitive &&
+           right.RootCaseSensitivity == PhysicalFileSystemCaseSensitivity.Insensitive
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 }

@@ -1,0 +1,524 @@
+{
+  "requirements": [
+    {
+      "id": "SCUI-001",
+      "text": "Freeze execution against the actual simple-chats start commit and record drift from the reviewed head.",
+      "owners": [
+        "SB01"
+      ]
+    },
+    {
+      "id": "SCUI-002",
+      "text": "Reconcile the predecessor UI-refactor status, checksums, ignored proof paths, and closure claims before dependent work.",
+      "owners": [
+        "SB01"
+      ]
+    },
+    {
+      "id": "SCUI-003",
+      "text": "Record the user-provided manual regression evidence without overstating untested scenarios.",
+      "owners": [
+        "SB01"
+      ]
+    },
+    {
+      "id": "SCUI-004",
+      "text": "Do not activate any Simple Chat browser surface before the mandatory CP1 hardening checkpoint passes.",
+      "owners": [
+        "SB01",
+        "SB05"
+      ]
+    },
+    {
+      "id": "SCUI-005",
+      "text": "Preserve the currently proven Agent settings, main chat, floating chat, Process chat, and Project Structure context behavior.",
+      "owners": [
+        "SB01",
+        "SB05",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-006",
+      "text": "Make reusable presentation collections defensive immutable snapshots rather than caller-owned IReadOnlyList references.",
+      "owners": [
+        "SB02"
+      ]
+    },
+    {
+      "id": "SCUI-007",
+      "text": "Normalize and bound ConversationPresentationKey values while preserving existing agent key round-trips.",
+      "owners": [
+        "SB02"
+      ]
+    },
+    {
+      "id": "SCUI-008",
+      "text": "Replace hard-coded active-item Open/Stop semantics with source-neutral declared action descriptors.",
+      "owners": [
+        "SB02",
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-009",
+      "text": "Map existing Agent active-chat Open and Stop actions through the generic action contract with unchanged behavior and accessibility.",
+      "owners": [
+        "SB02",
+        "SB05",
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-010",
+      "text": "Allow the transcript to render a bounded collection of transient messages rather than one user-specific pending message.",
+      "owners": [
+        "SB03"
+      ]
+    },
+    {
+      "id": "SCUI-011",
+      "text": "Derive message alignment, avatar, color, copy behavior, and role label from message role, not from transient state.",
+      "owners": [
+        "SB03"
+      ]
+    },
+    {
+      "id": "SCUI-012",
+      "text": "Support a transient streaming Assistant message that can grow incrementally without becoming canonical transcript state.",
+      "owners": [
+        "SB03",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-013",
+      "text": "Represent Pending, Streaming, Failed, and Cancelled display states with explicit status text and accessibility semantics.",
+      "owners": [
+        "SB03"
+      ]
+    },
+    {
+      "id": "SCUI-014",
+      "text": "Never persist or append partial streamed text as a canonical assistant transcript entry from the UI.",
+      "owners": [
+        "SB03",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-015",
+      "text": "Continue to disable raw HTML in rendered conversation Markdown.",
+      "owners": [
+        "SB03"
+      ]
+    },
+    {
+      "id": "SCUI-016",
+      "text": "Neutralize unsafe Markdown link and image URI schemes and prove safe relative, fragment, http, https, and mailto behavior.",
+      "owners": [
+        "SB03"
+      ]
+    },
+    {
+      "id": "SCUI-017",
+      "text": "Preserve existing Agent hidden-context parsing, approvals, execution, voice, attachments, token metadata, copy, focus, and auto-scroll behavior.",
+      "owners": [
+        "SB02",
+        "SB03",
+        "SB05",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-018",
+      "text": "Expose the exact active operation identity in conversation engine/application state when an active turn exists.",
+      "owners": [
+        "SB04",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-019",
+      "text": "Propagate ActiveOperationId through internal details and the additive HTTP conversation response without exposing system prompt content.",
+      "owners": [
+        "SB04"
+      ]
+    },
+    {
+      "id": "SCUI-020",
+      "text": "Keep ActiveOperationId profile-fenced and prove it cannot reference another conversation or database-profile generation.",
+      "owners": [
+        "SB04"
+      ]
+    },
+    {
+      "id": "SCUI-021",
+      "text": "Use the existing application-level LlmChatOperationEventStreamSession boundary as the durable event source.",
+      "owners": [
+        "SB04",
+        "SB05",
+        "SB06",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-022",
+      "text": "Do not implement the server-side Blazor UI by making loopback HTTP/SSE calls to its own Web host.",
+      "owners": [
+        "SB05",
+        "SB06",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-023",
+      "text": "On replay retention gaps or invalid local cursors, discard transient partial output and refresh authoritative operation/transcript state.",
+      "owners": [
+        "SB04",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-024",
+      "text": "Disposing, hiding, navigating away from, or disconnecting a UI follower must not cancel the durable LLM operation.",
+      "owners": [
+        "SB04",
+        "SB05",
+        "SB06",
+        "SB09",
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-025",
+      "text": "Cancellation must occur only through the explicit operation-cancel command and remain distinct from window close or archive.",
+      "owners": [
+        "SB04",
+        "SB06",
+        "SB09",
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-026",
+      "text": "Create a dedicated CanDoItAll.Modules.LlmChats.Ui Razor project for product UI and presentation mapping.",
+      "owners": [
+        "SB06"
+      ]
+    },
+    {
+      "id": "SCUI-027",
+      "text": "Keep the Simple Chat UI project free of EF Core, Persistence, Web API DTO, AgentFramework Core, tools, skills, voice, and agent execution references.",
+      "owners": [
+        "SB06",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-028",
+      "text": "Register the UI module, Razor assembly, and required services only through focused composition extensions and assembly markers.",
+      "owners": [
+        "SB06",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-029",
+      "text": "Gate read, manage, and execute UI actions with authorization semantics aligned to the existing LLM Chat API policies.",
+      "owners": [
+        "SB06",
+        "SB10",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-030",
+      "text": "Expose route and shell navigation only after definitions, conversations, and operation lifecycle behavior are functionally proven.",
+      "owners": [
+        "SB06",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-031",
+      "text": "Use one explicit large-desktop scroll owner and preserve the application first-viewport composition at 1600x1000 or maximized desktop.",
+      "owners": [
+        "SB07",
+        "SB08",
+        "SB10",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-032",
+      "text": "List and filter Simple Chat definitions across Draft, Active, Suspended, and Archived states.",
+      "owners": [
+        "SB07",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-033",
+      "text": "Create and edit definition name, avatar, summary, system prompt, and revision reason through reusable editor components.",
+      "owners": [
+        "SB07"
+      ]
+    },
+    {
+      "id": "SCUI-034",
+      "text": "Edit tags and preserve definition identity/revision metadata without adding deployment-owned fields.",
+      "owners": [
+        "SB07"
+      ]
+    },
+    {
+      "id": "SCUI-035",
+      "text": "Load provider/model choices through ILlmChatProviderResolver and keep provider SDK types out of the UI boundary.",
+      "owners": [
+        "SB06",
+        "SB07"
+      ]
+    },
+    {
+      "id": "SCUI-036",
+      "text": "Edit temperature, supported thinking effort, and timeout with provider/model capability-aware validation.",
+      "owners": [
+        "SB07"
+      ]
+    },
+    {
+      "id": "SCUI-037",
+      "text": "Expose Text, JSON, and JSON Schema response-format settings in an explicit advanced section.",
+      "owners": [
+        "SB07"
+      ]
+    },
+    {
+      "id": "SCUI-038",
+      "text": "Honor concurrency tokens, immutable revisions, status transitions, and reload-on-conflict behavior.",
+      "owners": [
+        "SB07"
+      ]
+    },
+    {
+      "id": "SCUI-039",
+      "text": "Create a conversation only from an Active definition and pin the authoritative definition revision.",
+      "owners": [
+        "SB08",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-040",
+      "text": "List, search, and keyset-page conversations without materializing unbounded transcripts.",
+      "owners": [
+        "SB08",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-041",
+      "text": "Select a conversation and page its canonical transcript without displaying persisted System messages.",
+      "owners": [
+        "SB08",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-042",
+      "text": "Rename and archive conversations with optimistic concurrency and stable user-visible conflict handling.",
+      "owners": [
+        "SB08",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-043",
+      "text": "Keep system prompts available only in manage-scoped definition editor state, never in read-scoped transcript presentation.",
+      "owners": [
+        "SB07",
+        "SB08",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-044",
+      "text": "Send each logical user turn with a stable operation id and the expected transcript revision.",
+      "owners": [
+        "SB08",
+        "SB09",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-045",
+      "text": "Render the admitted user turn as a transient pending projection until authoritative transcript refresh.",
+      "owners": [
+        "SB08",
+        "SB09"
+      ]
+    },
+    {
+      "id": "SCUI-046",
+      "text": "Render coalesced llm.response.delta events as one transient Assistant message.",
+      "owners": [
+        "SB09",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-047",
+      "text": "On terminal success, failure, cancellation, or recovery-required state, refresh authoritative operation and transcript state and remove transient projections.",
+      "owners": [
+        "SB09",
+        "SB10"
+      ]
+    },
+    {
+      "id": "SCUI-048",
+      "text": "Recover active operations after browser refresh, circuit reconnection, profile switch, and component remount without redispatch.",
+      "owners": [
+        "SB09",
+        "SB10",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-049",
+      "text": "Create an application-wide conversation-shell boundary for unified floating catalog composition without moving product orchestration into presentation components.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-050",
+      "text": "Provide an Agent floating contributor that preserves context access filtering, affinity, history, lifecycle, and focused AgentChatPanel behavior.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-051",
+      "text": "Provide a Simple Chat floating contributor that never receives ambient project context automatically.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-052",
+      "text": "Offer All, Agents, and Chats filters over one available-participant catalog.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-053",
+      "text": "Keep participant kind and lifecycle axis separate: Available and Active are not substitutes for Agents and Chats.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-054",
+      "text": "Render focused windows through source-owned descriptors/components while the neutral shell owns overlay placement and catalog composition.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-055",
+      "text": "Keep hide/close-window, stop Agent handle, cancel LLM operation, and archive conversation as distinct declared actions.",
+      "owners": [
+        "SB11"
+      ]
+    },
+    {
+      "id": "SCUI-056",
+      "text": "Preserve all existing floating Agent catalog/window test ids, keyboard behavior, retention, close decisions, and context badges.",
+      "owners": [
+        "SB11",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-057",
+      "text": "Support Simple Chat floating create/open/history/stream/cancel/reopen behavior using the same durable conversation and operation state as the main page.",
+      "owners": [
+        "SB11",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-058",
+      "text": "Display only sanitized failures and never leak provider response bodies, secrets, system prompts, or internal request fingerprints.",
+      "owners": [
+        "SB03",
+        "SB04",
+        "SB06",
+        "SB07",
+        "SB08",
+        "SB09",
+        "SB10",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-059",
+      "text": "Do not implement Add context, Project Structure, selected-node, subtree, file, or attachment context in this bundle.",
+      "owners": [
+        "SB08",
+        "SB11",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-060",
+      "text": "Do not add tools, skills, Memory, voice, image/file attachments, approvals, or agent execution semantics to Simple Chats.",
+      "owners": [
+        "SB08",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-061",
+      "text": "Do not add public chatbot channels, moderation, external participants, rate limits, or deployment fields to reusable definitions.",
+      "owners": [
+        "SB07",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-062",
+      "text": "Select tests from each actual source diff with CodeAnalytics impacted_tests_get and reject zero or unexpected discovery.",
+      "owners": [
+        "SB01",
+        "SB02",
+        "SB03",
+        "SB04",
+        "SB05",
+        "SB06",
+        "SB07",
+        "SB08",
+        "SB09",
+        "SB10",
+        "SB11",
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-063",
+      "text": "Run at most one unfiltered Stable gate, only at the frozen final checkpoint after all affected checks pass.",
+      "owners": [
+        "SB12"
+      ]
+    },
+    {
+      "id": "SCUI-064",
+      "text": "Finish in awaiting-user-simple-chat-ui-verification state with a precise Agent and Simple Chat manual regression checklist.",
+      "owners": [
+        "SB12"
+      ]
+    }
+  ]
+}

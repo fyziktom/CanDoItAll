@@ -1,3 +1,7 @@
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
+
 namespace CanDoItAll.AgentFramework.Core;
 
 /// <summary>
@@ -21,6 +25,7 @@ public sealed class WorkspaceRuntimeServices : IAsyncDisposable
         IWorkspaceArtifactToolService artifactToolService,
         IWorkspaceImageOperationService imageOperationService,
         IWorkspaceProcessHost processHost,
+        IExternalTargetPathRegistry externalTargetPathRegistry,
         IReadOnlyList<object>? ownedServices = null)
     {
         Scope = scope ?? throw new ArgumentNullException(nameof(scope));
@@ -29,6 +34,7 @@ public sealed class WorkspaceRuntimeServices : IAsyncDisposable
         ArtifactToolService = artifactToolService ?? throw new ArgumentNullException(nameof(artifactToolService));
         ImageOperationService = imageOperationService ?? throw new ArgumentNullException(nameof(imageOperationService));
         ProcessHost = processHost ?? throw new ArgumentNullException(nameof(processHost));
+        ExternalTargetPathRegistry = externalTargetPathRegistry ?? throw new ArgumentNullException(nameof(externalTargetPathRegistry));
         this.ownedServices = ownedServices ?? [];
     }
 
@@ -48,6 +54,8 @@ public sealed class WorkspaceRuntimeServices : IAsyncDisposable
     /// this instance; the bundle owns its disposal.
     /// </summary>
     public IWorkspaceProcessHost ProcessHost { get; }
+
+    public IExternalTargetPathRegistry ExternalTargetPathRegistry { get; }
 
     public async ValueTask DisposeAsync()
     {
@@ -115,27 +123,42 @@ public sealed class WorkspaceRuntimeCompositionException(string message)
 /// </summary>
 public sealed class WorkspaceRuntimeServicesFactory(
     IReadOnlyList<IWorkspaceCommandReceiptLifecycleFactExtractor> lifecycleFactExtractors,
-    IWorkspaceDocumentMarkdownConverter documentMarkdownConverter)
+    IWorkspaceDocumentMarkdownConverter documentMarkdownConverter,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory)
     : IWorkspaceRuntimeServicesFactory
 {
     public WorkspaceRuntimeServices Create(WorkspaceExecutionScope scope)
     {
         ArgumentNullException.ThrowIfNull(scope);
 
-        var fileService = new WorkspaceFileService(scope.WorkspaceRoot, scope.Scope);
+        var externalTargetRegistry = externalTargetPathRegistryFactory.Create(scope.ExternalTargetRootBindings);
+        var fileService = new WorkspaceFileService(
+            scope.WorkspaceRoot,
+            physicalPathPolicyFactory,
+            scope.Scope,
+            externalTargetRegistry);
         var processHost = new LocalWorkspaceProcessHost();
         var commandExecutionService = new WorkspaceCommandExecutionService(
             scope.WorkspaceRoot,
             processHost,
+            physicalPathPolicyFactory,
             scope.Scope,
-            lifecycleFactExtractors);
-        var imageOperationService = new WorkspaceImageOperationService(scope.WorkspaceRoot, scope.Scope);
+            lifecycleFactExtractors,
+            externalTargetRegistry);
+        var imageOperationService = new WorkspaceImageOperationService(
+            scope.WorkspaceRoot,
+            physicalPathPolicyFactory,
+            scope.Scope,
+            externalTargetRegistry);
         var artifactToolService = new WorkspaceArtifactToolService(
             scope.WorkspaceRoot,
             commandExecutionService,
             documentMarkdownConverter,
+            physicalPathPolicyFactory,
             scope.Scope,
-            imageOperationService);
+            imageOperationService,
+            externalTargetRegistry);
         return new WorkspaceRuntimeServices(
             scope,
             fileService,
@@ -143,6 +166,7 @@ public sealed class WorkspaceRuntimeServicesFactory(
             artifactToolService,
             imageOperationService,
             processHost,
+            externalTargetRegistry,
             ownedServices:
             [
                 fileService,

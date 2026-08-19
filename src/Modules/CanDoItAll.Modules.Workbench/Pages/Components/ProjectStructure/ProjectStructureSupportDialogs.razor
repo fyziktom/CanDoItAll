@@ -2,6 +2,7 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Components.Mermaid
+@using CanDoItAll.Modules.Workbench
 @using CanDoItAll.Modules.Workspace
 
 @if (SummaryDialog is not null)
@@ -80,9 +81,26 @@
                                    DialogClass="project-structure-summary-dialog"
                                    Close="CancelDelete">
         <Actions>
-            <Button Text="@(PendingDeletePrompt.IsBulk ? "Delete selected" : "Delete")"
-                    ButtonStyle="ButtonStyle.Danger"
-                    Click="ConfirmDelete" />
+            @if (PendingDeletePrompt.ManagedAttachmentCount > 0)
+            {
+                var deletesMultipleNodes = PendingDeletePrompt.IsBulk || PendingDeletePrompt.DescendantCount > 0;
+                <Button Text="@(deletesMultipleNodes ? "Delete nodes only" : "Delete node only")"
+                        ButtonStyle="ButtonStyle.Base"
+                        Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.RetainManagedFiles))" />
+                <Button Text="@(deletesMultipleNodes
+                    ? "Delete nodes and files"
+                    : PendingDeletePrompt.ManagedAttachmentCount > 1
+                        ? "Delete node and files"
+                        : "Delete node and file")"
+                        ButtonStyle="ButtonStyle.Danger"
+                        Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles))" />
+            }
+            else
+            {
+                <Button Text="@(PendingDeletePrompt.IsBulk ? "Delete selected" : "Delete")"
+                        ButtonStyle="ButtonStyle.Danger"
+                        Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles))" />
+            }
             <Button Text="Cancel"
                     Variant="Variant.Text"
                     ButtonStyle="ButtonStyle.Base"
@@ -216,7 +234,7 @@
     public ProjectStructureDeletePrompt? PendingDeletePrompt { get; set; }
 
     [Parameter]
-    public EventCallback ConfirmDelete { get; set; }
+    public EventCallback<ProjectStructureManagedStorageDisposition> ConfirmDelete { get; set; }
 
     [Parameter]
     public EventCallback CancelDelete { get; set; }

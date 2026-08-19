@@ -3,11 +3,14 @@ using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetProductBaselineLaunchVariableContributor(
-    IWorkspaceFileService workspaceFiles) : IProcessLaunchVariableContributor
+    IWorkspaceFileService workspaceFiles,
+    IExternalTargetPathRegistry externalTargetPathRegistry) : IProcessLaunchVariableContributor
 {
     internal const string DriverKey = "dotnet.product-baseline";
     internal const string VariableName = "DotNetProductBaselineContract";
@@ -163,7 +166,7 @@ internal sealed class DotNetProductBaselineLaunchVariableContributor(
             "*.sln;*.slnx",
             first.Entries
                 .Concat(second.Entries)
-                .GroupBy(entry => entry.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(entry => entry.RelativePath, ExternalTargetAliasCodec.EqualityComparer)
                 .Select(group => group.First())
                 .ToArray(),
             first.IsTruncated || second.IsTruncated);
@@ -176,12 +179,13 @@ internal sealed class DotNetProductBaselineLaunchVariableContributor(
         return listing.Entries
             .Where(entry => string.Equals(entry.PathKind, "file", StringComparison.OrdinalIgnoreCase))
             .Select(entry => NormalizePath(entry.RelativePath))
-            .Select(path => path.StartsWith(normalizedRoot + "/", StringComparison.OrdinalIgnoreCase)
+            .Select(path => ExternalTargetAliasCodec.IsAliasWithinRoot(path, normalizedRoot) &&
+                            path.Length > normalizedRoot.Length
                 ? path[(normalizedRoot.Length + 1)..]
                 : path)
             .Where(IsSafeRelativeProductPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -239,7 +243,7 @@ internal sealed class DotNetProductBaselineLaunchVariableContributor(
         => path.Length <= MaximumContractPathCharacters &&
            Path.GetFileNameWithoutExtension(path).Length <= MaximumContractNameCharacters;
 
-    private static string ResolveTargetAlias(IDictionary<string, string> variables)
+    private string ResolveTargetAlias(IDictionary<string, string> variables)
         => FirstNonEmpty(
             ResolveVariable(variables, "ProductRootAlias"),
             ResolveVariable(variables, "ExternalTargetRoot"),
@@ -247,7 +251,8 @@ internal sealed class DotNetProductBaselineLaunchVariableContributor(
             AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
                 FirstNonEmpty(
                     ResolveVariable(variables, "ProductRoot"),
-                    ResolveVariable(variables, "OutputRoot"))) ?? string.Empty);
+                    ResolveVariable(variables, "OutputRoot")),
+                externalTargetPathRegistry) ?? string.Empty);
 
     private static string CombineAlias(string rootAlias, string relativePath)
         => $"{NormalizePath(rootAlias).TrimEnd('/')}/{NormalizePath(relativePath).TrimStart('/')}";

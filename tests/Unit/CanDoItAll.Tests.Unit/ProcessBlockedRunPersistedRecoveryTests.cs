@@ -11,8 +11,9 @@ using CanDoItAll.Processes.Runtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessBlockedRunPersistedRecoveryTests
 {
     private const string ChildBlockedDiagnosticCode = "process.adapter.subprocess_child_blocked";
@@ -25,8 +26,11 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         "factory.1.0.0",
         "runtime.1",
         "runtime.1",
-        "sha256:persisted-recovery-binding",
+        Hash("persisted-recovery-binding"),
         []);
+
+    private static string Hash(string value)
+        => ProcessPlanHasher.ComputeContentHash(value);
 
     [Fact]
     public async Task Producer_and_consumer_recovery_history_survives_restarts_and_denies_replay()
@@ -51,6 +55,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             artifactSlotId,
             sourceResultKey);
         var plan = CreateSimpleAppPlan(planId, initialState.Steps);
+        initialState = initialState with { PlanHash = plan.PlanHash };
         var dispatchQueue = new RecordingDispatchQueue();
 
         await using (var seedContext = CreateDbContext(databaseName, databaseRoot))
@@ -116,7 +121,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             var restoredInput = Assert.Single(producerResult.ConnectedInputArtifacts);
             Assert.Equal(ProcessArtifactInputAvailability.Available, restoredInput.Availability);
             Assert.NotNull(restoredInput.ArtifactId);
-            Assert.Equal("sha256:restored-input", restoredInput.ContentHash);
+            Assert.Equal(Hash("restored-input"), restoredInput.ContentHash);
 
             var blockedResult = await PersistBlockedRunAsync(
                 store,
@@ -179,7 +184,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                             Availability = ProcessArtifactInputAvailability.Expected,
                             ArtifactId = null,
                             ContentHash = string.Empty,
-                            ConnectionHash = "sha256:recurrent-missing-input"
+                            ConnectionHash = Hash("recurrent-missing-input")
                         }
                         : receipt)
                     .ToArray(),
@@ -265,6 +270,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             sourceResultKey,
             Now.AddMinutes(2));
         var plan = CreateSimpleAppPlan(planId, blockedParentState.Steps);
+        blockedParentState = blockedParentState with { PlanHash = plan.PlanHash };
         var claimToken = DispatchClaimToken.New();
         var launchableParentState = blockedParentState with
         {
@@ -525,6 +531,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                 .ToArray()
         };
         var plan = CreateSimpleAppPlan(planId, blockedParentState.Steps);
+        blockedParentState = blockedParentState with { PlanHash = plan.PlanHash };
         var claimToken = DispatchClaimToken.New();
         var alternateClaimToken = DispatchClaimToken.New();
         var launchableParentState = blockedParentState with
@@ -894,7 +901,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             ProcessEventSensitivity.Normal,
             occurredAtUtc,
             ProcessRuntimeEventTypes.ProcessRunBlocked,
-            "sha256:persisted-recovery-blocked");
+            Hash("persisted-recovery-blocked"));
         var mutation = new ProcessRuntimeMutation(
             ProcessRuntimeTransitionOutcome.Applied,
             blockedState,
@@ -966,7 +973,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         var diagnostic = new StrategyResultDiagnosticReceipt(
             ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
             StrategyDiagnosticSensitivity.Normal,
-            "sha256:missing-input",
+            Hash("missing-input"),
             "Required input artifact is missing.",
             RestrictedEvidenceReference: null,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -984,7 +991,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             runId,
             runId,
             planId,
-            "sha256:persisted-recovery-plan",
+            Hash("persisted-recovery-plan"),
             ProcessRuntimeStatus.Blocked,
             [
                 new ProcessRuntimeStepState(
@@ -1019,7 +1026,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                     producerResultKey,
                     StrategyOutcome.Succeeded,
                     ProcessRuntimeStepStatus.Completed,
-                    "sha256:initial-producer-result")
+                    Hash("initial-producer-result"))
                 {
                     AppliedSequence = 1
                 },
@@ -1029,7 +1036,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                     sourceResultKey,
                     StrategyOutcome.NeedsManager,
                     ProcessRuntimeStepStatus.Blocked,
-                    "sha256:missing-input-result",
+                    Hash("missing-input-result"),
                     [diagnostic],
                     recoveryDecision: recoveryDecision)
                 {
@@ -1048,7 +1055,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                     producerStepId,
                     ArtifactId: null,
                     ContentHash: string.Empty,
-                    ConnectionHash: "sha256:producer-to-consumer")
+                    ConnectionHash: Hash("producer-to-consumer"))
             ]
         };
     }
@@ -1065,7 +1072,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         var diagnostic = new StrategyResultDiagnosticReceipt(
             ChildBlockedDiagnosticCode,
             StrategyDiagnosticSensitivity.Normal,
-            "sha256:completed-child-blocked-parent",
+            Hash("completed-child-blocked-parent"),
             "The parent is waiting on a linked child run.",
             RestrictedEvidenceReference: null,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -1086,7 +1093,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             parentRunId,
             parentRunId,
             planId,
-            "sha256:persisted-recovery-plan",
+            Hash("persisted-recovery-plan"),
             ProcessRuntimeStatus.Blocked,
             [
                 new ProcessRuntimeStepState(
@@ -1108,7 +1115,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                     sourceResultKey,
                     StrategyOutcome.NeedsManager,
                     ProcessRuntimeStepStatus.Blocked,
-                    "sha256:completed-child-blocked-result",
+                    Hash("completed-child-blocked-result"),
                     [diagnostic],
                     recoveryDecision: recoveryDecision)
                 {
@@ -1123,7 +1130,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         ProcessInstancePlanId planId,
         IReadOnlyList<ProcessRuntimeStepState> runtimeSteps)
     {
-        return new ProcessInstancePlan(
+        var plan = new ProcessInstancePlan(
             new ProcessInstancePlanHeader(
                 planId,
                 planId,
@@ -1135,7 +1142,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             new ResolvedProcessDefinitionSnapshot(
                 ProcessDefinitionId.New(),
                 ProcessDefinitionVersionId.New(),
-                "sha256:persisted-recovery-definition",
+                Hash("persisted-recovery-definition"),
                 "template/1",
                 "template/1",
                 [],
@@ -1144,7 +1151,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                         TemplateComponentId.New(),
                         "simple-app-delivery",
                         "1.0.0",
-                        "sha256:simple-app-template")
+                        Hash("simple-app-template"))
                 ],
                 []),
             new DriverStackSnapshot([]),
@@ -1162,11 +1169,15 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             new ArtifactPlan([], []),
             new BranchRouteTable([]),
             [],
-            new ManagerPlan("sha256:manager-policy", null, [], []),
+            new ManagerPlan(Hash("manager-policy"), null, [], []),
             new BudgetPlan([]),
-            new MonitoringPlan(true, "sha256:monitoring"),
-            new SecurityPlan("sha256:security", []),
-            "sha256:persisted-recovery-plan");
+            new MonitoringPlan(true, Hash("monitoring")),
+            new SecurityPlan(Hash("security"), []),
+            string.Empty);
+        return plan with
+        {
+            PlanHash = ProcessPlanHasher.Compute(plan)
+        };
     }
 
     private static StrategyResultEnvelope CreateProducerResult(ArtifactSlotId artifactSlotId)
@@ -1180,12 +1191,12 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
                 new ProducedArtifactRef(
                     ArtifactInstanceId.New(),
                     artifactSlotId,
-                    "sha256:restored-input")
+                    Hash("restored-input"))
             ],
             [],
             [],
             [],
-            "sha256:restored-producer-result");
+            Hash("restored-producer-result"));
     }
 
     private static StrategyResultEnvelope CreateMissingInputResult(ArtifactSlotId artifactSlotId)
@@ -1196,12 +1207,12 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             Guid.NewGuid(),
             StrategyOutcome.NeedsManager,
             [],
-            [new RequestedArtifactRef(artifactSlotId, "sha256:requested-input")],
+            [new RequestedArtifactRef(artifactSlotId, Hash("requested-input"))],
             [
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:missing-input",
+                    Hash("missing-input"),
                     "Required input artifact is missing.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -1210,10 +1221,10 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             [
                 new ManagerSignal(
                     new ManagerSignalCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
-                    "sha256:missing-input",
+                    Hash("missing-input"),
                     "Required input artifact is missing.")
             ],
-            "sha256:recurrent-missing-input-result");
+            Hash("recurrent-missing-input-result"));
     }
 
     private static ProcessRuntimeMutation Applied(ProcessRuntimeStateSnapshot state)
@@ -1265,7 +1276,7 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
             Guid.NewGuid().ToString("D"),
             "Recovery worker",
             "Recover the missing managed process artifact.",
-            "sha256:readiness",
+            Hash("readiness"),
             "Persisted recovery test assignment.",
             step.ProducedArtifactSlots.ToArray(),
             step.RequiredArtifactSlots.ToArray(),

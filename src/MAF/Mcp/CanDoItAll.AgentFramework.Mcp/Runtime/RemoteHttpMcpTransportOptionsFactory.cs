@@ -6,8 +6,6 @@ namespace CanDoItAll.AgentFramework.Mcp;
 
 internal static class RemoteHttpMcpTransportOptionsFactory
 {
-    private const string HttpTokenSymbols = "!#$%&'*+-.^_`|~";
-
     public static HttpClientTransportOptions Create(
         RemoteHttpMcpServerDescriptor descriptor)
     {
@@ -63,36 +61,15 @@ internal static class RemoteHttpMcpTransportOptionsFactory
         string headerName,
         string environmentVariable)
     {
-        if (!IsHttpHeaderName(headerName))
+        if (!McpEnvironmentVariableNamePolicy.IsValidHttpHeaderName(headerName))
         {
             throw InvalidBinding(descriptor, "header name");
         }
 
-        if (!IsEnvironmentVariableName(environmentVariable))
+        if (!McpEnvironmentVariableNamePolicy.IsValid(environmentVariable))
         {
             throw InvalidBinding(descriptor, "environment-variable reference");
         }
-    }
-
-    private static bool IsHttpHeaderName(string value)
-    {
-        return !string.IsNullOrEmpty(value) &&
-            value.All(character =>
-                char.IsAsciiLetterOrDigit(character) ||
-                HttpTokenSymbols.Contains(character));
-    }
-
-    private static bool IsEnvironmentVariableName(string value)
-    {
-        if (string.IsNullOrEmpty(value) ||
-            !(char.IsAsciiLetter(value[0]) || value[0] == '_'))
-        {
-            return false;
-        }
-
-        return value.Skip(1).All(character =>
-            char.IsAsciiLetterOrDigit(character) ||
-            character == '_');
     }
 
     private static McpSetupException InvalidBinding(

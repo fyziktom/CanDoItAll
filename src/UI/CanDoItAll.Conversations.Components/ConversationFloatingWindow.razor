@@ -1,0 +1,70 @@
+<div class="conversation-floating-window">
+    <OverlayWindow WindowId="@WindowId"
+                   TestId="@TestId"
+                   AriaLabel="@AriaLabel"
+                   Kicker="@Kicker"
+                   Title="@Title"
+                   Summary="@Summary"
+                   BodyClass="conversation-floating-window__body"
+                   DefaultPlacement="@DefaultPlacement"
+                   DefaultWidth="@DefaultWidth"
+                   DefaultHeight="@DefaultHeight"
+                   MinWidth="@MinWidth"
+                   MinHeight="@MinHeight"
+                   MaxWidth="@MaxWidth"
+                   MaxHeight="@MaxHeight"
+                   State="@State"
+                   StateChanged="@StateChanged">
+        @ChildContent
+    </OverlayWindow>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string WindowId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? TestId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Kicker { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Summary { get; set; }
+
+    [Parameter]
+    public string DefaultPlacement { get; set; } = "top-right";
+
+    [Parameter]
+    public double DefaultWidth { get; set; } = 560;
+
+    [Parameter]
+    public double DefaultHeight { get; set; } = 720;
+
+    [Parameter]
+    public double MinWidth { get; set; } = 360;
+
+    [Parameter]
+    public double MinHeight { get; set; } = 420;
+
+    [Parameter]
+    public double MaxWidth { get; set; } = 900;
+
+    [Parameter]
+    public double MaxHeight { get; set; } = 900;
+
+    [Parameter, EditorRequired]
+    public OverlayWindowState State { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<OverlayWindowState> StateChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+}

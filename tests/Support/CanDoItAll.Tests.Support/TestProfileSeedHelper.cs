@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Support;
@@ -40,12 +41,8 @@ public static class TestProfileSeedHelper
     }
 
     private static string SanitizeFileSegment(string value)
-    {
-        var sanitized = string.Concat(value.Trim().Select(character =>
-            Path.GetInvalidFileNameChars().Contains(character) ? '-' : character));
-
-        return string.IsNullOrWhiteSpace(sanitized) ? "seed" : sanitized;
-    }
+        => PortablePhysicalFileNamePolicy.Encode(
+            string.IsNullOrWhiteSpace(value) ? "seed" : value.Trim()).PhysicalName;
 }
 
 public sealed record TestProfileSeedResult(

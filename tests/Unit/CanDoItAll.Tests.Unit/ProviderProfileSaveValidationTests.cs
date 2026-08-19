@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderProfileSaveValidationTests
 {
@@ -84,6 +84,9 @@ public sealed class ProviderProfileSaveValidationTests
         "{\"providerPurpose\":\"Chat\",\"ProviderPurpose\":\"ImageGeneration\"}",
         "providerPurpose")]
     [InlineData(
+        "{\"suggestedModels\":[\"gemma4\"],\"SuggestedModels\":[\"gptoss\"]}",
+        "suggestedModels")]
+    [InlineData(
         "{\"tags\":[\"planning\"],\"Tags\":[\"brainstorming\"]}",
         "tags")]
     public void Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(
@@ -117,6 +120,7 @@ public sealed class ProviderProfileSaveValidationTests
               "AgentFrameworkProviderKind": "Ollama",
               "ProviderTransport": "ChatCompletions",
               "ProviderPurpose": "ImageGeneration",
+              "SuggestedModels": ["legacy-model"],
               "Tags": ["Legacy"],
               "customSetting": true
             }
@@ -132,7 +136,8 @@ public sealed class ProviderProfileSaveValidationTests
             ProviderTransportKind.Responses,
             ProviderProfilePurpose.Chat,
             [],
-            ["Planning"]);
+            ["Planning"],
+            [" gemma4-12b-256k ", "gptoss20b64k", "GPTOSS20B64K"]);
         using var document = JsonDocument.Parse(result);
         var properties = document.RootElement
             .EnumerateObject()
@@ -146,6 +151,7 @@ public sealed class ProviderProfileSaveValidationTests
             "agentFrameworkProviderKind",
             "providerTransport",
             "providerPurpose",
+            "suggestedModels",
             "tags"
         ];
 
@@ -184,7 +190,26 @@ public sealed class ProviderProfileSaveValidationTests
         Assert.Equal(
             "planning",
             document.RootElement.GetProperty("tags")[0].GetString());
+        Assert.Equal(
+            ["gemma4-12b-256k", "gptoss20b64k"],
+            document.RootElement.GetProperty("suggestedModels")
+                .EnumerateArray()
+                .Select(item => item.GetString()!)
+                .ToArray());
         Assert.True(document.RootElement.GetProperty("customSetting").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("{\"suggestedModels\":\"gptoss20b64k\"}")]
+    [InlineData("{\"suggestedModels\":[null]}")]
+    [InlineData("{\"suggestedModels\":[\"\"]}")]
+    public void Suggested_model_reader_rejects_malformed_metadata(
+        string configurationJson)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            AgentFrameworkProviderMetadata.ReadSuggestedModels(configurationJson));
+
+        Assert.Contains("suggestedModels", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

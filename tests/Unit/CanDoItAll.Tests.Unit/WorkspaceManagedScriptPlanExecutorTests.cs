@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Core;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceManagedScriptPlanExecutorTests
 {
@@ -21,9 +21,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
                 File.WriteAllText(markerPath, "completed");
             }
         });
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(CreateRequest(productRoot, markerPath));
 
@@ -43,9 +41,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
         var productRoot = workspace.CreateProductRoot();
         var outsidePath = Path.Combine(workspace.Root, "outside.txt");
         var processHost = new FakeWorkspaceProcessHost();
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(CreateRequest(productRoot, outsidePath));
 
@@ -53,6 +49,57 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
         Assert.Contains("escapes ProductRoot", result.Summary, StringComparison.Ordinal);
         Assert.Empty(result.ToolReceipts);
         Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_rejects_foreign_host_readback_syntax_before_running_the_script()
+    {
+        using var workspace = new TestWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var foreignPath = OperatingSystem.IsWindows()
+            ? "/var/lib/candoitall/proof.txt"
+            : @"C:\data\proof.txt";
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace.Root, processHost);
+
+        var result = await executor.ExecuteAsync(CreateRequest(productRoot, foreignPath));
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("invalid", result.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(processHost.Requests);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_keeps_case_distinct_unix_product_roots_separate()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var workspace = new TestWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        var siblingRoot = Path.Combine(
+            Path.GetDirectoryName(productRoot)!,
+            Path.GetFileName(productRoot).ToLowerInvariant());
+        Directory.CreateDirectory(siblingRoot);
+        var siblingPath = Path.Combine(siblingRoot, "proof.txt");
+        await File.WriteAllTextAsync(siblingPath, "completed");
+        var processHost = new FakeWorkspaceProcessHost();
+        var executor = CreateExecutor(workspace.Root, processHost);
+
+        try
+        {
+            var result = await executor.ExecuteAsync(CreateRequest(productRoot, siblingPath));
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("escapes ProductRoot", result.Summary, StringComparison.Ordinal);
+            Assert.Empty(processHost.Requests);
+        }
+        finally
+        {
+            Directory.Delete(siblingRoot, recursive: true);
+        }
     }
 
     [Fact]
@@ -66,9 +113,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
             ExitCode = 1,
             Stderr = "script failed"
         };
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(CreateRequest(productRoot, markerPath));
 
@@ -96,9 +141,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
             ExitCode = 1,
             Stderr = "A concurrent operation already completed the requested mutation."
         };
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(
             CreateRequest(productRoot, markerPath) with
@@ -137,9 +180,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
             ExitCode = 1,
             Stderr = "script failed"
         };
-        var executor = new WorkspaceManagedScriptPlanExecutor(
-            new WorkspaceFileService(workspace.Root),
-            new WorkspaceCommandExecutionService(workspace.Root, processHost));
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(CreateRequest(productRoot, markerPath));
 
@@ -161,9 +202,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
             ExitCode = 1,
             Stderr = "script failed"
         };
-        var executor = new WorkspaceManagedScriptPlanExecutor(
-            new WorkspaceFileService(workspace.Root),
-            new WorkspaceCommandExecutionService(workspace.Root, processHost));
+        var executor = CreateExecutor(workspace.Root, processHost);
         var request = CreateRequest(productRoot, optionalPath) with
         {
             ExecutionPolicy = CreateConvergentExecutionPolicy(),
@@ -206,9 +245,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
             TimedOut = true,
             Stderr = "timed out"
         };
-        var executor = new WorkspaceManagedScriptPlanExecutor(
-            new WorkspaceFileService(workspace.Root),
-            new WorkspaceCommandExecutionService(workspace.Root, processHost));
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(
             CreateRequest(productRoot, markerPath) with
@@ -231,9 +268,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
         var markerPath = Path.Combine(productRoot, "proof.txt");
         await File.WriteAllTextAsync(markerPath, "unexpected content");
         var processHost = new FakeWorkspaceProcessHost();
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(CreateRequest(productRoot, markerPath));
 
@@ -251,9 +286,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
         var markerPath = Path.Combine(productRoot, "proof.txt");
         await File.WriteAllTextAsync(markerPath, "first condition");
         var processHost = new FakeWorkspaceProcessHost();
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
 
         var result = await executor.ExecuteAsync(
             CreateRequest(
@@ -280,9 +313,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
         await File.WriteAllTextAsync(stalePath, "stale membership");
         await File.WriteAllTextAsync(validPath, "src/Calculator/Calculator.csproj");
         var processHost = new FakeWorkspaceProcessHost();
-        var workspaceFiles = new WorkspaceFileService(workspace.Root);
-        var workspaceCommands = new WorkspaceCommandExecutionService(workspace.Root, processHost);
-        var executor = new WorkspaceManagedScriptPlanExecutor(workspaceFiles, workspaceCommands);
+        var executor = CreateExecutor(workspace.Root, processHost);
         var request = CreateRequest(productRoot, stalePath) with
         {
             ReadbackChecks =
@@ -300,6 +331,23 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
         Assert.Equal(
             2,
             result.ToolReceipts.Count(receipt => receipt.ToolName == "workspace_read_file"));
+    }
+
+    private static WorkspaceManagedScriptPlanExecutor CreateExecutor(
+        string workspaceRoot,
+        IWorkspaceProcessHost processHost)
+    {
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        return new WorkspaceManagedScriptPlanExecutor(
+            TestWorkspaceServices.CreateFileService(
+                workspaceRoot,
+                externalTargetRegistry: externalTargets),
+            TestWorkspaceServices.CreateCommandExecutionService(
+                workspaceRoot,
+                processHost,
+                externalTargetRegistry: externalTargets),
+            externalTargets,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
     }
 
     private static WorkspaceManagedScriptPlanExecutionRequest CreateRequest(
@@ -320,7 +368,7 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
                 ["declaredWritePaths"] = new[] { readbackPath },
                 ["allowShellDelegation"] = true
             }),
-            AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(productRoot)!,
+            ".",
             $"artifacts/process-runs/{executionRunId:D}/tool-runs/managed-script.json",
             productRoot,
             [new WorkspaceManagedScriptReadbackCheck(

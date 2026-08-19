@@ -1,4 +1,5 @@
 using CanDoItAll.Processes.Abstractions;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 
@@ -6,6 +7,54 @@ namespace CanDoItAll.Processes.Builder;
 
 public sealed partial class ProcessInstancePlanCompiler
 {
+    private static void ValidateSelectedDriverHostCapabilityLimit(
+        IReadOnlyList<ProcessDriverDescriptor> selectedDrivers,
+        ICollection<ProcessBuildDiagnostic> diagnostics)
+    {
+        if (!ExceedsHostCapabilityLimit(
+                selectedDrivers.SelectMany(driver => driver.RequiredHostCapabilities)))
+        {
+            return;
+        }
+
+        diagnostics.Add(Error(
+            "Builder.DriverHostCapabilityLimitExceeded",
+            $"The selected driver stack requires more than {MaximumEffectiveHostCapabilities} process host capabilities."));
+    }
+
+    private static void ValidateEffectiveHostCapabilityLimit(
+        IReadOnlyList<ProcessDriverDescriptor> selectedDrivers,
+        IReadOnlyList<StepInstancePlan> steps,
+        ICollection<ProcessBuildDiagnostic> diagnostics)
+    {
+        var effectiveCapabilities = selectedDrivers
+            .SelectMany(driver => driver.RequiredHostCapabilities)
+            .Concat(steps.SelectMany(step => step.RequiredHostCapabilities));
+        if (!ExceedsHostCapabilityLimit(effectiveCapabilities))
+        {
+            return;
+        }
+
+        diagnostics.Add(Error(
+            "Builder.PlanHostCapabilityLimitExceeded",
+            $"The effective process plan requires more than {MaximumEffectiveHostCapabilities} process host capabilities."));
+    }
+
+    private static bool ExceedsHostCapabilityLimit(IEnumerable<ProcessHostCapabilityId> capabilities)
+    {
+        var distinct = new HashSet<ProcessHostCapabilityId>();
+        foreach (var capability in capabilities)
+        {
+            distinct.Add(capability);
+            if (distinct.Count > MaximumEffectiveHostCapabilities)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static IReadOnlyDictionary<StrategyId, ResolvedStrategyDescriptor> BuildStrategyIndex(
         IReadOnlyList<ProcessDriverDescriptor> selectedDrivers,
         ICollection<ProcessBuildDiagnostic> diagnostics)
@@ -31,6 +80,7 @@ public sealed partial class ProcessInstancePlanCompiler
     private static IReadOnlyList<StepInstancePlan> BuildStepPlans(
         ProcessInstancePlanCompileRequest request,
         IReadOnlyDictionary<StrategyId, ResolvedStrategyDescriptor> strategies,
+        IReadOnlyList<ProcessDriverDescriptor> selectedDrivers,
         ICollection<ProcessBuildDiagnostic> diagnostics)
     {
         var subprocessStepIds = request.Subprocesses
@@ -41,16 +91,79 @@ public sealed partial class ProcessInstancePlanCompiler
         foreach (var step in request.Definition.Steps)
         {
             var isExecutable = step.Kind is not ProcessStepKind.Start and not ProcessStepKind.End;
+            var requiredRuntimeToolNames = ProcessRequiredRuntimeToolNames
+                .NormalizeDeclaredRuntimeToolNames(step.RequiredRuntimeToolNames);
+            if (ProcessRequiredRuntimeToolNames.HasInvalidRuntimeToolContract(requiredRuntimeToolNames))
+            {
+                diagnostics.Add(Error(
+                    "Builder.StepRuntimeToolContractInvalid",
+                    $"Step '{step.Key}' declares an invalid or over-bound runtime-tool requirement contract."));
+            }
+
+            var requiredHostCapabilities = new HashSet<ProcessHostCapabilityId>();
+            if (isExecutable)
+            {
+                requiredHostCapabilities.UnionWith(
+                    selectedDrivers.SelectMany(driver => driver.RequiredHostCapabilities));
+            }
+
+            if (step.RequiredHostCapabilities.Count > MaximumEffectiveHostCapabilities)
+            {
+                diagnostics.Add(Error(
+                    "Builder.StepHostCapabilityLimitExceeded",
+                    $"Step '{step.Key}' declares more than {MaximumEffectiveHostCapabilities} process host capabilities."));
+            }
+
+            foreach (var value in step.RequiredHostCapabilities.Take(MaximumEffectiveHostCapabilities + 1))
+            {
+                if (!ProcessHostCapabilityId.TryParse(value, out var capabilityId))
+                {
+                    diagnostics.Add(Error(
+                        "Builder.StepHostCapabilityInvalid",
+                        $"Step '{step.Key}' declares an invalid process host capability id."));
+                    continue;
+                }
+
+                requiredHostCapabilities.Add(capabilityId);
+            }
+
             ProcessStrategyBindingSnapshot? binding = null;
             if (isExecutable)
             {
-                TryBindRequiredStrategy(
+                if (TryBindRequiredStrategy(
                     step.StrategyId,
                     GetExpectedStrategyKind(step.Kind),
                     strategies,
+                    request.CapabilityRequest.HostCapabilities,
                     diagnostics,
                     $"step '{step.Key}'",
-                    out binding);
+                    out binding))
+                {
+                    requiredHostCapabilities.UnionWith(
+                        binding.HostCapabilities.Select(capability => capability.Id));
+                    if (strategies.TryGetValue(binding.StrategyId, out var resolvedStrategy))
+                    {
+                        requiredHostCapabilities.UnionWith(
+                            resolvedStrategy.Driver.RequiredHostCapabilities);
+                    }
+                }
+            }
+
+            if (requiredHostCapabilities.Count > MaximumEffectiveHostCapabilities)
+            {
+                diagnostics.Add(Error(
+                    "Builder.StepHostCapabilityLimitExceeded",
+                    $"Step '{step.Key}' has more than {MaximumEffectiveHostCapabilities} effective process host capabilities across its selected driver stack, declaration, and active strategy."));
+            }
+
+            foreach (var capabilityId in requiredHostCapabilities
+                         .Where(capabilityId => !request.CapabilityRequest.HostCapabilities.IsAvailable(capabilityId))
+                         .OrderBy(capabilityId => capabilityId.Value, StringComparer.Ordinal)
+                         .Take(MaximumEffectiveHostCapabilities + 1))
+            {
+                diagnostics.Add(Error(
+                    "Builder.StepHostCapabilityMissing",
+                    $"Step '{step.Key}' requires unavailable host capability '{capabilityId}' on profile '{request.CapabilityRequest.HostCapabilities.ProfileId}'. Configure the required host adapter or choose a compatible process strategy."));
             }
 
             steps.Add(new StepInstancePlan(
@@ -60,7 +173,11 @@ public sealed partial class ProcessInstancePlanCompiler
                 step.Kind,
                 isExecutable,
                 subprocessStepIds.Contains(step.Id),
-                binding));
+                binding)
+            {
+                RequiredHostCapabilities = requiredHostCapabilities,
+                RequiredRuntimeToolNames = requiredRuntimeToolNames
+            });
         }
 
         return steps;
@@ -85,6 +202,7 @@ public sealed partial class ProcessInstancePlanCompiler
                 managerStrategyId,
                 ProcessStrategyKind.ManagerDecision,
                 strategies,
+                request.CapabilityRequest.HostCapabilities,
                 diagnostics,
                 "manager",
                 out managerBinding);
@@ -94,12 +212,14 @@ public sealed partial class ProcessInstancePlanCompiler
             request.Manager.RecoveryStrategyIds,
             ProcessStrategyKind.ArtifactRecovery,
             strategies,
+            request.CapabilityRequest.HostCapabilities,
             diagnostics,
             "recovery");
         var resupplyBindings = BindStrategyList(
             request.Manager.ResupplyStrategyIds,
             ProcessStrategyKind.ArtifactResupply,
             strategies,
+            request.CapabilityRequest.HostCapabilities,
             diagnostics,
             "resupply");
 
@@ -114,6 +234,7 @@ public sealed partial class ProcessInstancePlanCompiler
         IEnumerable<StrategyId> strategyIds,
         ProcessStrategyKind expectedKind,
         IReadOnlyDictionary<StrategyId, ResolvedStrategyDescriptor> strategies,
+        ProcessHostCapabilitySnapshot hostCapabilities,
         ICollection<ProcessBuildDiagnostic> diagnostics,
         string source)
     {
@@ -124,6 +245,7 @@ public sealed partial class ProcessInstancePlanCompiler
                 strategyId,
                 expectedKind,
                 strategies,
+                hostCapabilities,
                 diagnostics,
                 source,
                 out var binding))
@@ -139,6 +261,7 @@ public sealed partial class ProcessInstancePlanCompiler
         StrategyId? strategyId,
         ProcessStrategyKind expectedKind,
         IReadOnlyDictionary<StrategyId, ResolvedStrategyDescriptor> strategies,
+        ProcessHostCapabilitySnapshot hostCapabilities,
         ICollection<ProcessBuildDiagnostic> diagnostics,
         string source,
         out ProcessStrategyBindingSnapshot binding)
@@ -168,6 +291,44 @@ public sealed partial class ProcessInstancePlanCompiler
             return false;
         }
 
+        if (resolved.Strategy.RequiredHostCapabilities.Count > MaximumEffectiveHostCapabilities)
+        {
+            diagnostics.Add(Error(
+                "Builder.StrategyHostCapabilityLimitExceeded",
+                $"Strategy '{strategyId}' required for {source} declares more than {MaximumEffectiveHostCapabilities} process host capabilities."));
+            return false;
+        }
+
+        var requiredHostCapabilities = resolved.Strategy.RequiredHostCapabilities
+            .OrderBy(capability => capability.Value, StringComparer.Ordinal)
+            .ToArray();
+        if (requiredHostCapabilities.Length > 0 &&
+            expectedKind is not ProcessStrategyKind.StepExecution and not ProcessStrategyKind.BranchDecision)
+        {
+            diagnostics.Add(Error(
+                "Builder.NonExecutionStrategyHostCapabilitiesUnsupported",
+                $"Strategy '{strategyId}' required for {source} declares host capabilities, but runtime revalidation is currently supported only for executable step and branch strategies."));
+            return false;
+        }
+
+        var missingHostCapabilities = requiredHostCapabilities
+            .Where(capability => !hostCapabilities.IsAvailable(capability))
+            .ToArray();
+        foreach (var missingHostCapability in missingHostCapabilities)
+        {
+            var reason = hostCapabilities.TryGet(missingHostCapability, out var fact)
+                ? fact!.Reason.ToString()
+                : "NotReported";
+            diagnostics.Add(Error(
+                "Builder.StrategyHostCapabilityMissing",
+                $"Strategy '{strategyId}' required for {source} cannot use host capability '{missingHostCapability}' on profile '{hostCapabilities.ProfileId}' ({reason}). Choose a compatible strategy or configure the required host adapter."));
+        }
+
+        if (missingHostCapabilities.Length > 0)
+        {
+            return false;
+        }
+
         var inputs = new[]
         {
             new StrategyBindingInput(new StrategyBindingInputKey("source"), ProcessPlanHasher.ComputeContentHash(source)),
@@ -178,11 +339,21 @@ public sealed partial class ProcessInstancePlanCompiler
             resolved.Driver.DriverId,
             resolved.Strategy.StrategyId,
             resolved.Strategy.StrategyVersion,
-            $"{BuilderBindingVersion}:{resolved.Driver.DriverVersion}",
+            ProcessStrategyBindingVersions.ForDriver(resolved.Driver.DriverVersion),
             resolved.Driver.MinRuntimeSchema,
             resolved.Driver.MaxRuntimeSchema,
             ProcessPlanHasher.ComputeBindingInputHash(inputs),
-            inputs);
+            inputs)
+        {
+            HostProfileId = hostCapabilities.ProfileId,
+            HostCapabilities = requiredHostCapabilities
+                .Select(capability =>
+                {
+                    hostCapabilities.TryGet(capability, out var fact);
+                    return fact!;
+                })
+                .ToArray()
+        };
         return true;
     }
 
@@ -257,8 +428,17 @@ public sealed partial class ProcessInstancePlanCompiler
             subprocess.ParentDefinitionVersionId == definition.VersionId;
     }
 
-    private static DriverStackSnapshot BuildDriverStack(IReadOnlyList<ProcessDriverDescriptor> selectedDrivers)
+    private static DriverStackSnapshot BuildDriverStack(
+        IReadOnlyList<ProcessDriverDescriptor> selectedDrivers,
+        IReadOnlyList<StepInstancePlan> steps,
+        ProcessHostCapabilitySnapshot hostCapabilities)
     {
+        var requiredHostCapabilities = selectedDrivers
+            .SelectMany(driver => driver.RequiredHostCapabilities)
+            .Concat(steps.SelectMany(step => step.RequiredHostCapabilities))
+            .Distinct()
+            .OrderBy(capability => capability.Value, StringComparer.Ordinal)
+            .ToArray();
         return new DriverStackSnapshot(selectedDrivers
             .Select(driver => new ResolvedDriverSnapshot(
                 driver.DriverId,
@@ -266,8 +446,21 @@ public sealed partial class ProcessInstancePlanCompiler
                 driver.Layer,
                 driver.MinRuntimeSchema,
                 driver.MaxRuntimeSchema,
-                driver.CapabilityTags))
-            .ToArray());
+                driver.CapabilityTags)
+            {
+                RequiredHostCapabilities = driver.RequiredHostCapabilities
+            })
+            .ToArray())
+        {
+            HostProfileId = hostCapabilities.ProfileId,
+            HostCapabilities = requiredHostCapabilities
+                .Select(capability =>
+                {
+                    hostCapabilities.TryGet(capability, out var fact);
+                    return fact!;
+                })
+                .ToArray()
+        };
     }
 
     private static StrategyBindingSet BuildStrategyBindingSet(

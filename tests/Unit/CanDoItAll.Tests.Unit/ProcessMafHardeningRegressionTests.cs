@@ -11,7 +11,7 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessMafHardeningRegressionTests
 {
@@ -2040,6 +2040,8 @@ public sealed class ProcessMafHardeningRegressionTests
 
         public WorkspaceFileListResult ListFiles(string? relativePath = null, string searchPattern = "*", int maxResults = 100) => throw new NotSupportedException();
 
+        public WorkspaceFileListResult ListFiles(string path, string searchPattern, int maxResults, string authorityRootPath) => throw new NotSupportedException();
+
         public WorkspaceTextSearchResult SearchText(string query, string? relativePath = null, int maxResults = 20) => throw new NotSupportedException();
 
         public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters = 12000)
@@ -2067,6 +2069,9 @@ public sealed class ProcessMafHardeningRegressionTests
                 IsTruncated: isTruncated);
         }
 
+        public WorkspaceTextFileReadResult ReadTextFile(string path, int maxCharacters, string authorityRootPath)
+            => ReadTextFile(path, maxCharacters);
+
         public WorkspacePathStatResult StatPath(string path)
             => new(
                 Succeeded: true,
@@ -2078,6 +2083,9 @@ public sealed class ProcessMafHardeningRegressionTests
                 SizeBytes: files.ContainsKey(path) ? 1 : null,
                 LastWriteTimeUtc: files.ContainsKey(path) ? DateTimeOffset.UtcNow : null,
                 ChildCount: null);
+
+        public WorkspacePathStatResult StatPath(string path, string authorityRootPath)
+            => StatPath(path);
 
         public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760) => throw new NotSupportedException();
 

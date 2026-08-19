@@ -71,6 +71,8 @@ public sealed class TestDatabaseProfile
             ["Storage:ManagerArtifactsFolder"] = ManagerArtifactsRootPath,
             ["SecretVault:Provider"] = "DataProtectionFile",
             ["SecretVault:VaultPath"] = SecretVaultRootPath,
+            ["SecretVault:AllowInsecureDevelopmentProviders"] = "true",
+            ["DataProtection:KeyProtection:Provider"] = "UnprotectedDevelopment",
             ["Workbench:MaxWarmTabs"] = "3",
             ["Workbench:SleepAfterMinutes"] = "15",
             ["Workbench:BrowserStorageKey"] = "candoitall.workbench.session",

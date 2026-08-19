@@ -1,0 +1,10 @@
+<div class="llm-chat-floating-conversation-content flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
+     data-testid="floating-simple-chat-content"
+     data-conversation-context="none">
+    <LlmChatConversationWorkspace InitialConversationId="@ConversationId" Focused="true" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid ConversationId { get; set; }
+}

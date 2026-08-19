@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "bundle_id": "candoitall-unix-merge-readiness-followup-2026-08-12",
+  "title": "CanDoItAll Unix Adoption Merge-Readiness Follow-up",
+  "target_model": "Codex GPT-5.6 xhigh",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "unix-adoption",
+  "prepared_commit": "e282446daa2b775b93f2d70ea7fc0e282e26d802",
+  "prepared_parent": "246534dbaa1042627689716027b27ce959aa4220",
+  "prepared_utc_date": "2026-08-12",
+  "status": "Prepared",
+  "final_gate": "local Windows/Linux merge candidate plus separate macOS validation",
+  "subbundles": [
+    "M00",
+    "M01",
+    "M02",
+    "M03",
+    "C1",
+    "M04",
+    "M05",
+    "M06",
+    "C2",
+    "M07",
+    "M08",
+    "M09",
+    "M10"
+  ],
+  "accepted_alpha_deferrals": [
+    "Complete Azure Key Vault adapter",
+    "Complete HashiCorp Vault adapter",
+    "macOS Keychain native API modernization",
+    "Actual-host macOS proof until colleague handoff",
+    "Hosted CI execution until local candidate closure"
+  ]
+}

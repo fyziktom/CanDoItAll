@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Contract tests for the SDK-free canonical context records introduced by the
@@ -359,7 +359,7 @@ public sealed class CanonicalContextContractTests
 
         foreach (var relativePath in contractFiles)
         {
-            var fullPath = Path.Combine(root, relativePath);
+            var fullPath = TestRepositoryPath.Resolve(root, relativePath);
             Assert.True(File.Exists(fullPath), $"Missing contract file: {relativePath}");
             var text = File.ReadAllText(fullPath);
             foreach (var token in forbiddenTokens)

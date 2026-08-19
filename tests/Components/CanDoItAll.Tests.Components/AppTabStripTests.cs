@@ -3,7 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class AppTabStripTests : BunitContext
 {
@@ -88,5 +88,4 @@ public sealed class AppTabStripTests : BunitContext
         Assert.True(cleared);
     }
 }
-
 

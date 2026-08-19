@@ -2,12 +2,12 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Runtime;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessAcceptanceCriteriaLaunchVariableContributorTests
 {
     [Fact]
-    public void Enrich_excludes_implicit_acceptance_candidates_from_sibling_work_items()
+    public void Enrich_keeps_implicit_sibling_context_non_blocking()
     {
         var selected = CreateItem(
             "selected",
@@ -27,7 +27,87 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributorTests
 
         Assert.Contains(matrix.Criteria, criterion => criterion.SourceNodeId == selected.Id);
         Assert.DoesNotContain(matrix.Criteria, criterion => criterion.SourceNodeId == sibling.Id);
-        Assert.Contains(matrix.Criteria, criterion => criterion.SourceNodeId == projectContext.Id);
+        var planningCriterion = Assert.Single(
+            matrix.Criteria,
+            criterion => criterion.SourceNodeId == projectContext.Id);
+        Assert.Equal(
+            ProcessAcceptanceCriterionKind.DeliveryPlanning,
+            planningCriterion.Kind);
+        Assert.False(planningCriterion.RequiredForAcceptance);
+    }
+
+    [Fact]
+    public void Enrich_keeps_context_visual_targets_as_required_acceptance_inputs()
+    {
+        var selected = CreateItem(
+            "selected",
+            "The page must implement the requested workflow.",
+            ProcessLaunchSourceItemKind.WorkItem);
+        var visualTarget = CreateItem(
+            "visual-target",
+            "Source visual target for implementation and QA.",
+            ProcessLaunchSourceItemKind.ImageAsset);
+
+        var matrix = Enrich(CreateSource(selected, visualTarget));
+
+        var criterion = Assert.Single(
+            matrix.Criteria,
+            candidate => candidate.SourceNodeId == visualTarget.Id);
+        Assert.Equal(ProcessAcceptanceCriterionKind.ProductAcceptance, criterion.Kind);
+        Assert.True(criterion.RequiredForAcceptance);
+        Assert.Equal(
+            "Source visual target for implementation and QA.",
+            criterion.Summary);
+    }
+
+    [Fact]
+    public void Enrich_synthesizes_a_bounded_visual_criterion_when_only_a_title_exists()
+    {
+        var selected = CreateItem(
+            "selected",
+            "The page must implement the requested workflow.",
+            ProcessLaunchSourceItemKind.WorkItem);
+        var visualTarget = new ProcessLaunchSourceItem(
+            "visual-target",
+            "Approved desktop proposal",
+            string.Empty,
+            string.Empty,
+            "generated",
+            "image/png",
+            [],
+            ProcessLaunchSourceItemKind.ImageAsset,
+            true);
+
+        var matrix = Enrich(CreateSource(selected, visualTarget));
+
+        var criterion = Assert.Single(
+            matrix.Criteria,
+            candidate => candidate.SourceNodeId == visualTarget.Id);
+        Assert.Equal(
+            "Use the source asset 'Approved desktop proposal' as a visual acceptance target.",
+            criterion.Summary);
+        Assert.True(criterion.RequiredForAcceptance);
+    }
+
+    [Fact]
+    public void Enrich_keeps_typed_product_requirement_context_required()
+    {
+        var selected = CreateItem(
+            "selected",
+            "The page must implement the requested workflow.",
+            ProcessLaunchSourceItemKind.WorkItem);
+        var architecture = CreateItem(
+            "architecture",
+            "The solution must remain self-contained within its declared product root.",
+            ProcessLaunchSourceItemKind.ProductRequirement);
+
+        var matrix = Enrich(CreateSource(selected, architecture));
+
+        var criterion = Assert.Single(
+            matrix.Criteria,
+            candidate => candidate.SourceNodeId == architecture.Id);
+        Assert.Equal(ProcessAcceptanceCriterionKind.ProductAcceptance, criterion.Kind);
+        Assert.True(criterion.RequiredForAcceptance);
     }
 
     [Fact]
@@ -70,6 +150,57 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributorTests
             criterion =>
                 criterion.SourceNodeId == sibling.Id &&
                 criterion.Summary.Contains("passing automated smoke test", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Enrich_preserves_each_explicit_acceptance_bullet_as_one_criterion()
+    {
+        var selected = CreateItem(
+            "selected",
+            "The page must expose the requested workflow.",
+            ProcessLaunchSourceItemKind.WorkItem);
+        var context = CreateItem(
+            "context",
+            """
+            Acceptance criteria:
+            - Keep labels aligned and readable; this supersedes the earlier no-text interpretation.
+            """,
+            ProcessLaunchSourceItemKind.Other);
+
+        var matrix = Enrich(CreateSource(selected, context));
+
+        var criterion = Assert.Single(
+            matrix.Criteria,
+            candidate => candidate.SourceNodeId == context.Id);
+        Assert.Equal(
+            "Keep labels aligned and readable; this supersedes the earlier no-text interpretation.",
+            criterion.Summary);
+        Assert.True(criterion.RequiredForAcceptance);
+    }
+
+    [Fact]
+    public void Enrich_keeps_distinct_explicit_acceptance_bullets_separate()
+    {
+        var selected = CreateItem(
+            "selected",
+            "The page must expose the requested workflow.",
+            ProcessLaunchSourceItemKind.WorkItem);
+        var context = CreateItem(
+            "context",
+            """
+            Definition of done:
+            - The primary action must remain visible.
+            - The result panel must remain readable.
+            """,
+            ProcessLaunchSourceItemKind.Other);
+
+        var matrix = Enrich(CreateSource(selected, context));
+
+        var criteria = matrix.Criteria
+            .Where(candidate => candidate.SourceNodeId == context.Id)
+            .ToArray();
+        Assert.Equal(2, criteria.Length);
+        Assert.All(criteria, criterion => Assert.True(criterion.RequiredForAcceptance));
     }
 
     [Fact]

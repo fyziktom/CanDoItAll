@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "2026-08-12.1",
+  "traitFilter": "Category=UnixRuntimePortability",
+  "scopes": [
+    {
+      "name": "Unit",
+      "projectPath": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "assemblyPath": "tests/Unit/CanDoItAll.Tests.Unit/bin/{configuration}/net10.0/CanDoItAll.Tests.Unit.dll",
+      "trxFileName": "runtime-portability-unit.trx",
+      "expectedCaseCount": 422,
+      "expectedClasses": [
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkHostingServiceCollectionTests",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests",
+        "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkWorkspaceProcessLeaseCleanupTests",
+        "CanDoItAll.Tests.Unit.Storage.ApplicationStoragePortabilityContractTests",
+        "CanDoItAll.Tests.Unit.Processes.DotNetSolutionSetupRuntimeExecutorTests",
+        "CanDoItAll.Tests.Unit.Processes.ProcessBlockedRunPersistedRecoveryTests",
+        "CanDoItAll.Tests.Unit.Processes.ProcessesModuleHostedWorkerRegistrationTests",
+        "CanDoItAll.Tests.Unit.Processes.ProcessLaunchExecutorResolverTests",
+        "CanDoItAll.Tests.Unit.Processes.ProcessLaunchPromptTests",
+        "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeArchitectureBaselineTests",
+        "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeIntegrationAdapterTests",
+        "CanDoItAll.Tests.Unit.AgentFramework.WorkspaceRuntimePluginScriptArgumentTests"
+      ],
+      "expectedFullyQualifiedNames": []
+    },
+    {
+      "name": "Integration",
+      "projectPath": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "assemblyPath": "tests/Integration/CanDoItAll.Tests.Integration/bin/{configuration}/net10.0/CanDoItAll.Tests.Integration.dll",
+      "trxFileName": "runtime-portability-integration.trx",
+      "expectedCaseCount": 45,
+      "expectedClasses": [
+        "CanDoItAll.Tests.Integration.CapsuleCatalogServiceIntegrationTests",
+        "CanDoItAll.Tests.Integration.ExecutionFoundationPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.ManagerProcessDiscoveryIntegrationTests",
+        "CanDoItAll.Tests.Integration.McpExternalToolPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.PluginDesktopPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.ProcessCapabilityPortabilityIntegrationTests",
+        "CanDoItAll.Tests.Integration.WatchSupervisorServiceIntegrationTests"
+      ],
+      "expectedFullyQualifiedNames": []
+    },
+    {
+      "name": "Browser",
+      "projectPath": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "assemblyPath": "tests/Playwright/CanDoItAll.Tests.Playwright/bin/{configuration}/net10.0/CanDoItAll.Tests.Playwright.dll",
+      "trxFileName": "runtime-portability-browser.trx",
+      "expectedCaseCount": 1,
+      "expectedClasses": [
+        "CanDoItAll.Tests.Playwright.AppSmokeTests"
+      ],
+      "expectedFullyQualifiedNames": [
+        "CanDoItAll.Tests.Playwright.AppSmokeTests.Runtime_node_actions_show_direct_optional_and_dependency_missing_states"
+      ]
+    }
+  ]
+}

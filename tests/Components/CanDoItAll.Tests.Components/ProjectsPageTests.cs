@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectsPageTests
 {
@@ -1019,6 +1019,16 @@ public sealed class ProjectsPageTests
 
         public Task<Result> ActivateAsync(
             Guid id,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result> RebindWorkspaceAsync(
+            Guid id,
+            string workspaceRoot,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Result> RollbackWorkspacePathMigrationAsync(
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

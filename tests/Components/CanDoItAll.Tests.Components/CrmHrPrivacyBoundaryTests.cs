@@ -4,7 +4,7 @@ using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class CrmHrPrivacyBoundaryTests
 {

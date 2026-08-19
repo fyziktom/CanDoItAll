@@ -3,7 +3,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Runtime;
 
 public sealed class ProfileHarnessIntegrationTests
 {

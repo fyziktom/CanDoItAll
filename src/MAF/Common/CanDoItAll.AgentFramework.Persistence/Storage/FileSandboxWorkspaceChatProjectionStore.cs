@@ -851,7 +851,9 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         var runs = new List<ExecutionRunRecord>();
         if (Directory.Exists(layout.ExecutionRunsRoot))
         {
-            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot).OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+            foreach (var runDirectory in Directory.EnumerateDirectories(layout.ExecutionRunsRoot)
+                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
             {
                 var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(Path.Combine(runDirectory, "run.json"), cancellationToken);
                 if (run is null)
@@ -887,7 +889,8 @@ internal sealed class FileSandboxWorkspaceChatProjectionStore(
         {
             foreach (var runDirectory in Directory
                          .EnumerateDirectories(layout.ExecutionRunsRoot)
-                         .OrderBy(item => item, StringComparer.OrdinalIgnoreCase))
+                         .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                         .ThenBy(path => path, StringComparer.Ordinal))
             {
                 var run = await jsonStore.ReadJsonAsync<ExecutionRunRecord>(
                     Path.Combine(runDirectory, "run.json"),

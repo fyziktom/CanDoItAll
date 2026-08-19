@@ -1,15 +1,21 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure.FileSystem;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Processes.Application;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed class DotNetProcessLaunchVariableContributor(
+    IExternalTargetPathRegistry externalTargetPathRegistry,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     IWorkspaceFileService? workspaceFiles = null) : IProcessLaunchVariableContributor
 {
     private readonly DotNetSolutionSetupLaunchPlanBuilder solutionSetupLaunchPlanBuilder = new();
     private readonly IWorkspaceFileService? workspaceFiles = workspaceFiles;
     private readonly DotNetSolutionContextParser solutionContextParser = new();
-    private readonly DotNetSolutionContextPathResolver contextPathResolver = new();
+    private readonly DotNetSolutionContextPathResolver contextPathResolver = new(
+        externalTargetPathRegistry,
+        physicalPathPolicyFactory);
 
     public void Enrich(
         ProcessLaunchPreparationContext context,
@@ -51,18 +57,28 @@ internal sealed class DotNetProcessLaunchVariableContributor(
                     $".NET launch contract for process definition '{context.DefinitionKey}' could not be created from its declared existing solution context: {verificationIssue}");
             }
 
-            DotNetProcessLaunchVariableWriter.ApplyExistingSolution(verificationContract, variables);
+            var productRootPolicy = physicalPathPolicyFactory.Create(verificationContract.ProductRoot);
+            DotNetProcessLaunchVariableWriter.ApplyExistingSolution(
+                verificationContract,
+                variables,
+                productRootPolicy.PathComparer);
             return;
         }
 
-        var contractFactory = new DotNetProcessLaunchContractFactory(contextPathResolver);
+        var contractFactory = new DotNetProcessLaunchContractFactory(
+            contextPathResolver,
+            externalTargetPathRegistry);
         if (!contractFactory.TryCreate(solutionContext, variables, out var contract, out var contractIssue))
         {
             throw new InvalidOperationException(
                 $".NET launch contract for process definition '{context.DefinitionKey}' could not be created from its declared initialization plan: {contractIssue}");
         }
 
-        DotNetProcessLaunchVariableWriter.ApplyCore(contract, variables);
+        var initializationRootPolicy = physicalPathPolicyFactory.Create(contract.ProductRoot);
+        DotNetProcessLaunchVariableWriter.ApplyCore(
+            contract,
+            variables,
+            initializationRootPolicy.PathComparer);
         solutionSetupLaunchPlanBuilder.Apply(contract, activation.SetupPolicyBindings, variables);
     }
 }

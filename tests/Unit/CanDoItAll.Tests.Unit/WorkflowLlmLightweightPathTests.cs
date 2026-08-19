@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Runtime;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Proves the ordinary workflow LLM path never transits the full agent runtime: source guards over the

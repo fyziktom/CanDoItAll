@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "F01",
+  "title": "Deterministic process-plan hash classification",
+  "goal": "Remove time as an algorithm-authority signal while preserving exact V1/V2 hashes and fail-closed execution.",
+  "tasks": [
+    {
+      "id": "T01",
+      "description": "Introduce one structured payload-shape classifier shared conceptually by runtime mapping and migration tests.",
+      "status": "planned"
+    },
+    {
+      "id": "T02",
+      "description": "Classify no-V2-shape rows as LegacyV1 regardless of CreatedAtUtc.",
+      "status": "planned"
+    },
+    {
+      "id": "T03",
+      "description": "Classify complete valid V2 shape as HostCapabilitiesV2.",
+      "status": "planned"
+    },
+    {
+      "id": "T04",
+      "description": "Classify partial, malformed or conflicting shapes as Unknown.",
+      "status": "planned"
+    },
+    {
+      "id": "T05",
+      "description": "Keep LegacyV1 as NeedsRecompile with HostCapabilitiesWereNotSealed.",
+      "status": "planned"
+    },
+    {
+      "id": "T06",
+      "description": "Add a corrective idempotent migration for databases that already applied AddProcessPlanHashVersioning.",
+      "status": "planned"
+    },
+    {
+      "id": "T07",
+      "description": "Use PostgreSQL jsonb structure checks rather than LIKE and wall-clock cutoffs.",
+      "status": "planned"
+    },
+    {
+      "id": "T08",
+      "description": "Prove existing V1 and V2 hash fixtures remain byte-for-byte stable.",
+      "status": "planned"
+    }
+  ]
+}

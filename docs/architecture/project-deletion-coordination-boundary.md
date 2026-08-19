@@ -80,8 +80,8 @@ history and returns the same clean or warning result without repeating external 
 
 | Method and route | Contract |
 |---|---|
-| `POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/delete` | Starts a node deletion. A body containing the exact `durableMutationId` retries that same deletion. |
-| `POST /api/project-structure/projects/{projectId}/nodes/delete` | Deletes independent requested branches and reports every exact recovery when only part of the batch finishes. |
+| `POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/delete` | Starts a node deletion with an explicit `managedStorageDisposition`. A body containing the exact `durableMutationId` retries that same deletion and must match its persisted disposition. |
+| `POST /api/project-structure/projects/{projectId}/nodes/delete` | Deletes independent requested branches with one explicit `managedStorageDisposition` and reports every exact recovery when only part of the batch finishes. |
 | `GET /api/project-structure/projects/{projectId}/deletion-cleanups` | Lists non-terminal node cleanup recoveries with lease-aware retry availability. |
 | `GET /api/project-structure/projects/{projectId}/deletion-completion-notices` | Lists retained-warning completion evidence for node cleanup. |
 

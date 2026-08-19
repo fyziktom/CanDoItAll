@@ -9,7 +9,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.CrmHr;
 
 public sealed class PartyOrganizationAffiliationIntegrationTests
 {

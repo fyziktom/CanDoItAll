@@ -7,10 +7,31 @@ using CanDoItAll.AgentFramework.Tools;
 using CanDoItAll.AgentFramework.Tools.Abstractions;
 using CapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ToolImplementationContractsTests
 {
+    [Fact]
+    public void External_process_descriptor_preserves_argv_path_executable_and_schema_identity()
+    {
+        var descriptor = ToolDescriptorFactory.ExternalProcess(
+            CapabilityKey.Create("exact-process-contract"),
+            RuntimeToolName.Create("exact_process_contract"),
+            ImplementationKey.Create("external.exact-process-contract"),
+            "dotnet",
+            ["", " value ", " "],
+            " /workspace/ folder ",
+            TimeSpan.FromSeconds(5),
+            1024,
+            ["Tool", "tool"],
+            ["id", "ID", " id "]);
+
+        Assert.Equal(["", " value ", " "], descriptor.Arguments);
+        Assert.Equal(" /workspace/ folder ", descriptor.WorkingDirectory);
+        Assert.Equal(2, descriptor.AllowedExecutableNames.Count);
+        Assert.Equal(3, descriptor.RequiredOutputProperties.Count);
+    }
+
     [Fact]
     public async Task INV_INTERNAL_001_internal_tool_registry_resolves_mockable_tool_and_exposes_policy_descriptor()
     {
@@ -68,7 +89,8 @@ public sealed class ToolImplementationContractsTests
         Assert.Equal(CapabilityDiagnosticCategory.ProcessExit, diagnostic.Category);
         Assert.Equal(7, diagnostic.ExitCode);
         Assert.Equal("INV_EXTERNAL_001", diagnostic.CorrelationId);
-        Assert.Contains("fake-audit.exe", diagnostic.MaskedDetail, StringComparison.Ordinal);
+        Assert.Contains("external-audit-tool", diagnostic.MaskedDetail, StringComparison.Ordinal);
+        Assert.DoesNotContain("fake-audit.exe", diagnostic.MaskedDetail, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret-value", diagnostic.MaskedDetail, StringComparison.Ordinal);
         Assert.True(diagnostic.MaskedDetail.Length < 220);
         Assert.Contains("non-zero", diagnostic.RepairHint, StringComparison.OrdinalIgnoreCase);
@@ -105,7 +127,7 @@ public sealed class ToolImplementationContractsTests
     }
 
     [Fact]
-    public async Task INV_EXTERNAL_003_process_invoker_rejects_disallowed_command_before_start()
+    public async Task INV_EXTERNAL_003_process_invoker_maps_post_resolution_command_policy_denial()
     {
         var descriptor = ToolDescriptorFactory.ExternalProcess(
             CapabilityKey.Create("external-audit-tool"),
@@ -118,7 +140,8 @@ public sealed class ToolImplementationContractsTests
             maxOutputBytes: 128,
             allowedExecutableNames: ["fake-audit.exe"],
             requiredOutputProperties: ["ok"]);
-        var runner = new FakeProcessRunner(new ExternalProcessRunResult(true, 0, """{"ok":true}""", string.Empty, TimeSpan.Zero));
+        var runner = new FakeProcessRunner(new ExternalProcessCommandPolicyException(
+            "resolved path was not authorized"));
         var invoker = new ExternalProcessToolInvoker(runner);
 
         var result = await invoker.InvokeAsync(
@@ -127,10 +150,53 @@ public sealed class ToolImplementationContractsTests
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
-        Assert.False(runner.WasCalled);
+        Assert.True(runner.WasCalled);
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Category == CapabilityDiagnosticCategory.CommandPolicy &&
-            diagnostic.RepairHint.Contains("allowed executable", StringComparison.OrdinalIgnoreCase));
+            diagnostic.RepairHint.Contains("command policy", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task External_process_invoker_rejects_persisted_secret_arguments_before_runner_call(bool inlineValue)
+    {
+        var descriptor = ToolDescriptorFactory.ExternalProcess(
+            CapabilityKey.Create("secret-argument-tool"),
+            RuntimeToolName.Create("secret_argument_tool"),
+            ImplementationKey.Create("external.secret-argument-tool"),
+            executablePath: "fake-audit.exe",
+            arguments: inlineValue
+                ? ["--api-key=literal-secret"]
+                : ["--password", "literal-secret"],
+            workingDirectory: ".",
+            timeout: TimeSpan.FromSeconds(5),
+            maxOutputBytes: 128,
+            allowedExecutableNames: ["fake-audit.exe"],
+            requiredOutputProperties: ["ok"]);
+        var runner = new FakeProcessRunner(new ExternalProcessRunResult(
+            true,
+            0,
+            "{}",
+            string.Empty,
+            TimeSpan.Zero));
+        var invoker = new ExternalProcessToolInvoker(runner);
+
+        var result = await invoker.InvokeAsync(
+            descriptor,
+            ToolInvocationRequest.Create(
+                descriptor.Identity,
+                descriptor.ImplementationKey,
+                "{}",
+                "SECRET_ARGUMENT_POLICY"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.False(runner.WasCalled);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CapabilityDiagnosticCategory.SecretBinding, diagnostic.Category);
+        Assert.Equal("$.arguments", diagnostic.FieldPath);
+        Assert.DoesNotContain("literal-secret", diagnostic.MaskedDetail, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -159,7 +225,8 @@ public sealed class ToolImplementationContractsTests
         Assert.False(result.IsSuccess);
         Assert.Equal(CapabilityDiagnosticCategory.Timeout, diagnostic.Category);
         Assert.Equal(TimeSpan.FromMilliseconds(50), diagnostic.Timeout);
-        Assert.Contains("bounded", diagnostic.MaskedDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("external-audit-tool", diagnostic.MaskedDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("bounded process execution expired", diagnostic.MaskedDetail, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -190,6 +257,107 @@ public sealed class ToolImplementationContractsTests
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Category == CapabilityDiagnosticCategory.SchemaValidation &&
             diagnostic.FieldPath == "$.ok");
+    }
+
+    [Fact]
+    public async Task External_process_schema_keeps_case_distinct_required_properties()
+    {
+        var descriptor = ToolDescriptorFactory.ExternalProcess(
+            CapabilityKey.Create("case-sensitive-schema-tool"),
+            RuntimeToolName.Create("case_sensitive_schema_tool"),
+            ImplementationKey.Create("external.case-sensitive-schema-tool"),
+            executablePath: "fake-audit.exe",
+            arguments: [],
+            workingDirectory: ".",
+            timeout: TimeSpan.FromSeconds(5),
+            maxOutputBytes: 128,
+            allowedExecutableNames: ["fake-audit.exe"],
+            requiredOutputProperties: ["id", "ID"]);
+        var invoker = new ExternalProcessToolInvoker(new FakeProcessRunner(new ExternalProcessRunResult(
+            true,
+            0,
+            """{"id":1}""",
+            string.Empty,
+            TimeSpan.FromMilliseconds(5))));
+
+        var result = await invoker.InvokeAsync(
+            descriptor,
+            ToolInvocationRequest.Create(
+                descriptor.Identity,
+                descriptor.ImplementationKey,
+                "{}",
+                "CASE_SENSITIVE_SCHEMA"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Category == CapabilityDiagnosticCategory.SchemaValidation &&
+            diagnostic.FieldPath == "$.ID");
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("true")]
+    public async Task INV_EXTERNAL_005B_valid_non_object_output_returns_schema_diagnostic(string output)
+    {
+        var descriptor = ToolDescriptorFactory.ExternalProcess(
+            CapabilityKey.Create("external-audit-tool"),
+            RuntimeToolName.Create("external_audit"),
+            ImplementationKey.Create("external.audit"),
+            executablePath: "fake-audit.exe",
+            arguments: ["--json"],
+            workingDirectory: ".",
+            timeout: TimeSpan.FromSeconds(5),
+            maxOutputBytes: 128,
+            allowedExecutableNames: ["fake-audit.exe"],
+            requiredOutputProperties: ["ok"]);
+        var invoker = new ExternalProcessToolInvoker(new FakeProcessRunner(new ExternalProcessRunResult(
+            true,
+            0,
+            output,
+            "secret: value-never-returned",
+            TimeSpan.FromMilliseconds(12))));
+
+        var result = await invoker.InvokeAsync(
+            descriptor,
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, "{}", "INV_EXTERNAL_005B"),
+            CancellationToken.None);
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(CapabilityDiagnosticCategory.SchemaValidation, diagnostic.Category);
+        Assert.Equal("$", diagnostic.FieldPath);
+        Assert.DoesNotContain("value-never-returned", diagnostic.MaskedDetail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task INV_EXTERNAL_005C_residual_process_returns_resource_cleanup_diagnostic()
+    {
+        var descriptor = ToolDescriptorFactory.ExternalProcess(
+            CapabilityKey.Create("external-audit-tool"),
+            RuntimeToolName.Create("external_audit"),
+            ImplementationKey.Create("external.audit"),
+            executablePath: "fake-audit.exe",
+            arguments: ["--json"],
+            workingDirectory: ".",
+            timeout: TimeSpan.FromSeconds(5),
+            maxOutputBytes: 128,
+            allowedExecutableNames: ["fake-audit.exe"],
+            requiredOutputProperties: ["ok"]);
+        var invoker = new ExternalProcessToolInvoker(new FakeProcessRunner(
+            new ExternalProcessResidualProcessException("secret: residual-detail")));
+
+        var result = await invoker.InvokeAsync(
+            descriptor,
+            ToolInvocationRequest.Create(descriptor.Identity, descriptor.ImplementationKey, "{}", "INV_EXTERNAL_005C"),
+            CancellationToken.None);
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(CapabilityDiagnosticCategory.ResourceCleanup, diagnostic.Category);
+        Assert.Equal("$.cleanup", diagnostic.FieldPath);
+        Assert.DoesNotContain("residual-detail", diagnostic.MaskedDetail, StringComparison.Ordinal);
     }
 
     [Fact]

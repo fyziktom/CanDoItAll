@@ -8,7 +8,7 @@ using WorkspaceOllamaProviderAdapter = CanDoItAll.Modules.Workspace.OllamaProvid
 using WorkspaceOpenAiProviderAdapter = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter;
 using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderPricingTests
 {

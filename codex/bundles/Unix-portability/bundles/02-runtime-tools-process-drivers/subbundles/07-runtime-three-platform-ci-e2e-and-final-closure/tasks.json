@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "bundle": "CanDoItAll Runtime, Tools, and Process Drivers",
+  "subbundle_id": "B07",
+  "title": "Runtime three-platform CI, E2E, and final closure",
+  "critical": true,
+  "conditional": false,
+  "status": "Implemented locally — hosted Windows/Ubuntu/macOS aggregate and Final Gate R4 deferred",
+  "depends_on": [
+    "B06",
+    "Gate R3"
+  ],
+  "unlocks": [
+    "Final Gate R4"
+  ],
+  "requirements": [
+    "RCI-001",
+    "RCI-002",
+    "RCI-003",
+    "RCI-004",
+    "RCI-005",
+    "RCI-006",
+    "RCI-007"
+  ],
+  "source_hotspots": [
+    ".github/workflows/ci.yml",
+    "tools/Validation/Test-RuntimePortability.ps1",
+    "tests/Unit/CanDoItAll.Tests.Unit",
+    "tests/Integration/CanDoItAll.Tests.Integration",
+    "tests/Playwright/CanDoItAll.Tests.Playwright",
+    "tests/Playwright/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs"
+  ],
+  "tasks": [
+    {
+      "id": "B07-T01",
+      "title": "Extend active CI runtime matrix",
+      "description": "Add focused actual-host jobs for process/executable/environment, Workbench runtime nodes, Manager, MCP/external tools, plugins, and process drivers on Windows, Ubuntu, and macOS.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Implemented locally; hosted execution pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T02",
+      "title": "Run Workbench browser proof",
+      "description": "Capture capability-aware runtime actions, headless states, missing dependencies, foreign paths, terminal/elevation unavailability, and successful direct execution.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Implemented and proven on local Windows; hosted matrix pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T03",
+      "title": "Run MCP/external tool E2E",
+      "description": "Execute a deterministic local stdio MCP and governed external tool per claimed profile with approval, secret binding, workspace containment, timeout, invalid output, and cleanup.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T04",
+      "title": "Run Manager lifecycle/recovery E2E",
+      "description": "Launch dotnet watch/Tailwind, restart Manager, reconcile registry/discovery, stop only owned processes, inject PID/metadata/watcher faults, and prove no leak/foreign kill.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T05",
+      "title": "Run plugin/FileTools/Docker matrix",
+      "description": "Separate supported interactive/desktop/Docker profiles from headless/unavailable profiles and preserve truthful diagnostics.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T06",
+      "title": "Run representative process-domain scenario",
+      "description": "Use a process with special tools and review/recovery. Prove success or exact missing-capability behavior, receipts, evidence, no authority regression, and no escalation loop.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Implemented and covered by focused host slice; hosted aggregate pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T07",
+      "title": "Run full Windows regression and core C4 recheck",
+      "description": "All core path/storage/security/headless gates remain green with runtime features enabled and disabled.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Local focused regression complete; hosted aggregate pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T08",
+      "title": "Perform failure injection and security scan",
+      "description": "Cover child leaks, cancellation, secret output, executable substitution, path/symlink escape, missing native service, permission denial, cache corruption, and external dependency drift.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Local failure-injection and scan complete; hosted aggregate pending",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T09",
+      "title": "Publish final support/limitation matrix",
+      "description": "Record exact OS/profile/RID/dependency versions, desktop/headless distinctions, known limitations, operator remediation, rollback, and evidence links.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Completed for local and configured hosted profiles",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    },
+    {
+      "id": "B07-T10",
+      "title": "Issue Final Gate R4",
+      "description": "Only after all P0 requirements are Solved and independent architecture/security/runtime/QA/operations review is GO may the program be marked complete.",
+      "requirements": [
+        "RCI-001",
+        "RCI-002",
+        "RCI-003",
+        "RCI-004",
+        "RCI-005",
+        "RCI-006",
+        "RCI-007"
+      ],
+      "status": "Deferred by operator instruction pending hosted artifacts and independent R4 review",
+      "evidence_required": [
+        "failing-first or characterization",
+        "focused tests",
+        "actual-host proof where applicable",
+        "redaction result",
+        "changed-file and decision log"
+      ]
+    }
+  ]
+}

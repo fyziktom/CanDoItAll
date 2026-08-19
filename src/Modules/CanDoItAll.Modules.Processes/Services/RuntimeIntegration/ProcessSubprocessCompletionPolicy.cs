@@ -41,6 +41,9 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessSubprocessCompletionPolicy
 {
+    private const int MaximumPreflightDiagnosticItems = 16;
+    private const int MaximumPreflightTokenLength = 96;
+
     internal static bool IsRetryableSubprocessLaunchSkippedBlocker(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
@@ -130,31 +133,39 @@ internal static class ProcessSubprocessCompletionPolicy
         ProcessRuntimeStepAssignment assignment,
         ProcessRuntimeToolPreflightResult result)
     {
-        var missingSummary = result.MissingToolNames.Count == 0
-            ? result.PlanIssues.Count == 0
-                ? result.CapabilityDiagnostics.Count == 0
-                    ? "unknown"
-                    : string.Join(", ", result.CapabilityDiagnostics.Select(diagnostic => $"{diagnostic.Kind}:{diagnostic.CapabilityKey}"))
-                : string.Join(", ", result.PlanIssues.Select(issue => issue.Code))
-            : string.Join(", ", result.MissingToolNames);
-        var detailSummary = result.Summary;
-        if (result.PlanIssues.Count > 0)
-        {
-            detailSummary = $"{detailSummary} Plan guard issue(s): {string.Join(" | ", result.PlanIssues.Select(issue => $"{issue.Code}: {issue.SafeSummary}"))}";
-        }
-
-        if (result.CapabilityDiagnostics.Count > 0)
-        {
-            detailSummary = $"{detailSummary} Capability issue(s): {string.Join(" | ", result.CapabilityDiagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))}";
-        }
+        var missingTokens = result.MissingToolNames
+            .Select(NormalizePreflightToken)
+            .Where(token => token.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .Take(MaximumPreflightDiagnosticItems)
+            .ToArray();
+        var missingSummary = missingTokens.Length == 0
+            ? "not-reported"
+            : string.Join(", ", missingTokens);
+        var stepKey = NormalizePreflightToken(assignment.StepKey);
+        var detailSummary =
+            $"Missing={result.MissingToolNames.Count}; PlanIssues={result.PlanIssues.Count}; CapabilityIssues={result.CapabilityDiagnostics.Count}; HostCapabilityIssues={result.HostCapabilityFindings.Count}.";
 
         return new ProcessCompletionIssue(
             "process.adapter.runtime_tool_preflight_failed",
-            $"Step '{assignment.StepKey}' cannot be dispatched because runtime tool preflight failed for the exact process-step context: {missingSummary}. {detailSummary}",
+            $"Step '{stepKey}' cannot be dispatched because runtime tool preflight failed before side effects for: {missingSummary}. {detailSummary}",
             $"{assignment.RunId}:{assignment.StepInstanceId}:runtime-tool-preflight:{missingSummary}:{detailSummary}",
             assignment.ProducedArtifactSlotIds.Count > 0 ? assignment.ProducedArtifactSlotIds : assignment.RequiredArtifactSlotIds,
-            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
+    }
+
+    private static string NormalizePreflightToken(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Take(MaximumPreflightTokenLength)
+            .Where(character => char.IsAsciiLetterOrDigit(character) || character is '.' or '-' or '_' or ':')
+            .ToArray());
     }
 
     internal static bool HasChildProcessEvidenceRef(
@@ -353,14 +364,13 @@ internal static class ProcessSubprocessCompletionPolicy
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        var safeDetail = LimitDiagnosticText(exception.Message);
         var requestedSlots = assignment.ProducedArtifactSlotIds.Count > 0
             ? assignment.ProducedArtifactSlotIds
             : assignment.RequiredArtifactSlotIds;
         return new ProcessCompletionIssue(
             "process.adapter.subprocess_launch_failed",
-            $"Step '{assignment.StepKey}' could not launch mapped subprocess DefinitionKey '{subprocessDefinitionKey}'. The runtime preserved the parent step instead of retrying an indeterminate launch. Review the launch contract or child-process boundary before rework. Detail: {safeDetail}",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-failed:{subprocessDefinitionKey}:{exception.GetType().FullName}:{safeDetail}",
+            $"Step '{assignment.StepKey}' could not launch mapped subprocess DefinitionKey '{subprocessDefinitionKey}'. The runtime preserved the parent step instead of retrying an indeterminate launch. Review the launch contract or child-process boundary before rework; restricted failure detail is represented by the diagnostic evidence hash.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:subprocess-launch-failed:{subprocessDefinitionKey}:{ComputeHash(exception.GetType().FullName + ":" + exception.Message)}",
             requestedSlots,
             ProcessDiagnosticRetrySafety.UnsafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Unknown);

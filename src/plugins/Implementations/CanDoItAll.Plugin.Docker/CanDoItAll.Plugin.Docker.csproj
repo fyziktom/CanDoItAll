@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\..\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\Abstractions\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

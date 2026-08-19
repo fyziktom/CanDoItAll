@@ -4,14 +4,16 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class DotNetProcessLaunchVariableContributorTests
 {
     [Fact]
     public void Enrich_does_not_create_dotnet_facts_when_no_driver_is_declared()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
+        var contributor = new DotNetProcessLaunchVariableContributor(
+            TestExternalTargetPathRegistry.Create(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         var context = new ProcessLaunchPreparationContext(
             "generic-process",
             IsSubprocess: false,
@@ -30,7 +32,9 @@ public sealed class DotNetProcessLaunchVariableContributorTests
     [Fact]
     public void Enrich_rejects_solution_setup_without_the_declared_solution_context_binding()
     {
-        var contributor = new DotNetProcessLaunchVariableContributor();
+        var contributor = new DotNetProcessLaunchVariableContributor(
+            TestExternalTargetPathRegistry.Create(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         var context = new ProcessLaunchPreparationContext(
             "dotnet-solution-setup",
             IsSubprocess: true,
@@ -61,7 +65,9 @@ public sealed class DotNetProcessLaunchVariableContributorTests
     public void Preparation_service_does_not_activate_the_dotnet_driver_for_root_delivery_templates()
     {
         var service = new ProcessLaunchVariablePreparationService(
-            [new DotNetProcessLaunchVariableContributor()],
+            [new DotNetProcessLaunchVariableContributor(
+                TestExternalTargetPathRegistry.Create(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory)],
             new ProcessTemplatePackLoader());
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {

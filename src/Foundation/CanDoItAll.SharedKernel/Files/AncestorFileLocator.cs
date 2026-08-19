@@ -11,8 +11,7 @@ public static class AncestorFileLocator
 
         foreach (var startPath in startPaths
                      .Where(path => !string.IsNullOrWhiteSpace(path))
-                     .Select(path => Path.GetFullPath(path!))
-                     .Distinct(StringComparer.OrdinalIgnoreCase))
+                     .Select(path => Path.GetFullPath(path!)))
         {
             var current = new DirectoryInfo(startPath);
             while (current is not null)

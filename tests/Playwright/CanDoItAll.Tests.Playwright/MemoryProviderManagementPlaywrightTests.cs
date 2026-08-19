@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using CanDoItAll.SharedKernel;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Flows;
 
 [Collection(PlaywrightCollection.Name)]
 public sealed class MemoryProviderManagementPlaywrightTests

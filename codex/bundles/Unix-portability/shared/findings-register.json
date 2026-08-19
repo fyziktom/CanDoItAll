@@ -1,0 +1,634 @@
+{
+  "schema_version": 1,
+  "source_anchor": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "development",
+    "commit": "62ea8ee0cc42c1c06da934d126a5c18f8237a89f",
+    "commit_message": "Merge branch 'maf-refactor' into development",
+    "dotnet_sdk": "10.0.302",
+    "prepared_date": "2026-08-08",
+    "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
+    "local_build_reproduction": false
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A01",
+      "category": "Configuration paths",
+      "paths": [
+        "src/App/CanDoItAll.Web/appsettings.Development.json",
+        "src/App/CanDoItAll.Web/Properties/launchSettings.json"
+      ],
+      "observation": "Development workspace and control-plane roots are encoded as %LOCALAPPDATA%\\CanDoItAll\\...",
+      "risk": "Linux and macOS receive unresolved or semantically invalid roots before deeper portability work can even be exercised.",
+      "direction": "Introduce portable root defaults and explicit legacy Windows token compatibility; remove host-specific roots from shared development configuration.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-002",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A01",
+      "category": "Logical path normalization",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs"
+      ],
+      "observation": "Infrastructure policies only replace Path.AltDirectorySeparatorChar while the MAF policy explicitly converts backslash. These produce different meanings on Unix.",
+      "risk": "A persisted logical locator can resolve differently depending on the caller, causing inaccessible artifacts, duplicate records, or containment defects.",
+      "direction": "Define one logical-path contract with '/' serialization and field-specific legacy backslash readers; keep physical path parsing separate.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-003",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A01",
+      "category": "Path containment",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimePathResolver.cs"
+      ],
+      "observation": "Containment and root de-duplication use OrdinalIgnoreCase on every operating system.",
+      "risk": "Case-sensitive filesystems can treat distinct paths as equivalent in policy while the OS treats them as different.",
+      "direction": "Use logical ordinal semantics and root-specific physical filesystem semantics; add actual Linux/macOS characterization.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-004",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A01",
+      "category": "External path aliases",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs"
+      ],
+      "observation": "External-target aliases are shaped around Windows drive letters.",
+      "risk": "Unix absolute roots cannot be represented consistently and migration between hosts becomes ambiguous.",
+      "direction": "Version a platform-neutral alias format that identifies an allowed root without embedding drive-letter assumptions.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-005",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A01",
+      "category": "Path taxonomy",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure",
+        "src/MAF",
+        "src/Modules/CanDoItAll.Modules.Workbench"
+      ],
+      "observation": "Routes, logical locators, physical paths, executable paths, and command text are often represented as plain strings with local normalization.",
+      "risk": "A broad separator replacement can corrupt URLs, Unix filenames containing backslash, or intentionally host-bound paths.",
+      "direction": "Inventory and classify every persisted and runtime path-bearing field before implementation; apply transformations only by field type.",
+      "confidence": "High"
+    },
+    {
+      "id": "F-006",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "Filesystem case semantics",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage",
+        "tools/App/CanDoItAll.Manager",
+        "src/MAF"
+      ],
+      "observation": "Many sets, locks, and path comparisons use OrdinalIgnoreCase globally, while some use OperatingSystem.IsWindows as a proxy for filesystem behavior.",
+      "risk": "macOS can be case-sensitive or case-insensitive by volume, and Linux paths can collide in application state despite being distinct on disk.",
+      "direction": "Use ordinal semantics for logical identifiers and a root/volume-specific physical path policy for filesystem equality.",
+      "confidence": "Verified pattern"
+    },
+    {
+      "id": "F-007",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "Deterministic enumeration",
+      "paths": [
+        "src/Foundation",
+        "src/MAF",
+        "tools/App/CanDoItAll.Manager"
+      ],
+      "observation": "Filesystem enumeration is not uniformly ordered before producing persistent or decision-bearing results.",
+      "risk": "Linux, Windows, and macOS may return different order, changing plans, fingerprints, receipts, tests, or agent context.",
+      "direction": "Order by normalized logical key with an explicit comparer at every decision or persistence boundary.",
+      "confidence": "Requires A00 full scan"
+    },
+    {
+      "id": "F-008",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "Symlink and reparse containment",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs"
+      ],
+      "observation": "Existing reparse checks are valuable but duplicated and do not constitute a proven race-resistant cross-platform contract.",
+      "risk": "A symlink swap or inconsistent check can escape trusted roots during read, write, open, or process execution.",
+      "direction": "Define one deny-by-default managed-root link policy, validate existing ancestors immediately before access, and document residual TOCTOU limits.",
+      "confidence": "Verified design gap"
+    },
+    {
+      "id": "F-009",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "Atomic persistence",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
+        "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs"
+      ],
+      "observation": "Several writes are direct, while other writes use temporary files with only in-process coordination.",
+      "risk": "Crashes or concurrent processes can leave truncated catalog, secret, or artifact state.",
+      "direction": "Centralize same-volume temporary write, flush, atomic replace, bounded cross-process lock, and recovery rules.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-010",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "Portable filenames",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs"
+      ],
+      "observation": "Filename sanitization depends on Path.GetInvalidFileNameChars, which is platform-specific.",
+      "risk": "The same artifact name can serialize to different physical names on different hosts or remain invalid after transfer.",
+      "direction": "Define an application-level portable filename policy and preserve the original display name separately.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-011",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "Unix permissions",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane",
+        "src/Modules/CanDoItAll.Modules.Security"
+      ],
+      "observation": "No explicit 0700/0600 policy is applied to control-plane, key-ring, vault-key, or secret files.",
+      "risk": "Default umask and service-account configuration can expose protected local state to other users.",
+      "direction": "Apply and verify restrictive Unix modes after creation and migration; fail closed for secret-bearing state that cannot be hardened.",
+      "confidence": "Verified absence in inspected files"
+    },
+    {
+      "id": "F-012",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A02",
+      "category": "File watchers",
+      "paths": [
+        "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs"
+      ],
+      "observation": "FileSystemWatcher errors schedule a rebuild, but there is no unified generation/fingerprint/rescan contract.",
+      "risk": "Overflow, coalescing, rename behavior, or platform differences can silently miss changes.",
+      "direction": "Treat watchers as hints, debounce by generation, and confirm state through deterministic rescan/fingerprint with polling fallback.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-013",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A03",
+      "category": "Host-bound persisted paths",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApplicationPreferences.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs"
+      ],
+      "observation": "Absolute workspace roots and preferred executable paths are persisted without platform/host affinity or rebind state.",
+      "risk": "A profile copied to another OS can reinterpret a Windows path as a relative Unix name or silently select the wrong storage/application.",
+      "direction": "Version host-bound path records, detect foreign syntax, mark unresolved, and require explicit rebind or migration.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-014",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A03",
+      "category": "Application data roots",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/Configuration/AppOptions.cs"
+      ],
+      "observation": "Default roots rely on LocalApplicationData/fallback behavior without an explicit Windows/Linux/macOS data/config/state policy.",
+      "risk": "Interactive, service, and headless deployments can place mutable or secret data in surprising locations.",
+      "direction": "Define explicit platform defaults, service overrides, path purpose, ownership, and migration behavior.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-015",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A04",
+      "category": "Secret provider selection",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs"
+      ],
+      "observation": "Auto selects MacOsKeychain on macOS and LinuxSecretService on Linux, but both are UnsupportedSecretVault implementations.",
+      "risk": "Startup may appear healthy while the first secret operation fails, blocking providers, storage, MCP, and plugins.",
+      "direction": "Implement and prove each advertised provider or make capability selection fail fast with actionable diagnostics.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-016",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A04",
+      "category": "File vault master key",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs"
+      ],
+      "observation": "DataProtectionFileVault creates a random AES key and writes it as plaintext Base64 beside the ciphertext.",
+      "risk": "Copying or reading the vault directory reveals both ciphertext and its decrypting key; the name overstates protection.",
+      "direction": "Remove it from production Auto, require an externally protected wrapping key or an OS/remote vault, and preserve only an explicit test/development mode.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-017",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A04",
+      "category": "Data Protection key ring",
+      "paths": [
+        "src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs"
+      ],
+      "observation": "ASP.NET Data Protection keys are persisted to the filesystem without an explicit cross-platform at-rest protector.",
+      "risk": "Legacy secret records and control-plane database passwords depend on key files whose confidentiality is not protected by the current configuration.",
+      "direction": "Bootstrap key-ring protection independently of the ring itself; support DPAPI on Windows and explicit secure macOS/Linux/headless strategies.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-018",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A04",
+      "category": "Secret migration graph",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+        "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs"
+      ],
+      "observation": "Three persistence mechanisms coexist: legacy Data Protection secret payloads, control-plane Data Protection passwords, and new vault references.",
+      "risk": "Changing one key location/provider can make the other two unreadable or create partial migrations.",
+      "direction": "Create an explicit migration state machine with source-side decryption, staged destination writes, verification, rollback, and per-record versioning.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-019",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A04",
+      "category": "Secret write durability",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs"
+      ],
+      "observation": "Vault key/payload writes lack a unified atomic, permission, cross-process, rotation, and repair contract.",
+      "risk": "Concurrent startup or crash can produce mismatched key/payload generations.",
+      "direction": "Use versioned envelopes, atomic commits, bounded locks, restrictive modes, rotation checkpoints, and explicit recovery tooling.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-020",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A05",
+      "category": "Composition truthfulness",
+      "paths": [
+        "src/App/CanDoItAll.Web/Program.cs",
+        "src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs"
+      ],
+      "observation": "Current runtime selection can register a nominal provider that is not operational on the host.",
+      "risk": "Feature UI and readiness can claim support that will fail only during work execution.",
+      "direction": "Perform startup capability probes for mandatory providers and expose bounded, non-secret readiness diagnostics for optional features.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-021",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A05",
+      "category": "Platform abstractions",
+      "paths": [
+        "src/Foundation",
+        "src/MAF",
+        "tools/App"
+      ],
+      "observation": "Platform checks are distributed, but a single broad platform service would also violate current ownership boundaries.",
+      "risk": "Either branch sprawl or a god abstraction can couple unrelated modules and make testing harder.",
+      "direction": "Use small purpose-owned ports and leaf adapters selected at composition; common code continues using cross-platform .NET APIs directly.",
+      "confidence": "Architecture conclusion"
+    },
+    {
+      "id": "F-022",
+      "severity": "P0",
+      "bundle": "core",
+      "phase": "A07",
+      "category": "CI",
+      "paths": [
+        ".github/workflows-disabled/ci.yml"
+      ],
+      "observation": "The only discovered CI workflow is disabled. Its main application build/test runs only on Windows.",
+      "risk": "Cross-platform regressions and even general development regressions can merge without an active repository gate.",
+      "direction": "Restore an active workflow with Windows, Ubuntu, and macOS restore/build/stable-test gates plus targeted runtime proofs.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-023",
+      "severity": "P1",
+      "bundle": "core",
+      "phase": "A06",
+      "category": "Installation",
+      "paths": [
+        "tools/install/Install-CanDoItAllWebApp.ps1"
+      ],
+      "observation": "The installed-web-app path is Windows/PowerShell oriented.",
+      "risk": "Linux/macOS support remains a developer-only claim with no repeatable service/install/runbook path.",
+      "direction": "Retain the Windows installer, add Unix publish/service scripts or a small cross-platform installer boundary, and document service-user paths and rollback.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-024",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B01",
+      "category": "Process host",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs"
+      ],
+      "observation": "The central workspace host already uses typed argv and cross-platform ProcessStartInfo, but Unix process-group, signal, and tree-kill behavior is not proven.",
+      "risk": "Timeouts may leave grandchildren running or terminate incompletely.",
+      "direction": "Characterize Kill(entireProcessTree), cancellation, and stream drain on all target OSes before adding a purpose-specific native adapter.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-025",
+      "severity": "P0",
+      "bundle": "runtime",
+      "phase": "B01",
+      "category": "Environment semantics",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs"
+      ],
+      "observation": "The inherited allowlist is Windows-heavy and stored in an OrdinalIgnoreCase dictionary on every OS.",
+      "risk": "Unix variables can be dropped or case-collapsed, while Windows-only variables are treated as universal.",
+      "direction": "Separate safe common variables from OS/tool profiles and preserve host environment key semantics.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-026",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B01",
+      "category": "Executable resolution",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs",
+        "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs"
+      ],
+      "observation": "Two resolvers have different suffix and fallback rules; the workspace locator probes Windows suffixes on Unix.",
+      "risk": "The same capability can resolve differently in MCP, workspace tools, plugins, and Workbench.",
+      "direction": "Create one pure candidate/resolution contract with OS-specific leaf rules, execute-bit checks, stable diagnostics, and no implicit shell.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-027",
+      "severity": "P0",
+      "bundle": "runtime",
+      "phase": "B02",
+      "category": "Workbench runtime nodes",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs"
+      ],
+      "observation": "Runtime availability is Windows-only and every .NET, Docker, Conda, Python, or script plan is rendered as PowerShell text launched through powershell.exe/runas.",
+      "risk": "Unix hosts cannot launch runtime nodes, and ordinary direct commands inherit shell quoting/injection and presentation coupling.",
+      "direction": "Compile typed executable/argv/environment plans; execute directly; treat explicit shell scripts and optional terminal presentation as separate capabilities.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-028",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B02",
+      "category": "Python environments",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs"
+      ],
+      "observation": "Virtual environments assume Scripts/Activate.ps1.",
+      "risk": "Linux/macOS virtual environments use different layouts and do not require activation for deterministic execution.",
+      "direction": "Resolve and invoke the environment interpreter directly; keep activation only as optional terminal display behavior.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-029",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B02",
+      "category": "Elevation",
+      "paths": [
+        "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs"
+      ],
+      "observation": "Elevation is modeled as Windows runas.",
+      "risk": "Mapping this automatically to sudo/pkexec would create a privilege-escalation and interactive-hang risk.",
+      "direction": "Make elevation a separate optional capability that is unavailable by default on Unix/macOS unless an explicitly governed adapter is configured.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-030",
+      "severity": "P0",
+      "bundle": "runtime",
+      "phase": "B03",
+      "category": "Process ownership",
+      "paths": [
+        "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs"
+      ],
+      "observation": "Windows discovery uses WMI command lines; Unix fallback only searches process name and often lacks command-line identity.",
+      "risk": "Recovery/cleanup can miss owned processes or terminate an unrelated process with the same name.",
+      "direction": "Persist launched-process identity first, then use OS-specific discovery as a bounded recovery aid with PID/start-time/user/executable/command/workspace proof.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-031",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B03",
+      "category": "Manager Windows dependency",
+      "paths": [
+        "tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj",
+        "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs"
+      ],
+      "observation": "System.Management and WMI behavior live in the general Manager project.",
+      "risk": "Windows-only implementation details remain easy to call from neutral code and complicate platform analysis.",
+      "direction": "Move WMI behind a Windows-only leaf adapter/registration boundary; keep the Manager contract neutral.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-032",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B04",
+      "category": "MCP command policy",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs",
+        "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/McpExecutableResolver.cs"
+      ],
+      "observation": "Allowed names and executable discovery use separate case/suffix models.",
+      "risk": "A command can pass the allowlist but resolve unexpectedly, or be rejected on one OS despite an equivalent installed executable.",
+      "direction": "Validate the resolved executable identity against a capability-owned allowlist using host-appropriate rules.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-033",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B04",
+      "category": "Playwright MCP setup",
+      "paths": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs"
+      ],
+      "observation": "Resolver recursively scans a global npx cache and chooses the most recently written cli.js.",
+      "risk": "Selection is nondeterministic and can cross workspace/user trust boundaries.",
+      "direction": "Use a controlled, versioned application tool root with explicit integrity/version evidence; do not depend on global cache discovery for production.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-034",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B04",
+      "category": "Duplicate process runners",
+      "paths": [
+        "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs"
+      ],
+      "observation": "External tools implement an independent local runner with distinct timeout, output, and kill behavior.",
+      "risk": "Security and portability fixes can land in one runner but not the other.",
+      "direction": "Reuse one execution primitive or explicitly prove why a separate boundary is required; share tested low-level process semantics.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-035",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B04",
+      "category": "Diagnostics leakage",
+      "paths": [
+        "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs",
+        "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs"
+      ],
+      "observation": "External process stdout/stderr and environment bindings can flow into diagnostic messages.",
+      "risk": "Secrets or sensitive local paths can be captured in receipts, CI logs, or agent context.",
+      "direction": "Persist only approved environment names, cap/redact output, and route secret values through the runtime secret boundary.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-036",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B05",
+      "category": "Docker plugin",
+      "paths": [
+        "src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs"
+      ],
+      "observation": "The Docker plugin constructs LocalWorkspaceProcessHost directly and maintains its own executable/environment policy.",
+      "risk": "It bypasses owned process registries, composition-selected adapters, and later portability fixes.",
+      "direction": "Inject the authoritative host execution port, capability probe, and environment policy.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-037",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B05",
+      "category": "External FileTools package",
+      "paths": [
+        "src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj",
+        "src/Integration/CanDoItAll.FileTools.Integration/ConfiguredDesktopFileLauncher.cs"
+      ],
+      "observation": "Desktop launch behavior is owned by package 0.1.18 outside this repository.",
+      "risk": "The main application can claim macOS/Linux support without package/runtime evidence.",
+      "direction": "Run a pinned compatibility matrix, record package capabilities, and fail closed or quarantine desktop launch when the package lacks a supported adapter.",
+      "confidence": "Verified dependency, behavior requires execution"
+    },
+    {
+      "id": "F-038",
+      "severity": "P0",
+      "bundle": "runtime",
+      "phase": "B06",
+      "category": "Process architecture ownership",
+      "paths": [
+        "codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md",
+        "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs"
+      ],
+      "observation": "The current refactor intentionally moved process semantics and recovery to Processes.",
+      "risk": "A generic OS-service refactor inside MAF or Infrastructure could reintroduce reverse ownership and duplicate domain policy.",
+      "direction": "Expose narrow host capabilities at execution boundaries; let Processes own eligibility, strategy, recovery, evidence, and domain failure semantics.",
+      "confidence": "Verified architectural invariant"
+    },
+    {
+      "id": "F-039",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B06",
+      "category": "Process driver platform layer",
+      "paths": [
+        "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs"
+      ],
+      "observation": "ProcessDriverLayer.Platform exists and could be misread as a generic OS abstraction layer.",
+      "risk": "Host implementation facts become process-domain truth or vice versa.",
+      "direction": "Use the layer only for process strategy packages that require declared host capabilities; do not move filesystem/secrets/process primitives into process drivers.",
+      "confidence": "Architecture conclusion"
+    },
+    {
+      "id": "F-040",
+      "severity": "P1",
+      "bundle": "runtime",
+      "phase": "B07",
+      "category": "Cross-platform runtime evidence",
+      "paths": [
+        ".github/workflows-disabled/ci.yml",
+        "tests/Playwright/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs"
+      ],
+      "observation": "There is no active Windows/Linux/macOS runtime-node, Manager, MCP, or plugin proof.",
+      "risk": "A successful neutral build can mask runtime-only failures in process, terminal, desktop, or secret integration.",
+      "direction": "Add focused actual-host tests and failure injection after the core portability gate lands.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-041",
+      "severity": "P2",
+      "bundle": "shared",
+      "phase": "positive",
+      "category": "Portable foundation",
+      "paths": [
+        "CanDoItAll.slnx",
+        "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs"
+      ],
+      "observation": "Projects target neutral net10.0 and the central workspace process host already uses direct typed arguments.",
+      "risk": "None; this reduces required rewrite scope.",
+      "direction": "Preserve and extend these foundations rather than replacing them with a new parallel runtime.",
+      "confidence": "Verified"
+    },
+    {
+      "id": "F-042",
+      "severity": "P2",
+      "bundle": "shared",
+      "phase": "positive",
+      "category": "Current architecture",
+      "paths": [
+        "src/Processes",
+        "src/Processes/Drivers",
+        "src/Foundation/CanDoItAll.Security.Abstractions"
+      ],
+      "observation": "Recent refactors created clearer process, runtime, and security boundaries.",
+      "risk": "Portability changes could accidentally collapse these new boundaries.",
+      "direction": "Treat the latest architecture as authoritative and add portability through purpose-owned adapters.",
+      "confidence": "Verified"
+    }
+  ]
+}

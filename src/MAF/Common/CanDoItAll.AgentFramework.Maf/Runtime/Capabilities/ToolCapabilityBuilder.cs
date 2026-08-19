@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using System.Text.Json;
@@ -18,6 +19,7 @@ internal sealed class ToolCapabilityBuilder(
     IWorkspaceCommandExecutionService workspaceCommandExecutionService,
     AgentWorkspaceToolAccessSettings workspaceToolAccess,
     IReadOnlyList<FileSkillExecutionPolicy> fileSkillExecutionPolicies,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     RuntimeCapabilityAccessPlan capabilityAccessPlan)
 {
     private static readonly ProviderProfileService ProviderFeatureService = new();
@@ -408,7 +410,7 @@ internal sealed class ToolCapabilityBuilder(
             var fullPath = Path.GetFullPath(scriptPath);
             foreach (var policy in fileSkillExecutionPolicies.OrderByDescending(item => item.RootPath.Length))
             {
-                if (MafRuntimePathResolver.IsPathWithinRoot(fullPath, policy.RootPath))
+                if (physicalPathPolicyFactory.Create(policy.RootPath).IsWithinRoot(fullPath))
                 {
                     return policy;
                 }
@@ -442,6 +444,8 @@ internal sealed class ToolCapabilityBuilder(
 
             var exports = Directory.EnumerateFiles(exportRoot, "*.zip", SearchOption.TopDirectoryOnly)
                 .OrderByDescending(File.GetLastWriteTimeUtc)
+                .ThenBy(Path.GetFileName, StringComparer.Ordinal)
+                .ThenBy(path => path, StringComparer.Ordinal)
                 .Take(10)
                 .Select(path => $"{Path.GetFileName(path)} ({File.GetLastWriteTime(path):g})")
                 .ToList();

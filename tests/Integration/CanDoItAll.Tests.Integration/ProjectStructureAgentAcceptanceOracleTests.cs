@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel;
 using Xunit.Abstractions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 public sealed class ProjectStructureAgentAcceptanceOracleTests(ITestOutputHelper output)
 {

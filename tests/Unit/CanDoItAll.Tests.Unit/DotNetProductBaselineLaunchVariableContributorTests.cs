@@ -4,7 +4,7 @@ using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDisposable
 {
@@ -34,8 +34,7 @@ public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDispo
         {
             ["ProductRoot"] = productRoot
         };
-        var contributor = new DotNetProductBaselineLaunchVariableContributor(
-            new WorkspaceFileService(workspaceRoot));
+        var contributor = CreateContributor(workspaceRoot);
 
         contributor.Enrich(CreateActivatedContext(), variables);
 
@@ -88,8 +87,7 @@ public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDispo
         {
             ["ProductRoot"] = productRoot
         };
-        var contributor = new DotNetProductBaselineLaunchVariableContributor(
-            new WorkspaceFileService(workspaceRoot));
+        var contributor = CreateContributor(workspaceRoot);
 
         contributor.Enrich(CreateActivatedContext(), variables);
 
@@ -125,8 +123,7 @@ public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDispo
         {
             ["ProductRoot"] = productRoot
         };
-        var contributor = new DotNetProductBaselineLaunchVariableContributor(
-            new WorkspaceFileService(workspaceRoot));
+        var contributor = CreateContributor(workspaceRoot);
 
         contributor.Enrich(CreateActivatedContext(), variables);
 
@@ -150,8 +147,7 @@ public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDispo
         {
             ["ProductRoot"] = Path.Combine(root, "missing-product")
         };
-        var contributor = new DotNetProductBaselineLaunchVariableContributor(
-            new WorkspaceFileService(Path.Combine(root, "workspace")));
+        var contributor = CreateContributor(Path.Combine(root, "workspace"));
 
         contributor.Enrich(CreateActivatedContext(), variables);
 
@@ -171,8 +167,7 @@ public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDispo
         {
             ["ProductRoot"] = Path.Combine(root, "product")
         };
-        var contributor = new DotNetProductBaselineLaunchVariableContributor(
-            new WorkspaceFileService(Path.Combine(root, "workspace")));
+        var contributor = CreateContributor(Path.Combine(root, "workspace"));
         var context = CreateActivatedContext() with { DriverActivations = [] };
 
         contributor.Enrich(context, variables);
@@ -231,5 +226,16 @@ public sealed class DotNetProductBaselineLaunchVariableContributorTests : IDispo
                     new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))
             ]
         };
+    }
+
+    private static DotNetProductBaselineLaunchVariableContributor CreateContributor(
+        string workspaceRoot)
+    {
+        var externalTargets = TestExternalTargetPathRegistry.Create();
+        return new DotNetProductBaselineLaunchVariableContributor(
+            TestWorkspaceServices.CreateFileService(
+                workspaceRoot,
+                externalTargetRegistry: externalTargets),
+            externalTargets);
     }
 }

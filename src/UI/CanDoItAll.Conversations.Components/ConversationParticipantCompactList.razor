@@ -1,0 +1,38 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="@CssClassBuilder.Join("agent-compact-list", Class)"
+     role="list"
+     aria-label="@AriaLabel"
+     data-testid="@TestId">
+    @foreach (var item in Items)
+    {
+        <ConversationParticipantCompactListItem @key="item.Participant.Key"
+                                                Item="@item"
+                                                Selected="@Selected"
+                                                DoubleClicked="@DoubleClicked"
+                                                ActionRequested="@ActionRequested" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ConversationParticipantCompactItemPresentation> Items { get; set; } = [];
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Participants";
+
+    [Parameter]
+    public string TestId { get; set; } = "conversation-participant-compact-list";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> Selected { get; set; }
+
+    [Parameter]
+    public EventCallback<ConversationPresentationKey> DoubleClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<ParticipantActionRequest> ActionRequested { get; set; }
+}

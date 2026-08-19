@@ -4,7 +4,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ScenarioHarnessAgentRuntimeTests
 {
@@ -30,7 +30,7 @@ public sealed class ScenarioHarnessAgentRuntimeTests
             var runtime = new ScenarioHarnessAgentRuntime(
                 workspaceRoot,
                 WorkspaceScopeDescriptor.Sandbox,
-                new WorkspaceFileService(workspaceRoot, WorkspaceScopeDescriptor.Sandbox),
+                TestWorkspaceServices.CreateFileService(workspaceRoot, WorkspaceScopeDescriptor.Sandbox),
                 commandService);
 
             var response = await runtime.ExecuteScenarioRunAsync(

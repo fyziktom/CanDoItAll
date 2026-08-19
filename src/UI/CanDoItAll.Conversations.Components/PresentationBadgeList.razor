@@ -1,0 +1,47 @@
+@using CanDoItAll.Conversations.Components.Presentation
+
+@if (Badges.Count > 0)
+{
+    <Stack Orientation="Orientation.Horizontal"
+           Wrap="FlexWrap.Wrap"
+           GapScale="LayoutGap.Tiny"
+           Class="@Class"
+           data-testid="@TestId">
+        @foreach (var badge in Badges)
+        {
+            <Badge Tone="@ResolveTone(badge.Tone)"
+                   title="@badge.AccessibleDescription">
+                @if (!string.IsNullOrWhiteSpace(badge.Icon))
+                {
+                    <Icon Name="@badge.Icon" />
+                }
+                @badge.Text
+            </Badge>
+        }
+    </Stack>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PresentationBadge> Badges { get; set; } = [];
+
+    [Parameter]
+    public string TestId { get; set; } = "conversation-presentation-badges";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private static BadgeTone ResolveTone(PresentationTone tone)
+    {
+        return tone switch
+        {
+            PresentationTone.Accent => BadgeTone.Accent,
+            PresentationTone.Info => BadgeTone.Info,
+            PresentationTone.Success => BadgeTone.Success,
+            PresentationTone.Warning => BadgeTone.Warn,
+            PresentationTone.Promo => BadgeTone.Promo,
+            PresentationTone.Rank => BadgeTone.Rank,
+            _ => BadgeTone.Default
+        };
+    }
+}

@@ -1,4 +1,4 @@
-﻿using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.FileTools.Integration;
@@ -9,6 +9,10 @@ using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.AgentFramework.Llm.SimpleChats;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Processes;
@@ -19,6 +23,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -26,6 +31,8 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Data;
@@ -41,15 +48,17 @@ public static class RuntimeHostServiceCollectionExtensions
     public static IServiceCollection AddCanDoItAllRuntimeModules(
         this IServiceCollection services,
         IConfiguration configuration,
+        IHostEnvironment environment,
         string? contentRootPath = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(environment);
 
         services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
         services.AddProjectsModule();
         services.AddCanDoItAllMemory(configuration);
-        services.AddWorkbenchModule();
+        services.AddWorkbenchModule(configuration);
         services.AddResourcesModule();
         services.AddPromptsModule();
         services.AddPluginsModule(configuration, contentRootPath);
@@ -58,11 +67,96 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddProcessesModule(configuration);
         services.AddTestLabModule();
         services.AddAgentFrameworkModule(configuration);
+        services
+            .AddOptions<LlmChatExecutionLeaseOptions>()
+            .Bind(configuration.GetSection(LlmChatExecutionLeaseOptions.SectionName))
+            .Validate(static options => IsValid(options.Validate), "LLM Chat dispatcher configuration is invalid.")
+            .ValidateOnStart();
+        services
+            .AddOptions<LlmChatStreamingOptions>()
+            .Bind(configuration.GetSection(LlmChatStreamingOptions.SectionName))
+            .Validate(static options => IsValid(options.Validate), "LLM Chat streaming configuration is invalid.")
+            .ValidateOnStart();
+        services
+            .AddOptions<LlmChatTransferOptions>()
+            .Bind(configuration.GetSection(LlmChatTransferOptions.SectionName))
+            .Validate(static options => IsValid(options.Validate), "LLM Chat transfer configuration is invalid.")
+            .ValidateOnStart();
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<LlmChatExecutionLeaseOptions>>().Value);
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<LlmChatStreamingOptions>>().Value);
+        services.AddSingleton(provider =>
+            provider.GetRequiredService<IOptions<LlmChatTransferOptions>>().Value);
+        services.AddSimpleChatsApplication();
+        services.AddSimpleChatsRuntime();
+        services.AddLlmChatsPersistence();
+        services.AddHostedService<LlmChatOperationDispatcherHostedService>();
         services.AddSchedulerPlannerModule(configuration);
         services.AddCollaborationModule();
         services.AddCrmHrModule();
         services.AddSchedulerPlannerWorkflowInputOptionProviders();
         services.AddCanDoItAllFileToolsIntegration();
+        services.AddRuntimeHostPlatformComposition(configuration, environment);
+        return services;
+    }
+
+    private static bool IsValid(Action validate)
+    {
+        try
+        {
+            validate();
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    public static IServiceCollection AddRuntimeHostPlatformComposition(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(environment);
+
+        var profileOptions =
+            configuration.GetSection(RuntimeHostProfileOptions.SectionName).Get<RuntimeHostProfileOptions>() ??
+            new RuntimeHostProfileOptions();
+        var secretVaultOptions =
+            configuration.GetSection(SecretVaultOptions.SectionName).Get<SecretVaultOptions>() ??
+            new SecretVaultOptions();
+        ResolvedRuntimeHostProfile profile = RuntimeHostProfileResolver.Resolve(
+            profileOptions,
+            secretVaultOptions.UsageProfile,
+            RuntimeHostFacts.DetectCurrent(environment.IsDevelopment()));
+
+        services
+            .AddOptions<RuntimeHostProfileOptions>()
+            .Bind(configuration.GetSection(RuntimeHostProfileOptions.SectionName))
+            .Validate(options => Enum.IsDefined(options.Profile), "Runtime host profile is invalid.")
+            .ValidateOnStart();
+        services.AddSingleton<ResolvedRuntimeHostProfile>(profile);
+        services.PostConfigure<FileToolsDesktopLaunchOptions>(options =>
+            options.HostProfileAllowsDesktop = profile.IsInteractive);
+        services.AddSingleton<IRuntimeDeploymentSupportProvider, EmbeddedRuntimeDeploymentSupportProvider>();
+        services.AddSingleton<IHostCapabilitySnapshotProvider, HostCapabilitySnapshotService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IProcessHostCapabilitySource,
+            ApplicationProcessHostCapabilitySource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IProcessHostProfileSource,
+            ApplicationProcessHostProfileSource>());
+        services.AddHostedService<HostCapabilityStartupValidator>();
+        services.AddHealthChecks()
+            .AddCheck<HostCapabilityHealthCheck>("host-capabilities");
         return services;
     }
 

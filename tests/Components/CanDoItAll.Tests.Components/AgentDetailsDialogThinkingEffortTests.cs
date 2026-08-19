@@ -4,15 +4,19 @@ using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using ProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentDetailsDialogThinkingEffortTests
 {
@@ -183,6 +187,8 @@ public sealed class AgentDetailsDialogThinkingEffortTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
+        context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
         context.Services.AddSingleton(new AgentAvatarGenerationService(
             new UnavailableAgentImageGenerationService(),
             NullLogger<AgentAvatarGenerationService>.Instance));

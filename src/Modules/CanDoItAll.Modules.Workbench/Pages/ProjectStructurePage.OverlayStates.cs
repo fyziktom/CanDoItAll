@@ -325,7 +325,8 @@ public sealed record ProjectStructureDeletePrompt(
     string Title,
     int DescendantCount,
     bool RequiresConfirmation,
-    string ImpactCopy)
+    string ImpactCopy,
+    int ManagedAttachmentCount = 0)
 {
     public IReadOnlyList<string> NodeIds { get; init; } = string.IsNullOrWhiteSpace(NodeId) ? [] : [NodeId];
 

@@ -1,0 +1,170 @@
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+
+public enum LlmChatOperationKind
+{
+    SendTurn = 0
+}
+
+public enum LlmChatOperationStatus
+{
+    Pending,
+    Running,
+    Succeeded,
+    Failed,
+    CancellationRequested,
+    Cancelled,
+    RecoveryRequired
+}
+
+public enum LlmChatDispatchPhase
+{
+    Queued,
+    Claimed,
+    ProviderDispatchStarted,
+    ProviderDispatchReturned
+}
+
+public sealed record LlmChatOperation
+{
+    public const int MaximumAttributionScopeKeyLength = 200;
+
+    private long lastEventSequence;
+
+    public LlmChatOperation(
+        LlmChatOperationId id,
+        LlmChatConversationId conversationId,
+        LlmChatOperationKind kind,
+        LlmChatRequestFingerprint requestFingerprint,
+        long expectedTranscriptRevision,
+        LlmChatOperationStatus status,
+        DateTimeOffset startedAtUtc,
+        long concurrencyToken,
+        WorkspaceScopeDescriptor? attributionScope = null)
+    {
+        if (id.Value == Guid.Empty)
+        {
+            throw new ArgumentException("An operation requires an id.", nameof(id));
+        }
+
+        if (conversationId.Value == Guid.Empty)
+        {
+            throw new ArgumentException("An operation requires a conversation id.", nameof(conversationId));
+        }
+
+        if (string.IsNullOrWhiteSpace(requestFingerprint.Value))
+        {
+            throw new ArgumentException("An operation requires a request fingerprint.", nameof(requestFingerprint));
+        }
+
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown operation kind.");
+        }
+
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), status, "Unknown operation status.");
+        }
+
+        if (attributionScope is not null && !Enum.IsDefined(attributionScope.Kind))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(attributionScope),
+                attributionScope.Kind,
+                "Unknown attribution workspace scope kind.");
+        }
+
+        if (attributionScope?.Key.Length > MaximumAttributionScopeKeyLength)
+        {
+            throw new ArgumentException(
+                $"An attribution workspace scope key cannot exceed {MaximumAttributionScopeKeyLength} characters.",
+                nameof(attributionScope));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegative(expectedTranscriptRevision);
+        ArgumentOutOfRangeException.ThrowIfNegative(concurrencyToken);
+
+        Id = id;
+        ConversationId = conversationId;
+        Kind = kind;
+        RequestFingerprint = requestFingerprint;
+        ExpectedTranscriptRevision = expectedTranscriptRevision;
+        Status = status;
+        StartedAtUtc = startedAtUtc;
+        ConcurrencyToken = concurrencyToken;
+        AttributionScope = attributionScope is null
+            ? null
+            : new WorkspaceScopeDescriptor(attributionScope.Kind, attributionScope.Key);
+    }
+
+    public LlmChatOperationId Id { get; init; }
+
+    public LlmChatConversationId ConversationId { get; init; }
+
+    public LlmChatOperationKind Kind { get; init; }
+
+    public LlmChatRequestFingerprint RequestFingerprint { get; init; }
+
+    public long ExpectedTranscriptRevision { get; init; }
+
+    public LlmChatOperationStatus Status { get; init; }
+
+    public WorkspaceScopeDescriptor? AttributionScope { get; }
+
+    public DateTimeOffset? CancellationRequestedAtUtc { get; init; }
+
+    public long CancellationGeneration { get; init; }
+
+    public LlmChatExecutionOwnerId? ExecutionOwnerId { get; init; }
+
+    public long ExecutionEpoch { get; init; }
+
+    public DateTimeOffset? ClaimedAtUtc { get; init; }
+
+    public DateTimeOffset? HeartbeatAtUtc { get; init; }
+
+    public DateTimeOffset? LeaseExpiresAtUtc { get; init; }
+
+    public LlmChatDispatchPhase DispatchPhase { get; init; } = LlmChatDispatchPhase.Queued;
+
+    public DateTimeOffset? TurnAdmittedAtUtc { get; init; }
+
+    public DateTimeOffset? ProviderDispatchStartedAtUtc { get; init; }
+
+    public DateTimeOffset? ProviderDispatchReturnedAtUtc { get; init; }
+
+    public DateTimeOffset? TranscriptCompletedAtUtc { get; init; }
+
+    public DateTimeOffset StartedAtUtc { get; init; }
+
+    public DateTimeOffset? CompletedAtUtc { get; init; }
+
+    public long? ResultingTranscriptRevision { get; init; }
+
+    public Guid? AssistantEntryId { get; init; }
+
+    public string FailureCode { get; init; } = string.Empty;
+
+    public long LastEventSequence
+    {
+        get => lastEventSequence;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            lastEventSequence = value;
+        }
+    }
+
+    public long ConcurrencyToken { get; init; }
+
+    public bool IsTerminal => Status is
+        LlmChatOperationStatus.Succeeded or
+        LlmChatOperationStatus.Failed or
+        LlmChatOperationStatus.Cancelled;
+
+    public bool HasLiveExecutionLease(DateTimeOffset observedAtUtc)
+        => ExecutionOwnerId is not null && LeaseExpiresAtUtc > observedAtUtc;
+}

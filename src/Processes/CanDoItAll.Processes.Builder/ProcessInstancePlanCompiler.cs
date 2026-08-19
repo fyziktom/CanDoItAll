@@ -6,7 +6,7 @@ namespace CanDoItAll.Processes.Builder;
 
 public sealed partial class ProcessInstancePlanCompiler
 {
-    private const string BuilderBindingVersion = "builder/1.0";
+    private const int MaximumEffectiveHostCapabilities = 32;
 
     public ProcessPlanCompileResult Compile(ProcessInstancePlanCompileRequest request)
     {
@@ -44,6 +44,7 @@ public sealed partial class ProcessInstancePlanCompiler
         ValidateDefinition(request, diagnostics);
         ValidateInitialArtifacts(request, diagnostics);
         var capabilityMatch = SelectDriverStack(request, diagnostics);
+        ValidateSelectedDriverHostCapabilityLimit(capabilityMatch.OrderedDrivers, diagnostics);
 
         if (diagnostics.Any(diagnostic => diagnostic.Severity == ProcessBuildDiagnosticSeverity.Error))
         {
@@ -52,8 +53,9 @@ public sealed partial class ProcessInstancePlanCompiler
 
         var selectedDrivers = capabilityMatch.OrderedDrivers;
         var strategyIndex = BuildStrategyIndex(selectedDrivers, diagnostics);
-        var stepPlans = BuildStepPlans(request, strategyIndex, diagnostics);
+        var stepPlans = BuildStepPlans(request, strategyIndex, selectedDrivers, diagnostics);
         var managerPlan = BuildManagerPlan(request, strategyIndex, diagnostics);
+        ValidateEffectiveHostCapabilityLimit(selectedDrivers, stepPlans, diagnostics);
 
         if (diagnostics.Any(diagnostic => diagnostic.Severity == ProcessBuildDiagnosticSeverity.Error))
         {
@@ -96,7 +98,7 @@ public sealed partial class ProcessInstancePlanCompiler
                 migrationIds,
                 resolvedComponents,
                 appliedOverridePointers),
-            BuildDriverStack(selectedDrivers),
+            BuildDriverStack(selectedDrivers, stepPlans, request.CapabilityRequest.HostCapabilities),
             BuildStrategyBindingSet(stepPlans, managerPlan),
             stepPlans,
             BuildArtifactPlan(request),

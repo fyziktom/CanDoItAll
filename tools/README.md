@@ -6,7 +6,7 @@ Repository-specific engineering tools are grouped by purpose:
 |---|---|
 | `App` | Local development manager |
 | `dev` | PostgreSQL preparation, Tailwind watch, plugin packaging, and bounded development resets |
-| `install` | Installed web app publishing and its isolated PostgreSQL setup |
+| `install` | Installed web app publishing, its isolated PostgreSQL setup, and focused MCP artifact installation |
 | `Diagnostics` | Focused runtime and provider probes |
 | `ollama` | Local Ollama model and probe support |
 | `prompt_library` | Prompt component-library generation |
@@ -35,6 +35,40 @@ project. Neither installed-database path uses the repository's development `comp
 
 `tools/Install-CanDoItAllWebApp.ps1` is retained only as a compatibility wrapper for the
 former script location.
+
+Install a locally built CodeAnalytics MCP only after supplying a maintained protocol
+smoke request:
+
+```powershell
+& .\tools\install\Install-CanDoItAllCodeAnalyticsMcp.ps1 `
+    -McpRepositoryRoot ..\CanDoItAll.Mcp `
+    -SmokeRequestPath <path-to-test-impact-request.json>
+```
+
+The installer publishes to a unique staging directory, runs the MCP tool harness before
+and after switching, stops only exact owned CodeAnalytics executable paths, and retains
+the prior install for recovery. Use `-WhatIf` before a real cutover.
+
+Framework-dependent Unix artifacts use `tools/install/unix/install-candoitall-web.sh`.
+It installs immutable releases and switches a validated release-id state file without
+elevation, database mutation, provider selection, or root-policy duplication. The same
+folder contains the stable launcher, idempotent rollback entry point, and systemd/launchd
+templates. Start with `docs/operations/installing-instances.md`, then use
+`docs/operations/headless-web-host.md` for the detailed service lifecycle.
+
+Local development uses sibling `CanDoItAll.Components` and `CanDoItAll.FileTools` project
+references by default. Their roots can be overridden with
+`CanDoItAllComponentsRepositoryRoot` and `CanDoItAllFileToolsRepositoryRoot`. Hosted CI
+pins and checks out both repositories; Docker receives them as named build contexts; and
+release validation records their exact commits. All current gates keep
+`UseLocalCanDoItAllLibraries=true`.
+
+The runtime portability gate uses `tools/Validation/RuntimePortabilityCatalog.json` as its
+versioned class/FQN/count contract. Create the one Release build and durable identity stamp
+with `Test-RuntimePortability.ps1 -BuildOnly`; subsequent `-SkipBuild` runs verify the
+repository commit, source fingerprint, dependency mode and anchors, SDK, catalog, and
+assembly hashes before starting any test process. Use `-SelfTest` for the runner's bounded
+negative fixtures.
 
 Validate both installer entry points, the generated launcher, and non-mutating previews
 with:

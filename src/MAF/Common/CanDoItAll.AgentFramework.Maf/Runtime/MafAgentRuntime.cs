@@ -41,6 +41,7 @@ public sealed class MafAgentRuntime
             dependencies.ImageAnalysisService,
             dependencies.RuntimeToolProviderComposer,
             dependencies.CompositionMetrics,
+            dependencies.PhysicalPathPolicyFactory,
             dependencies.SpreadsheetDocumentService,
             dependencies.CapabilityDependencies);
         var runtimeAgentFactory = new MafRuntimeAgentFactory(
@@ -49,6 +50,7 @@ public sealed class MafAgentRuntime
             dependencies.ProviderCredentialService,
             dependencies.ProviderAgentFactory,
             runtimeCapabilityComposer,
+            dependencies.PhysicalPathPolicyFactory,
             dependencies.CapabilityDependencies.LoggerFactory,
             dependencies.ToolInvocationPolicyPipeline);
         var streamingTurnExecutor = new MafStreamingTurnExecutor(
@@ -57,10 +59,12 @@ public sealed class MafAgentRuntime
             dependencies.ProviderAgentFactory,
             dependencies.ApprovalContinuationDriver,
             dependencies.SessionPersistenceDriver,
+            dependencies.PhysicalPathPolicyFactory,
             dependencies.ExecutionOutcomeRecoveryPolicies);
         executionAdapter = new MafAgentExecutionAdapter(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
+            dependencies.PhysicalPathPolicyFactory,
             dependencies.WorkspaceRuntimeServicesFactory,
             runtimeAgentFactory,
             new InputAttachmentPreparer(
@@ -70,6 +74,7 @@ public sealed class MafAgentRuntime
         continuationAdapter = new MafAgentContinuationAdapter(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
+            dependencies.PhysicalPathPolicyFactory,
             dependencies.WorkspaceRuntimeServicesFactory,
             runtimeAgentFactory,
             dependencies.ApprovalContinuationDriver,
@@ -79,6 +84,7 @@ public sealed class MafAgentRuntime
         hostedAgentFactory = new MafHostedAgentFactory(
             normalizedWorkspaceRoot,
             resolvedWorkspaceScope,
+            dependencies.PhysicalPathPolicyFactory,
             dependencies.WorkspaceRuntimeServicesFactory,
             runtimeAgentFactory);
     }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -22,8 +23,8 @@ internal static class EffectiveExternalTargetContextBuilder
 
         var aliases = accessScope.WritableAliases
             .Concat(accessScope.ReadOnlyAliases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
             .ToArray();
         var targetLines = new List<string>();
         var renderedTargetCharacters = 0;

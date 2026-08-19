@@ -1,7 +1,7 @@
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureProcessContextNodeFilterTests
 {
@@ -59,6 +59,24 @@ public sealed class ProjectStructureProcessContextNodeFilterTests
         var include = ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node);
 
         Assert.True(include);
+    }
+
+    [Fact]
+    public void ShouldIncludeInProcessContext_excludes_notes_that_embed_prior_process_run_artifacts()
+    {
+        var node = CreateNode(
+            "custom:old-result-note",
+            $"custom:{Guid.NewGuid():N}",
+            ProjectObjectType.Note,
+            "result",
+            "Prior delivery result",
+            "Accepted using artifacts/process-runs/old-run/browser/after.yml.",
+            string.Empty,
+            string.Empty);
+
+        var include = ProjectStructureProcessContextNodeFilter.ShouldIncludeInProcessContext(node);
+
+        Assert.False(include);
     }
 
     private static ProjectStructureNode CreateNode(

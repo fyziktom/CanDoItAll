@@ -2,11 +2,12 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Hosting;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceImageOperationServiceTests
 {
@@ -31,7 +32,7 @@ public sealed class WorkspaceImageOperationServiceTests
         try
         {
             await File.WriteAllBytesAsync(Path.Combine(workspaceRoot, fileName), bytes);
-            var service = new WorkspaceImageOperationService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateImageOperationService(workspaceRoot);
 
             var result = await service.InspectImageFile(fileName);
 
@@ -59,7 +60,7 @@ public sealed class WorkspaceImageOperationServiceTests
         {
             var bytes = PngBytes();
             await File.WriteAllBytesAsync(Path.Combine(workspaceRoot, "frame.png"), bytes);
-            var service = new WorkspaceImageOperationService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateImageOperationService(workspaceRoot);
 
             var result = await service.ReadImageFile(
                 "frame.png",
@@ -88,7 +89,7 @@ public sealed class WorkspaceImageOperationServiceTests
         {
             var bytes = PngBytes();
             await File.WriteAllBytesAsync(Path.Combine(workspaceRoot, "large.png"), bytes);
-            var service = new WorkspaceImageOperationService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateImageOperationService(workspaceRoot);
 
             var result = await service.ReadImageFile("large.png", maxBytes: bytes.Length - 1);
 
@@ -111,14 +112,14 @@ public sealed class WorkspaceImageOperationServiceTests
         var workspaceRoot = CreateWorkspaceRoot();
         try
         {
-            var service = new WorkspaceImageOperationService(workspaceRoot);
+            var service = TestWorkspaceServices.CreateImageOperationService(workspaceRoot);
 
             var result = await service.InspectImageFile("../outside.png");
 
             Assert.False(result.Succeeded);
             Assert.Equal("Denied", result.Receipt.Outcome);
             Assert.Equal("workspace_inspect_image", result.Receipt.Operation);
-            Assert.Contains("outside the workspace root", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("workspace path is invalid", result.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -144,7 +145,7 @@ public sealed class WorkspaceImageOperationServiceTests
             await File.WriteAllBytesAsync(fullPath, PngBytes());
             var expected = new IOException($"Unexpected I/O failure at '{fullPath}'.");
             string? observedReadPath = null;
-            var service = new WorkspaceImageOperationService(
+            var service = TestWorkspaceServices.CreateImageOperationService(
                 workspaceRoot,
                 workspaceScope: null,
                 readAllBytes: path =>
@@ -184,12 +185,17 @@ public sealed class WorkspaceImageOperationServiceTests
         try
         {
             var imageOperations = new RecordingImageOperationService();
-            var service = new WorkspaceArtifactToolService(
+            var externalTargets = TestExternalTargetPathRegistry.Create();
+            var service = TestWorkspaceServices.CreateArtifactToolService(
                 workspaceRoot,
-                new WorkspaceCommandExecutionService(workspaceRoot, new LocalWorkspaceProcessHost()),
+                TestWorkspaceServices.CreateCommandExecutionService(
+                    workspaceRoot,
+                    new LocalWorkspaceProcessHost(),
+                    externalTargetRegistry: externalTargets),
                 new UnusedDocumentMarkdownConverter(),
                 WorkspaceScopeDescriptor.Sandbox,
-                imageOperations);
+                imageOperations,
+                externalTargets);
 
             var inspection = await service.InspectImageFile("images/frame.png");
             var content = await service.ReadImageFile(
@@ -217,7 +223,11 @@ public sealed class WorkspaceImageOperationServiceTests
         try
         {
             await File.WriteAllBytesAsync(Path.Combine(workspaceRoot, "fallback.png"), PngBytes());
-            var factory = new WorkspaceRuntimeServicesFactory([], new UnusedDocumentMarkdownConverter());
+            var factory = new WorkspaceRuntimeServicesFactory(
+                [],
+                new UnusedDocumentMarkdownConverter(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory());
             await using var workspaceServices = factory.Create(
                 new WorkspaceExecutionScope(workspaceRoot, WorkspaceScopeDescriptor.Sandbox));
 
@@ -246,12 +256,17 @@ public sealed class WorkspaceImageOperationServiceTests
             var hostingDescriptor = Assert.Single(
                 hostingServices,
                 descriptor => descriptor.ServiceType == typeof(IWorkspaceImageOperationService));
-            Assert.Equal(ServiceLifetime.Singleton, hostingDescriptor.Lifetime);
+            Assert.Equal(ServiceLifetime.Scoped, hostingDescriptor.Lifetime);
 
             await using var provider = hostingServices.BuildServiceProvider();
+            await using var firstScope = provider.CreateAsyncScope();
+            await using var secondScope = provider.CreateAsyncScope();
             Assert.Same(
-                provider.GetRequiredService<IWorkspaceImageOperationService>(),
-                provider.GetRequiredService<IWorkspaceImageOperationService>());
+                firstScope.ServiceProvider.GetRequiredService<IWorkspaceImageOperationService>(),
+                firstScope.ServiceProvider.GetRequiredService<IWorkspaceImageOperationService>());
+            Assert.NotSame(
+                firstScope.ServiceProvider.GetRequiredService<IWorkspaceImageOperationService>(),
+                secondScope.ServiceProvider.GetRequiredService<IWorkspaceImageOperationService>());
 
             var moduleServices = new ServiceCollection();
             moduleServices.AddAgentFrameworkModule(new ConfigurationBuilder().Build());

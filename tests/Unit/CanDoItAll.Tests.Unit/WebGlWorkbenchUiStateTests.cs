@@ -1,6 +1,6 @@
 using CanDoItAll.Components.WebGlLib;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class WebGlWorkbenchUiStateTests
 {

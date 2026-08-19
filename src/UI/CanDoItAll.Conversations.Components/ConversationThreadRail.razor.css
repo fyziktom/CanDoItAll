@@ -1,0 +1,24 @@
+.conversation-thread-rail {
+    min-width: 0;
+}
+
+.conversation-thread-rail ::deep .agents-chat-thread-search {
+    background: rgb(255 255 255 / 0.95);
+    border: 1px solid rgb(203 213 225);
+    border-radius: 0.9rem;
+    color: rgb(15 23 42);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+    padding: 0.65rem 0.8rem;
+    width: 100%;
+}
+
+.conversation-thread-rail ::deep .agents-chat-thread-search:focus {
+    border-color: rgb(14 165 233);
+    box-shadow: 0 0 0 3px rgb(14 165 233 / 0.13);
+}
+
+.conversation-thread-rail__actions {
+    min-width: 0;
+}

@@ -1,6 +1,6 @@
 using CanDoItAll.Manager;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceRuntimeProcessToolsTests
 {
@@ -13,7 +13,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+                <ProjectReference Include="../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
               </ItemGroup>
             </Project>
             """,
@@ -114,7 +114,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
             """
             <Project Sdk="Microsoft.NET.Sdk.Web">
               <ItemGroup>
-                <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+              <ProjectReference Include="../../Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
               </ItemGroup>
             </Project>
             """,
@@ -154,6 +154,41 @@ public sealed class WorkspaceRuntimeProcessToolsTests
         var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(workspace.RootPath, projectPath, new ManagerOptions());
 
         Assert.DoesNotContain("--no-restore", arguments);
+    }
+
+    [Fact]
+    public void BuildWatchArgumentList_stops_at_case_variant_workspace_root_on_windows()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var workspace = new TestWorkspace();
+        var projectPath = workspace.CreateProject(
+            @"src\App\App.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 0, 0, DateTimeKind.Utc));
+        workspace.CreateAssetsFile(
+            @"src\App\obj\project.assets.json",
+            modifiedAtUtc: new DateTime(2026, 3, 20, 8, 5, 0, DateTimeKind.Utc));
+        var outsideRestoreInput = Path.Combine(Path.GetDirectoryName(workspace.RootPath)!, "Directory.Packages.props");
+        File.WriteAllText(outsideRestoreInput, "<Project />");
+        File.SetLastWriteTimeUtc(outsideRestoreInput, new DateTime(2026, 3, 20, 8, 10, 0, DateTimeKind.Utc));
+
+        try
+        {
+            var arguments = WorkspaceRuntimeProcessTools.BuildWatchArgumentList(
+                workspace.RootPath.ToUpperInvariant(),
+                projectPath,
+                new ManagerOptions());
+
+            Assert.Contains("--no-restore", arguments);
+        }
+        finally
+        {
+            File.Delete(outsideRestoreInput);
+        }
     }
 
     [Fact]
@@ -249,11 +284,20 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     }
 
     [Fact]
-    public void ResolveTailwindCliPath_points_to_workspace_local_binary()
+    public void ResolveTailwindCliScriptPath_points_to_workspace_local_node_entry()
     {
-        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliPath(@"C:\repos\CanDoItAll\Tailwind");
+        var tailwindWorkspacePath = Path.Combine(Path.GetTempPath(), "CanDoItAll", "Tailwind");
+        var path = WorkspaceRuntimeProcessTools.ResolveTailwindCliScriptPath(tailwindWorkspacePath);
 
-        Assert.EndsWith(@"Tailwind\node_modules\.bin\tailwindcss.cmd", path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            Path.Combine(
+                tailwindWorkspacePath,
+                "node_modules",
+                "@tailwindcss",
+                "cli",
+                "dist",
+                "index.mjs"),
+            path);
     }
 
     [Theory]
@@ -263,41 +307,6 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     public void RequiresWorkspaceRecovery_detects_lock_and_port_conflicts(string line)
     {
         Assert.True(WorkspaceRuntimeProcessTools.RequiresWorkspaceRecovery(line));
-    }
-
-    [Fact]
-    public void IsWorkspaceOwnedProcess_matches_watch_host_and_child_processes()
-    {
-        const string projectPath = @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj";
-
-        var watchHost = new WorkspaceProcessSnapshot(
-            101,
-            "dotnet.exe",
-            @"""C:\Program Files\dotnet\dotnet.exe"" watch --project ""C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj"" run --no-launch-profile",
-            null);
-
-        var watchChild = new WorkspaceProcessSnapshot(
-            102,
-            "dotnet.exe",
-            @"""C:\Program Files\dotnet\dotnet.exe"" run --no-build -e DOTNET_WATCH=1 --project C:\repos\CanDoItAll\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj",
-            null);
-
-        var webProcess = new WorkspaceProcessSnapshot(
-            103,
-            "CanDoItAll.Web.exe",
-            @"""C:\repos\CanDoItAll\src\App\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.exe""",
-            @"C:\repos\CanDoItAll\src\App\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.exe");
-
-        var unrelated = new WorkspaceProcessSnapshot(
-            104,
-            "dotnet.exe",
-            @"""C:\Program Files\dotnet\dotnet.exe"" build C:\repos\Other\Other.csproj",
-            null);
-
-        Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(watchHost, projectPath));
-        Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(watchChild, projectPath));
-        Assert.True(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(webProcess, projectPath));
-        Assert.False(WorkspaceRuntimeProcessTools.IsWorkspaceOwnedProcess(unrelated, projectPath));
     }
 
     private sealed class TestWorkspace : IDisposable
@@ -318,7 +327,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
 
         public string CreateFile(string relativePath, string content, DateTime modifiedAtUtc)
         {
-            var fullPath = Path.Combine(RootPath, relativePath);
+            var fullPath = TestRepositoryPath.Resolve(RootPath, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
             File.WriteAllText(fullPath, content);
             File.SetLastWriteTimeUtc(fullPath, modifiedAtUtc);

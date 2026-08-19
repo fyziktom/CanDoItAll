@@ -10,6 +10,9 @@ namespace CanDoItAll.Tests.Playwright;
 
 public sealed class PlaywrightAppFixture : IAsyncLifetime
 {
+    private const string HeadlessRuntimePresentationEnvironmentVariable =
+        "CANDOITALL_PLAYWRIGHT_HEADLESS_RUNTIME_PRESENTATION";
+
     private readonly ConcurrentQueue<string> _logs = new();
     private Process? _process;
     private Task? _stdoutPump;
@@ -26,6 +29,13 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
     public string? DatabaseConnectionString => _activeProfile?.ConnectionString;
 
     public string? StorageWorkspaceRoot => _activeProfile?.WorkspaceRootPath;
+
+    public bool IsRuntimePresentationHeadless =>
+        !OperatingSystem.IsWindows() ||
+        string.Equals(
+            Environment.GetEnvironmentVariable(HeadlessRuntimePresentationEnvironmentVariable),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
 
     public string GetLogSnapshot(int maxLines = 200)
     {
@@ -69,6 +79,11 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
         }))
         {
             processStartInfo.Environment[pair.Key] = pair.Value;
+        }
+
+        if (IsRuntimePresentationHeadless)
+        {
+            processStartInfo.Environment["Workbench__RuntimePresentation__EnableWindowsTerminal"] = "false";
         }
 
         _process = Process.Start(processStartInfo) ?? throw new InvalidOperationException("Failed to start CanDoItAll.Web for Playwright tests.");

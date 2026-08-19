@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/tests/Integration/">
+    <Project Path="../Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
+  </Folder>
+</Solution>

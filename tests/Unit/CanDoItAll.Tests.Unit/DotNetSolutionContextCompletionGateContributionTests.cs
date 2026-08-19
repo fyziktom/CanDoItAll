@@ -6,7 +6,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class DotNetSolutionContextCompletionGateContributionTests : IDisposable
 {
@@ -98,7 +98,7 @@ public sealed class DotNetSolutionContextCompletionGateContributionTests : IDisp
     private IWorkspaceFileService CreateWorkspaceFiles()
     {
         Directory.CreateDirectory(workspaceRoot);
-        return new WorkspaceFileService(workspaceRoot);
+        return TestWorkspaceServices.CreateFileService(workspaceRoot);
     }
 
     private static (ProcessCompletionGateContext Context, string ArtifactRef) CreateContext(string payloadSchema)

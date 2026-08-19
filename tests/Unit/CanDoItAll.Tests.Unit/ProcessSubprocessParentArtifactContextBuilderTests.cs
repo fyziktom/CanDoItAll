@@ -4,7 +4,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessSubprocessParentArtifactContextBuilderTests
 {
@@ -81,7 +81,7 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
             var childRunId = Guid.NewGuid();
             var parentRef = "artifacts/process-runs/parent/steps/implement-code-change.md";
             var childRef = $"artifacts/process-runs/{childRunId:D}/steps/feature-repair-escalation.md";
-            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
+            var workspaceFiles = TestWorkspaceServices.CreateFileService(workspaceRoot);
             var writeResult = workspaceFiles.WriteTextFile(
                 parentRef,
                 $"""
@@ -149,7 +149,7 @@ public sealed class ProcessSubprocessParentArtifactContextBuilderTests
             var parentRef = "artifacts/process-runs/parent/steps/implement-code-change.md";
             var acceptedChildRef = $"artifacts/process-runs/{childRunId:D}/steps/slice-handoff.md";
             var undeclaredChildRef = $"artifacts/process-runs/{childRunId:D}/steps/private-review.md";
-            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
+            var workspaceFiles = TestWorkspaceServices.CreateFileService(workspaceRoot);
             Assert.True(workspaceFiles.WriteTextFile(
                 parentRef,
                 $"""

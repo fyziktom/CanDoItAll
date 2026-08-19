@@ -1,7 +1,7 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectCalendarStateParserTests
 {
@@ -47,5 +47,4 @@ public sealed class ProjectCalendarStateParserTests
         Assert.Null(state.SelectedEventId);
     }
 }
-
 

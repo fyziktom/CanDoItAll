@@ -3,10 +3,11 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Tests.Support;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
 /// Failing-first characterization: finalizer recovery evidence and script
@@ -53,6 +54,7 @@ public sealed class RunScopedRecoveryAndScriptInspectionBaselineTests
                 new NeverInvokedProviderAgentFactory(),
                 new MafApprovalContinuationDriver(),
                 new MafRuntimeSessionPersistenceDriver(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
                 [new ProcessAgentExecutionOutcomeRecoveryPolicy()]);
             AgentFinalizerPolicies.TryResolveForStructuredOutput(
                 AgentStructuredOutputContracts.ProcessStepOutcomeResult,
@@ -132,7 +134,9 @@ public sealed class RunScopedRecoveryAndScriptInspectionBaselineTests
             // can execute.
             var inspectionService = new MafScriptPolicyInspectionService(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Sandbox);
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory().Create([]));
             var auditScope = CreateSandboxRunAuditScope();
 
             var inspection = inspectionService.ResolveScriptContentInspectionForPolicy(
@@ -149,7 +153,9 @@ public sealed class RunScopedRecoveryAndScriptInspectionBaselineTests
             // and the per-run construction is required.
             var foreignScopeService = new MafScriptPolicyInspectionService(
                 workspaceRoot,
-                WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N")));
+                WorkspaceScopeDescriptor.Organization(Guid.NewGuid().ToString("N")),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory().Create([]));
             var foreignInspection = foreignScopeService.ResolveScriptContentInspectionForPolicy(
                 AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
                 [new KeyValuePair<string, object?>("path", scriptRelativePath)],
@@ -163,7 +169,74 @@ public sealed class RunScopedRecoveryAndScriptInspectionBaselineTests
         }
     }
 
-    private static WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState CreateSandboxRunAuditScope()
+    [Fact]
+    public void Script_policy_inspection_resolves_authorized_versioned_external_target_alias()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("external-script-inspection-workspace");
+        var externalRoot = TestFileSystem.CreateTemporaryRoot("external-script-inspection-target");
+        try
+        {
+            var scriptPath = Path.Combine(externalRoot, "scripts", "run.ps1");
+            Directory.CreateDirectory(Path.GetDirectoryName(scriptPath)!);
+            File.WriteAllText(scriptPath, "Write-Output 'external script'");
+
+            var registry = new ExternalTargetPathRegistry();
+            Assert.True(registry.TryCreateAlias(externalRoot, out var rootAlias));
+            Assert.True(registry.TryCreateAlias(scriptPath, out var scriptAlias));
+            var inspectionService = new MafScriptPolicyInspectionService(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                registry);
+
+            var inspection = inspectionService.ResolveScriptContentInspectionForPolicy(
+                AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+                [new KeyValuePair<string, object?>("path", scriptAlias)],
+                CreateSandboxRunAuditScope([rootAlias]),
+                scriptSideEffectManifestJson: string.Empty);
+
+            Assert.Equal(string.Empty, inspection.FailureMessage);
+            Assert.Equal("Write-Output 'external script'", inspection.Content);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(externalRoot);
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public void Script_policy_inspection_rejects_foreign_host_absolute_syntax()
+    {
+        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("foreign-script-inspection");
+        try
+        {
+            var foreignPath = OperatingSystem.IsWindows()
+                ? "/tmp/foreign-script.ps1"
+                : @"C:\foreign-script.ps1";
+            var inspectionService = new MafScriptPolicyInspectionService(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.Sandbox,
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                new ExternalTargetPathRegistryFactory().Create([]));
+
+            var inspection = inspectionService.ResolveScriptContentInspectionForPolicy(
+                AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+                [new KeyValuePair<string, object?>("path", foreignPath)],
+                CreateSandboxRunAuditScope(),
+                scriptSideEffectManifestJson: string.Empty);
+
+            Assert.Contains("not valid on this host", inspection.FailureMessage, StringComparison.Ordinal);
+            Assert.Equal(string.Empty, inspection.Content);
+        }
+        finally
+        {
+            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+        }
+    }
+
+    private static WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState CreateSandboxRunAuditScope(
+        IReadOnlyList<string>? allowedExternalTargetAliases = null)
         => new(
             ExecutionRunId: Guid.NewGuid(),
             AgentId: Guid.NewGuid(),
@@ -177,7 +250,8 @@ public sealed class RunScopedRecoveryAndScriptInspectionBaselineTests
             MessageId: string.Empty,
             ProviderName: "OpenAI",
             Model: "unit-test-model",
-            AllowedExternalTargetAliases: [],
+            ExternalTargetRootBindings: [],
+            AllowedExternalTargetAliases: allowedExternalTargetAliases ?? [],
             ReadOnlyExternalTargetAliases: [],
             AllowedManagedArtifactReadRefs: [],
             ProcessCooperationMode: null,

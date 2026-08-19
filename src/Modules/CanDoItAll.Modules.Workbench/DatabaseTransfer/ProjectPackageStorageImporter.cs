@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -16,6 +17,7 @@ namespace CanDoItAll.Modules.Workbench;
 internal sealed class ProjectPackageStorageImporter(
     IStorageDriverRegistry storageDrivers,
     ProjectManagedStoragePhysicalIdentityPolicy physicalIdentityPolicy,
+    IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
     IClock clock,
     ILogger<StoragePlacementService> placementLogger,
     ILogger<ProjectPackageService> logger)
@@ -37,7 +39,7 @@ internal sealed class ProjectPackageStorageImporter(
 
     internal List<StagedStorageWrite> CreateStagingJournal() => [];
 
-    private static async Task ValidateStorageManifestAsync(
+    private async Task ValidateStorageManifestAsync(
         string extractionRoot,
         ProjectPackageManifest manifest,
         IReadOnlyList<PackageBinding> bindings,
@@ -85,7 +87,8 @@ internal sealed class ProjectPackageStorageImporter(
 
             var sourcePath = ResolvePackageFilePath(
                 extractionRoot,
-                canonicalPackagePath);
+                canonicalPackagePath,
+                physicalPathPolicyFactory);
             if (!File.Exists(sourcePath))
             {
                 throw new InvalidDataException(
@@ -223,7 +226,10 @@ internal sealed class ProjectPackageStorageImporter(
         {
             var first = group.OrderBy(binding => binding.Binding.Id).First();
             var file = manifestByKey[group.Key];
-            var sourcePath = ResolvePackageFilePath(extractionRoot, file.PackagePath);
+            var sourcePath = ResolvePackageFilePath(
+                extractionRoot,
+                file.PackagePath,
+                physicalPathPolicyFactory);
             var content = await ReadBoundedFileAsync(
                 sourcePath,
                 ProjectStructureAssetUploadLimits.MaximumFileBytes,
@@ -536,6 +542,8 @@ internal sealed class ProjectPackageStorageImporter(
             }
 
             var now = clock.GetUtcNow();
+            var workspaceRoot = Path.GetFullPath(
+                targetProfile.Profile.Storage.WorkspaceRoot);
             pendingStorage = new StorageCatalogRecord
             {
                 Id = Guid.NewGuid(),
@@ -544,8 +552,7 @@ internal sealed class ProjectPackageStorageImporter(
                 IsEnabled = true,
                 IsSystemDefault = true,
                 ConnectionMode = StorageConnectionMode.Local,
-                EndpointOrRoot = Path.GetFullPath(
-                    targetProfile.Profile.Storage.WorkspaceRoot),
+                EndpointOrRoot = workspaceRoot,
                 CapabilityMask =
                     StorageCapability.Read |
                     StorageCapability.Write |
@@ -562,6 +569,10 @@ internal sealed class ProjectPackageStorageImporter(
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(
+                pendingStorage,
+                workspaceRoot,
+                now);
             pendingRule = new StorageRoutingRule
             {
                 Id = Guid.NewGuid(),
@@ -592,7 +603,7 @@ internal sealed class ProjectPackageStorageImporter(
                     $"Target filesystem storage '{storage.Name}' does not have an explicit root for inactive-profile import.");
             }
 
-            _ = FileSystemStoragePathPolicy.ResolveReparseSafeFullPath(
+            _ = physicalIdentityPolicy.ResolveReparseSafeFullPath(
                 Path.GetFullPath(storage.EndpointOrRoot));
         }
 

@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Llm.Abstractions\CanDoItAll.AgentFramework.Llm.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
   </ItemGroup>

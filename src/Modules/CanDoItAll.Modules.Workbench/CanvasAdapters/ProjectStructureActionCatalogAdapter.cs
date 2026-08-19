@@ -9,14 +9,35 @@ public sealed class ProjectStructureActionCatalogAdapter
     public const string EditActionId = "edit";
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node)
-        => BuildNodeContextActions(node, canLaunchRuntime: false);
+        => BuildNodeContextActions(
+            node,
+            runtimeCapabilities: null,
+            canOpenInFileExplorer: false,
+            canOpenInNewTab: false);
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node, bool canLaunchRuntime)
-        => BuildNodeContextActions(node, canLaunchRuntime, canOpenInFileExplorer: false, canOpenInNewTab: false);
+        => BuildNodeContextActions(
+            node,
+            CreateCompatibilityCapabilities(canLaunchRuntime),
+            canOpenInFileExplorer: false,
+            canOpenInNewTab: false);
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(
         ProjectStructureNode node,
         bool canLaunchRuntime,
+        bool canOpenInFileExplorer,
+        bool canOpenInNewTab,
+        int selectedNodeCount = 0)
+        => BuildNodeContextActions(
+            node,
+            CreateCompatibilityCapabilities(canLaunchRuntime),
+            canOpenInFileExplorer,
+            canOpenInNewTab,
+            selectedNodeCount);
+
+    public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(
+        ProjectStructureNode node,
+        ProjectStructureRuntimeLaunchCapabilities? runtimeCapabilities,
         bool canOpenInFileExplorer,
         bool canOpenInNewTab,
         int selectedNodeCount = 0)
@@ -55,30 +76,49 @@ public sealed class ProjectStructureActionCatalogAdapter
             actions.Insert(1, ProjectStructureFileActions.CreateCanvasAction());
         }
 
-        if (canLaunchRuntime)
+        if (runtimeCapabilities is not null)
         {
-            actions.InsertRange(
-                1,
-                [
-                    new CanvasWorkbenchAction
-                    {
-                        ActionId = "runtime:open",
-                        Label = "Run normally",
-                        MenuLabel = "Run",
-                        Description = "Launch the resolved workspace command in PowerShell.",
-                        Icon = "powershell",
-                        Tone = "accent"
-                    },
-                    new CanvasWorkbenchAction
-                    {
-                        ActionId = "runtime:admin",
-                        Label = "Run as administrator",
-                        MenuLabel = "Run admin",
-                        Description = "Launch the resolved workspace command in an elevated PowerShell window.",
-                        Icon = "admin_panel_settings",
-                        Tone = "warn"
-                    }
-                ]);
+            var runtimeActions = new List<CanvasWorkbenchAction>();
+            if (runtimeCapabilities.Direct.IsAvailable)
+            {
+                runtimeActions.Add(new CanvasWorkbenchAction
+                {
+                    ActionId = "runtime:open",
+                    Label = "Run",
+                    MenuLabel = "Run",
+                    Description = "Execute the typed runtime plan directly through the owned process host.",
+                    Icon = "play_arrow",
+                    Tone = "accent"
+                });
+            }
+
+            if (runtimeCapabilities.Terminal.IsAvailable)
+            {
+                runtimeActions.Add(new CanvasWorkbenchAction
+                {
+                    ActionId = "runtime:terminal",
+                    Label = "Open terminal",
+                    MenuLabel = "Terminal",
+                    Description = "Present the typed runtime plan in the configured terminal.",
+                    Icon = "terminal",
+                    Tone = "sky"
+                });
+            }
+
+            if (runtimeCapabilities.Elevation.IsAvailable)
+            {
+                runtimeActions.Add(new CanvasWorkbenchAction
+                {
+                    ActionId = "runtime:admin",
+                    Label = "Elevated launch",
+                    MenuLabel = "Elevated",
+                    Description = "Start the typed runtime plan through the explicitly supported elevation capability.",
+                    Icon = "admin_panel_settings",
+                    Tone = "warn"
+                });
+            }
+
+            actions.InsertRange(1, runtimeActions);
         }
 
         if (canOpenInFileExplorer)
@@ -249,6 +289,16 @@ public sealed class ProjectStructureActionCatalogAdapter
         actions.AddRange(ProjectStructureCanvasCatalog.BuildMenuCreateActions(node.ObjectType));
         return ProjectStructureActionShortcuts.Apply(ProjectStructureMenuComposition.OrderNodeContextActions(node, actions));
     }
+
+    private static ProjectStructureRuntimeLaunchCapabilities? CreateCompatibilityCapabilities(bool canLaunchRuntime)
+        => canLaunchRuntime
+            ? new ProjectStructureRuntimeLaunchCapabilities(
+                ProjectStructureRuntimeCapability.Available("Direct execution is available."),
+                ProjectStructureRuntimeCapability.Unavailable(
+                    ProjectStructureRuntimeCapabilityStatus.Unsupported,
+                    "Terminal capability was not supplied."),
+                ProjectStructureRuntimeCapability.Available("Elevated launch is available."))
+            : null;
 
     private static bool CanLinkExistingProcess(ProjectStructureNode node)
     {
@@ -679,4 +729,3 @@ public sealed class ProjectStructureActionCatalogAdapter
             ]
         };
 }
-

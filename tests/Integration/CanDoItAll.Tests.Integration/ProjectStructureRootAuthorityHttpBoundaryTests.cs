@@ -7,7 +7,7 @@ using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 public sealed class ProjectStructureRootAuthorityHttpBoundaryTests
 {
@@ -86,6 +86,10 @@ public sealed class ProjectStructureRootAuthorityHttpBoundaryTests
                 project.Id.ToString(),
                 "Validate runtime target authority",
                 15));
+        var externalRuntimeRoot = Path.Combine(host.RootPath, "external-runtime");
+        var externalProjectPath = Path.Combine(externalRuntimeRoot, "Calculator.csproj");
+        Directory.CreateDirectory(externalRuntimeRoot);
+        await File.WriteAllTextAsync(externalProjectPath, "<Project Sdk=\"Microsoft.NET.Sdk\" />");
 
         var response = await host.Client.PostAsJsonAsync(
             $"/api/project-structure/projects/{project.Id:D}/nodes",
@@ -96,8 +100,7 @@ public sealed class ProjectStructureRootAuthorityHttpBoundaryTests
                 "This HTTP request has no audited external-target scope.",
                 $"project:{project.Id:D}",
                 ObjectSubtype: "dotnet-watch",
-                MetadataJson: CreateDotNetRuntimeMetadata(
-                    @"C:\operator\private\unselected-project\Calculator.csproj"),
+                MetadataJson: CreateDotNetRuntimeMetadata(externalProjectPath),
                 LeaseToken: lease.LeaseToken));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

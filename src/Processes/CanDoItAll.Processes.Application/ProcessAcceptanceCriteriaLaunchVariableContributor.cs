@@ -75,7 +75,10 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
         var candidates = new List<AcceptanceCriteriaCandidate>();
         if (source.SelectedItem.IsIncludedInProcessContext)
         {
-            AddCandidates(source.SelectedItem, candidates);
+            AddCandidates(
+                source.SelectedItem,
+                candidates,
+                ProcessAcceptanceCriterionKind.ProductAcceptance);
         }
 
         foreach (var item in source.ContextItems)
@@ -85,9 +88,15 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
                 continue;
             }
 
+            var implicitKind = item.Kind is
+                ProcessLaunchSourceItemKind.ImageAsset or
+                ProcessLaunchSourceItemKind.ProductRequirement
+                ? ProcessAcceptanceCriterionKind.ProductAcceptance
+                : ProcessAcceptanceCriterionKind.DeliveryPlanning;
             AddCandidates(
                 item,
                 candidates,
+                implicitKind,
                 explicitSectionOnly: item.Kind == ProcessLaunchSourceItemKind.WorkItem);
         }
 
@@ -104,6 +113,7 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
     private static void AddCandidates(
         ProcessLaunchSourceItem item,
         List<AcceptanceCriteriaCandidate> candidates,
+        ProcessAcceptanceCriterionKind implicitKind,
         bool explicitSectionOnly = false)
     {
         var sourceText = string.Join(
@@ -122,8 +132,9 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
             ? explicitSectionLines.Select(value => new AcceptanceCriteriaSegment(
                 value,
                 ProcessAcceptanceCriterionKind.ProductAcceptance))
-            : SplitCriteriaTextByKind(sourceText);
+            : SplitCriteriaTextByKind(sourceText, implicitKind);
 
+        var initialCandidateCount = candidates.Count;
         foreach (var summary in segments
                      .Select(segment => new AcceptanceCriteriaSegment(
                          CleanCriterion(segment.Summary),
@@ -136,9 +147,39 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
                 summary.Summary,
                 summary.Kind));
         }
+
+        if (candidates.Count == initialCandidateCount &&
+            item.Kind is ProcessLaunchSourceItemKind.ImageAsset or
+                ProcessLaunchSourceItemKind.ProductRequirement)
+        {
+            candidates.Add(new AcceptanceCriteriaCandidate(
+                item.Id,
+                BuildTypedSourceFallback(item),
+                ProcessAcceptanceCriterionKind.ProductAcceptance));
+        }
     }
 
-    private static IReadOnlyList<AcceptanceCriteriaSegment> SplitCriteriaTextByKind(string text)
+    private static string BuildTypedSourceFallback(ProcessLaunchSourceItem item)
+    {
+        var descriptiveText = new[] { item.Notes, item.Subtitle }
+            .Select(CleanCriterion)
+            .FirstOrDefault(value => value.Length is >= 18 and <= 260);
+        if (!string.IsNullOrWhiteSpace(descriptiveText))
+        {
+            return descriptiveText;
+        }
+
+        var title = string.IsNullOrWhiteSpace(item.Title)
+            ? item.Id
+            : item.Title.Trim();
+        return item.Kind == ProcessLaunchSourceItemKind.ImageAsset
+            ? $"Use the source asset '{title}' as a visual acceptance target."
+            : $"Honor the source requirement '{title}'.";
+    }
+
+    private static IReadOnlyList<AcceptanceCriteriaSegment> SplitCriteriaTextByKind(
+        string text,
+        ProcessAcceptanceCriterionKind implicitKind)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -146,12 +187,12 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
         }
 
         var segments = new List<AcceptanceCriteriaSegment>();
-        var currentKind = ProcessAcceptanceCriterionKind.ProductAcceptance;
+        var currentKind = implicitKind;
         foreach (var line in text
                      .Replace("\r\n", "\n", StringComparison.Ordinal)
                      .Split('\n', StringSplitOptions.TrimEntries))
         {
-            if (TryGetSectionKind(line, out var sectionKind))
+            if (TryGetSectionKind(line, implicitKind, out var sectionKind))
             {
                 currentKind = sectionKind;
                 continue;
@@ -166,9 +207,10 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
 
     private static bool TryGetSectionKind(
         string line,
+        ProcessAcceptanceCriterionKind implicitKind,
         out ProcessAcceptanceCriterionKind kind)
     {
-        kind = ProcessAcceptanceCriterionKind.ProductAcceptance;
+        kind = implicitKind;
         if (!TryGetSectionTitle(line, out var title))
         {
             return false;
@@ -179,7 +221,7 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
             @"^(?:recommended\s+)?next\s+actions?$|^open\s+(?:gaps?|questions?)$|^pending\s+(?:decisions?|questions?)$|^assumptions?$",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
             ? ProcessAcceptanceCriterionKind.DeliveryPlanning
-            : ProcessAcceptanceCriterionKind.ProductAcceptance;
+            : implicitKind;
         return true;
     }
 
@@ -262,9 +304,10 @@ public sealed class ProcessAcceptanceCriteriaLaunchVariableContributor : IProces
             selected.Add(line);
         }
 
-        return selected.Count == 0
-            ? []
-            : SplitCriteriaText(string.Join(Environment.NewLine, selected));
+        return selected
+            .Select(value => value.Trim())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray();
     }
 
     private static IReadOnlyList<string> SplitCriteriaText(string text)

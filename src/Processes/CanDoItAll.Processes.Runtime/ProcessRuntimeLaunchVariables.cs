@@ -51,6 +51,7 @@ public static class ProcessRuntimeLaunchVariables
     public const string ProductRootAlias = "ProductRootAlias";
     public const string OutputRootAlias = "OutputRootAlias";
     public const string WorkspaceAlias = "WorkspaceAlias";
+    public const string ExternalTargetRootBindings = "ExternalTargetRootBindings";
 
     public static IReadOnlyDictionary<string, string> CreateParentRunLookup(ProcessRunId parentRunId)
     {
@@ -163,7 +164,7 @@ public static class ProcessRuntimeLaunchVariables
         var normalized = artifactRefs
             .Where(artifactRef => !string.IsNullOrWhiteSpace(artifactRef))
             .Select(artifactRef => artifactRef.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
         return JsonSerializer.Serialize(normalized, ProcessRuntimeLaunchVariableJson.Options);
     }
@@ -191,7 +192,7 @@ public static class ProcessRuntimeLaunchVariables
             artifactRefs = deserialized
                 .Where(artifactRef => !string.IsNullOrWhiteSpace(artifactRef))
                 .Select(artifactRef => artifactRef.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Distinct(StringComparer.Ordinal)
                 .ToArray();
             return artifactRefs.Count > 0;
         }

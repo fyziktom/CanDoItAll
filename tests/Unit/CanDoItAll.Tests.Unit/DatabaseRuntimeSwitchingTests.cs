@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using static CanDoItAll.Tests.Unit.DatabaseRuntimeSwitchingTestProfiles;
+using static CanDoItAll.Tests.Unit.Infrastructure.DatabaseRuntimeSwitchingTestProfiles;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class DatabaseRuntimeStateTests
@@ -98,6 +98,43 @@ public sealed class DatabaseRuntimeStateTests
         Assert.Equal(second.Profile.Id, observedNotification.CurrentProfileId);
         Assert.Throws<InvalidOperationException>(() =>
             runtimeState.MarkCurrentProfile(first));
+    }
+
+    [Fact]
+    public async Task Write_fence_totally_orders_commit_and_rejects_the_old_generation_after_switch()
+    {
+        var first = CreateResolvedProfile("first");
+        var second = CreateResolvedProfile("second");
+        var runtimeState = new DatabaseRuntimeState(new DatabaseSwitchNotificationService());
+        runtimeState.MarkCurrentProfile(first);
+        var expected = runtimeState.GetSnapshot();
+        var writeEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseWrite = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var write = runtimeState.ExecuteAsync(expected, async _ =>
+        {
+            writeEntered.TrySetResult(true);
+            await releaseWrite.Task.ConfigureAwait(false);
+            return 42;
+        });
+        await writeEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var switchProfile = Task.Run(() => runtimeState.PublishRestartObserved(expected, second));
+        await Task.Yield();
+        Assert.False(switchProfile.IsCompleted);
+
+        releaseWrite.TrySetResult(true);
+        Assert.Equal(42, await write);
+        await switchProfile;
+
+        var staleWriteExecuted = false;
+        await Assert.ThrowsAsync<DatabaseRuntimeProfileChangedException>(() => runtimeState.ExecuteAsync(
+            expected,
+            _ =>
+            {
+                staleWriteExecuted = true;
+                return Task.FromResult(0);
+            }));
+        Assert.False(staleWriteExecuted);
     }
 
     private static ResolvedDatabaseProfile CreateResolvedProfile(string name)

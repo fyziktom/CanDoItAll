@@ -33,31 +33,67 @@ public static class ServerSentEventResponseWriter
         response.HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
     }
 
-    public static async Task WriteAsync<T>(
+    public static Task WriteAsync<T>(
         HttpContext context,
         IBoundedReplayEventReader<T> stream,
         string eventName,
         Func<T, bool> filter)
-    {
-        await WriteAsync(
+        => WriteAsync(
             context,
             stream,
             eventName,
             filter,
             CancellationToken.None);
-    }
 
-    public static async Task WriteAsync<T>(
+    public static Task WriteAsync<T>(
         HttpContext context,
         IBoundedReplayEventReader<T> stream,
         string eventName,
         Func<T, bool> filter,
         CancellationToken streamLifetime)
     {
+        ValidateEventName(eventName);
+        return WriteCoreAsync(
+            context,
+            stream,
+            filter,
+            _ => eventName,
+            static _ => false,
+            streamLifetime,
+            InvalidCursorCode);
+    }
+
+    public static Task WriteAsync<T>(
+        HttpContext context,
+        IBoundedReplayEventReader<T> stream,
+        Func<T, string> eventNameSelector,
+        Func<T, bool> terminalPredicate,
+        CancellationToken streamLifetime,
+        string invalidCursorCode)
+        => WriteCoreAsync(
+            context,
+            stream,
+            static _ => true,
+            eventNameSelector,
+            terminalPredicate,
+            streamLifetime,
+            invalidCursorCode);
+
+    private static async Task WriteCoreAsync<T>(
+        HttpContext context,
+        IBoundedReplayEventReader<T> stream,
+        Func<T, bool> filter,
+        Func<T, string> eventNameSelector,
+        Func<T, bool> terminalPredicate,
+        CancellationToken streamLifetime,
+        string invalidCursorCode)
+    {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(filter);
-        ValidateEventName(eventName);
+        ArgumentNullException.ThrowIfNull(eventNameSelector);
+        ArgumentNullException.ThrowIfNull(terminalPredicate);
+        ArgumentException.ThrowIfNullOrWhiteSpace(invalidCursorCode);
 
         if (!ServerSentEventCursor.TryResolve(
                 context.Request,
@@ -67,7 +103,7 @@ public static class ServerSentEventResponseWriter
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsJsonAsync(
                 new ApiErrorResponse(
-                    [new ApiErrorItem(InvalidCursorCode, cursorError!, ErrorSeverity.Error)]),
+                    [new ApiErrorItem(invalidCursorCode, cursorError!, ErrorSeverity.Error)]),
                 context.RequestAborted);
             return;
         }
@@ -78,28 +114,29 @@ public static class ServerSentEventResponseWriter
                 context.RequestAborted,
                 streamLifetime)
             : null;
-        var cancellationToken = lifetime?.Token ?? context.RequestAborted;
+        var streamCancellationToken = lifetime?.Token ?? context.RequestAborted;
+        Task<BoundedReplayReadResult<T>>? pendingRead = null;
         try
         {
-            await context.Response.StartAsync(cancellationToken);
-            await context.Response.Body.FlushAsync(cancellationToken);
+            await context.Response.StartAsync(context.RequestAborted);
+            await context.Response.Body.FlushAsync(context.RequestAborted);
             using var heartbeatTimer = new PeriodicTimer(stream.HeartbeatInterval);
             Task<bool>? pendingHeartbeat = null;
-            while (!cancellationToken.IsCancellationRequested)
+            while (!streamCancellationToken.IsCancellationRequested)
             {
                 BoundedReplayReadResult<T> result;
-                var read = stream.ReadAsync(afterExclusive, cancellationToken);
+                var read = stream.ReadAsync(afterExclusive, streamCancellationToken);
                 if (read.IsCompletedSuccessfully)
                 {
                     result = read.Result;
                 }
                 else
                 {
-                    var pendingRead = read.AsTask();
+                    pendingRead = read.AsTask();
                     while (!pendingRead.IsCompleted)
                     {
                         pendingHeartbeat ??= heartbeatTimer
-                            .WaitForNextTickAsync(cancellationToken)
+                            .WaitForNextTickAsync(streamCancellationToken)
                             .AsTask();
                         if (await Task.WhenAny(pendingRead, pendingHeartbeat) == pendingRead)
                         {
@@ -112,32 +149,82 @@ public static class ServerSentEventResponseWriter
                         }
 
                         pendingHeartbeat = null;
-                        await WriteHeartbeatAsync(context.Response, cancellationToken);
+                        await WriteHeartbeatAsync(context.Response, context.RequestAborted);
                     }
 
                     result = await pendingRead;
+                    pendingRead = null;
+                }
+
+                if (streamCancellationToken.IsCancellationRequested)
+                {
+                    return;
                 }
 
                 if (result.Gap is not null)
                 {
-                    await WriteGapAsync(context.Response, result.Gap, cancellationToken);
+                    await WriteGapAsync(context.Response, result.Gap, context.RequestAborted);
                     afterExclusive = result.Gap.ResumeAfterSequence;
                 }
 
                 foreach (var entry in result.Events)
                 {
+                    if (streamCancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     afterExclusive = entry.Sequence;
                     if (filter(entry.Value))
                     {
+                        var eventName = eventNameSelector(entry.Value);
+                        ValidateEventName(eventName);
                         await WriteEventAsync(
                             context.Response,
                             entry.Sequence,
                             eventName,
                             entry.Value,
-                            cancellationToken);
+                            context.RequestAborted);
+                        if (terminalPredicate(entry.Value))
+                        {
+                            return;
+                        }
                     }
                 }
+
+                if (result.IsCompleted)
+                {
+                    return;
+                }
             }
+        }
+        catch (OperationCanceledException) when (streamCancellationToken.IsCancellationRequested)
+        {
+            if (pendingRead is not null)
+            {
+                await DrainReadAfterCancellationAsync(
+                    pendingRead,
+                    streamCancellationToken);
+            }
+        }
+        finally
+        {
+            if (streamLifetime.IsCancellationRequested &&
+                !context.RequestAborted.IsCancellationRequested &&
+                context.Response.HasStarted)
+            {
+                await context.Response.CompleteAsync();
+            }
+        }
+    }
+
+    private static async Task DrainReadAfterCancellationAsync<T>(
+        Task<BoundedReplayReadResult<T>> pendingRead,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await pendingRead.ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -17,11 +17,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.Tests.Components" />
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+    <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj" />
@@ -29,6 +32,9 @@
     <ProjectReference Include="..\..\..\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj" />
     <ProjectReference Include="..\..\..\src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\..\..\src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="..\..\..\src\UI\CanDoItAll.Conversations.Components\CanDoItAll.Conversations.Components.csproj" />
+    <ProjectReference Include="..\..\..\src\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj" />
+    <ProjectReference Include="..\..\..\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
@@ -40,6 +46,7 @@
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />
@@ -49,4 +56,3 @@
   </ItemGroup>
 
 </Project>
-

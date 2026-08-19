@@ -1,0 +1,46 @@
+<Stack Class="@Class" GapScale="@Gap">
+    @if (Header is not null)
+    {
+        @Header
+    }
+
+    @if (Validation is not null)
+    {
+        @Validation
+    }
+
+    @Sections
+
+    @if (AdvancedSettings is not null)
+    {
+        @AdvancedSettings
+    }
+
+    @if (Actions is not null)
+    {
+        @Actions
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment Sections { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? Header { get; set; }
+
+    [Parameter]
+    public RenderFragment? Validation { get; set; }
+
+    [Parameter]
+    public RenderFragment? AdvancedSettings { get; set; }
+
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    [Parameter]
+    public LayoutGap Gap { get; set; } = LayoutGap.Large;
+
+    [Parameter]
+    public string? Class { get; set; }
+}

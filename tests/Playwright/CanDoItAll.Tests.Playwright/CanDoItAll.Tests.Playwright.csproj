@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="CanDoItAll.Tests.Playwright" />
     <Using Include="Xunit" />
   </ItemGroup>
 

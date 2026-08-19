@@ -7,7 +7,7 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class FileToolsBrowseItemActionServiceTests
 {
@@ -335,8 +335,9 @@ public sealed class FileToolsBrowseItemActionServiceTests
                     ? StorageCapability.Read
                     : StorageCapability.Read |
                       StorageCapability.Download |
-                      StorageCapability.OpenLocally
+                       StorageCapability.OpenLocally
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(Storage, storageRoot, DateTimeOffset.UtcNow);
             var browseDriver = new StaticBrowseDriver(
                 Storage.ProviderKind,
                 $"{Container}/{fileName}",
@@ -704,6 +705,10 @@ public sealed class FileToolsBrowseItemActionServiceTests
 
             return Task.FromResult(removed);
         }
+
+        public Task<bool> RollbackPathMigrationAsync(
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
 
         public FileApplicationPreference? ResolveForFile(string fileName)
         {

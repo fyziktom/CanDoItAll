@@ -197,10 +197,10 @@ internal static partial class ProjectStructureDotNetRuntimeMetadataHydrator
         }
     }
 
-    [GeneratedRegex("""\bfrom\s+(?<path>[A-Za-z]:\\.+?)\s+using\s+`""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex("""\bfrom\s+(?<path>(?:[A-Za-z]:\\|/).+?)\s+using\s+`""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex WorkingDirectoryFromUsingRegex();
 
-    [GeneratedRegex("""\b(?:working directory|workingDirectory|repository root|repo root|product root)\s*[:=]\s*(?<path>[A-Za-z]:\\[^\r\n`]+)""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex("""\b(?:working directory|workingDirectory|repository root|repo root|product root)\s*[:=]\s*(?<path>(?:[A-Za-z]:\\[^\r\n`]+|/[^\r\n`]+))""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex WorkingDirectoryLabeledRegex();
 
     [GeneratedRegex("""--project\s+(?:"(?<double>[^"]+)"|'(?<single>[^']+)'|(?<plain>[^\s`]+))""", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

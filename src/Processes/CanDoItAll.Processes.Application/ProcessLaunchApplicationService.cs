@@ -9,6 +9,8 @@ using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Processes.Application;
 
@@ -25,7 +27,8 @@ public sealed class ProcessLaunchApplicationService(
     IProcessStepBriefBuilder stepBriefBuilder,
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
-    ILaunchVariableTemplateResolver launchVariableTemplateResolver)
+    ILaunchVariableTemplateResolver launchVariableTemplateResolver,
+    IExternalTargetPathRegistry externalTargetPathRegistry)
 {
     private const string ProcessRunNodePrefix = "process-run:";
     private const string ProcessRunIdVariableName = "ProcessRunId";
@@ -320,6 +323,10 @@ public sealed class ProcessLaunchApplicationService(
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
+        request = request with
+        {
+            RequestedBy = ProcessActorIdentityPolicy.Normalize(request.RequestedBy, "process-launch")
+        };
         var selected = ResolveDefinition(request);
         var driverCatalog = await driverCatalogProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
         var kernelBuild = ProcessTemplateKernelBuilder.Build(
@@ -374,7 +381,13 @@ public sealed class ProcessLaunchApplicationService(
                 selected.LiveRunProfile,
                 request.Variables)
             {
-                ExecutorOverrides = request.ExecutorOverrides
+                ExecutorOverrides = request.ExecutorOverrides,
+                StepVariablesByKey = selected.Definition.Steps.ToDictionary(
+                    step => step.Key,
+                    step => (IReadOnlyDictionary<string, string>)EnrichStepLaunchVariables(
+                        request.Variables,
+                        step),
+                    StringComparer.OrdinalIgnoreCase)
             },
             cancellationToken).ConfigureAwait(false);
         var assignmentBuild = BuildAssignments(
@@ -388,20 +401,24 @@ public sealed class ProcessLaunchApplicationService(
         var readinessFindings = executorResolution.Findings
             .Concat(assignmentBuild.Findings)
             .ToArray();
-        var launchPlan = CreateLaunchPlanView(
-            selected,
-            plan,
-            assignments,
-            readinessFindings);
         var blockingFindings = readinessFindings
             .Where(finding => finding.Severity == ProcessLaunchReadinessSeverity.Error)
             .ToArray();
         var assignmentBlockingFindings = assignmentBuild.Findings
             .Where(finding => finding.Severity == ProcessLaunchReadinessSeverity.Error)
             .ToArray();
+        var mandatoryBlockingFindings = blockingFindings
+            .Where(finding => finding.MustBlockLaunch)
+            .ToArray();
         if (assignmentBlockingFindings.Length > 0 ||
+            mandatoryBlockingFindings.Length > 0 ||
             (request.RunReadiness && blockingFindings.Length > 0))
         {
+            var blockedLaunchPlan = CreateLaunchPlanView(
+                selected,
+                plan,
+                assignments,
+                readinessFindings);
             return new ProcessLaunchPreparation(
                 new ProcessLaunchResult(
                     plan.Definition.DefinitionId,
@@ -409,7 +426,7 @@ public sealed class ProcessLaunchApplicationService(
                     RunId: null,
                     ProcessLaunchStage.Blocked,
                     Route: string.Empty,
-                    launchPlan,
+                    blockedLaunchPlan,
                     blockingFindings.Select(finding => finding.Message).ToArray()),
                 Selected: null,
                 Plan: null,
@@ -417,6 +434,17 @@ public sealed class ProcessLaunchApplicationService(
                 LaunchPlan: null,
                 BlockingFindings: blockingFindings);
         }
+
+        plan = BindRuntimeToolRequirements(
+            plan,
+            executorResolution.EffectiveRuntimeToolNamesByStep,
+            executorResolution.EffectiveHostCapabilitiesByStep,
+            executorResolution.HostCapabilities);
+        var launchPlan = CreateLaunchPlanView(
+            selected,
+            plan,
+            assignments,
+            readinessFindings);
 
         return new ProcessLaunchPreparation(
             EarlyResult: null,
@@ -510,7 +538,10 @@ public sealed class ProcessLaunchApplicationService(
                 new ProcessCapabilityRequest(
                     driverCatalog.RequiredCapabilityTags,
                     driverCatalog.RequiredCapabilityTags,
-                    new HashSet<CapabilityTag>()),
+                    new HashSet<CapabilityTag>())
+                {
+                    HostCapabilities = driverCatalog.HostCapabilities
+                },
                 [templateComponent],
                 [templateComponent],
                 [],
@@ -688,9 +719,8 @@ public sealed class ProcessLaunchApplicationService(
                 CompletedResultKey: null)
             {
                 ProducedArtifactSlots = assignment?.ProducedArtifactSlotIds.ToHashSet() ?? [],
-                RequiredRuntimeToolNames = assignment is null
-                    ? []
-                    : ResolveLaunchPlanRequiredRuntimeToolNames(assignment, templateStep),
+                RequiredRuntimeToolNames = planStep.RequiredRuntimeToolNames,
+                RequiredHostCapabilities = planStep.RequiredHostCapabilities,
                 ArtifactDescriptors = templateStep is null
                     ? []
                     : BuildRuntimeArtifactDescriptors(definition, templateStep, plan.ArtifactPlan.Slots, runId),
@@ -759,7 +789,7 @@ public sealed class ProcessLaunchApplicationService(
                     RoleResourceKey = FirstNonEmpty(assignment?.RoleResourceKey, role?.RoleResourceKey),
                     RoleDisplayName = FirstNonEmpty(assignment?.RoleDisplayName, role?.DisplayName, assignment?.RoleKey),
                     CapabilityScope = ProcessCapabilityScope.Normalize(templateStep?.CapabilityScope),
-                    RequiredRuntimeToolNames = ResolveLaunchPlanRequiredRuntimeToolNames(assignment, templateStep)
+                    RequiredRuntimeToolNames = step.RequiredRuntimeToolNames
                 };
             })
             .ToArray();
@@ -777,36 +807,78 @@ public sealed class ProcessLaunchApplicationService(
             findings);
     }
 
-    private static IReadOnlyList<string> ResolveLaunchPlanRequiredRuntimeToolNames(
-        ProcessRuntimeStepAssignment? assignment,
-        ProcessTemplateDefinitionStepDocument? templateStep)
+    private static ProcessInstancePlan BindRuntimeToolRequirements(
+        ProcessInstancePlan plan,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> effectiveRuntimeToolNamesByStep,
+        IReadOnlyDictionary<string, IReadOnlySet<ProcessHostCapabilityId>> effectiveHostCapabilitiesByStep,
+        ProcessHostCapabilitySnapshot? launchHostCapabilities)
     {
-        if (assignment is null)
-        {
-            return [];
-        }
+        var steps = plan.Steps
+            .Select(step =>
+            {
+                var requiredHostCapabilities = effectiveHostCapabilitiesByStep.TryGetValue(step.StepKey, out var effectiveCapabilities)
+                    ? step.RequiredHostCapabilities.Concat(effectiveCapabilities).ToHashSet()
+                    : step.RequiredHostCapabilities;
+                if (requiredHostCapabilities.Count > ProcessHostCapabilitySnapshot.MaximumCapabilities)
+                {
+                    throw new InvalidOperationException(
+                        $"Step '{step.StepKey}' exceeds the bounded process host capability contract after launch resolution.");
+                }
 
-        var launchContextToolNames = ResolveLaunchPlanRequiredRuntimeToolNameSet(assignment.LaunchVariables);
-        return launchContextToolNames
-            .Concat(ProcessRequiredRuntimeToolNames.NormalizeRuntimeToolNameCandidates(templateStep?.ExecutionContract?.RequiredRuntimeToolNames))
-            .Concat(ProcessRequiredRuntimeToolNames.FromUnconditionalCapabilityScope(assignment.CapabilityScope, launchContextToolNames))
-            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(toolName => toolName, StringComparer.OrdinalIgnoreCase)
+                return step with
+                {
+                    RequiredRuntimeToolNames = effectiveRuntimeToolNamesByStep.TryGetValue(
+                        step.StepKey,
+                        out var runtimeToolNames)
+                        ? runtimeToolNames
+                        : step.RequiredRuntimeToolNames,
+                    RequiredHostCapabilities = requiredHostCapabilities
+                };
+            })
             .ToArray();
-    }
-
-    private static IReadOnlySet<string> ResolveLaunchPlanRequiredRuntimeToolNameSet(
-        IReadOnlyDictionary<string, string> launchVariables)
-    {
-        if (!launchVariables.TryGetValue(ProcessRuntimeLaunchVariables.ProductCompletionRequiredToolReceipts, out var value) ||
-            string.IsNullOrWhiteSpace(value))
+        var requiredHostCapabilityIds = steps
+            .SelectMany(step => step.RequiredHostCapabilities)
+            .Distinct()
+            .OrderBy(capability => capability.Value, StringComparer.Ordinal)
+            .ToArray();
+        var hostCapabilities = launchHostCapabilities ?? new ProcessHostCapabilitySnapshot(
+            plan.DriverStack.HostProfileId,
+            plan.DriverStack.HostCapabilities);
+        if (!hostCapabilities.IsStructurallyValid())
         {
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            throw new InvalidOperationException(
+                "The launch host capability snapshot is not structurally valid.");
         }
 
-        return ProcessRequiredRuntimeToolNames.FromUnconditionalProductCompletionRequiredToolReceipts(value)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var requiredHostCapabilityFacts = requiredHostCapabilityIds
+            .Select(capabilityId => hostCapabilities.Capabilities.SingleOrDefault(capability => capability.Id == capabilityId))
+            .ToArray();
+        if (requiredHostCapabilityFacts.Any(capability =>
+                capability is null ||
+                capability.Availability != ProcessHostCapabilityAvailability.Available))
+        {
+            throw new InvalidOperationException(
+                "The launch host capability snapshot does not contain every effective available process host capability.");
+        }
+
+        var sealedHostCapabilityFacts = requiredHostCapabilityFacts
+            .Select(capability => capability!)
+            .ToArray();
+
+        var unsealedPlan = plan with
+        {
+            Steps = steps,
+            DriverStack = plan.DriverStack with
+            {
+                HostProfileId = hostCapabilities.ProfileId,
+                HostCapabilities = sealedHostCapabilityFacts
+            },
+            PlanHash = string.Empty
+        };
+        return unsealedPlan with
+        {
+            PlanHash = ProcessPlanHasher.Compute(unsealedPlan)
+        };
     }
 
     private static IReadOnlyList<ArtifactSlotId> ResolveRequiredSlots(
@@ -1040,7 +1112,7 @@ public sealed class ProcessLaunchApplicationService(
     private static string NormalizeOptional(string? value, string defaultValue)
         => string.IsNullOrWhiteSpace(value) ? defaultValue : value.Trim();
 
-    private static IReadOnlyDictionary<string, string> NormalizeLaunchVariables(
+    private IReadOnlyDictionary<string, string> NormalizeLaunchVariables(
         IReadOnlyDictionary<string, string> variables)
     {
         if (variables.Count == 0)
@@ -1063,7 +1135,7 @@ public sealed class ProcessLaunchApplicationService(
         return normalized;
     }
 
-    private static void NormalizeProductRootSynonyms(IDictionary<string, string> variables)
+    private void NormalizeProductRootSynonyms(IDictionary<string, string> variables)
     {
         var productRoot = FirstNonEmpty(
             TryGetNonEmptyLaunchVariable(variables, ProductRootVariableName),
@@ -1095,42 +1167,36 @@ public sealed class ProcessLaunchApplicationService(
         SetCanonicalLaunchVariableIfMissing(variables, OutputRootAliasVariableName, externalTargetAlias);
         SetCanonicalLaunchVariableIfMissing(variables, ProductRootAliasVariableName, externalTargetAlias);
         SetCanonicalLaunchVariableIfMissing(variables, WorkspaceAliasVariableName, externalTargetAlias);
+        var bindings = externalTargetPathRegistry.ExportBindings([externalTargetAlias]);
+        if (bindings.Count > 0)
+        {
+            variables[ProcessRuntimeLaunchVariables.ExternalTargetRootBindings] =
+                JsonSerializer.Serialize(bindings);
+        }
     }
 
-    private static string NormalizeExternalTargetAlias(string? value)
+    private string NormalizeExternalTargetAlias(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        var alias = ExternalTargetAliasCodec.NormalizeVersionedAlias(value);
+        if (!string.IsNullOrWhiteSpace(alias))
         {
-            return string.Empty;
+            return alias;
         }
 
-        var normalized = value.Trim().Replace('\\', '/').TrimEnd('/', '.', ',', ';', ')', ']');
-        if (normalized.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+        if (ExternalTargetAliasCodec.TryNormalizeLegacyAlias(value, out var legacyAlias))
         {
-            return normalized;
+            return externalTargetPathRegistry.MigrateLegacyAliasForWrite(legacyAlias);
         }
 
-        if (normalized.Length < 4 ||
-            normalized[1] != ':' ||
-            normalized[2] != '/' ||
-            !char.IsAsciiLetter(normalized[0]))
-        {
-            return string.Empty;
-        }
-
-        var suffix = normalized[3..].Trim('/');
-        if (string.IsNullOrWhiteSpace(suffix))
-        {
-            return string.Empty;
-        }
-
-        return $"external-target/{char.ToUpperInvariant(normalized[0])}/{suffix}";
+        return !string.IsNullOrWhiteSpace(value) &&
+               externalTargetPathRegistry.TryCreateAlias(value.Trim(), out alias)
+            ? alias
+            : string.Empty;
     }
 
     private static bool IsExternalTargetAlias(string? value)
     {
-        return !string.IsNullOrWhiteSpace(value) &&
-               value.Trim().Replace('\\', '/').StartsWith("external-target/", StringComparison.OrdinalIgnoreCase);
+        return ExternalTargetAliasCodec.IsAnyAlias(value);
     }
 
     private static IReadOnlyDictionary<string, string> EnrichLaunchScopeVariables(
@@ -1758,7 +1824,7 @@ public sealed class ProcessLaunchApplicationService(
             RuntimeCommandId.New(),
             new ProcessEventActor(
                 ProcessEventActorKind.User,
-                new ProcessActorId(string.IsNullOrWhiteSpace(requestedBy) ? "process-launch" : SanitizeActorId(requestedBy))),
+                new ProcessActorId(ProcessActorIdentityPolicy.Normalize(requestedBy, "process-launch"))),
             new ProcessCorrelationId($"launch-{Guid.NewGuid():N}"),
             occurredAtUtc);
     }
@@ -1912,12 +1978,6 @@ public sealed class ProcessLaunchApplicationService(
 
     private static string FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
-
-    private static string SanitizeActorId(string value)
-    {
-        var normalized = new string(value.Trim().Select(character => char.IsLetterOrDigit(character) || character is '-' or '_' or '.' ? character : '-').ToArray());
-        return string.IsNullOrWhiteSpace(normalized) ? "process-launch" : normalized;
-    }
 
     private static string BuildRunRoute(ProcessRunId runId, Guid? projectId)
     {

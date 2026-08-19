@@ -1,19 +1,24 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Bunit;
+using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using ProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentDetailsDialogAvatarGenerationTests
 {
@@ -34,8 +39,8 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
     public async Task Avatar_dialog_prefills_and_prepares_prompt_for_the_default_image_provider()
     {
         var imageGenerationService = new RecordingImageGenerationService();
-        using var context = CreateContext(imageGenerationService);
         var provider = CreateImageProvider();
+        using var context = CreateContext(imageGenerationService, [provider]);
         var editor = new AgentEditorModel
         {
             Name = "Luna",
@@ -69,16 +74,24 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         });
     }
 
-    private static BunitContext CreateContext(IAgentImageGenerationService imageGenerationService)
+    private static BunitContext CreateContext(
+        IAgentImageGenerationService imageGenerationService,
+        IReadOnlyList<ProviderProfile>? providers = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
-        context.Services.AddSingleton(new AgentAvatarGenerationService(
+        context.Services.AddSingleton<IExternalTargetPathRegistryFactory>(new ExternalTargetPathRegistryFactory());
+        context.Services.AddSingleton<IStorageCatalogSelectionSource>(new EmptyStorageCatalogSelectionSource());
+        var generationService = new AgentAvatarGenerationService(
             imageGenerationService,
-            NullLogger<AgentAvatarGenerationService>.Instance));
-        context.Services.AddSingleton(
-            DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceServiceProxy>());
+            NullLogger<AgentAvatarGenerationService>.Instance);
+        var workspaceService = DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceServiceProxy>();
+        ((WorkspaceServiceProxy)(object)workspaceService).Providers = providers ?? [];
+        context.Services.AddSingleton(generationService);
+        context.Services.AddSingleton(workspaceService);
+        context.Services.AddSingleton<IAvatarGenerationGateway>(
+            new AgentAvatarGenerationGateway(workspaceService, generationService));
         context.Services.AddSingleton(
             (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
         context.Services.AddSingleton(
@@ -149,11 +162,14 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
 
     public class WorkspaceServiceProxy : DispatchProxy
     {
+        public IReadOnlyList<ProviderProfile> Providers { get; set; } = [];
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             return targetMethod?.Name switch
             {
                 "add_ExecutionUpdated" or "remove_ExecutionUpdated" => null,
+                nameof(IAgentFrameworkWorkspaceService.ListProvidersAsync) => Task.FromResult(Providers),
                 _ => throw new InvalidOperationException(
                     $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.")
             };

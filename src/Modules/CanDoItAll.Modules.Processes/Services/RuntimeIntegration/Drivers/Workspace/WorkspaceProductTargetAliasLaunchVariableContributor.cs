@@ -1,9 +1,12 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class WorkspaceProductTargetAliasLaunchVariableContributor : IProcessLaunchVariableContributor
+internal sealed class WorkspaceProductTargetAliasLaunchVariableContributor(
+    IExternalTargetPathRegistry externalTargetPathRegistry) : IProcessLaunchVariableContributor
 {
     public void Enrich(
         ProcessLaunchPreparationContext context,
@@ -20,7 +23,9 @@ internal sealed class WorkspaceProductTargetAliasLaunchVariableContributor : IPr
             return;
         }
 
-        var externalTargetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(productRoot);
+        var externalTargetAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+            productRoot,
+            externalTargetPathRegistry);
         if (string.IsNullOrWhiteSpace(externalTargetAlias))
         {
             return;

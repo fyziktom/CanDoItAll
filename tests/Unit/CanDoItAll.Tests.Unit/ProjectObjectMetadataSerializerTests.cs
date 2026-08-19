@@ -1,10 +1,28 @@
 using System.Text.Json;
 using CanDoItAll.Modules.Workbench;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectObjectMetadataSerializerTests
 {
+    [Fact]
+    public void Infrastructure_storage_prefix_serializes_as_a_canonical_logical_path()
+    {
+        var metadata = new ProjectObjectMetadataEnvelope
+        {
+            Infrastructure = new ProjectInfrastructureMetadata
+            {
+                StoragePathPrefix = @"deliveries\reports"
+            }
+        };
+
+        var json = ProjectObjectMetadataSerializer.Serialize(metadata);
+        var roundTrip = ProjectObjectMetadataSerializer.Parse(json);
+
+        Assert.Equal("deliveries/reports", roundTrip.Infrastructure?.StoragePathPrefix);
+        Assert.DoesNotContain(@"deliveries\reports", json, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Serialize_preserving_unknown_properties_replaces_typed_families_without_losing_extensions()
     {

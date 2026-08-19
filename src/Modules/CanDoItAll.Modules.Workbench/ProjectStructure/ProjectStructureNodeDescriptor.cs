@@ -139,6 +139,8 @@ internal static class ProjectStructureNodeDescriptor
                 AddIfValue(facts, "Provider", HumanizeEnum(metadata.Environment?.PythonProvider));
                 AddIfValue(facts, "Name", metadata.Environment?.EnvironmentName);
                 AddIfValue(facts, "Project", metadata.Environment?.ProjectPath);
+                AddIfValue(facts, "Entry point", metadata.Environment?.EntryPoint);
+                AddIfValue(facts, "Args", metadata.Environment?.Arguments);
                 AddIfValue(facts, "Profile", metadata.Environment?.LaunchProfileName);
                 AddIfValue(facts, "URL", metadata.Environment?.LocalhostUrl);
                 break;

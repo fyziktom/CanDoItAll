@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -10,14 +11,20 @@ internal sealed class ContextCapabilityBuilder
     private const string RagStateKeyPrefix = "CanDoItAll.Rag.";
     private readonly WorkspaceRagRetriever ragRetriever;
     private readonly string workspaceRoot;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
 
     public ContextCapabilityBuilder(
         string workspaceRoot,
-        WorkspaceScopeDescriptor workspaceScope)
+        WorkspaceScopeDescriptor workspaceScope,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspaceRoot);
         this.workspaceRoot = Path.GetFullPath(workspaceRoot);
-        ragRetriever = new WorkspaceRagRetriever(this.workspaceRoot, workspaceScope);
+        this.physicalPathPolicyFactory = physicalPathPolicyFactory;
+        ragRetriever = new WorkspaceRagRetriever(
+            this.workspaceRoot,
+            workspaceScope,
+            physicalPathPolicyFactory);
     }
 
     public bool AddRagProvider(
@@ -26,7 +33,11 @@ internal sealed class ContextCapabilityBuilder
         AgentRuntimeConfiguration agentConfiguration)
     {
         var configuration = MafRuntimeJson.DeserializeConfiguration<RagCapabilityConfiguration>(capability.ConfigurationJson) ?? new RagCapabilityConfiguration();
-        var ragRoot = MafRuntimePathResolver.ResolvePathFromWorkspace(workspaceRoot, configuration.RagRoot ?? capability.EndpointOrPath, allowExternal: false);
+        var ragRoot = MafRuntimePathResolver.ResolvePathFromWorkspace(
+            workspaceRoot,
+            configuration.RagRoot ?? capability.EndpointOrPath,
+            allowExternal: false,
+            physicalPathPolicyFactory: physicalPathPolicyFactory);
         if (!Directory.Exists(ragRoot) && !File.Exists(ragRoot))
         {
             return false;

@@ -3,7 +3,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Playwright;
 
-namespace CanDoItAll.Tests.Playwright;
+namespace CanDoItAll.Tests.Playwright.Smoke;
 
 public sealed partial class AppSmokeTests
 {

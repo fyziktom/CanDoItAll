@@ -39,9 +39,11 @@ internal sealed record ProductFileContentCheckEvaluation(
     IReadOnlyList<string> DefectFailures,
     IReadOnlyList<string> InspectionFailures);
 
-internal static class ProcessProductCompletionPathGate
+internal sealed class ProcessProductCompletionPathGate(ProcessProductFilesystemInspector filesystemInspector)
 {
-    internal static ProcessCompletionIssue? ValidateProductMutationFilesystemState(
+    private const int MaximumPublicFindingCount = 16;
+
+    internal ProcessCompletionIssue? ValidateProductMutationFilesystemState(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
     {
@@ -51,29 +53,41 @@ internal static class ProcessProductCompletionPathGate
             return null;
         }
 
-        if (!TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        var rootResolution = ResolveInspectableProductRoot(assignment.LaunchVariables);
+        if (rootResolution.Kind != ProcessProductRootResolutionKind.Resolved)
         {
-            return null;
+            return CreateProductRootInspectionIssue(assignment, rootResolution.InvalidReason);
         }
 
-        var inspection = InspectProductRoot(productRoot);
+        var productRoot = rootResolution.ProductRoot;
+        var inspection = filesystemInspector.InspectProductRoot(
+            assignment.LaunchVariables,
+            productRoot);
         if (inspection.HasProductFiles)
         {
             return null;
         }
 
+        if (string.Equals(
+                inspection.Summary,
+                "the product root could not be inspected safely",
+                StringComparison.Ordinal))
+        {
+            return CreateProductRootInspectionIssue(assignment, inspection.Summary);
+        }
+
         return new ProcessCompletionIssue(
             "process.adapter.product_output_missing",
             inspection.Summary.Length == 0
-                ? $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' contains no product files."
-                : $"Step '{assignment.StepKey}' claimed completion but the configured product output root '{productRoot}' is not usable: {inspection.Summary}",
-            productRoot,
+                ? $"Step '{assignment.StepKey}' claimed completion but the configured product output root contains no product files."
+                : $"Step '{assignment.StepKey}' claimed completion but the configured product output root is not usable: {inspection.Summary}.",
+            ComputeHash($"{productRoot}:{inspection.Summary}"),
             [],
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    internal static ProcessCompletionIssue? ValidateRequiredProductPaths(
+    internal ProcessCompletionIssue? ValidateRequiredProductPaths(
         ProcessRuntimeStepAssignment assignment,
         string productRoot)
     {
@@ -83,51 +97,70 @@ internal static class ProcessProductCompletionPathGate
             return null;
         }
 
-        var invalidPaths = new List<string>();
-        var missingPaths = new List<string>();
-        foreach (var requiredPath in requiredPaths)
+        var invalidPathDetails = new List<string>();
+        var missingPathDetails = new List<string>();
+        var unavailablePathDetails = new List<string>();
+        for (var pathIndex = 0; pathIndex < requiredPaths.Count; pathIndex++)
         {
+            var requiredPath = requiredPaths[pathIndex];
             if (!TryResolveRequiredProductPath(productRoot, requiredPath, out var resolvedPath, out var invalidReason))
             {
-                invalidPaths.Add($"{requiredPath} ({invalidReason})");
+                invalidPathDetails.Add($"required-path[{pathIndex}]:{ComputeHash(requiredPath + ":" + invalidReason)}");
                 continue;
             }
 
-            if (!File.Exists(resolvedPath) &&
-                !Directory.Exists(resolvedPath))
+            var inspection = filesystemInspector.InspectPath(
+                assignment.LaunchVariables,
+                productRoot,
+                resolvedPath);
+            if (inspection.State == ProcessProductPathState.Missing)
             {
-                missingPaths.Add(resolvedPath);
+                missingPathDetails.Add($"required-path[{pathIndex}]:{ComputeHash(resolvedPath)}");
+            }
+            else if (inspection.State == ProcessProductPathState.Unavailable)
+            {
+                unavailablePathDetails.Add($"required-path[{pathIndex}]:inspection-unavailable");
             }
         }
 
-        if (invalidPaths.Count > 0)
+        if (invalidPathDetails.Count > 0)
         {
-            var invalidSummary = string.Join("; ", invalidPaths);
             return new ProcessCompletionIssue(
                 "process.adapter.product_required_output_path_invalid",
-                $"Step '{assignment.StepKey}' claimed completion but declared required product path(s) are invalid or outside the configured product root '{productRoot}': {invalidSummary}.",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-invalid:{invalidSummary}",
+                $"Step '{assignment.StepKey}' claimed completion but {invalidPathDetails.Count} declared required product path(s) are invalid or outside the configured product root. Repair the typed path contract and retry.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-invalid:{ComputeHash(string.Join(';', invalidPathDetails))}",
                 [],
                 ProcessDiagnosticRetrySafety.UnsafeToRetry,
                 ProcessDiagnosticIdempotencyClassification.Unknown);
         }
 
-        if (missingPaths.Count == 0)
+
+        if (unavailablePathDetails.Count > 0)
+        {
+            return new ProcessCompletionIssue(
+                "process.adapter.product_required_output_unavailable",
+                $"Step '{assignment.StepKey}' claimed completion but {unavailablePathDetails.Count} required product output path(s) could not be inspected safely. Repair or rebind the product-root authority and retry.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-unavailable:{ComputeHash(string.Join(';', unavailablePathDetails))}",
+                assignment.ProducedArtifactSlotIds,
+                ProcessDiagnosticRetrySafety.UnsafeToRetry,
+                ProcessDiagnosticIdempotencyClassification.Unknown);
+        }
+
+        if (missingPathDetails.Count == 0)
         {
             return null;
         }
 
-        var missingSummary = string.Join("; ", missingPaths);
         return new ProcessCompletionIssue(
             "process.adapter.product_required_output_missing",
-            $"Step '{assignment.StepKey}' claimed completion but required product output path(s) are missing under the configured product root '{productRoot}': {missingSummary}.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-missing:{missingSummary}",
+            $"Step '{assignment.StepKey}' claimed completion but {missingPathDetails.Count} required product output path(s) are missing under the configured product root. Create the declared outputs and retry.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-path-missing:{ComputeHash(string.Join(';', missingPathDetails))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    internal static ProcessCompletionIssue? ValidateRequiredProductFileContentChecks(
+    internal ProcessCompletionIssue? ValidateRequiredProductFileContentChecks(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         string productRoot)
@@ -137,8 +170,8 @@ internal static class ProcessProductCompletionPathGate
         {
             return new ProcessCompletionIssue(
                 "process.adapter.product_required_file_content_check_invalid",
-                $"Step '{assignment.StepKey}' claimed completion but declared required product file content check(s) are invalid: {resolution.InvalidReason}.",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-check-invalid:{resolution.InvalidReason}",
+                $"Step '{assignment.StepKey}' claimed completion but the declared required product file content check contract is invalid. Repair the typed check contract and retry.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-check-invalid:{ComputeHash(resolution.InvalidReason)}",
                 [],
                 ProcessDiagnosticRetrySafety.UnsafeToRetry,
                 ProcessDiagnosticIdempotencyClassification.Unknown);
@@ -150,6 +183,7 @@ internal static class ProcessProductCompletionPathGate
         }
 
         var evaluation = EvaluateProductFileContentCheckFailures(
+            assignment.LaunchVariables,
             productRoot,
             resolution.Checks,
             check => check.EnforceBranchOutcomeKeys.Count == 0 ||
@@ -157,13 +191,11 @@ internal static class ProcessProductCompletionPathGate
 
         if (evaluation.InspectionFailures.Count > 0)
         {
-            var inspectionSummary = string.Join(
-                "; ",
-                evaluation.InspectionFailures.Distinct(StringComparer.OrdinalIgnoreCase));
+            var inspectionSummary = SummarizeFindings(evaluation.InspectionFailures);
             return new ProcessCompletionIssue(
                 "process.adapter.product_required_file_content_check_unavailable",
-                $"Step '{assignment.StepKey}' claimed completion but required product file content/readback could not be inspected: {inspectionSummary}. This is an evidence-access or environment boundary, not verified product defect evidence.",
-                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-check-unavailable:{inspectionSummary}",
+                $"Step '{assignment.StepKey}' claimed completion but {evaluation.InspectionFailures.Count} required product file content/readback check(s) could not be inspected. This is an evidence-access or environment boundary, not verified product defect evidence. Finding identities: {inspectionSummary}.",
+                $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-check-unavailable:{ComputeHash(string.Join(';', evaluation.InspectionFailures))}",
                 assignment.ProducedArtifactSlotIds,
                 ProcessDiagnosticRetrySafety.UnsafeToRetry,
                 ProcessDiagnosticIdempotencyClassification.Unknown);
@@ -174,27 +206,43 @@ internal static class ProcessProductCompletionPathGate
             return null;
         }
 
-        var failureSummary = string.Join(
-            "; ",
-            evaluation.DefectFailures.Distinct(StringComparer.OrdinalIgnoreCase));
+        var failureSummary = SummarizeFindings(evaluation.DefectFailures);
         return new ProcessCompletionIssue(
             "process.adapter.product_required_file_content_missing",
-            $"Step '{assignment.StepKey}' claimed completion but required product file content/readback check(s) failed: {failureSummary}.",
-            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-missing:{failureSummary}",
+            $"Step '{assignment.StepKey}' claimed completion but {evaluation.DefectFailures.Count} required product file content/readback check(s) failed. Finding identities: {failureSummary}.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-file-content-missing:{ComputeHash(string.Join(';', evaluation.DefectFailures))}",
             assignment.ProducedArtifactSlotIds,
             ProcessDiagnosticRetrySafety.SafeToRetry,
             ProcessDiagnosticIdempotencyClassification.Idempotent);
     }
 
-    internal static ProcessCompletionIssue? ValidateRequiredProductFilesystemState(
+    internal ProcessCompletionIssue? ValidateRequiredProductFilesystemState(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output)
     {
-        if (output.Status != ProcessStepOutcomeStatus.Completed ||
-            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        if (output.Status != ProcessStepOutcomeStatus.Completed)
         {
             return null;
         }
+
+        var requiredPaths = ResolveProductCompletionRequiredPaths(assignment.LaunchVariables, assignment.StepKey);
+        var requiredContentChecks = ResolveProductCompletionRequiredFileContentChecks(
+            assignment.LaunchVariables,
+            assignment.StepKey);
+        if (requiredPaths.Count == 0 &&
+            requiredContentChecks.Checks.Count == 0 &&
+            string.IsNullOrWhiteSpace(requiredContentChecks.InvalidReason))
+        {
+            return null;
+        }
+
+        var rootResolution = ResolveInspectableProductRoot(assignment.LaunchVariables);
+        if (rootResolution.Kind != ProcessProductRootResolutionKind.Resolved)
+        {
+            return CreateRequiredProductRootInspectionIssue(assignment, rootResolution.InvalidReason);
+        }
+
+        var productRoot = rootResolution.ProductRoot;
 
         if (ValidateRequiredProductPaths(assignment, productRoot) is { } requiredPathIssue)
         {
@@ -204,17 +252,24 @@ internal static class ProcessProductCompletionPathGate
         return ValidateRequiredProductFileContentChecks(assignment, output, productRoot);
     }
 
-    internal static bool HasProductFileContentDefectEvidence(
+    internal bool HasProductFileContentDefectEvidence(
         ProcessRuntimeStepAssignment assignment,
         ProcessStepOutcomeResult output,
         out string defectSummary)
     {
         defectSummary = string.Empty;
-        if (output.Status != ProcessStepOutcomeStatus.Completed ||
-            !TryResolveInspectableProductRoot(assignment.LaunchVariables, out var productRoot))
+        if (output.Status != ProcessStepOutcomeStatus.Completed)
         {
             return false;
         }
+
+        var rootResolution = ResolveInspectableProductRoot(assignment.LaunchVariables);
+        if (rootResolution.Kind != ProcessProductRootResolutionKind.Resolved)
+        {
+            return false;
+        }
+
+        var productRoot = rootResolution.ProductRoot;
 
         var resolution = ResolveProductCompletionRequiredFileContentChecks(assignment.LaunchVariables, assignment.StepKey);
         if (!string.IsNullOrWhiteSpace(resolution.InvalidReason) ||
@@ -224,6 +279,7 @@ internal static class ProcessProductCompletionPathGate
         }
 
         var evaluation = EvaluateProductFileContentCheckFailures(
+            assignment.LaunchVariables,
             productRoot,
             resolution.Checks,
             check => check.EvidenceBranchOutcomeKeys.Count > 0 &&
@@ -233,49 +289,67 @@ internal static class ProcessProductCompletionPathGate
             return false;
         }
 
-        defectSummary = string.Join(
-            "; ",
-            evaluation.DefectFailures.Distinct(StringComparer.OrdinalIgnoreCase));
+        defectSummary =
+            $"{evaluation.DefectFailures.Count} configured product content check(s) failed ({SummarizeFindings(evaluation.DefectFailures)})";
         return true;
     }
 
-    internal static ProductFileContentCheckEvaluation EvaluateProductFileContentCheckFailures(
+    internal ProductFileContentCheckEvaluation EvaluateProductFileContentCheckFailures(
+        IReadOnlyDictionary<string, string> launchVariables,
         string productRoot,
         IReadOnlyList<ProductCompletionRequiredFileContentCheck> checks,
         Func<ProductCompletionRequiredFileContentCheck, bool> shouldEvaluate)
     {
         var defectFailures = new List<string>();
         var inspectionFailures = new List<string>();
-        foreach (var check in checks.Where(shouldEvaluate))
+        for (var checkIndex = 0; checkIndex < checks.Count; checkIndex++)
         {
+            var check = checks[checkIndex];
+            if (!shouldEvaluate(check))
+            {
+                continue;
+            }
+
             var invalidPaths = new List<string>();
             var missingPaths = new List<string>();
-            var existingPaths = new List<string>();
-            foreach (var pathCandidate in check.PathCandidates)
+            var existingPaths = new List<(string Path, string Label)>();
+            for (var candidateIndex = 0; candidateIndex < check.PathCandidates.Count; candidateIndex++)
             {
+                var pathCandidate = check.PathCandidates[candidateIndex];
+                var candidateLabel = $"check[{checkIndex}].path[{candidateIndex}]";
                 if (!TryResolveRequiredProductPath(
                         productRoot,
                         pathCandidate,
                         out var candidatePath,
                         out var invalidReason))
                 {
-                    invalidPaths.Add($"{pathCandidate} ({invalidReason})");
+                    invalidPaths.Add($"{candidateLabel}:invalid:{ComputeHash(pathCandidate + ":" + invalidReason)}");
                     continue;
                 }
 
-                if (!File.Exists(candidatePath))
+                var pathInspection = filesystemInspector.InspectPath(
+                    launchVariables,
+                    productRoot,
+                    candidatePath);
+                if (pathInspection.State is ProcessProductPathState.Missing or ProcessProductPathState.Directory)
                 {
-                    missingPaths.Add(candidatePath);
+                    missingPaths.Add($"{candidateLabel}:missing");
                     continue;
                 }
 
-                existingPaths.Add(candidatePath);
+                if (pathInspection.State == ProcessProductPathState.Unavailable)
+                {
+                    invalidPaths.Add($"{candidateLabel}:inspection-unavailable");
+                    continue;
+                }
+
+                existingPaths.Add((candidatePath, candidateLabel));
             }
 
             if (invalidPaths.Count > 0)
             {
                 inspectionFailures.Add(
-                    $"required content-check path candidate contract is invalid: {string.Join("; ", invalidPaths)}");
+                    $"check[{checkIndex}]:invalid-path-contract:{ComputeHash(string.Join(';', invalidPaths))}");
                 continue;
             }
 
@@ -284,7 +358,7 @@ internal static class ProcessProductCompletionPathGate
                 if (check.MustExist)
                 {
                     defectFailures.Add(
-                        $"none of the required content-check path candidates existed: {string.Join("; ", missingPaths)}");
+                        $"check[{checkIndex}]:required-path-missing:{ComputeHash(string.Join(';', missingPaths))}");
                 }
 
                 continue;
@@ -293,40 +367,44 @@ internal static class ProcessProductCompletionPathGate
             var candidateDefects = new List<string>();
             var candidateInspectionFailures = new List<string>();
             var satisfied = false;
-            foreach (var resolvedPath in existingPaths)
+            foreach (var (resolvedPath, candidateLabel) in existingPaths)
             {
-                string content;
-                try
+                var readResult = filesystemInspector.ReadText(
+                    launchVariables,
+                    productRoot,
+                    resolvedPath);
+                if (!readResult.Succeeded)
                 {
-                    content = File.ReadAllText(resolvedPath);
-                }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DirectoryNotFoundException or ArgumentException or NotSupportedException)
-                {
-                    candidateInspectionFailures.Add($"{resolvedPath} could not be read: {exception.Message}");
+                    candidateInspectionFailures.Add(
+                        $"{candidateLabel}:read-unavailable");
                     continue;
                 }
 
+                var content = readResult.Content;
+
                 var resolvedPathDefects = new List<string>();
-                foreach (var requiredTextGroup in check.RequiredTextAnyGroups)
+                for (var groupIndex = 0; groupIndex < check.RequiredTextAnyGroups.Count; groupIndex++)
                 {
+                    var requiredTextGroup = check.RequiredTextAnyGroups[groupIndex];
                     if (requiredTextGroup.Count == 0)
                     {
-                        resolvedPathDefects.Add($"{resolvedPath} has an empty required text group.");
+                        resolvedPathDefects.Add($"{candidateLabel}:required-group[{groupIndex}]-empty");
                         continue;
                     }
 
                     if (!requiredTextGroup.Any(requiredText => content.Contains(requiredText, StringComparison.OrdinalIgnoreCase)))
                     {
                         resolvedPathDefects.Add(
-                            $"{resolvedPath} does not contain any expected text from [{string.Join(" | ", requiredTextGroup)}]");
+                            $"{candidateLabel}:required-group[{groupIndex}]-missing:{ComputeHash(string.Join('\n', requiredTextGroup))}");
                     }
                 }
 
-                foreach (var forbiddenTextGroup in check.ForbiddenTextAnyGroups)
+                for (var groupIndex = 0; groupIndex < check.ForbiddenTextAnyGroups.Count; groupIndex++)
                 {
+                    var forbiddenTextGroup = check.ForbiddenTextAnyGroups[groupIndex];
                     if (forbiddenTextGroup.Count == 0)
                     {
-                        resolvedPathDefects.Add($"{resolvedPath} has an empty forbidden text group.");
+                        resolvedPathDefects.Add($"{candidateLabel}:forbidden-group[{groupIndex}]-empty");
                         continue;
                     }
 
@@ -336,7 +414,7 @@ internal static class ProcessProductCompletionPathGate
                     if (foundForbiddenText.Length > 0)
                     {
                         resolvedPathDefects.Add(
-                            $"{resolvedPath} contains forbidden text [{string.Join(" | ", foundForbiddenText)}]");
+                            $"{candidateLabel}:forbidden-group[{groupIndex}]-present:{ComputeHash(string.Join('\n', foundForbiddenText))}");
                     }
                 }
 
@@ -359,6 +437,44 @@ internal static class ProcessProductCompletionPathGate
         }
 
         return new ProductFileContentCheckEvaluation(defectFailures, inspectionFailures);
+    }
+
+    private static ProcessCompletionIssue CreateProductRootInspectionIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string reason)
+    {
+        return new ProcessCompletionIssue(
+            "process.adapter.product_output_inspection_unavailable",
+            $"Step '{assignment.StepKey}' claimed completion but the configured product output root could not be inspected safely. Repair or rebind the product-root authority and retry.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-output-inspection-unavailable:{ComputeHash(reason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static ProcessCompletionIssue CreateRequiredProductRootInspectionIssue(
+        ProcessRuntimeStepAssignment assignment,
+        string reason)
+    {
+        return new ProcessCompletionIssue(
+            "process.adapter.product_required_output_unavailable",
+            $"Step '{assignment.StepKey}' claimed completion but required product output checks could not inspect the configured product root. Repair or rebind the product-root authority and retry.",
+            $"{assignment.RunId}:{assignment.StepInstanceId}:product-required-output-unavailable:{ComputeHash(reason)}",
+            assignment.ProducedArtifactSlotIds,
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Unknown);
+    }
+
+    private static string SummarizeFindings(IReadOnlyList<string> findings)
+    {
+        var distinct = findings
+            .Where(finding => !string.IsNullOrWhiteSpace(finding))
+            .Distinct(StringComparer.Ordinal)
+            .Take(MaximumPublicFindingCount)
+            .ToArray();
+        return distinct.Length == 0
+            ? "not-reported"
+            : string.Join(", ", distinct);
     }
 
 }

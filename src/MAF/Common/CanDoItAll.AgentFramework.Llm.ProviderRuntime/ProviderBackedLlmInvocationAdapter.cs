@@ -124,16 +124,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             AgentProviderCapabilityKind.ChatCompletion,
             AgentProviderOperationKind.CompleteChat,
             model);
-        var payload = new ProviderChatCompletionRequest(
-            provider,
-            model,
-            BuildSystemPrompt(request.Messages),
-            BuildPriorTurns(request.Messages),
-            BuildFinalUserPrompt(request.Messages),
-            BuildAttachments(request.Attachments),
-            request.Settings?.ModelParameterConfigurationJson ?? string.Empty,
-            request.Settings?.Temperature,
-            BuildResponseFormat(request.ResponseFormat));
+        var payload = CreateProviderRequest(request, provider, model);
         return await handle.DispatchAsync(
             new ProviderRuntimeDispatchRequest<ProviderChatCompletionRequest>(query, payload),
             async (context, token) =>
@@ -145,6 +136,21 @@ public sealed class ProviderBackedLlmInvocationAdapter(
             cancellationToken).ConfigureAwait(false);
     }
 
+    internal static ProviderChatCompletionRequest CreateProviderRequest(
+        LlmInvocationRequest request,
+        ProviderProfile provider,
+        string model)
+        => new(
+            provider,
+            model,
+            BuildSystemPrompt(request.Messages),
+            BuildPriorTurns(request.Messages),
+            BuildFinalUserPrompt(request.Messages),
+            BuildAttachments(request.Attachments),
+            ResolveModelParameterConfiguration(request.Settings),
+            request.Settings?.Temperature,
+            BuildResponseFormat(request.ResponseFormat));
+
     private async ValueTask<IProviderRuntimeHandle> GetRuntimeHandleAsync(
         ProviderProfile provider,
         CancellationToken cancellationToken)
@@ -153,7 +159,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
         return await runtimePool.GetRequiredAsync(provider.Id, cancellationToken).ConfigureAwait(false);
     }
 
-    private static void EnsureProviderKindMatches(
+    internal static void EnsureProviderKindMatches(
         ProviderRuntimeDescriptor descriptor,
         ProviderProfile provider)
     {
@@ -163,7 +169,7 @@ public sealed class ProviderBackedLlmInvocationAdapter(
         }
     }
 
-    private static string ResolveModel(
+    internal static string ResolveModel(
         ProviderProfile provider,
         string requestedModel)
     {
@@ -269,4 +275,18 @@ public sealed class ProviderBackedLlmInvocationAdapter(
                 responseFormat.SchemaJson,
                 responseFormat.SchemaName,
                 responseFormat.SchemaDescription);
+
+    private static string ResolveModelParameterConfiguration(LlmModelSettings? settings)
+    {
+        if (settings is null)
+        {
+            return string.Empty;
+        }
+
+        return settings.ThinkingEffort is { } thinkingEffort
+            ? AgentThinkingEffortPolicy.WriteAgentOverride(
+                settings.ModelParameterConfigurationJson,
+                thinkingEffort)
+            : settings.ModelParameterConfigurationJson;
+    }
 }

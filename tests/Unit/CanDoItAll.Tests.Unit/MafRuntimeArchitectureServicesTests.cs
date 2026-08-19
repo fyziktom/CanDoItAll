@@ -16,7 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafRuntimeArchitectureServicesTests
 {
@@ -500,6 +500,48 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
+    public void MafApprovalContinuationDriver_prefers_newer_durable_approval_over_stale_cache()
+    {
+        var driver = new MafApprovalContinuationDriver();
+        var session = CreateSession(
+            new ChatSessionRuntimeCompatibilityRecord(
+                runtimeSessionKey: "conversation-001",
+                serializedSessionStateJson: "{}",
+                pendingApprovals:
+                [
+                    new PendingToolApprovalRecord(
+                        "approval-002",
+                        "call-002",
+                        "workspace_write_file",
+                        "function",
+                        string.Empty,
+                        """{"path":"artifacts/new-result.md"}""")
+                ]));
+        driver.StorePendingApprovals(
+            session.Id,
+            [
+                new ToolApprovalRequestContent(
+                    "approval-001",
+                    new FunctionCallContent(
+                        "call-001",
+                        "workspace_create_directory",
+                        new Dictionary<string, object?>
+                        {
+                            ["path"] = "artifacts/old-result"
+                        }))
+            ]);
+
+        var messages = driver.CreateApprovalInputMessages(
+            session,
+            [new AgentRuntimeApprovalDecision("approval-002", Approved: true)]).ToList();
+
+        var message = Assert.Single(messages);
+        var response = Assert.IsType<ToolApprovalResponseContent>(Assert.Single(message.Contents));
+        Assert.Equal("approval-002", response.RequestId);
+        Assert.Equal("call-002", response.ToolCall.CallId);
+    }
+
+    [Fact]
     public void MafApprovalContinuationDriver_rejects_approval_without_stable_call_id()
     {
         var driver = new MafApprovalContinuationDriver();
@@ -548,7 +590,7 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public void MafChatClientAgentOptionsFactory_applies_the_production_115_compatibility_policy()
+    public void MafChatClientAgentOptionsFactory_applies_the_production_117_compatibility_policy()
     {
         var chatOptions = new ChatOptions();
 
@@ -572,6 +614,26 @@ public sealed class MafRuntimeArchitectureServicesTests
         Assert.Equal([nameof(MafChatClientAgentOptionsFactory) + ".cs"], constructionSites);
     }
 
+    [Theory]
+    [InlineData(false, false, false, false)]
+    [InlineData(true, false, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, true, true, true)]
+    public void MafChatClientAgentOptionsFactory_requires_per_service_call_history_for_framework_managed_approvals(
+        bool configured,
+        bool frameworkManagedHistory,
+        bool hasApprovalTools,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            MafChatClientAgentOptionsFactory.ResolvePerServiceCallHistoryPersistence(
+                configured,
+                frameworkManagedHistory,
+                hasApprovalTools));
+    }
+
     [Fact]
     public void Maf_approval_content_rejects_missing_stable_request_id_at_construction()
     {
@@ -584,6 +646,42 @@ public sealed class MafRuntimeArchitectureServicesTests
                     new Dictionary<string, object?>())));
 
         Assert.Equal("requestId", exception.ParamName);
+    }
+
+    [Fact]
+    public void MafRuntimeResponseAssembler_excludes_approval_requests_resolved_across_continuation_hops()
+    {
+        var previouslyResolvedRequest = new ToolApprovalRequestContent(
+            "approval-previously-resolved",
+            new FunctionCallContent(
+                "call-previously-resolved",
+                "workspace_create_directory",
+                new Dictionary<string, object?>()));
+        var currentlyResolvedRequest = new ToolApprovalRequestContent(
+            "approval-currently-resolved",
+            new FunctionCallContent(
+                "call-currently-resolved",
+                "workspace_write_file",
+                new Dictionary<string, object?>()));
+        var pendingRequest = new ToolApprovalRequestContent(
+            "approval-pending",
+            new FunctionCallContent(
+                "call-pending",
+                "workspace_read_file",
+                new Dictionary<string, object?>()));
+        var activityResponse = new AgentResponse(
+            new ChatMessage(
+                ChatRole.Assistant,
+                [previouslyResolvedRequest, currentlyResolvedRequest, pendingRequest]));
+
+        var pendingApprovals = MafRuntimeResponseAssembler.ResolvePendingApprovalRequests(
+            activityResponse,
+            new HashSet<string>(
+                [previouslyResolvedRequest.RequestId, currentlyResolvedRequest.RequestId],
+                StringComparer.Ordinal));
+
+        var remainingApproval = Assert.Single(pendingApprovals);
+        Assert.Equal(pendingRequest.RequestId, remainingApproval.RequestId);
     }
 
     [Fact]

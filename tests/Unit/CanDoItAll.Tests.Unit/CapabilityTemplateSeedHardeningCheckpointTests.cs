@@ -9,7 +9,7 @@ using CanDoItAll.AgentFramework.Persistence;
 using AccessCapabilityKind = CanDoItAll.AgentFramework.Capabilities.Abstractions.CapabilityKind;
 using SeedCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CapabilityTemplateSeedHardeningCheckpointTests
 {

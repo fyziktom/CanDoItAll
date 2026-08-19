@@ -14,10 +14,24 @@ public sealed class StandardProcessAdapterStrategyFactory(IProcessStepExecutionD
     {
         ArgumentNullException.ThrowIfNull(binding);
 
-        if (binding.StrategyId != Descriptor.StrategyId)
+        if (binding.DriverId != driver.Descriptor.DriverId ||
+            binding.StrategyId != Descriptor.StrategyId ||
+            !string.Equals(binding.StrategyVersion, Descriptor.StrategyVersion, StringComparison.Ordinal) ||
+            !string.Equals(
+                binding.MinRuntimeSchema,
+                StandardProcessAdapterDriverPackageFactory.MinimumRuntimeSchema,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                binding.MaxRuntimeSchema,
+                StandardProcessAdapterDriverPackageFactory.MaximumRuntimeSchema,
+                StringComparison.Ordinal) ||
+            !binding.HostCapabilities
+                .Select(fact => fact.Id)
+                .ToHashSet()
+                .SetEquals(Descriptor.RequiredHostCapabilities))
         {
             throw new InvalidOperationException(
-                $"Strategy binding '{binding.StrategyId}' does not match adapter driver strategy '{Descriptor.StrategyId}'.");
+                "The process strategy binding does not match the Standard adapter driver descriptor.");
         }
 
         return ValueTask.FromResult<IProcessStrategy>(new StandardProcessAdapterStrategy(driver));
@@ -44,7 +58,8 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
                 CreateContextFacets(context))
             {
                 StepContract = context.StepContract,
-                DispatchClaimIdentity = context.DispatchClaimIdentity
+                DispatchClaimIdentity = context.DispatchClaimIdentity,
+                DispatchHostCapabilityEvidence = context.DispatchHostCapabilityEvidence
             },
             cancellationToken);
 
@@ -77,7 +92,8 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
             result.ResultHash)
         {
             UserSafeSummary = result.UserSafeSummary,
-            ExecutionRunId = result.ExecutionRunId
+            ExecutionRunId = result.ExecutionRunId,
+            HostCapabilityEvidence = result.HostCapabilityEvidence
         };
     }
 
@@ -122,7 +138,7 @@ internal sealed class StandardProcessAdapterStrategy(IProcessStepExecutionDriver
             .ToArray();
         if (normalized.Length == 0)
         {
-            return "sha256:empty";
+            return "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
         }
 
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(';', normalized)));

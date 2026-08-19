@@ -355,6 +355,11 @@ public sealed partial class AgentCapabilitySetupFlowService
             .Select(value => value.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+    private static IReadOnlySet<string> NormalizeAuthoritySet(IEnumerable<string>? values)
+        => (values ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToHashSet(StringComparer.Ordinal);
+
     private static string ToSnake(string value)
         => ToSeparatedIdentifier(value, '_');
 

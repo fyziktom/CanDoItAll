@@ -6,7 +6,7 @@ using CanDoItAll.Processes.Projections;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.Processes;
 
 public sealed class ProcessRunRecordApiIntegrationTests
 {

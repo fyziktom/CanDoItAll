@@ -28,12 +28,14 @@ internal sealed class ProcessExecutionMetadataComposer(
 
     internal string ComposeClaimedExecution(
         ProcessRuntimeStepAssignment assignment,
-        ProcessDispatchClaimIdentity dispatchClaimIdentity)
-        => Compose(assignment, dispatchClaimIdentity);
+        ProcessDispatchClaimIdentity dispatchClaimIdentity,
+        ProcessHostCapabilityEvaluationEvidence? hostCapabilityEvidence = null)
+        => Compose(assignment, dispatchClaimIdentity, hostCapabilityEvidence);
 
     private string Compose(
         ProcessRuntimeStepAssignment assignment,
-        ProcessDispatchClaimIdentity? dispatchClaimIdentity)
+        ProcessDispatchClaimIdentity? dispatchClaimIdentity,
+        ProcessHostCapabilityEvaluationEvidence? hostCapabilityEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(assignment);
 
@@ -60,6 +62,11 @@ internal sealed class ProcessExecutionMetadataComposer(
         if (dispatchClaimIdentity is { } claimIdentity)
         {
             ProcessDispatchClaimExecutionMetadata.Add(additions, claimIdentity);
+        }
+
+        if (hostCapabilityEvidence is not null)
+        {
+            additions.Add("processHostCapabilityEvidence", hostCapabilityEvidence);
         }
 
         return ProcessExecutionMetadataBuilder.BuildProcessExecutionMetadata(assignment, additions);

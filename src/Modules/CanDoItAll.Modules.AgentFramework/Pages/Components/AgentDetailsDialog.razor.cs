@@ -2,11 +2,13 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components.Presentation;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -39,7 +41,7 @@ public partial class AgentDetailsDialog
     public DialogService DialogService { get; set; } = default!;
 
     [Inject]
-    public AgentAvatarGenerationService AvatarGenerationService { get; set; } = default!;
+    public IExternalTargetPathRegistryFactory ExternalTargetPathRegistryFactory { get; set; } = default!;
 
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
@@ -51,11 +53,6 @@ public partial class AgentDetailsDialog
     private IReadOnlyList<ProjectAccessListItem> projectStructureProjects = [];
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<string> tagValues = [];
-    private string externalWorkspaceRootsText = string.Empty;
-    private string allowedStorageCatalogIdsText = string.Empty;
-    private string customAvatarFileName = string.Empty;
-    private string avatarGenerationPrompt = string.Empty;
-    private string? avatarGenerationErrorMessage;
     private string capabilitySearch = string.Empty;
     private CapabilityDialogAssignmentFilter capabilityAssignmentFilter = CapabilityDialogAssignmentFilter.All;
     private CapabilityDialogKindFilter capabilityKindFilter = CapabilityDialogKindFilter.All;
@@ -63,8 +60,6 @@ public partial class AgentDetailsDialog
     private bool isLoading = true;
     private bool isBusy;
     private bool isOpeningCapabilityWizard;
-    private bool isAvatarUploadBusy;
-    private bool isAvatarGenerationBusy;
     private bool isConfirmingAutoApproval;
     private bool isConfirmingDelete;
     private bool areProvidersLoaded;
@@ -79,9 +74,6 @@ public partial class AgentDetailsDialog
     private Task? projectStructureProjectsLoadTask;
     private int selectedTabIndex;
     private int autoApprovalInputVersion;
-    private bool avatarSelectorOpen;
-
-    private static IReadOnlyList<string> AvatarOptions => AgentAvatarImageCatalog.BundledAvatarUrls;
 
     private static IReadOnlyList<AgentWorkspaceToolProfileKind> WorkspaceToolProfileOptions { get; } =
     [
@@ -97,6 +89,12 @@ public partial class AgentDetailsDialog
     private ProviderProfile? SelectedRuntimeProvider => editorModel.ProviderProfileId.HasValue
         ? providers.FirstOrDefault(item => item.Id == editorModel.ProviderProfileId.Value)
         : null;
+
+    private IReadOnlyList<ConversationProviderOption> RuntimeProviderOptions
+        => AgentProviderPresentationMapper.Map(providers);
+
+    private ConversationPresentationKey? SelectedRuntimeProviderKey
+        => AgentProviderPresentationMapper.ToPresentationKey(editorModel.ProviderProfileId);
 
     private bool HasIncompatibleThinkingEffortOverride
     {
@@ -135,6 +133,11 @@ public partial class AgentDetailsDialog
             ? provider
             : null;
 
+    private AvatarGenerationSource? AvatarGenerationSource
+        => DefaultAvatarImageProvider is { } provider
+            ? new(provider.Id, provider.Name, ResolveAvatarImageModel(provider))
+            : null;
+
     private ProviderProfile? ImageCapableRuntimeProvider
         => SelectedRuntimeProvider is { IsEnabled: true, Purpose: ProviderProfilePurpose.ImageGeneration } provider
             ? provider
@@ -145,6 +148,19 @@ public partial class AgentDetailsDialog
         .OrderByDescending(provider => provider.IsEnabled)
         .ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    private IReadOnlyList<ConversationProviderOption> ImageGenerationProviderPresentationOptions
+        => AgentProviderPresentationMapper.Map(ImageGenerationProviderOptions);
+
+    private ConversationPresentationKey? SelectedImageGenerationProviderKey
+        => AgentProviderPresentationMapper.ToPresentationKey(
+            editorModel.ImageGenerationAccess.PreferredProviderProfileId);
+
+    private ConversationAvatarPresentation IdentityAvatar => new(
+        ResolveAvatarAltText(),
+        editorModel.AvatarImageUrl,
+        ResolveAvatarFallbackText(),
+        ResolveAvatarSeed());
 
     private IReadOnlyList<string> VisibleTagSuggestions => agents
         .SelectMany(agent => agent.Tags)
@@ -207,7 +223,7 @@ public partial class AgentDetailsDialog
                 else
                 {
                     editorModel = await WorkspaceService.GetAgentEditorAsync(AgentId.Value);
-                    ApplyEditorTextState();
+                    ApplyDerivedEditorState();
                     linkedPartyId = null;
                 }
             }
@@ -339,7 +355,7 @@ public partial class AgentDetailsDialog
 
     private async Task<Guid> PersistEditorAsync()
     {
-        SyncWorkspaceToolAccessFromEditorText();
+        NormalizeWorkspaceToolAccessForSave();
         NormalizeRuntimeModelSelectionForSave();
         NormalizeImageGenerationAccessForSave();
         editorModel.ProjectStructureAccess =
@@ -466,134 +482,10 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
-    private Task OpenAvatarSelectorAsync()
-    {
-        if (string.IsNullOrWhiteSpace(avatarGenerationPrompt))
-        {
-            avatarGenerationPrompt = BuildDefaultAvatarGenerationPrompt();
-        }
-
-        avatarGenerationErrorMessage = null;
-        avatarSelectorOpen = true;
-        return Task.CompletedTask;
-    }
-
-    private Task CloseAvatarSelectorAsync()
-    {
-        avatarSelectorOpen = false;
-        return Task.CompletedTask;
-    }
-
-    private Task ClearAvatarAsync()
-    {
-        editorModel.AvatarImageUrl = string.Empty;
-        customAvatarFileName = string.Empty;
-        avatarGenerationErrorMessage = null;
-        return Task.CompletedTask;
-    }
-
-    private async Task LoadCustomAvatarAsync(InputFileChangeEventArgs args)
-    {
-        var file = args.File;
-        customAvatarFileName = file.Name;
-        isAvatarUploadBusy = true;
-
-        try
-        {
-            editorModel.AvatarImageUrl = await AgentAvatarUploadFormatter.BuildDataUrlAsync(file);
-            avatarGenerationErrorMessage = null;
-            NotificationService.Success("Custom avatar loaded", "Save the agent to persist the loaded avatar.");
-        }
-        catch (Exception exception)
-        {
-            customAvatarFileName = string.Empty;
-            NotificationService.Error("Avatar upload failed", exception.Message);
-        }
-        finally
-        {
-            isAvatarUploadBusy = false;
-        }
-    }
-
-    private void SelectAvatar(string avatarImageUrl)
-    {
-        editorModel.AvatarImageUrl = avatarImageUrl.Trim();
-        customAvatarFileName = string.Empty;
-        avatarGenerationErrorMessage = null;
-    }
-
-    private async Task GenerateAvatarAsync()
-    {
-        if (isAvatarGenerationBusy)
-        {
-            return;
-        }
-
-        var provider = DefaultAvatarImageProvider;
-        if (provider is null)
-        {
-            const string message = "No default image provider is set. Configure and enable an image-generation provider before creating an avatar with AI.";
-            avatarGenerationErrorMessage = message;
-            NotificationService.Warning("AI avatar unavailable", message);
-            return;
-        }
-
-        var model = ResolveAvatarImageModel(provider);
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            var message = $"Image-generation provider '{provider.Name}' does not define a default model.";
-            avatarGenerationErrorMessage = message;
-            NotificationService.Warning("AI avatar unavailable", message);
-            return;
-        }
-
-        isAvatarGenerationBusy = true;
-        avatarGenerationErrorMessage = null;
-        try
-        {
-            var result = await AvatarGenerationService.GenerateAsync(
-                provider,
-                model,
-                avatarGenerationPrompt);
-            editorModel.AvatarImageUrl = result.AvatarDataUrl;
-            customAvatarFileName = string.Empty;
-            NotificationService.Success("AI avatar created", "Save the agent to persist the generated avatar.");
-        }
-        catch (Exception exception)
-        {
-            avatarGenerationErrorMessage = exception.Message;
-            NotificationService.Error("AI avatar generation failed", exception.Message);
-        }
-        finally
-        {
-            isAvatarGenerationBusy = false;
-        }
-    }
-
-    private string BuildDefaultAvatarGenerationPrompt()
-    {
-        var name = FirstNonEmpty(editorModel.Name, "this software agent");
-        var role = string.IsNullOrWhiteSpace(editorModel.RoleTitle)
-            ? string.Empty
-            : $", whose role is {editorModel.RoleTitle.Trim()}";
-        return $"A distinctive, friendly illustrated avatar for {name}{role}, in a clean modern professional style.";
-    }
-
     private string ResolveAvatarImageModel(ProviderProfile provider)
         => string.IsNullOrWhiteSpace(editorModel.ImageGenerationAccess.DefaultModel)
             ? provider.DefaultModel.Trim()
             : editorModel.ImageGenerationAccess.DefaultModel.Trim();
-
-    private bool IsSelectedAvatar(string avatarImageUrl)
-        => string.Equals(editorModel.AvatarImageUrl?.Trim(), avatarImageUrl.Trim(), StringComparison.OrdinalIgnoreCase);
-
-    private bool IsCustomAvatarLoaded()
-        => editorModel.AvatarImageUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
-
-    private string ResolveAvatarOptionClass(string avatarImageUrl)
-        => IsSelectedAvatar(avatarImageUrl)
-            ? "agent-details-dialog__avatar-option agent-details-dialog__avatar-option--selected"
-            : "agent-details-dialog__avatar-option";
 
     private string ResolveAvatarSelectionText()
     {
@@ -801,7 +693,7 @@ public partial class AgentDetailsDialog
             await WorkspaceService.VerifyCapabilityAsync(editorModel.Id.Value, capabilityId);
             capabilities = await WorkspaceService.ListCapabilitiesAsync();
             editorModel = await WorkspaceService.GetAgentEditorAsync(editorModel.Id.Value);
-            ApplyEditorTextState();
+            ApplyDerivedEditorState();
             NotificationService.Success("Capability verified", "Capability verification completed.");
         }
         catch (Exception exception)
@@ -1109,6 +1001,7 @@ public partial class AgentDetailsDialog
             : AgentWorkspaceToolAccessProfiles.CreateSettings(profile);
         next.Profile = profile;
         next.AllowedExternalTargetAliases = current.AllowedExternalTargetAliases.ToList();
+        next.ExternalTargetRootBindings = current.ExternalTargetRootBindings.ToList();
         next.CanReadStorage = current.CanReadStorage;
         next.CanWriteStorage = current.CanWriteStorage;
         next.AllowAllStorageCatalogs = current.AllowAllStorageCatalogs;
@@ -1187,6 +1080,29 @@ public partial class AgentDetailsDialog
         editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
     }
 
+    private void NormalizeWorkspaceToolAccessForSave()
+    {
+        var normalized = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
+        var externalTargetRegistry = ExternalTargetPathRegistryFactory.Create(
+            normalized.ExternalTargetRootBindings);
+        var canonicalAliases = normalized.AllowedExternalTargetAliases
+            .Select(alias =>
+                AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                    alias,
+                    externalTargetRegistry) ??
+                throw new InvalidOperationException(
+                    $"External workspace root '{alias}' is not a supported path or alias."))
+            .Distinct(ExternalTargetAliasCodec.EqualityComparer)
+            .OrderBy(alias => alias, StringComparer.Ordinal)
+            .ToList();
+
+        normalized.AllowedExternalTargetAliases = canonicalAliases;
+        normalized.ExternalTargetRootBindings = normalized.ExternalTargetRootBindings
+            .Concat(externalTargetRegistry.ExportBindings(canonicalAliases))
+            .ToList();
+        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(normalized);
+    }
+
     private static AgentWorkspaceToolAccessSettings CloneWorkspaceToolAccess(AgentWorkspaceToolAccessSettings source)
     {
         return new AgentWorkspaceToolAccessSettings
@@ -1200,6 +1116,7 @@ public partial class AgentDetailsDialog
             CanManageWorkspacePaths = source.CanManageWorkspacePaths,
             CanTransformArtifacts = source.CanTransformArtifacts,
             AllowedExternalTargetAliases = source.AllowedExternalTargetAliases.ToList(),
+            ExternalTargetRootBindings = source.ExternalTargetRootBindings.ToList(),
             CanReadStorage = source.CanReadStorage,
             CanWriteStorage = source.CanWriteStorage,
             AllowAllStorageCatalogs = source.AllowAllStorageCatalogs,
@@ -1297,6 +1214,39 @@ public partial class AgentDetailsDialog
         return Task.CompletedTask;
     }
 
+    private Task HandleNameChangedAsync(string? value)
+    {
+        editorModel.Name = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRoleChangedAsync(string? value)
+    {
+        editorModel.RoleTitle = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleAvatarChangedAsync(string? value)
+    {
+        editorModel.AvatarImageUrl = value?.Trim() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSummaryChangedAsync(string? value)
+    {
+        editorModel.Summary = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInstructionsChangedAsync(string? value)
+    {
+        editorModel.Instructions = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRuntimeProviderPresentationChangedAsync(ConversationPresentationKey? key)
+        => HandleRuntimeProviderChangedAsync(AgentProviderPresentationMapper.ToProviderId(key));
+
     private Task HandleRuntimeProviderChangedAsync(Guid? providerId)
     {
         editorModel.ProviderProfileId = providerId;
@@ -1393,6 +1343,9 @@ public partial class AgentDetailsDialog
         editorModel.ImageGenerationAccess = AgentImageGenerationAccessMetadata.Normalize(editorModel.ImageGenerationAccess);
         return Task.CompletedTask;
     }
+
+    private Task HandleImageGenerationProviderPresentationChangedAsync(ConversationPresentationKey? key)
+        => HandleImageGenerationProviderChangedAsync(AgentProviderPresentationMapper.ToProviderId(key));
 
     private Task HandleImageGenerationModelChangedAsync(string? model)
     {
@@ -1495,34 +1448,21 @@ public partial class AgentDetailsDialog
         return string.Empty;
     }
 
-    private void SyncWorkspaceToolAccessFromEditorText()
+    private void ApplyExternalWorkspaceRootSelection(ExternalWorkspaceRootSelection selection)
     {
-        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = SplitEditorLines(externalWorkspaceRootsText)
-            .Select(AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias)
-            .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .Cast<string>()
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(alias => alias, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = SplitEditorLines(allowedStorageCatalogIdsText)
-            .Where(item => Guid.TryParse(item, out _))
-            .Select(Guid.Parse)
-            .Where(item => item != Guid.Empty)
-            .Distinct()
-            .OrderBy(item => item)
-            .ToList();
-
-        editorModel.WorkspaceToolAccess = AgentWorkspaceToolAccessMetadata.Normalize(editorModel.WorkspaceToolAccess);
-        externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
-        allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
+        editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases = selection.AllowedAliases.ToList();
+        editorModel.WorkspaceToolAccess.ExternalTargetRootBindings = selection.RootBindings.ToList();
+        NormalizeWorkspaceToolAccess();
     }
 
-    private static IReadOnlyList<string> SplitEditorLines(string value)
+    private void ApplyStorageCatalogSelection(IReadOnlyList<Guid> catalogIds)
     {
-        return value
-            .Split(["\r\n", "\n", "\r", ",", ";"], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+        editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds = catalogIds
+            .Where(catalogId => catalogId != Guid.Empty)
+            .Distinct()
+            .OrderBy(catalogId => catalogId)
             .ToList();
+        NormalizeWorkspaceToolAccess();
     }
 
     private IReadOnlyList<string> BuildAgentTagsForSave()
@@ -1594,34 +1534,26 @@ public partial class AgentDetailsDialog
             ? providers.FirstOrDefault(provider => provider.Id == providerProfileId)?.Kind
             : null;
         editorModel = AgentEditorModel.FromDefinition(definition, providerKind);
-        ApplyEditorTextState();
+        ApplyDerivedEditorState();
         ResetAvatarGenerationState();
         linkedPartyId = AgentFrameworkCrmHrMetadata.Read(definition.ConfigurationJson)?.PartyId;
     }
 
-    private void ApplyEditorTextState()
+    private void ApplyDerivedEditorState()
     {
         tagValues = NormalizeVisibleTags(editorModel.Tags);
-        externalWorkspaceRootsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedExternalTargetAliases);
-        allowedStorageCatalogIdsText = string.Join(Environment.NewLine, editorModel.WorkspaceToolAccess.AllowedStorageCatalogIds.Select(item => item.ToString("D")));
     }
 
     private void ResetEditorState()
     {
         editorModel = new AgentEditorModel();
         tagValues = [];
-        externalWorkspaceRootsText = string.Empty;
-        allowedStorageCatalogIdsText = string.Empty;
         ResetAvatarGenerationState();
         linkedPartyId = null;
     }
 
     private void ResetAvatarGenerationState()
     {
-        avatarGenerationPrompt = string.Empty;
-        avatarGenerationErrorMessage = null;
-        isAvatarGenerationBusy = false;
-        avatarSelectorOpen = false;
     }
 
     private enum CapabilityDialogAssignmentFilter

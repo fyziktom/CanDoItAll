@@ -3,7 +3,7 @@ using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Web.Components.Layout;
 using Microsoft.AspNetCore.Components.Web;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class MainLayoutTopBarTests : BunitContext
 {

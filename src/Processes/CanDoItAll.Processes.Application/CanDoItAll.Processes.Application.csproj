@@ -11,6 +11,8 @@
     <ProjectReference Include="..\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj" />
+    <ProjectReference Include="..\..\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="..\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
   </ItemGroup>
 

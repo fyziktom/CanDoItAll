@@ -2,7 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel.Streaming;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentExecutionActivityCoordinatorTests
 {
@@ -180,6 +180,44 @@ public sealed class AgentExecutionActivityCoordinatorTests
             {
                 AgentExecutionActivityPhase.Accepted,
                 AgentExecutionActivityPhase.PersistingResult,
+                AgentExecutionActivityPhase.PreparingRuntime,
+                AgentExecutionActivityPhase.WaitingForProvider,
+                AgentExecutionActivityPhase.Streaming,
+                AgentExecutionActivityPhase.PersistingResult,
+                AgentExecutionActivityPhase.Completed
+            },
+            events.Select(item => item.Event.Phase));
+    }
+
+    [Fact]
+    public async Task Report_allows_runtime_reentry_after_awaiting_approval_for_auto_approval()
+    {
+        var context = CreateContext();
+
+        using var operation = Admit(context);
+        operation.Report(
+            AgentExecutionActivityPhase.AwaitingApproval,
+            "Approval required.");
+        operation.Report(
+            AgentExecutionActivityPhase.PreparingRuntime,
+            "Resuming the runtime after auto-approval.");
+        operation.Report(
+            AgentExecutionActivityPhase.WaitingForProvider,
+            "Waiting for the provider.");
+        operation.Report(
+            AgentExecutionActivityPhase.Streaming,
+            "Streaming the continuation.");
+        operation.Report(
+            AgentExecutionActivityPhase.PersistingResult,
+            "Persisting the completed result.");
+        operation.Complete("Completed.");
+
+        var events = await ReadEventsAsync(context);
+        Assert.Equal(
+            new[]
+            {
+                AgentExecutionActivityPhase.Accepted,
+                AgentExecutionActivityPhase.AwaitingApproval,
                 AgentExecutionActivityPhase.PreparingRuntime,
                 AgentExecutionActivityPhase.WaitingForProvider,
                 AgentExecutionActivityPhase.Streaming,

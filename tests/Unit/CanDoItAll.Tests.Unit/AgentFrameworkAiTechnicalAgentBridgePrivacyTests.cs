@@ -8,7 +8,7 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests

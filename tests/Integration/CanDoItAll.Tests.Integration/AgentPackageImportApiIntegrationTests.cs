@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Integration;
+namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class AgentPackageImportApiIntegrationTests
 {

@@ -11,8 +11,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
+[Trait("Category", "UnixRuntimePortability")]
 public sealed class ProcessesModuleHostedWorkerRegistrationTests
 {
     [Fact]
@@ -117,6 +118,8 @@ public sealed class ProcessesModuleHostedWorkerRegistrationTests
         services.AddSingleton<ICanonicalRuntimeDatabase>(new TestCanonicalRuntimeDatabase());
         services.AddScoped<IProcessRuntimeStrategyFactoryResolver, UnusableStrategyFactoryResolver>();
         services.AddProcessesModule(configuration);
+        services.RemoveAll<IProcessExecutionAdapter>();
+        services.RemoveAll<IProcessStepExecutionDriver>();
         services.RemoveAll<IProcessRuntimeStepAssignmentRepairService>();
         services.RemoveAll<IProcessRuntimeRunCancellationObserver>();
 

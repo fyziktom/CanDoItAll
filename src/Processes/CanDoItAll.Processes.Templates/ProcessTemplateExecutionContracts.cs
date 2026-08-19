@@ -46,6 +46,8 @@ public sealed class ProcessTemplateStepExecutionContractDocument
     public List<ProcessTemplateProducedArtifactSlotDocument> ProducedArtifactSlots { get; set; } = [];
 
     public List<string> RequiredRuntimeToolNames { get; set; } = [];
+
+    public List<string> RequiredHostCapabilities { get; set; } = [];
 }
 
 public sealed class ProcessTemplateDriverActivationDocument

@@ -1,0 +1,23 @@
+{
+  "selectedTab": "Capabilities",
+  "headings": [
+    "Blazor Application Developer",
+    "Capabilities",
+    "Playwright Local MCP",
+    ".NET App Delivery Skill",
+    "ASP.NET Core Skill",
+    "Blazor App Delivery Skill",
+    "Codeanalytics MCP Skill",
+    "Components MCP Skill",
+    "Concrete Deliverable Delivery Skill",
+    "Frontend Delivery Skill",
+    "Frontend Theme Skill",
+    "Git Standard Operations"
+  ],
+  "assignButtonCount": 81,
+  "unassignButtonCount": 0,
+  "verifyButtonCount": 124,
+  "containsMcp": true,
+  "containsSkill": true,
+  "containsTool": true
+}

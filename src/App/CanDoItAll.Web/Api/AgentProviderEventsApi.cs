@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.Extensions.Options;

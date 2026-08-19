@@ -10,19 +10,27 @@ or opening a pull request.
 ## Development Setup
 
 1. Install the SDK selected by `global.json`.
-2. Install PostgreSQL or a Docker Compose v2 runtime.
-3. Install Node.js when changing application Tailwind assets.
-4. Copy `.env.example` to the ignored `.env` file when using Compose.
-5. Run commands from the repository root.
+2. Clone `CanDoItAll.Components` and `CanDoItAll.FileTools` beside this repository for
+   the default source dependency mode. Use the exact names on case-sensitive filesystems,
+   or configure both repository-root MSBuild properties documented in the root README.
+3. Install PostgreSQL or a Docker Compose v2 runtime.
+4. Install PowerShell 7 for repository validation on Windows, Linux, or macOS.
+5. Install Node.js when changing application Tailwind assets.
+6. Copy `.env.example` to the ignored `.env` file when using Compose.
+7. Run commands from the repository root.
 
 ## Validation
 
 ```powershell
-dotnet restore .\CanDoItAll.slnx
-dotnet build .\CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test .\CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
-& .\tools\Validation\Test-Documentation.ps1
+dotnet restore ./CanDoItAll.slnx
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
+dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+./tools/Validation/Test-Documentation.ps1
 ```
+
+These commands use sibling source projects. For a clean-checkout/package validation,
+pass `-p:UseLocalCanDoItAllLibraries=false` consistently to restore, build, and test.
+Do not restore in one dependency mode and build in the other.
 
 Run the relevant browser, live-process, integration, or container gate when a change
 affects that boundary. Report skipped, quarantined, or unavailable validation explicitly.

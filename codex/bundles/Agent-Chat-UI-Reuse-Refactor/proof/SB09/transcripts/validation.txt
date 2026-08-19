@@ -1,0 +1,36 @@
+SB09 governed validation transcript
+Working directory: C:\repositories\CanDoItAll
+Repository HEAD: bca2c286d32c48ba0283a8f606f6cc5c8639afca
+Run time: 2026-08-16T15:29:12Z
+
+[UIR-SB09-01] Final impacted-test analysis
+Correlation: code-analytics_403408ed1a9148948214668d3c5f696d
+Result: Components workspace healthy; 113 projects; 922 source tests; 252 changes and 166 symbols resolved; AllSuppliedSuites required due bounded dynamic/reflection uncertainty.
+
+[UIR-SB09-02] Stable gate
+Command: dotnet test tests/Solutions/CanDoItAll.Tests.Stable.slnx --no-restore -nologo -v:minimal
+Result: 8284 passed, 3 failed, 2 skipped, 8289 total.
+Affected Components: 990/990 passed in 13m29s.
+Classification: all three failures are unrelated untouched LlmChats integration tests; Phase 1 is not reopened.
+
+[UIR-SB09-03] Repository/source/dependency guards
+Boundary: pass.
+Neutral forbidden dependencies: zero matches.
+Simple Chat phase exclusion: pass.
+New partial growth: none.
+Dependency direction: pass; no project cycle.
+
+[UIR-SB09-04] Final Playwright desktop pass
+Host: http://127.0.0.1:5218, viewport 1600x1000.
+Main actual send/response: MAIN AGENT CHAT OK.
+Floating actual send/response: FINAL FLOATING AGENT CHAT OK.
+Floating lifecycle: detach/follow, hide/keep-active, reopen persistence, history, stop-to-zero all pass.
+Settings: identity/provider/model inspected; unchanged values saved and updated timestamp observed.
+Process consumer: Manager chat shared workspace and composer loaded.
+Console: 0 errors, 0 warnings.
+Cleanup: browser closed; PID 30956 stopped.
+
+[UIR-SB09-05] Decision
+CP5: pass with unrelated Stable findings.
+Terminal state: awaiting-user-agent-chat-regression.
+Simple Chat UI activation: false.

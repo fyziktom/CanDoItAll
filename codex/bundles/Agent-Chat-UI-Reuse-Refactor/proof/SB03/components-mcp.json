@@ -1,0 +1,30 @@
+{
+  "transport": "manual stdio fallback after configured app transport reported Transport closed",
+  "server": "CanDoItAll.Mcp.Components 1.0.0.0",
+  "protocolVersion": "2025-06-18",
+  "queries": [
+    {
+      "tool": "components_recommend",
+      "correlationId": "corr_eda26cc432974db7a10514fba5c7c8fa",
+      "decision": "Retain BaseLib identity, tooltip, badge, and explicit independent action composition; do not replace the established card/list anatomy with a broader shell."
+    },
+    {
+      "tool": "component_get",
+      "component": "Avatar",
+      "correlationId": "corr_81d5a6304eb74b7e89447d1c4ca0da40",
+      "decision": "Use the shared Avatar with explicit image, fallback, seed, rounded shape, and typed size."
+    },
+    {
+      "tool": "component_get",
+      "component": "TooltipTarget",
+      "correlationId": "corr_71488a7fbd5a4f66a17a1efe35ca190d",
+      "decision": "Keep short local hover/focus help and existing placements."
+    },
+    {
+      "tool": "component_usage_examples",
+      "component": "Avatar",
+      "correlationId": "corr_1a9148c940b1494b842e9ddb1a187374",
+      "result": "No curated usage examples; component metadata and existing proven product usage were retained."
+    }
+  ]
+}

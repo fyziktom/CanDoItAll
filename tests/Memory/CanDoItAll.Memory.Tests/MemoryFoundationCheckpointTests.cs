@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 
-namespace CanDoItAll.Memory.Tests;
+namespace CanDoItAll.Memory.Tests.Contracts;
 
 public sealed class MemoryFoundationCheckpointTests
 {

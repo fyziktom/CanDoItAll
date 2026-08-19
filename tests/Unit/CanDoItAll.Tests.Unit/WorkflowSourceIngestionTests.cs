@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowSourceIngestionTests
 {
@@ -139,7 +139,11 @@ public sealed class WorkflowSourceIngestionTests
         using var external = new TempDirectory();
         workspace.Write("sources/evidence.txt", "workspace");
         external.Write("outside.txt", "external");
-        var resolver = new WorkflowSourceFileResolver(new WorkspacePathResolutionService(workspace.Path));
+        var externalTargetPathRegistry = TestExternalTargetPathRegistry.Create();
+        var resolver = new WorkflowSourceFileResolver(
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path, externalTargetRegistry: externalTargetPathRegistry),
+            externalTargetPathRegistry,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
         var relativeCandidate = new WorkflowSourceCandidate(
             "relative",
             "Relative",
@@ -174,7 +178,8 @@ public sealed class WorkflowSourceIngestionTests
             new HashSet<string>([".txt"], StringComparer.OrdinalIgnoreCase),
             take: 1));
         Assert.Equal(Path.GetFullPath(external.FullPath("outside.txt")), resolved.FullPath);
-        Assert.False(string.IsNullOrWhiteSpace(resolved.DisplayPath));
+        Assert.StartsWith("external-target/v1/", resolved.DisplayPath, StringComparison.Ordinal);
+        Assert.DoesNotContain(external.Path, resolved.DisplayPath, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -183,7 +188,9 @@ public sealed class WorkflowSourceIngestionTests
         using var workspace = new TempDirectory();
         Directory.CreateDirectory(workspace.FullPath("sources"));
         var resolver = new WorkflowSourceFileResolver(
-            new WorkspacePathResolutionService(workspace.Path),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path),
+            TestExternalTargetPathRegistry.Create(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             (_, _) => throw new UnauthorizedAccessException(@"C:\private\native-path"));
         var candidate = new WorkflowSourceCandidate(
             "sources",
@@ -204,6 +211,75 @@ public sealed class WorkflowSourceIngestionTests
         Assert.Equal(WorkspaceToolAccessDeniedException.FailureCode, exception.ErrorCode);
         Assert.Contains("sources", exception.SafeMessage, StringComparison.Ordinal);
         Assert.DoesNotContain(@"C:\private\native-path", exception.SafeMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void FileResolverSortsCandidatesBeforeApplyingTake()
+    {
+        using var workspace = new TempDirectory();
+        workspace.Write("sources/z-last.txt", "z");
+        workspace.Write("sources/A-first.txt", "a");
+        var externalTargetPathRegistry = TestExternalTargetPathRegistry.Create();
+        var resolver = new WorkflowSourceFileResolver(
+            TestWorkspaceServices.CreatePathResolutionService(
+                workspace.Path,
+                externalTargetRegistry: externalTargetPathRegistry),
+            externalTargetPathRegistry,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            (root, _) =>
+            [
+                Path.Combine(root, "z-last.txt"),
+                Path.Combine(root, "A-first.txt")
+            ]);
+        var candidate = new WorkflowSourceCandidate(
+            "sources",
+            "Sources",
+            "folderPath",
+            "sources",
+            "test");
+
+        var file = Assert.Single(resolver.ResolveCandidateFiles(
+            candidate,
+            CreateSettings(".txt"),
+            new HashSet<string>([".txt"], StringComparer.OrdinalIgnoreCase),
+            take: 1));
+
+        Assert.Equal("A-first.txt", file.FileName);
+        Assert.Equal("sources/A-first.txt", file.DisplayPath);
+    }
+
+    [Fact]
+    public void FileResolverUsesOpaqueAliasForUnixNameContainingBackslash()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var workspace = new TempDirectory();
+        workspace.Write(@"sources/literal\name.txt", "value");
+        var externalTargetPathRegistry = TestExternalTargetPathRegistry.Create();
+        var resolver = new WorkflowSourceFileResolver(
+            TestWorkspaceServices.CreatePathResolutionService(
+                workspace.Path,
+                externalTargetRegistry: externalTargetPathRegistry),
+            externalTargetPathRegistry,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
+        var candidate = new WorkflowSourceCandidate(
+            "sources",
+            "Sources",
+            "folderPath",
+            "sources",
+            "test");
+
+        var file = Assert.Single(resolver.ResolveCandidateFiles(
+            candidate,
+            CreateSettings(".txt"),
+            new HashSet<string>([".txt"], StringComparer.OrdinalIgnoreCase),
+            take: 1));
+
+        Assert.StartsWith("external-target/v1/", file.DisplayPath, StringComparison.Ordinal);
+        Assert.DoesNotContain(workspace.Path, file.DisplayPath, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -538,6 +614,9 @@ public sealed class WorkflowSourceIngestionTests
         Assert.Equal(1, denied.RootElement.GetProperty("failedSourceCount").GetInt32());
         Assert.Equal(0, denied.RootElement.GetProperty("loadedSourceCount").GetInt32());
         Assert.Equal(1, allowed.RootElement.GetProperty("loadedSourceCount").GetInt32());
+        Assert.DoesNotContain(external.Path, denied.RootElement.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain(external.Path, allowed.RootElement.GetRawText(), StringComparison.Ordinal);
+        Assert.Contains("external-target/v1/", allowed.RootElement.GetRawText(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -573,7 +652,16 @@ public sealed class WorkflowSourceIngestionTests
     private static SourceIngestionWorkflowExecutor CreateExecutor(
         string workspaceRoot,
         IWorkspaceDocumentMarkdownConverter converter)
-        => new(new WorkspacePathResolutionService(workspaceRoot), converter);
+    {
+        var externalTargetPathRegistry = TestExternalTargetPathRegistry.Create();
+        return new SourceIngestionWorkflowExecutor(
+            TestWorkspaceServices.CreatePathResolutionService(
+                workspaceRoot,
+                externalTargetRegistry: externalTargetPathRegistry),
+            converter,
+            externalTargetPathRegistry,
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
+    }
 
     private static async Task<JsonDocument> ExecuteAsync(
         string workspaceRoot,

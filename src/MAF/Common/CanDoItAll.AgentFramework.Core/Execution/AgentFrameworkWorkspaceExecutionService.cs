@@ -1,6 +1,9 @@
 using CanDoItAll.AgentFramework.Core.Execution;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -15,6 +18,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     IAgentExecutionCheckpointBridge executionCheckpointBridge,
     IProviderRuntimeProfileSource providerSource,
     IAgentProviderCredentialResolver providerCredentialResolver,
+    IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory,
     ILogger logger,
     AgentExecutionActivityWorkspaceIdentity activityWorkspaceIdentity,
     IAgentExecutionPreparationService executionPreparationService,
@@ -48,10 +52,13 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
         providerCredentialDispatchScopeFactory =
         new(providerCredentialResolver);
     private readonly IWorkspacePathResolutionService? workspacePathResolutionService = workspacePathResolutionService;
+    private readonly IExternalTargetPathRegistryFactory externalTargetPathRegistryFactory =
+        externalTargetPathRegistryFactory ?? throw new ArgumentNullException(nameof(externalTargetPathRegistryFactory));
     private readonly IWorkspaceExecutionRunProcessLeaseCleaner workspaceProcessLeaseCleaner =
         workspaceProcessLeaseCleaner
         ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
     private readonly ILogger logger = logger;
+    private static readonly AgentProviderUsageObservationAssembler UsageObservationAssembler = new();
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);
     private readonly AgentTurnContextLeaseRegistry transientContextRegistry =

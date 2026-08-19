@@ -3,6 +3,9 @@ using CanDoItAll.FileTools.FileBrowser.Components;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.FileTools.FileInteraction.Components;
 using CanDoItAll.FileTools.FileInteraction.Markdown;
+using CanDoItAll.FileTools.FileInteraction.Spreadsheet;
+using CanDoItAll.FileTools.FileInteraction.Spreadsheet.Components;
+using ClosedXML.Excel;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Components.Mermaid;
 using CanDoItAll.Modules.Workbench;
@@ -13,7 +16,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureAttachmentPreviewDialogTests
 {
@@ -75,7 +78,10 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             "forecast.xlsx",
             "Reviewed by finance.");
         var file = new FileReference("authorized", "forecast-handle");
-        var source = new StaticContentSource(ProjectStructureFileInteractionPolicy.XlsxMediaType);
+        byte[] workbookContent = CreateSpreadsheetWorkbook();
+        var source = new StaticContentSource(
+            ProjectStructureFileInteractionPolicy.XlsxMediaType,
+            workbookContent);
         var session = new FileToolsKnownFileSession(
             file,
             source,
@@ -86,7 +92,7 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
                 "forecast.xlsx",
                 FileInteractionMode.View,
                 ProjectStructureFileInteractionPolicy.XlsxMediaType,
-                3),
+                workbookContent.Length),
             session,
             new NoopSessionReleaser());
         bool opened = false;
@@ -110,13 +116,13 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         fileInteraction.WaitForAssertion(() =>
         {
             Assert.True(source.ReadCount > 0);
-            Assert.Single(fileInteraction.FindComponents<WorkbenchSpreadsheetFileView>());
+            Assert.Single(fileInteraction.FindComponents<SpreadsheetFileView>());
         });
-        var spreadsheet = fileInteraction.FindComponent<WorkbenchSpreadsheetFileView>();
+        var spreadsheet = fileInteraction.FindComponent<SpreadsheetFileView>();
         spreadsheet.WaitForAssertion(() =>
         {
-            Assert.NotNull(spreadsheet.Find("[data-testid='workbench-spreadsheet-preview']"));
-            Assert.NotNull(spreadsheet.Find("[data-testid='workbench-spreadsheet-grid']"));
+            Assert.NotNull(spreadsheet.Find("[data-testid='spreadsheet-preview']"));
+            Assert.NotNull(spreadsheet.Find("[data-testid='spreadsheet-grid']"));
             Assert.Contains("Acceptance", spreadsheet.Markup, StringComparison.Ordinal);
             Assert.Contains("=COUNTA(A1:A2)", spreadsheet.Markup, StringComparison.Ordinal);
             Assert.Empty(cut.FindAll("iframe"));
@@ -450,10 +456,8 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .AddBuiltIns()
             .AddMarkdown()
             .AddWorkbenchMermaid()
-            .AddWorkbenchSpreadsheetPreview()
+            .AddSpreadsheet()
             .Build());
-        context.Services.AddSingleton<ISpreadsheetWorkbookContentPreviewService>(
-            new StaticSpreadsheetContentPreviewService());
         context.Services.AddSingleton<IMarkdownFencedCodeComponentRegistration,
             WorkbenchMarkdownMermaidComponentRegistration>();
     }
@@ -525,9 +529,35 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             Priority: 0,
             StorageObjectReferenceJson: "{}");
 
-    private sealed class StaticContentSource(string mediaType, string? content = null) : IFileContentSource
+    private static byte[] CreateSpreadsheetWorkbook()
     {
+        using var workbook = new XLWorkbook();
+        IXLWorksheet worksheet = workbook.Worksheets.Add("Acceptance");
+        worksheet.Cell("A1").Value = "Metric";
+        worksheet.Cell("B1").Value = "Value";
+        worksheet.Cell("A2").Value = "Rows";
+        worksheet.Cell("B2").FormulaA1 = "COUNTA(A1:A2)";
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private sealed class StaticContentSource : IFileContentSource
+    {
+        private readonly byte[] content;
+        private readonly string mediaType;
         private int readCount;
+
+        public StaticContentSource(string mediaType, string? content = null)
+            : this(mediaType, content is null ? [1, 2, 3] : Encoding.UTF8.GetBytes(content))
+        {
+        }
+
+        public StaticContentSource(string mediaType, byte[] content)
+        {
+            this.mediaType = mediaType;
+            this.content = content;
+        }
 
         public int ReadCount => Volatile.Read(ref readCount);
 
@@ -536,35 +566,11 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref readCount);
-            byte[] bytes = content is null ? [1, 2, 3] : Encoding.UTF8.GetBytes(content);
             return ValueTask.FromResult(new FileContentLease(
-                new MemoryStream(bytes),
+                new MemoryStream(content),
                 mediaType,
-                bytes.LongLength));
+                content.LongLength));
         }
-    }
-
-    private sealed class StaticSpreadsheetContentPreviewService
-        : ISpreadsheetWorkbookContentPreviewService
-    {
-        public SpreadsheetWorkbookContentPreviewResult PreviewWorkbook(
-            SpreadsheetWorkbookContentPreviewRequest request)
-            => new(
-                request.WorkbookName,
-                TotalWorksheetCount: 1,
-                [
-                    new SpreadsheetWorksheetPreview(
-                        "Acceptance",
-                        Position: 1,
-                        UsedRangeAddress: "A1:B2",
-                        UsedRowCount: 2,
-                        UsedColumnCount: 2,
-                        Values: [["Metric", "Value"], ["Rows", "=COUNTA(A1:A2)"]],
-                        MarkdownTable: string.Empty,
-                        RowsTruncated: false,
-                        ColumnsTruncated: false)
-                ],
-                WorksheetsTruncated: false);
     }
 
     private sealed class UnknownLengthContentSource(long availableBytes) : IFileContentSource

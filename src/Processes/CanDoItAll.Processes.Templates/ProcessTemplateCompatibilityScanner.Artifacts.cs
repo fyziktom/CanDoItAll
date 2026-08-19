@@ -17,7 +17,8 @@ public static partial class ProcessTemplateCompatibilityScanner
 
         var diagnostics = new List<ProcessArtifactContractDiagnostic>();
         foreach (var artifactPath in Directory.EnumerateFiles(artifactRoot, "*.json", SearchOption.TopDirectoryOnly)
-                     .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
+                     .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                     .ThenBy(path => path, StringComparer.Ordinal))
         {
             cancellationToken.ThrowIfCancellationRequested();
 

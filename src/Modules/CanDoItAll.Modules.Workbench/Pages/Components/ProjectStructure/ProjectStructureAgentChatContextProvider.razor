@@ -1,6 +1,7 @@
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Infrastructure.Storage
 @using CanDoItAll.Modules.Workbench.AgentContext
 @using CanDoItAll.Modules.Workbench.ProjectStructure
 @using CanDoItAll.SharedKernel
@@ -13,6 +14,7 @@
 @inject IAgentReferenceDataProvider ReferenceDataProvider
 @inject IAgentReferenceDataCacheInvalidator ReferenceDataCacheInvalidator
 @inject IDatabaseRuntimeState DatabaseRuntimeState
+@inject IExternalTargetPathRegistry ExternalTargetPathRegistry
 @inject TimeProvider TimeProvider
 @inject ILogger<ProjectStructureAgentChatContextProvider> Logger
 @inject NavigationManager Navigation
@@ -286,7 +288,9 @@
                 AgentChatExternalTargetAccessAttachmentPublisher.CreateReadOnlyDraft(
                     ProjectStructureOutputRootAuthorityResolver.ResolveChatDiscoveryRoots(
                         surface,
-                        selectedEntities),
+                        selectedEntities,
+                        ExternalTargetPathRegistry),
+                    ExternalTargetPathRegistry,
                     databaseProfileGeneration,
                     capturedAtUtc,
                     capturedAtUtc.Add(

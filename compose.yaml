@@ -1,5 +1,5 @@
-# Development-only PostgreSQL. The installed Windows web app uses the separate
-# tools/install/Install-CanDoItAllWebAppDatabase.ps1 lifecycle.
+# Development-only application stack. The installed Windows web app uses the separate
+# tools/install/Install-CanDoItAllWebApp.ps1 lifecycle.
 name: ${COMPOSE_PROJECT_NAME:-candoitall-app}
 
 x-bounded-logging: &bounded-logging
@@ -9,6 +9,78 @@ x-bounded-logging: &bounded-logging
     max-file: "3"
 
 services:
+  app:
+    image: ${APP_IMAGE:-candoitall-app:dev}
+    build:
+      context: .
+      dockerfile: src/App/CanDoItAll.Web/Dockerfile
+      additional_contexts:
+        components: ../CanDoItAll.Components
+        filetools: ../CanDoItAll.FileTools
+      args:
+        DOTNET_SDK_VERSION: ${DOTNET_SDK_VERSION:-10.0.302}
+        DOTNET_RUNTIME_VERSION: ${DOTNET_RUNTIME_VERSION:-10.0.10}
+        BUILD_DATE: ${BUILD_DATE:-}
+        BUILD_REVISION: ${BUILD_REVISION:-development}
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      CANDOITALL_HOST_BINDING_ID: ${CANDOITALL_HOST_BINDING_ID:-candoitall-compose}
+      ControlPlane__LogsRootPath: /data/logs
+      ControlPlane__RootPath: /data/control-plane
+      ControlPlane__RuntimeTemporaryRootPath: /tmp/candoitall
+      ControlPlane__StateRootPath: /data/state
+      Database__ConnectionString: Host=db;Port=5432;Database=${POSTGRES_DB:-candoitall_development};Username=${POSTGRES_USER:-candoitall};Include Error Detail=true
+      Database__PasswordFile: /run/secrets/db-password
+      Database__Provider: PostgreSql
+      FileTools__DesktopLaunch__Enabled: "false"
+      RuntimeHost__Profile: LinuxHeadless
+      SecretVault__UsageProfile: Headless
+      Storage__WorkspaceRoot: /data/workspace
+      WebHost__HttpsRedirectionEnabled: "false"
+      XDG_CONFIG_HOME: /data/config
+      XDG_DATA_HOME: /data
+      XDG_STATE_HOME: /data/state
+    secrets:
+      - db-password
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${CDA_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    volumes:
+      - app-data:/data
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/bin/busybox
+        - wget
+        - --spider
+        - --quiet
+        - http://127.0.0.1:8080/health
+      start_period: 5m
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    cpus: ${APP_CPU_LIMIT:-2.0}
+    pids_limit: ${APP_PID_LIMIT:-512}
+    stop_grace_period: 30s
+    restart: "no"
+    logging: *bounded-logging
+
   db:
     image: postgres:${POSTGRES_IMAGE_TAG:-16-alpine}
     environment:
@@ -17,10 +89,10 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/db-password
     secrets:
       - db-password
-    ports:
-      - "${CDA_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
     healthcheck:
       test:
         - CMD-SHELL
@@ -38,7 +110,13 @@ services:
 
 secrets:
   db-password:
-    environment: POSTGRES_PASSWORD
+    file: ${DB_PASSWORD_FILE:-.secrets/db-password}
 
 volumes:
+  app-data:
   db-data:
+
+networks:
+  frontend:
+  backend:
+    internal: true

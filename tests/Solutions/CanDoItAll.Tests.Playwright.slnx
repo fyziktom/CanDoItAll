@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/tests/Playwright/">
+    <Project Path="../Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj" />
+  </Folder>
+</Solution>

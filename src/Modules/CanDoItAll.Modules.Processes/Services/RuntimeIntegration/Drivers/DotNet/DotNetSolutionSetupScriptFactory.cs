@@ -144,7 +144,9 @@ internal static class DotNetSolutionSetupScriptFactory
     {
         builder.AppendLine("function Normalize-PathText([string]$Value) {");
         builder.AppendLine("    if ($null -eq $Value) { return '' }");
-        builder.AppendLine("    return $Value.Replace('\\', '/').ToLowerInvariant()");
+        builder.AppendLine("    $normalized = $Value.Replace('\\', '/')");
+        builder.AppendLine("    if ([System.IO.Path]::DirectorySeparatorChar -eq '\\') { return $normalized.ToLowerInvariant() }");
+        builder.AppendLine("    return $normalized");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine("function Invoke-Dotnet([string[]]$Arguments) {");

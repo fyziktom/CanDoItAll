@@ -1,6 +1,6 @@
 using Bunit;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class EmbeddedBrowserTests
 {

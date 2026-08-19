@@ -3,8 +3,7 @@ using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Modules.Prompts;
-using CanDoItAll.Modules.Prompts.Components;
+using CanDoItAll.Conversations.Components.Presentation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
@@ -17,6 +16,8 @@ public partial class AgentChatPanel : IAsyncDisposable
     private const string AgentThreadsHelpText =
         "Search and select threads for the active technical agent. Use Switch Agent when you need another agent's thread list.";
     private const string UpdatingWorkspaceContextRunState = "Updating current workspace context...";
+    private static readonly ConversationThreadRailText ThreadRailText = new(
+        EmptyText: "The selected agent does not have a thread yet.");
 
     private readonly object voiceOwnerGate = new();
     private CancellationTokenSource voiceOperationCancellation = new();
@@ -73,16 +74,12 @@ public partial class AgentChatPanel : IAsyncDisposable
     public NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
-    public IPromptGalleryService PromptGallery { get; set; } = default!;
-
-    [Inject]
     public ILogger<AgentChatPanel> Logger { get; set; } = default!;
 
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<ProviderProfile> providers = [];
     private IReadOnlyCollection<Guid> privateAgentIds = [];
     private ChatAgentWorkspaceSnapshot? workspace;
-    private IReadOnlyList<ChatSessionSummaryRecord> filteredSessions = [];
     private IReadOnlyList<ExecutionLogEntry> executionLog = [];
     private IReadOnlyList<AgentRunMetric> metrics = [];
     private AgentDefinition? selectedAgent;
@@ -95,7 +92,6 @@ public partial class AgentChatPanel : IAsyncDisposable
     private int composerKey;
     private string runStateText = string.Empty;
     private string runStateTone = "neutral";
-    private string threadSearchText = string.Empty;
     private bool isVoiceModeEnabled;
     private bool isVoiceRecording;
     private bool isVoiceTranscribing;
@@ -112,7 +108,10 @@ public partial class AgentChatPanel : IAsyncDisposable
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
     private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
 
-    private IReadOnlyList<ChatSessionSummaryRecord> FilteredSessions => filteredSessions;
+    private IReadOnlyList<ConversationThreadPresentation> ThreadPresentations
+        => workspace?.Sessions
+            .Select(session => AgentThreadPresentationMapper.Map(session, selectedSessionId))
+            .ToArray() ?? [];
 
     private bool CanOpenRuntimeDetails
         => workspace?.SelectedRun is not null ||
@@ -259,7 +258,6 @@ public partial class AgentChatPanel : IAsyncDisposable
         var hadSelectedAgent = selectedAgentId.HasValue;
         await ResetVoiceOwnerAsync();
         workspace = null;
-        filteredSessions = [];
         selectedAgent = null;
         selectedAgentId = null;
         selectedSessionId = null;
@@ -288,7 +286,6 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     private async Task SelectAgentAsync(Guid agentId)
     {
-        threadSearchText = string.Empty;
         await LoadWorkspaceAsync(agentId, preferredSessionId: null);
     }
 
@@ -338,94 +335,28 @@ public partial class AgentChatPanel : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private async Task HandlePromptGallerySelectionAsync(PromptGallerySelection selection)
+    private Task InsertPromptGalleryContentAsync(string content)
     {
-        var compatibilityResult = await PromptGallery.EvaluateCompatibilityAsync(
-            selection.ArtifactId,
-            new PromptGalleryConsumerContext(
-                PromptGalleryConsumer.Chat,
-                PromptGalleryCompatibilityPurpose.Selection,
-                Provider: SelectedAgentProviderKind,
-                Model: selectedAgent?.Model));
-        if (compatibilityResult.IsFailure || compatibilityResult.Value is null)
-        {
-            NotificationService.Warning(
-                "Prompt compatibility unavailable",
-                DescribePromptGalleryErrors(compatibilityResult.Errors));
-            return;
-        }
-
-        var compatibility = compatibilityResult.Value;
-        var decision = PromptCompatibilityWarningDecision.InsertAnyway;
-        if (!compatibility.CanUse || compatibility.HasVisibleWarnings)
-        {
-            var dialogResult = await DialogService.OpenAsync<PromptCompatibilityWarningDialog>(
-                "Prompt compatibility",
-                new Dictionary<string, object?>
-                {
-                    [nameof(PromptCompatibilityWarningDialog.Selection)] = selection,
-                    [nameof(PromptCompatibilityWarningDialog.Compatibility)] = compatibility
-                },
-                new DialogOptions
-                {
-                    Eyebrow = "Provider and model check",
-                    Subtitle = "Review declared compatibility before inserting this prompt.",
-                    Size = ModalSize.Medium,
-                    DenseChrome = true,
-                    TestId = "prompt-gallery-chat-compatibility-dialog",
-                    AriaLabel = "Prompt compatibility warning"
-                });
-            if (dialogResult is not PromptCompatibilityWarningDecision selectedDecision ||
-                selectedDecision == PromptCompatibilityWarningDecision.Cancel)
-            {
-                return;
-            }
-
-            decision = selectedDecision;
-        }
-
-        if (decision == PromptCompatibilityWarningDecision.InsertAndSuppress)
-        {
-            foreach (var issue in compatibility.Issues.Where(issue =>
-                         !issue.IsSuppressed && issue.IsSuppressible))
-            {
-                var suppression = await PromptGallery.SetWarningSuppressionAsync(
-                    selection.ArtifactId,
-                    PromptGalleryConsumer.Chat,
-                    issue.Code,
-                    suppressed: true);
-                if (suppression.IsFailure)
-                {
-                    NotificationService.Warning(
-                        "Warning preference was not saved",
-                        DescribePromptGalleryErrors(suppression.Errors));
-                }
-            }
-        }
-
-        var content = selection.Content.Trim();
-        if (content.Length == 0)
-        {
-            NotificationService.Warning("Prompt is empty", "The selected Gallery item has no content to insert.");
-            return;
-        }
-
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        var normalizedContent = content.Trim();
         draftPrompt = string.IsNullOrWhiteSpace(draftPrompt)
-            ? content
-            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{content}";
+            ? normalizedContent
+            : $"{draftPrompt.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{normalizedContent}";
         composerKey++;
+        return Task.CompletedTask;
     }
 
-    private static string DescribePromptGalleryErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
-        => errors.Count == 0
-            ? "The Prompt Gallery did not return a result."
-            : string.Join(" ", errors.Select(error => error.Message));
-
-    private Task HandleThreadSearchChangedAsync(string? value)
+    private Task HandleThreadSelectedAsync(ConversationPresentationKey key)
     {
-        threadSearchText = value ?? string.Empty;
-        RefreshFilteredSessions();
-        return Task.CompletedTask;
+        if (!AgentThreadPresentationMapper.TryResolveSessionId(key, out var sessionId))
+        {
+            Logger.LogWarning(
+                "Ignoring invalid conversation thread presentation key {ThreadKey}.",
+                key.Value);
+            return Task.CompletedTask;
+        }
+
+        return SelectSessionAsync(sessionId);
     }
 
     private Task SendMessageAsync()
@@ -1165,7 +1096,6 @@ public partial class AgentChatPanel : IAsyncDisposable
         selectedSessionId = nextWorkspace.SelectedSessionId;
         executionLog = nextExecutionLog;
         metrics = nextMetrics;
-        RefreshFilteredSessions();
         ResolveRunState();
         SynchronizeActiveChatRunState();
         if (selectionChanged)
@@ -1188,14 +1118,6 @@ public partial class AgentChatPanel : IAsyncDisposable
 
         publishedAccessState = state;
         await ContextAccessStateChanged.InvokeAsync(state);
-    }
-
-    private void RefreshFilteredSessions()
-    {
-        filteredSessions = workspace?.Sessions
-            .Where(MatchesThreadSearch)
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ToArray() ?? [];
     }
 
     private Task OpenAgentSwitchDialogAsync()
@@ -1983,57 +1905,6 @@ Use these workspace artifacts as input:
                 NotificationService.Info(label, value);
                 break;
         }
-    }
-
-    private static string BuildSessionMeta(ChatSessionSummaryRecord session)
-    {
-        return session.MessageCount == 0
-            ? "Empty thread"
-            : $"{session.MessageCount} message(s)";
-    }
-
-    private static string FormatThreadUpdatedAt(ChatSessionSummaryRecord session)
-        => session.UpdatedAtUtc.LocalDateTime.ToString("dd.MM HH:mm");
-
-    private static string BuildThreadCardPreview(ChatSessionSummaryRecord session)
-    {
-        var preview = NormalizeInlineText(session.LastMessagePreview);
-        const int maxLength = 88;
-        return preview.Length <= maxLength
-            ? preview
-            : $"{preview[..maxLength].TrimEnd()}...";
-    }
-
-    private static string BuildThreadTooltipText(ChatSessionSummaryRecord session)
-        => NormalizeInlineText(session.LastMessagePreview);
-
-    private static string NormalizeInlineText(string value)
-    {
-        return string.Join(
-            ' ',
-            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-    }
-
-    private bool MatchesThreadSearch(ChatSessionSummaryRecord session)
-    {
-        if (string.IsNullOrWhiteSpace(threadSearchText))
-        {
-            return true;
-        }
-
-        return session.Title.Contains(threadSearchText, StringComparison.OrdinalIgnoreCase) ||
-               session.LastMessagePreview.Contains(threadSearchText, StringComparison.OrdinalIgnoreCase) ||
-               BuildSessionMeta(session).Contains(threadSearchText, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string ResolveEmptyThreadText()
-    {
-        if (workspace?.Sessions.Count > 0)
-        {
-            return "No threads match the current search.";
-        }
-
-        return "The selected agent does not have a thread yet.";
     }
 
     private string BuildRuntimeDialogSubtitle()

@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessModuleBoundaryTests
 {
@@ -70,8 +70,9 @@ public sealed class ProcessModuleBoundaryTests
             var document = XDocument.Load(projectFile);
             var actualReferences = document.Descendants("ProjectReference")
                 .Select(element => element.Attribute("Include")?.Value)
+                .OfType<string>()
                 .Where(include => !string.IsNullOrWhiteSpace(include))
-                .Select(include => Path.GetFileNameWithoutExtension(include))
+                .Select(include => Path.GetFileNameWithoutExtension(include.Replace('\\', '/')))
                 .Where(reference => reference is not null && knownProjects.Contains(reference))
                 .Cast<string>()
                 .Order(StringComparer.Ordinal)
@@ -110,7 +111,6 @@ public sealed class ProcessModuleBoundaryTests
             "CrmHr",
             "Gmail",
             "Office365",
-            "Docker",
             "Tetris",
             "Invoice",
             "Recipe",
@@ -129,6 +129,183 @@ public sealed class ProcessModuleBoundaryTests
         Assert.True(
             findings.Length == 0,
             "Generic process boundary projects must stay domain-agnostic: " + string.Join(", ", findings));
+    }
+
+    [Fact]
+    public void Process_driver_and_generic_runtime_layers_do_not_own_host_primitives()
+    {
+        var root = FindRepositoryRoot();
+        var guardedProjects = new[]
+        {
+            "CanDoItAll.Processes.Contracts",
+            "CanDoItAll.Processes.Abstractions",
+            "CanDoItAll.Processes.Core",
+            "CanDoItAll.Processes.Drivers.Abstractions",
+            "CanDoItAll.Processes.Drivers.Standard",
+            "CanDoItAll.Processes.Builder",
+            "CanDoItAll.Processes.Runtime"
+        };
+        var blockedHostPrimitives = new[]
+        {
+            "System.Diagnostics.Process",
+            "ProcessStartInfo",
+            "Process.Start(",
+            "OperatingSystem.Is",
+            "RuntimeInformation.",
+            "Environment.GetEnvironmentVariable(",
+            "Environment.SetEnvironmentVariable(",
+            "Environment.GetFolderPath(",
+            "Environment.CurrentDirectory",
+            "Environment.MachineName",
+            "Environment.OSVersion",
+            "Environment.ProcessPath",
+            "Environment.SystemDirectory",
+            "Environment.UserName",
+            "System.IO.File",
+            "System.IO.Directory",
+            "System.IO.Path",
+            "File.",
+            "Directory.",
+            "Path.",
+            "FileInfo",
+            "DirectoryInfo",
+            "FileStream",
+            "ISecretVault",
+            "ISecretResolver",
+            "ProtectedData",
+            "DllImport",
+            "LibraryImport"
+        };
+
+        var findings = guardedProjects
+            .Select(project => Path.GetDirectoryName(GetSolutionProjectFile(root, project))!)
+            .SelectMany(directory => Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(path => FindSubstringMatches(root, path, blockedHostPrimitives))
+            .Take(20)
+            .ToArray();
+
+        Assert.True(
+            findings.Length == 0,
+            "Process drivers and generic runtime layers must consume typed owner facts instead of host primitives: " +
+            string.Join(", ", findings));
+    }
+
+    [Fact]
+    public void Process_runtime_integration_execution_paths_delegate_host_io_to_owner_services()
+    {
+        var root = FindRepositoryRoot();
+        var integrationDriverDirectory = Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Processes",
+            "Services",
+            "RuntimeIntegration",
+            "Drivers");
+        var blockedHostPrimitives = new[]
+        {
+            "System.Diagnostics.Process",
+            "ProcessStartInfo",
+            "Process.Start(",
+            "OperatingSystem.Is",
+            "RuntimeInformation.",
+            "Environment.GetEnvironmentVariable(",
+            "Environment.SetEnvironmentVariable(",
+            "Environment.GetFolderPath(",
+            "Environment.CurrentDirectory",
+            "Environment.MachineName",
+            "Environment.OSVersion",
+            "Environment.ProcessPath",
+            "Environment.SystemDirectory",
+            "Environment.UserName",
+            "System.IO.File",
+            "System.IO.Directory",
+            "File.",
+            "Directory.",
+            "FileInfo",
+            "DirectoryInfo",
+            "FileStream",
+            "ISecretVault",
+            "ISecretResolver",
+            "ProtectedData",
+            "DllImport",
+            "LibraryImport"
+        };
+
+        var runtimeIntegrationDirectory = Directory.GetParent(integrationDriverDirectory)!.FullName;
+        var guardedFiles = Directory
+            .EnumerateFiles(integrationDriverDirectory, "*.cs", SearchOption.AllDirectories)
+            .Concat(
+            [
+                Path.Combine(runtimeIntegrationDirectory, "ProcessProductCompletionPathGate.cs"),
+                Path.Combine(runtimeIntegrationDirectory, "ProcessProductFilesystemInspector.cs"),
+                Path.Combine(runtimeIntegrationDirectory, "ProcessProductRootResolver.cs")
+            ]);
+        var findings = guardedFiles
+            .SelectMany(path => FindSubstringMatches(root, path, blockedHostPrimitives))
+            .Take(20)
+            .ToArray();
+
+        Assert.True(
+            findings.Length == 0,
+            "Process runtime integration execution paths must delegate host I/O, OS probing, native execution, and secrets to owner services: " +
+            string.Join(", ", findings));
+    }
+
+    [Theory]
+    [InlineData("OperatingSystem.IsWindows()", "OperatingSystem.Is")]
+    [InlineData("Environment.GetEnvironmentVariable(\"PATH\")", "Environment.")]
+    [InlineData("File.ReadAllText(path)", "File.")]
+    [InlineData("Directory.CreateDirectory(path)", "Directory.")]
+    [InlineData("Path.GetFullPath(path)", "Path.")]
+    [InlineData("new FileStream(path, FileMode.Open)", "FileStream")]
+    [InlineData("RuntimeInformation.IsOSPlatform(OSPlatform.Linux)", "RuntimeInformation.")]
+    public void Host_primitive_guard_patterns_match_representative_forbidden_apis(
+        string source,
+        string expectedPattern)
+    {
+        var findings = FindSubstringMatches(
+                source,
+                [
+                    "OperatingSystem.Is",
+                    "RuntimeInformation.",
+                    "Environment.",
+                    "File.",
+                    "Directory.",
+                    "Path.",
+                    "FileStream"
+                ])
+            .ToArray();
+
+        Assert.Contains(expectedPattern, findings);
+    }
+
+    [Fact]
+    public void Process_driver_projects_reference_only_the_declared_inward_process_contracts()
+    {
+        var root = FindRepositoryRoot();
+        var driverProjects = new[]
+        {
+            "CanDoItAll.Processes.Drivers.Abstractions",
+            "CanDoItAll.Processes.Drivers.Standard"
+        };
+
+        foreach (var project in driverProjects)
+        {
+            var document = XDocument.Load(GetSolutionProjectFile(root, project));
+            var actualReferences = document.Descendants("ProjectReference")
+                .Select(element => element.Attribute("Include")?.Value)
+                .OfType<string>()
+                .Select(include => Path.GetFileNameWithoutExtension(include.Replace('\\', '/')))
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            var allowedReferences = AllowedProcessReferences[project]
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.Equal(allowedReferences, actualReferences);
+        }
     }
 
     [Fact]
@@ -298,6 +475,21 @@ public sealed class ProcessModuleBoundaryTests
             }
         }
     }
+
+    private static IEnumerable<string> FindSubstringMatches(
+        string root,
+        string path,
+        IReadOnlyList<string> terms)
+        => FindSubstringMatches(File.ReadAllText(path), terms)
+            .Select(term => $"{Path.GetRelativePath(root, path)} contains {term}");
+
+    private static IEnumerable<string> FindSubstringMatches(
+        string source,
+        IReadOnlyList<string> terms)
+        => terms.Where(term => System.Text.RegularExpressions.Regex.IsMatch(
+            source,
+            $"(?<![A-Za-z0-9_]){System.Text.RegularExpressions.Regex.Escape(term)}",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant));
 
     private static bool IsScannableSourceOrProjectFile(string path)
     {

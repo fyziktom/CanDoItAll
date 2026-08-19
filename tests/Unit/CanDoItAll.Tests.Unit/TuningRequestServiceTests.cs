@@ -2,7 +2,7 @@ using System.Threading.Channels;
 using CanDoItAll.Manager;
 using Microsoft.Extensions.Configuration;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Infrastructure;
 
 public sealed class TuningRequestServiceTests
 {

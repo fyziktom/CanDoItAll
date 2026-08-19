@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Infrastructure.Storage;
 
@@ -14,7 +15,7 @@ public static class StorageJson
     {
         return reference is null
             ? string.Empty
-            : JsonSerializer.Serialize(reference, SerializerOptions);
+            : JsonSerializer.Serialize(NormalizeReference(reference), SerializerOptions);
     }
 
     public static StorageObjectReference? ParseReference(string? json)
@@ -24,7 +25,8 @@ public static class StorageJson
             return null;
         }
 
-        return JsonSerializer.Deserialize<StorageObjectReference>(json, SerializerOptions);
+        StorageObjectReference? reference = JsonSerializer.Deserialize<StorageObjectReference>(json, SerializerOptions);
+        return reference is null ? null : NormalizeReference(reference);
     }
 
     public static bool TryParseReference(string? json, out StorageObjectReference? reference)
@@ -148,10 +150,7 @@ public static class StorageJson
         string originalFileName,
         long? contentLength = null)
     {
-        var normalizedRelativePath = relativePath
-            .Trim()
-            .Replace('\\', '/')
-            .TrimStart('/');
+        string normalizedRelativePath = NormalizeLogicalLocator(relativePath);
 
         return new StorageObjectReference(
             null,
@@ -175,6 +174,49 @@ public static class StorageJson
 
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         return options;
+    }
+
+    private static StorageObjectReference NormalizeReference(StorageObjectReference reference)
+    {
+        if (reference.FormatVersion > StorageObjectReference.CurrentFormatVersion || reference.FormatVersion < 1)
+        {
+            throw new InvalidOperationException(
+                $"Unsupported storage reference format version '{reference.FormatVersion}'.");
+        }
+
+        string locator = reference.LocatorKind switch
+        {
+            StorageLocatorKind.RelativePath or StorageLocatorKind.RemotePath => NormalizeLogicalLocator(reference.Locator),
+            _ => reference.Locator.Trim()
+        };
+        return reference with
+        {
+            Locator = locator,
+            FormatVersion = StorageObjectReference.CurrentFormatVersion
+        };
+    }
+
+    internal static string NormalizeLogicalLocator(string locator)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(locator);
+        string candidate = locator.Trim();
+        if (PhysicalPathSyntaxClassifier.Classify(candidate) != PhysicalPathSyntax.Relative ||
+            candidate.StartsWith('\\'))
+        {
+            throw new InvalidOperationException(
+                "A storage logical locator must be relative and cannot use rooted physical or URI syntax.");
+        }
+
+        string normalized = candidate.Replace('\\', '/');
+        if (normalized.Length == 0 ||
+            normalized.Split('/', StringSplitOptions.None).Any(segment =>
+                segment.Length == 0 || segment is "." or ".."))
+        {
+            throw new InvalidOperationException(
+                "A storage logical locator must contain canonical non-traversing segments.");
+        }
+
+        return normalized;
     }
 
     private static void ValidateProviderConfigurationLength(string json)

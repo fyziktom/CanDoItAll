@@ -1,0 +1,13 @@
+{
+  "workspace": "",
+  "selectorType": "FullyQualifiedName|Class|Namespace|Project|Workspace|AllSuppliedSuites",
+  "selector": "",
+  "command": "",
+  "expectedDiscovery": "",
+  "actualDiscovery": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "exitCode": null,
+  "result": "pending"
+}

@@ -4,7 +4,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class DotNetSolutionContextParserTests
 {
@@ -86,7 +86,7 @@ public sealed class DotNetSolutionContextParserTests
     {
         var parser = new DotNetSolutionContextParser();
         Assert.True(parser.TryParse(CreateInitializeArtifact(), out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
         var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Decision.{Guid.NewGuid():N}");
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -115,7 +115,7 @@ public sealed class DotNetSolutionContextParserTests
             StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
         var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Decision.{Guid.NewGuid():N}");
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
 
         var created = factory.TryCreate(
             context,
@@ -146,7 +146,7 @@ public sealed class DotNetSolutionContextParserTests
             .Replace("client/TimeTracker/TimeTracker.csproj", "TimeTracker.csproj", StringComparison.Ordinal)
             .Replace("\"directory\": \"client/TimeTracker\"", "\"directory\": \".\"", StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
         var canonicalRoot = Path.Combine(
             Path.GetTempPath(),
             $"CanDoItAll.Decision.{Guid.NewGuid():N}",
@@ -182,7 +182,7 @@ public sealed class DotNetSolutionContextParserTests
             .Replace("\"template\": \"blazorwasm\"", $"\"template\": \"{applicationTemplate}\"", StringComparison.Ordinal)
             .Replace("\"template\": \"xunit\"", $"\"template\": \"{testTemplate}\"", StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
 
         var created = factory.TryCreate(
             context,
@@ -213,7 +213,7 @@ public sealed class DotNetSolutionContextParserTests
             .Replace("\"template\": \"blazorwasm\"", $"\"template\": \"{applicationTemplate}\"", StringComparison.Ordinal)
             .Replace("\"template\": \"xunit\"", $"\"template\": \"{testTemplate}\"", StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
 
         var created = factory.TryCreate(
             context,
@@ -238,7 +238,7 @@ public sealed class DotNetSolutionContextParserTests
             "\"template\": \"console\"",
             StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
 
         var created = factory.TryCreate(
             context,
@@ -263,7 +263,7 @@ public sealed class DotNetSolutionContextParserTests
             "\"targetFramework\": \"not-a-target-framework\"",
             StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetProcessLaunchContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = CreateInitializationContractFactory();
 
         var created = factory.TryCreate(
             context,
@@ -285,7 +285,7 @@ public sealed class DotNetSolutionContextParserTests
         var parser = new DotNetSolutionContextParser();
         Assert.True(parser.TryParse(CreateVerifyExistingArtifact(), out var context, out var parseIssue), parseIssue);
         var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Decision.{Guid.NewGuid():N}");
-        var factory = new DotNetExistingSolutionVerificationContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = new DotNetExistingSolutionVerificationContractFactory(CreatePathResolver());
 
         var created = factory.TryCreate(
             context,
@@ -310,13 +310,66 @@ public sealed class DotNetSolutionContextParserTests
             "../outside/Portal.csproj",
             StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetExistingSolutionVerificationContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = new DotNetExistingSolutionVerificationContractFactory(CreatePathResolver());
 
         var created = factory.TryCreate(
             context,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["ProductRoot"] = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Decision.{Guid.NewGuid():N}")
+            },
+            out _,
+            out var issue);
+
+        Assert.False(created);
+        Assert.Contains("escapes", issue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Context_path_resolver_rejects_foreign_host_product_root()
+    {
+        var parser = new DotNetSolutionContextParser();
+        Assert.True(parser.TryParse(CreateVerifyExistingArtifact(), out var context, out var parseIssue), parseIssue);
+        var foreignRoot = OperatingSystem.IsWindows()
+            ? "/var/lib/candoitall/product"
+            : @"C:\products\CanDoItAll";
+        var factory = new DotNetExistingSolutionVerificationContractFactory(CreatePathResolver());
+
+        var created = factory.TryCreate(
+            context,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProductRoot"] = foreignRoot
+            },
+            out _,
+            out var issue);
+
+        Assert.False(created);
+        Assert.Contains("product root", issue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Context_path_resolver_uses_case_sensitive_product_containment_on_unix()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var parser = new DotNetSolutionContextParser();
+        var artifact = CreateVerifyExistingArtifact().Replace(
+            "modules/Portal/Portal.csproj",
+            "../product/modules/Portal/Portal.csproj",
+            StringComparison.Ordinal);
+        Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
+        var productRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Decision.{Guid.NewGuid():N}", "Product");
+        var factory = new DotNetExistingSolutionVerificationContractFactory(CreatePathResolver());
+
+        var created = factory.TryCreate(
+            context,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["ProductRoot"] = productRoot
             },
             out _,
             out var issue);
@@ -338,7 +391,7 @@ public sealed class DotNetSolutionContextParserTests
             externalTargetAlias.Replace("\\", "\\\\", StringComparison.Ordinal),
             StringComparison.Ordinal);
         Assert.True(parser.TryParse(artifact, out var context, out var parseIssue), parseIssue);
-        var factory = new DotNetExistingSolutionVerificationContractFactory(new DotNetSolutionContextPathResolver());
+        var factory = new DotNetExistingSolutionVerificationContractFactory(CreatePathResolver());
 
         var created = factory.TryCreate(
             context,
@@ -377,10 +430,13 @@ public sealed class DotNetSolutionContextParserTests
         Directory.CreateDirectory(workspaceRoot);
         try
         {
-            var workspaceFiles = new WorkspaceFileService(workspaceRoot);
+            var workspaceFiles = TestWorkspaceServices.CreateFileService(workspaceRoot);
             const string artifactRef = "artifacts/process-runs/parent/steps/solution-context.md";
             Assert.True(workspaceFiles.WriteTextFile(artifactRef, CreateInitializeArtifact()).Succeeded);
-            var contributor = new DotNetProcessLaunchVariableContributor(workspaceFiles);
+            var contributor = new DotNetProcessLaunchVariableContributor(
+                TestExternalTargetPathRegistry.Create(),
+                TestWorkspaceServices.PhysicalPathPolicyFactory,
+                workspaceFiles);
             var context = new ProcessLaunchPreparationContext(
                 "dotnet-solution-setup",
                 IsSubprocess: true,
@@ -428,6 +484,21 @@ public sealed class DotNetSolutionContextParserTests
             Directory.Delete(workspaceRoot, recursive: true);
         }
     }
+
+    private static DotNetProcessLaunchContractFactory CreateInitializationContractFactory()
+    {
+        var externalTargetPathRegistry = TestExternalTargetPathRegistry.Create();
+        return new DotNetProcessLaunchContractFactory(
+            new DotNetSolutionContextPathResolver(
+                externalTargetPathRegistry,
+                TestWorkspaceServices.PhysicalPathPolicyFactory),
+            externalTargetPathRegistry);
+    }
+
+    private static DotNetSolutionContextPathResolver CreatePathResolver()
+        => new(
+            TestExternalTargetPathRegistry.Create(),
+            TestWorkspaceServices.PhysicalPathPolicyFactory);
 
     private static ProcessLaunchSourceSnapshot EmptySource()
     {

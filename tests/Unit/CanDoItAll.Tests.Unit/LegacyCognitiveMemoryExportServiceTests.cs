@@ -1,9 +1,10 @@
 using System.Text.Json;
+using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Tests.Support;
 using Npgsql;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Memory;
 
 public sealed class LegacyCognitiveMemoryExportServiceTests
 {
@@ -13,7 +14,7 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
         var rootPath = TestFileSystem.CreateTemporaryRoot("legacy-cognitive-memory-export-disabled");
         try {
             var reader = new FakeLegacyCognitiveMemoryDataReader([]);
-            var service = new LegacyCognitiveMemoryExportService(reader);
+            var service = CreateService(reader);
 
             var result = await service.ExportAsync(new LegacyCognitiveMemoryExportRequest(
                 rootPath,
@@ -35,7 +36,7 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
         var rootPath = TestFileSystem.CreateTemporaryRoot("legacy-cognitive-memory-export-empty");
         try {
             var reader = new FakeLegacyCognitiveMemoryDataReader([]);
-            var service = new LegacyCognitiveMemoryExportService(reader);
+            var service = CreateService(reader);
 
             var result = await service.ExportAsync(CreateEnabledRequest(rootPath, "empty-export"));
 
@@ -72,7 +73,7 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
                     })
                 ]);
             var reader = new FakeLegacyCognitiveMemoryDataReader([table]);
-            var service = new LegacyCognitiveMemoryExportService(reader);
+            var service = CreateService(reader);
 
             var result = await service.ExportAsync(CreateEnabledRequest(rootPath, "populated-export"));
 
@@ -107,14 +108,14 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
         var rootPath = TestFileSystem.CreateTemporaryRoot("legacy-cognitive-memory-export-duplicate");
         try {
             var firstReader = new FakeLegacyCognitiveMemoryDataReader([]);
-            var service = new LegacyCognitiveMemoryExportService(firstReader);
+            var service = CreateService(firstReader);
             var firstResult = await service.ExportAsync(CreateEnabledRequest(rootPath, "duplicate-export"));
             Assert.Equal(LegacyCognitiveMemoryExportResultKind.NoLegacyData, firstResult.Kind);
 
             var blockingReader = new FakeLegacyCognitiveMemoryDataReader(
                 [],
                 new InvalidOperationException("Reader should not be invoked for duplicate exports."));
-            var duplicateService = new LegacyCognitiveMemoryExportService(blockingReader);
+            var duplicateService = CreateService(blockingReader);
 
             var duplicateResult = await duplicateService.ExportAsync(CreateEnabledRequest(rootPath, "duplicate-export"));
 
@@ -137,7 +138,7 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
         var rootPath = TestFileSystem.CreateTemporaryRoot("legacy-cognitive-memory-export-unsafe-id");
         try {
             var reader = new FakeLegacyCognitiveMemoryDataReader([]);
-            var service = new LegacyCognitiveMemoryExportService(reader);
+            var service = CreateService(reader);
 
             await Assert.ThrowsAsync<ArgumentException>(() => service.ExportAsync(CreateEnabledRequest(rootPath, exportId)));
             Assert.Equal(0, reader.ReadCount);
@@ -156,7 +157,7 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
             var reader = new FakeLegacyCognitiveMemoryDataReader(
                 [],
                 new InvalidOperationException("simulated partial export failure"));
-            var service = new LegacyCognitiveMemoryExportService(reader);
+            var service = CreateService(reader);
 
             var result = await service.ExportAsync(CreateEnabledRequest(rootPath, "failed-export"));
 
@@ -182,6 +183,13 @@ public sealed class LegacyCognitiveMemoryExportServiceTests
             CompatibilityEnabled: true,
             OverwriteExisting: false,
             LegacyCognitiveMemoryCompatibilityMode.ReadOnlyArchive);
+
+    private static LegacyCognitiveMemoryExportService CreateService(
+        ILegacyCognitiveMemoryDataReader dataReader)
+        => new(
+            dataReader,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
+            new DurableFileWriter(TestWorkspaceServices.PhysicalPathPolicyFactory));
 
     private static async Task<LegacyCognitiveMemoryExportManifest> ReadManifestAsync(string? manifestPath)
     {

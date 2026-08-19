@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowDocumentImageExecutorTests
 {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Runtime;
 
@@ -67,9 +68,12 @@ internal static class DotNetSolutionSetupToolPlanGuard
     private const string AddTestProjectPlanKind = "DotNetSolutionAddTestProject";
     private const string RepairSolutionSetupPlanKind = "DotNetSolutionRepair";
 
-    public static DotNetSolutionSetupToolPlanGuardResult Evaluate(ProcessRuntimeStepAssignment assignment)
+    public static DotNetSolutionSetupToolPlanGuardResult Evaluate(
+        ProcessRuntimeStepAssignment assignment,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory)
     {
         ArgumentNullException.ThrowIfNull(assignment);
+        ArgumentNullException.ThrowIfNull(physicalPathPolicyFactory);
 
         var selectsDotNetSetupExecutor =
             ProcessRuntimeLaunchVariables.TryReadProcessStepRuntimeOwnedExecutorKey(
@@ -86,6 +90,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             {
                 return DotNetExistingSolutionVerifier.TryResolveInputs(
                     assignment.LaunchVariables,
+                    physicalPathPolicyFactory,
                     out _,
                     out var verificationIssue)
                     ? DotNetSolutionSetupToolPlanGuardResult.Satisfied
@@ -132,10 +137,10 @@ internal static class DotNetSolutionSetupToolPlanGuard
         ValidateRequiredReceipts(assignment, plan, issues);
         ValidateScriptRef(assignment, plan, issues);
         ValidateScript(assignment, plan, issues);
-        ValidateManifest(assignment, plan, issues);
+        ValidateManifest(assignment, plan, physicalPathPolicyFactory, issues);
         ValidateExecutionPlan(assignment, plan, issues);
-        ValidateRequiredPaths(assignment, plan, issues);
-        ValidateReadbackChecks(assignment, issues);
+        ValidateRequiredPaths(assignment, plan, physicalPathPolicyFactory, issues);
+        ValidateReadbackChecks(assignment, physicalPathPolicyFactory, issues);
 
         return issues.Count == 0
             ? new DotNetSolutionSetupToolPlanGuardResult(plan, [])
@@ -517,6 +522,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
     private static void ValidateManifest(
         ProcessRuntimeStepAssignment assignment,
         DotNetSolutionSetupToolPlan plan,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
         if (string.IsNullOrWhiteSpace(plan.SideEffectManifest))
@@ -567,8 +573,8 @@ internal static class DotNetSolutionSetupToolPlanGuard
                     plan.SideEffectManifestVariableName);
             }
 
-            ValidateManifestPathArray(assignment, plan, root, "declaredReadPaths", issues);
-            ValidateManifestPathArray(assignment, plan, root, "declaredWritePaths", issues);
+            ValidateManifestPathArray(assignment, plan, root, "declaredReadPaths", physicalPathPolicyFactory, issues);
+            ValidateManifestPathArray(assignment, plan, root, "declaredWritePaths", physicalPathPolicyFactory, issues);
         }
         catch (JsonException exception)
         {
@@ -586,6 +592,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
         DotNetSolutionSetupToolPlan plan,
         JsonElement root,
         string propertyName,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
         if (!root.TryGetProperty(propertyName, out var paths) ||
@@ -603,7 +610,12 @@ internal static class DotNetSolutionSetupToolPlanGuard
 
         foreach (var path in paths.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String))
         {
-            ValidateNativeProductPathScope(assignment, propertyName, path.GetString() ?? string.Empty, issues);
+            ValidateNativeProductPathScope(
+                assignment,
+                propertyName,
+                path.GetString() ?? string.Empty,
+                physicalPathPolicyFactory,
+                issues);
         }
     }
 
@@ -705,6 +717,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
     private static void ValidateRequiredPaths(
         ProcessRuntimeStepAssignment assignment,
         DotNetSolutionSetupToolPlan plan,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
         var minimumPathCount = plan.Kind == DotNetSolutionSetupToolPlanKind.CreateProject ? 1 : 2;
@@ -730,12 +743,18 @@ internal static class DotNetSolutionSetupToolPlanGuard
 
         foreach (var path in plan.RequiredPaths)
         {
-            ValidateNativeProductPathScope(assignment, "requiredPaths", path, issues);
+            ValidateNativeProductPathScope(
+                assignment,
+                "requiredPaths",
+                path,
+                physicalPathPolicyFactory,
+                issues);
         }
     }
 
     private static void ValidateReadbackChecks(
         ProcessRuntimeStepAssignment assignment,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
         var authoritativeSolutionCandidates = new[]
@@ -746,7 +765,6 @@ internal static class DotNetSolutionSetupToolPlanGuard
                 assignment.LaunchVariables,
                 DotNetSolutionSetupTemplatePolicyBindings.SolutionFileCandidatesVariableKey))
             .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var checks = ReadCanonicalArrayElement(
             assignment.LaunchVariables,
@@ -765,9 +783,27 @@ internal static class DotNetSolutionSetupToolPlanGuard
         var checkElements = checks.Value.ValueKind == JsonValueKind.Array
             ? checks.Value.EnumerateArray().ToArray()
             : [checks.Value];
+        var productRoot = ReadLaunchVariable(assignment.LaunchVariables, "ProductRoot");
+        IPhysicalFileSystemPathPolicy productRootPolicy;
+        try
+        {
+            productRootPolicy = physicalPathPolicyFactory.Create(productRoot);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException or PhysicalPathValidationException)
+        {
+            AddIssue(
+                issues,
+                "dotnet.setup.plan.product_root_invalid",
+                $"Step '{assignment.StepKey}' declares an invalid ProductRoot for .NET setup readback checks.",
+                assignment,
+                "ProductRoot");
+            return;
+        }
+
         var normalizedAuthoritativeCandidates = authoritativeSolutionCandidates
             .Select(NormalizeNativePath)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSet(productRootPolicy.PathComparer);
         var hasCompleteSolutionCandidateCheck = false;
         foreach (var check in checkElements)
         {
@@ -797,7 +833,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
                 .Select(candidate => candidate.GetString() ?? string.Empty)
                 .SelectMany(SplitStringList)
                 .Select(NormalizeNativePath)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                .ToHashSet(productRootPolicy.PathComparer);
             hasCompleteSolutionCandidateCheck |=
                 normalizedAuthoritativeCandidates.All(normalizedCheckCandidates.Contains);
         }
@@ -828,6 +864,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
         ProcessRuntimeStepAssignment assignment,
         string source,
         string path,
+        IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
         List<ProcessRuntimeToolPlanGuardIssue> issues)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -864,10 +901,17 @@ internal static class DotNetSolutionSetupToolPlanGuard
             return;
         }
 
-        var normalizedProductRoot = NormalizeNativePath(productRoot);
-        var normalizedPath = NormalizeNativePath(path);
-        if (!normalizedPath.Equals(normalizedProductRoot, StringComparison.OrdinalIgnoreCase) &&
-            !normalizedPath.StartsWith($"{normalizedProductRoot}/", StringComparison.OrdinalIgnoreCase))
+        var isWithinRoot = false;
+        try
+        {
+            isWithinRoot = physicalPathPolicyFactory.Create(productRoot).IsWithinRoot(path);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException or NotSupportedException or PathTooLongException or PhysicalPathValidationException)
+        {
+        }
+
+        if (!isWithinRoot)
         {
             AddIssue(
                 issues,
@@ -944,7 +988,7 @@ internal static class DotNetSolutionSetupToolPlanGuard
             .Select(item => item.GetString() ?? string.Empty)
             .SelectMany(SplitStringList)
             .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
     }
 

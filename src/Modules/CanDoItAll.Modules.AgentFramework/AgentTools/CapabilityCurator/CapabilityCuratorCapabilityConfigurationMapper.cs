@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.AgentFramework.Models;
 using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
@@ -74,7 +75,7 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
     {
         EnsureExclusiveConfiguration(input, input.SkillConfiguration, nameof(input.SkillConfiguration));
         var configuration = input.SkillConfiguration!;
-        var allowedRoots = NormalizeValues(configuration.AllowedExternalRoots);
+        var allowedRoots = NormalizeAuthorityValues(configuration.AllowedExternalRoots);
         var trustLevel = configuration.ScriptTrustLevel ?? configuration.Source switch
         {
             CapabilityCuratorSkillSource.Inline => CapabilityCuratorSkillTrustLevel.InlineSkill,
@@ -188,8 +189,8 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
             {
                 Method = RequireText(http.Method, "External HTTP method").ToUpperInvariant(),
                 Endpoint = endpoint,
-                HeaderBindings = NormalizeBindings(http.HeaderBindings),
-                RequiredOutputProperties = NullWhenEmpty(NormalizeValues(http.RequiredOutputProperties)),
+                HeaderBindings = NormalizeHeaderBindings(http.HeaderBindings),
+                RequiredOutputProperties = NullWhenEmpty(NormalizeAuthorityValues(http.RequiredOutputProperties)),
                 TimeoutSeconds = http.TimeoutSeconds,
                 MaxResponseBytes = http.MaxResponseBytes
             };
@@ -210,10 +211,10 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
             model.ExternalProcess = new ExternalProcessModel
             {
                 Command = RequireText(process.Command, "External process command"),
-                Arguments = NullWhenEmpty(NormalizeSequence(process.Arguments)),
-                WorkingDirectory = NormalizeOptional(process.WorkingDirectory) ?? ".",
-                AllowedExecutableNames = NullWhenEmpty(NormalizeValues(process.AllowedExecutableNames, preserveCase: true)),
-                RequiredOutputProperties = NullWhenEmpty(NormalizeValues(process.RequiredOutputProperties, preserveCase: true)),
+                Arguments = NullWhenEmpty(PreserveSequence(process.Arguments)),
+                WorkingDirectory = PreserveOptionalDataValue(process.WorkingDirectory) ?? ".",
+                AllowedExecutableNames = NullWhenEmpty(NormalizeAuthorityValues(process.AllowedExecutableNames)),
+                RequiredOutputProperties = NullWhenEmpty(NormalizeAuthorityValues(process.RequiredOutputProperties)),
                 TimeoutSeconds = process.TimeoutSeconds,
                 MaxOutputBytes = process.MaxOutputBytes
             };
@@ -245,7 +246,7 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
             },
             Hosted = configuration.Transport == CapabilityCuratorMcpTransport.Logical ? true : null,
             ServerName = NormalizeOptional(configuration.ServerName),
-            AllowedTools = NullWhenEmpty(NormalizeValues(configuration.AllowedTools, preserveCase: true)),
+            AllowedTools = NullWhenEmpty(NormalizeTypedNames(configuration.AllowedTools)),
             ApprovalMode = configuration.ApprovalMode.ToString(),
             TimeoutSeconds = configuration.TimeoutSeconds,
             OperationClassifications = NormalizeClassifications(
@@ -263,18 +264,18 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
             }
 
             ValidateNoInlineSecretArguments(configuration.Arguments, "Stdio MCP arguments");
-            model.Arguments = NullWhenEmpty(NormalizeSequence(configuration.Arguments));
-            model.WorkingDirectory = NormalizeOptional(configuration.WorkingDirectory) ?? ".";
+            model.Arguments = NullWhenEmpty(PreserveSequence(configuration.Arguments));
+            model.WorkingDirectory = PreserveOptionalDataValue(configuration.WorkingDirectory) ?? ".";
             model.MessageFraming = configuration.MessageFraming.ToString();
             model.AllowedWorkingDirectories = NullWhenEmpty(
-                NormalizeValues(configuration.AllowedWorkingDirectories, preserveCase: true));
-            model.EnvironmentVariableBindings = NormalizeBindings(configuration.EnvironmentVariableBindings);
+                NormalizeAuthorityValues(configuration.AllowedWorkingDirectories));
+            model.EnvironmentVariableBindings = NormalizeEnvironmentBindings(configuration.EnvironmentVariableBindings);
             endpointOrPath = model.Command;
         }
         else if (configuration.Transport == CapabilityCuratorMcpTransport.Http)
         {
             model.Endpoint = RequireAbsoluteHttpUri(configuration.Endpoint, "Remote MCP endpoint");
-            model.HeaderBindings = NormalizeBindings(configuration.HeaderBindings);
+            model.HeaderBindings = NormalizeHeaderBindings(configuration.HeaderBindings);
             endpointOrPath = model.Endpoint;
         }
         else
@@ -480,15 +481,28 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
         }
     }
 
-    private static Dictionary<string, string>? NormalizeBindings(
+    private static Dictionary<string, string>? NormalizeEnvironmentBindings(
         IReadOnlyDictionary<string, string>? bindings)
+        => NormalizeBindings(
+            bindings,
+            new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer,
+            "environment variable");
+
+    private static Dictionary<string, string>? NormalizeHeaderBindings(
+        IReadOnlyDictionary<string, string>? bindings)
+        => NormalizeBindings(bindings, StringComparer.OrdinalIgnoreCase, "header");
+
+    private static Dictionary<string, string>? NormalizeBindings(
+        IReadOnlyDictionary<string, string>? bindings,
+        StringComparer targetComparer,
+        string targetKind)
     {
         if (bindings is null || bindings.Count == 0)
         {
             return null;
         }
 
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, string>(targetComparer);
         foreach (var (destination, source) in bindings)
         {
             var normalizedDestination = RequireText(destination, "Binding destination");
@@ -499,7 +513,11 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
                     $"Binding source '{normalizedSource}' must be an environment-variable name, not a literal value.");
             }
 
-            result[normalizedDestination] = normalizedSource;
+            if (!result.TryAdd(normalizedDestination, normalizedSource))
+            {
+                throw new ArgumentException(
+                    $"Binding destination '{normalizedDestination}' is ambiguous for the current host's {targetKind} semantics.");
+            }
         }
 
         return result;
@@ -534,11 +552,26 @@ internal static partial class CapabilityCuratorCapabilityConfigurationMapper
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToArray() ?? [];
 
-    private static IReadOnlyList<string> NormalizeSequence(IEnumerable<string>? values)
+    private static IReadOnlyList<string> PreserveSequence(IEnumerable<string>? values)
+        => values?.ToArray() ?? [];
+
+    private static IReadOnlyList<string> NormalizeTypedNames(IEnumerable<string>? values)
         => values?
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
             .ToArray() ?? [];
+
+    private static IReadOnlyList<string> NormalizeAuthorityValues(IEnumerable<string>? values)
+        => values?
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray() ?? [];
+
+    private static string? PreserveOptionalDataValue(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value;
 
     private static List<string>? NullWhenEmpty(IReadOnlyList<string> values)
         => values.Count == 0 ? null : values.ToList();

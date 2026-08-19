@@ -1,0 +1,35 @@
+{
+  "subbundleId": "SB08",
+  "title": "Agent consumer migration and architecture closure",
+  "status": "completed",
+  "proofTier": "Governed",
+  "dependsOn": [
+    "SB07"
+  ],
+  "checkpoint": "CP4",
+  "ownedRequirements": [
+    "UIR-004",
+    "UIR-012",
+    "UIR-014",
+    "UIR-016",
+    "UIR-017",
+    "UIR-018",
+    "UIR-019",
+    "UIR-024",
+    "UIR-025",
+    "UIR-031",
+    "UIR-033",
+    "UIR-044",
+    "UIR-045",
+    "UIR-046",
+    "UIR-054",
+    "UIR-061",
+    "UIR-064",
+    "UIR-073",
+    "UIR-075",
+    "UIR-077"
+  ],
+  "executionBaseSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "candidateHeadSha": "bca2c286d32c48ba0283a8f606f6cc5c8639afca",
+  "progressionDecision": "pass-to-SB09"
+}

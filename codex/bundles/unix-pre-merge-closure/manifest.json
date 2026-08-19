@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "name": "CanDoItAll Unix pre-merge closure",
+  "createdDate": "2026-08-12",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "unix-adoption",
+  "reviewedCommit": "af9206caf3c09dc25088e388727fda0e1b404833",
+  "targetBranch": "development",
+  "targetCommit": "acc1ee4a5484dd98bd1df77f8e060a2a5a3b4c59",
+  "status": "Not merge ready \u2014 three bounded closures required",
+  "subbundles": [
+    "F00",
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06"
+  ],
+  "macosPolicy": "Actual-host validation deferred until after merge into development",
+  "enterpriseVaultPolicy": "Out of scope for alpha merge readiness"
+}

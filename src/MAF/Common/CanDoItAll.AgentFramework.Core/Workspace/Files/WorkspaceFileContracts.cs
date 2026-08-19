@@ -8,7 +8,23 @@ public static class WorkspaceFileLimits
     public const int MaxTextMutationBytes = 4 * 1024 * 1024;
 }
 
-public interface IWorkspaceFileService
+public interface IWorkspaceFileInspectionService
+{
+    WorkspaceFileListResult ListFiles(
+        string path,
+        string searchPattern,
+        int maxResults,
+        string authorityRootPath);
+
+    WorkspaceTextFileReadResult ReadTextFile(
+        string path,
+        int maxCharacters,
+        string authorityRootPath);
+
+    WorkspacePathStatResult StatPath(string path, string authorityRootPath);
+}
+
+public interface IWorkspaceFileService : IWorkspaceFileInspectionService
 {
     WorkspaceFileListResult ListDirectory(string? relativePath = null, int maxResults = 100);
 

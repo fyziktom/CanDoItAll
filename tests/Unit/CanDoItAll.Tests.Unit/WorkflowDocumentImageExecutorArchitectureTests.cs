@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowDocumentImageExecutorArchitectureTests
 {

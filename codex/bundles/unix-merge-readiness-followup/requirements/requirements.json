@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "requirements": [
+    {
+      "id": "MR-001",
+      "priority": "P0",
+      "owner": "M01",
+      "title": "Versioned persisted-plan hash and capability migration"
+    },
+    {
+      "id": "MR-002",
+      "priority": "P0",
+      "owner": "M02",
+      "title": "Reproducible FileTools source provenance"
+    },
+    {
+      "id": "MR-003",
+      "priority": "P0",
+      "owner": "M03",
+      "title": "Complete owned process-tree termination"
+    },
+    {
+      "id": "MR-004",
+      "priority": "P1",
+      "owner": "M04",
+      "title": "Bidirectional local MCP control handling"
+    },
+    {
+      "id": "MR-005",
+      "priority": "P1",
+      "owner": "M05",
+      "title": "Strict bounded Docker recipes"
+    },
+    {
+      "id": "MR-006",
+      "priority": "P1",
+      "owner": "M06",
+      "title": "Central reparse-safe workspace authority"
+    },
+    {
+      "id": "MR-007",
+      "priority": "P1",
+      "owner": "M06",
+      "title": "Effective executable authority"
+    },
+    {
+      "id": "MR-008",
+      "priority": "P1",
+      "owner": "M07",
+      "title": "Non-stale focused validation"
+    },
+    {
+      "id": "MR-009",
+      "priority": "P1",
+      "owner": "M07/M10",
+      "title": "Canonical evidence reconciliation"
+    },
+    {
+      "id": "MR-010",
+      "priority": "P1",
+      "owner": "M05/M08",
+      "title": "Clean-checkout local Docker stack"
+    }
+  ]
+}

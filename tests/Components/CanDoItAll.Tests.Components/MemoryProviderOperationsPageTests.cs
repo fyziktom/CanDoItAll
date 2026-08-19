@@ -10,7 +10,7 @@ using CanDoItAll.Modules.Memory.Pages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.Memory;
 
 public sealed class MemoryProviderOperationsPageTests
 {

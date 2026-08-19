@@ -4,7 +4,7 @@ using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Templates;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessInstancePlanCompilerTests
 {
@@ -69,7 +69,7 @@ public sealed class ProcessInstancePlanCompilerTests
     public void Compile_fails_on_driver_capability_conflict()
     {
         var conflictTag = new CapabilityTag("capability.execution");
-        var first = NewPackage("driver.first", ProcessDriverLayer.Platform, Tags(conflictTag), NewStrategies());
+        var first = NewPackage("driver.first", ProcessDriverLayer.Framework, Tags(conflictTag), NewStrategies());
         var second = NewPackage("driver.second", ProcessDriverLayer.Scenario, Tags(conflictTag), []);
         var catalog = new ProcessDriverCatalog([first, second]);
         var request = NewRequest(
@@ -185,6 +185,221 @@ public sealed class ProcessInstancePlanCompilerTests
         Assert.NotEqual(first.Plan.PlanHash, second.Plan.PlanHash);
     }
 
+    [Fact]
+    public void Plan_hash_changes_when_runtime_tool_contract_changes()
+    {
+        var compiler = new ProcessInstancePlanCompiler();
+        var first = compiler.Compile(NewRequest(
+            definition: NewDefinition(activityRuntimeToolNames: ["workspace_python_run_file"])));
+        var second = compiler.Compile(NewRequest(
+            definition: NewDefinition(activityRuntimeToolNames: ["workspace_dotnet_build"])));
+
+        Assert.True(first.Succeeded);
+        Assert.True(second.Succeeded);
+        Assert.NotNull(first.Plan);
+        Assert.NotNull(second.Plan);
+        Assert.Equal(
+            ["workspace_python_run_file"],
+            first.Plan.Steps.Single(step => step.StepDefinitionId == ActivityStepId).RequiredRuntimeToolNames);
+        Assert.NotEqual(first.Plan.PlanHash, second.Plan.PlanHash);
+    }
+
+    [Fact]
+    public void Compile_fails_when_active_strategy_host_capability_is_unavailable()
+    {
+        var strategies = NewStrategies()
+            .Select(strategy => strategy.StrategyId == new StrategyId("strategy.execute")
+                ? strategy with
+                {
+                    RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+                    {
+                        ProcessHostCapabilityIds.PythonRuntime
+                    }
+                }
+                : strategy)
+            .ToArray();
+        var request = NewRequest(
+            catalog: NewCatalog(strategies),
+            capabilityRequest: NewCapabilityRequest(new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.PythonRuntime,
+                        ProcessHostCapabilityAvailability.Unavailable,
+                        ProcessHostCapabilityReason.DependencyMissing,
+                        ProcessHostExecutionPort.None)
+                ])));
+
+        var result = new ProcessInstancePlanCompiler().Compile(request);
+
+        Assert.False(result.Succeeded);
+        var diagnostic = Assert.Single(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Builder.StrategyHostCapabilityMissing");
+        Assert.Contains(ProcessHostCapabilityIds.PythonRuntime.Value, diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("linux", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Compile_does_not_block_on_unselected_strategy_host_capability()
+    {
+        var unusedStrategy = new ProcessStrategyDescriptor(
+            new StrategyId("strategy.unused-docker"),
+            "1.0.0",
+            ProcessStrategyKind.StepExecution,
+            Tags("capability.execution"))
+        {
+            RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+            {
+                ProcessHostCapabilityIds.Docker
+            }
+        };
+        var request = NewRequest(catalog: NewCatalog([.. NewStrategies(), unusedStrategy]));
+
+        var result = new ProcessInstancePlanCompiler().Compile(request);
+
+        Assert.True(result.Succeeded);
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Builder.StrategyHostCapabilityMissing");
+    }
+
+    [Fact]
+    public void Compile_records_and_hashes_only_bounded_host_capability_facts()
+    {
+        var strategies = NewStrategies()
+            .Select(strategy => strategy.StrategyId == new StrategyId("strategy.execute")
+                ? strategy with
+                {
+                    RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+                    {
+                        ProcessHostCapabilityIds.PythonRuntime
+                    }
+                }
+                : strategy)
+            .ToArray();
+        var managedHostFact = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Available,
+            ProcessHostCapabilityReason.Ready,
+            ProcessHostExecutionPort.ManagedProcessHost);
+        var compiler = new ProcessInstancePlanCompiler();
+
+        var managed = compiler.Compile(NewRequest(
+            catalog: NewCatalog(strategies),
+            capabilityRequest: NewCapabilityRequest(new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [managedHostFact]))));
+        var alternateProfile = compiler.Compile(NewRequest(
+            catalog: NewCatalog(strategies),
+            capabilityRequest: NewCapabilityRequest(new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux-alternate"),
+                [managedHostFact]))));
+
+        Assert.True(managed.Succeeded);
+        Assert.True(alternateProfile.Succeeded);
+        Assert.NotNull(managed.Plan);
+        Assert.NotNull(alternateProfile.Plan);
+        var binding = Assert.Single(
+            managed.Plan.Strategies.ExecutionBindings,
+            binding => binding.StrategyId == new StrategyId("strategy.execute"));
+        Assert.Equal(new ProcessHostProfileId("linux"), binding.HostProfileId);
+        Assert.Equal([managedHostFact], binding.HostCapabilities);
+        Assert.NotEqual(managed.Plan.PlanHash, alternateProfile.Plan.PlanHash);
+        var serialized = System.Text.Json.JsonSerializer.Serialize(managed.Plan);
+        Assert.DoesNotContain("/home/sentinel", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret:", serialized, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Compile_rejects_structurally_invalid_host_capability_snapshot()
+    {
+        var duplicate = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Available,
+            ProcessHostCapabilityReason.Ready,
+            ProcessHostExecutionPort.ManagedProcessHost);
+
+        var result = new ProcessInstancePlanCompiler().Compile(NewRequest(
+            capabilityRequest: NewCapabilityRequest(new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux"),
+                [duplicate, duplicate]))));
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Builder.HostCapabilitySnapshotInvalid");
+    }
+
+    [Fact]
+    public void Compile_rejects_selected_driver_stack_with_more_than_32_host_capabilities()
+    {
+        var requiredCapabilities = NewHostCapabilities(33);
+        var first = NewPackage(
+            "driver.first",
+            ProcessDriverLayer.Platform,
+            Tags("capability.execution"),
+            NewStrategies(),
+            requiredCapabilities.Take(16).ToHashSet());
+        var second = NewPackage(
+            "driver.second",
+            ProcessDriverLayer.Platform,
+            Tags("capability.branch", "capability.manager"),
+            NewStrategies(),
+            requiredCapabilities.Skip(16).ToHashSet());
+        var request = NewRequest(
+            catalog: new ProcessDriverCatalog([first, second]),
+            capabilityRequest: NewCapabilityRequest(NewAvailableHostSnapshot(
+                requiredCapabilities.Take(ProcessHostCapabilitySnapshot.MaximumCapabilities).ToHashSet())));
+
+        var result = new ProcessInstancePlanCompiler().Compile(request);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Builder.DriverHostCapabilityLimitExceeded");
+        Assert.Null(result.Plan);
+    }
+
+    [Fact]
+    public void Compile_rejects_effective_step_with_more_than_32_strategy_and_declared_host_capabilities()
+    {
+        var requiredCapabilities = NewHostCapabilities(33);
+        var strategyCapabilities = requiredCapabilities.Take(16).ToHashSet();
+        var stepCapabilities = requiredCapabilities.Skip(16).ToArray();
+        var strategies = NewStrategies()
+            .Select(strategy => strategy.StrategyId == new StrategyId("strategy.execute")
+                ? strategy with { RequiredHostCapabilities = strategyCapabilities }
+                : strategy)
+            .ToArray();
+        var definition = NewDefinition();
+        definition = definition with
+        {
+            Steps = definition.Steps.Select(step =>
+                step.Id == ActivityStepId
+                    ? step with
+                    {
+                        RequiredHostCapabilities = stepCapabilities
+                            .Select(capability => capability.Value)
+                            .ToArray()
+                    }
+                    : step).ToArray()
+        };
+        var request = NewRequest(
+            definition: definition,
+            catalog: NewCatalog(strategies),
+            capabilityRequest: NewCapabilityRequest(NewAvailableHostSnapshot(
+                requiredCapabilities.Take(ProcessHostCapabilitySnapshot.MaximumCapabilities).ToHashSet())));
+
+        var result = new ProcessInstancePlanCompiler().Compile(request);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Builder.StepHostCapabilityLimitExceeded");
+        Assert.Null(result.Plan);
+    }
+
     private static ProcessInstancePlanCompileRequest NewRequest(
         ProcessDefinitionKernel? definition = null,
         ProcessDriverCatalog? catalog = null,
@@ -242,7 +457,8 @@ public sealed class ProcessInstancePlanCompilerTests
         ProcessDefinitionVersionId? versionId = null,
         StrategyId? activityStrategyId = null,
         bool includeActivityStrategy = true,
-        bool includeBackwardBudget = true)
+        bool includeBackwardBudget = true,
+        IReadOnlyList<string>? activityRuntimeToolNames = null)
     {
         var resolvedActivityStrategyId = includeActivityStrategy
             ? activityStrategyId ?? new StrategyId("strategy.execute")
@@ -253,7 +469,10 @@ public sealed class ProcessInstancePlanCompilerTests
             versionId ?? DefinitionVersionId,
             [
                 new ProcessGraphNode(StartStepId, "start", ProcessStepKind.Start),
-                new ProcessGraphNode(ActivityStepId, "activity", ProcessStepKind.Activity, resolvedActivityStrategyId),
+                new ProcessGraphNode(ActivityStepId, "activity", ProcessStepKind.Activity, resolvedActivityStrategyId)
+                {
+                    RequiredRuntimeToolNames = activityRuntimeToolNames ?? []
+                },
                 new ProcessGraphNode(BranchStepId, "branch", ProcessStepKind.Branch, branchStrategyId),
                 new ProcessGraphNode(EndStepId, "end", ProcessStepKind.End)
             ],
@@ -309,18 +528,34 @@ public sealed class ProcessInstancePlanCompilerTests
         ];
     }
 
-    private static ProcessDriverCatalog NewCatalog()
+    private static ProcessDriverCatalog NewCatalog(
+        IReadOnlyList<ProcessStrategyDescriptor>? strategies = null)
     {
         return new ProcessDriverCatalog([
             NewPackage(
                 "driver.generic",
-                ProcessDriverLayer.Platform,
+                ProcessDriverLayer.Framework,
                 Tags(
                     "capability.execution",
                     "capability.branch",
                     "capability.manager"),
-                NewStrategies())
+                strategies ?? NewStrategies())
         ]);
+    }
+
+    private static ProcessCapabilityRequest NewCapabilityRequest(
+        ProcessHostCapabilitySnapshot hostCapabilities)
+    {
+        return new ProcessCapabilityRequest(
+            Tags(
+                "capability.execution",
+                "capability.branch",
+                "capability.manager"),
+            NoTags(),
+            NoTags())
+        {
+            HostCapabilities = hostCapabilities
+        };
     }
 
     private static IReadOnlyList<ProcessStrategyDescriptor> NewStrategies()
@@ -349,7 +584,8 @@ public sealed class ProcessInstancePlanCompilerTests
         string driverId,
         ProcessDriverLayer layer,
         IReadOnlySet<CapabilityTag> capabilities,
-        IReadOnlyList<ProcessStrategyDescriptor> strategies)
+        IReadOnlyList<ProcessStrategyDescriptor> strategies,
+        IReadOnlySet<ProcessHostCapabilityId>? requiredHostCapabilities = null)
     {
         var descriptor = new ProcessDriverDescriptor(
             new DriverId(driverId),
@@ -362,7 +598,10 @@ public sealed class ProcessInstancePlanCompilerTests
             [],
             [],
             [],
-            strategies);
+            strategies)
+        {
+            RequiredHostCapabilities = requiredHostCapabilities ?? new HashSet<ProcessHostCapabilityId>()
+        };
 
         return new ProcessDriverPackage(descriptor, [], [], [], [], [], []);
     }
@@ -380,5 +619,26 @@ public sealed class ProcessInstancePlanCompilerTests
     private static IReadOnlySet<CapabilityTag> NoTags()
     {
         return new HashSet<CapabilityTag>();
+    }
+
+    private static IReadOnlySet<ProcessHostCapabilityId> NewHostCapabilities(int count)
+    {
+        return Enumerable.Range(0, count)
+            .Select(index => new ProcessHostCapabilityId($"host.test.cap-{index:D2}"))
+            .ToHashSet();
+    }
+
+    private static ProcessHostCapabilitySnapshot NewAvailableHostSnapshot(
+        IReadOnlySet<ProcessHostCapabilityId> capabilities)
+    {
+        return new ProcessHostCapabilitySnapshot(
+            new ProcessHostProfileId("test"),
+            capabilities
+                .Select(capability => new ProcessHostCapabilityFact(
+                    capability,
+                    ProcessHostCapabilityAvailability.Available,
+                    ProcessHostCapabilityReason.Ready,
+                    ProcessHostExecutionPort.ManagedProcessHost))
+                .ToArray());
     }
 }

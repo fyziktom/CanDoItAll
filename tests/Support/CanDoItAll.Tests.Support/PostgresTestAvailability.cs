@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Sockets;
 using Npgsql;
@@ -43,7 +44,7 @@ public static class PostgresTestAvailability
             return localDefaultResult;
         }
 
-        var composeFilePath = Path.Combine(repositoryRoot, "docker-compose.yml");
+        var composeFilePath = Path.Combine(repositoryRoot, "compose.yaml");
         if (!File.Exists(composeFilePath))
         {
             return new PostgresAvailabilityResult(false, false, null, $"Missing docker compose file at '{composeFilePath}'.");
@@ -131,18 +132,39 @@ public static class PostgresTestAvailability
             CreateNoWindow = true
         };
 
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"Failed to start process '{fileName} {arguments}'.");
+        Process? process;
+        try
+        {
+            process = Process.Start(startInfo);
+        }
+        catch (Win32Exception exception)
+        {
+            return new ProcessExecutionResult(
+                -1,
+                string.Empty,
+                $"Unable to start '{fileName}'. {exception.Message}");
+        }
 
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-        var standardErrorTask = process.StandardError.ReadToEndAsync();
+        if (process is null)
+        {
+            return new ProcessExecutionResult(
+                -1,
+                string.Empty,
+                $"Unable to start '{fileName}'.");
+        }
 
-        await process.WaitForExitAsync(cancellationToken);
+        using (process)
+        {
+            var standardOutputTask = process.StandardOutput.ReadToEndAsync();
+            var standardErrorTask = process.StandardError.ReadToEndAsync();
 
-        return new ProcessExecutionResult(
-            process.ExitCode,
-            (await standardOutputTask).Trim(),
-            (await standardErrorTask).Trim());
+            await process.WaitForExitAsync(cancellationToken);
+
+            return new ProcessExecutionResult(
+                process.ExitCode,
+                (await standardOutputTask).Trim(),
+                (await standardErrorTask).Trim());
+        }
     }
 
     private sealed record ProcessExecutionResult(int ExitCode, string StandardOutput, string StandardError)

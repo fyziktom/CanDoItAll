@@ -2,7 +2,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Storage;
 
 public sealed class StoragePlacementServiceTests
 {
@@ -28,6 +28,7 @@ public sealed class StoragePlacementServiceTests
                 HealthStatus = StorageHealthStatus.Healthy,
                 IsEnabled = true
             };
+            StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, DateTimeOffset.UtcNow);
             var revisions = new ProcessLocalFileCatalogRevisionService();
             var sut = new RevisionPublishingStoragePlacementService(new StoragePlacementService(
                 new TestStorageCatalogService(storage),

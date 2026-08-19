@@ -185,7 +185,8 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
                     configuredScope.WorkspaceRoot,
                     governance.WorkspaceScope,
                     governance,
-                    run.Id));
+                    run.Id,
+                    rootCaseSensitivity: configuredScope.RootCaseSensitivity));
         }
 
         var trustedMetadataScope = ExecutionInvocationMetadata
@@ -196,7 +197,8 @@ public sealed class WorkspaceExecutionRunProcessLeaseCleaner
                 trustedMetadataScope ?? configuredScope.Scope,
                 configuredScope.DatabaseProfileId,
                 configuredScope.DatabaseProfileGeneration,
-                executionRunId: run.Id));
+                executionRunId: run.Id,
+                rootCaseSensitivity: configuredScope.RootCaseSensitivity));
     }
 
     private static WorkspaceExecutionRunProcessCleanupResult Failure(
@@ -457,7 +459,8 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
         try
         {
             leaseFiles = Directory.GetFiles(leaseDirectory, "*.json")
-                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+                .ThenBy(path => path, StringComparer.Ordinal)
                 .ToArray();
         }
         catch (Exception)
@@ -492,7 +495,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
                 if (!string.Equals(
                     Path.GetFileName(leaseFile),
                     expectedFileName,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.Ordinal))
                 {
                     leases.RemoveAt(leases.Count - 1);
                     failures.Add(new WorkspaceExecutionRunProcessCleanupFailure(
@@ -510,7 +513,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
 
         return new WorkspaceExecutionRunProcessLeaseLoadResult(
             leases
-                .GroupBy(lease => lease.StartupReceiptPath, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(lease => lease.StartupReceiptPath, StringComparer.Ordinal)
                 .Select(group => group.First())
                 .ToArray(),
             failures);
@@ -666,7 +669,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
         if (!string.Equals(
             Path.GetFileName(fullPath),
             StartupReceiptFileName,
-            StringComparison.OrdinalIgnoreCase))
+            StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Workspace process identity requires a {StartupReceiptFileName} receipt. Received '{startupReceiptPath}'.");
@@ -686,9 +689,9 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
             .Where(path => string.Equals(
                 Path.GetFileName(path.Replace('/', Path.DirectorySeparatorChar)),
                 StartupReceiptFileName,
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.Ordinal))
             .Select(NormalizeStartupReceiptPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(StringComparer.Ordinal)
             .ToArray();
         return startupReceiptPaths.Length switch
         {
@@ -710,8 +713,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
 
     private static string BuildLeaseFileName(string normalizedStartupReceiptPath)
     {
-        var identity = normalizedStartupReceiptPath.ToUpperInvariant();
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedStartupReceiptPath)))
             .ToLowerInvariant();
         return $"{hash}.json";
     }
@@ -742,7 +744,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
         if (!string.Equals(
             registeredPath,
             normalizedStartupReceiptPath,
-            StringComparison.OrdinalIgnoreCase))
+            StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Durable workspace process lease identity mismatch for '{normalizedStartupReceiptPath}'.");
@@ -825,7 +827,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
                 !string.Equals(
                     existing.StartupReceiptPath,
                     lease.StartupReceiptPath,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     $"Durable workspace process lease '{leaseFile}' contains a conflicting identity.");
@@ -866,7 +868,7 @@ internal sealed class WorkspaceExecutionRunProcessLeaseStore
                     !string.Equals(
                         existing.StartupReceiptPath,
                         lease.StartupReceiptPath,
-                        StringComparison.OrdinalIgnoreCase))
+                        StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"Durable workspace process lease '{leaseFile}' contains a conflicting identity.");
@@ -939,7 +941,7 @@ internal sealed record WorkspaceExecutionRunProcessLeaseCleanupAttempt(
 internal static class WorkspaceExecutionRunProcessLeaseCleanupCoordinator
 {
     private static readonly ConcurrentDictionary<string, SharedCleanupOperation> Operations =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(StringComparer.Ordinal);
 
     public static CleanupOperationLease Acquire(
         string leaseIdentityPath,

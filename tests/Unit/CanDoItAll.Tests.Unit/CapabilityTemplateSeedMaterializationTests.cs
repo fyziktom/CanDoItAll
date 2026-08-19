@@ -7,7 +7,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class CapabilityTemplateSeedMaterializationTests
 {
@@ -69,7 +69,7 @@ public sealed class CapabilityTemplateSeedMaterializationTests
             .Select(item => item.GetString())
             .ToList();
         Assert.Contains(playwrightArguments, item => item == "--yes");
-        Assert.Contains(playwrightArguments, item => item == "@playwright/mcp@latest");
+        Assert.Contains(playwrightArguments, item => item == "@playwright/mcp@0.0.78");
         Assert.Contains(
             playwrightJson.RootElement.GetProperty("allowedTools").EnumerateArray(),
             item => item.GetString() == "browser_take_screenshot");

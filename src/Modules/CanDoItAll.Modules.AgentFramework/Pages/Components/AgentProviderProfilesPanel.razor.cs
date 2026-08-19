@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -23,6 +24,7 @@ public partial class AgentProviderProfilesPanel
     private readonly HashSet<string> expandedProviderTreeNodeIds = [];
     private readonly HashSet<string> knownProviderTagNodeIds = [];
     private IReadOnlyList<ProviderProfile> providers = [];
+    private IReadOnlyList<SecretListItem> secrets = [];
     private ProviderProfileEditorModel providerModel = CreateNewProviderEditor();
     private IReadOnlyList<string> providerTagValues = [];
     private string providerSearch = string.Empty;
@@ -46,6 +48,13 @@ public partial class AgentProviderProfilesPanel
         .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
+    private bool HasUnavailableSecretReference =>
+        !string.IsNullOrWhiteSpace(providerModel.ApiKeyEnvironmentVariable) &&
+        !secrets.Any(secret => string.Equals(
+            AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id),
+            providerModel.ApiKeyEnvironmentVariable,
+            StringComparison.OrdinalIgnoreCase));
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
@@ -56,7 +65,11 @@ public partial class AgentProviderProfilesPanel
         isLoading = true;
         try
         {
-            providers = await WorkspaceService.ListProvidersAsync();
+            var providersTask = WorkspaceService.ListProvidersAsync();
+            var secretsTask = WorkspaceProviderService.ListSecretsAsync();
+            await Task.WhenAll(providersTask, secretsTask);
+            providers = await providersTask;
+            secrets = await secretsTask;
             RefreshProviderTreeExpansionDefaults();
 
             if (providerModel.Id.HasValue &&

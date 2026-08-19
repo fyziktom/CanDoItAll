@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="RuntimeDeploymentSupport.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
@@ -16,11 +20,15 @@
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.csproj" />
+    <ProjectReference Include="..\..\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
     <ProjectReference Include="..\..\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj" />
     <ProjectReference Include="..\..\Processes\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj" />
+    <ProjectReference Include="..\..\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />

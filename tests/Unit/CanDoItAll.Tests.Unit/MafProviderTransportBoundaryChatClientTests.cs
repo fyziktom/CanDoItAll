@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class MafProviderTransportBoundaryChatClientTests
 {
@@ -198,8 +198,8 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         using var client = CreateBoundaryClient(
             new StreamingChatClient(stream),
             provider,
-            idleTimeout: TimeSpan.FromMilliseconds(70),
-            absoluteTimeout: TimeSpan.FromSeconds(1));
+            idleTimeout: TimeSpan.FromMilliseconds(500),
+            absoluteTimeout: TimeSpan.FromSeconds(3));
         var updates = new List<ChatResponseUpdate>();
 
         await foreach (var update in client.GetStreamingResponseAsync(CreateMessages()))

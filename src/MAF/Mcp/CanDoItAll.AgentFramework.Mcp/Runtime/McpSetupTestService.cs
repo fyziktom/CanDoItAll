@@ -80,7 +80,7 @@ public sealed class McpSetupTestService(IMcpClientFactory clientFactory) : IMcpS
                 correlationId,
                 CapabilityDiagnosticCategory.Timeout,
                 "$.timeout",
-                $"MCP setup for '{descriptor.ServerKey}' timed out. {exception.Message}",
+                $"MCP setup for '{descriptor.ServerKey}' timed out ({exception.GetType().Name}).",
                 "Increase timeout only after confirming the MCP server starts and responds predictably.",
                 discoveredTools,
                 cleanup.Completed), cleanup);
@@ -144,7 +144,7 @@ public sealed class McpSetupTestService(IMcpClientFactory clientFactory) : IMcpS
                 CapabilityDiagnosticCategory.ResourceCleanup,
                 descriptor,
                 "$.cleanup",
-                $"MCP cleanup for '{descriptor.ServerKey}' failed. {exception.Message}",
+                $"MCP cleanup for '{descriptor.ServerKey}' failed ({exception.GetType().Name}).",
                 "Inspect the MCP server shutdown path before enabling this descriptor.",
                 correlationId));
         }

@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workbench;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
 
-namespace CanDoItAll.Tests.Components;
+namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class HrAgentCompositionTests
 {
@@ -98,6 +99,7 @@ public sealed class HrAgentCompositionTests
 
         var administration = new HrAgentAdministrationService(
             workspace,
+            scope.ServiceProvider.GetRequiredService<IExternalTargetPathRegistry>(),
             NullLogger<HrAgentAdministrationService>.Instance);
         await Assert.ThrowsAsync<InvalidOperationException>(() => administration.CreateAsync(
             HrAgentIdentity.AgentId,

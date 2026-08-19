@@ -37,6 +37,14 @@ public sealed partial class ProcessInstancePlanCompiler
                 "Builder.InvalidSubprocessDepth",
                 "Maximum subprocess depth cannot be negative."));
         }
+
+        if (request.CapabilityRequest.HostCapabilities is null ||
+            !request.CapabilityRequest.HostCapabilities.IsStructurallyValid())
+        {
+            diagnostics.Add(Error(
+                "Builder.HostCapabilitySnapshotInvalid",
+                "Host capability snapshot is invalid."));
+        }
     }
 
     private static void ValidateSubprocessDepth(
@@ -209,6 +217,13 @@ public sealed partial class ProcessInstancePlanCompiler
             diagnostics.Add(Error(
                 "Builder.DriverCapabilityMissing",
                 $"Required capability '{missingCapability}' is not provided by the selected driver stack."));
+        }
+
+        foreach (var missingCapability in match.MissingHostCapabilities)
+        {
+            diagnostics.Add(Error(
+                "Builder.DriverHostCapabilityMissing",
+                $"Selected process drivers require unavailable host capability '{missingCapability}' on profile '{request.CapabilityRequest.HostCapabilities.ProfileId}'. Choose a compatible strategy or configure the required host adapter."));
         }
 
         foreach (var conflict in match.Conflicts)

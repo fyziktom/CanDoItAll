@@ -4,10 +4,45 @@ using CanDoItAll.Processes.Core;
 using CanDoItAll.Processes.Drivers.Abstractions;
 using CanDoItAll.Processes.Runtime;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessRuntimeEngineTests
 {
+    public enum OversizedStrategyResultField
+    {
+        UserSafeSummary,
+        DiagnosticSummary,
+        RestrictedEvidenceReference,
+        DiagnosticCount,
+        ManagerSignalSummary,
+        ManagerSignalCount
+    }
+
+    public enum InvalidStrategyReceiptValue
+    {
+        ResultHash,
+        ArtifactContentHash,
+        RequestedArtifactHash,
+        DiagnosticEvidenceHash,
+        ManagerSignalHash,
+        RestrictedEvidenceReference
+    }
+
+    public enum UnsafePublicReceiptTextField
+    {
+        UserSafeSummary,
+        DiagnosticSummary,
+        ManagerSignalSummary
+    }
+
+    public enum UnsafeStrategyReceiptIdentifierField
+    {
+        StrategyId,
+        StrategyVersion,
+        DiagnosticCode,
+        ManagerSignalCode
+    }
+
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 0, 0, TimeSpan.Zero);
     private static readonly ProcessRunId RunId = new(new Guid("16f34b15-355c-4b39-a495-c63c3fd38af8"));
     private static readonly ProcessInstancePlanId PlanId = new(new Guid("92dc150a-fb57-4922-a188-b354a3134bf2"));
@@ -30,7 +65,7 @@ public sealed class ProcessRuntimeEngineTests
         "factory.1.0.0",
         "runtime.1",
         "runtime.1",
-        "sha256:binding",
+        ReceiptHash("binding"),
         []);
 
     [Fact]
@@ -88,8 +123,8 @@ public sealed class ProcessRuntimeEngineTests
                     ProcessArtifactInputAvailability.Available,
                     StartStepId,
                     ArtifactInstanceId,
-                    "sha256:artifact",
-                    "sha256:start-to-activity-artifact")
+                    ReceiptHash("artifact"),
+                    ReceiptHash("start-to-activity-artifact"))
             ]
         };
 
@@ -301,6 +336,482 @@ public sealed class ProcessRuntimeEngineTests
     }
 
     [Fact]
+    public async Task Strategy_result_rejects_oversized_host_capability_evidence_before_state_mutation()
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+        var capabilities = Enumerable.Range(0, 33)
+            .Select(index => new ProcessHostCapabilityFact(
+                new ProcessHostCapabilityId($"host.test.cap-{index:D2}"),
+                ProcessHostCapabilityAvailability.Available,
+                ProcessHostCapabilityReason.Ready,
+                ProcessHostExecutionPort.ManagedProcessHost))
+            .ToArray();
+        var strategyResult = SucceededResult() with
+        {
+            HostCapabilityEvidence = new ProcessHostCapabilityEvaluationEvidence(
+                new ProcessHostProfileId("test"),
+                capabilities)
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                strategyResult));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(state, result.State);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Runtime.HostCapabilityEvidenceInvalid");
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Fact]
+    public async Task Strategy_result_rejects_duplicate_or_structurally_invalid_host_capability_evidence()
+    {
+        var invalidFacts = new[]
+        {
+            new ProcessHostCapabilityFact(
+                ProcessHostCapabilityIds.NodeRuntime,
+                ProcessHostCapabilityAvailability.Available,
+                ProcessHostCapabilityReason.Ready,
+                ProcessHostExecutionPort.DockerHostTool),
+            new ProcessHostCapabilityFact(
+                ProcessHostCapabilityIds.NodeRuntime,
+                ProcessHostCapabilityAvailability.Available,
+                ProcessHostCapabilityReason.Ready,
+                ProcessHostExecutionPort.ManagedProcessHost)
+        };
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+        var strategyResult = SucceededResult() with
+        {
+            HostCapabilityEvidence = new ProcessHostCapabilityEvaluationEvidence(
+                new ProcessHostProfileId("test"),
+                invalidFacts)
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                strategyResult));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(state, result.State);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == "Runtime.HostCapabilityEvidenceInvalid");
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Theory]
+    [InlineData(OversizedStrategyResultField.UserSafeSummary)]
+    [InlineData(OversizedStrategyResultField.DiagnosticSummary)]
+    [InlineData(OversizedStrategyResultField.RestrictedEvidenceReference)]
+    [InlineData(OversizedStrategyResultField.DiagnosticCount)]
+    [InlineData(OversizedStrategyResultField.ManagerSignalSummary)]
+    [InlineData(OversizedStrategyResultField.ManagerSignalCount)]
+    public async Task Strategy_result_rejects_oversized_receipt_fields_before_state_mutation(
+        OversizedStrategyResultField oversizedField)
+    {
+        const string secretSentinel = "secret: C:\\private\\host\\token=raw-runtime-token";
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+        var diagnostic = new StrategyDiagnosticRef(
+            new StrategyDiagnosticCode("process.runtime.test"),
+            StrategyDiagnosticSensitivity.Normal,
+            ReceiptHash("diagnostic"),
+            "Bounded diagnostic.",
+            RestrictedReference("process", "test"),
+            ProcessDiagnosticRetrySafety.UnsafeToRetry,
+            ProcessDiagnosticIdempotencyClassification.Idempotent);
+        var managerSignal = new ManagerSignal(
+            new ManagerSignalCode("process.runtime.test"),
+            ReceiptHash("signal"),
+            "Bounded manager signal.");
+        var oversizedValueLength = oversizedField switch
+        {
+            OversizedStrategyResultField.UserSafeSummary =>
+                ProcessStrategyResultLimits.MaximumUserSafeSummaryLength + 1,
+            OversizedStrategyResultField.DiagnosticSummary =>
+                ProcessStrategyResultLimits.MaximumDiagnosticSummaryLength + 1,
+            OversizedStrategyResultField.RestrictedEvidenceReference =>
+                ProcessStrategyResultLimits.MaximumRestrictedEvidenceReferenceLength + 1,
+            OversizedStrategyResultField.ManagerSignalSummary =>
+                ProcessStrategyResultLimits.MaximumManagerSignalSummaryLength + 1,
+            _ => 0
+        };
+        var oversizedValue = secretSentinel + new string(
+            'x',
+            Math.Max(0, oversizedValueLength - secretSentinel.Length));
+        var strategyResult = FailedResult() with
+        {
+            UserSafeSummary = oversizedField == OversizedStrategyResultField.UserSafeSummary
+                ? oversizedValue
+                : "Bounded failure.",
+            Diagnostics = oversizedField switch
+            {
+                OversizedStrategyResultField.DiagnosticSummary =>
+                [diagnostic with { SafeSummary = oversizedValue }],
+                OversizedStrategyResultField.RestrictedEvidenceReference =>
+                [diagnostic with { RestrictedEvidenceReference = oversizedValue }],
+                OversizedStrategyResultField.DiagnosticCount => Enumerable
+                    .Range(0, ProcessStrategyResultLimits.MaximumDiagnostics + 1)
+                    .Select(index => diagnostic with
+                    {
+                        Code = new StrategyDiagnosticCode($"process.runtime.test-{index:D2}")
+                    })
+                    .ToArray(),
+                _ => [diagnostic]
+            },
+            ManagerSignals = oversizedField switch
+            {
+                OversizedStrategyResultField.ManagerSignalSummary =>
+                [managerSignal with { SafeSummary = oversizedValue }],
+                OversizedStrategyResultField.ManagerSignalCount => Enumerable
+                    .Range(0, ProcessStrategyResultLimits.MaximumManagerSignals + 1)
+                    .Select(index => managerSignal with
+                    {
+                        Code = new ManagerSignalCode($"process.runtime.test-{index:D2}")
+                    })
+                    .ToArray(),
+                _ => [managerSignal]
+            }
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                strategyResult));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(state, result.State);
+        var rejection = Assert.Single(result.Diagnostics);
+        Assert.Equal("Runtime.StrategyResultReceiptInvalid", rejection.Code);
+        Assert.DoesNotContain(secretSentinel, rejection.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"C:\private\host", rejection.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Theory]
+    [InlineData(InvalidStrategyReceiptValue.ResultHash)]
+    [InlineData(InvalidStrategyReceiptValue.ArtifactContentHash)]
+    [InlineData(InvalidStrategyReceiptValue.RequestedArtifactHash)]
+    [InlineData(InvalidStrategyReceiptValue.DiagnosticEvidenceHash)]
+    [InlineData(InvalidStrategyReceiptValue.ManagerSignalHash)]
+    [InlineData(InvalidStrategyReceiptValue.RestrictedEvidenceReference)]
+    public async Task Strategy_result_rejects_non_canonical_receipt_values_before_state_mutation(
+        InvalidStrategyReceiptValue invalidField)
+    {
+        const string secretSentinel = "password=raw-strategy-secret";
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+        var artifact = new ProducedArtifactRef(ArtifactInstanceId, ArtifactSlotId, ReceiptHash("artifact"));
+        var requestedArtifact = new RequestedArtifactRef(ArtifactSlotId, ReceiptHash("request"));
+        var diagnostic = new StrategyDiagnosticRef(
+            new StrategyDiagnosticCode("process.runtime.test"),
+            StrategyDiagnosticSensitivity.Normal,
+            ReceiptHash("diagnostic"),
+            "Bounded diagnostic.",
+            RestrictedReference("process", "diagnostic"));
+        var signal = new ManagerSignal(
+            new ManagerSignalCode("process.runtime.test"),
+            ReceiptHash("signal"),
+            "Bounded manager signal.");
+        var strategyResult = FailedResult() with
+        {
+            ResultHash = invalidField == InvalidStrategyReceiptValue.ResultHash
+                ? secretSentinel
+                : ReceiptHash("result"),
+            ProducedArtifacts =
+            [
+                invalidField == InvalidStrategyReceiptValue.ArtifactContentHash
+                    ? artifact with { ContentHash = secretSentinel }
+                    : artifact
+            ],
+            RequestedArtifacts =
+            [
+                invalidField == InvalidStrategyReceiptValue.RequestedArtifactHash
+                    ? requestedArtifact with { RequestHash = secretSentinel }
+                    : requestedArtifact
+            ],
+            Diagnostics =
+            [
+                invalidField switch
+                {
+                    InvalidStrategyReceiptValue.DiagnosticEvidenceHash =>
+                        diagnostic with { EvidenceHash = secretSentinel },
+                    InvalidStrategyReceiptValue.RestrictedEvidenceReference =>
+                        diagnostic with { RestrictedEvidenceReference = secretSentinel },
+                    _ => diagnostic
+                }
+            ],
+            ManagerSignals =
+            [
+                invalidField == InvalidStrategyReceiptValue.ManagerSignalHash
+                    ? signal with { SignalHash = secretSentinel }
+                    : signal
+            ]
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                strategyResult));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(state, result.State);
+        var rejection = Assert.Single(result.Diagnostics);
+        Assert.Equal("Runtime.StrategyResultReceiptInvalid", rejection.Code);
+        Assert.DoesNotContain(secretSentinel, rejection.Message, StringComparison.Ordinal);
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Theory]
+    [InlineData(UnsafePublicReceiptTextField.UserSafeSummary, 0)]
+    [InlineData(UnsafePublicReceiptTextField.UserSafeSummary, 1)]
+    [InlineData(UnsafePublicReceiptTextField.UserSafeSummary, 2)]
+    [InlineData(UnsafePublicReceiptTextField.UserSafeSummary, 3)]
+    [InlineData(UnsafePublicReceiptTextField.DiagnosticSummary, 0)]
+    [InlineData(UnsafePublicReceiptTextField.DiagnosticSummary, 1)]
+    [InlineData(UnsafePublicReceiptTextField.DiagnosticSummary, 2)]
+    [InlineData(UnsafePublicReceiptTextField.DiagnosticSummary, 3)]
+    [InlineData(UnsafePublicReceiptTextField.ManagerSignalSummary, 0)]
+    [InlineData(UnsafePublicReceiptTextField.ManagerSignalSummary, 1)]
+    [InlineData(UnsafePublicReceiptTextField.ManagerSignalSummary, 2)]
+    [InlineData(UnsafePublicReceiptTextField.ManagerSignalSummary, 3)]
+    public async Task Strategy_result_rejects_in_bounds_secret_or_physical_path_text_before_state_mutation(
+        UnsafePublicReceiptTextField field,
+        int unsafeTextKind)
+    {
+        var unsafeText = unsafeTextKind switch
+        {
+            0 => "password=raw-public-receipt-token",
+            1 => @"C:\private\host\receipt.txt",
+            2 => "/home/private/receipt.txt",
+            3 => "https://alice:supersecret@example.invalid/api",
+            _ => throw new ArgumentOutOfRangeException(nameof(unsafeTextKind))
+        };
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+        var diagnostic = new StrategyDiagnosticRef(
+            new StrategyDiagnosticCode("process.runtime.test"),
+            StrategyDiagnosticSensitivity.Normal,
+            ReceiptHash("diagnostic"),
+            field == UnsafePublicReceiptTextField.DiagnosticSummary ? unsafeText : "Bounded diagnostic.");
+        var signal = new ManagerSignal(
+            new ManagerSignalCode("process.runtime.test"),
+            ReceiptHash("signal"),
+            field == UnsafePublicReceiptTextField.ManagerSignalSummary ? unsafeText : "Bounded signal.");
+        var strategyResult = FailedResult() with
+        {
+            UserSafeSummary = field == UnsafePublicReceiptTextField.UserSafeSummary
+                ? unsafeText
+                : "Bounded failure.",
+            Diagnostics = [diagnostic],
+            ManagerSignals = [signal]
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                strategyResult));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(state, result.State);
+        var rejection = Assert.Single(result.Diagnostics);
+        Assert.Equal("Runtime.StrategyResultReceiptInvalid", rejection.Code);
+        Assert.DoesNotContain(unsafeText, rejection.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Theory]
+    [InlineData(UnsafeStrategyReceiptIdentifierField.StrategyId, @"C:\private\strategy")]
+    [InlineData(UnsafeStrategyReceiptIdentifierField.StrategyVersion, "/home/private/version")]
+    [InlineData(UnsafeStrategyReceiptIdentifierField.DiagnosticCode, @"C:\private\diagnostic")]
+    [InlineData(UnsafeStrategyReceiptIdentifierField.ManagerSignalCode, "/home/private/signal")]
+    public async Task Strategy_result_rejects_path_bearing_identifiers_before_state_mutation(
+        UnsafeStrategyReceiptIdentifierField field,
+        string unsafeValue)
+    {
+        var unitOfWork = new RecordingUnitOfWork();
+        var engine = new ProcessRuntimeEngine(unitOfWork);
+        var token = DispatchClaimToken.New();
+        var state = NewState(
+            ProcessRuntimeStatus.Active,
+            NewStartStep(ProcessRuntimeStepStatus.Completed),
+            NewActivityStep(ProcessRuntimeStepStatus.Running, activeClaimToken: token),
+            claims:
+            [
+                new DispatchClaimState(
+                    token,
+                    ActivityStepId,
+                    OwnerId,
+                    DispatchClaimStatus.Claimed,
+                    1,
+                    Now,
+                    Now.AddMinutes(5),
+                    null,
+                    null)
+            ]);
+        var diagnostic = new StrategyDiagnosticRef(
+            new StrategyDiagnosticCode(field == UnsafeStrategyReceiptIdentifierField.DiagnosticCode
+                ? unsafeValue
+                : "process.runtime.test"),
+            StrategyDiagnosticSensitivity.Normal,
+            ReceiptHash("diagnostic"),
+            "Bounded diagnostic.");
+        var signal = new ManagerSignal(
+            new ManagerSignalCode(field == UnsafeStrategyReceiptIdentifierField.ManagerSignalCode
+                ? unsafeValue
+                : "process.runtime.test"),
+            ReceiptHash("signal"),
+            "Bounded signal.");
+        var strategyResult = FailedResult() with
+        {
+            StrategyId = field == UnsafeStrategyReceiptIdentifierField.StrategyId
+                ? new StrategyId(unsafeValue)
+                : StrategyId,
+            StrategyVersion = field == UnsafeStrategyReceiptIdentifierField.StrategyVersion
+                ? unsafeValue
+                : "1.0.0",
+            Diagnostics = [diagnostic],
+            ManagerSignals = [signal]
+        };
+
+        var result = await engine.SubmitStrategyResultAsync(
+            state,
+            Context(Now.AddMinutes(1)),
+            new SubmitStrategyResultCommand(
+                ActivityStepId,
+                OwnerId,
+                token,
+                StrategyResultIdempotencyKey.New(),
+                strategyResult));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(state, result.State);
+        Assert.DoesNotContain(unsafeValue, Assert.Single(result.Diagnostics).Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(unitOfWork.Requests);
+    }
+
+    [Fact]
     public async Task Duplicate_strategy_result_returns_existing_state_without_second_commit()
     {
         var unitOfWork = new RecordingUnitOfWork();
@@ -318,7 +829,7 @@ public sealed class ProcessRuntimeEngineTests
                     resultKey,
                     StrategyOutcome.Succeeded,
                     ProcessRuntimeStepStatus.Completed,
-                    "sha256:result")
+                    ReceiptHash("result"))
             ]);
 
         var result = await engine.SubmitStrategyResultAsync(
@@ -574,7 +1085,7 @@ public sealed class ProcessRuntimeEngineTests
         var receipt = Assert.Single(result.State.AppliedResults);
         var diagnostic = Assert.Single(receipt.Diagnostics);
         Assert.Equal("process.runtime.test_needs_manager", diagnostic.Code);
-        Assert.Equal("sha256:needs-manager-diagnostic", diagnostic.EvidenceHash);
+        Assert.Equal(ReceiptHash("needs-manager-diagnostic"), diagnostic.EvidenceHash);
         Assert.Equal("Unit test needs manager.", diagnostic.SafeSummary);
         Assert.Equal(ProcessDiagnosticRetrySafety.UnsafeToRetry, diagnostic.RetrySafety);
         Assert.Equal(ProcessDiagnosticIdempotencyClassification.Idempotent, diagnostic.Idempotency);
@@ -1040,7 +1551,7 @@ public sealed class ProcessRuntimeEngineTests
                     StartStepId,
                     ArtifactId: null,
                     ContentHash: string.Empty,
-                    ConnectionHash: "sha256:start-to-activity-expected")
+                    ConnectionHash: ReceiptHash("start-to-activity-expected"))
             ]
         };
 
@@ -1103,7 +1614,7 @@ public sealed class ProcessRuntimeEngineTests
                     StartStepId,
                     ArtifactId: null,
                     ContentHash: string.Empty,
-                    ConnectionHash: "sha256:start-to-activity-expected")
+                    ConnectionHash: ReceiptHash("start-to-activity-expected"))
             ]
         };
 
@@ -1147,7 +1658,7 @@ public sealed class ProcessRuntimeEngineTests
                     resultKey,
                     StrategyOutcome.Failed,
                     ProcessRuntimeStepStatus.Failed,
-                    "sha256:failed-result")
+                    ReceiptHash("failed-result"))
             ]);
 
         var result = await engine.RequestStepReworkAsync(
@@ -1247,7 +1758,7 @@ public sealed class ProcessRuntimeEngineTests
             ProcessRuntimeStatus.Blocked,
             ActivityStepId,
             sourceResultKey,
-            "sha256:missing-input-fingerprint",
+            ReceiptHash("missing-input-fingerprint"),
             ProcessRecoveryRouteKind.UpstreamStepRework,
             StartStepId,
             ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer);
@@ -1337,7 +1848,7 @@ public sealed class ProcessRuntimeEngineTests
                     ProcessRuntimeStatus.Blocked,
                     ActivityStepId,
                     sourceResultKey,
-                    "sha256:missing-input-fingerprint",
+                    ReceiptHash("missing-input-fingerprint"),
                     ProcessRecoveryRouteKind.UpstreamStepRework,
                     ProcessStepInstanceId.New(),
                     ProcessRuntimeBlockedRecoveryPhase.UpstreamProducer)
@@ -1372,6 +1883,318 @@ public sealed class ProcessRuntimeEngineTests
         Assert.Equal(dispatchClaimIdentity, strategy.Context.DispatchClaimIdentity);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Strategy_dispatcher_rejects_result_identity_mismatch_before_handoff(bool mismatchVersion)
+    {
+        const string foreignIdentity = "strategy.foreign";
+        const string foreignVersion = "9.9.9";
+        var dispatcher = new ProcessStrategyDispatcher();
+        var plan = NewPlan();
+        var workItem = new DispatchWorkItem(RunId, ActivityStepId, ActivityDefinitionId, Binding, 1)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategyResult = SucceededResult() with
+        {
+            StrategyId = mismatchVersion ? StrategyId : new StrategyId(foreignIdentity),
+            StrategyVersion = mismatchVersion ? foreignVersion : "1.0.0"
+        };
+        var strategy = new RecordingStrategy(strategyResult);
+        var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => dispatcher.InvokeAsync(workItem, plan, factory));
+
+        Assert.NotNull(strategy.Context);
+        Assert.DoesNotContain(foreignIdentity, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(foreignVersion, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Strategy_dispatcher_revalidates_current_host_capabilities_before_custom_strategy_invocation()
+    {
+        var unavailableFact = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Unavailable,
+            ProcessHostCapabilityReason.DependencyMissing,
+            ProcessHostExecutionPort.None);
+        var dispatcher = new ProcessStrategyDispatcher(new FixedHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux-dispatch"),
+                [unavailableFact])));
+        var plan = NewPlan();
+        var activityStep = plan.Steps.Single(step => step.StepInstanceId == ActivityStepId) with
+        {
+            RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+            {
+                ProcessHostCapabilityIds.PythonRuntime
+            }
+        };
+        plan = plan with
+        {
+            Steps = plan.Steps.Select(step =>
+                step.StepInstanceId == ActivityStepId ? activityStep : step).ToArray()
+        };
+        var stepContract = ProcessStepExecutionContract.Empty with
+        {
+            RequiredHostCapabilities = activityStep.RequiredHostCapabilities
+        };
+        var workItem = new DispatchWorkItem(
+            RunId,
+            ActivityStepId,
+            ActivityDefinitionId,
+            Binding,
+            1,
+            stepContract)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategy = new RecordingStrategy(SucceededResult());
+        var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
+
+        var result = await dispatcher.InvokeAsync(workItem, plan, factory);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Null(strategy.Context);
+        Assert.Equal(new ProcessHostProfileId("linux-dispatch"), result.HostCapabilityEvidence?.ProfileId);
+        Assert.Equal([unavailableFact], result.HostCapabilityEvidence?.Capabilities);
+        Assert.DoesNotContain("DependencyMissing", result.UserSafeSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Strategy_dispatcher_rejects_factory_host_capability_contract_drift_before_invocation()
+    {
+        var dispatcher = new ProcessStrategyDispatcher();
+        var plan = NewPlan();
+        var workItem = new DispatchWorkItem(RunId, ActivityStepId, ActivityDefinitionId, Binding, 1)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategy = new RecordingStrategy(SucceededResult());
+        var factory = new RecordingStrategyFactory(
+            Binding.StrategyId,
+            strategy,
+            new HashSet<ProcessHostCapabilityId> { ProcessHostCapabilityIds.PythonRuntime });
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => dispatcher.InvokeAsync(workItem, plan, factory));
+
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Null(strategy.Context);
+        Assert.DoesNotContain(ProcessHostCapabilityIds.PythonRuntime.Value, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Strategy_dispatcher_rejects_same_id_runtime_binding_drift_before_invocation(int driftKind)
+    {
+        var runtimeBinding = driftKind switch
+        {
+            0 => Binding with { StrategyVersion = "2.0.0" },
+            1 => Binding with
+            {
+                Inputs =
+                [
+                    new StrategyBindingInput(
+                        new StrategyBindingInputKey("runtime-input"),
+                        ReceiptHash("runtime-input"))
+                ]
+            },
+            2 => Binding with
+            {
+                HostProfileId = new ProcessHostProfileId("linux"),
+                HostCapabilities =
+                [
+                    new ProcessHostCapabilityFact(
+                        ProcessHostCapabilityIds.PythonRuntime,
+                        ProcessHostCapabilityAvailability.Available,
+                        ProcessHostCapabilityReason.Ready,
+                        ProcessHostExecutionPort.ManagedProcessHost)
+                ]
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(driftKind))
+        };
+        var workItem = new DispatchWorkItem(
+            RunId,
+            ActivityStepId,
+            ActivityDefinitionId,
+            runtimeBinding,
+            1)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategy = new RecordingStrategy(SucceededResult());
+        var factory = new RecordingStrategyFactory(runtimeBinding.StrategyId, strategy);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new ProcessStrategyDispatcher().InvokeAsync(workItem, NewPlan(), factory));
+
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Null(strategy.Context);
+    }
+
+    [Fact]
+    public async Task Strategy_dispatcher_rejects_runtime_step_contract_that_omits_immutable_plan_capability()
+    {
+        var plan = NewPlan();
+        var activityStep = plan.Steps.Single(step => step.StepInstanceId == ActivityStepId) with
+        {
+            RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+            {
+                ProcessHostCapabilityIds.PythonRuntime
+            }
+        };
+        plan = plan with
+        {
+            Steps = plan.Steps.Select(step =>
+                step.StepInstanceId == ActivityStepId ? activityStep : step).ToArray()
+        };
+        var workItem = new DispatchWorkItem(RunId, ActivityStepId, ActivityDefinitionId, Binding, 1)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategy = new RecordingStrategy(SucceededResult());
+        var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new ProcessStrategyDispatcher().InvokeAsync(workItem, plan, factory));
+
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Null(strategy.Context);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Strategy_dispatcher_rejects_runtime_tool_contract_drift_before_factory_invocation(
+        bool substituteTool)
+    {
+        var plan = NewPlan();
+        var activityStep = plan.Steps.Single(step => step.StepInstanceId == ActivityStepId) with
+        {
+            RequiredRuntimeToolNames = ["workspace_python_run_file"]
+        };
+        plan = plan with
+        {
+            Steps = plan.Steps.Select(step =>
+                step.StepInstanceId == ActivityStepId ? activityStep : step).ToArray()
+        };
+        var stepContract = ProcessStepExecutionContract.Empty with
+        {
+            RequiredRuntimeToolNames = substituteTool
+                ? ["workspace_dotnet_build"]
+                : []
+        };
+        var workItem = new DispatchWorkItem(
+            RunId,
+            ActivityStepId,
+            ActivityDefinitionId,
+            Binding,
+            1,
+            stepContract)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategy = new RecordingStrategy(SucceededResult());
+        var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new ProcessStrategyDispatcher().InvokeAsync(workItem, plan, factory));
+
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Null(strategy.Context);
+    }
+
+    [Fact]
+    public async Task Strategy_dispatcher_rejects_step_definition_identity_drift_before_factory_invocation()
+    {
+        var workItem = new DispatchWorkItem(
+            RunId,
+            ActivityStepId,
+            ProcessStepDefinitionId.New(),
+            Binding,
+            1)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var strategy = new RecordingStrategy(SucceededResult());
+        var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new ProcessStrategyDispatcher().InvokeAsync(workItem, NewPlan(), factory));
+
+        Assert.Equal(0, factory.CreateCount);
+        Assert.Null(strategy.Context);
+    }
+
+    [Fact]
+    public async Task Strategy_dispatcher_converts_host_snapshot_drift_into_persistable_failure()
+    {
+        var availableFact = new ProcessHostCapabilityFact(
+            ProcessHostCapabilityIds.PythonRuntime,
+            ProcessHostCapabilityAvailability.Available,
+            ProcessHostCapabilityReason.Ready,
+            ProcessHostExecutionPort.ManagedProcessHost);
+        var dispatcher = new ProcessStrategyDispatcher(new FixedHostCapabilitySnapshotProvider(
+            new ProcessHostCapabilitySnapshot(
+                new ProcessHostProfileId("linux-dispatch"),
+                [availableFact])));
+        var plan = NewPlan();
+        var activityStep = plan.Steps.Single(step => step.StepInstanceId == ActivityStepId) with
+        {
+            RequiredHostCapabilities = new HashSet<ProcessHostCapabilityId>
+            {
+                ProcessHostCapabilityIds.PythonRuntime
+            }
+        };
+        plan = plan with
+        {
+            Steps = plan.Steps.Select(step =>
+                step.StepInstanceId == ActivityStepId ? activityStep : step).ToArray()
+        };
+        var stepContract = ProcessStepExecutionContract.Empty with
+        {
+            RequiredHostCapabilities = activityStep.RequiredHostCapabilities
+        };
+        var workItem = new DispatchWorkItem(
+            RunId,
+            ActivityStepId,
+            ActivityDefinitionId,
+            Binding,
+            1,
+            stepContract)
+        {
+            DispatchClaimIdentity = new ProcessDispatchClaimIdentity(Guid.NewGuid())
+        };
+        var unstableEvidence = new ProcessHostCapabilityEvaluationEvidence(
+            new ProcessHostProfileId("unstable"),
+            [
+                new ProcessHostCapabilityFact(
+                    ProcessHostCapabilityIds.PythonRuntime,
+                    ProcessHostCapabilityAvailability.Unverified,
+                    ProcessHostCapabilityReason.ProbePending,
+                    ProcessHostExecutionPort.None)
+            ]);
+        var strategy = new RecordingStrategy(SucceededResult() with
+        {
+            HostCapabilityEvidence = unstableEvidence
+        });
+        var factory = new RecordingStrategyFactory(Binding.StrategyId, strategy);
+
+        var result = await dispatcher.InvokeAsync(workItem, plan, factory);
+
+        Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+        Assert.Equal(new ProcessHostProfileId("unstable"), result.HostCapabilityEvidence?.ProfileId);
+        Assert.Equal(
+            "process.runtime.host_capability_snapshot_changed",
+            Assert.Single(result.Diagnostics).Code.Value);
+    }
+
     private static RuntimeCommandContext Context(DateTimeOffset? now = null)
     {
         return new RuntimeCommandContext(
@@ -1393,7 +2216,7 @@ public sealed class ProcessRuntimeEngineTests
             RunId,
             RunId,
             PlanId,
-            "sha256:plan",
+            ReceiptHash("plan"),
             status,
             [firstStep ?? NewStartStep(ProcessRuntimeStepStatus.Pending), secondStep ?? NewActivityStep(ProcessRuntimeStepStatus.Pending)],
             claims ?? [],
@@ -1441,7 +2264,7 @@ public sealed class ProcessRuntimeEngineTests
             new ResolvedProcessDefinitionSnapshot(
                 ProcessDefinitionId.New(),
                 ProcessDefinitionVersionId.New(),
-                "sha256:definition",
+                ReceiptHash("definition"),
                 "template/1",
                 "template/1",
                 [],
@@ -1458,11 +2281,11 @@ public sealed class ProcessRuntimeEngineTests
                 []),
             new BranchRouteTable([]),
             [],
-            new ManagerPlan("sha256:manager", null, [], []),
+            new ManagerPlan(ReceiptHash("manager"), null, [], []),
             new BudgetPlan([]),
-            new MonitoringPlan(true, "sha256:monitoring"),
-            new SecurityPlan("sha256:security", []),
-            "sha256:plan");
+            new MonitoringPlan(true, ReceiptHash("monitoring")),
+            new SecurityPlan(ReceiptHash("security"), []),
+            ReceiptHash("plan"));
     }
 
     private static StrategyResultEnvelope SucceededResult(bool producedArtifact = false)
@@ -1473,12 +2296,12 @@ public sealed class ProcessRuntimeEngineTests
             Guid.NewGuid(),
             StrategyOutcome.Succeeded,
             producedArtifact
-                ? [new ProducedArtifactRef(ArtifactInstanceId, ArtifactSlotId, "sha256:artifact")]
+                ? [new ProducedArtifactRef(ArtifactInstanceId, ArtifactSlotId, ReceiptHash("artifact"))]
                 : [],
             [],
             [],
             [],
-            "sha256:result");
+            ReceiptHash("result"));
     }
 
     private static StrategyResultEnvelope FailedResult()
@@ -1492,7 +2315,7 @@ public sealed class ProcessRuntimeEngineTests
             [],
             [],
             [],
-            "sha256:failed-result");
+            ReceiptHash("failed-result"));
     }
 
     private static StrategyResultEnvelope NeedsManagerResult()
@@ -1508,14 +2331,14 @@ public sealed class ProcessRuntimeEngineTests
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode("process.runtime.test_needs_manager"),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:needs-manager-diagnostic",
+                    ReceiptHash("needs-manager-diagnostic"),
                     "Unit test needs manager.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
             ],
             [],
-            "sha256:needs-manager-result")
+            ReceiptHash("needs-manager-result"))
         {
             UserSafeSummary = "Unit test requires manager recovery."
         };
@@ -1534,7 +2357,7 @@ public sealed class ProcessRuntimeEngineTests
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode("external.system.condition"),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:opaque-child-diagnostic",
+                    ReceiptHash("opaque-child-diagnostic"),
                     "An external system condition stopped the child run.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -1544,7 +2367,7 @@ public sealed class ProcessRuntimeEngineTests
                 }
             ],
             [],
-            "sha256:opaque-child-result");
+            ReceiptHash("opaque-child-result"));
     }
 
     private static StrategyResultEnvelope SafeCompletionGateNeedsManagerResult()
@@ -1560,14 +2383,14 @@ public sealed class ProcessRuntimeEngineTests
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode("process.adapter.product_required_tool_receipt_missing"),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:missing-workspace-pwsh-run-script",
+                    ReceiptHash("missing-workspace-pwsh-run-script"),
                     "Required current-run product tool receipt is missing: workspace_pwsh_run_script.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.SafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
             ],
             [],
-            "sha256:completion-gate-safe-retry");
+            ReceiptHash("completion-gate-safe-retry"));
     }
 
     private static StrategyResultEnvelope AttestedTransientBeforeSideEffectsResult()
@@ -1591,7 +2414,7 @@ public sealed class ProcessRuntimeEngineTests
                     new StrategyDiagnosticCode(
                         ProcessExecutionAdapterDiagnosticCodes.AgentTransientExecutionBeforeSideEffects),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:attested-zero-side-effects",
+                    ReceiptHash("attested-zero-side-effects"),
                     "The provider failed before the execution recorded any side effect.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.SafeToRetry,
@@ -1601,7 +2424,7 @@ public sealed class ProcessRuntimeEngineTests
                 }
             ],
             [],
-            "sha256:attested-transient-result")
+            ReceiptHash("attested-transient-result"))
         {
             ExecutionRunId = attestation.ExecutionRunId
         };
@@ -1620,14 +2443,14 @@ public sealed class ProcessRuntimeEngineTests
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode("process.adapter.branch_outcome_defect_evidence_missing"),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:missing-defect-evidence",
+                    ReceiptHash("missing-defect-evidence"),
                     "Selected repair branch lacks deterministic defect evidence.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.SafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
             ],
             [],
-            "sha256:branch-defect-evidence-gap");
+            ReceiptHash("branch-defect-evidence-gap"));
     }
 
     private static StrategyResultEnvelope RuntimeLifecycleCorrelationGapNeedsManagerResult()
@@ -1643,14 +2466,14 @@ public sealed class ProcessRuntimeEngineTests
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode("process.adapter.runtime_lifecycle_correlation_missing"),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:runtime-lifecycle-correlation",
+                    ReceiptHash("runtime-lifecycle-correlation"),
                     "Runtime lifecycle proof is incomplete or stale.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.SafeToRetry,
                     ProcessDiagnosticIdempotencyClassification.Idempotent)
             ],
             [],
-            "sha256:runtime-lifecycle-correlation-gap");
+            ReceiptHash("runtime-lifecycle-correlation-gap"));
     }
 
     private static StrategyResultEnvelope NeedsManagerResultWithoutDiagnostics()
@@ -1664,7 +2487,7 @@ public sealed class ProcessRuntimeEngineTests
             [],
             [],
             [],
-            "sha256:needs-manager-result");
+            ReceiptHash("needs-manager-result"));
     }
 
     private static StrategyResultEnvelope MissingInputNeedsManagerResult()
@@ -1675,12 +2498,12 @@ public sealed class ProcessRuntimeEngineTests
             Guid.NewGuid(),
             StrategyOutcome.NeedsManager,
             [],
-            [new RequestedArtifactRef(ArtifactSlotId, "sha256:requested-input")],
+            [new RequestedArtifactRef(ArtifactSlotId, ReceiptHash("requested-input"))],
             [
                 new StrategyDiagnosticRef(
                     new StrategyDiagnosticCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:missing-input",
+                    ReceiptHash("missing-input"),
                     "Required input artifact is missing.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -1689,10 +2512,10 @@ public sealed class ProcessRuntimeEngineTests
             [
                 new ManagerSignal(
                     new ManagerSignalCode(ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact),
-                    "sha256:missing-input",
+                    ReceiptHash("missing-input"),
                     "Required input artifact is missing.")
             ],
-            "sha256:missing-input-result");
+            ReceiptHash("missing-input-result"));
     }
 
     private static StrategyResultReceipt CreateUpstreamRecoveryReceipt(
@@ -1704,12 +2527,12 @@ public sealed class ProcessRuntimeEngineTests
             sourceResultKey,
             StrategyOutcome.NeedsManager,
             ProcessRuntimeStepStatus.Blocked,
-            "sha256:missing-input-result",
+            ReceiptHash("missing-input-result"),
             [
                 new StrategyResultDiagnosticReceipt(
                     ProcessRuntimeDiagnosticCodes.MissingRequiredInputArtifact,
                     StrategyDiagnosticSensitivity.Normal,
-                    "sha256:missing-input",
+                    ReceiptHash("missing-input"),
                     "Required input artifact is missing.",
                     RestrictedEvidenceReference: null,
                     ProcessDiagnosticRetrySafety.UnsafeToRetry,
@@ -1724,9 +2547,15 @@ public sealed class ProcessRuntimeEngineTests
             {
                 RouteKind = ProcessRecoveryRouteKind.UpstreamStepRework,
                 ResponsibleStepInstanceId = StartStepId,
-                DiagnosticFingerprint = "sha256:missing-input-fingerprint"
+                DiagnosticFingerprint = ReceiptHash("missing-input-fingerprint")
             });
     }
+
+    private static string ReceiptHash(string value)
+        => ProcessPlanHasher.ComputeContentHash(value);
+
+    private static string RestrictedReference(string kind, string value)
+        => $"restricted://{kind}/{ReceiptHash(value)}";
 
     private sealed class RecordingUnitOfWork : IProcessRuntimeUnitOfWork
     {
@@ -1744,20 +2573,35 @@ public sealed class ProcessRuntimeEngineTests
 
     private sealed class RecordingStrategyFactory(
         StrategyId strategyId,
-        IProcessStrategy strategy) : IProcessStrategyFactory
+        IProcessStrategy strategy,
+        IReadOnlySet<ProcessHostCapabilityId>? requiredHostCapabilities = null) : IProcessStrategyFactory
     {
+        public int CreateCount { get; private set; }
+
         public ProcessStrategyDescriptor Descriptor { get; } = new(
             strategyId,
             "1.0.0",
             ProcessStrategyKind.StepExecution,
-            new HashSet<CapabilityTag>());
+            new HashSet<CapabilityTag>())
+        {
+            RequiredHostCapabilities = requiredHostCapabilities ?? new HashSet<ProcessHostCapabilityId>()
+        };
 
         public ValueTask<IProcessStrategy> CreateAsync(
             ProcessStrategyBindingSnapshot binding,
             CancellationToken cancellationToken = default)
         {
+            CreateCount++;
             return ValueTask.FromResult(strategy);
         }
+    }
+
+    private sealed class FixedHostCapabilitySnapshotProvider(
+        ProcessHostCapabilitySnapshot snapshot) : IProcessHostCapabilitySnapshotProvider
+    {
+        public ValueTask<ProcessHostCapabilitySnapshot> GetAsync(
+            CancellationToken cancellationToken = default)
+            => ValueTask.FromResult(snapshot);
     }
 
     private sealed class RecordingStrategy(StrategyResultEnvelope result) : IProcessStrategy

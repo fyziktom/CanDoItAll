@@ -1,4 +1,6 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -22,9 +24,14 @@ public static class LlmConversationServiceCollectionExtensions
 
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ILlmConversationContextWindowPolicy, RecencyBoundedContextWindowPolicy>();
+        services.TryAddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
+        services.TryAddSingleton<DurableFileWriter>();
         services.TryAdd(ServiceDescriptor.Describe(
             typeof(ILlmConversationStore),
-            serviceProvider => new FileLlmConversationStore(storageRootResolver(serviceProvider)),
+            serviceProvider => new FileLlmConversationStore(
+                storageRootResolver(serviceProvider),
+                serviceProvider.GetRequiredService<IPhysicalFileSystemPathPolicyFactory>(),
+                serviceProvider.GetRequiredService<DurableFileWriter>()),
             lifetime));
         services.TryAdd(ServiceDescriptor.Describe(
             typeof(ILlmConversationService),

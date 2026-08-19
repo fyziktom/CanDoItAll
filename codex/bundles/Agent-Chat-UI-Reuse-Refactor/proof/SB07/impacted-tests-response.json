@@ -1,0 +1,38 @@
+{
+  "subbundleId": "SB07",
+  "correlationId": "code-analytics_db96898cf5324ecba0c88c72c76a68b6",
+  "result": {
+    "isComplete": false,
+    "confidence": "Low",
+    "fallbackKind": "AllSuppliedSuites",
+    "fallbackReason": "Dynamic and reflection dispatch in the Components workspace prevents complete static relationship proof.",
+    "requiredSelection": "All supplied suites / Components",
+    "workspaceHealthy": true,
+    "workspaceProjectCount": 1,
+    "sourceTestCount": 922,
+    "ignoredContextOnlyPathCount": 5,
+    "conditionalSelections": []
+  },
+  "executions": [
+    {
+      "selector": "ConversationFloatingComponentsTests|AgentActiveChatPresentationMapperTests",
+      "discovered": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "selector": "FloatingAgentChatSettingsPanelTests",
+      "discovered": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "selector": "AllSuppliedSuites: Components",
+      "discovered": 990,
+      "passed": 990,
+      "failed": 0,
+      "duration": "13m48s"
+    }
+  ],
+  "promotionDecision": "Executed the conservative required Components selection. No conditional selector was returned."
+}

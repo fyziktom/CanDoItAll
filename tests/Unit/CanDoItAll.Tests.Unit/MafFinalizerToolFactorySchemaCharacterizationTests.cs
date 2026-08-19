@@ -4,21 +4,12 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 /// <summary>
-/// Characterization test for SB13's <see cref="MafFinalizerToolFactory"/> generic rewrite. The expected
-/// name/description/schema strings below were captured verbatim from the pre-refactor 8-arm type-switch
-/// implementation (session 5c18c0b3, before any SB13 edits: <c>CreateTool</c> dispatched on
-/// <c>policy.OutputType</c> to per-contract <c>AIFunctionFactory.Create</c> calls &#8212; one JsonElement-typed
-/// tolerant capture for the process-step outcome contract with a hand-written <see cref="AIJsonSchemaCreateOptions"/>
-/// description provider, and seven strictly-typed captures using the simple
-/// <c>AIFunctionFactory.Create(Delegate, string, string, JsonSerializerOptions)</c> overload). The rewritten
-/// generic single-path factory (policy-metadata-driven <see cref="AgentFinalizerPolicy.KnownOutputNormalizer"/>
-/// decides JsonElement vs strictly-typed capture; <see cref="AgentFinalizerPolicy.ToolDescription"/> /
-/// <see cref="AgentFinalizerPolicy.ResultParameterDescription"/> decide description/schema wiring) must reproduce
-/// every one of these byte-for-byte: same tool name, same description, same generated JSON schema (same parameter
-/// name, same type shape/constraints, same descriptions) for every one of the 8 finalizer contracts.
+/// Characterizes the policy-driven <see cref="MafFinalizerToolFactory"/> contract for all finalizers. Strictly
+/// typed finalizers retain their generated schemas, while tolerant finalizers capture a raw <see cref="JsonElement"/>
+/// but advertise their policy output type's full nested schema.
 /// </summary>
 public sealed class MafFinalizerToolFactorySchemaCharacterizationTests
 {
@@ -35,7 +26,7 @@ public sealed class MafFinalizerToolFactorySchemaCharacterizationTests
 
     [Theory]
     [MemberData(nameof(Contracts))]
-    public void CreateCapture_reproduces_the_pre_refactor_tool_name_description_and_json_schema(
+    public void CreateCapture_produces_the_policy_tool_name_description_and_json_schema(
         AgentStructuredOutputContract contract,
         string expectedName,
         string expectedDescription,
@@ -57,13 +48,90 @@ public sealed class MafFinalizerToolFactorySchemaCharacterizationTests
         Assert.Equal(expectedSchema, function.JsonSchema.GetRawText());
     }
 
+    [Fact]
+    public async Task CreateCapture_rejects_every_noncanonical_argument_set_before_binding_for_all_finalizers()
+    {
+        foreach (var (contract, _, _, _) in ExpectedBaselines())
+        {
+            var capture = Assert.IsType<FinalizerCapture>(
+                MafFinalizerToolFactory.CreateCapture(contract, AgentFinalizerMode.Required));
+            var function = Assert.IsAssignableFrom<AIFunction>(Assert.Single(capture.Tools));
+            var invalidArgumentSets = new AIFunctionArguments[]
+            {
+                [],
+                new() { ["status"] = "Completed" },
+                new()
+                {
+                    ["result"] = JsonSerializer.SerializeToElement(new { }),
+                    ["acceptanceCriteriaEvidence"] = JsonSerializer.SerializeToElement(Array.Empty<object>())
+                }
+            };
+
+            foreach (var arguments in invalidArgumentSets)
+            {
+                var response = Assert.IsType<FinalizerSubmissionResult>(
+                    await function.InvokeAsync(arguments, CancellationToken.None));
+
+                Assert.False(response.Succeeded);
+                Assert.Contains("expected exactly one argument named `result`", response.Message, StringComparison.Ordinal);
+                Assert.False(MafRuntimeToolInvocationResultClassifier.IsSuccessful(response));
+                Assert.Equal(response.Message, MafRuntimeToolInvocationResultClassifier.ResolveFailureMessage(response));
+            }
+
+            Assert.Empty(capture.Snapshot());
+        }
+    }
+
+    [Fact]
+    public async Task Process_step_tolerant_finalizer_with_exact_result_captures_acceptance_criteria_evidence()
+    {
+        var capture = Assert.IsType<FinalizerCapture>(MafFinalizerToolFactory.CreateCapture(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            AgentFinalizerMode.Required));
+        var function = Assert.IsAssignableFrom<AIFunction>(Assert.Single(capture.Tools));
+        var outcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Current-run validation found a defect.",
+            BranchOutcomeKey = "repair-required",
+            BranchOutcomeTitle = "Repair required",
+            EvidenceRefs = ["artifacts/process-runs/run-1/steps/qa.md"],
+            AcceptanceCriteriaEvidence =
+            [
+                new ProcessAcceptanceCriterionEvidence
+                {
+                    CriterionId = "AC-002",
+                    Status = ProcessAcceptanceCriterionEvidenceStatus.Failed,
+                    Summary = "The browser exposed a runtime error surface.",
+                    EvidenceRefs = ["artifacts/process-runs/run-1/browser/after.yml"]
+                }
+            ]
+        };
+        var arguments = new AIFunctionArguments
+        {
+            ["result"] = JsonSerializer.SerializeToElement(outcome, AgentOutputJson.SerializerOptions)
+        };
+
+        var response = Assert.IsType<JsonElement>(
+            await function.InvokeAsync(arguments, CancellationToken.None));
+
+        Assert.True(response.GetProperty("succeeded").GetBoolean());
+        var invocation = Assert.Single(capture.Snapshot());
+        var validation = new DefaultAgentFinalizerValidator().Validate(capture.Policy, [invocation]);
+        Assert.True(validation.Succeeded);
+        var captured = Assert.IsType<ProcessStepOutcomeResult>(validation.Output);
+        var criterion = Assert.Single(captured.AcceptanceCriteriaEvidence);
+        Assert.Equal("AC-002", criterion.CriterionId);
+        Assert.Equal(ProcessAcceptanceCriterionEvidenceStatus.Failed, criterion.Status);
+    }
+
     private static IEnumerable<(AgentStructuredOutputContract Contract, string Name, string Description, string Schema)> ExpectedBaselines()
     {
         yield return (
             AgentStructuredOutputContracts.ProcessStepOutcomeResult,
             "submit_process_step_outcome",
             "Submits the final process-step outcome exactly once as typed machine-readable arguments.",
-            """{"type":"object","properties":{"result":{"description":"Final governed process-step outcome. Include status, reason, branchOutcomeKey, branchOutcomeTitle, evidenceRefs, nextActions, and humanReadableSummaryMarkdown. branchOutcomeTitle requires a non-empty stable branchOutcomeKey declared by the current process brief. When no branch is selected, both branch fields must be empty strings. Completed outcomes require at least one concrete current-run evidence reference."}},"required":["result"]}""");
+            """{"type":"object","properties":{"result":{"description":"Final governed process-step outcome. Include status, reason, branchOutcomeKey, branchOutcomeTitle, evidenceRefs, acceptanceCriteriaEvidence, nextActions, and humanReadableSummaryMarkdown. acceptanceCriteriaEvidence must be an array whose entries use criterionId, status, summary, and evidenceRefs. branchOutcomeTitle requires a non-empty stable branchOutcomeKey declared by the current process brief. When no branch is selected, both branch fields must be empty strings. Completed outcomes require at least one concrete current-run evidence reference.","type":"object","properties":{"status":{"type":"string","enum":["Completed","Blocked","Failed","WaitingApproval","Refused"]},"reason":{"type":"string"},"branchOutcomeKey":{"type":"string"},"branchOutcomeTitle":{"type":"string"},"evidenceRefs":{"type":"array","items":{"type":"string"}},"acceptanceCriteriaEvidence":{"type":"array","items":{"type":"object","properties":{"criterionId":{"type":"string"},"status":{"type":"string","enum":["Passed","Failed","NotVerified"]},"summary":{"type":"string"},"evidenceRefs":{"type":"array","items":{"type":"string"}}},"required":["criterionId","status","summary"]}},"nextActions":{"type":"array","items":{"type":"string"}},"humanReadableSummaryMarkdown":{"type":["string","null"]}},"required":["status","reason"]}},"required":["result"]}""");
 
         yield return (
             AgentStructuredOutputContracts.CodeReviewResult,

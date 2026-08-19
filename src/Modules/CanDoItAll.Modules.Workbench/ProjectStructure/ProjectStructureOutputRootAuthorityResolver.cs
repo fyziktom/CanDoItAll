@@ -1,13 +1,14 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureOutputRootAuthorityResolver
 {
     private const int MinimumImplicitRootSegmentCount = 1;
-    private const string ExternalTargetAliasRoot = "external-target";
-
     private static readonly HashSet<string> ProtectedDriveFolders = new(
         [
             "$Recycle.Bin",
@@ -24,6 +25,8 @@ internal static class ProjectStructureOutputRootAuthorityResolver
 
     private static readonly IReadOnlyList<ProtectedRoot> ProtectedRoots =
         BuildProtectedRoots();
+    private static readonly IPhysicalFileSystemPathPolicyFactory PhysicalPathPolicyFactory =
+        new PhysicalFileSystemPathPolicyFactory();
 
     public static string ResolveProcessOutputRoot(
         ProjectStructureSurface? surface,
@@ -69,8 +72,10 @@ internal static class ProjectStructureOutputRootAuthorityResolver
 
     public static IReadOnlyList<string> ResolveChatDiscoveryRoots(
         ProjectStructureSurface? surface,
-        IReadOnlyList<AgentChatContextEntityReference>? selectedEntities)
+        IReadOnlyList<AgentChatContextEntityReference>? selectedEntities,
+        IExternalTargetPathRegistry externalTargetPathRegistry)
     {
+        ArgumentNullException.ThrowIfNull(externalTargetPathRegistry);
         if (surface is null || selectedEntities is null || selectedEntities.Count == 0)
         {
             return [];
@@ -87,7 +92,7 @@ internal static class ProjectStructureOutputRootAuthorityResolver
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToHashSet(StringComparer.Ordinal);
-        var resolvedAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolvedAliases = new HashSet<string>(ExternalTargetAliasCodec.EqualityComparer);
 
         foreach (var selectedNodeId in selectedEntities
                      .Where(entity =>
@@ -112,7 +117,8 @@ internal static class ProjectStructureOutputRootAuthorityResolver
             var resolution = ResolveChatRootForSelection(
                 selectedNode,
                 nodesById,
-                ambiguousNodeIds);
+                ambiguousNodeIds,
+                externalTargetPathRegistry);
             if (resolution.IsConflict)
             {
                 return [];
@@ -125,14 +131,15 @@ internal static class ProjectStructureOutputRootAuthorityResolver
         }
 
         return resolvedAliases
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
             .ToArray();
     }
 
     private static ChatRootResolution ResolveChatRootForSelection(
         ProjectStructureNode selectedNode,
         IReadOnlyDictionary<string, ProjectStructureNode> nodesById,
-        IReadOnlySet<string> ambiguousNodeIds)
+        IReadOnlySet<string> ambiguousNodeIds,
+        IExternalTargetPathRegistry externalTargetPathRegistry)
     {
         var visited = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -143,7 +150,7 @@ internal static class ProjectStructureOutputRootAuthorityResolver
         {
             if (node.ObjectType == ProjectObjectType.ProjectBlock)
             {
-                return ResolveAllRootsFromTypedProjectBlock(node);
+                return ResolveAllRootsFromTypedProjectBlock(node, externalTargetPathRegistry);
             }
 
             if (string.IsNullOrWhiteSpace(node.ParentId))
@@ -161,7 +168,8 @@ internal static class ProjectStructureOutputRootAuthorityResolver
     }
 
     private static ChatRootResolution ResolveAllRootsFromTypedProjectBlock(
-        ProjectStructureNode node)
+        ProjectStructureNode node,
+        IExternalTargetPathRegistry externalTargetPathRegistry)
     {
         if (node.ObjectType != ProjectObjectType.ProjectBlock ||
             string.IsNullOrWhiteSpace(node.MetadataJson))
@@ -184,12 +192,15 @@ internal static class ProjectStructureOutputRootAuthorityResolver
             return ChatRootResolution.None;
         }
 
-        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var aliases = new HashSet<string>(ExternalTargetAliasCodec.EqualityComparer);
         foreach (var root in EnumerateProjectBlockRoots(projectBlock)
                      .Where(static root => !string.IsNullOrWhiteSpace(root)))
         {
-            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(root);
-            if (string.IsNullOrWhiteSpace(alias) || !IsAllowedImplicitChatRoot(alias))
+            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
+                root,
+                externalTargetPathRegistry);
+            if (string.IsNullOrWhiteSpace(alias) ||
+                !IsAllowedImplicitChatRoot(alias, externalTargetPathRegistry))
             {
                 return ChatRootResolution.Conflict;
             }
@@ -206,58 +217,100 @@ internal static class ProjectStructureOutputRootAuthorityResolver
             : new ChatRootResolution(aliases.Single(), IsConflict: false);
     }
 
-    private static bool IsAllowedImplicitChatRoot(string normalizedAlias)
+    private static bool IsAllowedImplicitChatRoot(
+        string normalizedAlias,
+        IExternalTargetPathRegistry externalTargetPathRegistry)
     {
-        var segments = normalizedAlias.Split(
-            '/',
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length < MinimumImplicitRootSegmentCount + 2 ||
-            !string.Equals(
-                segments[0],
-                ExternalTargetAliasRoot,
-                StringComparison.OrdinalIgnoreCase) ||
-            segments[1].Length != 1 ||
-            !char.IsLetter(segments[1][0]) ||
-            ProtectedDriveFolders.Contains(segments[2]) ||
-            IsUserProfileContainerRoot(segments))
+        if (externalTargetPathRegistry.TryResolve(
+                normalizedAlias,
+                out var physicalRoot,
+                out _) != ExternalTargetAliasResolutionKind.Resolved)
         {
             return false;
         }
 
-        return !ProtectedRoots.Any(root =>
-            string.Equals(normalizedAlias, root.Alias, StringComparison.OrdinalIgnoreCase) ||
-            root.ProtectDescendants &&
-            normalizedAlias.StartsWith(root.Alias + "/", StringComparison.OrdinalIgnoreCase));
-    }
+        var filesystemRoot = Path.GetPathRoot(physicalRoot);
+        if (string.IsNullOrWhiteSpace(filesystemRoot))
+        {
+            return false;
+        }
 
-    private static bool IsUserProfileContainerRoot(IReadOnlyList<string> segments)
-        => segments.Count is 3 or 4 &&
-           string.Equals(segments[2], "Users", StringComparison.OrdinalIgnoreCase);
+        var segments = Path.GetRelativePath(filesystemRoot, physicalRoot)
+            .Split(
+                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length < MinimumImplicitRootSegmentCount ||
+            OperatingSystem.IsWindows() && ProtectedDriveFolders.Contains(segments[0]))
+        {
+            return false;
+        }
+
+        return !ProtectedRoots.Any(root => IsProtectedRoot(physicalRoot, root));
+    }
 
     private static IReadOnlyList<ProtectedRoot> BuildProtectedRoots()
     {
         var roots = new List<ProtectedRoot>();
-        Add(Environment.SpecialFolder.UserProfile, protectDescendants: false);
-        Add(Environment.SpecialFolder.Windows, protectDescendants: true);
-        Add(Environment.SpecialFolder.System, protectDescendants: true);
-        Add(Environment.SpecialFolder.ProgramFiles, protectDescendants: true);
-        Add(Environment.SpecialFolder.ProgramFilesX86, protectDescendants: true);
-        Add(Environment.SpecialFolder.CommonApplicationData, protectDescendants: true);
-        Add(Environment.SpecialFolder.ApplicationData, protectDescendants: true);
-        Add(Environment.SpecialFolder.LocalApplicationData, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.UserProfile, protectDescendants: false);
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(userProfile) &&
+            Directory.GetParent(userProfile) is { } userContainer &&
+            !IsFileSystemRoot(userContainer.FullName))
+        {
+            AddPath(userContainer.FullName, protectDescendants: true);
+        }
+        AddFolder(Environment.SpecialFolder.Windows, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.System, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.ProgramFiles, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.ProgramFilesX86, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.CommonApplicationData, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.ApplicationData, protectDescendants: true);
+        AddFolder(Environment.SpecialFolder.LocalApplicationData, protectDescendants: true);
         return roots
-            .DistinctBy(root => root.Alias, StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(root => root.Path, StringComparer.Ordinal)
             .ToArray();
 
-        void Add(Environment.SpecialFolder folder, bool protectDescendants)
+        void AddFolder(Environment.SpecialFolder folder, bool protectDescendants)
         {
-            var alias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(
-                Environment.GetFolderPath(folder));
-            if (!string.IsNullOrWhiteSpace(alias))
+            AddPath(Environment.GetFolderPath(folder), protectDescendants);
+        }
+
+        void AddPath(string path, bool protectDescendants)
+        {
+            if (!string.IsNullOrWhiteSpace(path) && Path.IsPathRooted(path))
             {
-                roots.Add(new ProtectedRoot(alias, protectDescendants));
+                roots.Add(new ProtectedRoot(Path.GetFullPath(path), protectDescendants));
             }
         }
+
+        static bool IsFileSystemRoot(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var root = Path.GetPathRoot(fullPath);
+            return !string.IsNullOrWhiteSpace(root) &&
+                   string.Equals(
+                       Path.TrimEndingDirectorySeparator(fullPath),
+                       Path.TrimEndingDirectorySeparator(root),
+                       OperatingSystem.IsWindows()
+                           ? StringComparison.OrdinalIgnoreCase
+                           : StringComparison.Ordinal);
+        }
+    }
+
+    private static string EnsureTrailingSeparator(string path)
+        => path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar)
+            ? path
+            : path + Path.DirectorySeparatorChar;
+
+    private static bool IsProtectedRoot(string physicalRoot, ProtectedRoot protectedRoot)
+    {
+        var policy = PhysicalPathPolicyFactory.Create(protectedRoot.Path);
+        var comparison = policy.CaseSensitivity == PhysicalFileSystemCaseSensitivity.Sensitive
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
+        return string.Equals(physicalRoot, protectedRoot.Path, comparison) ||
+               protectedRoot.ProtectDescendants &&
+               physicalRoot.StartsWith(EnsureTrailingSeparator(protectedRoot.Path), comparison);
     }
 
     private static IEnumerable<ProjectStructureNode> EnumerateAuthorityNodes(
@@ -321,7 +374,7 @@ internal static class ProjectStructureOutputRootAuthorityResolver
         yield return projectBlock.WorkspaceRoot;
     }
 
-    private sealed record ProtectedRoot(string Alias, bool ProtectDescendants);
+    private sealed record ProtectedRoot(string Path, bool ProtectDescendants);
 
     private readonly record struct ChatRootResolution(string Alias, bool IsConflict)
     {

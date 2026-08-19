@@ -1,0 +1,546 @@
+{
+  "schema_version": 2,
+  "source_anchor": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "development",
+    "commit": "62ea8ee0cc42c1c06da934d126a5c18f8237a89f",
+    "commit_message": "Merge branch 'maf-refactor' into development",
+    "dotnet_sdk": "10.0.302",
+    "prepared_date": "2026-08-08",
+    "analysis_method": "GitHub connector source inspection plus comparison with the supplied 2026-07-31 portability bundle",
+    "local_build_reproduction": false
+  },
+  "m07_reconciliation": {
+    "branch": "unix-adoption",
+    "commit": "386d8beb6038035f89a9a6961ec017d8213879a5",
+    "working_tree_status": "M00-M07 merge-candidate work in progress; immutable candidate is frozen at M08",
+    "dependency_mode": "package",
+    "reconciled_date": "2026-08-12"
+  },
+  "portable_token": "{{REPO_ROOT}}",
+  "references": [
+    {
+      "id": "ROOT-001",
+      "relative_path": "global.json",
+      "portable_reference": "{{REPO_ROOT}}/global.json",
+      "owner_bundle": "shared",
+      "area": "Build",
+      "prepared_observation": "Pins .NET SDK 10.0.302.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "ROOT-002",
+      "relative_path": "Directory.Build.props",
+      "portable_reference": "{{REPO_ROOT}}/Directory.Build.props",
+      "owner_bundle": "shared",
+      "area": "Build",
+      "prepared_observation": "Repository-wide build and package versions; no Windows-only TFM.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "ROOT-003",
+      "relative_path": "CanDoItAll.slnx",
+      "portable_reference": "{{REPO_ROOT}}/CanDoItAll.slnx",
+      "owner_bundle": "shared",
+      "area": "Architecture",
+      "prepared_observation": "Current solution includes the new Processes stack, process drivers, Security.Abstractions, and MAF runtime abstractions.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "ROOT-004",
+      "relative_path": ".github/workflows/ci.yml",
+      "portable_reference": "{{REPO_ROOT}}/.github/workflows/ci.yml",
+      "owner_bundle": "core",
+      "area": "CI",
+      "prepared_observation": "Active three-host workflow now uses package mode, PostgreSQL, the stamped runtime catalog, headless proof, and a disposable Docker secret; hosted execution remains unclaimed.",
+      "evidence_status": "M07-reconciled-hosted-pending"
+    },
+    {
+      "id": "APP-001",
+      "relative_path": "src/App/CanDoItAll.Web/Program.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Web/Program.cs",
+      "owner_bundle": "core",
+      "area": "Composition",
+      "prepared_observation": "Composition root and host startup surface.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "APP-002",
+      "relative_path": "src/App/CanDoItAll.Web/appsettings.json",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Web/appsettings.json",
+      "owner_bundle": "core",
+      "area": "Configuration",
+      "prepared_observation": "Base settings keep desktop launch disabled and define runtime profiles.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "APP-003",
+      "relative_path": "src/App/CanDoItAll.Web/appsettings.Development.json",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Web/appsettings.Development.json",
+      "owner_bundle": "core",
+      "area": "Configuration",
+      "prepared_observation": "Workspace and control-plane roots use %LOCALAPPDATA% and Windows separators.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "APP-004",
+      "relative_path": "src/App/CanDoItAll.Web/Properties/launchSettings.json",
+      "portable_reference": "{{REPO_ROOT}}/src/App/CanDoItAll.Web/Properties/launchSettings.json",
+      "owner_bundle": "core",
+      "area": "Configuration",
+      "prepared_observation": "Development profiles repeat Windows-only roots and enable desktop launch.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-001",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Configuration/AppOptions.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Configuration/AppOptions.cs",
+      "owner_bundle": "core",
+      "area": "Configuration",
+      "prepared_observation": "Defines storage and control-plane options and relative defaults.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-002",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "owner_bundle": "core",
+      "area": "Paths",
+      "prepared_observation": "Expands environment variables and derives LocalApplicationData-based control-plane paths.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-003",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "owner_bundle": "core",
+      "area": "Control plane",
+      "prepared_observation": "Persists database profiles, encrypted passwords, and host filesystem workspace roots.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-004",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApplicationPreferences.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApplicationPreferences.cs",
+      "owner_bundle": "core",
+      "area": "Control plane",
+      "prepared_observation": "Persists absolute preferred application executable paths.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-005",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs",
+      "owner_bundle": "core",
+      "area": "Composition",
+      "prepared_observation": "Persists ASP.NET Data Protection keys under the control plane.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-006",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "owner_bundle": "core",
+      "area": "Paths",
+      "prepared_observation": "Workspace path guard uses native separator conversion that does not treat backslash as a legacy logical separator on Unix.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-007",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStoragePathPolicy.cs",
+      "owner_bundle": "core",
+      "area": "Filesystem",
+      "prepared_observation": "Storage root containment and reparse checks; separator semantics differ from MAF workspace policy.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-008",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Storage/Drivers/FileSystemStorageDriver.cs",
+      "owner_bundle": "core",
+      "area": "Storage",
+      "prepared_observation": "Direct non-atomic SaveAsync, temporary replace path, platform-dependent filename sanitization, and case-insensitive lock hashing.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "CORE-009",
+      "relative_path": "src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Infrastructure/Storage/Persistence/StorageBootstrapCatalogPolicy.cs",
+      "owner_bundle": "core",
+      "area": "Storage",
+      "prepared_observation": "Treats persisted filesystem root equality according to the current OS.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "SEC-001",
+      "relative_path": "src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj",
+      "portable_reference": "{{REPO_ROOT}}/src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "New abstractions project introduced by the MAF refactor.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "SEC-002",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "References ProtectedData and Security.Abstractions.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "SEC-003",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretVaults.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Auto selects macOS/Linux providers that are currently unsupported; file vault stores a Base64 master key beside ciphertext.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "SEC-004",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Secret records support vault references and legacy Data Protection payloads.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "SEC-005",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecurityModuleServiceCollectionExtensions.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Registers secret protector, vault factory, and runtime secret services.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "SEC-006",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/SecretRuntimeResolver.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/SecretRuntimeResolver.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Runtime secret resolution boundary; full local scan required after materialization.",
+      "evidence_status": "Search-confirmed"
+    },
+    {
+      "id": "SEC-007",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/StorageSecretResolver.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/StorageSecretResolver.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Storage credential resolution boundary.",
+      "evidence_status": "Search-confirmed"
+    },
+    {
+      "id": "SEC-008",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Security/PluginSecretBroker.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Security/PluginSecretBroker.cs",
+      "owner_bundle": "core",
+      "area": "Security",
+      "prepared_observation": "Plugin secret dispatch boundary.",
+      "evidence_status": "Search-confirmed"
+    },
+    {
+      "id": "FILE-001",
+      "relative_path": "src/Integration/CanDoItAll.FileTools.Integration/ConfiguredDesktopFileLauncher.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Integration/CanDoItAll.FileTools.Integration/ConfiguredDesktopFileLauncher.cs",
+      "owner_bundle": "runtime",
+      "area": "Desktop integration",
+      "prepared_observation": "Delegates capability to the external FileTools desktop package.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "FILE-002",
+      "relative_path": "src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj",
+      "portable_reference": "{{REPO_ROOT}}/src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj",
+      "owner_bundle": "runtime",
+      "area": "External dependency",
+      "prepared_observation": "Uses CanDoItAll.FileTools.Desktop package 0.1.18.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "FILE-003",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureLocalFileOpener.cs",
+      "owner_bundle": "runtime",
+      "area": "Desktop integration",
+      "prepared_observation": "Combines trusted path resolution, preferred application records, and desktop launch.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-001",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Paths/WorkspacePathPolicy.cs",
+      "owner_bundle": "core",
+      "area": "Paths",
+      "prepared_observation": "Canonicalizes logical backslashes but has Windows-drive-shaped external target aliases.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-002",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimePathResolver.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimePathResolver.cs",
+      "owner_bundle": "core",
+      "area": "Paths",
+      "prepared_observation": "Uses OrdinalIgnoreCase containment on every OS.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-003",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandEnvironmentPolicy.cs",
+      "owner_bundle": "runtime",
+      "area": "Process environment",
+      "prepared_observation": "Windows-heavy allowlist and case-insensitive environment map on every OS.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-004",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceExecutableLocator.cs",
+      "owner_bundle": "runtime",
+      "area": "Executable resolution",
+      "prepared_observation": "Always probes .exe/.cmd/.bat and does not prove Unix execute permission.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-005",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Process/LocalWorkspaceProcessHost.cs",
+      "owner_bundle": "runtime",
+      "area": "Process execution",
+      "prepared_observation": "Typed direct process execution is already mostly portable; process-tree semantics remain unproven on Unix.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-006",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs",
+      "owner_bundle": "runtime",
+      "area": "Process execution",
+      "prepared_observation": "Central command runner, path aliasing, environment filtering, receipts, and product-target audit.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-007",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/LocalMcpCommandPolicy.cs",
+      "owner_bundle": "runtime",
+      "area": "MCP",
+      "prepared_observation": "Case-insensitive command-name policy mixes Unix and Windows executable suffixes.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-008",
+      "relative_path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpJsonRpcConnection.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpJsonRpcConnection.cs",
+      "owner_bundle": "runtime",
+      "area": "MCP",
+      "prepared_observation": "Local stdio MCP now uses bounded bidirectional JSON-RPC while executable identity remains with the canonical workspace locator/process host.",
+      "evidence_status": "M04-C2-windows-linux-green"
+    },
+    {
+      "id": "MAF-009",
+      "relative_path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpProcessLauncher.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpProcessLauncher.cs",
+      "owner_bundle": "runtime",
+      "area": "MCP",
+      "prepared_observation": "Direct local stdio MCP process launch.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-010",
+      "relative_path": "src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/Runtime/LocalStdioMcpEnvironmentBinder.cs",
+      "owner_bundle": "runtime",
+      "area": "MCP",
+      "prepared_observation": "Binds raw and inherited environment values into MCP processes.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-011",
+      "relative_path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+      "owner_bundle": "runtime",
+      "area": "MCP",
+      "prepared_observation": "OS-aware npm/node names but recursively scans global npx cache and chooses newest match.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MAF-012",
+      "relative_path": "src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/MAF/Tools/CanDoItAll.AgentFramework.Tools/External/ExternalProcessToolInvoker.cs",
+      "owner_bundle": "runtime",
+      "area": "External tools",
+      "prepared_observation": "Contains another local process runner with independent timeout/kill/output behavior.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "WB-001",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureRuntimeLauncher.cs",
+      "owner_bundle": "runtime",
+      "area": "Runtime nodes",
+      "prepared_observation": "Windows-only PowerShell/runas launcher; runtime plans are serialized as PowerShell command text.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "WB-002",
+      "relative_path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDirectDotNetCommandPolicy.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureDirectDotNetCommandPolicy.cs",
+      "owner_bundle": "runtime",
+      "area": "Runtime nodes",
+      "prepared_observation": "Legacy command classifier is cmd/PowerShell-centric.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MGR-001",
+      "relative_path": "tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj",
+      "portable_reference": "{{REPO_ROOT}}/tools/App/CanDoItAll.Manager/CanDoItAll.Manager.csproj",
+      "owner_bundle": "runtime",
+      "area": "Manager",
+      "prepared_observation": "References System.Management in the general Manager project.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MGR-002",
+      "relative_path": "tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "portable_reference": "{{REPO_ROOT}}/tools/App/CanDoItAll.Manager/WorkspaceRuntimeProcessTools.cs",
+      "owner_bundle": "runtime",
+      "area": "Manager",
+      "prepared_observation": "WMI inventory on Windows and weak name-only Unix fallback; path comparisons are broadly case-insensitive.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MGR-003",
+      "relative_path": "tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
+      "portable_reference": "{{REPO_ROOT}}/tools/App/CanDoItAll.Manager/TailwindWatchSupervisorService.cs",
+      "owner_bundle": "runtime",
+      "area": "Manager",
+      "prepared_observation": "FileSystemWatcher-based change detection with partial cross-platform command branches.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "MGR-004",
+      "relative_path": "tools/App/CanDoItAll.Manager/WatchSupervisorService.cs",
+      "portable_reference": "{{REPO_ROOT}}/tools/App/CanDoItAll.Manager/WatchSupervisorService.cs",
+      "owner_bundle": "runtime",
+      "area": "Manager",
+      "prepared_observation": "Main watch process supervisor; exact local characterization required.",
+      "evidence_status": "Search-confirmed"
+    },
+    {
+      "id": "MGR-005",
+      "relative_path": "tools/App/CanDoItAll.Manager/TuningExecutionAdapter.cs",
+      "portable_reference": "{{REPO_ROOT}}/tools/App/CanDoItAll.Manager/TuningExecutionAdapter.cs",
+      "owner_bundle": "runtime",
+      "area": "Manager",
+      "prepared_observation": "Additional process-launch surface; exact local characterization required.",
+      "evidence_status": "Search-confirmed"
+    },
+    {
+      "id": "PLUG-001",
+      "relative_path": "src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/plugins/Implementations/CanDoItAll.Plugin.Docker/DockerHostToolService.cs",
+      "owner_bundle": "runtime",
+      "area": "Plugins",
+      "prepared_observation": "Constructs LocalWorkspaceProcessHost directly and maintains another environment/executable policy.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "PROC-001",
+      "relative_path": "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessDriverDescriptor.cs",
+      "owner_bundle": "runtime",
+      "area": "Processes",
+      "prepared_observation": "Process drivers include a Platform layer, but this layer owns process strategy composition, not generic host OS services.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "PROC-002",
+      "relative_path": "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDescriptors.cs",
+      "portable_reference": "{{REPO_ROOT}}/src/Processes/Drivers/CanDoItAll.Processes.Drivers.Standard/StandardProcessAdapterDescriptors.cs",
+      "owner_bundle": "runtime",
+      "area": "Processes",
+      "prepared_observation": "Standard adapter capability descriptors.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "PROC-003",
+      "relative_path": "codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md",
+      "portable_reference": "{{REPO_ROOT}}/codex/bundles/MAF-Refactor/adrs/ADR-007-process-semantics-owned-by-processes.md",
+      "owner_bundle": "runtime",
+      "area": "Architecture",
+      "prepared_observation": "Explicitly assigns process semantics and recovery to Processes rather than MAF.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "PROC-004",
+      "relative_path": "codex/bundles/MAF-Refactor/architecture/15-exact-code-adaptation-inventory.md",
+      "portable_reference": "{{REPO_ROOT}}/codex/bundles/MAF-Refactor/architecture/15-exact-code-adaptation-inventory.md",
+      "owner_bundle": "runtime",
+      "area": "Architecture",
+      "prepared_observation": "Current MAF refactor adaptation map and ownership constraints.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "OPS-001",
+      "relative_path": "tools/install/Install-CanDoItAllWebApp.ps1",
+      "portable_reference": "{{REPO_ROOT}}/tools/install/Install-CanDoItAllWebApp.ps1",
+      "owner_bundle": "core",
+      "area": "Installation",
+      "prepared_observation": "Windows-oriented installer and launcher generation.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "TEST-001",
+      "relative_path": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "portable_reference": "{{REPO_ROOT}}/tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "owner_bundle": "shared",
+      "area": "Tests",
+      "prepared_observation": "Primary unit test project.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "TEST-002",
+      "relative_path": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "portable_reference": "{{REPO_ROOT}}/tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "owner_bundle": "shared",
+      "area": "Tests",
+      "prepared_observation": "Integration test project.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "TEST-003",
+      "relative_path": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "portable_reference": "{{REPO_ROOT}}/tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "owner_bundle": "shared",
+      "area": "Tests",
+      "prepared_observation": "Browser validation project.",
+      "evidence_status": "Verified"
+    },
+    {
+      "id": "TEST-004",
+      "relative_path": "tests/Unit/CanDoItAll.Tests.Unit/LocalWorkspaceProcessHostTests.cs",
+      "portable_reference": "{{REPO_ROOT}}/tests/Unit/CanDoItAll.Tests.Unit/LocalWorkspaceProcessHostTests.cs",
+      "owner_bundle": "runtime",
+      "area": "Tests",
+      "prepared_observation": "Existing process-host tests.",
+      "evidence_status": "Search-confirmed"
+    },
+    {
+      "id": "TEST-005",
+      "relative_path": "tests/Playwright/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs",
+      "portable_reference": "{{REPO_ROOT}}/tests/Playwright/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs",
+      "owner_bundle": "runtime",
+      "area": "Tests",
+      "prepared_observation": "Current application launch fixture uses ProcessStartInfo.",
+      "evidence_status": "Search-confirmed"
+    }
+  ],
+  "materialization_rule": "Every exact reference must be revalidated against the execution checkout. Search-confirmed references require content inspection in A00/B00."
+}

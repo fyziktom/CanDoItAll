@@ -1,0 +1,35 @@
+{
+  "viewport": { "width": 1600, "height": 1000 },
+  "catalog": {
+    "rect": { "x": 1024, "y": 16, "width": 560, "height": 720 },
+    "bodyOverflow": "hidden",
+    "labels": ["Agents", "Agent chats", "Active chats"],
+    "searchResult": "Delivery QA Observer"
+  },
+  "chat": {
+    "agent": "Delivery QA Observer",
+    "request": "Reply with exactly: FLOATING CHAT REGRESSION OK",
+    "response": "FLOATING CHAT REGRESSION OK",
+    "status": "Completed",
+    "messages": 2,
+    "hideDecision": "Keep active",
+    "reopened": true,
+    "historyReopened": true,
+    "stopped": true,
+    "activeCountAfterStop": 0
+  },
+  "affinity": {
+    "initial": "Following: Agents · Overview / overview",
+    "detached": "Detached from application context",
+    "restored": true
+  },
+  "settings": {
+    "retention": { "value": 10, "min": 1, "max": 1440 },
+    "maximumActive": { "value": 12, "min": 1, "max": 50 },
+    "maximumPreparedAgents": 0,
+    "adaptivePreparationEnabled": true,
+    "preparedRetention": 10,
+    "saved": false
+  },
+  "console": { "warnings": 0, "errors": 0 }
+}

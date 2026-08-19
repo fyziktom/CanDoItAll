@@ -1,15 +1,15 @@
-@inject IAgentFrameworkWorkspaceService WorkspaceService
+@inject ProviderUsageQueryService UsageQueryService
 
 @if (isLoading)
 {
-    <LoadingState Eyebrow="Agent usage"
-                  Title="Loading agent usage"
-                  Description="Reading the compact agent usage projection for this workspace." />
+    <LoadingState Eyebrow="Consumer usage"
+                  Title="Loading consumer usage"
+                  Description="Combining Agent and Simple Chat usage for the selected scope." />
 }
 else if (!string.IsNullOrWhiteSpace(loadError))
 {
     <EmptyState Eyebrow="Usage unavailable"
-                Title="Agent usage could not be loaded"
+                Title="Consumer usage could not be loaded"
                 Description="@loadError" />
 }
 else
@@ -18,75 +18,81 @@ else
            data-testid="agents-usage-dialog">
         <Grid Gap="LayoutGap.Medium"
               ColumnTemplate="repeat(auto-fit,minmax(9rem,1fr))">
-            <MetricCard Label="Ranked agents" Value="@AgentUsageDisplay.FormatCount(snapshot.Agents.Count)" />
-            <MetricCard Label="Runs" Value="@AgentUsageDisplay.FormatCount(snapshot.Agents.Sum(item => item.RunCount))" />
+            <MetricCard Label="Ranked consumers" Value="@AgentUsageDisplay.FormatCount(snapshot.Consumers.Count)" />
+            <MetricCard Label="Executions" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.ExecutionCount)" />
             <MetricCard Label="Usage observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UsageObservationCount)" />
             <MetricCard Label="Unknown observations" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnknownUsageObservationCount)" />
-            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.TotalTokens)" />
+            <MetricCard Label="Tokens" Value="@AgentUsageDisplay.FormatTokens(snapshot.Totals.Tokens.TotalTokens)" />
             <MetricCard Label="Known cost" Value="@AgentUsageDisplay.FormatCost(snapshot.Totals.KnownCostUsd)" />
+            <MetricCard Label="Unpriced" Value="@AgentUsageDisplay.FormatCount(snapshot.Totals.UnpricedObservationCount)" />
         </Grid>
 
-        <CdaChart Title="Agent execution ranking"
-                  Description="Top agents by execution count, with failures preserved in the detail table."
-                  Series="@AgentRunSeries"
-                  Options="@AgentRunChartOptions"
+        <CdaChart Title="Consumer execution ranking"
+                  Description="Top Agents and Simple Chat definitions by execution count in the selected scope."
+                  Series="@ConsumerExecutionSeries"
+                  Options="@ConsumerExecutionChartOptions"
                   Height="320"
                   Class="w-full"
-                  EmptyText="No agent usage has been recorded." />
+                  EmptyText="No consumer usage has been recorded." />
 
         <SurfaceCard Soft="true">
-            @if (snapshot.Agents.Count == 0)
+            @if (snapshot.Consumers.Count == 0)
             {
                 <EmptyState Eyebrow="No usage"
-                            Title="No agent usage rows"
-                            Description="Run an agent execution to populate this detail view." />
+                            Title="No consumer usage rows"
+                            Description="Run an Agent or Simple Chat in the selected scope to populate this detail view." />
             }
             else
             {
-                <DataGrid TItem="AgentOverviewUsageRow"
-                          Data="@AgentRows"
+                <DataGrid TItem="ProviderUsageConsumerRow"
+                          Data="@ConsumerRows"
                           AllowPaging="true"
                           PageSize="10"
                           data-testid="agents-usage-dialog-grid">
                     <Columns>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Agent">
-                            <Template Context="agent">
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Consumer">
+                            <Template Context="consumer">
                                 <Stack Gap="0.15rem">
-                                    <span class="font-medium text-slate-950">@agent.AgentName</span>
-                                    <span class="text-xs text-slate-500">@AgentUsageDisplay.FormatLastUsed(agent.LastUsedAtUtc)</span>
+                                    <span class="font-medium text-slate-950">@consumer.ConsumerName</span>
+                                    <span class="text-xs text-slate-500">@ResolveConsumerKind(consumer.ConsumerKind) · @AgentUsageDisplay.FormatLastUsed(consumer.LastUsedAtUtc)</span>
                                 </Stack>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Runs">
-                            <Template Context="agent">
-                                <span>@AgentUsageDisplay.FormatCount(agent.RunCount)</span>
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Executions">
+                            <Template Context="consumer">
+                                <span>@AgentUsageDisplay.FormatCount(consumer.Totals.ExecutionCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Failed">
-                            <Template Context="agent">
-                                <StatusBadge Tone="@(agent.FailedRunCount > 0 ? "danger" : "success")"
-                                             Text="@AgentUsageDisplay.FormatCount(agent.FailedRunCount)"
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Failed">
+                            <Template Context="consumer">
+                                <StatusBadge Tone="@(consumer.Totals.FailedExecutionCount > 0 ? "danger" : "success")"
+                                             Text="@AgentUsageDisplay.FormatCount(consumer.Totals.FailedExecutionCount)"
                                              NoWrap="true" />
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Observations">
-                            <Template Context="agent">
-                                <span>@AgentUsageDisplay.FormatCount(agent.UsageObservationCount)</span>
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Observations">
+                            <Template Context="consumer">
+                                <span>@AgentUsageDisplay.FormatCount(consumer.Totals.UsageObservationCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Unknown">
-                            <Template Context="agent">
-                                <span>@AgentUsageDisplay.FormatCount(agent.UnknownUsageObservationCount)</span>
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Unknown">
+                            <Template Context="consumer">
+                                <span>@AgentUsageDisplay.FormatCount(consumer.Totals.UnknownUsageObservationCount)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Tokens">
-                            <Template Context="agent">
-                                <span>@AgentUsageDisplay.FormatTokens(agent.TotalTokens)</span>
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Tokens">
+                            <Template Context="consumer">
+                                <span>@AgentUsageDisplay.FormatTokens(consumer.Totals.Tokens.TotalTokens)</span>
                             </Template>
                         </DataGridColumn>
-                        <DataGridColumn TItem="AgentOverviewUsageRow" Title="Known cost">
-                            <Template Context="agent">
-                                <span>@AgentUsageDisplay.FormatCost(agent.KnownCostUsd)</span>
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Known cost">
+                            <Template Context="consumer">
+                                <span>@AgentUsageDisplay.FormatCost(consumer.Totals.KnownCostUsd)</span>
+                            </Template>
+                        </DataGridColumn>
+                        <DataGridColumn TItem="ProviderUsageConsumerRow" Title="Unpriced">
+                            <Template Context="consumer">
+                                <span>@AgentUsageDisplay.FormatCount(consumer.Totals.UnpricedObservationCount)</span>
                             </Template>
                         </DataGridColumn>
                     </Columns>
@@ -104,12 +110,12 @@ else
 }
 
 @code {
-    private static readonly CdaChartOptions AgentRunChartOptions = new()
+    private static readonly CdaChartOptions ConsumerExecutionChartOptions = new()
     {
         Type = CdaChartType.Bar,
         XAxisType = CdaChartAxisType.Category,
-        Unit = "runs",
-        YAxisTitle = "Runs",
+        Unit = "executions",
+        YAxisTitle = "Executions",
         ShowToolbar = false,
         EnableZoom = false,
         ShowLegend = false,
@@ -121,30 +127,33 @@ else
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }
 
-    private AgentUsageDetailSnapshot snapshot = AgentUsageDetailSnapshot.Empty;
+    [Parameter]
+    public ProviderUsageWorkloadSelection Selection { get; set; } = ProviderUsageWorkloadSelection.Both;
+
+    private ProviderUsageSnapshot snapshot = ProviderUsageSnapshot.Empty(ProviderUsageWorkloadSelection.Both);
     private bool isLoading = true;
     private string? loadError;
 
-    private IReadOnlyList<AgentOverviewUsageRow> AgentRows =>
-        snapshot.Agents
-            .OrderByDescending(item => item.RunCount)
-            .ThenBy(item => item.AgentName, StringComparer.OrdinalIgnoreCase)
+    private IReadOnlyList<ProviderUsageConsumerRow> ConsumerRows =>
+        snapshot.Consumers
+            .OrderByDescending(item => item.Totals.ExecutionCount)
+            .ThenBy(item => item.ConsumerName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-    private IReadOnlyList<CdaChartSeries> AgentRunSeries =>
-        AgentRows.Count == 0
+    private IReadOnlyList<CdaChartSeries> ConsumerExecutionSeries =>
+        ConsumerRows.Count == 0
             ? []
             :
             [
                 new CdaChartSeries
                 {
-                    Name = "Runs",
+                    Name = "Executions",
                     Type = CdaChartType.Bar,
-                    Points = AgentRows
+                    Points = ConsumerRows
                         .Take(10)
                         .Select(item => new CdaChartPoint(
-                            AgentUsageDisplay.TrimLabel(item.AgentName, 22),
-                            item.RunCount))
+                            AgentUsageDisplay.TrimLabel(item.ConsumerName, 22),
+                            item.Totals.ExecutionCount))
                         .ToArray()
                 }
             ];
@@ -153,7 +162,7 @@ else
     {
         try
         {
-            snapshot = await WorkspaceService.GetAgentUsageDetailsAsync();
+            snapshot = await UsageQueryService.QueryAsync(Selection);
         }
         catch (Exception exception)
         {
@@ -167,4 +176,13 @@ else
 
     private Task CloseAsync()
         => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+
+    private static string ResolveConsumerKind(ProviderUsageConsumerKind kind)
+        => kind switch
+        {
+            ProviderUsageConsumerKind.Agent => "Agent",
+            ProviderUsageConsumerKind.SimpleChatDefinition => "Simple Chat",
+            ProviderUsageConsumerKind.Unattributed => "Unattributed",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown usage consumer kind.")
+        };
 }

@@ -5,7 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 
-namespace CanDoItAll.Tests.Unit;
+namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkspaceRuntimePluginImageAnalysisTests
 {
@@ -194,9 +194,10 @@ public sealed class WorkspaceRuntimePluginImageAnalysisTests
     {
         var root = Path.GetTempPath();
         return new WorkspaceRuntimePlugin(
-            new WorkspaceCommandExecutionService(root, new LocalWorkspaceProcessHost()),
+            TestWorkspaceServices.CreateCommandExecutionService(root, new LocalWorkspaceProcessHost()),
             artifactService,
             root,
+            TestWorkspaceServices.PhysicalPathPolicyFactory,
             WorkspaceScopeDescriptor.Sandbox,
             accessSettings ?? AgentWorkspaceToolAccessProfiles.CreateSettings(AgentWorkspaceToolProfileKind.QualityValidation),
             provider,
