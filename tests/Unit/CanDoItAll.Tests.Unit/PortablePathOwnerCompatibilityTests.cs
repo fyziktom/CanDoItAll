@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -182,21 +183,21 @@ public sealed class PortablePathOwnerCompatibilityTests
     }
 
     [Fact]
-    public void Maf_workspace_guard_keeps_case_distinct_unix_roots_separate()
+    public void Maf_workspace_guard_keeps_roots_separate_on_case_sensitive_filesystems()
     {
-        if (OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         var parent = TestFileSystem.CreateTemporaryRoot("maf-case-sensitive-root");
-        var workspaceRoot = Path.Combine(parent, "Workspace");
-        var siblingRoot = Path.Combine(parent, "workspace");
-        Directory.CreateDirectory(workspaceRoot);
-        Directory.CreateDirectory(siblingRoot);
-
         try
         {
+            if (TestWorkspaceServices.PhysicalPathPolicyFactory.Create(parent).CaseSensitivity !=
+                PhysicalFileSystemCaseSensitivity.Sensitive)
+            {
+                return;
+            }
+
+            var workspaceRoot = Path.Combine(parent, "Workspace");
+            var siblingRoot = Path.Combine(parent, "workspace");
+            Directory.CreateDirectory(workspaceRoot);
+            Directory.CreateDirectory(siblingRoot);
             var guard = new WorkspaceRuntimeFileAccessGuard(
                 workspaceRoot,
                 TestWorkspaceServices.PhysicalPathPolicyFactory,

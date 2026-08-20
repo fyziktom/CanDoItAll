@@ -22,8 +22,8 @@ public sealed class CrossPlatformCiWorkflowTests
         Assert.Contains("fail-fast: false", workflow, StringComparison.Ordinal);
         Assert.Contains("UseLocalCanDoItAllLibraries=true", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("UseLocalCanDoItAllLibraries=false", workflow, StringComparison.Ordinal);
-        Assert.Contains("repository: fysiktom/CanDoItAll.Components", workflow, StringComparison.Ordinal);
-        Assert.Contains("repository: fysiktom/CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: fyziktom/CanDoItAll.Components", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: fyziktom/CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
         Assert.Contains("path: CanDoItAll.Components", workflow, StringComparison.Ordinal);
         Assert.Contains("path: CanDoItAll.FileTools", workflow, StringComparison.Ordinal);
         Assert.Contains("CANDOITALL_COMPONENTS_COMMIT", workflow, StringComparison.Ordinal);
@@ -123,16 +123,16 @@ public sealed class CrossPlatformCiWorkflowTests
 
         System.Text.Json.JsonElement catalogRoot = catalog.RootElement;
         Assert.Equal(1, catalogRoot.GetProperty("schemaVersion").GetInt32());
-        Assert.Equal("2026-08-12.1", catalogRoot.GetProperty("catalogVersion").GetString());
+        Assert.Equal("2026-08-19.1", catalogRoot.GetProperty("catalogVersion").GetString());
         Assert.Equal("Category=UnixRuntimePortability", catalogRoot.GetProperty("traitFilter").GetString());
         System.Text.Json.JsonElement[] scopes = catalogRoot.GetProperty("scopes").EnumerateArray().ToArray();
         Assert.Equal(3, scopes.Length);
-        Assert.Equal(422, FindScope(scopes, "Unit").GetProperty("expectedCaseCount").GetInt32());
+        Assert.Equal(429, FindScope(scopes, "Unit").GetProperty("expectedCaseCount").GetInt32());
         Assert.Equal(45, FindScope(scopes, "Integration").GetProperty("expectedCaseCount").GetInt32());
         System.Text.Json.JsonElement browserScope = FindScope(scopes, "Browser");
         Assert.Equal(1, browserScope.GetProperty("expectedCaseCount").GetInt32());
         Assert.Equal(
-            "CanDoItAll.Tests.Playwright.AppSmokeTests.Runtime_node_actions_show_direct_optional_and_dependency_missing_states",
+            "CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Runtime_node_actions_show_direct_optional_and_dependency_missing_states",
             Assert.Single(browserScope.GetProperty("expectedFullyQualifiedNames").EnumerateArray()).GetString());
     }
 

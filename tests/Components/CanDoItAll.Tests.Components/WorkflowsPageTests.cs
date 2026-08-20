@@ -299,7 +299,7 @@ public sealed class WorkflowsPageTests
         var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.WaitForAssertion(() =>
         {
@@ -307,15 +307,15 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain(surface.Nodes, node => node.Id == "work");
         });
 
-        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForElement("[data-testid='workflows-catalog']");
         cut.WaitForAssertion(() => Assert.Contains(
             cut.FindAll("[data-testid='workflows-catalog-item']"),
             item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal)));
-        cut.FindAll("[data-testid='workflows-catalog-item']")
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflows-catalog-item']")
             .First(item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal))
-            .Click();
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+            .Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
 
         cut.WaitForAssertion(() =>
@@ -384,7 +384,21 @@ public sealed class WorkflowsPageTests
     [Fact]
     public async Task Workflows_page_ignores_late_history_page_and_run_selection_results()
     {
-        await using var harness = await ComponentTestHarness.CreateAsync();
+        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
+        var runtimeManager = new RacingWorkflowRuntimeManager();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IWorkflowRunStore>();
+            services.RemoveAll<IWorkflowArtifactStore>();
+            services.RemoveAll<IWorkflowExternalRequestStore>();
+            services.RemoveAll<IWorkflowCheckpointStore>();
+            services.RemoveAll<IWorkflowRuntimeManager>();
+            services.AddSingleton<IWorkflowRunStore>(runStore);
+            services.AddSingleton<IWorkflowArtifactStore>(runStore);
+            services.AddSingleton<IWorkflowExternalRequestStore>(runStore);
+            services.AddSingleton<IWorkflowCheckpointStore>(runStore);
+            services.AddSingleton<IWorkflowRuntimeManager>(runtimeManager);
+        });
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         var catalogService = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
         var firstDefinition = await CreateCanvasLoadDefinitionAsync(catalogService);
@@ -393,16 +407,16 @@ public sealed class WorkflowsPageTests
         var firstRun = CreateRun(firstDefinition, "first-definition-run", now.AddMinutes(-2));
         var secondRun = CreateRun(secondDefinition, "second-definition-run", now.AddMinutes(-1));
         var newestSecondRun = CreateRun(secondDefinition, "newest-second-run", now);
-        var runStore = new CountingWorkflowRunStore(new WorkflowRunStoreCallCounter());
         await runStore.SaveRunAsync(firstRun);
         await runStore.SaveRunAsync(secondRun);
         await runStore.SaveRunAsync(newestSecondRun);
-        var runtimeManager = new RacingWorkflowRuntimeManager(firstRun, secondRun, newestSecondRun);
+        runtimeManager.AddRuns(firstRun, secondRun, newestSecondRun);
 
         navigation.NavigateTo("/agents/workflows");
         var cut = harness.Context.Render<WorkflowsPage>();
-        cut.Instance.RunStore = runStore;
-        cut.Instance.RuntimeManager = runtimeManager;
+        cut.WaitForAssertion(
+            () => Assert.Empty(cut.FindAll("[data-testid='workflows-loading']")),
+            TimeSpan.FromSeconds(10));
         await cut.InvokeAsync(() => InvokeSelectDefinitionAsync(cut.Instance, firstDefinition.Id));
 
         runStore.DelayRunPages(firstDefinition.Id, secondDefinition.Id);
@@ -1149,7 +1163,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.ProviderOptions, []));
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
 
         cut.WaitForElement("[data-testid='workflow-canvas-preview-input-dialog']");
         cut.WaitForAssertion(() =>
@@ -1158,9 +1172,11 @@ public sealed class WorkflowsPageTests
             Assert.Contains(projectId.ToString("D"), cut.Find("[data-testid='workflow-canvas-preview-project-id']").GetAttribute("value"));
         });
 
-        cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
-        cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
-        cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node"));
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
@@ -2864,8 +2880,16 @@ public sealed class WorkflowsPageTests
 
     private sealed class RacingWorkflowRuntimeManager(params WorkflowRunSnapshot[] runs) : IWorkflowRuntimeManager
     {
-        private readonly IReadOnlyDictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
+        private readonly Dictionary<WorkflowRunId, WorkflowRunSnapshot> runsById = runs.ToDictionary(run => run.RunId);
         private readonly Dictionary<WorkflowRunId, PendingRunRequest> pendingRuns = [];
+
+        public void AddRuns(params WorkflowRunSnapshot[] addedRuns)
+        {
+            foreach (var run in addedRuns)
+            {
+                runsById.Add(run.RunId, run);
+            }
+        }
 
         public void DelayRuns(params WorkflowRunId[] runIds)
         {

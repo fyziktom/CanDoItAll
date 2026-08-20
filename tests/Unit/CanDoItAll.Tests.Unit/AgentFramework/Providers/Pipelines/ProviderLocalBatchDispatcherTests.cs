@@ -181,6 +181,8 @@ public sealed class ProviderLocalBatchDispatcherTests
 
         var timeoutKey = CreateKey("timeout-model", "chat");
         await using var timeoutHub = new ProviderLocalBatchDispatcherHub<int, int>();
+        var timedOutBatchStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseTimedOutBatch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var timeoutTask = timeoutHub.DispatchAsync(
             new ProviderBatchEnvelope<int>(timeoutKey, 5, Guid.NewGuid()),
             CreatePolicy(
@@ -188,13 +190,22 @@ public sealed class ProviderLocalBatchDispatcherTests
                 maxBatchSize: 2,
                 maxQueueDelay: TimeSpan.FromMilliseconds(5),
                 requestTimeout: TimeSpan.FromMilliseconds(40)),
-            async (items, cancellationToken) =>
+            async (items, _) =>
             {
-                await Task.Delay(200, CancellationToken.None);
+                timedOutBatchStarted.SetResult();
+                await releaseTimedOutBatch.Task;
                 return items.Select(item => ProviderBatchItemResult<int>.Succeeded(item.CorrelationId, item.Payload)).ToList();
             });
 
-        await Assert.ThrowsAsync<TimeoutException>(() => timeoutTask);
+        try
+        {
+            await timedOutBatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await Assert.ThrowsAsync<TimeoutException>(() => timeoutTask);
+        }
+        finally
+        {
+            releaseTimedOutBatch.TrySetResult();
+        }
 
         static Task<IReadOnlyList<ProviderBatchItemResult<int>>> PartialBatchAsync(
             IReadOnlyList<ProviderBatchExecutionItem<int>> items,

@@ -72,6 +72,7 @@ public sealed class LlmChatOperationExecutor(
                     break;
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 var now = timeProvider.GetUtcNow();
                 var observation = await heartbeatStore.RenewAndObserveAsync(
                     lease,

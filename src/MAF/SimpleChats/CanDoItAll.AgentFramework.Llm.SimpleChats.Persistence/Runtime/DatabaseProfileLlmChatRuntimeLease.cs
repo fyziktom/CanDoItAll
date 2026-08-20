@@ -60,11 +60,17 @@ internal sealed class DatabaseProfileLlmChatRuntimeLease : ILlmChatRuntimeLease
     public CancellationToken CancellationToken => cancellationSource.Token;
 
     public Result EnsureCurrent()
-        => LlmChatRuntimeFence.IsCurrent(runtimeState.GetSnapshot(), Identity)
-            ? Result.Success()
-            : Result.Failure(Error.Failure(
-                "The active database profile changed during LLM Chat execution.",
-                LlmChatErrorCodes.RuntimeProfileChanged));
+    {
+        if (LlmChatRuntimeFence.IsCurrent(runtimeState.GetSnapshot(), Identity))
+        {
+            return Result.Success();
+        }
+
+        Cancel();
+        return Result.Failure(Error.Failure(
+            "The active database profile changed during LLM Chat execution.",
+            LlmChatErrorCodes.RuntimeProfileChanged));
+    }
 
     public ValueTask DisposeAsync()
     {
@@ -88,6 +94,9 @@ internal sealed class DatabaseProfileLlmChatRuntimeLease : ILlmChatRuntimeLease
     }
 
     private void OnProfileChanged(object? sender, DatabaseProfileChangedNotification notification)
+        => Cancel();
+
+    private void Cancel()
     {
         lock (lifecycleGate)
         {

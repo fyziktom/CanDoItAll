@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -2417,11 +2416,26 @@ public sealed class ProjectStructurePageSimpleMutationTests
         return await refreshTask;
     }
 
-    private static string ResolveComponentTestProjectPath([CallerFilePath] string sourceFilePath = "")
-        => Path.Combine(
-            Path.GetDirectoryName(sourceFilePath)
-                ?? throw new InvalidOperationException("The component test source directory could not be resolved."),
-            "CanDoItAll.Tests.Components.csproj");
+    private static string ResolveComponentTestProjectPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+            {
+                return Path.Combine(
+                    directory.FullName,
+                    "tests",
+                    "Components",
+                    "CanDoItAll.Tests.Components",
+                    "CanDoItAll.Tests.Components.csproj");
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not locate the repository root from the component test output directory.");
+    }
 
     private static IElement FindButtonByLabel(
         IRenderedComponent<IComponent> cut,

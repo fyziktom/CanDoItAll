@@ -10,6 +10,8 @@ public sealed class PhysicalFileSystemPathPolicyFactory : IPhysicalFileSystemPat
 
 internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPolicy
 {
+    private const string MacOsVarAliasPath = "/var";
+    private const string MacOsVarTargetPath = "/private/var";
     private readonly string rootWithSeparator;
 
     public PhysicalFileSystemPathPolicy(string managedRoot)
@@ -269,12 +271,37 @@ internal sealed class PhysicalFileSystemPathPolicy : IPhysicalFileSystemPathPoli
                         : "An ancestor of the requested physical path does not exist.");
             }
 
-            if (attributes.HasFlag(FileAttributes.ReparsePoint))
+            if (attributes.HasFlag(FileAttributes.ReparsePoint) &&
+                !IsTrustedMacOsSystemAlias(currentPath))
             {
                 throw new PhysicalPathValidationException(
                     PhysicalPathValidationErrorCode.LinkTraversal,
                     "Filesystem symbolic-link or reparse-point traversal is not allowed for managed paths.");
             }
+        }
+    }
+
+    private static bool IsTrustedMacOsSystemAlias(string path)
+    {
+        if (!OperatingSystem.IsMacOS() ||
+            !string.Equals(path, MacOsVarAliasPath, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            var target = new DirectoryInfo(path).ResolveLinkTarget(returnFinalTarget: true);
+            return target is not null &&
+                   string.Equals(
+                       Path.TrimEndingDirectorySeparator(target.FullName),
+                       MacOsVarTargetPath,
+                       StringComparison.Ordinal);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
         }
     }
 

@@ -84,6 +84,21 @@ public sealed class PhysicalFileSystemPathPolicyTests
     }
 
     [Fact]
+    public void Constructor_allows_the_macos_system_var_alias()
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            return;
+        }
+
+        string managedRoot = Path.Combine("/var", $"candoitall-policy-{Guid.NewGuid():N}");
+
+        var policy = new PhysicalFileSystemPathPolicy(managedRoot);
+
+        Assert.Equal(managedRoot, policy.RootPath);
+    }
+
+    [Fact]
     public void Policy_rejects_symbolic_link_ancestor()
     {
         using var managed = new TemporaryDirectory();

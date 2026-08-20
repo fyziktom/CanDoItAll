@@ -67,6 +67,16 @@ TEXT_SUFFIXES = {
 }
 
 
+def is_integrity_file(root: Path, path: Path) -> bool:
+    relative_parts = path.relative_to(root).parts
+    return (
+        path.is_file()
+        and "evidence" not in relative_parts
+        and "__pycache__" not in relative_parts
+        and path.suffix != ".pyc"
+    )
+
+
 @dataclass(frozen=True)
 class Issue:
     severity: str
@@ -624,7 +634,8 @@ def validate_integrity(context: ValidationContext) -> None:
     actual_payload = {
         path.relative_to(context.root).as_posix(): path
         for path in context.root.rglob("*")
-        if path.is_file() and path.name not in {"bundle-index.json", "CHECKSUMS.sha256"}
+        if is_integrity_file(context.root, path)
+        and path.name not in {"bundle-index.json", "CHECKSUMS.sha256"}
     }
     indexed_paths: set[str] = set()
     for item in files:
@@ -674,7 +685,7 @@ def validate_integrity(context: ValidationContext) -> None:
     actual_checksum_files = {
         path.relative_to(context.root).as_posix(): path
         for path in context.root.rglob("*")
-        if path.is_file() and path.name != "CHECKSUMS.sha256"
+        if is_integrity_file(context.root, path) and path.name != "CHECKSUMS.sha256"
     }
     if set(checksum_entries) != set(actual_checksum_files):
         context.error(

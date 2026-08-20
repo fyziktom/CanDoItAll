@@ -140,12 +140,14 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
             }
 
             ownership = ownershipStart.Attach(process);
+            var executablePathFingerprint = ResolveStableExecutablePathFingerprint(
+                process,
+                executableIdentityPath);
             var identity = new WorkspaceOwnedProcessIdentity(
                 process.Id,
                 ResolveProcessStartedAtUtc(process, startedAtUtc),
-                ComputeExecutablePathFingerprint(executableIdentityPath),
+                executablePathFingerprint,
                 ownership.Identity);
-            WaitForExecutableIdentity(process, identity.ExecutablePathFingerprint);
             IWorkspaceProcessSession session = new LocalWorkspaceProcessSession(
                 process,
                 ownership,
@@ -523,29 +525,46 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceLongRunningProcessHost
         }
     }
 
-    private static void WaitForExecutableIdentity(Process process, string expectedFingerprint)
+    private static string ResolveStableExecutablePathFingerprint(
+        Process process,
+        string requestedExecutablePath)
     {
         var deadline = DateTimeOffset.UtcNow.AddSeconds(1);
+        var fallbackFingerprint = ComputeExecutablePathFingerprint(requestedExecutablePath);
+        string? candidateFingerprint = null;
+        var candidateObservedAtUtc = DateTimeOffset.MinValue;
         while (DateTimeOffset.UtcNow < deadline)
         {
             var fingerprint = TryGetExecutablePathFingerprint(process);
-            if (string.Equals(fingerprint, expectedFingerprint, StringComparison.Ordinal))
+            if (fingerprint is not null)
             {
-                return;
+                if (!string.Equals(fingerprint, candidateFingerprint, StringComparison.Ordinal))
+                {
+                    candidateFingerprint = fingerprint;
+                    candidateObservedAtUtc = DateTimeOffset.UtcNow;
+                }
+                else if (DateTimeOffset.UtcNow - candidateObservedAtUtc >= TimeSpan.FromMilliseconds(25))
+                {
+                    return fingerprint;
+                }
             }
 
             if (HasExited(process))
             {
-                return;
+                return candidateFingerprint ?? fallbackFingerprint;
             }
 
             Thread.Sleep(5);
             process.Refresh();
         }
 
-        var currentFingerprint = TryGetExecutablePathFingerprint(process) ?? "unavailable";
+        if (candidateFingerprint is not null)
+        {
+            return candidateFingerprint;
+        }
+
         throw new InvalidOperationException(
-            $"The process executable identity did not stabilize after launch. Expected={expectedFingerprint[..12]}; Current={currentFingerprint[..Math.Min(12, currentFingerprint.Length)]}.");
+            "The process executable identity could not be observed after launch.");
     }
 
     private static async Task WriteStandardInputAsync(

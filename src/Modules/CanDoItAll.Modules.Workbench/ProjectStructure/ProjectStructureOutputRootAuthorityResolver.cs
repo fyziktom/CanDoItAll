@@ -253,7 +253,8 @@ internal static class ProjectStructureOutputRootAuthorityResolver
         var roots = new List<ProtectedRoot>();
         AddFolder(Environment.SpecialFolder.UserProfile, protectDescendants: false);
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (!string.IsNullOrWhiteSpace(userProfile) &&
+        if (OperatingSystem.IsWindows() &&
+            !string.IsNullOrWhiteSpace(userProfile) &&
             Directory.GetParent(userProfile) is { } userContainer &&
             !IsFileSystemRoot(userContainer.FullName))
         {
