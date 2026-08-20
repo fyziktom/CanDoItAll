@@ -299,7 +299,7 @@ public sealed class WorkflowsPageTests
         var cut = harness.Context.Render<WorkflowsPage>();
 
         cut.WaitForElement("[data-testid='workflows-tab-editor']");
-        cut.Find("[data-testid='workflows-tab-editor']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
         cut.WaitForAssertion(() =>
         {
@@ -307,14 +307,14 @@ public sealed class WorkflowsPageTests
             Assert.DoesNotContain(surface.Nodes, node => node.Id == "work");
         });
 
-        cut.Find("[data-testid='workflows-tab-workflows']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-workflows']").Click());
         cut.WaitForElement("[data-testid='workflows-catalog']");
         cut.WaitForAssertion(() => Assert.Contains(
             cut.FindAll("[data-testid='workflows-catalog-item']"),
             item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal)));
-        cut.FindAll("[data-testid='workflows-catalog-item']")
+        await cut.InvokeAsync(() => cut.FindAll("[data-testid='workflows-catalog-item']")
             .First(item => item.TextContent.Contains(definition.Name, StringComparison.Ordinal))
-            .Click();
+            .Click());
         await cut.InvokeAsync(() => cut.Find("[data-testid='workflows-tab-editor']").Click());
         cut.WaitForElement("[data-testid='workflow-canvas-editor']");
 
