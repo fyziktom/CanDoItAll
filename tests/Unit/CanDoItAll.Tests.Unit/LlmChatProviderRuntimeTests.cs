@@ -232,6 +232,26 @@ public sealed class LlmChatRuntimeFenceTests
     }
 
     [Fact]
+    public async Task Lease_self_cancels_when_runtime_state_advances_before_notification()
+    {
+        var initial = ProviderRuntimeTestData.RuntimeIdentity;
+        var state = new MutableDatabaseRuntimeState(initial);
+        var factory = new DatabaseProfileLlmChatRuntimeLeaseFactory(
+            ProviderRuntimeTestData.CreateCanonicalRuntimeDatabase(initial),
+            state,
+            new TestDatabaseSwitchNotificationService());
+        await using var lease = await factory.AcquireAsync();
+
+        state.Change(initial with { Generation = initial.Generation + 1 });
+
+        var result = lease.EnsureCurrent();
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(LlmChatErrorCodes.RuntimeProfileChanged, Assert.Single(result.Errors).Code);
+        Assert.True(lease.CancellationToken.IsCancellationRequested);
+    }
+
+    [Fact]
     public async Task Profile_switch_during_dispatch_cancels_the_invocation_and_prevents_assistant_commit()
     {
         var initial = ProviderRuntimeTestData.RuntimeIdentity;

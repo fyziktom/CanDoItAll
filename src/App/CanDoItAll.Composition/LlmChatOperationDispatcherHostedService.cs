@@ -53,6 +53,7 @@ internal sealed class LlmChatOperationDispatcherHostedService(
             {
                 var availability = dispatchSignal.Availability;
                 logger.LogError(
+                    exception,
                     "LLM Chat dispatcher worker {WorkerId} pass failed. FailureType={FailureType} RegisteredWorkers={RegisteredWorkers} ProgressingWorkers={ProgressingWorkers}.",
                     workerId,
                     exception.GetType().FullName,

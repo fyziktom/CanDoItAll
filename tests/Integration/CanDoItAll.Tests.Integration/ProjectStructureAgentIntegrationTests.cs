@@ -4488,8 +4488,6 @@ public sealed class ProjectStructureAgentIntegrationTests
                 new ProjectStructureReadRequest(IncludeMetadata: true));
             var auditedNode = Assert.Single(audited.Nodes, node => node.Id == created.Id);
             Assert.NotNull(auditedNode.ActionCapabilities);
-            Assert.Equal(runtimeLauncher.IsAvailable, auditedNode.ActionCapabilities!.CanRunNormally);
-            Assert.Equal(runtimeLauncher.IsAvailable, auditedNode.ActionCapabilities.CanRunAsAdministrator);
 
             var authorizedResolution = runtimeLauncher.Resolve(
                 created.ObjectType,
@@ -4498,6 +4496,12 @@ public sealed class ProjectStructureAgentIntegrationTests
                 created.MetadataJson,
                 ProjectStructureRuntimePathAuthorityMode.AgentExecution);
             Assert.True(authorizedResolution.IsSuccess, authorizedResolution.Message);
+            Assert.Equal(
+                authorizedResolution.EffectiveCapabilities.Direct.IsAvailable,
+                auditedNode.ActionCapabilities!.CanRunNormally);
+            Assert.Equal(
+                authorizedResolution.EffectiveCapabilities.Elevation.IsAvailable,
+                auditedNode.ActionCapabilities.CanRunAsAdministrator);
             Assert.NotNull(authorizedResolution.Plan);
             Assert.Equal(externalRoot, authorizedResolution.Plan!.WorkingDirectory);
             Assert.Contains(projectPath, authorizedResolution.Plan.DisplayCommand, StringComparison.Ordinal);

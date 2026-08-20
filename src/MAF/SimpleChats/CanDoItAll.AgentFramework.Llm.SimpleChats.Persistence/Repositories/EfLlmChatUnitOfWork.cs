@@ -10,17 +10,26 @@ public sealed class EfLlmChatUnitOfWork(
     ILlmChatCommitFence commitFence) : ILlmChatUnitOfWork
 {
     private readonly List<Action> _postCommitCallbacks = [];
+    private int _executionDepth;
 
     public async Task<T> ExecuteAsync<T>(
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
-        if (dbContext.Database.CurrentTransaction is not null)
+        if (_executionDepth > 0 || dbContext.Database.CurrentTransaction is not null)
         {
-            var nestedResult = await operation(cancellationToken).ConfigureAwait(false);
-            await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return nestedResult;
+            _executionDepth++;
+            try
+            {
+                var nestedResult = await operation(cancellationToken).ConfigureAwait(false);
+                await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                return nestedResult;
+            }
+            finally
+            {
+                _executionDepth--;
+            }
         }
 
         _postCommitCallbacks.Clear();
@@ -28,12 +37,25 @@ public sealed class EfLlmChatUnitOfWork(
         {
             var result = await commitFence.ExecuteAsync(async fenceCancellationToken =>
             {
-                await using var transaction = await dbContext.Database.BeginTransactionAsync(fenceCancellationToken)
-                    .ConfigureAwait(false);
-                var transactionResult = await operation(fenceCancellationToken).ConfigureAwait(false);
-                await SaveChangesAsync(fenceCancellationToken).ConfigureAwait(false);
-                await transaction.CommitAsync(fenceCancellationToken).ConfigureAwait(false);
-                return transactionResult;
+                await using var transaction = dbContext.Database.IsRelational()
+                    ? await dbContext.Database.BeginTransactionAsync(fenceCancellationToken).ConfigureAwait(false)
+                    : null;
+                _executionDepth++;
+                try
+                {
+                    var transactionResult = await operation(fenceCancellationToken).ConfigureAwait(false);
+                    await SaveChangesAsync(fenceCancellationToken).ConfigureAwait(false);
+                    if (transaction is not null)
+                    {
+                        await transaction.CommitAsync(fenceCancellationToken).ConfigureAwait(false);
+                    }
+
+                    return transactionResult;
+                }
+                finally
+                {
+                    _executionDepth--;
+                }
             }, cancellationToken).ConfigureAwait(false);
             var callbacks = _postCommitCallbacks.ToArray();
             _postCommitCallbacks.Clear();
@@ -54,7 +76,7 @@ public sealed class EfLlmChatUnitOfWork(
     public void RegisterPostCommit(Action callback)
     {
         ArgumentNullException.ThrowIfNull(callback);
-        if (dbContext.Database.CurrentTransaction is null)
+        if (_executionDepth == 0 && dbContext.Database.CurrentTransaction is null)
         {
             throw new InvalidOperationException("A post-commit callback requires an active LLM Chat transaction.");
         }
@@ -79,10 +101,10 @@ public sealed class EfLlmChatUnitOfWork(
         }
 
         var invalidEventWrite = dbContext.ChangeTracker.Entries<LlmChatOperationEventRow>()
-            .FirstOrDefault(entry => entry.State is EntityState.Modified or EntityState.Deleted);
+            .FirstOrDefault(entry => entry.State == EntityState.Modified);
         if (invalidEventWrite is not null)
         {
-            throw new InvalidOperationException("LLM Chat operation events are append-only.");
+            throw new InvalidOperationException("LLM Chat operation events cannot be modified after append.");
         }
 
         return dbContext.SaveChangesAsync(cancellationToken);

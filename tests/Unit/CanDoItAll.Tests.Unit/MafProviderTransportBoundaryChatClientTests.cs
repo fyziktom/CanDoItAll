@@ -192,14 +192,14 @@ public sealed class MafProviderTransportBoundaryChatClientTests
     {
         var provider = CreateProvider();
         var stream = new HeartbeatAsyncEnumerable(
-            TimeSpan.FromMilliseconds(30),
+            TimeSpan.FromMilliseconds(250),
             semanticProgress: true,
-            updateLimit: 3);
+            updateLimit: 9);
         using var client = CreateBoundaryClient(
             new StreamingChatClient(stream),
             provider,
-            idleTimeout: TimeSpan.FromMilliseconds(500),
-            absoluteTimeout: TimeSpan.FromSeconds(3));
+            idleTimeout: TimeSpan.FromSeconds(2),
+            absoluteTimeout: TimeSpan.FromSeconds(8));
         var updates = new List<ChatResponseUpdate>();
 
         await foreach (var update in client.GetStreamingResponseAsync(CreateMessages()))
@@ -207,7 +207,7 @@ public sealed class MafProviderTransportBoundaryChatClientTests
             updates.Add(update);
         }
 
-        Assert.Equal(3, updates.Count);
+        Assert.Equal(9, updates.Count);
         Assert.False(stream.TransportCancellationWasRequested);
     }
 

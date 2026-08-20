@@ -276,7 +276,7 @@ foreach ($launcherCase in $launcherCases) {
     }
 }
 
-$handoffTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("candoitall-launcher-handoff-" + [guid]::NewGuid().ToString("N"))
+$handoffTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("cia-h-" + [System.IO.Path]::GetRandomFileName())
 $handoffLauncherPath = Join-Path $handoffTestRoot "Fake-Launcher.ps1"
 $handoffMutex = $null
 $handoffMutexAcquired = $false
@@ -367,7 +367,7 @@ finally {
     }
 }
 
-$previewRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("candoitall-install-preview-" + [guid]::NewGuid().ToString("N"))
+$previewRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("cia-p-" + [System.IO.Path]::GetRandomFileName())
 $databasePreviewRoot = Join-Path $previewRoot "database"
 $webPreviewRoot = Join-Path $previewRoot "web"
 $ipv6PreviewRoot = Join-Path $previewRoot "web-ipv6"
@@ -420,7 +420,7 @@ Assert-Condition `
     -Condition (-not (Test-Path -LiteralPath $ipv6PreviewRoot)) `
     -Message "IPv6 web installer preview created '$ipv6PreviewRoot'."
 
-$pendingStateTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("candoitall-pending-state-" + [guid]::NewGuid().ToString("N"))
+$pendingStateTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("cia-s-" + [System.IO.Path]::GetRandomFileName())
 $pendingStateDatabaseRoot = Join-Path $pendingStateTestRoot "runtime\database"
 $pendingStatePath = Join-Path $pendingStateDatabaseRoot "database-engine.pending"
 try {
@@ -481,7 +481,7 @@ Assert-Throws `
             -WhatIf
     }
 
-$junctionTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("candoitall-install-junction-" + [guid]::NewGuid().ToString("N"))
+$junctionTestRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("cia-j-" + [System.IO.Path]::GetRandomFileName())
 $junctionInstallRoot = Join-Path $junctionTestRoot "linked-install"
 $junctionRepoRoot = Join-Path $junctionTestRoot "linked-repository"
 try {

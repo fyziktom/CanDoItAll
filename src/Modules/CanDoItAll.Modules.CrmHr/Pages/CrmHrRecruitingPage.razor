@@ -578,11 +578,6 @@
 
     private Task CreateNewApplicationAsync()
     {
-        if (currentWorkspace is null || currentWorkspace.HasSelectedApplication)
-        {
-            return Task.CompletedTask;
-        }
-
         if (ApplicationId.HasValue || PartyId.HasValue)
         {
             openNewApplicationAfterRouteReset = true;
@@ -591,6 +586,17 @@
             isRecruitmentDialogOpen = false;
             agentChatContextAccessState = AgentChatContextAccessState.Loading;
             Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
+            return Task.CompletedTask;
+        }
+
+        if (currentWorkspace is null)
+        {
+            openNewApplicationAfterRouteReset = true;
+            return Task.CompletedTask;
+        }
+
+        if (currentWorkspace.HasSelectedApplication)
+        {
             return Task.CompletedTask;
         }
 

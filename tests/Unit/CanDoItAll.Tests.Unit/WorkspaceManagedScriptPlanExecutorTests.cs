@@ -1,8 +1,10 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Core;
+using CanDoItAll.Tests.Support;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -70,15 +72,16 @@ public sealed class WorkspaceManagedScriptPlanExecutorTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_keeps_case_distinct_unix_product_roots_separate()
+    public async Task ExecuteAsync_keeps_product_roots_separate_on_case_sensitive_filesystems()
     {
-        if (OperatingSystem.IsWindows())
+        using var workspace = new TestWorkspace();
+        var productRoot = workspace.CreateProductRoot();
+        if (TestWorkspaceServices.PhysicalPathPolicyFactory.Create(workspace.Root).CaseSensitivity !=
+            PhysicalFileSystemCaseSensitivity.Sensitive)
         {
             return;
         }
 
-        using var workspace = new TestWorkspace();
-        var productRoot = workspace.CreateProductRoot();
         var siblingRoot = Path.Combine(
             Path.GetDirectoryName(productRoot)!,
             Path.GetFileName(productRoot).ToLowerInvariant());

@@ -204,10 +204,10 @@ public static class DataProtectionKeyRingProtection
             }
         }
 
-        return X509CertificateLoader.LoadPkcs12FromFile(
-            path,
-            password,
-            X509KeyStorageFlags.EphemeralKeySet);
+        var keyStorageFlags = OperatingSystem.IsMacOS()
+            ? X509KeyStorageFlags.DefaultKeySet
+            : X509KeyStorageFlags.EphemeralKeySet;
+        return X509CertificateLoader.LoadPkcs12FromFile(path, password, keyStorageFlags);
     }
 }
 
