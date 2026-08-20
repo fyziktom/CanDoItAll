@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "bundleName": "CanDoItAll-MAF-1.18-Workflow-HITL-Codex-5.6-xhigh",
+  "preparedAt": "2026-08-20",
+  "preparedFor": {
+    "model": "GPT-5.6",
+    "reasoningEffort": "xhigh"
+  },
+  "repository": {
+    "owner": "fyziktom",
+    "name": "CanDoItAll",
+    "branch": "development",
+    "preparationBaselineCommit": "5cdf1666dbafdcea975909101c1854773f5f3556",
+    "solution": "CanDoItAll.slnx"
+  },
+  "framework": {
+    "currentStable": "1.17.0",
+    "targetStable": "1.18.0",
+    "currentPreview": "1.17.0-preview.260804.1",
+    "targetPreview": "1.18.0-preview.260818.1"
+  },
+  "waves": [
+    {
+      "id": "Wave-A",
+      "title": "MAF 1.18 upgrade and behavioral hardening",
+      "subbundles": [
+        "SB00",
+        "SB01",
+        "SB02"
+      ],
+      "independentlyClosable": true
+    },
+    {
+      "id": "Wave-B",
+      "title": "Native workflow HITL, persistence, and API",
+      "subbundles": [
+        "SB03",
+        "SB04",
+        "SB05",
+        "SB06"
+      ],
+      "independentlyClosable": false
+    }
+  ],
+  "subbundles": [
+    {
+      "id": "SB00",
+      "directory": "subbundles/SB00-reanchor-baseline",
+      "proofTier": "Standard",
+      "status": "Prepared",
+      "dependsOn": []
+    },
+    {
+      "id": "SB01",
+      "directory": "subbundles/SB01-maf-1.18-package-migration",
+      "proofTier": "Standard",
+      "status": "Prepared",
+      "dependsOn": [
+        "SB00"
+      ]
+    },
+    {
+      "id": "SB02",
+      "directory": "subbundles/SB02-tool-approval-safety",
+      "proofTier": "Behavioral",
+      "status": "Prepared",
+      "dependsOn": [
+        "SB01"
+      ]
+    },
+    {
+      "id": "SB03",
+      "directory": "subbundles/SB03-native-maf-hitl-foundation",
+      "proofTier": "Governed",
+      "status": "Prepared",
+      "dependsOn": [
+        "SB02"
+      ]
+    },
+    {
+      "id": "SB04",
+      "directory": "subbundles/SB04-persistent-recovery-state-machine",
+      "proofTier": "Governed",
+      "status": "Prepared",
+      "dependsOn": [
+        "SB03"
+      ]
+    },
+    {
+      "id": "SB05",
+      "directory": "subbundles/SB05-authorized-hitl-api",
+      "proofTier": "Governed",
+      "status": "Prepared",
+      "dependsOn": [
+        "SB04"
+      ]
+    },
+    {
+      "id": "SB06",
+      "directory": "subbundles/SB06-e2e-broad-gate-closeout",
+      "proofTier": "Governed",
+      "status": "Prepared",
+      "dependsOn": [
+        "SB05"
+      ]
+    }
+  ],
+  "hardConstraints": [
+    "Concurrent tool invocation remains disabled.",
+    "StoreInvocableFunctionCallsForFutureTurns remains disabled.",
+    "Native MAF request ports and checkpoints replace exception-as-pause for new resumable runs.",
+    "The in-process backend remains non-durable.",
+    "No restart-from-input fallback is permitted.",
+    "Actor identity is trusted context, not request payload.",
+    "Response acceptance is idempotent and crash recoverable.",
+    "Governed side effects use stable deduplication keys."
+  ],
+  "frozenBroadGate": {
+    "id": "FG-01",
+    "owner": "SB06",
+    "runCount": 1
+  }
+}
