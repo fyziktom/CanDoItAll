@@ -214,31 +214,35 @@ public sealed class EfLlmConversationStore(AppDbContext dbContext)
         Guid conversationId,
         CancellationToken cancellationToken)
     {
-        var state = await (
+        var rows = await (
                 from transcript in dbContext.Set<LlmChatTranscriptRow>().AsNoTracking()
                 join conversation in dbContext.Set<LlmChatConversationRow>().AsNoTracking()
                     on transcript.ConversationId equals conversation.Id
+                join message in dbContext.Set<LlmChatMessageRow>().AsNoTracking()
+                    on transcript.ConversationId equals message.ConversationId into messageRows
+                from message in messageRows.DefaultIfEmpty()
                 where transcript.ConversationId == conversationId
+                orderby message.Sequence
                 select new
                 {
                     Transcript = transcript,
                     conversation.Title,
                     conversation.CreatedAtUtc,
-                    conversation.UpdatedAtUtc
+                    conversation.UpdatedAtUtc,
+                    Message = message
                 })
-            .SingleOrDefaultAsync(cancellationToken)
+            .ToArrayAsync(cancellationToken)
             .ConfigureAwait(false);
-        if (state is null)
+        if (rows.Length == 0)
         {
             return null;
         }
 
-        var messages = await dbContext.Set<LlmChatMessageRow>()
-            .AsNoTracking()
-            .Where(row => row.ConversationId == conversationId)
-            .OrderBy(row => row.Sequence)
-            .ToArrayAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var state = rows[0];
+        var messages = rows
+            .Select(row => row.Message)
+            .OfType<LlmChatMessageRow>()
+            .ToArray();
         return LlmConversationPersistenceMapper.ToDocument(
             state.Transcript,
             state.Title,
