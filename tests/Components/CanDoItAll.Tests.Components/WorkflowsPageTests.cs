@@ -1163,7 +1163,7 @@ public sealed class WorkflowsPageTests
             .Add(component => component.ProviderOptions, []));
 
         cut.WaitForElement("[data-testid='workflow-canvas-run-preview']");
-        cut.Find("[data-testid='workflow-canvas-run-preview']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-run-preview']").Click());
 
         cut.WaitForElement("[data-testid='workflow-canvas-preview-input-dialog']");
         cut.WaitForAssertion(() =>
@@ -1172,9 +1172,11 @@ public sealed class WorkflowsPageTests
             Assert.Contains(projectId.ToString("D"), cut.Find("[data-testid='workflow-canvas-preview-project-id']").GetAttribute("value"));
         });
 
-        cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node");
-        cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true);
-        cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click();
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='workflow-canvas-preview-node-id']").Change("custom:test-parent-node"));
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-testid='workflow-canvas-preview-simulate-store']").Change(true));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='workflow-canvas-preview-input-run']").Click());
         await ClickWorkflowCanvasTabAsync(cut, "workflow-canvas-tab-preview");
 
         cut.WaitForAssertion(() =>
