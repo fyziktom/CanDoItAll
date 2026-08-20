@@ -1,3 +1,4 @@
+using System.IO.Pipelines;
 using System.Text;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -8,6 +9,7 @@ using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Api.Streaming;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -308,12 +310,15 @@ public sealed class ApiStreamingTransportTests
     }
 
     [Fact]
-    public async Task Streaming_writer_treats_profile_switch_before_response_start_as_normal_completion()
+    public async Task Streaming_writer_completes_response_when_profile_switch_ends_stream()
     {
         var context = new DefaultHttpContext();
         await using var body = new MemoryStream();
         using var switchedProfile = new CancellationTokenSource();
         context.Response.Body = body;
+        var responseBody = new TrackingResponseBodyFeature(
+            context.Features.GetRequiredFeature<IHttpResponseBodyFeature>());
+        context.Features.Set<IHttpResponseBodyFeature>(responseBody);
         switchedProfile.Cancel();
         var stream = CreateStream();
 
@@ -325,6 +330,7 @@ public sealed class ApiStreamingTransportTests
             switchedProfile.Token);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        Assert.True(responseBody.CompleteWasCalled);
     }
 
     [Fact]
@@ -596,6 +602,35 @@ public sealed class ApiStreamingTransportTests
             }
 
             await base.WriteAsync(buffer, cancellationToken);
+        }
+    }
+
+    private sealed class TrackingResponseBodyFeature(IHttpResponseBodyFeature inner) :
+        IHttpResponseBodyFeature
+    {
+        public Stream Stream => inner.Stream;
+
+        public PipeWriter Writer => inner.Writer;
+
+        public bool CompleteWasCalled { get; private set; }
+
+        public void DisableBuffering()
+            => inner.DisableBuffering();
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+            => inner.StartAsync(cancellationToken);
+
+        public Task SendFileAsync(
+            string path,
+            long offset,
+            long? count,
+            CancellationToken cancellationToken = default)
+            => inner.SendFileAsync(path, offset, count, cancellationToken);
+
+        public async Task CompleteAsync()
+        {
+            await inner.CompleteAsync();
+            CompleteWasCalled = true;
         }
     }
 

@@ -116,6 +116,7 @@ public static class ServerSentEventResponseWriter
             : null;
         var streamCancellationToken = lifetime?.Token ?? context.RequestAborted;
         Task<BoundedReplayReadResult<T>>? pendingRead = null;
+        var completeProfileBoundResponse = false;
         try
         {
             await context.Response.StartAsync(context.RequestAborted);
@@ -158,6 +159,9 @@ public static class ServerSentEventResponseWriter
 
                 if (streamCancellationToken.IsCancellationRequested)
                 {
+                    completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(
+                        context,
+                        streamLifetime);
                     return;
                 }
 
@@ -171,6 +175,9 @@ public static class ServerSentEventResponseWriter
                 {
                     if (streamCancellationToken.IsCancellationRequested)
                     {
+                        completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(
+                            context,
+                            streamLifetime);
                         return;
                     }
 
@@ -197,6 +204,10 @@ public static class ServerSentEventResponseWriter
                     return;
                 }
             }
+
+            completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(
+                context,
+                streamLifetime);
         }
         catch (OperationCanceledException) when (streamCancellationToken.IsCancellationRequested)
         {
@@ -206,8 +217,25 @@ public static class ServerSentEventResponseWriter
                     pendingRead,
                     streamCancellationToken);
             }
+
+            completeProfileBoundResponse = ShouldCompleteProfileBoundResponse(
+                context,
+                streamLifetime);
+        }
+        finally
+        {
+            if (completeProfileBoundResponse)
+            {
+                await context.Response.CompleteAsync();
+            }
         }
     }
+
+    private static bool ShouldCompleteProfileBoundResponse(
+        HttpContext context,
+        CancellationToken streamLifetime)
+        => streamLifetime.IsCancellationRequested &&
+           !context.RequestAborted.IsCancellationRequested;
 
     private static async Task DrainReadAfterCancellationAsync<T>(
         Task<BoundedReplayReadResult<T>> pendingRead,
