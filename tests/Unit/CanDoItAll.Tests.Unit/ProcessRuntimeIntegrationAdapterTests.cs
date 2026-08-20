@@ -3868,6 +3868,31 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             var assignment = CreateQaValidationAssignmentWithAcceptanceMatrix(outputRoot, scaffoldPage);
             var primaryRef = BuildStepArtifactRef(assignment);
             var executionRunId = Guid.NewGuid();
+            var receipts = CreateFullQaValidationReceipts(primaryRef, executionRunId);
+            var evaluationStartedAtUtc = receipts
+                .Single(receipt => string.Equals(
+                    receipt.ToolName,
+                    ToolContractCatalog.BrowserEvaluate,
+                    StringComparison.OrdinalIgnoreCase))
+                .StartedAtUtc;
+            receipts = receipts
+                .Select(receipt => receipt.ToolName switch
+                {
+                    ToolContractCatalog.BrowserPressKey => receipt with
+                    {
+                        Id = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+                        StartedAtUtc = evaluationStartedAtUtc,
+                        CompletedAtUtc = evaluationStartedAtUtc
+                    },
+                    ToolContractCatalog.BrowserEvaluate => receipt with
+                    {
+                        Id = Guid.Empty,
+                        StartedAtUtc = evaluationStartedAtUtc,
+                        CompletedAtUtc = evaluationStartedAtUtc
+                    },
+                    _ => receipt
+                })
+                .ToArray();
 
             var result = ToAdapterResult(
                 assignment,
@@ -3901,7 +3926,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     AC-002: Test proof shows completed lines update score.
                     """
                 },
-                CreateFullQaValidationReceipts(primaryRef, executionRunId),
+                receipts,
                 executionRunId);
 
             Assert.True(result.Outcome == StrategyOutcome.Succeeded, DescribeResult(result));
