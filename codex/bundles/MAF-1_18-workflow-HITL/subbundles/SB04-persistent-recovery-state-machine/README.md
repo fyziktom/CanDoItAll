@@ -2,11 +2,11 @@
 
 ## Status
 
-Prepared
+Proven
 
 ## Outcome
 
-Persist native MAF checkpoints and external response operations in PostgreSQL/EF, make response acceptance and resume crash-recoverable, verify exact workflow topology/version, and deduplicate governed side-effecting executor invocation.
+Persist native MAF checkpoints and external response operations in PostgreSQL/EF, make response acceptance and resume crash-recoverable, verify exact workflow topology/version, and provide exactly-once response acceptance and deduplicated participating governed effects.
 
 ## Owned requirements
 
@@ -48,6 +48,54 @@ SB03 passed with real checkpoint and disposed-run rehydration proof.
 - current database integration test fixtures.
 
 Use the persistence model and state machine documents as decisions, then adapt names to repository conventions.
+
+## C# Architecture Impact
+
+This critical foundation moved response acceptance/resume ownership out of the baseline 748-line runtime manager, added a recoverable explicit operation state machine, and introduced focused PostgreSQL stores plus governed executor replay protection. `WorkflowRuntimeManager` is now 738 lines; its public entry points are thin factory delegates and response submission is a one-line delegate. The compatibility construction path is test-only. No new persistence responsibility was appended to the 3,133-line `PersistentWorkflowStores.cs` cluster.
+
+The governing design is recorded in `../../architecture/00-csharp-current-state-inventory.md` through `../../architecture/04-csharp-testability-plan.md`. SB04 remains locked until CP-WB1 proves SB03; CP-WB2 is its closure gate.
+
+## Boundary Ownership
+
+- Models own operation, lease, checkpoint-payload, request-version/state, and executor-invocation values/records.
+- Workflows.Abstractions owns business-specific checkpoint, operation, continuation/boundary, and dedup ports.
+- Workflows.Core owns pure operation-transition and compatibility policy.
+- Workflows.Runtime owns one external-response continuation coordinator; `WorkflowRuntimeManager` delegates rather than duplicating lifecycle ownership.
+- WorkflowExecutors.Core owns the stable invocation-key factory and decorator around the existing invoker.
+- Modules.AgentFramework owns focused EF entities/configurations/stores in separate files and production composition.
+- The PostgreSQL migration project owns generated migration/snapshot changes.
+
+## Dependency Direction
+
+No new production project/reference was added. Core/Runtime remain free of MAF, EF, and Npgsql; persistence implements inward-facing ports; Infrastructure does not reference the module. Final snapshot `snap-20260821044013-44e660f5` covers 9 projects and 478 documents, reports no project cycle, and retains exactly the same two named baseline non-project cycles as `snap-20260820220112-5cb38069`. Executable composition proof supplements the static DI analysis.
+
+## Pattern Decision
+
+- State: explicit response-operation enum and pure legal-transition policy.
+- Business CAS/lease port: conditional PostgreSQL updates and unique constraints, not a generic repository or in-process lock.
+- Decorator: governed executor replay/dedup around the existing invoker, with a propagated participant idempotency key.
+
+Rejected alternatives include boolean/timestamp state inference, read-then-save coordination, unbounded retries, generic Unit of Work abstractions, driver-only dedup, and claiming arbitrary external exactly-once behavior. Full records are in `../../architecture/03-csharp-pattern-selection-records.md`.
+
+## Testability Contract
+
+Transition policy, continuation coordinator, lease policy, invocation-key factory, and dedup decorator are directly constructed with recording fakes and `FakeTimeProvider`; they do not require a manager, host, or DbContext. Persistent stores are tested against real PostgreSQL with migrations. Crash points are injectable before claim, before delivery, after delivery/before finalization, and at participating effect commit.
+
+## Partial Class Policy
+
+No handwritten production partial or nested service is allowed. Each new EF entity/configuration/store is a focused top-level type in a separate file. Generated migration/designer partials are allowed. `PersistentWorkflowStores.cs` and `WorkflowRuntimeManager` must shrink/delegate rather than grow.
+
+## Architecture Proof Required
+
+- CP-WB1 remains Proven before any SB04 implementation;
+- before/after project/dependency/cycle evidence and framework isolation;
+- direct unit and negative tests for transition, continuation, lease, and dedup responsibilities;
+- source assertions that the runtime manager no longer owns response accept/CAS/backend/finalize and the old persistence cluster did not absorb new stores;
+- executable persistent composition and exactly-one-decorator smoke;
+- real PostgreSQL migration, constraints, ordinal ordering, CAS/lease race, takeover, stale-owner, reconstruction, and legacy proof;
+- all crash windows, cancellation, consecutive-wait, exact-version/topology, missing/corrupt checkpoint, and participating-effect dedup proof;
+- precise guarantee language: exactly-once response acceptance and deduplicated participating governed effects, not arbitrary external exactly once;
+- CP-WB2 reviewer decision and downstream SB05 unlock only after governed proof is complete.
 
 ## Implementation boundary
 
@@ -191,17 +239,46 @@ No solution-wide gate. Run affected unit and database integration projects. The 
 
 ## Closure record
 
-Not executed.
+Proven on 2026-08-21. CP-WB2 strict architecture re-review is Pass and SB05 is
+dependency-ready.
 
-Record:
+- entities/migration: focused top-level checkpoint session/payload, external-request
+  boundary, external-response operation, and executor-invocation entities,
+  configurations, and stores are composed in `Modules.AgentFramework`; migration
+  `20260821021747_AddWorkflowHitlRecovery` is present and
+  `dotnet ef migrations has-pending-model-changes` reports no pending model change;
+- checkpoint ordering/hash: PostgreSQL allocates typed checkpoint identity and ordinal
+  atomically, returns the index in ascending commit order, and verifies payload hashes;
+- operation state/CAS: persistent create/replay/conflict, single active claim, staged
+  boundary commit, cancellation, and terminal-state immutability are proven;
+- lease/recovery: heartbeat, stale-owner rejection, bounded expired-lease takeover, and
+  retryable recovery are proven against direct policy tests and real PostgreSQL;
+- exact-version/topology: continuation reloads the exact workflow version and fails
+  closed on identity, topology, missing, corrupt, or legacy checkpoint incompatibility;
+- deduplication: the existing executor invoker is decorated exactly once; completed
+  participating effects replay without a second inner invocation, live claims conflict,
+  and input-hash mismatch fails closed;
+- legacy behavior: legacy metadata-only waits remain inspectable but non-resumable and
+  are never restarted from initial input;
+- crash simulations: accepted-before-claim, claimed-before-delivery,
+  delivered-before-finalize, and participating-effect-before-operation-completion paths
+  are covered;
+- tests/counts: the immutable 26-clause Unit selector passed 419/419; the exact
+  three-class Integration selector passed 16/16, including 15 real PostgreSQL facts and
+  one production-composition fact; ten affected Release project builds and the final
+  post-fix Release Unit build passed with zero warnings and zero errors;
+- architecture: `WorkflowRuntimeManager` is 738 lines versus the 748-line baseline,
+  public entry points are thin factory delegates, response submission is a one-line
+  delegate, the compatibility factory path is test-only, and snapshot
+  `snap-20260821044013-44e660f5` reports 9 projects, 478 documents, no project cycle, and
+  only the same two named baseline non-project cycles;
+- governance: the upgraded-package scanner passes at stable `1.18.0` and preview
+  `1.18.0-preview.260818.1`; governed artifacts are under `proof/SB04`;
+- blockers/deviations: no closure blocker remains. Integration assets required one
+  explicit restore from stale 1.17 test assets, and the first sandboxed Module build
+  required an authorized retry for sibling Components generated-asset cache writes;
+  passing reruns and the retained progression evidence are recorded in `proof/SB04`.
 
-- entities/migration:
-- checkpoint ordering/hash:
-- operation state/CAS:
-- lease/recovery:
-- exact-version/topology:
-- deduplication:
-- legacy behavior:
-- crash simulations:
-- tests/counts:
-- blockers/deviations:
+The proven guarantee is exactly-once response acceptance and deduplicated participating
+governed effects. It does not claim exactly-once behavior for an arbitrary external
+system.

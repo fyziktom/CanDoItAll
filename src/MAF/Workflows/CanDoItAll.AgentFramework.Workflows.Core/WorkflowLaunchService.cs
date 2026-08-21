@@ -11,6 +11,7 @@ public sealed class WorkflowLaunchService(
     IWorkflowRunLauncher runLauncher,
     IWorkflowLaunchIdempotencyStore idempotencyStore,
     IWorkflowRunStore runStore,
+    IWorkflowLaunchAuthorizationScopeResolver authorizationScopeResolver,
     TimeProvider timeProvider) : IWorkflowLaunchService
 {
     private static readonly TimeSpan ClaimLeaseDuration = TimeSpan.FromMinutes(5);
@@ -29,13 +30,18 @@ public sealed class WorkflowLaunchService(
 
         ValidateIntent(intent);
         var inputJson = ValidateAndNormalizeInput(intent.InputJson);
-        if (intent.Idempotency is WorkflowLaunchIdempotency.CallerSupplied keyed)
+        var authorizedIntent = ResolveAuthorizationScope(intent);
+        if (authorizedIntent.Idempotency is WorkflowLaunchIdempotency.CallerSupplied keyed)
         {
-            return await LaunchIdempotentlyAsync(intent, inputJson, keyed.Key, cancellationToken);
+            return await LaunchIdempotentlyAsync(
+                authorizedIntent,
+                inputJson,
+                keyed.Key,
+                cancellationToken);
         }
 
         return await LaunchNewAsync(
-            intent,
+            authorizedIntent,
             inputJson,
             WorkflowLaunchIdempotencyDisposition.NotRequested,
             cancellationToken);
@@ -546,6 +552,31 @@ public sealed class WorkflowLaunchService(
         {
             throw new InvalidOperationException("Caller-supplied workflow launch idempotency key is required.");
         }
+    }
+
+    private WorkflowLaunchIntent ResolveAuthorizationScope(WorkflowLaunchIntent intent)
+    {
+        var authorization = authorizationScopeResolver.Resolve(intent.Origin)
+            ?? throw new InvalidOperationException(
+                "Workflow launch authorization scope resolution returned no result.");
+        if (authorization.Scope is null ||
+            !string.Equals(
+                authorization.PolicyFingerprint,
+                WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Workflow launch authorization scope resolution did not return the current trusted policy.");
+        }
+
+        return intent with
+        {
+            Origin = intent.Origin with
+            {
+                AuthorizationScope = authorization.Scope,
+                AuthorizationPolicyFingerprint = authorization.PolicyFingerprint
+            }
+        };
     }
 
     private static string ValidateAndNormalizeInput(string inputJson)

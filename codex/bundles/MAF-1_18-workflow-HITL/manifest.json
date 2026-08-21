@@ -47,14 +47,14 @@
       "id": "SB00",
       "directory": "subbundles/SB00-reanchor-baseline",
       "proofTier": "Standard",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": []
     },
     {
       "id": "SB01",
       "directory": "subbundles/SB01-maf-1.18-package-migration",
       "proofTier": "Standard",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": [
         "SB00"
       ]
@@ -63,7 +63,7 @@
       "id": "SB02",
       "directory": "subbundles/SB02-tool-approval-safety",
       "proofTier": "Behavioral",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": [
         "SB01"
       ]
@@ -72,7 +72,7 @@
       "id": "SB03",
       "directory": "subbundles/SB03-native-maf-hitl-foundation",
       "proofTier": "Governed",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": [
         "SB02"
       ]
@@ -81,7 +81,7 @@
       "id": "SB04",
       "directory": "subbundles/SB04-persistent-recovery-state-machine",
       "proofTier": "Governed",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": [
         "SB03"
       ]
@@ -90,7 +90,7 @@
       "id": "SB05",
       "directory": "subbundles/SB05-authorized-hitl-api",
       "proofTier": "Governed",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": [
         "SB04"
       ]
@@ -99,7 +99,7 @@
       "id": "SB06",
       "directory": "subbundles/SB06-e2e-broad-gate-closeout",
       "proofTier": "Governed",
-      "status": "Prepared",
+      "status": "Proven",
       "dependsOn": [
         "SB05"
       ]
@@ -118,6 +118,20 @@
   "frozenBroadGate": {
     "id": "FG-01",
     "owner": "SB06",
-    "runCount": 1
+    "status": "Pass",
+    "runCount": 1,
+    "sourceHead": "af425ac371b251447f9858b15476092531c686da",
+    "startedAtUtc": "2026-08-21T12:52:49.8229732Z",
+    "completedAtUtc": "2026-08-21T13:59:43.2785414Z",
+    "tests": {
+      "total": 8471,
+      "passed": 8471,
+      "failed": 0,
+      "skipped": 0
+    },
+    "siblingPins": {
+      "CanDoItAll.Components": "8372c1d55f21b349f8e859470b02eeb4421e96ca",
+      "CanDoItAll.FileTools": "c95dd07208a6d48724443317cdc6cfe67a13020a"
+    }
   }
 }

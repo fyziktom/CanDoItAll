@@ -2956,18 +2956,6 @@ public sealed class WorkflowsPageTests
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
-        public Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
         private PendingRunRequest GetPendingRun(WorkflowRunId runId)
             => pendingRuns.TryGetValue(runId, out var pendingRequest)
                 ? pendingRequest

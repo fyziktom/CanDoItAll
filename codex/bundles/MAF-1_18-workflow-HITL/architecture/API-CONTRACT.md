@@ -16,7 +16,7 @@ Recommended wire shape:
   "expectedRequestVersion": 3,
   "response": {
     "approved": true,
-    "comment": "Reviewed and approved."
+    "message": "Reviewed and approved."
   }
 }
 ```
@@ -56,18 +56,20 @@ Long-running continuation may return `202 Accepted` with operation status. Synch
 
 ## Status query
 
-Add or expose through existing detail:
+Add the focused authorized read endpoint:
 
-- `GET /api/workflows/external-requests/{requestId}`
 - `GET /api/workflows/external-response-operations/{operationId}`
 
-A separate endpoint is required only when existing run detail cannot provide stable operation polling. Reuse existing run detail where sufficient.
+It is a read model over the existing operation/request/run relationship, not a second
+mutation API. Return only safe state/outcome/timestamps, run state, safe message, and a
+safe next-pending-request projection.
 
 ## Authorization
 
 At minimum, authorization input must include:
 
 - authenticated principal/service identity;
+- canonical database profile and server-owned workspace scope;
 - request ID;
 - run origin;
 - workflow ID/version;
@@ -77,6 +79,13 @@ At minimum, authorization input must include:
 - assignment or intended approver metadata where present.
 
 Authorization is enforced in `WorkflowExternalResponseService` or an injected authorizer, not solely through endpoint group policy.
+
+Persist the server-owned target profile/scope additively through existing run `OriginJson`
+and request-boundary `AuthorizationPolicyJson`. Cross-profile access is denied. Agents
+require their admitted governance scope; organization-scoped human/API authority may
+cover a server-verified narrower run only within the same profile. Missing or legacy scope
+fails closed. This contract does not invent a per-user project ACL that the repository
+does not implement.
 
 Required negative cases:
 
@@ -97,9 +106,22 @@ Validate before operation claim:
 - HumanInput response matches stored schema;
 - payload is within size/depth limits;
 - expected request version matches;
-- persisted request belongs to the current run and is pending;
+- persisted request belongs to the current run and is pending-compatible;
 - checkpoint linkage is present for native resumable runs;
 - redaction/payload policy succeeds.
+
+Do not reject a same-key replay solely because the request has already advanced to
+`ResponseClaimed`, `Responded`, or `Denied`; first let the durable operation store resolve
+the existing same-fingerprint operation.
+
+## Recovery and persistence decision
+
+SB05 adds no relational table, column, model-snapshot edit, or EF migration. Scope/policy
+uses the existing JSON snapshots. Recovery reconstructs and revalidates authorization
+from the durable operation plus request boundary. Approval action is derived only from the
+validated protected response (`approved=true`/`false`); HumanInput derives
+`submit-input`. No caller supplies an action or authorization grant. Missing or corrupt
+legacy authorization material fails closed.
 
 ## Audit
 
@@ -117,6 +139,10 @@ Persist safe audit information:
 - next run/request/checkpoint references.
 
 Do not log raw secrets, full tool arguments, credentials, unrestricted user input, or checkpoint JSON.
+
+Public run, request, event, artifact, checkpoint, response, and operation projections must
+also exclude `RequestJson`, `ResponseJson`, raw event `PayloadJson`, native checkpoint IDs,
+payload references/hashes, artifact storage paths, protected keys, and internal policy.
 
 ## Status mapping
 
@@ -139,12 +165,9 @@ Recommended mapping; adapt to repository conventions without losing typed outcom
 
 Do not use 502 for deterministic local resume failure unless an actual upstream gateway dependency justifies it.
 
-## Compatibility
+## Compatibility decision
 
-During migration, accept the old raw `ResponseJson` shape only when API compatibility requirements demand it. If retained:
-
-- isolate it in a versioned compatibility DTO;
-- parse it once at the edge;
-- convert to the typed internal JSON value;
-- mark it deprecated in the contract;
-- do not let both shapes create different service behavior.
+Repository client inventory found no consumer that requires the old raw `ResponseJson`
+HTTP shape. Remove it rather than versioning it. Discovery of a concrete dependent client
+triggers IK-14 and stops implementation for an explicit compatibility decision; it does
+not authorize silently adding a second wire contract.

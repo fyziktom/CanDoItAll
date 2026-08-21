@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared
+Proven
 
 ## Outcome
 
@@ -130,19 +130,33 @@ Do not run solution-wide tests. A single solution restore is allowed to establis
 
 ## Closure record
 
-Not executed.
+Passed on 2026-08-20.
 
-Record:
-
-- HEAD:
-- worktree:
-- SDK:
-- restore:
-- package graph:
-- old symbol scan:
-- concurrency composition:
-- direct ToolApprovalAgent:
-- workflow/API/persistence deviations:
-- focused tests and counts:
-- blockers:
-- downstream changes to bundle:
+- HEAD: `af425ac371b251447f9858b15476092531c686da` on `maf-update-and-hil`; only the
+  bundle commit differs from preparation baseline `5cdf1666dbafdcea975909101c1854773f5f3556`.
+- Worktree: clean at entry; no unrelated changes.
+- SDK: `10.0.303`; `global.json` requests `10.0.302` with `latestPatch`.
+- Restore: `dotnet restore CanDoItAll.slnx` passed after granting access to the configured
+  user NuGet environment.
+- Package graph: stable MAF `1.17.0`; A2A/Hosting preview
+  `1.17.0-preview.260804.1`; all direct consumers remain the three projects listed in the
+  impact map.
+- Old symbol scan: no session-isolation provider symbols.
+- Concurrency composition: the central options factory is the only production
+  `ChatClientAgentOptions` construction site; no production `FunctionInvokingChatClient`,
+  `UseProvidedChatClientAsIs = true`, enabled concurrency, or enabled declaration-only
+  tool storage.
+- Direct `ToolApprovalAgent`: absent.
+- Workflow/API/persistence deviations: none; current source matches the preparation
+  evidence. `CanDoItAll.slnx` contains product/tool projects but no test projects, so SB06
+  must not treat `dotnet test CanDoItAll.slnx` as the broad test gate.
+- CodeAnalytics: `snap-20260820203442-90bdd166`; 6 scoped projects, 364 documents,
+  no blocking diagnostics and no project-reference cycle.
+- Focused discovery: approval 12, adapter isolation 4, lifecycle 13, API integration 16.
+- Focused results: combined unit selection 29/29 passed; API integration 16/16 passed on
+  the authorized rerun.
+- Environmental note: a pre-existing `CanDoItAll.Web` process locks Release web output.
+  Preserve it and use isolated validation output/configuration rather than silently
+  stopping it.
+- Blockers: none.
+- Progression: SB01 is unlocked. Later subbundles inherit the recorded discovery floors.

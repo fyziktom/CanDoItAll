@@ -310,7 +310,7 @@ public sealed class WorkflowFoundationTests
                 ExposeAzureFunctionsMcpTool: false)
         };
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -389,7 +389,7 @@ public sealed class WorkflowFoundationTests
                 ExposeAzureFunctionsMcpTool: false)
         };
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -446,7 +446,7 @@ public sealed class WorkflowFoundationTests
         };
         var payloadPolicy = new WorkflowPayloadPolicyService(new StaticWorkflowSettingsService(settings));
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -580,14 +580,18 @@ public sealed class WorkflowFoundationTests
                 ExposeAzureFunctionsMcpTool: false)
         };
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager(
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(TimeProvider.System);
+        var catalog = new ExactWorkflowCatalog(definition);
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
-                    [])
+                    [],
+                    checkpointPayloadStore: checkpointStore,
+                    catalog: catalog)
             ],
-            store);
-
+            store,
+            checkpointStore);
         var run = await manager.StartAsync(
             definition,
             new WorkflowRunStartRequest(
@@ -596,11 +600,20 @@ public sealed class WorkflowFoundationTests
                 "{\"route\":\"automatic\"}",
                 WorkflowRuntimeBackendKind.InProcess,
                 SourceProcessRunId: null,
-                SourceProcessAssignmentId: null));
+                SourceProcessAssignmentId: null)
+            {
+                Origin = CreateAuthorizedOrigin("foundation-human-input")
+            });
         var pending = await store.ListPendingExternalRequestsAsync(run.RunId);
+        var events = await manager.ListEventsAsync(run.RunId);
+        var checkpoint = Assert.Single(await store.ListCheckpointsAsync(run.RunId));
 
         Assert.Equal(WorkflowRunState.Completed, run.State);
         Assert.Empty(pending);
+        Assert.Equal(WorkflowCheckpointKind.Completed, checkpoint.Kind);
+        Assert.Equal(WorkflowCheckpointTrustBoundary.MetadataOnly, checkpoint.TrustBoundary);
+        Assert.Equal(WorkflowResumeAvailability.NotSupported, checkpoint.ResumeAvailability);
+        Assert.Contains(events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Completed);
     }
 
     [Fact]
@@ -638,13 +651,19 @@ public sealed class WorkflowFoundationTests
                 ExposeAzureFunctionsMcpTool: false)
         };
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager(
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(TimeProvider.System);
+        var catalog = new ExactWorkflowCatalog(definition);
+        var composition = WorkflowExternalResponseTestCompositionFactory.Create(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
-                    [])
+                    [],
+                    checkpointPayloadStore: checkpointStore,
+                    catalog: catalog)
             ],
-            store);
+            store,
+            checkpointStore);
+        var manager = composition.Manager;
 
         var run = await manager.StartAsync(
             definition,
@@ -661,13 +680,19 @@ public sealed class WorkflowFoundationTests
         Assert.Equal(WorkflowRunState.WaitingForInput, run.State);
         var request = Assert.Single(pending);
         Assert.Equal(new WorkflowNodeId("human"), request.NodeId);
+        Assert.Equal(WorkflowExternalRequestState.Pending, request.State);
+        Assert.NotNull(request.Continuation);
         var checkpoint = Assert.Single(await store.ListCheckpointsAsync(run.RunId));
         Assert.Equal(WorkflowCheckpointKind.WaitingForInput, checkpoint.Kind);
         Assert.Equal(request.Id, checkpoint.ExternalRequestId);
-        Assert.Equal(WorkflowResumeAvailability.NotSupported, checkpoint.ResumeAvailability);
+        Assert.Equal(WorkflowCheckpointTrustBoundary.TrustedRuntimeState, checkpoint.TrustBoundary);
+        Assert.Equal(WorkflowResumeAvailability.Available, checkpoint.ResumeAvailability);
         Assert.Contains(events, workflowEvent =>
             workflowEvent.Kind == WorkflowEventKind.ExecutorInvoked &&
             workflowEvent.NodeId == new WorkflowNodeId("start"));
+        Assert.Contains(events, workflowEvent =>
+            workflowEvent.Kind == WorkflowEventKind.WaitingForInput &&
+            workflowEvent.NodeId == new WorkflowNodeId("human"));
     }
 
     [Fact]
@@ -690,13 +715,19 @@ public sealed class WorkflowFoundationTests
                 ExposeAzureFunctionsMcpTool: false)
         };
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager(
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(TimeProvider.System);
+        var catalog = new ExactWorkflowCatalog(definition);
+        var composition = WorkflowExternalResponseTestCompositionFactory.Create(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
-                    [])
+                    [],
+                    checkpointPayloadStore: checkpointStore,
+                    catalog: catalog)
             ],
-            store);
+            store,
+            checkpointStore);
+        var manager = composition.Manager;
 
         var run = await manager.StartAsync(
             definition,
@@ -706,34 +737,52 @@ public sealed class WorkflowFoundationTests
                 "{\"question\":\"approve?\"}",
                 WorkflowRuntimeBackendKind.InProcess,
                 SourceProcessRunId: null,
-                SourceProcessAssignmentId: null));
+                SourceProcessAssignmentId: null)
+            {
+                Origin = CreateAuthorizedOrigin("foundation-human-input-response")
+            });
         var pending = await store.ListPendingExternalRequestsAsync(run.RunId);
-        var response = await manager.SubmitExternalResponseAsync(
-            pending[0].Id,
+        var waitingRequest = Assert.Single(pending);
+        var waitingCheckpoint = Assert.Single(await store.ListCheckpointsAsync(run.RunId));
+        var response = await composition.Responses.SubmitAsync(
+            waitingRequest,
             "{\"approved\":true}");
-        var persistedRequest = await store.GetExternalRequestAsync(pending[0].Id);
+        var persistedRequest = await store.GetExternalRequestAsync(waitingRequest.Id);
+        var pendingAfterResponse = await store.ListPendingExternalRequestsAsync(run.RunId);
+        var events = await manager.ListEventsAsync(run.RunId);
 
         Assert.Equal(WorkflowRunState.WaitingForInput, run.State);
-        Assert.Single(pending);
-        Assert.Equal(WorkflowExternalResponseOutcome.UnsupportedResume, response.Outcome);
-        Assert.Equal(WorkflowRunState.WaitingForInput, response.Run?.State);
-        Assert.Null(persistedRequest?.RespondedAtUtc);
+        Assert.Equal(WorkflowExternalRequestState.Pending, waitingRequest.State);
+        Assert.Equal(WorkflowCheckpointTrustBoundary.TrustedRuntimeState, waitingCheckpoint.TrustBoundary);
+        Assert.Equal(WorkflowResumeAvailability.Available, waitingCheckpoint.ResumeAvailability);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.Completed, response.Outcome);
+        Assert.Equal(WorkflowRunState.Completed, response.Run?.State);
+        Assert.Empty(pendingAfterResponse);
+        Assert.NotNull(persistedRequest?.RespondedAtUtc);
+        Assert.Equal(string.Empty, persistedRequest?.ResponseJson);
+        Assert.Equal(definition.VersionId, catalog.RequestedVersionId);
+        Assert.Contains(events, workflowEvent =>
+            workflowEvent.Kind == WorkflowEventKind.WaitingForInput &&
+            workflowEvent.NodeId == new WorkflowNodeId("human"));
+        Assert.Contains(events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Completed);
     }
 
     [Fact]
     public async Task RuntimeManagerLeavesApprovalWaitingWhenResumeBackendIsUnavailable()
     {
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager([], store);
-        var request = await SaveWaitingApprovalRequestAsync(store);
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(TimeProvider.System);
+        var composition = WorkflowExternalResponseTestCompositionFactory.Create([], store, checkpointStore);
+        var manager = composition.Manager;
+        var request = await SaveWaitingApprovalRequestAsync(store, checkpointStore);
 
-        var response = await manager.SubmitExternalResponseAsync(
-            request.Id,
+        var response = await composition.Responses.SubmitAsync(
+            request,
             "{\"approved\":true,\"message\":\"Operator approved.\"}");
         var pending = await store.ListPendingExternalRequestsAsync(request.RunId);
         var events = await manager.ListEventsAsync(request.RunId);
 
-        Assert.Equal(WorkflowExternalResponseOutcome.BackendUnavailable, response.Outcome);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.BackendUnavailable, response.Outcome);
         Assert.Single(pending);
         Assert.DoesNotContain(events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Completed);
     }
@@ -742,16 +791,18 @@ public sealed class WorkflowFoundationTests
     public async Task RuntimeManagerDoesNotFabricateApprovalDenialWithoutResumeBackend()
     {
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager([], store);
-        var request = await SaveWaitingApprovalRequestAsync(store);
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(TimeProvider.System);
+        var composition = WorkflowExternalResponseTestCompositionFactory.Create([], store, checkpointStore);
+        var manager = composition.Manager;
+        var request = await SaveWaitingApprovalRequestAsync(store, checkpointStore);
 
-        var response = await manager.SubmitExternalResponseAsync(
-            request.Id,
+        var response = await composition.Responses.SubmitAsync(
+            request,
             "{\"approved\":false,\"message\":\"Denied token=raw-token-value.\"}");
         var persisted = await manager.GetRunAsync(request.RunId);
         var events = await manager.ListEventsAsync(request.RunId);
 
-        Assert.Equal(WorkflowExternalResponseOutcome.BackendUnavailable, response.Outcome);
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.BackendUnavailable, response.Outcome);
         Assert.NotNull(persisted);
         Assert.Equal(WorkflowRunState.WaitingForInput, persisted.State);
         Assert.DoesNotContain(events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Error);
@@ -761,11 +812,15 @@ public sealed class WorkflowFoundationTests
     public async Task RuntimeManagerRejectsMalformedApprovalResponse()
     {
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager([], store);
-        var request = await SaveWaitingApprovalRequestAsync(store);
+        var checkpointStore = new InMemoryWorkflowBackendCheckpointPayloadStore(TimeProvider.System);
+        var composition = WorkflowExternalResponseTestCompositionFactory.Create([], store, checkpointStore);
+        var request = await SaveWaitingApprovalRequestAsync(store, checkpointStore);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            manager.RespondToExternalRequestAsync(request.Id, "{\"message\":\"missing approval\"}"));
+        var response = await composition.Responses.SubmitAsync(
+            request,
+            "{\"message\":\"missing approval\"}");
+
+        Assert.Equal(WorkflowExternalResponseServiceOutcome.InvalidResponse, response.Outcome);
     }
 
     [Fact]
@@ -777,7 +832,7 @@ public sealed class WorkflowFoundationTests
         ], [
             CreateEdge("start-to-end", "start", "end")
         ]);
-        var manager = new WorkflowRuntimeManager([], new InMemoryWorkflowRunStore());
+        var manager = WorkflowRuntimeManager.CreateInMemory([], new InMemoryWorkflowRunStore());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => manager.StartAsync(
             definition,
@@ -810,7 +865,7 @@ public sealed class WorkflowFoundationTests
                 ExposeAzureFunctionsStatusEndpoint: false,
                 ExposeAzureFunctionsMcpTool: false)
         };
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -856,7 +911,9 @@ public sealed class WorkflowFoundationTests
             DateTimeOffset.UtcNow);
     }
 
-    private static async Task<WorkflowExternalRequestRecord> SaveWaitingApprovalRequestAsync(InMemoryWorkflowRunStore store)
+    private static async Task<WorkflowExternalRequestRecord> SaveWaitingApprovalRequestAsync(
+        InMemoryWorkflowRunStore store,
+        InMemoryWorkflowBackendCheckpointPayloadStore checkpointStore)
     {
         var now = DateTimeOffset.UtcNow;
         var runId = WorkflowRunId.New();
@@ -869,9 +926,13 @@ public sealed class WorkflowFoundationTests
             BackendRunId: runId.ToString(),
             Summary: "Workflow is waiting for approval.",
             CreatedAtUtc: now,
-            UpdatedAtUtc: now);
+            UpdatedAtUtc: now)
+        {
+            Origin = CreateAuthorizedOrigin("foundation-approval")
+        };
+        var requestId = WorkflowExternalRequestId.New();
         var request = new WorkflowExternalRequestRecord(
-            WorkflowExternalRequestId.New(),
+            requestId,
             runId,
             WorkflowExternalRequestKind.Approval,
             new WorkflowNodeId("approval-node"),
@@ -879,12 +940,57 @@ public sealed class WorkflowFoundationTests
             RequestJson: "{}",
             ResponseJson: string.Empty,
             CreatedAtUtc: now,
-            RespondedAtUtc: null);
+            RespondedAtUtc: null)
+        {
+            State = WorkflowExternalRequestState.Pending,
+            ResponseContract = new WorkflowExternalResponseContract(
+                WorkflowExternalRequestKind.Approval,
+                "workflow.approval",
+                1,
+                """{"type":"object","required":["approved"]}""",
+                4_096),
+            Continuation = new WorkflowExternalRequestContinuation(
+                new WorkflowBackendExternalRequestLink(
+                    requestId,
+                    new WorkflowBackendRequestId("approval-request"),
+                    new WorkflowBackendRequestPortId("approval")),
+                new WorkflowBackendCheckpointLink(
+                    new WorkflowBackendSessionId(run.BackendRunId),
+                    new WorkflowBackendCheckpointId("approval-checkpoint")),
+                new WorkflowCompilerContractVersion(1),
+                WorkflowTopologyFingerprint.Create("foundation-approval"),
+                WorkflowBackendCheckpointPayloadHash.Compute("{}")),
+            AuthorizationPolicy = new WorkflowExternalRequestAuthorizationPolicySnapshot(
+                (run.Origin as WorkflowLaunchOrigin.Api)!.Actor,
+                ExecutorId: null,
+                WorkflowExecutorCapabilityFlags.None,
+                WorkflowExecutorApprovalRequirement.NotRequired,
+                IntendedApproverSubjectId: string.Empty)
+            {
+                AuthorizationScope = run.Origin.AuthorizationScope,
+                AuthorizationPolicyFingerprint = run.Origin.AuthorizationPolicyFingerprint,
+                ResponseAuthorizationLifetimeSeconds = WorkflowExternalResponseAuthorizationPolicy.ResponseLifetimeSeconds
+            }
+        };
 
+        request = await WorkflowHitlTestCheckpointFactory.AddCheckpointAsync(
+            checkpointStore,
+            run,
+            request,
+            "{}");
         await store.SaveRunAsync(run);
         await store.SaveExternalRequestAsync(request);
         return request;
     }
+
+    private static WorkflowLaunchOrigin.Api CreateAuthorizedOrigin(string correlationId)
+        => new(
+            new WorkflowLaunchActor(WorkflowLaunchActorKind.User, "foundation-launcher"),
+            new WorkflowLaunchCorrelationId(correlationId))
+        {
+            AuthorizationScope = WorkspaceScopeDescriptor.Organization("unit-tests"),
+            AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+        };
 
     private static WorkflowNode CreateNode(
         string id,
@@ -962,6 +1068,65 @@ public sealed class WorkflowFoundationTests
                 input.PayloadJson,
                 component.ResultShape));
         }
+    }
+
+    private sealed class ExactWorkflowCatalog(WorkflowDefinition definition) : IWorkflowCatalogService
+    {
+        public WorkflowVersionId? RequestedVersionId { get; private set; }
+
+        public Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            RequestedVersionId = versionId;
+            return Task.FromResult<WorkflowDefinitionDetail?>(
+                workflowId == definition.Id && versionId == definition.VersionId
+                    ? new WorkflowDefinitionDetail(definition, WorkflowValidationResult.Success)
+                    : null);
+        }
+
+        public Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
+            WorkflowId workflowId,
+            WorkflowLifecycleStatus status,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> SaveDefinitionAsync(
+            WorkflowDefinitionSaveRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ChangeDefinitionStatusAsync(
+            WorkflowDefinitionStatusChangeRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinitionExportEnvelope?> ExportDefinitionAsync(
+            WorkflowId workflowId,
+            WorkflowVersionId? versionId = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowDefinition> ImportDefinitionAsync(
+            WorkflowDefinitionImportRequest request,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteDefinitionAsync(
+            WorkflowId workflowId,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkflowValidationResult> ValidateDefinitionAsync(
+            WorkflowDefinition workflowDefinition,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private sealed class StaticWorkflowSettingsService(WorkflowSettings settings) : IWorkflowSettingsService

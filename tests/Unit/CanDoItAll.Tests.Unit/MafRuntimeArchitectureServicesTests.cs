@@ -590,7 +590,7 @@ public sealed class MafRuntimeArchitectureServicesTests
     }
 
     [Fact]
-    public void MafChatClientAgentOptionsFactory_applies_the_production_117_compatibility_policy()
+    public void MafChatClientAgentOptionsFactory_applies_the_production_118_compatibility_policy()
     {
         var chatOptions = new ChatOptions();
 
@@ -598,6 +598,7 @@ public sealed class MafRuntimeArchitectureServicesTests
 
         Assert.Same(chatOptions, options.ChatOptions);
         Assert.False(options.UseProvidedChatClientAsIs);
+        Assert.False(options.AllowConcurrentInvocation);
         Assert.True(options.DisableApprovalNotRequiredFunctionBypassing);
         Assert.False(options.DisableApprovalResponseBinding);
 
@@ -612,6 +613,13 @@ public sealed class MafRuntimeArchitectureServicesTests
             .ToList();
 
         Assert.Equal([nameof(MafChatClientAgentOptionsFactory) + ".cs"], constructionSites);
+        Assert.Contains(
+            "AllowConcurrentInvocation = false",
+            File.ReadAllText(Path.Combine(
+                mafRoot,
+                "Runtime",
+                nameof(MafChatClientAgentOptionsFactory) + ".cs")),
+            StringComparison.Ordinal);
     }
 
     [Theory]

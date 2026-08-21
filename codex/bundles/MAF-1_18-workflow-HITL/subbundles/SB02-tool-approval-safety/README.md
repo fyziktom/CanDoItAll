@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared
+Proven
 
 ## Outcome
 
@@ -128,16 +128,38 @@ No broad gate. Wave A closes on affected builds plus focused behavioral proof.
 
 ## Closure record
 
-Not executed.
+Passed on 2026-08-20.
 
-Record:
-
-- central serial setting:
-- custom invocation audit:
-- direct ToolApprovalAgent decision:
-- declaration-only experiment:
-- order/overlap test:
-- approval/session tests/counts:
-- usage/telemetry tests:
-- Wave A files/diff:
-- blockers/deviations:
+- Central serial setting: `MafChatClientAgentOptionsFactory` explicitly sets
+  `AllowConcurrentInvocation = false`; runtime construction and repair execution both use
+  that factory.
+- Custom invocation audit: one production `ChatClientAgentOptions` construction site; no
+  `FunctionInvokingChatClient`, no `UseProvidedChatClientAsIs = true`, and no production
+  bypass. Provider `AllowMultipleToolCalls` support remains independent and unchanged.
+- Direct `ToolApprovalAgent` decision: none exists, so no wrapper or iteration cap was
+  invented.
+- Declaration-only experiment: no active
+  `StoreInvocableFunctionCallsForFutureTurns = true`; the experiment remains disabled.
+- Order/overlap proof: three new tests exercise the real MAF invocation decorator.
+  Streaming and non-streaming calls complete `A → B → C` exactly once with maximum active
+  count one. The negative fixture deliberately opts the same path into concurrency and
+  observes an active count greater than one.
+- Failing-first proof: the renamed 1.18 factory regression failed because the source lacked
+  an explicit serial assignment, then passed after the one-line production change.
+- Approval/session proof: 12/12 approval round-trip tests passed, covering streaming and
+  non-streaming restart, replay, cross-session, unknown response, consecutive requests,
+  hosted MCP, and argument binding/tamper protection.
+- Usage/telemetry proof: streaming recovery 2/2, workflow usage 9/9, response-assembler
+  usage 2/2, provider update pump 4/4, and architecture/runtime safety 52/52 passed. The
+  runtime uses OpenTelemetry activities directly and has no application-owned telemetry
+  event-serialization wrapper, so the conditional serialization-containment test is N/A.
+- Total focused result: 84/84 passed after exact discovery. The upgraded static scanner
+  reports no error, warning, or unsafe finding.
+- Documentation: `docs/agent-runtime-tool-surface.md` records serial execution, retained
+  multiple-call output, approval barriers, and deferred concurrency; documentation
+  validation passed for 187 maintained Markdown files.
+- Wave A files: central MAF version props, central agent options factory, the renamed/static
+  factory regression, the new concurrency policy fixture, maintained tool-surface docs, and
+  bundle execution state. No workflow HITL implementation is mixed into this diff.
+- Blockers/deviations: none. The unit gate used Debug to avoid the pre-existing Release Web
+  output lock; the production MAF project passed in Release with zero warnings/errors.

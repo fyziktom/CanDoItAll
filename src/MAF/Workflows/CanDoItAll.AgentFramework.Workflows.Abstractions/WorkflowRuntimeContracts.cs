@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -46,6 +47,65 @@ public interface IWorkflowExternalResponseBackend
         WorkflowExternalRequestRecord request,
         string responseJson,
         CancellationToken cancellationToken = default);
+
+    Task<WorkflowBackendStartResult> ResumeAsync(
+        WorkflowBackendResumeRequest request,
+        CancellationToken cancellationToken = default)
+        => ResumeAsync(
+            request.Run,
+            request.ExternalRequest,
+            request.Response.GetRawText(),
+            cancellationToken);
+}
+
+public sealed record WorkflowBackendResumeRequest
+{
+    public WorkflowBackendResumeRequest(
+        WorkflowRunSnapshot run,
+        WorkflowExternalRequestRecord externalRequest,
+        JsonElement response)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(externalRequest);
+        Run = run;
+        ExternalRequest = externalRequest;
+        Response = response;
+        InvocationGeneration = externalRequest.Version.Value;
+    }
+
+    public WorkflowBackendResumeRequest(
+        WorkflowRunSnapshot run,
+        WorkflowExternalRequestRecord externalRequest,
+        JsonElement response,
+        WorkflowExternalResponseOperationId causationOperationId,
+        long invocationGeneration,
+        WorkflowExternalResponseAuthorization authorization)
+        : this(run, externalRequest, response)
+    {
+        if (invocationGeneration < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(invocationGeneration),
+                "Workflow backend invocation generation cannot be negative.");
+        }
+
+        ArgumentNullException.ThrowIfNull(authorization);
+        CausationOperationId = causationOperationId;
+        InvocationGeneration = invocationGeneration;
+        Authorization = authorization;
+    }
+
+    public WorkflowRunSnapshot Run { get; init; }
+
+    public WorkflowExternalRequestRecord ExternalRequest { get; init; }
+
+    public JsonElement Response { get; init; }
+
+    public WorkflowExternalResponseOperationId? CausationOperationId { get; init; }
+
+    public long InvocationGeneration { get; init; }
+
+    public WorkflowExternalResponseAuthorization? Authorization { get; init; }
 }
 
 public enum WorkflowRunCancellationOutcome
@@ -71,6 +131,7 @@ public enum WorkflowExternalResponseOutcome
     Accepted,
     UnsupportedResume,
     AlreadyResponded,
+    ResponseRejected,
     RequestNotFound,
     RunNotFound,
     RunNotWaiting,

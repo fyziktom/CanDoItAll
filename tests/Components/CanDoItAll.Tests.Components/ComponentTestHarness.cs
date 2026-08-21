@@ -1,6 +1,7 @@
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Tests.Support;
@@ -47,12 +48,14 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.AddAuthorization();
         var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
         TestApplicationBootstrap.ConfigureDefaultServices(
             context.Services,
             configuration,
             testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
+        context.Services.AddAgentFrameworkUi();
         context.Services.AddScoped<TuningCoordinator>();
         context.Services.AddHttpClient<DevelopmentManagerClient>();
         configureServices?.Invoke(context.Services);
@@ -88,4 +91,3 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
         }
     }
 }
-

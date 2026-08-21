@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
@@ -61,33 +63,64 @@ class Finding:
 
 
 def iter_files(root: Path, extensions: set[str]) -> Iterable[Path]:
-    for path in root.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in extensions:
-            continue
-        if any(part in SKIP_DIRECTORIES for part in path.relative_to(root).parts):
-            continue
-        yield path
+    git_files = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ],
+        check=False,
+        capture_output=True,
+    )
+    if git_files.returncode == 0:
+        for raw_path in git_files.stdout.split(b"\0"):
+            if not raw_path:
+                continue
+            relative_path = Path(raw_path.decode("utf-8", errors="surrogateescape"))
+            if any(part in SKIP_DIRECTORIES for part in relative_path.parts):
+                continue
+            path = root / relative_path
+            if path.is_file() and path.suffix.lower() in extensions:
+                yield path
+        return
+
+    for directory, child_directories, file_names in os.walk(root):
+        child_directories[:] = [
+            name for name in child_directories if name not in SKIP_DIRECTORIES
+        ]
+        directory_path = Path(directory)
+        for file_name in file_names:
+            path = directory_path / file_name
+            if path.suffix.lower() in extensions:
+                yield path
 
 
-def scan_pattern(
-    root: Path, pattern: re.Pattern[str], category: str
-) -> list[Finding]:
-    findings: list[Finding] = []
+def scan_patterns(
+    root: Path,
+    patterns: dict[str, tuple[re.Pattern[str], str]],
+) -> dict[str, list[Finding]]:
+    findings = {key: [] for key in patterns}
     for path in iter_files(root, ACTIVE_EXTENSIONS):
         try:
             lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
         for number, line in enumerate(lines, start=1):
-            if pattern.search(line):
-                findings.append(
-                    Finding(
-                        category=category,
-                        path=str(path.relative_to(root)),
-                        line=number,
-                        text=line.strip()[:300],
+            for key, (pattern, category) in patterns.items():
+                if pattern.search(line):
+                    findings[key].append(
+                        Finding(
+                            category=category,
+                            path=str(path.relative_to(root)),
+                            line=number,
+                            text=line.strip()[:300],
+                        )
                     )
-                )
     return findings
 
 
@@ -156,22 +189,39 @@ def main() -> int:
             f"expected {expected!r} for mode {args.mode}."
         )
 
+    source_patterns = {
+        **{
+            f"old:{symbol}": (
+                re.compile(rf"\b{re.escape(symbol)}\b"),
+                "old_isolation_symbol",
+            )
+            for symbol in OLD_ISOLATION_SYMBOLS
+        },
+        **{
+            f"unsafe:{category}": (pattern, category)
+            for category, pattern in UNSAFE_PATTERNS.items()
+        },
+        **{
+            f"info:{category}": (pattern, category)
+            for category, pattern in INFO_PATTERNS.items()
+        },
+    }
+    source_findings = scan_patterns(repo_root, source_patterns)
+
     for symbol in OLD_ISOLATION_SYMBOLS:
-        symbol_findings = scan_pattern(
-            repo_root, re.compile(rf"\b{re.escape(symbol)}\b"), "old_isolation_symbol"
-        )
+        symbol_findings = source_findings[f"old:{symbol}"]
         findings.extend(symbol_findings)
         if args.mode == "upgraded" and symbol_findings:
             errors.append(f"Old isolation symbol remains: {symbol}")
 
-    for category, pattern in UNSAFE_PATTERNS.items():
-        matches = scan_pattern(repo_root, pattern, category)
+    for category in UNSAFE_PATTERNS:
+        matches = source_findings[f"unsafe:{category}"]
         findings.extend(matches)
         if matches:
             errors.append(f"Unsafe opt-in found: {category}")
 
-    for category, pattern in INFO_PATTERNS.items():
-        matches = scan_pattern(repo_root, pattern, category)
+    for category in INFO_PATTERNS:
+        matches = source_findings[f"info:{category}"]
         findings.extend(matches)
         if matches:
             warnings.append(

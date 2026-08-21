@@ -43,6 +43,8 @@ When authorization is enabled, `/api/access/tokens` requires the privileged
 `api.tokens.issue` scope. Memory-provider routes accept the existing umbrella `api`
 scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`, and
 `api.memory-providers.query` scopes for their respective operations.
+Workflow HITL response submission and operation-status reads require the exact
+`api.workflows.respond` scope; the broad `api` scope does not authorize this boundary.
 
 ## Current Route Families
 
@@ -67,6 +69,43 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | `/api/runtime` | Host capability and bounded operation-readiness snapshots. | [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs) |
 
 Use OpenAPI for exact methods and schemas. Do not copy a complete generated endpoint inventory into maintained documentation.
+
+## Workflow Human-In-The-Loop Responses
+
+Submit a response to the existing command route with one `Idempotency-Key` header and a
+typed JSON body:
+
+```json
+{
+  "expectedRequestVersion": 3,
+  "response": {
+    "approved": true,
+    "message": "Reviewed and approved."
+  }
+}
+```
+
+The route is `POST /api/workflows/external-requests/{requestId}/response`. The `response`
+member is a JSON value, not a JSON string containing encoded JSON. The server rejects
+unknown body members, ambiguous duplicate properties, invalid or over-limit JSON, and
+missing, repeated, empty, or over-limit idempotency keys before workflow mutation.
+
+Read a previously accepted attempt at
+`GET /api/workflows/external-response-operations/{operationId}`. Both routes apply the
+same authenticated actor, current database profile, persisted workspace scope, and
+response-capability checks. They return allowlisted status projections; raw request and
+response JSON, event payloads, checkpoint references and hashes, artifact storage paths,
+protected keys, leases, and internal authorization material are never part of the HTTP
+contract. A disabled global API-authentication switch does not manufacture an anonymous
+workflow-response actor: anonymous submission still receives `401` from the application
+boundary.
+
+Completed, waiting-again, and denied outcomes return `200`; active resumption returns
+`202`. Invalid input returns `400`, authentication and authorization failures return
+`401`/`403`, missing resources return `404`, stale or conflicting attempts return `409`,
+cancelled or superseded attempts return `410`, incompatible durable state returns `422`,
+retryable infrastructure failures return `503`, and unclassified terminal failures use a
+redacted `500`. The workflow response boundary never uses `502`.
 
 ## Process Contract
 

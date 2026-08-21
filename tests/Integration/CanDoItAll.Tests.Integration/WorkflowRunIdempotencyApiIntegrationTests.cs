@@ -4,6 +4,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Web.Api;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,8 +58,14 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
         Assert.True(replayed.Replayed);
         var expectedKeyHash = WorkflowLaunchIdempotencyRequestFactory.CreateKeyHash(
             new WorkflowLaunchIdempotencyKey(key));
-        Assert.Equal(expectedKeyHash, created.IdempotencyKeyHash);
-        Assert.Equal(expectedKeyHash, replayed.IdempotencyKeyHash);
+        Assert.DoesNotContain(
+            expectedKeyHash,
+            await createResponse.Content.ReadAsStringAsync(),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            expectedKeyHash,
+            await replayResponse.Content.ReadAsStringAsync(),
+            StringComparison.Ordinal);
 
         var reverseRouteKey = $"workflow-start-reverse-{Guid.NewGuid():N}";
         using var genericCreateResponse = await StartAsync(
@@ -154,7 +161,7 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
                 $"/api/workflows/runs?workflowId={workflows.Other.Id.Value:D}");
             var runListBody = await runListResponse.Content.ReadAsStringAsync();
             Assert.Equal(HttpStatusCode.OK, runListResponse.StatusCode);
-            var persistedRuns = JsonSerializer.Deserialize<IReadOnlyList<WorkflowRunSnapshot>>(
+            var persistedRuns = JsonSerializer.Deserialize<IReadOnlyList<WorkflowRunApiResponse>>(
                 runListBody,
                 JsonOptions)!;
             var persistedRun = Assert.Single(persistedRuns);
@@ -175,7 +182,14 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
             lookupBody,
             JsonOptions)!;
         var expectedFingerprint = WorkflowLaunchIdempotencyRequestFactory.CreateFingerprint(
-            CreateFingerprintIntent(workflows.PrimaryV1, key),
+            CreateFingerprintIntent(
+                workflows.PrimaryV1,
+                key,
+                host.App.Services
+                    .GetRequiredService<IDatabaseProfileRuntimeAccessor>()
+                    .ResolveCurrentProfile()
+                    .Profile
+                    .Id),
             firstInput);
 
         Assert.Equal(HttpStatusCode.OK, lookupResponse.StatusCode);
@@ -188,7 +202,7 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
         Assert.Equal(workflows.PrimaryV1.VersionId, evidence.RequestedVersionId);
         Assert.Equal(workflows.PrimaryV1.VersionId, evidence.ResolvedVersionId);
         Assert.Equal(WorkflowRuntimeBackendKind.InProcess, evidence.ResolvedBackend);
-        Assert.Equal(created.Run.RunId, evidence.OriginalRunId);
+        Assert.Equal(created.Run.RunId, evidence.OriginalRunId.Value);
         Assert.Equal(WorkflowLaunchIdempotencyRecordState.Completed, evidence.ClaimState);
         Assert.Equal(WorkflowRunState.Completed, evidence.RunState);
         Assert.True(evidence.IsTerminal);
@@ -365,13 +379,18 @@ public sealed class WorkflowRunIdempotencyApiIntegrationTests
 
     private static WorkflowLaunchIntent CreateFingerprintIntent(
         WorkflowDefinition definition,
-        string key)
+        string key,
+        Guid profileId)
         => new(
             new WorkflowDefinitionSelection.ExactSavedVersion(definition.Id, definition.VersionId),
             WorkflowLaunchMode.Production,
             new WorkflowLaunchOrigin.Api(
                 new WorkflowLaunchActor(WorkflowLaunchActorKind.Service, "candoitall-api"),
-                new WorkflowLaunchCorrelationId("fingerprint-verification")),
+                new WorkflowLaunchCorrelationId("fingerprint-verification"))
+            {
+                AuthorizationScope = WorkspaceScopeDescriptor.Organization(profileId.ToString("N")),
+                AuthorizationPolicyFingerprint = WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+            },
             "{}",
             WorkflowLaunchCompletionPolicy.WaitForStopped,
             new WorkflowLaunchIdempotency.CallerSupplied(new WorkflowLaunchIdempotencyKey(key)))

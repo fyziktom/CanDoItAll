@@ -213,3 +213,15 @@ Required response:
 - do not mark response accepted;
 - do not restart;
 - document an operator decision path.
+
+## Persistence and guarantee boundary
+
+In-memory state-machine stores are proof-only, process-local, non-durable, and
+non-snapshot-isolated. PostgreSQL conditional writes, constraints, and transactions are
+authoritative for operation CAS, lease ownership, checkpoint ordinal allocation, atomic
+resume-boundary commits, and participating executor-invocation state.
+
+The precise guarantee is exactly-once response acceptance and deduplicated participating
+governed effects. It does not extend to an arbitrary external side effect unless that
+system participates through an idempotency key, transactional outbox, or equivalent
+protocol.

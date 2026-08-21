@@ -51,7 +51,14 @@ public sealed class WorkflowLaunchServiceTests
         Assert.Same(draft, request.Definition);
         Assert.Equal("{\"prompt\":\"hello\"}", request.InputJson);
         Assert.Equal(WorkflowRuntimeBackendKind.InProcess, request.Backend.Kind);
-        Assert.Equal(origin, request.Origin);
+        Assert.Equal(
+            origin with
+            {
+                AuthorizationScope = WorkspaceScopeDescriptor.Project("workflow-launch-test"),
+                AuthorizationPolicyFingerprint =
+                    WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+            },
+            request.Origin);
         Assert.Equal(FixedUtcNow, request.ResolvedAtUtc);
         Assert.Equal(request, result.ResolvedRequest);
         Assert.Single(fixture.Catalog.ValidationRequests);
@@ -226,7 +233,14 @@ public sealed class WorkflowLaunchServiceTests
                 Origin = origin
             });
 
-            Assert.Equal(origin, result.ResolvedRequest.Origin);
+            Assert.Equal(
+                origin with
+                {
+                    AuthorizationScope = WorkspaceScopeDescriptor.Project("workflow-launch-test"),
+                    AuthorizationPolicyFingerprint =
+                        WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint
+                },
+                result.ResolvedRequest.Origin);
             Assert.Equal(origin.Kind, result.ResolvedRequest.Origin.Kind);
         }
 
@@ -448,6 +462,11 @@ public sealed class WorkflowLaunchServiceTests
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IWorkflowLaunchService));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IWorkflowRunLauncher));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IWorkflowLaunchIdempotencyStore));
+        Assert.Contains(
+            services,
+            descriptor =>
+                descriptor.ServiceType == typeof(IWorkflowLaunchAuthorizationScopeResolver) &&
+                descriptor.ImplementationType == typeof(DefaultWorkflowLaunchAuthorizationScopeResolver));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(TimeProvider));
     }
 
@@ -456,7 +475,7 @@ public sealed class WorkflowLaunchServiceTests
     {
         var definition = CreateDefinition(status: WorkflowLifecycleStatus.Active);
         var backend = new CapturingWorkflowExecutionBackend();
-        var runtime = new WorkflowRuntimeManager([backend], new InMemoryWorkflowRunStore());
+        var runtime = WorkflowRuntimeManager.CreateInMemory([backend], new InMemoryWorkflowRunStore());
         var launcher = new WorkflowRuntimeManagerRunLauncher(runtime);
         var idempotency = new WorkflowLaunchIdempotency.CallerSupplied(
             new WorkflowLaunchIdempotencyKey("launcher-preserves-idempotency"));
@@ -639,6 +658,7 @@ public sealed class WorkflowLaunchServiceTests
             runLauncher,
             new InMemoryWorkflowLaunchIdempotencyStore(),
             runStore,
+            new WorkflowLaunchTestAuthorizationScopeResolver(),
             new FixedTimeProvider(FixedUtcNow));
         return new TestFixture(service, catalog, runLauncher, runStore);
     }
@@ -654,6 +674,7 @@ public sealed class WorkflowLaunchServiceTests
             runLauncher,
             new InMemoryWorkflowLaunchIdempotencyStore(),
             runStore,
+            new WorkflowLaunchTestAuthorizationScopeResolver(),
             new FixedTimeProvider(FixedUtcNow));
         return (service, runLauncher);
     }

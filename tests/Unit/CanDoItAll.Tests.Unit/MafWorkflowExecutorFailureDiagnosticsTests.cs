@@ -17,7 +17,7 @@ public sealed class MafWorkflowExecutorFailureDiagnosticsTests
     public async Task Executor_failure_surfaces_root_cause_in_summary_events_and_diagnostic_payload()
     {
         var executor = new ThrowingWorkflowExecutor();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(

@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared
+Proven
 
 ## Outcome
 
@@ -123,17 +123,31 @@ No solution-wide test gate. Affected project builds are sufficient at this stage
 
 ## Closure record
 
-Not executed.
+Passed on 2026-08-20.
 
-Record:
-
-- version diff:
-- resolved package graph:
-- compile breaks:
-- breaking rename action:
-- package warnings:
-- builds:
-- focused tests/counts:
-- documentation:
-- files changed:
-- blockers/deviations:
+- Version diff: stable `1.17.0` to `1.18.0`; preview
+  `1.17.0-preview.260804.1` to `1.18.0-preview.260818.1`.
+- Resolved package graph: all direct consumers and both test projects resolve
+  `Microsoft.Agents.AI`, `.Abstractions`, `.OpenAI`, and `.Workflows` at `1.18.0`;
+  A2A and Hosting packages resolve at `1.18.0-preview.260818.1`.
+- Compile breaks: none in product source. The first unit build correctly failed because
+  `CanDoItAll.slnx` excludes tests and their assets still referenced 1.17; restoring the
+  unit project replaced that stale graph.
+- Breaking rename action: none; no old session-isolation symbol exists in active source.
+- Package warnings: none after the test-project restore. No downgrade or mixed-version
+  warning remains.
+- Builds: Maf, Hosting, and Workflows.MafAdapter passed in Release; the unit project
+  passed in Debug with zero warnings and zero errors.
+- Focused tests: `MafRuntimeArchitectureServicesTests` 52,
+  `MafWorkflowAdapterIsolationTests` 4, `MafWorkflowEventNormalizerTests` 3,
+  `A2ARemoteAgentToolFactoryTests` 3, `AgentA2AHostCardFactoryTests` 2,
+  `AgentFrameworkHostingServiceCollectionTests` 5, and `AgentA2AMetadataTests` 4;
+  73/73 passed.
+- Documentation: no maintained version statement still names 1.17; the central props file
+  remains the package-version source of truth.
+- Files changed: `src/MAF/MicrosoftAgentFramework.Packages.props` and execution bundle
+  state. The bundle scanner was repaired to enumerate active Git files once per scan
+  category instead of repeatedly traversing ignored build trees.
+- Blockers/deviations: the existing Web process locks Release output, so the broad unit
+  project used Debug. Product consumer builds used Release. The prescribed upgraded
+  scanner passes with no errors, warnings, or findings.

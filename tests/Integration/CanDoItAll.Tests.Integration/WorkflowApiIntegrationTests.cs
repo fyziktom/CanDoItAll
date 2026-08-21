@@ -234,8 +234,9 @@ public sealed class WorkflowApiIntegrationTests
         var manualCheckpoint = Assert.Single(manual.Checkpoints);
         Assert.Equal(WorkflowCheckpointKind.WaitingForInput, manualCheckpoint.Kind);
         Assert.Equal(request.Id, manualCheckpoint.ExternalRequestId);
-        Assert.Equal(WorkflowCheckpointTrustBoundary.MetadataOnly, manualCheckpoint.TrustBoundary);
-        Assert.Contains("durable", manualCheckpoint.ResumeUnavailableReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(WorkflowCheckpointTrustBoundary.TrustedRuntimeState, manualCheckpoint.TrustBoundary);
+        Assert.Equal(WorkflowResumeAvailability.Available, manualCheckpoint.ResumeAvailability);
+        Assert.Empty(manualCheckpoint.ResumeUnavailableReason);
     }
 
     [Fact]

@@ -4,6 +4,19 @@
 
 Persist enough data to rehydrate a MAF workflow safely without making MAF objects part of CanDoItAll's domain or public API.
 
+## Authority boundary
+
+The Runtime in-memory implementations exist for isolated proof and test-only compatibility
+construction. They are process-local, non-durable, and non-snapshot-isolated. They do not
+prove host-restart, multi-host race, or transactional recovery behavior and must never be
+described as production persistence.
+
+The focused EF/PostgreSQL implementations in `Modules.AgentFramework` are authoritative
+for production checkpoint ordinal allocation, payload/session persistence, response-operation
+create/replay/conflict and lease CAS, atomic resume-boundary commits, and participating
+executor-invocation deduplication. PostgreSQL unique constraints, conditional writes, and
+transactions—not an in-process lock or staged memory copy—establish these guarantees.
+
 ## Checkpoint payload record
 
 Suggested logical entity: `WorkflowBackendCheckpointPayloadRecord`
@@ -137,7 +150,7 @@ At minimum, use atomic database operations for:
 5. final response-operation state + request response state;
 6. invocation deduplication claim/result.
 
-A single transaction across MAF execution and external systems is neither possible nor required. Use durable state transitions and idempotent boundaries.
+A single transaction across MAF execution and external systems is neither possible nor required. Use durable state transitions and idempotent boundaries. The precise guarantee is exactly-once response acceptance and deduplicated participating governed effects; arbitrary external effects require their own idempotency key, transactional outbox, or equivalent participation protocol.
 
 ## Retention
 
@@ -160,4 +173,6 @@ The migration must preserve existing run/request/checkpoint rows.
 
 Legacy checkpoint metadata without a backend payload remains readable but non-resumable. Do not synthesize fake payloads.
 
-Use repository migration naming and placement conventions discovered by SB00.
+Migration `20260821021747_AddWorkflowHitlRecovery` follows the repository naming and
+placement conventions, preserves legacy rows, and passes
+`dotnet ef migrations has-pending-model-changes` with no pending model change.

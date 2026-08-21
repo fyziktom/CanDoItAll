@@ -164,15 +164,22 @@ Named checkpoint: **FG-01 / post-SB05 frozen implementation**
 
 Run once in SB06 after no planned source/schema changes remain:
 
-```bash
-dotnet restore CanDoItAll.slnx
-dotnet build CanDoItAll.slnx --no-restore
+```powershell
+dotnet restore ./CanDoItAll.slnx
+dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
+dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx
+dotnet build ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" /m:1
 ```
 
-Run the solution-wide test gate only when repository convention and available time/resources support it:
+`CanDoItAll.slnx` deliberately contains no test projects. Never run
+`dotnet test ./CanDoItAll.slnx` as FG-01 or describe it as a test gate.
 
-```bash
-dotnet test CanDoItAll.slnx --no-build
-```
+This execution keeps the sibling source graph fixed at:
 
-If solution-wide tests are too broad or contain known unrelated failures, run every affected test project once and record the baseline exception with evidence. Do not repeatedly rerun known expensive UI suites.
+- `CanDoItAll.Components`: `8372c1d55f21b349f8e859470b02eeb4421e96ca`
+- `CanDoItAll.FileTools`: `c95dd07208a6d48724443317cdc6cfe67a13020a`
+
+Keep those sibling roots and commits unchanged across all five commands. FG-01 is a
+single frozen gate; an affected source/schema/package/API change invalidates it rather
+than permitting selective substitution or repeated broad reruns.

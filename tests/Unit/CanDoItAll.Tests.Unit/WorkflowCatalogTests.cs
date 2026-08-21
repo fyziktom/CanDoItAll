@@ -507,7 +507,7 @@ public sealed class WorkflowCatalogTests
     public async Task RuntimeManagerRejectsInProcessWhenDurablePolicyDisallowsPreview()
     {
         var runStore = new InMemoryWorkflowRunStore();
-        var runtimeManager = new WorkflowRuntimeManager(
+        var runtimeManager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
@@ -558,7 +558,7 @@ public sealed class WorkflowCatalogTests
         InMemoryWorkflowCatalogService catalog,
         InMemoryWorkflowRunStore runStore)
     {
-        var runtimeManager = new WorkflowRuntimeManager(
+        var runtimeManager = WorkflowRuntimeManager.CreateInMemory(
             [
                 new MafInProcessWorkflowExecutionBackend(
                     new MafWorkflowCompiler(
@@ -574,6 +574,7 @@ public sealed class WorkflowCatalogTests
             new WorkflowRuntimeManagerRunLauncher(runtimeManager),
             new InMemoryWorkflowLaunchIdempotencyStore(),
             runStore,
+            new WorkflowLaunchTestAuthorizationScopeResolver(),
             TimeProvider.System);
         return new WorkflowTestRunner(catalog, launchService, runtimeManager, runStore);
     }

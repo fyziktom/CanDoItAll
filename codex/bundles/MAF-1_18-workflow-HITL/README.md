@@ -1,11 +1,16 @@
 # CanDoItAll MAF 1.18 Upgrade and Workflow HITL Bundle
 
-**Bundle state:** Prepared for execution  
+**Bundle state:** Proven — Wave A, Wave B, SB00–SB06, and CP-WB4 passed
+
 **Target repository:** `fyziktom/CanDoItAll`  
 **Target branch:** `development`  
 **Preparation baseline:** `5cdf1666dbafdcea975909101c1854773f5f3556`  
 **Prepared for:** Codex GPT-5.6, reasoning effort `xhigh`  
 **Prepared on:** 2026-08-20
+
+**Final execution:** `maf-update-and-hil` at
+`af425ac371b251447f9858b15476092531c686da`; frozen FG-01 window
+`2026-08-21T12:52:49.8229732Z`–`2026-08-21T13:59:43.2785414Z`
 
 ## Outcome
 
@@ -32,7 +37,7 @@ Wave A must remain reviewable and revertible even if Wave B uncovers larger runt
 - Do **not** enable `StoreInvocableFunctionCallsForFutureTurns` in this initiative.
 - Do not confuse provider support for multiple tool calls with permission to execute calls concurrently.
 - Do not implement workflow pause by throwing an exception and later restarting the workflow.
-- Do not claim exactly-once execution for arbitrary external side effects. Provide exactly-once response acceptance plus a stable deduplication boundary for replayable side-effecting workflow executors.
+- Do not claim exactly-once execution for arbitrary external side effects. The precise guarantee is exactly-once response acceptance and deduplicated participating governed effects.
 - Do not mark the in-process backend as durable merely because its checkpoints are persisted.
 - Do not expose an API that lets a model or workflow approve its own governed operation.
 - Do not accept a response against a different workflow version, topology, request, tenant, project, or actor boundary.
@@ -106,3 +111,24 @@ The bundle is complete only when:
 - focused proof passes for every subbundle;
 - the named broad gate runs once at the frozen checkpoint or is honestly blocked with evidence;
 - all requirement rows in `traceability/TRACEABILITY.md` are closed.
+
+## Final validation summary
+
+All completion-bar items are satisfied. The final valid frozen FG-01 checkpoint used the
+five repository-authoritative commands from `docs/testing.md`: both restores passed, the
+product and Stable Release builds passed with zero warnings and zero errors, and the exact
+filtered Stable test gate passed **8,471/8,471** with zero failed or skipped tests. The
+assembly totals were Components 1,078, Integration 923, AgentFramework.Memory 22, Memory
+196, and Unit 6,252.
+
+The final dependency roots remained pinned throughout the gate:
+
+- `CanDoItAll.Components`: `8372c1d55f21b349f8e859470b02eeb4421e96ca`;
+- `CanDoItAll.FileTools`: `c95dd07208a6d48724443317cdc6cfe67a13020a`.
+
+Pre-freeze broad diagnostics are retained honestly in the execution report. They exposed
+test-composition readiness, implicit plugin-export, safe API projection, in-memory runtime
+redaction/atomicity, and process-host readiness defects. Those findings reopened the
+affected ownership claims, received focused red/green proof, and were revalidated before
+the single accepted FG-01 checkpoint. Append-only supplements preserve the SB03, SB04,
+and SB05 reproof without rewriting their frozen historical ledgers or TRXs.

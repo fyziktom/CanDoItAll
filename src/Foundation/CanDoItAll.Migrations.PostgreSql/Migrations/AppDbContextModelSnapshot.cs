@@ -1276,6 +1276,113 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("AgentFramework_WorkflowArtifacts", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("BackendRequestId")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("BackendRequestPortId")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<long>("CommitOrdinal")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ExternalRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ParentCheckpointId")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ProtectedPayload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalRequestId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WfBackendCheckpoints_ExternalRequest")
+                        .HasFilter("\"ExternalRequestId\" IS NOT NULL");
+
+                    b.HasIndex("ParentCheckpointId")
+                        .HasDatabaseName("IX_AF_WfBackendCheckpoints_Parent");
+
+                    b.HasIndex("SessionId", "CommitOrdinal")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WfBackendCheckpoints_SessionOrdinal");
+
+                    b.ToTable("AgentFramework_WorkflowBackendCheckpointPayloads", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Backend")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CompilerContractVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("FormatVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("NextCommitOrdinal")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TopologyFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkflowVersionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WfCheckpointSessions_Run");
+
+                    b.HasIndex("WorkflowId", "WorkflowVersionId")
+                        .HasDatabaseName("IX_AF_WfCheckpointSessions_WorkflowVersion");
+
+                    b.ToTable("AgentFramework_WorkflowBackendCheckpointSessions", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowCheckpointRecordEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1532,6 +1639,177 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("AgentFramework_WorkflowEvents", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExecutorInvocationRecordEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CausationOperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CausationRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CausationRequestVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ConcurrencyVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExecutorContractVersion")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ExecutorId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("FailureCode")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("InputHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("InvocationKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("LeaseAcquiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LeaseEpoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LeaseOwnerId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<long>("LogicalGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ProtectedStoredResult")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SafeMessage")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("ScopeKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StoredResultHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkflowVersionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowExecutorInvocations_IdempotencyKey");
+
+                    b.HasIndex("InvocationKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowExecutorInvocations_Key");
+
+                    b.HasIndex("ScopeKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WorkflowExecutorInvocations_Scope");
+
+                    b.HasIndex("State", "LeaseExpiresAtUtc")
+                        .HasDatabaseName("IX_AF_WorkflowExecutorInvocations_Lease");
+
+                    b.HasIndex("RunId", "CausationRequestId", "CausationOperationId")
+                        .HasDatabaseName("IX_AF_WorkflowExecutorInvocations_Causation");
+
+                    b.ToTable("AgentFramework_WorkflowExecutorInvocations", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AuthorizationPolicyJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContinuationJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestPayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("RequestVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ResponseContractJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RequestId");
+
+                    b.ToTable("AgentFramework_WorkflowExternalRequestBoundaries", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1573,6 +1851,123 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("RunId", "RespondedAtUtc");
 
                     b.ToTable("AgentFramework_WorkflowExternalRequests", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ActorKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ActorScopeFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ActorSubjectId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<long>("ExpectedRequestVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FinalResultJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdempotencyKeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("LastReplayedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LeaseAcquiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LeaseEpoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LeaseOwnerId")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<long>("OperationVersion")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OutcomeCode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProtectedResponsePayload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReplayCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResponsePayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SafeMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WfResponseOperations_Request");
+
+                    b.HasIndex("RunId")
+                        .HasDatabaseName("IX_AF_WfResponseOperations_Run");
+
+                    b.HasIndex("RequestId", "IdempotencyKeyHash", "ActorScopeFingerprint")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AF_WfResponseOperations_Fingerprint");
+
+                    b.HasIndex("State", "LeaseExpiresAtUtc", "AcceptedAtUtc")
+                        .HasDatabaseName("IX_AF_WfResponseOperations_Recovery");
+
+                    b.ToTable("AgentFramework_WorkflowExternalResponseOperations", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowLaunchIdempotencyRecordEntity", b =>
@@ -6970,6 +7365,32 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCheckpointId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_WfBackendCheckpointPayloads_Parent");
+
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_WfBackendCheckpointPayloads_Sessions");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowRunRecordEntity", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", "RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_AF_WfCheckpointSessions_Runs");
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b =>
                 {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
@@ -6990,6 +7411,33 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .HasForeignKey("VersionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", "RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_AF_WfRequestBoundaries_Requests");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", "RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_AF_WfResponseOperations_Requests");
+
+                    b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowRunRecordEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_AF_WfResponseOperations_Runs");
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
