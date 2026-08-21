@@ -213,6 +213,45 @@ public sealed class WorkflowExecutorDeduplicationTests
     }
 
     [Fact]
+    public async Task ParticipatingExecutorOutsideExternalResponseBypassesStoreAndReceivesNoSyntheticKey()
+    {
+        var executor = new RecordingParticipatingExecutor();
+        var store = new InMemoryDeduplicationStore();
+        var fixture = CreateFixture(executor, store) with
+        {
+            Context = WorkflowExecutorInvocationContext.Empty
+        };
+
+        await fixture.ExecuteAsync("{\"value\":1}");
+        await fixture.ExecuteAsync("{\"value\":1}");
+
+        Assert.Equal(2, executor.InvocationCount);
+        Assert.Equal(0, store.ClaimCount);
+        Assert.All(executor.IdempotencyKeys, Assert.Null);
+    }
+
+    [Fact]
+    public async Task ParticipatingExecutorWithPartialExternalResponseIdentityFailsClosed()
+    {
+        var executor = new RecordingParticipatingExecutor();
+        var store = new InMemoryDeduplicationStore();
+        var fixture = CreateFixture(executor, store) with
+        {
+            Context = new WorkflowExecutorInvocationContext
+            {
+                CausationRequestId = WorkflowExternalRequestId.New()
+            }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => fixture.ExecuteAsync("{\"value\":1}").AsTask());
+
+        Assert.Contains("requires run, request, request-version, and response-operation identity", exception.Message);
+        Assert.Equal(0, executor.InvocationCount);
+        Assert.Equal(0, store.ClaimCount);
+    }
+
+    [Fact]
     public void DeduplicationRegistrationIsIdempotentAndDoesNotResolveRecursively()
     {
         var services = new ServiceCollection();

@@ -217,6 +217,11 @@ public sealed class DeduplicatingWorkflowExecutorInvoker(
             return false;
         }
 
+        if (invocationContext == WorkflowExecutorInvocationContext.Empty)
+        {
+            return false;
+        }
+
         var runId = WorkflowExecutorExecutionAuditScope.CurrentRunId;
         if (runId is null ||
             invocationContext.CausationRequestId is not { } requestId ||
