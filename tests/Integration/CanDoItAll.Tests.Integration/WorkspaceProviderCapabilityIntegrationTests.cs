@@ -9,7 +9,7 @@ namespace CanDoItAll.Tests.Integration.AgentFramework;
 public sealed class WorkspaceProviderCapabilityIntegrationTests
 {
     [Fact]
-    public async Task SaveProviderAsync_persists_ollama_structured_output_as_false_even_when_editor_posts_true()
+    public async Task SaveProviderAsync_persists_ollama_structured_output_as_true_from_capability_defaults()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -35,7 +35,7 @@ public sealed class WorkspaceProviderCapabilityIntegrationTests
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var provider = await dbContext.Set<ProviderProfile>().SingleAsync(item => item.Id == saveResult.Value);
 
-        Assert.False(provider.SupportsStructuredOutput);
+        Assert.True(provider.SupportsStructuredOutput);
     }
 
     [Fact]

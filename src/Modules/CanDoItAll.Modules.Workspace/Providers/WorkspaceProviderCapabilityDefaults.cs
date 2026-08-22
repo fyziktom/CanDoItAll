@@ -44,7 +44,7 @@ internal sealed record WorkspaceProviderCapabilityDefaults(
             OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => new(
                 SupportsStreaming: true,
                 SupportsToolCalling: true,
-                SupportsStructuredOutput: false,
+                SupportsStructuredOutput: true,
                 SupportsVision: false),
             _ => Disabled
         };

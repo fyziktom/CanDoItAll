@@ -258,6 +258,7 @@ public sealed class ProviderProfileService : IProviderProfileService
     {
         var normalizedProvider = NormalizeImportedProfile(provider);
         var supportsOpenAiFamily = normalizedProvider.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi;
+        var supportsOllamaStructuredOutput = normalizedProvider.Kind == ProviderKind.Ollama;
         var supportsResponsesNativeTools = normalizedProvider.SupportsTools
             && normalizedProvider.Transport == ProviderTransportKind.Responses
             && supportsOpenAiFamily;
@@ -265,7 +266,8 @@ public sealed class ProviderProfileService : IProviderProfileService
             && normalizedProvider.Transport == ProviderTransportKind.Responses
             && !normalizedProvider.PreferFrameworkManagedChatHistory;
         var supportsFunctionTools = normalizedProvider.SupportsTools;
-        var supportsResponseFormatJsonSchema = supportsOpenAiFamily &&
+        var supportsResponseFormatJsonSchema = supportsOllamaStructuredOutput ||
+                                               supportsOpenAiFamily &&
                                                normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
         var supportsStructuredOutput = supportsResponseFormatJsonSchema;
         var supportsToolApprovalRequests = supportsOpenAiFamily &&
