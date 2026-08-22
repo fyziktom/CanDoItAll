@@ -72,6 +72,15 @@ Use OpenAPI for exact methods and schemas. Do not copy a complete generated endp
 
 ## Workflow Human-In-The-Loop Responses
 
+Read the current request from `GET /api/workflows/runs/{runId}/pending-requests` or the
+run-detail projection before submitting a response. Each pending item includes its identity,
+kind, node, version, state, a bounded/redacted `prompt`, and a `responseContract`. The
+contract contains schema identity/version, maximum response bytes, and a parsed `schema`
+when its validated schema is within the public projection bound; `schemaAvailable` is false
+when the schema is deliberately omitted. Clients must not derive presentation from artifact
+file-name conventions. The allowlist never returns the request's prior-node `context`, raw
+`RequestJson`, authorization policy, executor arguments, or checkpoint material.
+
 Submit a response to the existing command route with one `Idempotency-Key` header and a
 typed JSON body:
 

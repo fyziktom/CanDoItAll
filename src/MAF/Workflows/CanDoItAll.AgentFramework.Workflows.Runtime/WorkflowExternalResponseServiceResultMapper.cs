@@ -87,13 +87,20 @@ internal sealed class WorkflowExternalResponseServiceResultMapper
                 WorkflowExternalResponseServiceOutcome.OperationNotFound,
             WorkflowExternalResponseContinuationOutcome.ClaimConflict =>
                 WorkflowExternalResponseServiceOutcome.ActiveOperationConflict,
+            WorkflowExternalResponseContinuationOutcome.Cancelled =>
+                WorkflowExternalResponseServiceOutcome.Cancelled,
             WorkflowExternalResponseContinuationOutcome.FailedRetryable =>
                 WorkflowExternalResponseServiceOutcome.RetryableFailure,
             WorkflowExternalResponseContinuationOutcome.FailedTerminal =>
                 WorkflowExternalResponseServiceOutcome.TerminalFailure,
             _ => WorkflowExternalResponseServiceOutcome.TerminalFailure
         };
-        return Failure(outcome, result.SafeMessage, result.Run ?? fallbackRun, request);
+        return Failure(
+            outcome,
+            result.SafeMessage,
+            result.Run ?? fallbackRun,
+            request,
+            result.Operation);
     }
 
     public WorkflowExternalResponseServiceResult MapOperation(

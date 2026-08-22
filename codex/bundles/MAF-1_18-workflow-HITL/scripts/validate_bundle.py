@@ -17,11 +17,14 @@ REQUIRED_FILES = [
     "manifest.json",
     "initiative/INITIATIVE-PROFILE.md",
     "inputs/USER-REQUEST.md",
+    "inputs/HITL-API-SAMPLE-REQUEST.md",
     "inputs/REQUIREMENTS.md",
     "evidence/CURRENT-STATE.md",
+    "evidence/HITL-API-SAMPLE-CURRENT-STATE.md",
     "evidence/MAF-1.18-DELTA.md",
     "evidence/SOURCE-INDEX.md",
     "architecture/ARCHITECTURE-REVIEW.md",
+    "architecture/HITL-API-SAMPLE-DESIGN.md",
     "architecture/TOOL-CONCURRENCY-POLICY.md",
     "architecture/HITL-STATE-MACHINE.md",
     "architecture/API-CONTRACT.md",
@@ -105,12 +108,12 @@ def validate(root: Path) -> list[str]:
         fail(errors, "Target preview MAF version must be 1.18.0-preview.260818.1.")
 
     subbundles = manifest.get("subbundles")
-    if not isinstance(subbundles, list) or len(subbundles) != 7:
-        fail(errors, "Manifest must define exactly seven subbundles.")
+    if not isinstance(subbundles, list) or len(subbundles) != 8:
+        fail(errors, "Manifest must define exactly eight subbundles.")
         subbundles = []
 
     ids = [item.get("id") for item in subbundles if isinstance(item, dict)]
-    if ids != [f"SB{i:02d}" for i in range(7)]:
+    if ids != [f"SB{i:02d}" for i in range(8)]:
         fail(errors, f"Unexpected subbundle order: {ids}")
 
     for item in subbundles:
@@ -132,7 +135,7 @@ def validate(root: Path) -> list[str]:
 
     requirements = read_text(root / "inputs/REQUIREMENTS.md", errors)
     traceability = read_text(root / "traceability/TRACEABILITY.md", errors)
-    for number in range(1, 46):
+    for number in range(1, 55):
         requirement_id = f"RQ-{number:03d}"
         if requirement_id not in requirements:
             fail(errors, f"Requirements file is missing {requirement_id}.")
@@ -174,8 +177,8 @@ def main() -> int:
 
     print("Bundle validation: PASS")
     print(f"Root: {root}")
-    print("Requirements: 45")
-    print("Subbundles: 7")
+    print("Requirements: 54")
+    print("Subbundles: 8")
     print("Target: MAF 1.18.0 / A2A preview 1.18.0-preview.260818.1")
     return 0
 

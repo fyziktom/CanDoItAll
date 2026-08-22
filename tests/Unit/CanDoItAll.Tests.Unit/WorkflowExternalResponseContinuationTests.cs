@@ -252,6 +252,76 @@ public sealed class WorkflowExternalResponseContinuationTests
         Assert.Equal(WorkflowRunState.WaitingForInput, run?.State);
     }
 
+    [Fact]
+    public async Task InvalidResultBoundaryCommit_PersistsTerminalFailureInsteadOfLeavingOperationResuming()
+    {
+        var fixture = await Fixture.CreateAsync(Now);
+        var boundaryStore = new CommitOutcomeBoundaryStore(
+            fixture.ResumeBoundaryStore,
+            WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
+        var continuation = fixture.CreateContinuation(
+            new FixedTimeProvider(Now),
+            boundaryStore: boundaryStore);
+
+        var result = await continuation.ContinueAsync(
+            new WorkflowExternalResponseContinuationRequest(
+                fixture.Operation.Id,
+                new WorkflowExternalResponseLeaseOwnerId("host-a")));
+        var stored = await fixture.OperationStore.GetAsync(fixture.Operation.Id);
+
+        Assert.Equal(WorkflowExternalResponseContinuationOutcome.FailedTerminal, result.Outcome);
+        Assert.Equal(WorkflowExternalResponseOperationState.FailedTerminal, result.Operation?.State);
+        Assert.Equal(WorkflowExternalResponseOperationOutcomeCode.ResponseRejected, result.Operation?.OutcomeCode);
+        Assert.Equal(result.Operation, stored);
+        Assert.Null(stored?.Lease);
+    }
+
+    [Theory]
+    [InlineData(WorkflowResumeBoundaryCommitOutcome.ConcurrencyConflict)]
+    [InlineData(WorkflowResumeBoundaryCommitOutcome.LeaseConflict)]
+    public async Task OwnershipConflictDuringCommit_ReturnsClaimConflictWithoutOverwritingOperation(
+        WorkflowResumeBoundaryCommitOutcome commitOutcome)
+    {
+        var fixture = await Fixture.CreateAsync(Now);
+        var boundaryStore = new CommitOutcomeBoundaryStore(
+            fixture.ResumeBoundaryStore,
+            commitOutcome);
+        var continuation = fixture.CreateContinuation(
+            new FixedTimeProvider(Now),
+            boundaryStore: boundaryStore);
+
+        var result = await continuation.ContinueAsync(
+            new WorkflowExternalResponseContinuationRequest(
+                fixture.Operation.Id,
+                new WorkflowExternalResponseLeaseOwnerId("host-a")));
+        var stored = await fixture.OperationStore.GetAsync(fixture.Operation.Id);
+
+        Assert.Equal(WorkflowExternalResponseContinuationOutcome.ClaimConflict, result.Outcome);
+        Assert.Equal(WorkflowExternalResponseOperationState.Resuming, result.Operation?.State);
+        Assert.Equal(WorkflowExternalResponseOperationState.Resuming, stored?.State);
+        Assert.Equal(WorkflowExternalResponseOperationOutcomeCode.None, stored?.OutcomeCode);
+    }
+
+    [Fact]
+    public async Task CancellationWinningCommit_ReturnsCancelledEvenWhenCommitCarriesResumingSnapshot()
+    {
+        var fixture = await Fixture.CreateAsync(Now);
+        var boundaryStore = new CommitOutcomeBoundaryStore(
+            fixture.ResumeBoundaryStore,
+            WorkflowResumeBoundaryCommitOutcome.CancellationWon);
+        var continuation = fixture.CreateContinuation(
+            new FixedTimeProvider(Now),
+            boundaryStore: boundaryStore);
+
+        var result = await continuation.ContinueAsync(
+            new WorkflowExternalResponseContinuationRequest(
+                fixture.Operation.Id,
+                new WorkflowExternalResponseLeaseOwnerId("host-a")));
+
+        Assert.Equal(WorkflowExternalResponseContinuationOutcome.Cancelled, result.Outcome);
+        Assert.Equal(WorkflowExternalResponseOperationState.Resuming, result.Operation?.State);
+    }
+
     [Theory]
     [InlineData(WorkflowBackendResumeFailureKind.ExactWorkflowVersionMissing, WorkflowExternalResponseOperationOutcomeCode.WorkflowVersionMismatch)]
     [InlineData(WorkflowBackendResumeFailureKind.ExactWorkflowVersionMismatch, WorkflowExternalResponseOperationOutcomeCode.WorkflowVersionMismatch)]
@@ -430,13 +500,16 @@ public sealed class WorkflowExternalResponseContinuationTests
             TimeProvider timeProvider,
             WorkflowExternalResponseRecoveryHook? hook = null,
             IWorkflowActiveRunRegistry? activeRuns = null,
-            IWorkflowExternalResponseOperationStore? operationStore = null)
+            IWorkflowExternalResponseOperationStore? operationStore = null,
+            IWorkflowResumeBoundaryStore? boundaryStore = null)
             => new(
                 [Backend],
                 operationStore ?? OperationStore,
-                ResumeBoundaryStore,
+                boundaryStore ?? ResumeBoundaryStore,
                 activeRuns ?? new WorkflowActiveRunRegistry(),
                 new WorkflowExternalResponseValidator(),
+                new NullWorkflowEventSink(),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowExternalResponseContinuation>.Instance,
                 timeProvider,
                 hook);
 
@@ -723,6 +796,35 @@ public sealed class WorkflowExternalResponseContinuationTests
                 callback(state);
             }
         }
+    }
+
+    private sealed class CommitOutcomeBoundaryStore(
+        IWorkflowResumeBoundaryStore inner,
+        WorkflowResumeBoundaryCommitOutcome commitOutcome) : IWorkflowResumeBoundaryStore
+    {
+        public Task<WorkflowResumeBoundaryLoadResult> LoadAsync(
+            WorkflowResumeBoundaryLoadRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.LoadAsync(request, cancellationToken);
+
+        public async Task<WorkflowResumeBoundaryCommitResult> TryCommitAsync(
+            WorkflowResumeBoundaryCommitRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            var loaded = await inner.LoadAsync(
+                new WorkflowResumeBoundaryLoadRequest(request.OperationId),
+                cancellationToken);
+            return new WorkflowResumeBoundaryCommitResult(
+                commitOutcome,
+                loaded.Context?.Operation,
+                loaded.Context?.Run,
+                NextRequest: null);
+        }
+
+        public Task<WorkflowResumeBoundaryCancellationResult> TryCancelAsync(
+            WorkflowResumeBoundaryCancellationRequest request,
+            CancellationToken cancellationToken = default)
+            => inner.TryCancelAsync(request, cancellationToken);
     }
 
     private sealed class TakeoverOnRenewalOperationStore(

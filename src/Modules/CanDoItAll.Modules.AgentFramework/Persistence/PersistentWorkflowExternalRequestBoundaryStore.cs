@@ -22,19 +22,34 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
     {
         ArgumentNullException.ThrowIfNull(boundary);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var externalRequest = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalRequests"
-                WHERE "Id" = {boundary.RequestId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var isInMemory = WorkflowPersistenceProvider.IsInMemory(dbContext);
+        await using var transaction = isInMemory
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var externalRequest = isInMemory
+            ? await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .SingleOrDefaultAsync(
+                    current => current.Id == boundary.RequestId.Value,
+                    cancellationToken)
+            : await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalRequests"
+                    WHERE "Id" = {boundary.RequestId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (externalRequest is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowExternalRequestBoundarySaveResult(
                 WorkflowExternalRequestBoundarySaveOutcome.RequestNotFound,
                 Boundary: null);
@@ -45,7 +60,11 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
             .SingleOrDefaultAsync(item => item.RunId == externalRequest.RunId, cancellationToken);
         if (run is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowExternalRequestBoundarySaveResult(
                 WorkflowExternalRequestBoundarySaveOutcome.RequestNotFound,
                 Boundary: null);
@@ -59,7 +78,11 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
                 requestPayloadHash,
                 StringComparison.Ordinal))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowExternalRequestBoundarySaveResult(
                 WorkflowExternalRequestBoundarySaveOutcome.VersionConflict,
                 Boundary: null);
@@ -77,7 +100,11 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
             WorkflowNativeCheckpointRequestLinkOutcome.Linked or
             WorkflowNativeCheckpointRequestLinkOutcome.AlreadyLinked))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowExternalRequestBoundarySaveResult(
                 WorkflowExternalRequestBoundarySaveOutcome.VersionConflict,
                 Boundary: null);
@@ -103,7 +130,11 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
                 !HasSameImmutableBoundary(existing, boundary) ||
                 !CanTransition(existing.State, boundary.State))
             {
-                await transaction.RollbackAsync(cancellationToken);
+                if (transaction is not null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+
                 return new WorkflowExternalRequestBoundarySaveResult(
                     WorkflowExternalRequestBoundarySaveOutcome.VersionConflict,
                     existing);
@@ -116,11 +147,18 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
         }
         catch (DbUpdateConcurrencyException)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowExternalRequestBoundarySaveResult(
                 WorkflowExternalRequestBoundarySaveOutcome.VersionConflict,
                 Boundary: null);
@@ -183,6 +221,34 @@ public sealed class PersistentWorkflowExternalRequestBoundaryStore(
                     entity.AuthorizationPolicyJson,
                     entity.RequestId,
                     nameof(entity.AuthorizationPolicyJson))
+        };
+    }
+
+    internal static WorkflowExternalRequestRecord HydrateRequest(
+        WorkflowExternalRequestRecordEntity request,
+        WorkflowExternalRequestBoundaryEntity? boundary)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var legacyRequest = request.ToRequest();
+        if (boundary is null)
+        {
+            return legacyRequest;
+        }
+
+        var boundaryRecord = ToRecord(boundary);
+        if (boundaryRecord.RequestId != legacyRequest.Id)
+        {
+            throw new InvalidOperationException(
+                $"Workflow request '{legacyRequest.Id}' has a mismatched native boundary.");
+        }
+
+        return legacyRequest with
+        {
+            Version = boundaryRecord.RequestVersion,
+            State = boundaryRecord.State,
+            ResponseContract = boundaryRecord.ResponseContract,
+            Continuation = boundaryRecord.Continuation,
+            AuthorizationPolicy = boundaryRecord.AuthorizationPolicy
         };
     }
 

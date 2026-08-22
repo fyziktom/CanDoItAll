@@ -1,14 +1,16 @@
 # Bundle Status
 
-**Overall:** Proven
+**Overall:** Implemented — Wave C is technically validated but Governed proof is incomplete;
+Wave A/Wave B remain historically Proven
 
-**Current wave:** Closed — Wave A and Wave B proven
+**Current wave:** Wave C — implementation complete; Governed closure incomplete
 
-**Current subbundle:** None; SB06 and CP-WB4 are Proven / Pass
+**Current subbundle:** SB07 — Implemented (`GOVERNED_PROOF_INCOMPLETE`)
 
 **Preparation baseline:** `5cdf1666dbafdcea975909101c1854773f5f3556`  
-**Execution HEAD:** `af425ac371b251447f9858b15476092531c686da`
-**Last update:** 2026-08-21
+**Historical Wave B execution HEAD:** `af425ac371b251447f9858b15476092531c686da`
+**Wave C working HEAD observed during scaffolding:** `c19cb94bfac710f567db63a93f1e4af69f046cc5`
+**Last update:** 2026-08-22
 
 | Subbundle | Title | Proof tier | Status | Dependency state |
 |---|---|---:|---|---|
@@ -19,11 +21,49 @@
 | SB04 | Persistent checkpoint and response recovery state machine | Governed | Proven | Complete; governed proof passed and CP-WB2 approved |
 | SB05 | Authorized and idempotent workflow HITL API | Governed | Proven | Complete; governed proof passed and CP-WB3 approved |
 | SB06 | End-to-end proof, documentation, and frozen broad gate | Governed | Proven | Complete; 17-row E2E matrix, final documentation/input audit, and FG-01 passed |
+| SB07 | Standalone HITL API sample and browser E2E | Governed | Implemented | Technical validation passes; authentic failing-first test evidence and final SHA-256 freeze are absent |
 
-## Active blockers
+## Wave C re-anchor
 
-None. The source/test freeze is `af425ac371b251447f9858b15476092531c686da` with sibling
-pins Components `8372c1d55f21b349f8e859470b02eeb4421e96ca` and FileTools
+Wave C was prepared from branch `maf-update-and-hil`. The working HEAD recorded for this
+uncommitted Wave C worktree is `c19cb94bfac710f567db63a93f1e4af69f046cc5`. The standalone
+sample targets .NET 10, has no project reference into this checkout, contains exactly twenty
+SimWiki JSON articles, and consumes stable identity, idempotent start, run-specific SSE,
+canonical readback, governed response, operation status, and artifact APIs.
+
+The standalone Release build and 61/61 tests pass; `node --check` passes. Four affected product
+Release builds pass at 0W/0E, as do 71/71 focused Unit and 64/64 focused Integration tests.
+Three terminal Playwright conversations prove first-attempt hit, second-attempt hit, and
+exactly-three miss with one EventSource and no polling fallback. Canonical API readbacks,
+inspected 1280x900 screenshots from the frozen source set, and safety/anti-stub
+scans are recorded under `proof/SB07`. The once-only full Integration project passed 982/983
+with zero failures; the sole skip is the explicitly opt-in live Ollama catalog test requiring
+additional installed model families.
+
+The final repair serializes response-operation replay against lease/state mutation with a
+request-scoped PostgreSQL `FOR UPDATE` lock. Migration
+`20260822013043_AddWorkflowNativeCheckpointRequestUniqueness` fail-closes on pre-existing
+duplicates before adding the filtered unique native-link tuple over session, request, and port.
+Known unique-constraint violations map to a typed link conflict; callers roll back the aborted
+transaction. The independent race review found no blocker and retained explicit follow-ups.
+
+The historical FG-01 checkpoint remains accepted evidence for SB00–SB06 only. Wave C source
+changes do not retroactively alter that recorded result. SB07 has its own focused and live
+E2E closure gate.
+
+## Closure notes
+
+Technical validation has no active code blocker. `BG-SB07-02`, final ownership/evidence hash
+verification, and both validators pass, but no authentic failing-first test transcript exists for
+the behavior-changing recovery work. `BG-SB07-01` is retained as invalidated evidence;
+it cannot prove source or schema added after that gate. The pre-fix replay
+`DbUpdateConcurrencyException` was reproduced in console diagnostics only and is not relabeled
+as governed RED evidence. Runtime workspace, credentials, connection material, raw request
+context, and checkpoint payloads remain outside proof.
+
+The historical Wave B source/test freeze remains
+`af425ac371b251447f9858b15476092531c686da` with sibling pins Components
+`8372c1d55f21b349f8e859470b02eeb4421e96ca` and FileTools
 `c95dd07208a6d48724443317cdc6cfe67a13020a`.
 
 FG-01 ran against the final valid frozen checkpoint from
@@ -94,3 +134,6 @@ the product source and tests are unchanged. The worktree was clean at entry.
 | Exactly-once response acceptance and deduplicated participating governed effects | Accepted | Arbitrary external side effects cannot be made exactly once by checkpointing alone. |
 | Reuse existing project boundaries; extract top-level collaborators | Accepted | The scoped graph already has the necessary neutral/runtime/adapter/persistence layers; a new project or partial split would add ceremony without fixing a dependency defect. |
 | Keep execution/resume on the same backend instance | Accepted | `WorkflowRuntimeManager` selects an execution backend and casts that instance for response resume; the backend delegates resume to a focused concrete driver. |
+| Serialize response-operation replay with request mutation | Accepted | PostgreSQL replay now locks the request operation row with `FOR UPDATE`, preserving the request-before-operation lock order used by claim and commit. |
+| Enforce one native request tuple per session | Accepted | A filtered unique index over session/request/port is the authoritative cross-context boundary; migration preflight fails visibly on legacy duplicates instead of deleting data. |
+| Replace invalidated BG-SB07-01 with BG-SB07-02 | Accepted | The earlier gate remains invalidated; BG-SB07-02 passed 982/983 with zero failures and one declared opt-in live Ollama skip. |

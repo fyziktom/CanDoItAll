@@ -34,15 +34,20 @@ internal static class WorkflowNativeCheckpointRequestLinker
             return WorkflowNativeCheckpointRequestLinkOutcome.LinkConflict;
         }
 
-        var checkpoint = await dbContext.Set<WorkflowBackendCheckpointPayloadEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowBackendCheckpointPayloads"
-                WHERE "Id" = {continuation.Checkpoint.CheckpointId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        var checkpoint = WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? await dbContext.Set<WorkflowBackendCheckpointPayloadEntity>()
+                .SingleOrDefaultAsync(
+                    item => item.Id == continuation.Checkpoint.CheckpointId.Value,
+                    cancellationToken)
+            : await dbContext.Set<WorkflowBackendCheckpointPayloadEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowBackendCheckpointPayloads"
+                    WHERE "Id" = {continuation.Checkpoint.CheckpointId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (checkpoint is null)
         {
             return WorkflowNativeCheckpointRequestLinkOutcome.CheckpointNotFound;
@@ -99,7 +104,18 @@ internal static class WorkflowNativeCheckpointRequestLinker
             checkpoint.ExternalRequestId = boundary.RequestId.Value;
             checkpoint.BackendRequestId = continuation.Request.BackendRequestId.Value;
             checkpoint.BackendRequestPortId = continuation.Request.BackendRequestPortId.Value;
-            await dbContext.SaveChangesAsync(cancellationToken);
+            if (!WorkflowPersistenceProvider.IsInMemory(dbContext))
+            {
+                try
+                {
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateException exception) when (IsRequestLinkConflict(exception))
+                {
+                    return WorkflowNativeCheckpointRequestLinkOutcome.LinkConflict;
+                }
+            }
+
             return WorkflowNativeCheckpointRequestLinkOutcome.Linked;
         }
 
@@ -116,4 +132,10 @@ internal static class WorkflowNativeCheckpointRequestLinker
             ? WorkflowNativeCheckpointRequestLinkOutcome.AlreadyLinked
             : WorkflowNativeCheckpointRequestLinkOutcome.LinkConflict;
     }
+
+    private static bool IsRequestLinkConflict(DbUpdateException exception)
+        => DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception) &&
+           DbUpdateExceptionClassifier.GetConstraintName(exception) is
+               WorkflowBackendCheckpointPayloadEntityConfiguration.ExternalRequestUniqueIndexName or
+               WorkflowBackendCheckpointPayloadEntityConfiguration.NativeRequestUniqueIndexName;
 }

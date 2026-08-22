@@ -197,6 +197,40 @@ public sealed class WorkflowExternalResponseWebBoundaryTests
     }
 
     [Fact]
+    public void ResultMapper_MapsClaimConflictWithResumingSnapshotToConflict()
+    {
+        var operation = new WorkflowExternalResponseOperationRecord(
+            WorkflowExternalResponseOperationId.New(),
+            WorkflowExternalRequestId.New(),
+            WorkflowRunId.New(),
+            WorkflowExternalRequestVersion.Initial,
+            new WorkflowExternalResponseIdempotencyKeyHash(new string('a', 64)),
+            new WorkflowExternalResponsePayloadHash(new string('b', 64)),
+            new WorkflowExternalResponseActorScopeFingerprint(new string('c', 64)),
+            new WorkflowExternalResponsePayload("{}"),
+            new WorkflowLaunchActor(WorkflowLaunchActorKind.User, "test-user"),
+            new WorkflowLaunchCorrelationId("claim-conflict"),
+            WorkflowExternalResponseOperationState.Resuming,
+            Attempt: 1,
+            WorkflowExternalResponseOperationConcurrencyVersion.Initial,
+            FixedUtcNow);
+
+        var result = WorkflowExternalResponseApiMapper.Map(
+            new WorkflowExternalResponseServiceResult(
+                WorkflowExternalResponseServiceOutcome.ActiveOperationConflict,
+                operation,
+                Run: null,
+                Request: null,
+                NextRequest: null,
+                Replayed: false,
+                "The continuation lost its claim."));
+
+        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(StatusCodes.Status409Conflict, statusResult.StatusCode);
+        Assert.NotEqual(StatusCodes.Status202Accepted, statusResult.StatusCode);
+    }
+
+    [Fact]
     public void SafeProjections_ExcludeRawAndProtectedDomainFields()
     {
         var runId = WorkflowRunId.New();
@@ -317,6 +351,71 @@ public sealed class WorkflowExternalResponseWebBoundaryTests
         Assert.DoesNotContain(new string('c', 64), json, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret", json, StringComparison.Ordinal);
         Assert.Contains("[REDACTED]", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SafePendingRequestProjection_ExposesBoundedPromptAndResponseContractOnly()
+    {
+        var request = new WorkflowExternalRequestRecord(
+            WorkflowExternalRequestId.New(),
+            WorkflowRunId.New(),
+            WorkflowExternalRequestKind.HumanInput,
+            new WorkflowNodeId("hobby"),
+            "MafHumanInputRequested",
+            JsonSerializer.Serialize(new
+            {
+                prompt = $"What is your main hobby? {new string('x', 5_000)}",
+                responseShape = new
+                {
+                    kind = "Json"
+                },
+                context = new
+                {
+                    protectedValue = "must-not-be-public"
+                }
+            }),
+            string.Empty,
+            FixedUtcNow,
+            RespondedAtUtc: null)
+        {
+            Version = WorkflowExternalRequestVersion.Initial,
+            State = WorkflowExternalRequestState.Pending,
+            ResponseContract = new WorkflowExternalResponseContract(
+                WorkflowExternalRequestKind.HumanInput,
+                "workflow.human-input.response.v1",
+                schemaVersion: 1,
+                """
+                {
+                  "type": "object",
+                  "required": ["name", "hobby"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": { "type": "string" },
+                    "hobby": { "type": "string" }
+                  }
+                }
+                """,
+                maximumPayloadBytes: 65_536)
+        };
+
+        var json = JsonSerializer.Serialize(
+            WorkflowApiSafeProjection.Map(request),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        var prompt = root.GetProperty("prompt").GetString();
+        Assert.NotNull(prompt);
+        Assert.StartsWith("What is your main hobby?", prompt, StringComparison.Ordinal);
+        Assert.Equal(4_096, prompt.Length);
+        var contract = root.GetProperty("responseContract");
+        Assert.Equal("workflow.human-input.response.v1", contract.GetProperty("schemaId").GetString());
+        Assert.Equal(1, contract.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal("object", contract.GetProperty("schema").GetProperty("type").GetString());
+        Assert.Equal(65_536, contract.GetProperty("maximumPayloadBytes").GetInt32());
+        Assert.DoesNotContain("must-not-be-public", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("responseShape", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("context", json, StringComparison.Ordinal);
     }
 
     [Fact]

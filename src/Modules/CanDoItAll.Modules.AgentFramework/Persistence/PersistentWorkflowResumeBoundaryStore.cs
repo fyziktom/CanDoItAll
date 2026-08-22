@@ -123,7 +123,13 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     {
         ArgumentNullException.ThrowIfNull(request);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var isInMemory = WorkflowPersistenceProvider.IsInMemory(dbContext);
+        await using var transaction = isInMemory
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var operationIdentity = await dbContext.Set<WorkflowExternalResponseOperationEntity>()
             .AsNoTracking()
             .Where(item => item.Id == request.OperationId.Value)
@@ -131,52 +137,53 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             .SingleOrDefaultAsync(cancellationToken);
         if (operationIdentity is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.OperationNotFound);
         }
 
-        var sourceRequest = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalRequests"
-                WHERE "Id" = {operationIdentity.RequestId}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        var sourceRequest = isInMemory
+            ? await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .SingleOrDefaultAsync(item => item.Id == operationIdentity.RequestId, cancellationToken)
+            : await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalRequests"
+                    WHERE "Id" = {operationIdentity.RequestId}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (sourceRequest is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.RequestNotFound);
         }
 
-        var operation = await dbContext.Set<WorkflowExternalResponseOperationEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalResponseOperations"
-                WHERE "Id" = {request.OperationId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        var operation = await PersistentWorkflowExternalResponseOperationStore.LockOperationAsync(
+            dbContext,
+            request.OperationId,
+            cancellationToken);
         if (operation is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.OperationNotFound);
         }
 
-        var sourceRun = await dbContext.Set<WorkflowRunRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowRuns"
-                WHERE "RunId" = {operation.RunId}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        var sourceRun = isInMemory
+            ? await dbContext.Set<WorkflowRunRecordEntity>()
+                .SingleOrDefaultAsync(item => item.RunId == operation.RunId, cancellationToken)
+            : await dbContext.Set<WorkflowRunRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowRuns"
+                    WHERE "RunId" = {operation.RunId}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (sourceRun is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.RunNotFound);
         }
 
@@ -184,14 +191,14 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             .SingleOrDefaultAsync(item => item.RequestId == operation.RequestId, cancellationToken);
         if (boundary is null || boundary.RequestVersion != request.ExpectedRequestVersion.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.RequestVersionConflict);
         }
 
         var guardOutcome = ValidateCommitGuard(operation, boundary, sourceRun, sourceRequest, request);
         if (guardOutcome.HasValue)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(guardOutcome.Value);
         }
 
@@ -202,7 +209,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
         }
 
@@ -213,7 +220,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
                 sourceBoundary,
                 cancellationToken) != WorkflowResumeBoundaryLoadOutcome.Found)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
         }
 
@@ -223,7 +230,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             sourceRequest,
             request))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
         }
 
@@ -232,7 +239,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             if (!WorkflowExternalRequestBoundaryRecord.TryCreate(externalRequest, out var nextBoundary) ||
                 nextBoundary is null)
             {
-                await transaction.RollbackAsync(cancellationToken);
+                await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
                 return CommitResult(WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
             }
 
@@ -248,14 +255,14 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
                 WorkflowNativeCheckpointRequestLinkOutcome.Linked or
                 WorkflowNativeCheckpointRequestLinkOutcome.AlreadyLinked))
             {
-                await transaction.RollbackAsync(cancellationToken);
+                await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
                 return CommitResult(WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
             }
         }
 
         if (!await NativeCheckpointLinksExistAsync(dbContext, request.BackendResult, cancellationToken))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CommitResult(WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary);
         }
 
@@ -272,7 +279,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         await AddBackendResultRecordsAsync(dbContext, request.BackendResult, cancellationToken);
         CompleteOperation(operation, request.FinalResult, request.CommittedAtUtc);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
 
         var nextRequest = request.BackendResult.ExternalRequests.SingleOrDefault();
         return new WorkflowResumeBoundaryCommitResult(
@@ -288,43 +295,58 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
     {
         ArgumentNullException.ThrowIfNull(request);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var requestEntity = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalRequests"
-                WHERE "Id" = {request.RequestId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var isInMemory = WorkflowPersistenceProvider.IsInMemory(dbContext);
+        await using var transaction = isInMemory
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var requestEntity = isInMemory
+            ? await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .SingleOrDefaultAsync(item => item.Id == request.RequestId.Value, cancellationToken)
+            : await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalRequests"
+                    WHERE "Id" = {request.RequestId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (requestEntity is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CancellationResult(WorkflowResumeBoundaryCancellationOutcome.RequestNotFound);
         }
 
-        var operation = await dbContext.Set<WorkflowExternalResponseOperationEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalResponseOperations"
-                WHERE "RequestId" = {request.RequestId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
-        var run = await dbContext.Set<WorkflowRunRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowRuns"
-                WHERE "RunId" = {request.RunId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        var operation = isInMemory
+            ? await dbContext.Set<WorkflowExternalResponseOperationEntity>()
+                .SingleOrDefaultAsync(item => item.RequestId == request.RequestId.Value, cancellationToken)
+            : await dbContext.Set<WorkflowExternalResponseOperationEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalResponseOperations"
+                    WHERE "RequestId" = {request.RequestId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
+        var run = isInMemory
+            ? await dbContext.Set<WorkflowRunRecordEntity>()
+                .SingleOrDefaultAsync(item => item.RunId == request.RunId.Value, cancellationToken)
+            : await dbContext.Set<WorkflowRunRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowRuns"
+                    WHERE "RunId" = {request.RunId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (run is null || requestEntity.RunId != run.RunId)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CancellationResult(WorkflowResumeBoundaryCancellationOutcome.RunNotFound);
         }
 
@@ -332,7 +354,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             .SingleOrDefaultAsync(item => item.RequestId == request.RequestId.Value, cancellationToken);
         if (boundary is null || boundary.RequestVersion != request.ExpectedRequestVersion.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CancellationResult(WorkflowResumeBoundaryCancellationOutcome.RequestVersionConflict);
         }
 
@@ -341,7 +363,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
              operation.State == (int)WorkflowExternalResponseOperationState.Resuming) &&
             operation.LeaseExpiresAtUtc > request.CancelledAtUtc)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CancellationResult(
                 WorkflowResumeBoundaryCancellationOutcome.ActiveResume,
                 run,
@@ -352,7 +374,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
 
         if (run.State is WorkflowRunState.Completed or WorkflowRunState.Failed or WorkflowRunState.Cancelled)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CancellationResult(
                 WorkflowResumeBoundaryCancellationOutcome.AlreadyTerminal,
                 run,
@@ -369,7 +391,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
                 (WorkflowExternalResponseOperationState)operation.State,
                 WorkflowExternalResponseOperationState.Cancelled))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CancellationResult(
                 WorkflowResumeBoundaryCancellationOutcome.AlreadyTerminal,
                 run,
@@ -404,7 +426,7 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
             CreatedAtUtc = request.CancelledAtUtc
         });
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
         return CancellationResult(
             WorkflowResumeBoundaryCancellationOutcome.Cancelled,
             run,
@@ -455,7 +477,6 @@ public sealed class PersistentWorkflowResumeBoundaryStore : IWorkflowResumeBound
         {
             var continuation = externalRequest.Continuation!;
             var nativeCheckpoint = await dbContext.Set<WorkflowBackendCheckpointPayloadEntity>()
-                .AsNoTracking()
                 .SingleOrDefaultAsync(
                     checkpoint =>
                         checkpoint.Id == continuation.Checkpoint.CheckpointId.Value &&

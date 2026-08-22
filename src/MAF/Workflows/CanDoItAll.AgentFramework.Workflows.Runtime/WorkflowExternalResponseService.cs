@@ -312,6 +312,14 @@ public sealed class WorkflowExternalResponseService : IWorkflowExternalResponseS
         bool replayed,
         CancellationToken cancellationToken)
     {
+        if (result.Outcome is
+            WorkflowExternalResponseContinuationOutcome.Cancelled or
+            WorkflowExternalResponseContinuationOutcome.ClaimConflict or
+            WorkflowExternalResponseContinuationOutcome.NotFound)
+        {
+            return resultMapper.ContinuationFailure(result, fallbackRun, request);
+        }
+
         if (result.Operation is not null)
         {
             return await MapOperationAsync(

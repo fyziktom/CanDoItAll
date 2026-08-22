@@ -51,10 +51,12 @@ public sealed class MafWorkflowHumanInLoopTests
             [component],
             checkpointPayloadStore: new ForwardingCheckpointStore(retainedCheckpointState),
             catalog: secondCatalog);
+        var eventSink = new RecordingWorkflowEventSink();
         var secondRuntime = WorkflowExternalResponseTestCompositionFactory.Create(
             [secondBackend],
             runStore,
-            retainedCheckpointState);
+            retainedCheckpointState,
+            eventSink: eventSink);
         var response = await secondRuntime.Responses.SubmitAsync(
             first.Request,
             """{"answer":"continue"}""",
@@ -67,6 +69,9 @@ public sealed class MafWorkflowHumanInLoopTests
         Assert.Equal(1, marker.InvocationCount);
         Assert.Equal(definition.VersionId, secondCatalog.RequestedVersionId);
         Assert.Equal(1, secondCatalog.ExactReadCount);
+        Assert.Contains(eventSink.Events, workflowEvent =>
+            workflowEvent.RunId == first.Run.RunId &&
+            workflowEvent.Kind == WorkflowEventKind.Completed);
     }
 
     [Fact]
@@ -1091,5 +1096,19 @@ public sealed class MafWorkflowHumanInLoopTests
         WorkflowExternalRequestRecord Request,
         InMemoryWorkflowRunStore RunStore,
         InMemoryWorkflowBackendCheckpointPayloadStore CheckpointState);
+
+    private sealed class RecordingWorkflowEventSink : IWorkflowEventSink
+    {
+        public List<WorkflowEventRecord> Events { get; } = [];
+
+        public Task PublishAsync(
+            WorkflowEventRecord workflowEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Events.Add(workflowEvent);
+            return Task.CompletedTask;
+        }
+    }
 
 }

@@ -34,6 +34,27 @@ Complete existing endpoints with typed JSON, authorization, validation, idempote
 
 Run realistic workflow cases, freeze source/schema, execute the broad gate once, update docs, audit every requirement, and produce closure evidence.
 
+## Wave C — API sample and browser proof
+
+### SB07 Standalone HITL API sample
+
+1. Prove the current API contract against the live host and capture the failing generic
+   HumanInput presentation case.
+2. Scaffold the .NET 10 static-SSR sample and focused tests under
+   `C:\programovani\dotnet\candoitall-sample-hitl-api`.
+3. Add the file-backed SimWiki corpus/API, typed CanDoItAll client, workflow provisioner,
+   conversation service, and authenticated SSE proxy.
+4. Add the smallest safe Web projection repair demonstrated by step 1, with direct and HTTP
+   contract tests. Do not expose raw `RequestJson`.
+5. Start the authenticated CanDoItAll host, provision the stable workflow, and prove native
+   HumanInput plus governed HTTP-read approvals through the public API.
+6. Run focused builds/tests and Playwright direct-hit, retry-hit, and three-miss cases. Record
+   sanitized proof under `proof/SB07` and close RQ-046 through RQ-054.
+
+**Wave C exit gate:** the browser completes real workflows through API/SSE, all three search
+outcomes are proven, safe request presentation is bounded, credentials are absent from client
+traffic/proof, and focused validation is green.
+
 ## Commit/review boundaries
 
 Recommended commit boundaries:

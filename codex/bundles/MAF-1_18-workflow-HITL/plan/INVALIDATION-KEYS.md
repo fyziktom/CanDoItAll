@@ -20,3 +20,8 @@
 | IK-16 | Focused test filter discovers zero tests | Active subbundle |
 | IK-17 | A completed subbundle's proof is contradicted by later behavior | Owning prerequisite and dependents |
 | IK-18 | UI changes become necessary to expose operation status | Create explicit UI follow-up unless user expands scope |
+| IK-19 | Live pending-request projection cannot safely render HumanInput intent/schema | SB07 and bounded SB05 projection claim |
+| IK-20 | Sample requires browser-visible bearer credentials or direct cross-origin EventSource | SB07 architecture |
+| IK-21 | SimWiki executor bypasses approval or private-network policy | SB07 workflow definition |
+| IK-22 | SSE handling uses polling fallback or treats every attention signal as HumanInput | SB07 client/runtime |
+| IK-23 | Playwright cannot distinguish direct-hit, retry-hit, and terminal miss | SB07 workflow/sample proof |

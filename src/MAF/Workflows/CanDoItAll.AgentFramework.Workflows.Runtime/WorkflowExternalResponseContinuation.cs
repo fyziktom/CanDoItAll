@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -15,6 +16,8 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
     private readonly IWorkflowResumeBoundaryStore boundaryStore;
     private readonly IWorkflowActiveRunRegistry activeRuns;
     private readonly IWorkflowExternalResponseValidator validator;
+    private readonly IWorkflowEventSink eventSink;
+    private readonly ILogger<WorkflowExternalResponseContinuation> logger;
     private readonly TimeProvider timeProvider;
     private readonly WorkflowExternalResponseLeaseHeartbeat heartbeat;
     private readonly WorkflowExternalResponseResultMapper resultMapper = new();
@@ -26,6 +29,8 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
         IWorkflowResumeBoundaryStore boundaryStore,
         IWorkflowActiveRunRegistry activeRuns,
         IWorkflowExternalResponseValidator validator,
+        IWorkflowEventSink eventSink,
+        ILogger<WorkflowExternalResponseContinuation> logger,
         TimeProvider timeProvider,
         WorkflowExternalResponseRecoveryHook? recoveryHook = null)
     {
@@ -34,6 +39,8 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
         ArgumentNullException.ThrowIfNull(boundaryStore);
         ArgumentNullException.ThrowIfNull(activeRuns);
         ArgumentNullException.ThrowIfNull(validator);
+        ArgumentNullException.ThrowIfNull(eventSink);
+        ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         this.backends = backends.ToDictionary(item => item.Descriptor.Kind);
@@ -41,6 +48,8 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
         this.boundaryStore = boundaryStore;
         this.activeRuns = activeRuns;
         this.validator = validator;
+        this.eventSink = eventSink;
+        this.logger = logger;
         this.timeProvider = timeProvider;
         this.recoveryHook = recoveryHook;
         heartbeat = new WorkflowExternalResponseLeaseHeartbeat(
@@ -335,8 +344,13 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
                     "The persisted response is not valid JSON.",
                     CancellationToken.None);
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                logger.LogError(
+                    exception,
+                    "Workflow response operation {OperationId} failed while resuming run {RunId}. No response payload is logged.",
+                    operation.Id,
+                    context.Run.RunId);
                 await leaseHeartbeat.StopAsync();
                 return await FailRetryableAsync(
                     leaseHeartbeat.CurrentOperation,
@@ -410,16 +424,36 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
                 finalResult,
                 timeProvider.GetUtcNow()),
             CancellationToken.None);
-        if (!commit.Succeeded || commit.Operation is null)
+        if (!commit.Succeeded)
         {
+            logger.LogWarning(
+                "Workflow response operation {OperationId} could not commit run {RunId}: {CommitOutcome}.",
+                operation.Id,
+                context.Run.RunId,
+                commit.Outcome);
+            return await HandleCommitFailureAsync(
+                commit,
+                operation,
+                request.LeaseOwnerId);
+        }
+
+        if (commit.Operation is null)
+        {
+            logger.LogError(
+                "Workflow response operation {OperationId} committed run {RunId} without returning the committed operation.",
+                operation.Id,
+                context.Run.RunId);
             return new WorkflowExternalResponseContinuationResult(
-                commit.Outcome == WorkflowResumeBoundaryCommitOutcome.CancellationWon
-                    ? WorkflowExternalResponseContinuationOutcome.Cancelled
-                    : WorkflowExternalResponseContinuationOutcome.ClaimConflict,
-                commit.Operation ?? operation,
+                WorkflowExternalResponseContinuationOutcome.FailedRetryable,
+                Operation: null,
                 commit.Run,
                 commit.NextRequest,
-                $"Workflow response boundary commit did not succeed: {commit.Outcome}.");
+                "The workflow response was committed without a durable operation result. Query the operation status before retrying.");
+        }
+
+        foreach (var workflowEvent in backendResult.Events)
+        {
+            await eventSink.PublishAsync(workflowEvent, CancellationToken.None);
         }
 
         return new WorkflowExternalResponseContinuationResult(
@@ -428,6 +462,69 @@ public sealed class WorkflowExternalResponseContinuation : IWorkflowExternalResp
             commit.Run,
             commit.NextRequest,
             commit.Operation.SafeMessage);
+    }
+
+    private async Task<WorkflowExternalResponseContinuationResult> HandleCommitFailureAsync(
+        WorkflowResumeBoundaryCommitResult commit,
+        WorkflowExternalResponseOperationRecord operation,
+        WorkflowExternalResponseLeaseOwnerId ownerId)
+    {
+        var safeMessage = $"Workflow response boundary commit did not succeed: {commit.Outcome}.";
+        switch (commit.Outcome)
+        {
+            case WorkflowResumeBoundaryCommitOutcome.CancellationWon:
+                return new WorkflowExternalResponseContinuationResult(
+                    WorkflowExternalResponseContinuationOutcome.Cancelled,
+                    commit.Operation ?? operation,
+                    commit.Run,
+                    commit.NextRequest,
+                    safeMessage);
+            case WorkflowResumeBoundaryCommitOutcome.OperationNotFound:
+                return new WorkflowExternalResponseContinuationResult(
+                    WorkflowExternalResponseContinuationOutcome.NotFound,
+                    commit.Operation,
+                    commit.Run,
+                    commit.NextRequest,
+                    safeMessage);
+            case WorkflowResumeBoundaryCommitOutcome.ConcurrencyConflict:
+            case WorkflowResumeBoundaryCommitOutcome.LeaseConflict:
+                return new WorkflowExternalResponseContinuationResult(
+                    WorkflowExternalResponseContinuationOutcome.ClaimConflict,
+                    commit.Operation ?? operation,
+                    commit.Run,
+                    commit.NextRequest,
+                    safeMessage);
+            case WorkflowResumeBoundaryCommitOutcome.RequestNotFound:
+            case WorkflowResumeBoundaryCommitOutcome.RequestVersionConflict:
+                return await FailTerminalAsync(
+                    commit.Operation ?? operation,
+                    ownerId,
+                    WorkflowExternalResponseOperationOutcomeCode.RequestMismatch,
+                    "The workflow response cannot be committed because its persisted request boundary changed.",
+                    CancellationToken.None);
+            case WorkflowResumeBoundaryCommitOutcome.RunNotFound:
+                return await FailTerminalAsync(
+                    commit.Operation ?? operation,
+                    ownerId,
+                    WorkflowExternalResponseOperationOutcomeCode.ResumeFailed,
+                    "The workflow response cannot be committed because its persisted run is unavailable.",
+                    CancellationToken.None);
+            case WorkflowResumeBoundaryCommitOutcome.InvalidResultBoundary:
+                return await FailTerminalAsync(
+                    commit.Operation ?? operation,
+                    ownerId,
+                    WorkflowExternalResponseOperationOutcomeCode.ResponseRejected,
+                    "The workflow response cannot be committed because the resumed result boundary is invalid.",
+                    CancellationToken.None);
+            case WorkflowResumeBoundaryCommitOutcome.Committed:
+            default:
+                return new WorkflowExternalResponseContinuationResult(
+                    WorkflowExternalResponseContinuationOutcome.FailedRetryable,
+                    Operation: null,
+                    commit.Run,
+                    commit.NextRequest,
+                    "The workflow response boundary returned an invalid commit result. Query the operation status before retrying.");
+        }
     }
 
     private async Task<WorkflowExternalResponseContinuationResult> FailRetryableAsync(

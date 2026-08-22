@@ -112,6 +112,8 @@ internal static class WorkflowExternalResponseTestCompositionFactory
             resumeStore,
             activeRuns,
             validator,
+            eventSink ?? new NullWorkflowEventSink(),
+            NullLogger<WorkflowExternalResponseContinuation>.Instance,
             timeProvider);
         var manager = new WorkflowRuntimeManager(
             backendList,

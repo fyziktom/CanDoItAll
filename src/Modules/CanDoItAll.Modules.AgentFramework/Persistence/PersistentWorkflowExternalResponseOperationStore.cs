@@ -50,18 +50,23 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        await using var transaction = WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var externalRequest = await LockRequestAsync(dbContext, request.RequestId, cancellationToken);
         if (externalRequest is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.RequestNotFound);
         }
 
-        var existing = await dbContext.Set<WorkflowExternalResponseOperationEntity>()
-            .SingleOrDefaultAsync(
-                operation => operation.RequestId == request.RequestId.Value,
-                cancellationToken);
+        var existing = await LockOperationByRequestAsync(
+            dbContext,
+            request.RequestId,
+            cancellationToken);
         if (existing is not null)
         {
             var result = ResolveReplay(existing, request);
@@ -70,7 +75,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
                 existing.ReplayCount++;
                 existing.LastReplayedAtUtc = request.AcceptedAtUtc;
                 await dbContext.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
                 return result with
                 {
                     Operation = ToRecord(existing),
@@ -82,7 +87,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
                 };
             }
 
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return result;
         }
 
@@ -91,13 +96,13 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
             .SingleOrDefaultAsync(record => record.RunId == request.RunId.Value, cancellationToken);
         if (run is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.RunNotFound);
         }
 
         if (externalRequest.RunId != request.RunId.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.ActiveOperationConflict);
         }
 
@@ -107,26 +112,26 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
                 cancellationToken);
         if (boundary is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.LegacyNonResumable);
         }
 
         if (boundary.RequestVersion != request.ExpectedRequestVersion.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.RequestVersionMismatch);
         }
 
         if ((WorkflowExternalRequestState)boundary.State != WorkflowExternalRequestState.Pending ||
             externalRequest.RespondedAtUtc.HasValue)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.RequestNotPending);
         }
 
         if (run.State != WorkflowRunState.WaitingForInput)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return CreateResult(WorkflowExternalResponseOperationCreateOutcome.RunNotWaiting);
         }
 
@@ -134,7 +139,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         dbContext.Set<WorkflowExternalResponseOperationEntity>().Add(entity);
         boundary.State = (int)WorkflowExternalRequestState.ResponseClaimed;
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
         return new WorkflowExternalResponseOperationCreateResult(
             WorkflowExternalResponseOperationCreateOutcome.Created,
             ToRecord(entity));
@@ -199,7 +204,13 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var isInMemory = WorkflowPersistenceProvider.IsInMemory(dbContext);
+        await using var transaction = isInMemory
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var identity = await dbContext.Set<WorkflowExternalResponseOperationEntity>()
             .AsNoTracking()
             .Where(operation => operation.Id == request.OperationId.Value)
@@ -207,7 +218,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
             .SingleOrDefaultAsync(cancellationToken);
         if (identity is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return new WorkflowExternalResponseOperationClaimResult(
                 WorkflowExternalResponseOperationClaimOutcome.NotFound,
                 Operation: null,
@@ -221,7 +232,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         var entity = await LockOperationAsync(dbContext, request.OperationId, cancellationToken);
         if (entity is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return new WorkflowExternalResponseOperationClaimResult(
                 WorkflowExternalResponseOperationClaimOutcome.NotFound,
                 Operation: null,
@@ -231,41 +242,44 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         var boundary = await dbContext.Set<WorkflowExternalRequestBoundaryEntity>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.RequestId == identity.RequestId, cancellationToken);
-        var run = await dbContext.Set<WorkflowRunRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowRuns"
-                WHERE "RunId" = {identity.RunId}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        var run = isInMemory
+            ? await dbContext.Set<WorkflowRunRecordEntity>()
+                .SingleOrDefaultAsync(item => item.RunId == identity.RunId, cancellationToken)
+            : await dbContext.Set<WorkflowRunRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowRuns"
+                    WHERE "RunId" = {identity.RunId}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
         if (externalRequest is null ||
             externalRequest.RespondedAtUtc.HasValue ||
             boundary is null ||
             (WorkflowExternalRequestState)boundary.State != WorkflowExternalRequestState.ResponseClaimed ||
             run?.State != WorkflowRunState.WaitingForInput)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return ClaimResult(WorkflowExternalResponseOperationClaimOutcome.InvalidState, entity);
         }
 
         if (entity.OperationVersion != request.ExpectedVersion.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return ClaimResult(WorkflowExternalResponseOperationClaimOutcome.ConcurrencyConflict, entity);
         }
 
         var state = (WorkflowExternalResponseOperationState)entity.State;
         if (HasActiveLease(entity, request.ClaimedAtUtc))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return ClaimResult(WorkflowExternalResponseOperationClaimOutcome.ActiveLease, entity);
         }
 
         if (!CanClaim(state))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return ClaimResult(WorkflowExternalResponseOperationClaimOutcome.InvalidState, entity);
         }
 
@@ -278,7 +292,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
             entity.CompletedAtUtc = request.ClaimedAtUtc;
             ClearLease(entity);
             await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
             return ClaimResult(WorkflowExternalResponseOperationClaimOutcome.AttemptLimitReached, entity);
         }
 
@@ -295,7 +309,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
                 cancellationToken);
         if (anotherActiveRunClaim)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return ClaimResult(WorkflowExternalResponseOperationClaimOutcome.ActiveLease, entity);
         }
 
@@ -317,7 +331,7 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         entity.LeaseExpiresAtUtc = request.LeaseExpiresAtUtc;
         entity.StartedAtUtc = null;
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
 
         var operation = ToRecord(entity);
         var lease = operation.Lease
@@ -478,37 +492,42 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         bool requireUnexpiredLease = true)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        await using var transaction = WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var entity = await LockOperationAsync(dbContext, operationId, cancellationToken);
         if (entity is null)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return MutationResult(WorkflowExternalResponseOperationMutationOutcome.NotFound);
         }
 
         if (entity.OperationVersion != expectedVersion.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return MutationResult(WorkflowExternalResponseOperationMutationOutcome.ConcurrencyConflict, entity);
         }
 
         if (!string.Equals(entity.LeaseOwnerId, leaseOwnerId.Value, StringComparison.Ordinal) ||
             entity.LeaseEpoch != leaseEpoch.Value)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return MutationResult(WorkflowExternalResponseOperationMutationOutcome.LeaseConflict, entity);
         }
 
         if (entity.LeaseExpiresAtUtc is not { } leaseExpiresAtUtc ||
             requireUnexpiredLease && leaseExpiresAtUtc <= operationAtUtc)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return MutationResult(WorkflowExternalResponseOperationMutationOutcome.LeaseExpired, entity);
         }
 
         if (!allowedStates.Contains((WorkflowExternalResponseOperationState)entity.State))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return MutationResult(WorkflowExternalResponseOperationMutationOutcome.InvalidTransition, entity);
         }
 
@@ -518,12 +537,12 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         }
         catch (WorkflowExternalResponseInvalidTransitionException)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await WorkflowPersistenceProvider.RollbackAsync(transaction, cancellationToken);
             return MutationResult(WorkflowExternalResponseOperationMutationOutcome.InvalidTransition, entity);
         }
         entity.OperationVersion++;
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await WorkflowPersistenceProvider.CommitAsync(transaction, cancellationToken);
         return MutationResult(WorkflowExternalResponseOperationMutationOutcome.Updated, entity);
     }
 
@@ -531,29 +550,52 @@ public sealed class PersistentWorkflowExternalResponseOperationStore :
         AppDbContext dbContext,
         WorkflowExternalRequestId requestId,
         CancellationToken cancellationToken)
-        => dbContext.Set<WorkflowExternalRequestRecordEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalRequests"
-                WHERE "Id" = {requestId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        => WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .SingleOrDefaultAsync(item => item.Id == requestId.Value, cancellationToken)
+            : dbContext.Set<WorkflowExternalRequestRecordEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalRequests"
+                    WHERE "Id" = {requestId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
+
+    private static Task<WorkflowExternalResponseOperationEntity?> LockOperationByRequestAsync(
+        AppDbContext dbContext,
+        WorkflowExternalRequestId requestId,
+        CancellationToken cancellationToken)
+        => WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? dbContext.Set<WorkflowExternalResponseOperationEntity>()
+                .SingleOrDefaultAsync(item => item.RequestId == requestId.Value, cancellationToken)
+            : dbContext.Set<WorkflowExternalResponseOperationEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalResponseOperations"
+                    WHERE "RequestId" = {requestId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
 
     internal static Task<WorkflowExternalResponseOperationEntity?> LockOperationAsync(
         AppDbContext dbContext,
         WorkflowExternalResponseOperationId operationId,
         CancellationToken cancellationToken)
-        => dbContext.Set<WorkflowExternalResponseOperationEntity>()
-            .FromSqlInterpolated(
-                $"""
-                SELECT *
-                FROM "AgentFramework_WorkflowExternalResponseOperations"
-                WHERE "Id" = {operationId.Value}
-                FOR UPDATE
-                """)
-            .SingleOrDefaultAsync(cancellationToken);
+        => WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? dbContext.Set<WorkflowExternalResponseOperationEntity>()
+                .SingleOrDefaultAsync(item => item.Id == operationId.Value, cancellationToken)
+            : dbContext.Set<WorkflowExternalResponseOperationEntity>()
+                .FromSqlInterpolated(
+                    $"""
+                    SELECT *
+                    FROM "AgentFramework_WorkflowExternalResponseOperations"
+                    WHERE "Id" = {operationId.Value}
+                    FOR UPDATE
+                    """)
+                .SingleOrDefaultAsync(cancellationToken);
 
     internal WorkflowExternalResponseOperationRecord ToRecord(
         WorkflowExternalResponseOperationEntity entity)

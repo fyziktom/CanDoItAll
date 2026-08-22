@@ -124,6 +124,8 @@ internal static class WorkflowInMemoryRuntimeFactory
             resumeBoundaries,
             activeRuns,
             new WorkflowExternalResponseValidator(),
+            eventSink ?? new NullWorkflowEventSink(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowExternalResponseContinuation>.Instance,
             timeProvider);
         return new WorkflowRuntimeManager(
             backendList,

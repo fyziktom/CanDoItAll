@@ -120,6 +120,45 @@ public sealed class WorkflowExternalResponseServiceTests
         Assert.Equal(0, fixture.Continuation.CallCount);
     }
 
+    [Theory]
+    [InlineData(
+        WorkflowExternalResponseContinuationOutcome.ClaimConflict,
+        WorkflowExternalResponseServiceOutcome.ActiveOperationConflict)]
+    [InlineData(
+        WorkflowExternalResponseContinuationOutcome.Cancelled,
+        WorkflowExternalResponseServiceOutcome.Cancelled)]
+    public async Task ContinuationFailureWithResumingSnapshot_MapsTheFailureOutcomeInsteadOfResuming(
+        WorkflowExternalResponseContinuationOutcome continuationOutcome,
+        WorkflowExternalResponseServiceOutcome expectedOutcome)
+    {
+        var fixture = await Fixture.CreateAsync();
+        fixture.Continuation.ResultFactory = request =>
+        {
+            var operation = fixture.OperationStore.StoredOperation
+                ?? throw new InvalidOperationException("The response operation was not created.");
+            return new WorkflowExternalResponseContinuationResult(
+                continuationOutcome,
+                operation with
+                {
+                    State = WorkflowExternalResponseOperationState.Resuming,
+                    Lease = new WorkflowExternalResponseLease(
+                        request.LeaseOwnerId,
+                        new WorkflowExternalResponseLeaseEpoch(1),
+                        Now,
+                        Now.AddMinutes(1))
+                },
+                fixture.Run,
+                NextRequest: null,
+                "The continuation did not commit.");
+        };
+
+        var result = await fixture.Service.SubmitAsync(fixture.CreateCommand());
+
+        Assert.Equal(expectedOutcome, result.Outcome);
+        Assert.NotEqual(WorkflowExternalResponseServiceOutcome.Resuming, result.Outcome);
+        Assert.Equal(WorkflowExternalResponseOperationState.Resuming, result.Operation?.State);
+    }
+
     [Fact]
     public async Task UnauthenticatedCommand_PerformsNoLookupOrMutation()
     {
@@ -563,6 +602,9 @@ public sealed class WorkflowExternalResponseServiceTests
     {
         public int CallCount { get; private set; }
 
+        public Func<WorkflowExternalResponseContinuationRequest, WorkflowExternalResponseContinuationResult>?
+            ResultFactory { get; set; }
+
         public async Task<WorkflowExternalResponseContinuationResult> ContinueAsync(
             WorkflowExternalResponseContinuationRequest request,
             CancellationToken cancellationToken = default)
@@ -571,6 +613,11 @@ public sealed class WorkflowExternalResponseServiceTests
             if (beforeReturnAsync is not null)
             {
                 await beforeReturnAsync();
+            }
+
+            if (ResultFactory is not null)
+            {
+                return ResultFactory(request);
             }
 
             var completedRun = run with

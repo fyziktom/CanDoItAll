@@ -35,7 +35,16 @@ internal sealed record WorkflowPendingExternalRequestApiResponse(
     long Version,
     WorkflowExternalRequestState State,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset? RespondedAtUtc);
+    DateTimeOffset? RespondedAtUtc,
+    string? Prompt,
+    WorkflowExternalResponseContractApiResponse? ResponseContract);
+
+internal sealed record WorkflowExternalResponseContractApiResponse(
+    string SchemaId,
+    int SchemaVersion,
+    JsonElement? Schema,
+    bool SchemaAvailable,
+    int MaximumPayloadBytes);
 
 internal sealed record WorkflowRunApiResponse(
     Guid RunId,

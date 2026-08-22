@@ -49,6 +49,15 @@
 | RQ-043 | SB01/SB05/SB06 | Version, API/control-plane, runtime, migration/legacy, and guarantee documentation | Wave A package docs; SB05 executable OpenAPI/API contract; final maintained-Markdown validation over 187 files and SB06 closeout audit | Proven |
 | RQ-044 | SB01/SB02 | Separate Wave A diffs/closure | Execution report | Proven |
 | RQ-045 | SB06 | Original request audited note by note against implementation and proof | `closeout/EXECUTION-REPORT.md` original-input closure table; RQ-001–RQ-045 all Proven; closure checklist complete | Proven |
+| RQ-046 | SB07 | Standalone .NET 10 Blazor static-SSR sample, zero product project references | Sample Release build 0W/0E; 61/61 tests; frozen 72-file source-set assertion; three browser journeys; BG-SB07-02 982/983 with zero failures | Implemented — Governed proof incomplete |
+| RQ-047 | SB07 | Twenty unique file-backed SimWiki articles with typed list/read/search endpoints | 61/61 sample tests and canonical final-run list/search readbacks | Implemented — Governed proof incomplete |
+| RQ-048 | SB07 | Stable published workflow start plus LLM greeting and native HumanInput | Exact definition/two-component readback and mismatch tests; claim-state reconciliation tests; terminal live journeys; native-link migration/race | Implemented — Governed proof incomplete |
+| RQ-049 | SB07 | Existing response API plus signal-driven SSE, operation-status reconciliation, and canonical readback | 61/61 sample, 71/71 Unit, 64/64 focused Integration; replay lock; exact 202 operation binding; unchanged-cursor SSE reconnect; final one-EventSource journeys | Implemented — Governed proof incomplete |
+| RQ-050 | SB07 | Unrolled maximum-three governed search workflow with success/failure branches | Chess first hit, Cycling second hit, exactly-three miss; no fourth request | Implemented — Governed proof incomplete |
+| RQ-051 | SB07 | Server-side token, stable identity/idempotency/cursor/artifact handling | Zero-hit credential/log scan; exact operation/cursor readbacks; message and public-URI redaction tests; final ledgers verified | Implemented — Governed proof incomplete |
+| RQ-052 | SB07 | Bounded allow-listed pending-request prompt/contract projection | Safe mapper plus 50/50 Web-boundary facts within the 64/64 focused Integration selector | Implemented — Governed proof incomplete |
+| RQ-053 | SB07 | Playwright direct-hit, later-hit, and three-miss journeys | Final run `20260822T055150662Z-3853d604`; three inspected 1280x900 screenshots; clean console; one EventSource per conversation | Implemented — Governed proof incomplete |
+| RQ-054 | SB07 | Configuration/run docs and focused validation | Sample 61/61, Unit 71/71, focused Integration 64/64, broad Integration 982/983 with one declared opt-in skip, Playwright 3/3, five Release builds, hashes, and validators pass; failing-first Governed gate incomplete | Implemented — Governed proof incomplete |
 
 ## Closure rule
 

@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -7,12 +8,16 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Npgsql;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
 {
     private const string RecoveryMigrationId = "20260821021747_AddWorkflowHitlRecovery";
+    private const string NativeRequestUniquenessMigrationId =
+        "20260822013043_AddWorkflowNativeCheckpointRequestUniqueness";
     private static readonly DateTimeOffset TestTime =
         new(2026, 8, 20, 22, 0, 0, TimeSpan.Zero);
     private static readonly WorkspaceScopeDescriptor TestAuthorizationScope =
@@ -23,9 +28,9 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     {
         await using var fixture = await CreateFixtureAsync("workflowhitlmigration");
         await using var dbContext = fixture.Factory.CreateDbContext();
-        Assert.Contains(
-            RecoveryMigrationId,
-            await dbContext.Database.GetAppliedMigrationsAsync());
+        var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
+        Assert.Contains(RecoveryMigrationId, appliedMigrations);
+        Assert.Contains(NativeRequestUniquenessMigrationId, appliedMigrations);
         Assert.False(await dbContext.Set<WorkflowBackendCheckpointSessionEntity>().AnyAsync());
         Assert.False(await dbContext.Set<WorkflowBackendCheckpointPayloadEntity>().AnyAsync());
         Assert.False(await dbContext.Set<WorkflowExternalRequestBoundaryEntity>().AnyAsync());
@@ -233,6 +238,101 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     }
 
     [Fact]
+    public async Task PostgreSql_NativeCheckpointLink_ConcurrentSameSessionTupleHasSingleWinner()
+    {
+        await using var fixture = await CreateFixtureAsync("workflowhitllinkrace");
+        var run = await SeedRunAsync(fixture.Factory);
+        var session = CreateCheckpointSession(run);
+        var checkpointStore = fixture.CreateCheckpointStore();
+        var firstCheckpoint = await checkpointStore.CreateAsync(
+            new WorkflowBackendCheckpointCreateRequest(
+                session,
+                Parent: null,
+                WorkflowBackendCheckpointPayload.Create("{\"native\":\"first-racer\"}")));
+        var secondCheckpoint = await checkpointStore.CreateAsync(
+            new WorkflowBackendCheckpointCreateRequest(
+                session,
+                Parent: null,
+                WorkflowBackendCheckpointPayload.Create("{\"native\":\"second-racer\"}")));
+        Assert.True(firstCheckpoint.Succeeded);
+        Assert.True(secondCheckpoint.Succeeded);
+
+        var backendRequestId = new WorkflowBackendRequestId("native-request-race");
+        var backendRequestPortId = new WorkflowBackendRequestPortId("native-port-race");
+        var firstLink = new WorkflowBackendExternalRequestLink(
+            WorkflowExternalRequestId.New(),
+            backendRequestId,
+            backendRequestPortId);
+        var secondLink = new WorkflowBackendExternalRequestLink(
+            WorkflowExternalRequestId.New(),
+            backendRequestId,
+            backendRequestPortId);
+        var firstRequest = CreateExternalRequest(
+            run,
+            firstLink.ExternalRequestId,
+            firstLink,
+            firstCheckpoint.Checkpoint!);
+        var secondRequest = CreateExternalRequest(
+            run,
+            secondLink.ExternalRequestId,
+            secondLink,
+            secondCheckpoint.Checkpoint!);
+        await PersistRequestAndCheckpointAsync(
+            fixture.Factory,
+            run,
+            firstRequest,
+            firstCheckpoint.Checkpoint!);
+        await PersistRequestAndCheckpointAsync(
+            fixture.Factory,
+            run,
+            secondRequest,
+            secondCheckpoint.Checkpoint!);
+
+        var interceptor = new NativeRequestPrecheckBarrierInterceptor();
+        var boundaryStore = new PersistentWorkflowExternalRequestBoundaryStore(
+            fixture.Factory.WithInterceptor(interceptor));
+        var results = await Task.WhenAll(
+            boundaryStore.UpsertAsync(CreateBoundary(firstRequest)),
+            boundaryStore.UpsertAsync(CreateBoundary(secondRequest)));
+
+        Assert.Single(
+            results,
+            result => result.Outcome == WorkflowExternalRequestBoundarySaveOutcome.Created);
+        Assert.Single(
+            results,
+            result => result.Outcome == WorkflowExternalRequestBoundarySaveOutcome.VersionConflict);
+        var checkpointIds = new[]
+        {
+            firstCheckpoint.Checkpoint!.Index.Link.CheckpointId.Value,
+            secondCheckpoint.Checkpoint!.Index.Link.CheckpointId.Value
+        };
+        var requestIds = new[] { firstRequest.Id.Value, secondRequest.Id.Value };
+        await using var verificationContext = fixture.Factory.CreateDbContext();
+        var persistedCheckpoints = await verificationContext
+            .Set<WorkflowBackendCheckpointPayloadEntity>()
+            .AsNoTracking()
+            .Where(checkpoint => checkpointIds.Contains(checkpoint.Id))
+            .ToArrayAsync();
+        var linkedCheckpoint = Assert.Single(
+            persistedCheckpoints,
+            checkpoint => checkpoint.ExternalRequestId.HasValue);
+        var unlinkedCheckpoint = Assert.Single(
+            persistedCheckpoints,
+            checkpoint => checkpoint.ExternalRequestId is null);
+        Assert.Equal(backendRequestId.Value, linkedCheckpoint.BackendRequestId);
+        Assert.Equal(backendRequestPortId.Value, linkedCheckpoint.BackendRequestPortId);
+        Assert.Contains(linkedCheckpoint.ExternalRequestId!.Value, requestIds);
+        Assert.Null(unlinkedCheckpoint.BackendRequestId);
+        Assert.Null(unlinkedCheckpoint.BackendRequestPortId);
+        var persistedBoundaryRequestId = await verificationContext
+            .Set<WorkflowExternalRequestBoundaryEntity>()
+            .Where(boundary => requestIds.Contains(boundary.RequestId))
+            .Select(boundary => boundary.RequestId)
+            .SingleAsync();
+        Assert.Equal(linkedCheckpoint.ExternalRequestId.Value, persistedBoundaryRequestId);
+    }
+
+    [Fact]
     public async Task PostgreSql_OperationLedger_EnforcesReplayConflictLeaseAndExpiredTakeover()
     {
         await using var fixture = await CreateFixtureAsync("workflowhitloperationledger");
@@ -388,6 +488,103 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(exhausted.Operation.State, recovered!.State);
         Assert.Equal(exhausted.Operation.Lease, recovered.Lease);
         Assert.Equal("{\"answer\":42}", recovered.ResponsePayload.Json);
+    }
+
+    [Fact]
+    public async Task PostgreSql_OperationReplay_WaitsForConcurrentLeaseMutationAndReturnsCurrentState()
+    {
+        await using var fixture = await CreateFixtureAsync("workflowhitloperationreplayrace");
+        var seeded = await SeedWaitingRequestAsync(fixture, createBoundary: true);
+        var store = fixture.CreateOperationStore();
+        var actor = new WorkflowLaunchActor(WorkflowLaunchActorKind.User, "replay-race-operator");
+        var fingerprint = WorkflowExternalResponseFingerprintFactory.Create(
+            seeded.Request.Id,
+            seeded.Request.Version,
+            actor,
+            TestAuthorizationScope,
+            WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+            new WorkflowExternalResponseIdempotencyKey("replay-race-key"),
+            "{\"answer\":42}");
+        var createRequest = new WorkflowExternalResponseOperationCreateRequest(
+            WorkflowExternalResponseOperationId.New(),
+            seeded.Request.Id,
+            seeded.Run.RunId,
+            seeded.Request.Version,
+            fingerprint,
+            actor,
+            new WorkflowLaunchCorrelationId("replay-race"),
+            TestTime);
+        var created = await store.CreateOrReplayAsync(createRequest);
+        var owner = new WorkflowExternalResponseLeaseOwnerId("replay-race-host");
+        var claimed = await store.TryClaimAsync(
+            new WorkflowExternalResponseOperationClaimRequest(
+                created.Operation!.Id,
+                created.Operation.ConcurrencyVersion,
+                owner,
+                TestTime.AddSeconds(1),
+                TestTime.AddMinutes(1),
+                MaximumAttempts: 3));
+        Assert.Equal(WorkflowExternalResponseOperationClaimOutcome.Claimed, claimed.Outcome);
+
+        await using var lockConnection = new NpgsqlConnection(fixture.ConnectionString);
+        await lockConnection.OpenAsync();
+        await using var lockTransaction = await lockConnection.BeginTransactionAsync();
+        await using (var lockCommand = lockConnection.CreateCommand())
+        {
+            lockCommand.Transaction = lockTransaction;
+            lockCommand.CommandText =
+                """
+                SELECT "Id"
+                FROM "AgentFramework_WorkflowExternalResponseOperations"
+                WHERE "Id" = @operationId
+                FOR UPDATE
+                """;
+            lockCommand.Parameters.AddWithValue("operationId", created.Operation.Id.Value);
+            Assert.Equal(created.Operation.Id.Value, await lockCommand.ExecuteScalarAsync());
+        }
+
+        var interceptor = new OperationReplayCommandInterceptor(seeded.Request.Id.Value);
+        var racingStore = fixture.CreateOperationStore(interceptor);
+        var renewedLeaseExpiry = TestTime.AddMinutes(2);
+        var renewalTask = racingStore.TryRenewLeaseAsync(
+            new WorkflowExternalResponseOperationLeaseRenewalRequest(
+                claimed.Operation!.Id,
+                claimed.Operation.ConcurrencyVersion,
+                owner,
+                claimed.Claim!.Lease.Epoch,
+                TestTime.AddSeconds(2),
+                renewedLeaseExpiry));
+        Task<WorkflowExternalResponseOperationCreateResult>? replayTask = null;
+        string replayReadCommand;
+        try
+        {
+            await WaitForBlockedDatabaseCommandAsync(fixture.ConnectionString);
+            replayTask = racingStore.CreateOrReplayAsync(createRequest with
+            {
+                OperationId = WorkflowExternalResponseOperationId.New(),
+                AcceptedAtUtc = TestTime.AddSeconds(3)
+            });
+            replayReadCommand = await interceptor.OperationReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+        finally
+        {
+            await lockTransaction.RollbackAsync();
+        }
+
+        var renewed = await renewalTask;
+        var replayed = await replayTask;
+
+        Assert.Contains("FOR UPDATE", replayReadCommand, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(WorkflowExternalResponseOperationMutationOutcome.Updated, renewed.Outcome);
+        Assert.Equal(WorkflowExternalResponseOperationCreateOutcome.Replayed, replayed.Outcome);
+        Assert.Equal(renewedLeaseExpiry, replayed.Operation!.Lease!.ExpiresAtUtc);
+        Assert.Equal(renewed.Operation!.ConcurrencyVersion, replayed.Operation.ConcurrencyVersion);
+        await using var verificationContext = fixture.Factory.CreateDbContext();
+        var persisted = await verificationContext.Set<WorkflowExternalResponseOperationEntity>()
+            .AsNoTracking()
+            .SingleAsync(operation => operation.Id == created.Operation.Id.Value);
+        Assert.Equal(1, persisted.ReplayCount);
+        Assert.Equal(renewedLeaseExpiry, persisted.LeaseExpiresAtUtc);
     }
 
     [Fact]
@@ -1198,6 +1395,33 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
         Assert.Equal(expectedLink?.BackendRequestPortId.Value, checkpoint.BackendRequestPortId);
     }
 
+    private static async Task WaitForBlockedDatabaseCommandAsync(string connectionString)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                  AND pid <> pg_backend_pid()
+                  AND wait_event_type = 'Lock')
+            """;
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            if (await command.ExecuteScalarAsync() is true)
+            {
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(25));
+        }
+
+        throw new TimeoutException("The PostgreSQL mutation did not reach the operation-row lock barrier.");
+    }
+
     private static WorkflowExternalRequestBoundaryRecord CreateBoundary(
         WorkflowExternalRequestRecord request)
     {
@@ -1241,6 +1465,12 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
             bool reconstructDataProtectionProvider = false)
             => new(Factory, keyDirectory.CreateProvider());
 
+        public PersistentWorkflowExternalResponseOperationStore CreateOperationStore(
+            DbCommandInterceptor interceptor)
+            => new(Factory.WithInterceptor(interceptor), keyDirectory.CreateProvider());
+
+        public string ConnectionString => database.ConnectionString;
+
         public IDataProtectionProvider CreateDataProtectionProvider()
             => keyDirectory.CreateProvider();
 
@@ -1256,9 +1486,72 @@ public sealed class WorkflowHitlRecoveryPersistenceIntegrationTests
     {
         public AppDbContext CreateDbContext() => new(options);
 
+        public WorkflowHitlDbContextFactory WithInterceptor(DbCommandInterceptor interceptor)
+            => new(new DbContextOptionsBuilder<AppDbContext>(options)
+                .AddInterceptors(interceptor)
+                .Options);
+
         public Task<AppDbContext> CreateDbContextAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult(CreateDbContext());
+    }
+
+    private sealed class OperationReplayCommandInterceptor(Guid requestId) : DbCommandInterceptor
+    {
+        public TaskCompletionSource<string> OperationReadStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.Contains(
+                    "AgentFramework_WorkflowExternalResponseOperations",
+                    StringComparison.Ordinal) &&
+                command.Parameters.Cast<DbParameter>().Any(parameter =>
+                    parameter.Value is Guid value && value == requestId))
+            {
+                OperationReadStarted.TrySetResult(command.CommandText);
+            }
+
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class NativeRequestPrecheckBarrierInterceptor : DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource bothPrechecksCompleted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int completedPrechecks;
+
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            DbDataReader result,
+            CancellationToken cancellationToken = default)
+        {
+            if (!command.CommandText.Contains("SELECT EXISTS", StringComparison.OrdinalIgnoreCase) ||
+                !command.CommandText.Contains(
+                    "AgentFramework_WorkflowBackendCheckpointPayloads",
+                    StringComparison.Ordinal) ||
+                !command.CommandText.Contains("BackendRequestId", StringComparison.Ordinal) ||
+                !command.CommandText.Contains("BackendRequestPortId", StringComparison.Ordinal))
+            {
+                return result;
+            }
+
+            if (Interlocked.Increment(ref completedPrechecks) == 2)
+            {
+                bothPrechecksCompleted.TrySetResult();
+            }
+
+            await bothPrechecksCompleted.Task.WaitAsync(
+                TimeSpan.FromSeconds(10),
+                cancellationToken);
+            return result;
+        }
     }
 
     private sealed class DataProtectionKeyDirectory : IDisposable

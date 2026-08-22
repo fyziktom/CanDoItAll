@@ -62,3 +62,15 @@
 - **RQ-043** Update API/runtime documentation and package/version documentation.
 - **RQ-044** Keep the upgrade wave independently reviewable and revertible from the HITL wave.
 - **RQ-045** Close every original request item with implementation and proof evidence.
+
+## Follow-on API sample and browser proof
+
+- **RQ-046** Create a .NET 10 Blazor SSR sample at `C:\programovani\dotnet\candoitall-sample-hitl-api` using plain HTML, CSS, and JavaScript.
+- **RQ-047** Host a file-backed SimWiki API with approximately twenty hobby articles plus typed list, read, and search operations.
+- **RQ-048** Start a real published workflow from the submitted name and display an LLM-personalized greeting that requests the user's hobby.
+- **RQ-049** Submit the hobby through the existing external-response API and drive attention/terminal transitions from the run-specific SSE stream plus canonical readbacks, without a polling fallback.
+- **RQ-050** Have the workflow propose three search topics, perform no more than three governed SimWiki searches, personalize a found article, and terminate with an explicit not-found response after three misses.
+- **RQ-051** Keep API credentials server-side and use stable workflow identity, exact published versions, idempotent start/response keys, SSE cursors, and safe terminal artifact readback.
+- **RQ-052** Repair only demonstrated API/runtime defects. Any pending-request enhancement must be additive, allow-listed, bounded, and must not expose raw request context or protected state.
+- **RQ-053** Validate the real browser flow with Playwright across direct-hit, retry-hit, and three-miss conversations, including terminal UI state and browser-console cleanliness.
+- **RQ-054** Provide sample configuration/run documentation and focused build/test/API proof with discovered test counts and no stored secrets.

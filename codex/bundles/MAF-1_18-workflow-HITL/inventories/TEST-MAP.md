@@ -144,6 +144,45 @@ SB00 records the actual baseline count. The expected post-change count is:
 
 A run reporting zero discovered tests is failure even when the process exits successfully.
 
+## SB07 final focused map
+
+- Standalone sample: exactly 61/61, covering the twenty-article corpus, search behavior,
+  exact workflow/two-component configuration, start idempotency reconciliation, HumanInput and
+  three approval boundaries, exact asynchronous-operation identity/lifecycle, canonical artifact
+  parsing, URI redaction, and unchanged-cursor SSE reconnect behavior.
+- Product Unit: 71/71 across `PersistentWorkflowRunStoreInMemoryTests`,
+  `WorkflowLaunchIdempotencyInMemoryStoreTests`,
+  `PersistentWorkflowExecutorInvocationDeduplicationStoreInMemoryTests`,
+  `PersistentWorkflowResumeBoundaryStoreInMemoryTests`,
+  `WorkflowExternalResponseContinuationTests`, `WorkflowExternalResponseServiceTests`,
+  `WorkflowExternalResponseServiceResultMapperTests`, and `MafWorkflowHumanInLoopTests`.
+- Product Integration: 64/64 across `WorkflowExternalResponseWebBoundaryTests` (50) and
+  `WorkflowHitlRecoveryPersistenceIntegrationTests` (14), including the safe pending
+  prompt/contract projection, external-response HTTP outcomes, request-row replay locking,
+  same-session native-link uniqueness, and migration application.
+- Browser: three real Playwright journeys against source digest
+  `98a6a2e1a0e2143fed1d37b83688d4bb32303236c02d8e36c9ac829e4d022adc` — direct hit,
+  second-attempt hit, and exactly-three miss — with one EventSource per conversation and clean
+  final console/page state.
+
+Raw counters and exact commands are frozen under `proof/SB07`.
+
+## SB07 current-source broad gate
+
+`BG-SB07-01` is retained as invalidated historical Wave C evidence. It ran before the
+PostgreSQL response-replay lock and native checkpoint-link schema migration and cannot prove
+those source/schema changes.
+
+`BG-SB07-02` is the replacement gate. The focused entry checks are 61 sample, 71 Unit, and
+64 Integration tests with exact class/topic selection; all pass. The broad trigger is migration
+`20260822013043_AddWorkflowNativeCheckpointRequestUniqueness`, which changes shared persistence
+schema and runtime composition beyond the focused Web/recovery classes. The once-only unfiltered
+Integration project ran against the current source/build freeze and passed 982 of 983 tests with
+zero failures in 1h24m. The sole skip is the declared opt-in
+`LiveLocalOllamaThinkingEffortIntegrationTests` catalog test, which requires additional installed
+Qwen, Gemma, GPT-OSS, and non-thinking model families and never downloads them. Historical FG-01
+was not rerun or relabeled.
+
 ## Build map
 
 Focused builds after restore:

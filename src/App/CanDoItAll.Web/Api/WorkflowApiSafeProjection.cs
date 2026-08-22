@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -7,6 +8,7 @@ namespace CanDoItAll.Web.Api;
 internal static class WorkflowApiSafeProjection
 {
     private const int MaximumSafeTextLength = 4_096;
+    private const int MaximumSafeSchemaLength = 32_768;
 
     public static WorkflowRunApiResponse Map(WorkflowRunSnapshot run)
         => new(
@@ -67,7 +69,9 @@ internal static class WorkflowApiSafeProjection
             request.Version.Value,
             request.EffectiveState,
             request.CreatedAtUtc,
-            request.RespondedAtUtc);
+            request.RespondedAtUtc,
+            MapPrompt(request.RequestJson),
+            Map(request.Kind, request.ResponseContract));
 
     public static WorkflowListPage<WorkflowRunApiResponse> Map(
         WorkflowListPage<WorkflowRunSnapshot> page)
@@ -113,5 +117,54 @@ internal static class WorkflowApiSafeProjection
         return safe.Length <= MaximumSafeTextLength
             ? safe
             : safe[..MaximumSafeTextLength];
+    }
+
+    private static string? MapPrompt(string requestJson)
+    {
+        if (string.IsNullOrWhiteSpace(requestJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(requestJson);
+            if (document.RootElement.ValueKind is not JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty("prompt", out var prompt) ||
+                prompt.ValueKind is not JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return Bound(prompt.GetString());
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static WorkflowExternalResponseContractApiResponse? Map(
+        WorkflowExternalRequestKind requestKind,
+        WorkflowExternalResponseContract? contract)
+    {
+        if (contract is null || contract.Kind != requestKind)
+        {
+            return null;
+        }
+
+        JsonElement? schema = null;
+        if (contract.SchemaJson.Length <= MaximumSafeSchemaLength)
+        {
+            using var document = JsonDocument.Parse(contract.SchemaJson);
+            schema = document.RootElement.Clone();
+        }
+
+        return new WorkflowExternalResponseContractApiResponse(
+            Bound(contract.SchemaId),
+            contract.SchemaVersion,
+            schema,
+            SchemaAvailable: schema.HasValue,
+            contract.MaximumPayloadBytes);
     }
 }

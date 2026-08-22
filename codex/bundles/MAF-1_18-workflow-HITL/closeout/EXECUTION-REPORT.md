@@ -1,13 +1,17 @@
 # Execution Report
 
-**State:** Proven
+**State:** Implemented — Wave C/SB07 technically validated but Governed proof incomplete;
+Wave A/Wave B remain historically Proven
 
 **Repository:** `C:\repositories\CanDoItAll`
 
-**Branch/HEAD:** `maf-update-and-hil` / `af425ac371b251447f9858b15476092531c686da`
+**Branch:** `maf-update-and-hil`
+**Historical Wave B HEAD:** `af425ac371b251447f9858b15476092531c686da`
+**Wave C working HEAD observed during scaffolding:** `c19cb94bfac710f567db63a93f1e4af69f046cc5`
 **Executor:** Codex GPT-5.6 xhigh
 **Started:** 2026-08-20
-**Completed:** 2026-08-21T13:59:43.2785414Z
+**Wave A/Wave B completed:** 2026-08-21T13:59:43.2785414Z
+**Wave C completion:** 2026-08-22
 
 ## Wave A result
 
@@ -61,10 +65,41 @@ participating executors. Direct coordinator recovery is proven on a reconstructe
 automatic hosted-worker startup remains separate focused composition/worker evidence and
 is not overstated by the E2E fixture.
 
+## Wave C result
+
+Implemented and technically validated. The standalone .NET 10 static-SSR sample has no product project
+reference, loads exactly twenty SimWiki JSON articles, provisions a stable unrolled
+three-attempt workflow, keeps authenticated upstream traffic server-side, and proxies
+run-specific SSE without polling. Its Release build, 61/61 tests, and JavaScript syntax pass.
+Final run `20260822T055150662Z-3853d604` proves Mina/chess reaches Chess after one approval;
+Nina/`road biking; search road biking before cycling` reaches Cycling after two approvals; and
+Zoe/underwater basket weaving receives the explicit miss after three approvals. Each conversation
+has one EventSource, one hobby POST, clean page/console state, and an inspected 1280x900 screenshot.
+
+Live use also drove bounded product repairs: safe pending prompt/contract projection,
+provider-aware InMemory mutations, canonical pending hydration, post-commit result-event
+publication, truthful outcome precedence, and fail-closed continuation logging. Independent
+race review then identified PostgreSQL replay/linkage gaps. Replay now takes a request-scoped
+`FOR UPDATE` lock before operation mutation. Migration
+`20260822013043_AddWorkflowNativeCheckpointRequestUniqueness` preflights duplicates and adds the
+filtered same-session native request/port unique tuple; only known constraint violations map to
+typed link conflicts and current callers roll back.
+
+Four affected product Release builds pass at 0W/0E. Focused proof passes 71/71 Unit and 64/64
+Integration tests, including 50 Web-boundary and 14 PostgreSQL recovery facts. The independent
+race review is Pass with follow-up. `BG-SB07-01` is retained as invalidated by the final
+persistence/schema changes. `BG-SB07-02` passed its once-only full Integration project at
+982/983 with zero failures in 1h24m; the sole skip is the declared opt-in live Ollama catalog
+test requiring additional installed model families. Post-fix technical verification passes.
+Final governed ledgers and validators pass, but no authentic failing-first test artifact exists:
+the pre-fix findings are review findings rather than RED evidence, and the later standalone
+findings were review evidence rather than executed failing tests.
+
 ## Validation summary
 
-Executed through the final frozen SB06 state. The accepted FG-01 checkpoint ran once after
-focused/E2E proof and every diagnostic repair passed.
+Historical validation is complete through the frozen SB06 state. The accepted FG-01 checkpoint
+ran once after focused/E2E proof and every historical diagnostic repair passed. Wave C focused
+and browser gates are current below; its replacement broad gate passed.
 
 | Gate | Command/filter | Expected discovery | Actual | Result | Evidence |
 |---|---|---:|---:|---|---|
@@ -76,6 +111,9 @@ focused/E2E proof and every diagnostic repair passed.
 | SB05 API | exact 22-class Unit selector; exact 11-class Integration selector; all affected Release builds; source/schema/API/architecture gates | 297 Unit; 137 Integration | 297 Unit; 137 Integration; 0 skipped | Pass | `proof/SB05`; snapshot `snap-20260821072204-bf844210`; CP-WB3 Pass |
 | SB06 restart and closure | 17-scenario E2E map; retained Unit/Integration selectors; normalizer, PostgreSQL precision/lease, Components, plugin, API projection, runtime, and process-host focused repairs | E2E 12; Unit 7; Integration 14; targeted counts as recorded | E2E 12/12; Unit 7/7; Integration 14/14; every targeted repair green | Pass | `proof/SB06/TestResults`; append-only SB03/SB04/SB05 reopen supplements; snapshot `snap-20260821092959-44e660f5` |
 | FG-01 broad | Five authoritative commands from `docs/testing.md`: product restore/build, Stable restore/build, exact filtered Stable test | Components 1,078; Integration 923; AgentFramework.Memory 22; Memory 196; Unit 6,252 | 8,471/8,471; 0 failed/skipped; both builds 0W/0E | Pass | Valid freeze `2026-08-21T12:52:49.8229732Z`–`2026-08-21T13:59:43.2785414Z`; HEAD and sibling pins recorded below |
+| SB07 focused/browser | Sample Release build/list/test; four affected product builds; exact Unit and two-class Integration selectors; terminal live SSE; three Playwright journeys; safety scans | Sample 61; Unit 71; Integration 64; Playwright 3 | Sample 61/61; Unit 71/71; Integration 64/64; Playwright 3/3; five Release builds 0W/0E | Technical Pass; Governed proof incomplete | `proof/SB07`; CP-WC1 Pass with follow-up |
+| BG-SB07-01 | Initial Wave C current-source gate | Sample 30; Unit 71; Integration 50; Playwright 3 | Passed against earlier source | Invalidated | Later replay-lock and native-link schema repairs changed source/schema |
+| BG-SB07-02 | Once-only full Integration-project gate after focused proof and migration freeze | 983 total; exact skip identity recorded | 982 passed; 0 failed; 1 declared opt-in live catalog skip; 1h24m | Pass | Broad product TRX passes; FG-01 unchanged; SB07 Governed closure remains separate |
 
 ## Deviations
 
@@ -160,6 +198,22 @@ focused/E2E proof and every diagnostic repair passed.
 - A sandbox-only denial during the final restore was retried with the identical command
   under the required permission and passed. This was an environmental access result and did
   not mutate source or count as a product-gate failure.
+- The first unfiltered Integration attempt was stopped after every observed failure was the same
+  sandbox denial on the control-plane profile lock. The identical authorized command produced the
+  retained 982/983 broad TRX with zero failures. Its one skipped live Ollama catalog fact is
+  opt-in and requires additional installed model families; it never downloads them.
+- The first Wave C current-source gate, `BG-SB07-01`, passed before independent review exposed
+  two relational race gaps. It is retained as invalidated rather than overwritten. The pre-fix
+  replay/lease race produced `DbUpdateConcurrencyException` in console diagnostics, but no
+  durable failing-first TRX was captured; the report does not manufacture one.
+- PostgreSQL replay now selects the request operation `FOR UPDATE` before incrementing replay
+  state, preserving the request-before-operation order used by lease/state paths. The direct
+  two-connection test proves a queued lease renewal and replay both persist.
+- Two-context native-link prechecks were insufficient without a database constraint. Migration
+  `20260822013043_AddWorkflowNativeCheckpointRequestUniqueness` fails on legacy duplicates and
+  adds a filtered unique tuple. The deterministic barrier test proves one winner, one typed
+  conflict, and a fully unlinked loser. Both current conflict callers roll back the PostgreSQL
+  transaction.
 - The final valid frozen checkpoint remained at HEAD
   `af425ac371b251447f9858b15476092531c686da`, Components
   `8372c1d55f21b349f8e859470b02eeb4421e96ca`, and FileTools
@@ -167,13 +221,18 @@ focused/E2E proof and every diagnostic repair passed.
   51.15s, Stable build passed 0W/0E in 70.13s, and the exact filtered test passed
   8,471/8,471 with zero failed or skipped tests.
 
-## Remaining risks
+## Wave C closure result
 
-No required implementation or validation work remains. The declared product boundaries
-remain intentional rather than hidden residual risk: the in-process backend is non-durable;
-in-memory stores are process-local, non-durable, and non-snapshot-isolated; direct
-reconstructed-host coordinator recovery is distinct from hosted-worker startup proof; and
-the supported guarantee is exactly-once response acceptance plus deduplicated participating
+SB07 implementation and technical validation are complete. `BG-SB07-02` and the post-fix
+technical verifier pass. The completed sample, focused product, live SSE, three-journey
+Playwright, screenshot, safety, and anti-stub evidence did not require another broad FG-01
+replay. Governed closeout remains incomplete solely because no authentic failing-first test
+transcript exists; final hashes and validators pass.
+
+The historical Wave B product boundaries remain intentional: the in-process backend is
+non-durable; in-memory stores are process-local, non-durable, and non-snapshot-isolated; direct
+reconstructed-host coordinator recovery is distinct from hosted-worker startup proof; and the
+supported guarantee is exactly-once response acceptance plus deduplicated participating
 governed effects, not arbitrary external exactly-once execution.
 
 ## Original input closure
@@ -185,6 +244,9 @@ governed effects, not arbitrary external exactly-once execution.
 | Treat parallel tool calls cautiously because order matters | Solved | Application-owned invocation remains explicitly serial; streaming/non-streaming A/B/C order and a meaningful opt-in overlap negative are proven. No public concurrency toggle or declaration-only storage experiment was added. |
 | Complete workflow Human-in-the-Loop after the small update | Solved | Native MAF request ports, protected checkpoints, exact-version/topology rehydration, consecutive waits, approval/denial, recovery, cancellation, legacy/corruption fail-closed behavior, and participating-effect deduplication are implemented and proven. |
 | Complete the HITL API, not only the runtime | Solved | The existing response route now uses typed bounded JSON, trusted actor/scope authorization, idempotency/conflict handling, audit/redaction, safe status/read projections, OpenAPI, and one shared service used by all three production callers. |
-| Provide a detailed Codex 5.6 xhigh bundle/archive | Solved | The user identified this delivered repository bundle as the execution input. Its seven-subbundle shape preserves requirements, dependencies, architecture, proof tiers, traceability, governed artifacts, reopen history, execution report, and final closure; the current in-place execution supersedes archive transport. |
+| Provide a detailed Codex 5.6 xhigh bundle/archive | Solved | The user identified this delivered repository bundle as the execution input. Its eight-subbundle shape preserves requirements, dependencies, architecture, proof tiers, traceability, governed artifacts, reopen history, execution report, and final closure; the current in-place execution supersedes archive transport. |
+| Add the standalone HITL sample and three browser journeys | Implemented and technically validated | The implementation, 61/71/64 focused tests, five Release builds, terminal live SSE, three frozen-source Playwright journeys, screenshots, broad 982/983 with zero failures, safety scans, final hashes, and validators pass; authentic failing-first Governed proof remains absent. |
 
-RQ-001 through RQ-045 are Proven. No raw input is Partially solved or Not solved.
+RQ-001 through RQ-045 remain historically Proven. RQ-046 through RQ-054 are Implemented and
+technically validated by the separate Wave C evidence but are not Governed-Proven; historical
+Wave A/Wave B facts remain unchanged.

@@ -48,12 +48,20 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        await EnsureSessionExistsAsync(dbContext, request.Session, cancellationToken);
-        var session = await LockSessionAsync(dbContext, request.Session.Id, cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        await using var transaction = WorkflowPersistenceProvider.IsInMemory(dbContext)
+            ? null
+            : await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        var session = await EnsureAndLockSessionAsync(dbContext, request.Session, cancellationToken);
         if (!HasMatchingMetadata(session, request.Session))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowBackendCheckpointCreateResult(
                 WorkflowBackendCheckpointCreateOutcome.SessionMetadataMismatch,
                 Checkpoint: null);
@@ -62,7 +70,11 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
         if (request.Parent is { } parentLink &&
             !await CheckpointExistsAsync(dbContext, parentLink, cancellationToken))
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
             return new WorkflowBackendCheckpointCreateResult(
                 WorkflowBackendCheckpointCreateOutcome.ParentNotFound,
                 Checkpoint: null);
@@ -75,7 +87,10 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
         dbContext.Set<WorkflowBackendCheckpointPayloadEntity>().Add(
             ToEntity(request, checkpointId, commitOrdinal, createdAtUtc));
         await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
 
         return new WorkflowBackendCheckpointCreateResult(
             WorkflowBackendCheckpointCreateOutcome.Created,
@@ -178,11 +193,38 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
         }
     }
 
-    private static async Task EnsureSessionExistsAsync(
+    private static async Task<WorkflowBackendCheckpointSessionEntity> EnsureAndLockSessionAsync(
         AppDbContext dbContext,
         WorkflowBackendCheckpointSession session,
         CancellationToken cancellationToken)
     {
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            var existing = await dbContext.Set<WorkflowBackendCheckpointSessionEntity>()
+                .SingleOrDefaultAsync(record => record.Id == session.Id.Value, cancellationToken);
+            if (existing is not null)
+            {
+                return existing;
+            }
+
+            var created = new WorkflowBackendCheckpointSessionEntity
+            {
+                Id = session.Id.Value,
+                RunId = session.RunId.Value,
+                WorkflowId = session.WorkflowId.Value,
+                WorkflowVersionId = session.WorkflowVersionId.Value,
+                Backend = (int)session.Backend,
+                Format = session.Format.Value,
+                FormatVersion = session.FormatVersion.Value,
+                CompilerContractVersion = session.CompilerContractVersion.Value,
+                TopologyFingerprint = session.TopologyFingerprint.Value,
+                NextCommitOrdinal = 0
+            };
+            dbContext.Set<WorkflowBackendCheckpointSessionEntity>().Add(created);
+            return created;
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         await dbContext.Database.ExecuteSqlInterpolatedAsync(
             $"""
             INSERT INTO "AgentFramework_WorkflowBackendCheckpointSessions"
@@ -192,21 +234,16 @@ public sealed class PersistentWorkflowBackendCheckpointPayloadStore :
             ON CONFLICT ("Id") DO NOTHING
             """,
             cancellationToken);
-    }
-
-    private static Task<WorkflowBackendCheckpointSessionEntity> LockSessionAsync(
-        AppDbContext dbContext,
-        WorkflowBackendSessionId sessionId,
-        CancellationToken cancellationToken)
-        => dbContext.Set<WorkflowBackendCheckpointSessionEntity>()
+        return await dbContext.Set<WorkflowBackendCheckpointSessionEntity>()
             .FromSqlInterpolated(
                 $"""
                 SELECT *
                 FROM "AgentFramework_WorkflowBackendCheckpointSessions"
-                WHERE "Id" = {sessionId.Value}
+                WHERE "Id" = {session.Id.Value}
                 FOR UPDATE
                 """)
             .SingleAsync(cancellationToken);
+    }
 
     private static Task<bool> CheckpointExistsAsync(
         AppDbContext dbContext,

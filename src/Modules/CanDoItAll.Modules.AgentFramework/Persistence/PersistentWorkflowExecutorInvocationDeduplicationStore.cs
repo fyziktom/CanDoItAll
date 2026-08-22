@@ -33,6 +33,16 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
         CancellationToken cancellationToken = default)
     {
         ValidateClaimRequest(request);
+        await using (var providerContext = await dbContextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            if (WorkflowPersistenceProvider.IsInMemory(providerContext))
+            {
+                return await TryClaimInMemoryAsync(request, cancellationToken);
+            }
+
+            WorkflowPersistenceProvider.EnsureRelational(providerContext);
+        }
+
         if (await TryInsertClaimAsync(request, cancellationToken))
         {
             var inserted = WorkflowExecutorInvocationRecordEntity.CreateClaimed(request);
@@ -202,6 +212,27 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            return await MutateInMemoryAsync(
+                dbContext,
+                request.Key,
+                expectedInputHash: null,
+                request.ExpectedVersion,
+                request.LeaseOwnerId,
+                request.LeaseEpoch,
+                request.RenewedAtUtc,
+                additionalGuard: null,
+                entity =>
+                {
+                    entity.ConcurrencyVersion++;
+                    entity.LeaseExpiresAtUtc = request.LeaseExpiresAtUtc;
+                    entity.UpdatedAtUtc = request.RenewedAtUtc;
+                },
+                cancellationToken);
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         var affected = await dbContext.Set<WorkflowExecutorInvocationRecordEntity>()
             .Where(item =>
                 item.InvocationKey == request.Key.Value &&
@@ -239,6 +270,36 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
         var protectedStoredResult = resultProtector.Protect(storedResultJson);
         var completedAtUtc = storedResult.CompletedAtUtc;
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            return await MutateInMemoryAsync(
+                dbContext,
+                request.Key,
+                request.ExpectedInputHash,
+                request.ExpectedVersion,
+                request.LeaseOwnerId,
+                request.LeaseEpoch,
+                completedAtUtc,
+                entity => string.Equals(
+                    entity.NodeId,
+                    request.StoredResult.Result.NodeId.Value,
+                    StringComparison.Ordinal),
+                entity =>
+                {
+                    entity.State = WorkflowExecutorInvocationState.Completed;
+                    entity.ConcurrencyVersion++;
+                    entity.ProtectedStoredResult = protectedStoredResult;
+                    entity.StoredResultHash = storedResultHash;
+                    entity.CompletedAtUtc = completedAtUtc;
+                    ClearLease(entity);
+                    entity.FailureCode = string.Empty;
+                    entity.SafeMessage = string.Empty;
+                    entity.UpdatedAtUtc = completedAtUtc;
+                },
+                cancellationToken);
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         var affected = await dbContext.Set<WorkflowExecutorInvocationRecordEntity>()
             .Where(item =>
                 item.InvocationKey == request.Key.Value &&
@@ -294,6 +355,30 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
             nameof(request.FailureCode));
         var safeMessage = RequireBoundedText(request.SafeMessage, 1024, nameof(request.SafeMessage));
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            return await MutateInMemoryAsync(
+                dbContext,
+                request.Key,
+                request.ExpectedInputHash,
+                request.ExpectedVersion,
+                request.LeaseOwnerId,
+                request.LeaseEpoch,
+                request.FailedAtUtc,
+                additionalGuard: null,
+                entity =>
+                {
+                    entity.State = request.FailureState;
+                    entity.ConcurrencyVersion++;
+                    entity.FailureCode = failureCode;
+                    entity.SafeMessage = safeMessage;
+                    ClearLease(entity);
+                    entity.UpdatedAtUtc = request.FailedAtUtc;
+                },
+                cancellationToken);
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         var affected = await dbContext.Set<WorkflowExecutorInvocationRecordEntity>()
             .Where(item =>
                 item.InvocationKey == request.Key.Value &&
@@ -325,11 +410,166 @@ public sealed class PersistentWorkflowExecutorInvocationDeduplicationStore :
                 cancellationToken);
     }
 
+    private async Task<WorkflowExecutorInvocationClaimResult> TryClaimInMemoryAsync(
+        WorkflowExecutorInvocationClaimRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var existing = await dbContext.Set<WorkflowExecutorInvocationRecordEntity>()
+            .SingleOrDefaultAsync(
+                item => item.ScopeKey == request.Identity.ScopeKey.Value,
+                cancellationToken);
+        if (existing is null)
+        {
+            var inserted = WorkflowExecutorInvocationRecordEntity.CreateClaimed(request);
+            dbContext.Set<WorkflowExecutorInvocationRecordEntity>().Add(inserted);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return Claimed(ToRecord(inserted));
+        }
+
+        if (!HasSameInvocation(existing, request.Identity))
+        {
+            return new WorkflowExecutorInvocationClaimResult(
+                WorkflowExecutorInvocationClaimOutcome.InputMismatch,
+                ToRecord(existing),
+                Claim: null);
+        }
+
+        var record = ToRecord(existing);
+        if (existing.State == WorkflowExecutorInvocationState.Completed)
+        {
+            return new WorkflowExecutorInvocationClaimResult(
+                WorkflowExecutorInvocationClaimOutcome.ReplayedCompleted,
+                record,
+                Claim: null);
+        }
+
+        if (existing.State == WorkflowExecutorInvocationState.FailedTerminal)
+        {
+            return new WorkflowExecutorInvocationClaimResult(
+                WorkflowExecutorInvocationClaimOutcome.FailedTerminal,
+                record,
+                Claim: null);
+        }
+
+        if (existing.State == WorkflowExecutorInvocationState.Claimed &&
+            existing.LeaseExpiresAtUtc > request.ClaimedAtUtc)
+        {
+            return new WorkflowExecutorInvocationClaimResult(
+                WorkflowExecutorInvocationClaimOutcome.ActiveLease,
+                record,
+                Claim: null);
+        }
+
+        var canRecover = existing.State == WorkflowExecutorInvocationState.FailedRetryable ||
+            existing.State == WorkflowExecutorInvocationState.Claimed &&
+            existing.LeaseExpiresAtUtc <= request.ClaimedAtUtc;
+        if (!canRecover)
+        {
+            return new WorkflowExecutorInvocationClaimResult(
+                WorkflowExecutorInvocationClaimOutcome.ConcurrencyConflict,
+                record,
+                Claim: null);
+        }
+
+        if (existing.Attempt >= request.MaximumAttempts)
+        {
+            existing.State = WorkflowExecutorInvocationState.FailedTerminal;
+            existing.ConcurrencyVersion++;
+            ClearLease(existing);
+            existing.FailureCode = WorkflowExecutorInvocationFailureCode.AttemptLimitReached.Value;
+            existing.SafeMessage =
+                "The governed executor invocation exhausted its bounded recovery attempts.";
+            existing.UpdatedAtUtc = request.ClaimedAtUtc;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return new WorkflowExecutorInvocationClaimResult(
+                WorkflowExecutorInvocationClaimOutcome.AttemptLimitReached,
+                ToRecord(existing),
+                Claim: null);
+        }
+
+        existing.State = WorkflowExecutorInvocationState.Claimed;
+        existing.Attempt++;
+        existing.ConcurrencyVersion++;
+        existing.LeaseOwnerId = request.LeaseOwnerId.Value;
+        existing.LeaseEpoch++;
+        existing.LeaseAcquiredAtUtc = request.ClaimedAtUtc;
+        existing.LeaseExpiresAtUtc = request.LeaseExpiresAtUtc;
+        existing.FailureCode = string.Empty;
+        existing.SafeMessage = string.Empty;
+        existing.UpdatedAtUtc = request.ClaimedAtUtc;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Claimed(ToRecord(existing));
+    }
+
+    private async Task<WorkflowExecutorInvocationMutationResult> MutateInMemoryAsync(
+        AppDbContext dbContext,
+        WorkflowExecutorInvocationKey key,
+        WorkflowExecutorInputHash? expectedInputHash,
+        WorkflowExecutorInvocationConcurrencyVersion expectedVersion,
+        WorkflowExecutorInvocationLeaseOwnerId leaseOwnerId,
+        WorkflowExecutorInvocationLeaseEpoch leaseEpoch,
+        DateTimeOffset observedAtUtc,
+        Func<WorkflowExecutorInvocationRecordEntity, bool>? additionalGuard,
+        Action<WorkflowExecutorInvocationRecordEntity> mutation,
+        CancellationToken cancellationToken)
+    {
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var entity = await dbContext.Set<WorkflowExecutorInvocationRecordEntity>()
+            .SingleOrDefaultAsync(item => item.InvocationKey == key.Value, cancellationToken);
+        if (entity is null)
+        {
+            return new WorkflowExecutorInvocationMutationResult(
+                WorkflowExecutorInvocationMutationOutcome.NotFound,
+                Record: null);
+        }
+
+        var record = ToRecord(entity);
+        var failure = expectedInputHash is { } inputHash && record.Identity.InputHash != inputHash
+            ? WorkflowExecutorInvocationMutationOutcome.InputMismatch
+            : record.State != WorkflowExecutorInvocationState.Claimed
+                ? WorkflowExecutorInvocationMutationOutcome.InvalidState
+                : record.ConcurrencyVersion != expectedVersion
+                    ? WorkflowExecutorInvocationMutationOutcome.ConcurrencyConflict
+                    : record.Lease is null ||
+                      record.Lease.OwnerId != leaseOwnerId ||
+                      record.Lease.Epoch != leaseEpoch
+                        ? WorkflowExecutorInvocationMutationOutcome.LeaseConflict
+                        : record.Lease.ExpiresAtUtc <= observedAtUtc
+                            ? WorkflowExecutorInvocationMutationOutcome.LeaseExpired
+                            : additionalGuard is not null && !additionalGuard(entity)
+                                ? WorkflowExecutorInvocationMutationOutcome.ConcurrencyConflict
+                                : (WorkflowExecutorInvocationMutationOutcome?)null;
+        if (failure.HasValue)
+        {
+            return new WorkflowExecutorInvocationMutationResult(failure.Value, record);
+        }
+
+        mutation(entity);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new WorkflowExecutorInvocationMutationResult(
+            WorkflowExecutorInvocationMutationOutcome.Updated,
+            ToRecord(entity));
+    }
+
+    private static void ClearLease(WorkflowExecutorInvocationRecordEntity entity)
+    {
+        entity.LeaseOwnerId = null;
+        entity.LeaseAcquiredAtUtc = null;
+        entity.LeaseExpiresAtUtc = null;
+    }
+
     private async Task<bool> TryInsertClaimAsync(
         WorkflowExecutorInvocationClaimRequest request,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         dbContext.Set<WorkflowExecutorInvocationRecordEntity>().Add(
             WorkflowExecutorInvocationRecordEntity.CreateClaimed(request));
         try

@@ -144,6 +144,19 @@ Public run, request, event, artifact, checkpoint, response, and operation projec
 also exclude `RequestJson`, `ResponseJson`, raw event `PayloadJson`, native checkpoint IDs,
 payload references/hashes, artifact storage paths, protected keys, and internal policy.
 
+The Wave C pending-request projection may add only these presentation fields:
+
+- `prompt`: the allow-listed `prompt` string parsed from the protected request envelope,
+  passed through the standard redactor and capped at 4,096 characters;
+- `responseContract`: schema identity/version, maximum payload bytes, and the already-
+  validated JSON schema when it is at most 32,768 characters;
+- `schemaAvailable`: an explicit false value when a larger schema is omitted rather than
+  truncated into invalid JSON.
+
+The projection must parse individual allow-listed properties. It must never serialize or
+clone the containing request object, its `context`, approval policy, executor settings, or
+any continuation/checkpoint data.
+
 ## Status mapping
 
 Recommended mapping; adapt to repository conventions without losing typed outcomes:

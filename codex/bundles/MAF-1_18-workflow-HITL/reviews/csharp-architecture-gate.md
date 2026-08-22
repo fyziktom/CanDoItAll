@@ -2,11 +2,11 @@
 
 ## Review state
 
-- Review: Wave B final implementation and frozen closeout
-- Status: **CP-WB1, CP-WB2, CP-WB3, and CP-WB4 Pass**
-- Evidence date: 2026-08-21
+- Review: Wave B frozen closeout plus Wave C/SB07 current-source hardening
+- Status: **CP-WB1, CP-WB2, CP-WB3, and CP-WB4 Pass; CP-WC1 Pass with follow-up**
+- Evidence date: 2026-08-22
 - CodeAnalytics snapshots: re-anchor `snap-20260820203442-90bdd166`; focused architecture `snap-20260820220112-5cb38069`; SB03 final `snap-20260821002934-bf844210`; SB04 final `snap-20260821044013-44e660f5`; SB05 final `snap-20260821072204-bf844210`; SB06 focused final `snap-20260821092959-44e660f5`
-- Applicable subbundles: SB03, SB04, SB05, and final SB06 verification
+- Applicable subbundles: SB03, SB04, SB05, final SB06 verification, and SB07
 
 ## Gate findings
 
@@ -88,6 +88,39 @@ narrow plugin/runtime/test repairs add no project reference. Independent strict 
 approved the typed seam and construction-time fence. The accepted frozen FG-01 builds both
 solution graphs at 0W/0E and passes 8,471/8,471 tests with zero failed or skipped.
 
+### CP-WC1 current-source review — Pass with follow-up
+
+| Gate finding | Closure evidence |
+|---|---|
+| A standalone browser sample could introduce an inward source dependency or duplicate mutation path | The sample has no CanDoItAll project reference and uses only typed HTTP JSON/SSE; the existing governed response endpoint remains the sole mutation route |
+| Stable identity could silently reuse a drifted workflow or component before automatic approval | The provisioner reads the exact resolved definition and both referenced LLM components; graph/configuration mismatch tests fail closed before approval |
+| Lost or asynchronous transport responses could duplicate a run/approval or consume stale canonical detail | Typed launch claim evidence bounds start replay; exact operation/run/request/version binding persists `202` responses and operation status resolves before canonical detail |
+| SSE transport loss could terminalize the conversation or consume its cursor | Reconnectable transport loss ends enumeration without state/cursor mutation; the next watch resumes from the same cursor while malformed stream data remains fail-closed |
+| A path-based idempotency key could leak through client diagnostics | Default HTTP-client logging is disabled and both exception message and public `RequestUri` are sanitized; upstream access-log exposure remains an explicit boundary |
+| Pending HumanInput usability could leak protected state | Web projects only a bounded prompt and trusted response contract; mapper and serialization facts exclude raw context, policy, checkpoint, credential, and executor data |
+| Replay persistence could race lease/state mutation | Relational replay loads the request operation with `FOR UPDATE`, preserving request-before-operation order; a deterministic two-connection PostgreSQL test proves replay and lease renewal both persist |
+| Two DbContext instances could link the same native request tuple | Migration `20260822013043_AddWorkflowNativeCheckpointRequestUniqueness` adds the filtered same-session request/port unique index; the deterministic barrier test yields one created and one typed conflict with the loser fully unlinked |
+| A PostgreSQL unique violation could be mistaken for every database failure | Only known constraint names map to `LinkConflict`; unexpected errors propagate and both current callers roll back the aborted transaction |
+| InMemory compatibility could be mistaken for production atomicity | Exact provider detection and a process-wide mutation semaphore support the declared test/development profile only; production claims continue to rely on PostgreSQL |
+
+No new product project/reference, mutation facade, handwritten partial, service locator, or
+inward dependency was introduced. The four affected product Release builds and sample Release
+build pass at 0W/0E; focused sample 61/61, Unit 71/71, and Integration 64/64 pass; three
+frozen-source Playwright journeys cover direct hit, later hit, and exact three-miss behavior.
+Independent technical review found no remaining code blocker, and `BG-SB07-02` passed 982/983
+with zero failures and one declared opt-in live Ollama catalog skip. Final hashes and validators
+pass, but no authentic failing-first test transcript exists; SB07 is Implemented but Governed proof is
+incomplete.
+
+The remaining risks are explicit: pre-existing duplicate tuples block migration until operator
+remediation, future link callers must preserve rollback after a typed conflict, only lease
+renewal is independently raced through the shared replay lock path, and the InMemory semaphore
+is process-local. Sample sessions remain anonymous/unbounded/process-local; configuration can be
+mutated externally after process-level readback; convergence stays event-driven without polling;
+and upstream access logs still observe path keys. The pre-fix replay exception was console-only
+and the later blockers were review findings, not executed failures; no authentic failing-first
+test transcript is claimed.
+
 ## Existing debt disposition
 
 - Exception-as-pause and metadata-only checkpoints are legacy compatibility only and may not serve new native runs.
@@ -130,4 +163,5 @@ Before each architecture subbundle closes, rerun the strict architecture review 
 | CP-WB1 | Pass / SB03 Proven | `proof/SB03`; exact 203/203 selector; seven Release builds including unit; Debug unit build; source/anti-stub and production-composition proof; snapshot `snap-20260821002934-bf844210` |
 | CP-WB2 | Pass / SB04 Proven | `proof/SB04`; Unit 419/419; Integration 16/16; ten affected Release builds plus final post-fix Unit build at 0W/0E; migration `20260821021747_AddWorkflowHitlRecovery` with no pending model changes; scanner/docs/bundle/diff gates; snapshot `snap-20260821044013-44e660f5`; independent strict re-review |
 | CP-WB3 | Pass / SB05 Proven | `proof/SB05`; Unit 297/297; Integration 137/137; all affected Release builds at 0W/0E; no SB05 migration/model-snapshot change; exact three-caller/no-bypass and safe-projection gates; real Web/service/PostgreSQL/MAF positive and adversarial proof; snapshot `snap-20260821072204-bf844210`; independent strict re-review |
-| CP-WB4 | Pass / SB06 and parent Proven | 17-row E2E matrix; restart E2E 12/12; focused Unit 7/7 and Integration 14/14; append-only SB03/SB04/SB05 reproof; snapshot `snap-20260821092959-44e660f5`; strict typed-seam review; Components 1,078/1,078; valid frozen FG-01 builds 0W/0E and tests 8,471/8,471; final documentation, traceability, and input audit |
+| CP-WB4 | Pass / SB06 and historical Wave A/Wave B parent Proven | 17-row E2E matrix; restart E2E 12/12; focused Unit 7/7 and Integration 14/14; append-only SB03/SB04/SB05 reproof; snapshot `snap-20260821092959-44e660f5`; strict typed-seam review; Components 1,078/1,078; valid frozen FG-01 builds 0W/0E and tests 8,471/8,471; final documentation, traceability, and input audit |
+| CP-WC1 | Pass with follow-up / SB07 Implemented, Governed proof incomplete | Safe standalone HTTP/SSE boundary; exact definition/component readback; bounded start/response reconciliation; exact asynchronous-operation lifecycle; unchanged-cursor SSE reconnect; URI redaction; replay `FOR UPDATE`; native tuple migration/constraint; sample 61/61, Unit 71/71, focused Integration 64/64, broad Integration 982/983 with zero failures and one declared opt-in skip, Playwright 3/3, five Release builds at 0W/0E; no blocking code finding; authentic failing-first test proof absent |

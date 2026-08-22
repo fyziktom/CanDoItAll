@@ -330,7 +330,9 @@ Final focused CodeAnalytics snapshot: `snap-20260821072204-bf844210`.
 
 ## CP-WB4 final frozen closure review
 
-Architecture status: **Pass** on 2026-08-21. SB06 and the parent bundle are Proven.
+Architecture status: **Pass** on 2026-08-21. SB06 and the historical Wave A/Wave B parent
+checkpoint are Proven. Wave C subsequently reopened the current parent state without changing
+this frozen decision.
 
 - Final focused snapshot `snap-20260821092959-44e660f5` covers 9 projects and 499
   documents, reports no blocking error or project cycle, and retains exactly the two
@@ -371,3 +373,50 @@ deduplicated participating governed effects are supported; arbitrary external ex
 execution is not. Production restart/multi-host correctness comes from PostgreSQL CAS,
 constraints, and transactions. In-memory implementations remain process-local,
 non-durable, and non-snapshot-isolated.
+
+## CP-WC1 Wave C architecture review
+
+Architecture status: **Pass with follow-up** on 2026-08-22. The implementation has no open
+architecture blocker and `BG-SB07-02`, final hash ledgers, and validators pass. Governed closeout
+is incomplete because no authentic failing-first test artifact exists; SB07 is
+Implemented, not Proven.
+
+- The standalone sample is an HTTP/SSE consumer with no project reference into CanDoItAll. It
+  owns presentation, SimWiki, provisioning, and process-local conversation coordination.
+- Web retains safe DTO/mapper ownership. The pending projection is a bounded prompt plus trusted
+  response contract; raw request context, policy, checkpoints, credentials, and executor
+  arguments remain outside public/browser serialization.
+- Runtime retains continuation and event publication. Events are published only after a
+  successful durable continuation commit, and result mapping gives terminal outcomes precedence.
+- Modules.AgentFramework retains provider-specific persistence. InMemory uses an explicit
+  process-local mutation semaphore; PostgreSQL remains authoritative for cross-context state.
+- Response replay now locks the request-scoped operation row with `FOR UPDATE`, matching the
+  request-before-operation order used by claim and commit. The deterministic race proves lease
+  renewal and replay serialize without losing either mutation.
+- Migration `20260822013043_AddWorkflowNativeCheckpointRequestUniqueness` adds the filtered
+  same-session native request/port tuple. The migration fails closed on existing duplicates;
+  exact known unique violations map to a typed conflict and current callers roll back.
+- No new product project, endpoint family, mutation facade, handwritten partial, service
+  locator, or inward dependency was introduced. Generated EF migration partials remain the
+  existing framework-owned exception.
+- The standalone provisioner reads the exact resolved definition and both referenced LLM
+  components before running; immutable graph/configuration drift fails before automatic approval.
+- Ambiguous starts use typed claim-state/version/backend evidence before bounded replay. Accepted
+  asynchronous responses persist exact operation/run/request/version identity, reconcile operation
+  status before canonical detail, suppress duplicate approval, and fail explicit terminal outcomes.
+- Reconnectable SSE transport loss leaves state and cursor unchanged; malformed stream content
+  remains fail-closed. Idempotency lookup keys are redacted from exception messages and public URIs.
+- Focused validation passes the sample 61/61, Unit 71/71, Integration 64/64, four product Release
+  builds plus the sample Release build at 0W/0E, and three frozen-source Playwright journeys.
+  The full Integration project passed 982/983 with zero failures and one declared opt-in live
+  Ollama catalog skip.
+
+The independent PostgreSQL race review found no blocker and returned Pass with follow-up. The
+remaining risks are operational migration remediation for pre-existing duplicate tuples,
+preserving rollback in future link callers, per-mutation race breadth beyond lease renewal, and
+the deliberately process-local InMemory semaphore. The sample additionally retains anonymous,
+unbounded process-local sessions, externally mutable component configuration after a successful
+process-level readback, event-driven convergence without polling, and unavoidable upstream access
+logging of path-based idempotency keys. The replay failure was reproduced before the fix only in
+console output, and the later pre-fix findings are review-only evidence; no authentic failing-first
+test transcript is claimed.

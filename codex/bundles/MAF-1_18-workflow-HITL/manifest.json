@@ -40,6 +40,14 @@
         "SB06"
       ],
       "independentlyClosable": false
+    },
+    {
+      "id": "Wave-C",
+      "title": "Workflow HITL API sample and browser proof",
+      "subbundles": [
+        "SB07"
+      ],
+      "independentlyClosable": true
     }
   ],
   "subbundles": [
@@ -103,6 +111,19 @@
       "dependsOn": [
         "SB05"
       ]
+    },
+    {
+      "id": "SB07",
+      "directory": "subbundles/SB07-hitl-api-sample-e2e",
+      "proofTier": "Governed",
+      "status": "Implemented",
+      "proofManifest": "proof/SB07/manifest.md",
+      "semanticInvariants": "proof/SB07/semantic-invariants.md",
+      "closureDecision": "NotReady",
+      "governedProofState": "GOVERNED_PROOF_INCOMPLETE",
+      "dependsOn": [
+        "SB06"
+      ]
     }
   ],
   "hardConstraints": [
@@ -113,7 +134,9 @@
     "No restart-from-input fallback is permitted.",
     "Actor identity is trusted context, not request payload.",
     "Response acceptance is idempotent and crash recoverable.",
-    "Governed side effects use stable deduplication keys."
+    "Governed side effects use stable deduplication keys.",
+    "The sample keeps bearer credentials server-side and proxies authenticated SSE.",
+    "A safe pending-request projection never exposes raw request context or protected runtime state."
   ],
   "frozenBroadGate": {
     "id": "FG-01",
@@ -133,5 +156,40 @@
       "CanDoItAll.Components": "8372c1d55f21b349f8e859470b02eeb4421e96ca",
       "CanDoItAll.FileTools": "c95dd07208a6d48724443317cdc6cfe67a13020a"
     }
-  }
+  },
+  "waveCCurrentSourceGates": [
+    {
+      "id": "BG-SB07-01",
+      "owner": "SB07",
+      "status": "Invalidated",
+      "sourceHead": "c19cb94bfac710f567db63a93f1e4af69f046cc5",
+      "sampleTests": 30,
+      "unitTests": 71,
+      "integrationTests": 50,
+      "playwrightJourneys": 3,
+      "affectedReleaseBuilds": 4,
+      "invalidationReason": "Post-gate PostgreSQL replay serialization and native checkpoint-link uniqueness repairs changed persistence source and schema.",
+      "historicalFg01Rerun": false
+    },
+    {
+      "id": "BG-SB07-02",
+      "owner": "SB07",
+      "status": "Pass",
+      "sourceHead": "c19cb94bfac710f567db63a93f1e4af69f046cc5",
+      "sampleTests": 61,
+      "unitTests": 71,
+      "focusedIntegrationTests": 64,
+      "broadIntegration": {
+        "status": "Pass",
+        "discovered": 983,
+        "passed": 982,
+        "failed": 0,
+        "skipped": 1
+      },
+      "playwrightJourneys": 3,
+      "affectedProductReleaseBuilds": 4,
+      "sampleReleaseBuilds": 1,
+      "historicalFg01Rerun": false
+    }
+  ]
 }

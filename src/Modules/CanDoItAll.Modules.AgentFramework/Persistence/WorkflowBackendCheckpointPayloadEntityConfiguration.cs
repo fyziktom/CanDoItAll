@@ -6,6 +6,11 @@ namespace CanDoItAll.Modules.AgentFramework;
 internal sealed class WorkflowBackendCheckpointPayloadEntityConfiguration :
     IEntityTypeConfiguration<WorkflowBackendCheckpointPayloadEntity>
 {
+    internal const string ExternalRequestUniqueIndexName =
+        "UX_AF_WfBackendCheckpoints_ExternalRequest";
+    internal const string NativeRequestUniqueIndexName =
+        "UX_AF_WfBackendCheckpoints_NativeRequest";
+
     public void Configure(EntityTypeBuilder<WorkflowBackendCheckpointPayloadEntity> builder)
     {
         builder.ToTable("AgentFramework_WorkflowBackendCheckpointPayloads");
@@ -23,7 +28,16 @@ internal sealed class WorkflowBackendCheckpointPayloadEntityConfiguration :
         builder.HasIndex(checkpoint => checkpoint.ExternalRequestId)
             .IsUnique()
             .HasFilter("\"ExternalRequestId\" IS NOT NULL")
-            .HasDatabaseName("UX_AF_WfBackendCheckpoints_ExternalRequest");
+            .HasDatabaseName(ExternalRequestUniqueIndexName);
+        builder.HasIndex(checkpoint => new
+            {
+                checkpoint.SessionId,
+                checkpoint.BackendRequestId,
+                checkpoint.BackendRequestPortId
+            })
+            .IsUnique()
+            .HasFilter("\"BackendRequestId\" IS NOT NULL AND \"BackendRequestPortId\" IS NOT NULL")
+            .HasDatabaseName(NativeRequestUniqueIndexName);
         builder.HasIndex(checkpoint => checkpoint.ParentCheckpointId)
             .HasDatabaseName("IX_AF_WfBackendCheckpoints_Parent");
         builder.HasOne<WorkflowBackendCheckpointSessionEntity>()

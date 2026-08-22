@@ -10,6 +10,11 @@ flowchart TD
     SB04 --> SB05[SB05 API governance]
     SB05 --> FREEZE[FG-01 Freeze]
     FREEZE --> SB06[SB06 E2E and broad gate]
+    SB06 --> SB07[SB07 API sample and browser E2E]
+    SB07 --> BG1[BG-SB07-01 invalidated]
+    BG1 --> RACES[Replay lock and native-link uniqueness repair]
+    RACES --> BG2[BG-SB07-02 current-source gate]
+    BG2 --> WAVEC[Wave C closure]
 ```
 
 ## Critical foundations
@@ -19,6 +24,9 @@ flowchart TD
 - **CF-03:** native MAF checkpoint can rehydrate a disposed run — lent by SB03.
 - **CF-04:** persistent response operation and deduplication survive replay — lent by SB04.
 - **CF-05:** authorized API reaches the same service boundary — lent by SB05.
+- **CF-06:** safe request presentation and public API/SSE behavior are consumable by a standalone client — proven by SB07.
+- **CF-07:** request-operation replay and same-session native checkpoint linkage serialize
+  authoritatively in PostgreSQL — focused proof and BG-SB07-02 broad Integration evidence pass.
 
 ## Safe parallelism
 
@@ -49,3 +57,10 @@ Test fixture work may proceed in parallel only after the owning public contracts
 - Reopen SB04 when persistence schema, state transitions, or invocation key material changes.
 - Reopen SB05 when auth conventions, API DTOs, or public outcomes change.
 - Any reopened critical foundation invalidates SB06 proof.
+- A Wave C finding reopens SB05 only when it contradicts the owned public API guarantee;
+  otherwise SB07 repairs and revalidates its bounded additive projection independently.
+- A response-operation lock-order or native-link index/model change invalidates the current
+  Wave C gate. `BG-SB07-01` is therefore retained as invalidated and cannot be reused.
+- Migration `20260822013043_AddWorkflowNativeCheckpointRequestUniqueness` triggers one full
+  Integration-project run at `BG-SB07-02` after focused 61/71/64 validation passes. Historical FG-01
+  remains immutable and is not rerun.
