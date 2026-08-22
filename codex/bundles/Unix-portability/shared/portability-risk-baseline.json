@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-19T21:43:15.190454+00:00",
+  "generated_utc": "2026-08-22T19:41:17.766179+00:00",
   "review_gate": "A07 Core Gate C4 portability static guard",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 13757,
+  "allowance_count": 13777,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -6578,27 +6578,33 @@
       "count": 1
     },
     {
-      "path": "src/App/CanDoItAll.Web/Api/WorkflowsApi.cs",
+      "path": "src/App/CanDoItAll.Web/Api/WorkflowExternalResponseOpenApiContract.cs",
       "category": "case-policy",
-      "source_fingerprint": "67897e3c4d80a29267e7508cb336566c794e3202144a71ab8798025235b565a2",
+      "source_fingerprint": "ef19623abc57141add4f4b9d52ace98790a6049d0ff651e9ca3154e374b3c3c4",
       "count": 1
     },
     {
-      "path": "src/App/CanDoItAll.Web/Api/WorkflowsApi.cs",
+      "path": "src/App/CanDoItAll.Web/Api/WorkflowExternalResponseRequestReader.cs",
       "category": "case-policy",
-      "source_fingerprint": "7a75254bef4bf4b4302ee7fca30eb0435a7f2630c9e522e5ed4e4b54aaf9f739",
+      "source_fingerprint": "d78f2da43d888aeb7d0b72b33320cfd83a2cf7bc29ae04413bc919dc89c6a958",
       "count": 1
     },
     {
-      "path": "src/App/CanDoItAll.Web/Api/WorkflowsApi.cs",
+      "path": "src/App/CanDoItAll.Web/Api/WorkflowRunReadEndpoints.cs",
       "category": "case-policy",
-      "source_fingerprint": "c2cdaf505774968f3b1c1192fd8570eae447b0585ec1363ae591efcea588b86e",
+      "source_fingerprint": "447ae93564f4c6750101215b9fc48683263dd5a9661a67298a91ac0d07b8754b",
       "count": 1
     },
     {
-      "path": "src/App/CanDoItAll.Web/Api/WorkflowsApi.cs",
+      "path": "src/App/CanDoItAll.Web/Api/WorkflowRunReadEndpoints.cs",
       "category": "case-policy",
-      "source_fingerprint": "c945419bb9198314c3e0692cb7c2a2fba37a5674e2664aa770d516296ad91728",
+      "source_fingerprint": "5e856c2b4a5d701f476f622b827f2363d975e1cb91d2b5f0d4f443e28490e71e",
+      "count": 1
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/WorkflowRunReadEndpoints.cs",
+      "category": "case-policy",
+      "source_fingerprint": "831137d036d6e72ed1578cde2a4d4d34aec293e4b7d9b279df7289435a3c6271",
       "count": 1
     },
     {
@@ -11087,6 +11093,54 @@
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260818103613_AddSimpleChatProjectAttribution.Designer.cs",
       "category": "process-domain",
       "source_fingerprint": "6051c28368f2f944a1f4abce4ab31f3c5d1820baf2c299a81271dbe1a844d5d3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260821021747_AddWorkflowHitlRecovery.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a2a7f135008fb18fb0f2c15d075c952d536d6b97e5e384e51bc80c542a51db8c",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260821021747_AddWorkflowHitlRecovery.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "c37a49ff9fa2e66b0eda4269b473afd6213fb27c8b92721a944f246e5d3066c1",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260821021747_AddWorkflowHitlRecovery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "524567372a17ef3cc17c48085a0a3c54657148db85f3b26b638c61be1e370445",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260821021747_AddWorkflowHitlRecovery.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "69084fa5ff203faa94b9af3e57bbc68405f9a7951a8c286d1d209b0550d33d60",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260822013043_AddWorkflowNativeCheckpointRequestUniqueness.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "1b2c2f3f942fd175098ae91e73f9041edcb428506770f6aa56ae7c76e8b26779",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260822013043_AddWorkflowNativeCheckpointRequestUniqueness.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "6497ab0802ad76e5ac4c0a13e334e0a7f927c38f171efdbfcf8b4083ebe74b54",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260822013043_AddWorkflowNativeCheckpointRequestUniqueness.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "452bdf4f9e0ffd7a32d4a96a91eedd5ed68316792c688daa6ce2dcb072a7ac1a",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260822013043_AddWorkflowNativeCheckpointRequestUniqueness.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "ce5b6db4ede0b2df78d921844385ed97284b660c8f6c46636ce5e767576dbef5",
       "count": 1
     },
     {
@@ -36782,6 +36836,30 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowExternalResponseFingerprintFactory.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7ef15093cb18a4f2d6b01a2f8a1e92a94dbb32e06a13af14f68d5379e7afd8c3",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowExternalResponseValidator.cs",
+      "category": "case-policy",
+      "source_fingerprint": "25a0d44897e170c425eb953945783a714f176e354803b2247f0a02a5789524a1",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowExternalResponseValidator.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7342c6a4c7f090c7a50532c4f558b826307264b0cfb507f1247aaa768c8ecc4a",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowExternalResponseValidator.cs",
+      "category": "case-policy",
+      "source_fingerprint": "eea860dc9445cce3e96d12bc2b48e01600f72049fc597b808384018204933a98",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowLaunchService.cs",
       "category": "permissions",
       "source_fingerprint": "4d9026ff0eb76ef8a800d9e1238aa3979898f6f5c51737bba25c6c7481734153",
@@ -36875,6 +36953,24 @@
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowUsageAnalyticsStore.cs",
       "category": "case-policy",
       "source_fingerprint": "72c9eab7d5d7cdc4d80b93eb4ee8702c9ebc26981653dfc027c92eced330a052",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowExternalRequestMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6bd07ff247bedbe2b71e338f1d712ce6ea964d1aafb8a5d97f8f5b50bc1bbcd8",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowExternalRequestMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "7308982c26178a5954f2d797551423481cf390572ccd8deb575b64aa54b85af8",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowExternalRequestMapper.cs",
+      "category": "case-policy",
+      "source_fingerprint": "fe8b3d9463563c3900dd13b0da4b55b65a7aace779e14a5a6ac1166073ae48c3",
       "count": 1
     },
     {
@@ -42512,9 +42608,33 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowBackendCheckpointPayloadStore.cs",
+      "category": "dataprotection",
+      "source_fingerprint": "adea6050e77bba0c62c0ecff4ed2cac2997cfda40e635b82ac1c6ad06a0b169e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowExecutorInvocationDeduplicationStore.cs",
+      "category": "dataprotection",
+      "source_fingerprint": "7c716986815d0d7697dbf5817ad09457c314693a4500e0a8ed0b110ed0292105",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowExternalResponseOperationStore.cs",
+      "category": "dataprotection",
+      "source_fingerprint": "44ca03539d97736009d96f63f1c95f95415377b501563f8cb48b552418f4382d",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowLaunchIdempotencyStore.cs",
       "category": "permissions",
       "source_fingerprint": "87c6233a70fea5435fc07383a815afc299826653ea6681e55c3de63863ef843f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowResumeBoundaryStore.cs",
+      "category": "dataprotection",
+      "source_fingerprint": "2ae6ae409b30e2cb9a38bc02c45411fb5db891e76ca435a3a3812b7115c8d985",
       "count": 1
     },
     {
