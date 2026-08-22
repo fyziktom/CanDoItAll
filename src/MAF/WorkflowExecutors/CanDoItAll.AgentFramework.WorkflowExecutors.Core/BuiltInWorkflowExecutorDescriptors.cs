@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -12,6 +13,16 @@ public static class BuiltInWorkflowExecutorDescriptors
 {
     private static readonly WorkflowExecutorSourceDescriptor BuiltInSource = WorkflowExecutorSourceDescriptor.BuiltIn(
         typeof(BuiltInWorkflowExecutorDescriptors).Assembly.GetName().Version?.ToString() ?? string.Empty);
+    private static readonly WorkflowExecutorSideEffectDescriptor DirectExternalWriteSideEffects = new(
+        WorkflowExecutorSideEffectKind.ExternalWrite,
+        WorkflowExecutorExternalMutationKind.None,
+        SupportsPreview: false,
+        SupportsDryRun: false,
+        SupportsCommit: false,
+        RequiresCommitIdempotencyKey: false,
+        AllowsIdempotentRetry: false,
+        IdempotencyKeyJsonPath: string.Empty,
+        ReceiptSchema: string.Empty);
 
     public static WorkflowExecutorDescriptor StorageFile { get; } = Create(
         WorkflowExecutorIds.StorageFile,
@@ -77,8 +88,8 @@ public static class BuiltInWorkflowExecutorDescriptors
 
     public static WorkflowExecutorDescriptor HttpFetch { get; } = Create(
         WorkflowExecutorIds.HttpFetch,
-        "HTTP fetch",
-        "Fetches or downloads bounded HTTP/HTTPS content with SSRF guardrails, explicit method, headers, body, and size settings.",
+        "HTTP request",
+        "Sends a bounded HTTP/HTTPS request with SSRF guardrails and returns the response for the next workflow step.",
         WorkflowExecutorCategoryKind.Http,
         "public",
         "builtin.http-fetch",
@@ -86,11 +97,16 @@ public static class BuiltInWorkflowExecutorDescriptors
         defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 },
         permissionPolicy: new WorkflowExecutorPermissionPolicy(
             WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.WritesExternalData |
             WorkflowExecutorCapabilityFlags.WritesWorkspace |
             WorkflowExecutorCapabilityFlags.EmitsArtifacts |
             WorkflowExecutorCapabilityFlags.UsesNetwork |
             WorkflowExecutorCapabilityFlags.UsesSecrets,
-            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect));
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect)) with
+    {
+        ConfigurationSchema = CreateHttpFetchConfigurationSchema(),
+        SideEffects = DirectExternalWriteSideEffects
+    };
 
     public static WorkflowExecutorDescriptor Delay { get; } = Create(
         WorkflowExecutorIds.Delay,
@@ -282,6 +298,93 @@ public static class BuiltInWorkflowExecutorDescriptors
         .. Planned
     ];
 
+    private static ConfigurationSchema CreateHttpFetchConfigurationSchema()
+    {
+        var generated = WorkflowExecutorDescriptorFactory.CreateSettingsConfigurationSchema<WorkflowHttpExecutorSettings>();
+        return generated with
+        {
+            Fields = generated.Fields
+                .Select(field => field.Key switch
+                {
+                    "method" => field with
+                    {
+                        Label = "HTTP method",
+                        HelpText = "HTTP method used for the request."
+                    },
+                    "url" => field with
+                    {
+                        Label = "Endpoint URL",
+                        FieldType = ConfigurationFieldType.Url,
+                        HelpText = "Fixed absolute HTTP or HTTPS endpoint. When set, it takes precedence over the URL-from-input setting."
+                    },
+                    "urlJsonPath" => field with
+                    {
+                        Label = "URL from input JSON path",
+                        HelpText = "Optional JSON path resolving to an absolute HTTP or HTTPS URL when Endpoint URL is empty."
+                    },
+                    "queryParameters" => field with
+                    {
+                        Label = "Static query parameters",
+                        FieldType = ConfigurationFieldType.Json,
+                        HelpText = "Optional JSON object of query parameter names and string values. Names and values are URL-encoded."
+                    },
+                    "queryParametersJsonPath" => field with
+                    {
+                        Label = "Query parameters from input JSON path",
+                        HelpText = "Optional JSON path resolving to an object of string, number, or boolean query parameter values."
+                    },
+                    "headers" => field with
+                    {
+                        Label = "Headers",
+                        HelpText = "Optional JSON object of non-secret request headers. Use Secret header for credentials."
+                    },
+                    "secretHeader" => field with
+                    {
+                        Label = "Secret header",
+                        HelpText = "Optional stored-secret binding applied to one request header at execution time."
+                    },
+                    "body" => field with
+                    {
+                        Label = "JSON body",
+                        FieldType = ConfigurationFieldType.MultilineText,
+                        HelpText = "Optional JSON request body. GET requests do not send a body."
+                    },
+                    "maxResponseBytes" => field with
+                    {
+                        Label = "Maximum response bytes",
+                        HelpText = "Bounded response size requested from the executor, from 1 KiB through 5 MiB."
+                    },
+                    "includeInputPayload" => field with
+                    {
+                        Label = "Include input payload",
+                        HelpText = "Include the incoming workflow payload in the executor result for the next node."
+                    },
+                    "allowPrivateNetworkTargets" => field with
+                    {
+                        Label = "Allow private network targets",
+                        HelpText = "Allow loopback, private, and link-local targets. Enable only for explicitly trusted local services."
+                    },
+                    "downloadToWorkspace" => field with
+                    {
+                        Label = "Download to workspace",
+                        HelpText = "Write the bounded response body to the managed workflow workspace."
+                    },
+                    "outputPath" => field with
+                    {
+                        Label = "Workspace output path",
+                        HelpText = "Optional managed workspace path used when Download to workspace is enabled."
+                    },
+                    "overwrite" => field with
+                    {
+                        Label = "Overwrite workspace file",
+                        HelpText = "Allow replacement of an existing workspace output file."
+                    },
+                    _ => field
+                })
+                .ToArray()
+        };
+    }
+
     private static WorkflowExecutorDescriptor Create<TSettings>(
         WorkflowExecutorId id,
         string name,
@@ -331,4 +434,3 @@ public static class BuiltInWorkflowExecutorDescriptors
             BuiltInSource,
             availabilityMessage);
 }
-
