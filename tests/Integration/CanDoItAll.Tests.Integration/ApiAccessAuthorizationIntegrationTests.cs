@@ -4,12 +4,28 @@ using System.Net.Http.Json;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Web.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.Api;
 
 public sealed class ApiAccessAuthorizationIntegrationTests
 {
+    [Fact]
+    public async Task Local_operator_ui_identity_does_not_authenticate_http_boundaries()
+    {
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: true,
+            configureServices: services => services.AddCanDoItAllLocalOperatorUiAuthentication(),
+            useInMemoryDatabase: true);
+
+        using var llmChatsResponse = await host.Client.GetAsync("/api/llm-chats");
+        using var authorizedFileResponse = await host.Client.GetAsync("/authorized-files/content");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, llmChatsResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, authorizedFileResponse.StatusCode);
+    }
+
     [Fact]
     public async Task Token_issuance_requires_explicit_privileged_scope()
     {

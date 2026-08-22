@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
 namespace CanDoItAll.Web.Infrastructure;
 
 public static class InteractiveServerServiceCollectionExtensions
@@ -12,6 +15,24 @@ public static class InteractiveServerServiceCollectionExtensions
             .AddInteractiveServerComponents(options => options.DetailedErrors = detailedErrors)
             .AddHubOptions(options => options.MaximumReceiveMessageSize = MaximumReceiveMessageBytes);
 
+        return services;
+    }
+
+    public static IServiceCollection AddCanDoItAllLocalOperatorUiAuthentication(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddHttpContextAccessor();
+        services.TryAddScoped<LocalOperatorAuthenticationStateProvider>();
+        services.Replace(ServiceDescriptor.Scoped<AuthenticationStateProvider>(
+            serviceProvider => serviceProvider
+                .GetRequiredService<LocalOperatorAuthenticationStateProvider>()));
+        services.Replace(ServiceDescriptor.Scoped<IHostEnvironmentAuthenticationStateProvider>(
+            serviceProvider => serviceProvider
+                .GetRequiredService<LocalOperatorAuthenticationStateProvider>()));
+        services.Replace(ServiceDescriptor.Scoped<IInteractiveAccessPrincipalProvider>(
+            serviceProvider => serviceProvider
+                .GetRequiredService<LocalOperatorAuthenticationStateProvider>()));
         return services;
     }
 }

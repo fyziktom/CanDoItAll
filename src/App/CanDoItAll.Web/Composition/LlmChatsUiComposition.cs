@@ -1,8 +1,9 @@
+using System.Security.Claims;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Web.Api;
+using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -22,7 +23,7 @@ public static class LlmChatsUiComposition
 
 internal sealed class WebLlmChatUiPolicyEvaluator(
     IAuthorizationService authorization,
-    AuthenticationStateProvider authenticationState,
+    IInteractiveAccessPrincipalProvider interactiveAccessPrincipalProvider,
     IOptions<ApiAccessOptions> apiOptions) : ILlmChatUiPolicyEvaluator
 {
     public async ValueTask<bool> IsAllowedAsync(
@@ -41,8 +42,9 @@ internal sealed class WebLlmChatUiPolicyEvaluator(
             LlmChatUiPermission.Execute => ApiAuthorizationPolicies.ExecuteLlmChats,
             _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, "Unknown permission.")
         };
-        var state = await authenticationState.GetAuthenticationStateAsync().WaitAsync(cancellationToken);
-        var result = await authorization.AuthorizeAsync(state.User, policy);
+        ClaimsPrincipal principal = await interactiveAccessPrincipalProvider
+            .GetCurrentAsync(cancellationToken);
+        var result = await authorization.AuthorizeAsync(principal, policy);
         return result.Succeeded;
     }
 }
