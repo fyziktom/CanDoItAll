@@ -136,7 +136,7 @@ public sealed class WorkflowTemplatePackLoaderTests
     }
 
     [Fact]
-    public void Load_default_pack_validates_current_executor_references_against_descriptor_catalog()
+    public void Load_default_pack_validates_current_executor_references_and_policies_against_builtin_descriptors()
     {
         var pack = new WorkflowTemplatePackLoader().Load();
         var executorIds = pack.Workflows
@@ -146,7 +146,10 @@ public sealed class WorkflowTemplatePackLoaderTests
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(id => id!)
             .ToArray();
-        var catalog = WorkflowExecutorCatalog.FromDescriptors(executorIds.Select(id => CreateDescriptor(id)));
+        var builtInDescriptors = BuiltInWorkflowExecutorDescriptors.All
+            .ToDictionary(descriptor => descriptor.Id.Value, StringComparer.OrdinalIgnoreCase);
+        var catalog = WorkflowExecutorCatalog.FromDescriptors(executorIds.Select(id =>
+            builtInDescriptors.GetValueOrDefault(id) ?? CreateDescriptor(id)));
 
         var validatedPack = new WorkflowTemplatePackLoader(pack.RootPath, catalog).Load();
 
