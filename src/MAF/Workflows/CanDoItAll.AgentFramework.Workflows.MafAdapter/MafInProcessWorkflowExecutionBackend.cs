@@ -1,17 +1,18 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
-using Microsoft.Agents.AI.Workflows;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBackend
+public sealed class MafInProcessWorkflowExecutionBackend :
+    IWorkflowExecutionBackend,
+    IWorkflowExternalResponseBackend
 {
     private readonly IWorkflowMafCompiler compiler;
-    private readonly IMafWorkflowEventNormalizer eventNormalizer;
-    private readonly IWorkflowCheckpointFactory checkpointFactory;
-    private readonly IWorkflowPayloadPolicyService payloadPolicyService;
-    private readonly TimeProvider timeProvider;
+    private readonly MafLegacyWorkflowExecutionDriver legacyDriver;
+    private readonly MafWorkflowNativeStartDriver? nativeStartDriver;
+    private readonly MafWorkflowExternalResponseDriver? externalResponseDriver;
     private readonly IReadOnlyList<LlmCallComponent>? components;
     private readonly IWorkflowComponentLibraryService? componentLibrary;
 
@@ -21,17 +22,33 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         IMafWorkflowEventNormalizer? eventNormalizer = null,
         IWorkflowCheckpointFactory? checkpointFactory = null,
         IWorkflowPayloadPolicyService? payloadPolicyService = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IWorkflowBackendCheckpointPayloadStore? checkpointPayloadStore = null,
+        IWorkflowCatalogService? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(compiler);
         ArgumentNullException.ThrowIfNull(components);
 
         this.compiler = compiler;
         this.components = components;
-        this.eventNormalizer = eventNormalizer ?? new MafWorkflowEventNormalizer();
-        this.checkpointFactory = checkpointFactory ?? new WorkflowCheckpointFactory();
-        this.payloadPolicyService = payloadPolicyService ?? new WorkflowPayloadPolicyService();
-        this.timeProvider = timeProvider ?? TimeProvider.System;
+        var normalizer = eventNormalizer ?? new MafWorkflowEventNormalizer();
+        var checkpointRecordFactory = checkpointFactory ?? new WorkflowCheckpointFactory();
+        var payloadPolicy = payloadPolicyService ?? new WorkflowPayloadPolicyService();
+        var clock = timeProvider ?? TimeProvider.System;
+        legacyDriver = new MafLegacyWorkflowExecutionDriver(
+            normalizer,
+            checkpointRecordFactory,
+            payloadPolicy,
+            clock);
+        (nativeStartDriver, externalResponseDriver) = CreateNativeDrivers(
+            compiler,
+            checkpointPayloadStore,
+            catalog,
+            normalizer,
+            checkpointRecordFactory,
+            payloadPolicy,
+            clock);
+        Descriptor = CreateDescriptor(externalResponseDriver is not null);
     }
 
     public MafInProcessWorkflowExecutionBackend(
@@ -40,31 +57,36 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         IMafWorkflowEventNormalizer? eventNormalizer = null,
         IWorkflowCheckpointFactory? checkpointFactory = null,
         IWorkflowPayloadPolicyService? payloadPolicyService = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IWorkflowBackendCheckpointPayloadStore? checkpointPayloadStore = null,
+        IWorkflowCatalogService? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(compiler);
         ArgumentNullException.ThrowIfNull(componentLibrary);
 
         this.compiler = compiler;
         this.componentLibrary = componentLibrary;
-        this.eventNormalizer = eventNormalizer ?? new MafWorkflowEventNormalizer();
-        this.checkpointFactory = checkpointFactory ?? new WorkflowCheckpointFactory();
-        this.payloadPolicyService = payloadPolicyService ?? new WorkflowPayloadPolicyService();
-        this.timeProvider = timeProvider ?? TimeProvider.System;
+        var normalizer = eventNormalizer ?? new MafWorkflowEventNormalizer();
+        var checkpointRecordFactory = checkpointFactory ?? new WorkflowCheckpointFactory();
+        var payloadPolicy = payloadPolicyService ?? new WorkflowPayloadPolicyService();
+        var clock = timeProvider ?? TimeProvider.System;
+        legacyDriver = new MafLegacyWorkflowExecutionDriver(
+            normalizer,
+            checkpointRecordFactory,
+            payloadPolicy,
+            clock);
+        (nativeStartDriver, externalResponseDriver) = CreateNativeDrivers(
+            compiler,
+            checkpointPayloadStore,
+            catalog,
+            normalizer,
+            checkpointRecordFactory,
+            payloadPolicy,
+            clock);
+        Descriptor = CreateDescriptor(externalResponseDriver is not null);
     }
 
-    public WorkflowRuntimeBackendDescriptor Descriptor { get; } = new(
-        WorkflowRuntimeBackendKind.InProcess,
-        "MAF in-process workflow runtime",
-        IsDurable: false,
-        SupportsStreaming: true,
-        SupportsExternalRequests: true,
-        SupportsDashboardObservability: false,
-        OperationalNotes: "Use for local development, tests, previews, and approved short non-durable runs only.")
-    {
-        SupportsExternalResponseResume = false,
-        SupportsActiveCancellation = true
-    };
+    public WorkflowRuntimeBackendDescriptor Descriptor { get; }
 
     public async Task<WorkflowBackendStartResult> StartAsync(
         WorkflowDefinition definition,
@@ -75,392 +97,141 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(request);
 
-        var now = timeProvider.GetUtcNow();
-        var resolvedComponents = componentLibrary is null
-            ? components ?? []
-            : await componentLibrary.ListComponentsAsync(cancellationToken);
+        var resolvedComponents = await ResolveComponentsAsync(definition, cancellationToken);
         var build = compiler.Compile(
             definition,
-            FilterReferencedComponents(definition, resolvedComponents),
+            resolvedComponents,
             request.PreviewSimulationPlan);
-        if (!build.Compilation.Succeeded || build.Workflow is null)
+        if (build.Compilation.Succeeded &&
+            build.Workflow is not null &&
+            build.HasNativeExternalRequests)
         {
-            var diagnostic = MafWorkflowAdapterFailureDiagnostics.CompilationFailed(
+            if (nativeStartDriver is null)
+            {
+                throw new InvalidOperationException(
+                    "MAF workflows with native external requests require both a checkpoint payload store and an exact workflow catalog.");
+            }
+
+            return await nativeStartDriver.StartAsync(
                 definition,
-                runId,
-                Descriptor.Kind,
-                build.Compilation,
-                now);
-            var diagnosticJson = WorkflowRuntimeFailureDiagnosticMapper.Serialize(diagnostic);
-            var failurePayload = await payloadPolicyService.ApplyAsync(new WorkflowPayloadPolicyRequest(
-                runId,
-                WorkflowPayloadPolicyScope.ExecutorError,
-                build.Compilation.ErrorMessage,
-                WorkflowArtifactKind.Text,
-                "workflow-compilation-error.txt",
-                "text/plain",
-                now)
-            {
-                CaptureArtifact = true
-            }, cancellationToken);
-            var failed = new WorkflowRunSnapshot(
-                runId,
-                definition.Id,
-                definition.VersionId,
-                WorkflowRunState.Failed,
-                Descriptor.Kind,
-                BackendRunId: runId.ToString(),
-                Summary: diagnostic.Message,
-                CreatedAtUtc: now,
-                UpdatedAtUtc: now)
-            {
-                TerminalAtUtc = now,
-                Origin = request.Origin
-            };
-            var failedEvent = new WorkflowEventRecord(
-                Guid.NewGuid(),
-                runId,
-                WorkflowEventKind.Error,
-                NodeId: null,
-                diagnostic.Message,
-                WorkflowEventPayloads.Serialize(
-                    WorkflowEventPayloadSource.Runtime,
-                    "WorkflowCompilationFailed",
-                    inlineJson: diagnosticJson,
-                    reference: failurePayload.Reference,
-                    originalInlineCharacters: diagnosticJson.Length),
-                now);
-
-            var failedCheckpoint = checkpointFactory.CreateMetadataCheckpoint(
-                new WorkflowCheckpointCreateRequest(
-                    definition,
-                    runId,
-                    Descriptor.Kind,
-                    WorkflowCheckpointKind.Failed,
-                    now)
-                {
-                    Summary = diagnostic.Message
-                });
-
-            var failureArtifacts = failurePayload.Artifact is null
-                ? []
-                : new[] { failurePayload.Artifact };
-
-            return new WorkflowBackendStartResult(failed, [failedEvent], [], failureArtifacts)
-            {
-                Checkpoints = [failedCheckpoint]
-            };
-        }
-
-        var eventBindings = MafWorkflowEventBindingIndex.FromDefinition(definition);
-        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId);
-        var externalRequestCapture = new WorkflowBackendExternalRequestCapture();
-        using var externalRequestScope = WorkflowExternalRequestCaptureScope.Push(externalRequestCapture);
-        var progressObserver = new WorkflowBackendProgressEventObserver(
-            runId,
-            definition,
-            request.PreviewSimulationPlan,
-            payloadPolicyService,
-            request.Origin,
-            WorkflowNodeExecutionProgressScope.Current);
-        Run run;
-        try
-        {
-            run = await RunWithProgressObserverAsync(
-                build.Workflow,
                 request,
                 runId,
-                progressObserver,
-                cancellationToken);
-        }
-        catch (Exception exception) when (WorkflowExternalRequestPendingException.TryFind(exception, out _))
-        {
-            if (!WorkflowExternalRequestPendingException.TryFind(exception, out var pendingException) ||
-                pendingException is null)
-            {
-                throw;
-            }
-
-            return await CreateWaitingForExternalRequestResultAsync(
-                definition,
-                runId,
-                Descriptor.Kind,
-                pendingException.Request,
-                progressObserver,
-                request.Origin,
-                now,
+                build,
                 cancellationToken);
         }
 
-        if (externalRequestCapture.Requests.LastOrDefault() is { } capturedRequest)
-        {
-            return await CreateWaitingForExternalRequestResultAsync(
-                definition,
-                runId,
-                Descriptor.Kind,
-                capturedRequest,
-                progressObserver,
-                request.Origin,
-                now,
-                cancellationToken);
-        }
-
-        await using (run)
-        {
-            var status = await run.GetStatusAsync(cancellationToken);
-            var mappedState = MafWorkflowStatusMapper.MapRunStatus(status);
-            var finalState = mappedState == WorkflowRunState.Idle
-                ? WorkflowRunState.Completed
-                : mappedState;
-            var events = progressObserver.Events
-                .Concat(run.OutgoingEvents
-                    .Select(workflowEvent => eventNormalizer.Normalize(
-                        runId,
-                        workflowEvent,
-                        eventBindings,
-                        timeProvider.GetUtcNow()))
-                    .Where(workflowEvent => !IsDuplicateProgressEvent(progressObserver.Events, workflowEvent))
-                    .ToList())
-                .OrderBy(workflowEvent => workflowEvent.CreatedAtUtc)
-                .ToList();
-            var failureEvent = events.LastOrDefault(workflowEvent =>
-                workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed);
-            if (failureEvent is not null)
-            {
-                finalState = WorkflowRunState.Failed;
-            }
-
-            var inputPayload = await payloadPolicyService.ApplyAsync(new WorkflowPayloadPolicyRequest(
-                runId,
-                WorkflowPayloadPolicyScope.RunInput,
-                request.InputJson,
-                WorkflowArtifactKind.Json,
-                "workflow-input.json",
-                "application/json",
-                now)
-            {
-                CaptureArtifact = true
-            }, cancellationToken);
-            var startedEvent = new WorkflowEventRecord(
-                Guid.NewGuid(),
-                runId,
-                WorkflowEventKind.Started,
-                NodeId: null,
-                $"Workflow '{definition.Name}' started.",
-                WorkflowEventPayloads.Serialize(
-                    WorkflowEventPayloadSource.Runtime,
-                    "WorkflowStarted",
-                    inlineJson: inputPayload.InlinePayload,
-                    reference: inputPayload.Reference,
-                    originalInlineCharacters: inputPayload.OriginalPayloadCharacters,
-                    inlineTruncated: inputPayload.InlineTruncated,
-                    maxInlinePayloadCharacters: inputPayload.MaxInlinePayloadCharacters),
-                now);
-            var startedEventIndex = events.FindIndex(workflowEvent => workflowEvent.Kind == WorkflowEventKind.Started);
-            if (startedEventIndex >= 0)
-            {
-                events[startedEventIndex] = startedEvent;
-            }
-            else
-            {
-                events.Insert(0, startedEvent);
-            }
-
-            progressObserver.AddArtifact(inputPayload.Artifact);
-
-            if (finalState == WorkflowRunState.Completed)
-            {
-                events.Add(new WorkflowEventRecord(
-                    Guid.NewGuid(),
-                    runId,
-                    WorkflowEventKind.Completed,
-                    NodeId: null,
-                    $"Workflow '{definition.Name}' completed.",
-                    WorkflowEventPayloads.Serialize(
-                        WorkflowEventPayloadSource.Runtime,
-                        "WorkflowCompleted"),
-                    timeProvider.GetUtcNow()));
-            }
-
-            var snapshotUpdatedAtUtc = timeProvider.GetUtcNow();
-            var snapshot = new WorkflowRunSnapshot(
-                runId,
-                definition.Id,
-                definition.VersionId,
-                finalState,
-                Descriptor.Kind,
-                BackendRunId: run.SessionId,
-                Summary: failureEvent is not null
-                    ? WorkflowFailureDisplayFormatter.ToUserMessage(failureEvent)
-                    : finalState == WorkflowRunState.Completed
-                        ? $"Workflow '{definition.Name}' completed."
-                        : $"Workflow '{definition.Name}' is {finalState}.",
-                CreatedAtUtc: now,
-                UpdatedAtUtc: snapshotUpdatedAtUtc)
-            {
-                TerminalAtUtc = IsTerminal(finalState) ? snapshotUpdatedAtUtc : null,
-                Origin = request.Origin
-            };
-            var artifacts = MergeArtifacts(
-                progressObserver.Artifacts,
-                finalState == WorkflowRunState.Completed
-                    ? MafConfiguredFileArtifactResolver.BuildConfiguredFileArtifacts(definition, runId, timeProvider.GetUtcNow())
-                    : []);
-            var checkpoint = checkpointFactory.CreateMetadataCheckpoint(
-                new WorkflowCheckpointCreateRequest(
-                    definition,
-                    runId,
-                    Descriptor.Kind,
-                    MapCheckpointKind(finalState),
-                    snapshot.UpdatedAtUtc)
-                {
-                    Summary = snapshot.Summary
-                });
-
-            return new WorkflowBackendStartResult(snapshot, events, [], artifacts)
-            {
-                Checkpoints = [checkpoint],
-                UsageObservations = progressObserver.UsageObservations
-            };
-        }
-    }
-
-    private async Task<WorkflowBackendStartResult> CreateWaitingForExternalRequestResultAsync(
-        WorkflowDefinition definition,
-        WorkflowRunId runId,
-        WorkflowRuntimeBackendKind backend,
-        WorkflowExternalRequestRecord request,
-        WorkflowBackendProgressEventObserver progressObserver,
-        WorkflowLaunchOrigin? origin,
-        DateTimeOffset createdAtUtc,
-        CancellationToken cancellationToken)
-    {
-        var now = timeProvider.GetUtcNow();
-        var summary = request.Kind == WorkflowExternalRequestKind.Approval
-            ? $"Workflow is waiting for approval at node '{request.NodeId}'."
-            : $"Workflow is waiting for input at node '{request.NodeId}'.";
-        var requestPayload = await payloadPolicyService.ApplyAsync(new WorkflowPayloadPolicyRequest(
+        return await legacyDriver.StartAsync(
+            definition,
+            request,
             runId,
-            WorkflowPayloadPolicyScope.ExternalRequest,
-            request.RequestJson,
-            WorkflowArtifactKind.Json,
-            $"workflow-external-request-{request.Id.Value:N}.json",
-            "application/json",
-            now)
-        {
-            NodeId = request.NodeId,
-            CaptureArtifact = true
-        }, cancellationToken);
-        var waitingRun = new WorkflowRunSnapshot(
-            runId,
-            definition.Id,
-            definition.VersionId,
-            WorkflowRunState.WaitingForInput,
-            backend,
-            BackendRunId: runId.ToString(),
-            Summary: summary,
-            CreatedAtUtc: createdAtUtc,
-            UpdatedAtUtc: now)
-        {
-            Origin = origin
-        };
-        var waitingEvent = new WorkflowEventRecord(
-            Guid.NewGuid(),
-            runId,
-            WorkflowEventKind.WaitingForInput,
-            request.NodeId,
-            summary,
-            WorkflowEventPayloads.Serialize(
-                WorkflowEventPayloadSource.ExternalRequest,
-                "WorkflowExternalRequest",
-                request.NodeId,
-                requestId: request.Id,
-                requestKind: request.Kind,
-                inlineJson: requestPayload.InlinePayload,
-                reference: requestPayload.Reference,
-                originalInlineCharacters: requestPayload.OriginalPayloadCharacters,
-                inlineTruncated: requestPayload.InlineTruncated,
-                maxInlinePayloadCharacters: requestPayload.MaxInlinePayloadCharacters),
-            now);
-        progressObserver.AddArtifact(requestPayload.Artifact);
-        var events = progressObserver.Events
-            .Concat([waitingEvent])
-            .OrderBy(workflowEvent => workflowEvent.CreatedAtUtc)
-            .ToArray();
-        var checkpoint = checkpointFactory.CreateMetadataCheckpoint(
-            new WorkflowCheckpointCreateRequest(
-                definition,
-                runId,
-                backend,
-                WorkflowCheckpointKind.WaitingForInput,
-                now)
-            {
-                NodeId = request.NodeId,
-                ExternalRequestId = request.Id,
-                Summary = summary
-            });
-
-        return new WorkflowBackendStartResult(waitingRun, events, [request], progressObserver.Artifacts)
-        {
-            Checkpoints = [checkpoint],
-            UsageObservations = progressObserver.UsageObservations
-        };
-    }
-
-    private static WorkflowCheckpointKind MapCheckpointKind(WorkflowRunState state)
-        => state switch
-        {
-            WorkflowRunState.Completed => WorkflowCheckpointKind.Completed,
-            WorkflowRunState.Failed => WorkflowCheckpointKind.Failed,
-            WorkflowRunState.Cancelled => WorkflowCheckpointKind.Cancelled,
-            _ => WorkflowCheckpointKind.RuntimeBoundary
-        };
-
-    private static bool IsTerminal(WorkflowRunState state)
-        => state is WorkflowRunState.Completed or WorkflowRunState.Failed or WorkflowRunState.Cancelled;
-
-    private static IReadOnlyList<WorkflowArtifactRecord> MergeArtifacts(
-        params IEnumerable<WorkflowArtifactRecord>[] artifactGroups)
-    {
-        var artifactsByPath = new Dictionary<string, WorkflowArtifactRecord>(StringComparer.Ordinal);
-        foreach (var artifact in artifactGroups.SelectMany(group => group))
-        {
-            if (!artifactsByPath.ContainsKey(artifact.StoragePath))
-            {
-                artifactsByPath.Add(artifact.StoragePath, artifact);
-            }
-        }
-
-        return artifactsByPath.Values
-            .OrderBy(artifact => artifact.CreatedAtUtc)
-            .ThenBy(artifact => artifact.StoragePath, StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    private static async Task<Run> RunWithProgressObserverAsync(
-        Workflow workflow,
-        WorkflowRunStartRequest request,
-        WorkflowRunId runId,
-        WorkflowBackendProgressEventObserver progressObserver,
-        CancellationToken cancellationToken)
-    {
-        using var progressScope = WorkflowNodeExecutionProgressScope.Push(progressObserver);
-        return await InProcessExecution.RunAsync(
-            workflow,
-            new WorkflowNodeInput(request.InputJson),
-            runId.ToString(),
+            build,
             cancellationToken);
     }
 
-    private static bool IsDuplicateProgressEvent(
-        IReadOnlyList<WorkflowEventRecord> progressEvents,
-        WorkflowEventRecord workflowEvent)
+    public async Task<WorkflowBackendStartResult> ResumeAsync(
+        WorkflowRunSnapshot run,
+        WorkflowExternalRequestRecord request,
+        string responseJson,
+        CancellationToken cancellationToken = default)
     {
-        return workflowEvent.Kind is WorkflowEventKind.ExecutorInvoked or WorkflowEventKind.ExecutorCompleted or WorkflowEventKind.ExecutorFailed &&
-               workflowEvent.NodeId.HasValue &&
-               progressEvents.Any(progressEvent =>
-                   progressEvent.Kind == workflowEvent.Kind &&
-                   progressEvent.NodeId == workflowEvent.NodeId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
+        using var document = JsonDocument.Parse(responseJson);
+        return await ResumeAsync(
+            new WorkflowBackendResumeRequest(
+                run,
+                request,
+                document.RootElement.Clone()),
+            cancellationToken);
+    }
+
+    public async Task<WorkflowBackendStartResult> ResumeAsync(
+        WorkflowBackendResumeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (externalResponseDriver is null)
+        {
+            throw new InvalidOperationException(
+                "MAF external-response resume requires both a checkpoint payload store and an exact workflow catalog.");
+        }
+
+        var resolvedComponents = await ResolveAllComponentsAsync(cancellationToken);
+        return await externalResponseDriver.ResumeAsync(request, resolvedComponents, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<LlmCallComponent>> ResolveComponentsAsync(
+        WorkflowDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        var resolved = componentLibrary is null
+            ? components ?? []
+            : await componentLibrary.ListComponentsAsync(cancellationToken);
+        return FilterReferencedComponents(definition, resolved);
+    }
+
+    private async Task<IReadOnlyList<LlmCallComponent>> ResolveAllComponentsAsync(
+        CancellationToken cancellationToken)
+    {
+        return componentLibrary is null
+            ? components ?? []
+            : await componentLibrary.ListComponentsAsync(cancellationToken);
+    }
+
+    private static (
+        MafWorkflowNativeStartDriver? Start,
+        MafWorkflowExternalResponseDriver? Response) CreateNativeDrivers(
+        IWorkflowMafCompiler compiler,
+        IWorkflowBackendCheckpointPayloadStore? checkpointPayloadStore,
+        IWorkflowCatalogService? catalog,
+        IMafWorkflowEventNormalizer eventNormalizer,
+        IWorkflowCheckpointFactory checkpointFactory,
+        IWorkflowPayloadPolicyService payloadPolicyService,
+        TimeProvider timeProvider)
+    {
+        if (checkpointPayloadStore is null || catalog is null)
+        {
+            return (null, null);
+        }
+
+        var streamingDriver = new MafWorkflowStreamingRunDriver();
+        var requestMapper = new MafWorkflowExternalRequestMapper(timeProvider);
+        var turnResultMapper = new MafWorkflowTurnResultMapper(
+            checkpointPayloadStore,
+            requestMapper,
+            eventNormalizer,
+            checkpointFactory,
+            payloadPolicyService,
+            timeProvider);
+        return (
+            new MafWorkflowNativeStartDriver(
+                checkpointPayloadStore,
+                streamingDriver,
+                turnResultMapper,
+                timeProvider),
+            new MafWorkflowExternalResponseDriver(
+                compiler,
+                catalog,
+                checkpointPayloadStore,
+                streamingDriver,
+                new MafWorkflowRehydrationVerifier(),
+                requestMapper,
+                turnResultMapper));
+    }
+
+    private static WorkflowRuntimeBackendDescriptor CreateDescriptor(bool supportsResume)
+    {
+        return new WorkflowRuntimeBackendDescriptor(
+            WorkflowRuntimeBackendKind.InProcess,
+            "MAF in-process workflow runtime",
+            IsDurable: false,
+            SupportsStreaming: true,
+            SupportsExternalRequests: true,
+            SupportsDashboardObservability: false,
+            OperationalNotes: "Use for local development, tests, previews, and approved short non-durable runs only.")
+        {
+            SupportsExternalResponseResume = supportsResume,
+            SupportsActiveCancellation = true
+        };
     }
 
     private static IReadOnlyList<LlmCallComponent> FilterReferencedComponents(

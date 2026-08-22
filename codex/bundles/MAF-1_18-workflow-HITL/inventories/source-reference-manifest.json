@@ -1,0 +1,35 @@
+{
+  "preparationBaseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "development",
+    "commit": "5cdf1666dbafdcea975909101c1854773f5f3556",
+    "tree": "4026c65173415e1e53ddbf355995fffe9b154ad4",
+    "inspectedAt": "2026-08-20"
+  },
+  "upstream": {
+    "repository": "microsoft/agent-framework",
+    "baseTag": "dotnet-1.17.0",
+    "targetTag": "dotnet-1.18.0",
+    "relevantPullRequests": [
+      7650,
+      7474,
+      7388,
+      7567
+    ]
+  },
+  "criticalCanDoItAllPaths": [
+    "src/MAF/MicrosoftAgentFramework.Packages.props",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafChatClientAgentOptionsFactory.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs",
+    "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/WorkflowRuntimeContracts.cs",
+    "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/WorkflowExternalRequestRuntime.cs",
+    "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/WorkflowRuntimeManager.cs",
+    "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafWorkflowCompiler.cs",
+    "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/MafInProcessWorkflowExecutionBackend.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+    "src/App/CanDoItAll.Web/Api/WorkflowsApi.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/MafApprovalSessionRoundTripTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/WorkflowRuntimeLifecycleRedGateTests.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs"
+  ]
+}

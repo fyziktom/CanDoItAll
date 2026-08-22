@@ -33,7 +33,7 @@ public static class WorkflowLaunchIdempotencyRequestFactory
             requestedVersionId,
             intent.Mode,
             intent.Origin.Kind,
-            new WorkflowLaunchOriginScopeKey(Hash(CreateOriginScopePayload(intent.Origin))));
+            new WorkflowLaunchOriginScopeKey(Hash(CreateAuthorizedOriginScopePayload(intent.Origin))));
     }
 
     public static WorkflowLaunchRequestFingerprint CreateFingerprint(
@@ -50,7 +50,8 @@ public static class WorkflowLaunchIdempotencyRequestFactory
             canonicalInputJson,
             intent.CompletionPolicy,
             intent.RequestedBackend,
-            intent.PreviewSimulationPlan);
+            intent.PreviewSimulationPlan,
+            CreateOriginAuthorizationPayload(intent.Origin));
         return new WorkflowLaunchRequestFingerprint(Hash(payload), canonicalInputHash);
     }
 
@@ -105,6 +106,28 @@ public static class WorkflowLaunchIdempotencyRequestFactory
             _ => throw new InvalidOperationException(
                 $"Workflow launch origin '{origin.GetType().Name}' is not supported.")
         };
+
+    private static AuthorizedOriginScopePayload CreateAuthorizedOriginScopePayload(
+        WorkflowLaunchOrigin origin)
+        => new(
+            CreateOriginAuthorizationPayload(origin),
+            CreateOriginScopePayload(origin));
+
+    private static OriginAuthorizationPayload CreateOriginAuthorizationPayload(
+        WorkflowLaunchOrigin origin)
+    {
+        if (origin.AuthorizationScope is null ||
+            string.IsNullOrWhiteSpace(origin.AuthorizationPolicyFingerprint))
+        {
+            throw new InvalidOperationException(
+                "Workflow launch idempotency requires a trusted authorization scope and policy fingerprint.");
+        }
+
+        return new OriginAuthorizationPayload(
+            origin.AuthorizationScope.Kind,
+            origin.AuthorizationScope.Key,
+            origin.AuthorizationPolicyFingerprint);
+    }
 
     private static string Hash<T>(T value)
     {
@@ -168,7 +191,17 @@ public static class WorkflowLaunchIdempotencyRequestFactory
         string InputJson,
         WorkflowLaunchCompletionPolicy CompletionPolicy,
         WorkflowRuntimeBackendKind? RequestedBackend,
-        WorkflowPreviewSimulationPlan PreviewSimulationPlan);
+        WorkflowPreviewSimulationPlan PreviewSimulationPlan,
+        OriginAuthorizationPayload OriginAuthorization);
+
+    private sealed record AuthorizedOriginScopePayload(
+        OriginAuthorizationPayload Authorization,
+        object Lineage);
+
+    private sealed record OriginAuthorizationPayload(
+        WorkspaceScopeKind ScopeKind,
+        string ScopeKey,
+        string PolicyFingerprint);
 
     private sealed record ActorOriginScopePayload(
         WorkflowLaunchActorKind ActorKind,

@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -47,6 +50,104 @@ public interface IWorkflowExecutorInvoker
         WorkflowNode node,
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default);
+
+    ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        WorkflowNodeInput input,
+        WorkflowExecutorInvocationContext invocationContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(invocationContext);
+        return ExecuteAsync(definition, node, input, cancellationToken);
+    }
+}
+
+public readonly record struct WorkflowExecutorApprovalRequestId
+{
+    [JsonConstructor]
+    public WorkflowExecutorApprovalRequestId(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Workflow executor approval request id cannot contain leading or trailing whitespace.", nameof(value));
+        }
+
+        Value = value;
+    }
+
+    public string Value { get; }
+
+    public static WorkflowExecutorApprovalRequestId New() => new(Guid.NewGuid().ToString("N"));
+
+    public override string ToString() => Value;
+}
+
+public readonly record struct WorkflowExecutorApprovalToken
+{
+    [JsonConstructor]
+    public WorkflowExecutorApprovalToken(string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Workflow executor approval token cannot contain leading or trailing whitespace.", nameof(value));
+        }
+
+        Value = value;
+    }
+
+    public string Value { get; }
+
+    public static WorkflowExecutorApprovalToken New()
+        => new(Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32)));
+
+    public bool FixedTimeEquals(WorkflowExecutorApprovalToken other)
+    {
+        var expectedBytes = Encoding.UTF8.GetBytes(Value);
+        var presentedBytes = Encoding.UTF8.GetBytes(other.Value);
+        return expectedBytes.Length == presentedBytes.Length &&
+            CryptographicOperations.FixedTimeEquals(expectedBytes, presentedBytes);
+    }
+
+    public override string ToString() => Value;
+}
+
+public sealed record WorkflowExecutorApprovalAuthorization(
+    WorkflowExecutorApprovalRequestId RequestId,
+    WorkflowExecutorApprovalToken ExpectedToken,
+    WorkflowExecutorApprovalToken PresentedToken,
+    WorkflowRunId RunId,
+    WorkflowId WorkflowId,
+    WorkflowVersionId WorkflowVersionId,
+    WorkflowNodeId NodeId,
+    WorkflowExecutorId ExecutorId,
+    WorkflowExecutorCapabilityFlags RequiredCapabilities,
+    WorkflowExecutorApprovalRequirement ApprovalRequirement,
+    WorkflowExecutorInputHash InputHash,
+    WorkflowExternalResponseAuthorization ExternalResponseAuthorization,
+    bool Approved,
+    string Message);
+
+public sealed record WorkflowExecutorInvocationContext
+{
+    public static WorkflowExecutorInvocationContext Empty { get; } = new();
+
+    public WorkflowExecutorApprovalAuthorization? ApprovalAuthorization { get; init; }
+
+    public WorkflowExternalResponseAuthorization? ExternalResponseAuthorization { get; init; }
+
+    public WorkflowExternalRequestId? CausationRequestId { get; init; }
+
+    public WorkflowExternalRequestVersion? CausationRequestVersion { get; init; }
+
+    public WorkflowExternalResponseOperationId? CausationOperationId { get; init; }
+
+    public WorkflowExecutorInvocationGeneration InvocationGeneration { get; init; } =
+        WorkflowExecutorInvocationGeneration.Initial;
+
+    public WorkflowExecutorInvocationIdempotencyKey? IdempotencyKey { get; init; }
 }
 
 public interface IWorkflowExecutorApprovalGate
@@ -88,4 +189,15 @@ public sealed record WorkflowExecutorExecutionContext(
     public string PluginConnectionId { get; init; } = string.Empty;
 
     public string RedactedSettingsSummary { get; init; } = string.Empty;
+
+    public WorkflowExternalRequestId? CausationRequestId { get; init; }
+
+    public WorkflowExternalRequestVersion? CausationRequestVersion { get; init; }
+
+    public WorkflowExternalResponseOperationId? CausationOperationId { get; init; }
+
+    public WorkflowExecutorInvocationGeneration InvocationGeneration { get; init; } =
+        WorkflowExecutorInvocationGeneration.Initial;
+
+    public WorkflowExecutorInvocationIdempotencyKey? IdempotencyKey { get; init; }
 }

@@ -284,7 +284,7 @@ public sealed class WorkflowUsageAnalyticsTests
         var runStore = new InMemoryWorkflowRunStore();
         var usageStore = new InMemoryWorkflowUsageObservationStore();
         var backend = new WorkflowUsageCompletingBackend(observation, FixedUtcNow);
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [backend],
             runStore,
             new WorkflowActiveRunRegistry(),
@@ -317,7 +317,7 @@ public sealed class WorkflowUsageAnalyticsTests
             definition.VersionId);
         var runStore = new InMemoryWorkflowRunStore();
         var usageStore = new InMemoryWorkflowUsageObservationStore();
-        var manager = new WorkflowRuntimeManager(
+        var manager = WorkflowRuntimeManager.CreateInMemory(
             [new WorkflowUsageFailingBackend(observation)],
             runStore,
             new WorkflowActiveRunRegistry(),

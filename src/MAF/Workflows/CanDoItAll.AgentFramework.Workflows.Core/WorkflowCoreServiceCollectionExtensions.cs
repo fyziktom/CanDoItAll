@@ -21,6 +21,7 @@ public static class WorkflowCoreServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowLaunchIdempotencyQueryStore>(serviceProvider =>
             serviceProvider.GetRequiredService<InMemoryWorkflowLaunchIdempotencyStore>());
         services.TryAddScoped<IWorkflowLaunchIdempotencyQueryService, WorkflowLaunchIdempotencyQueryService>();
+        services.TryAddScoped<IWorkflowLaunchAuthorizationScopeResolver, DefaultWorkflowLaunchAuthorizationScopeResolver>();
         services.TryAddScoped<IWorkflowRunLauncher, WorkflowRuntimeManagerRunLauncher>();
         services.TryAddScoped<IWorkflowLaunchService, WorkflowLaunchService>();
         services.TryAddScoped<IWorkflowUsageAnalyticsStore, WorkflowUsageAnalyticsStore>();

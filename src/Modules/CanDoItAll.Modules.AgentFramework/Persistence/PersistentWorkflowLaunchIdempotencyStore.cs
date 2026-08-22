@@ -25,6 +25,23 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         CancellationToken cancellationToken = default)
     {
         ValidateClaimWindow(claimedAtUtc, leaseExpiresAtUtc);
+        await using (var providerContext = await dbContextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            if (WorkflowPersistenceProvider.IsInMemory(providerContext))
+            {
+                return await TryClaimInMemoryAsync(
+                    scope,
+                    fingerprint,
+                    claimToken,
+                    proposedRunId,
+                    claimedAtUtc,
+                    leaseExpiresAtUtc,
+                    cancellationToken);
+            }
+
+            WorkflowPersistenceProvider.EnsureRelational(providerContext);
+        }
+
         while (true)
         {
             if (await TryInsertClaimAsync(
@@ -111,6 +128,27 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+                dbContext,
+                cancellationToken);
+            var existing = await ClaimQuery(dbContext, scope)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (existing is null ||
+                existing.State != WorkflowLaunchIdempotencyClaimState.Pending ||
+                existing.ClaimToken != claimToken.Value)
+            {
+                return false;
+            }
+
+            existing.LeaseExpiresAtUtc = leaseExpiresAtUtc;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
+
         var affected = await ClaimQuery(dbContext, scope)
             .Where(record =>
                 record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
@@ -130,6 +168,29 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         ArgumentNullException.ThrowIfNull(completion);
         var completionJson = JsonSerializer.Serialize(completion, JsonOptions);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+                dbContext,
+                cancellationToken);
+            var existing = await ClaimQuery(dbContext, scope)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (existing is null ||
+                existing.State != WorkflowLaunchIdempotencyClaimState.Pending ||
+                existing.ClaimToken != claimToken.Value)
+            {
+                return false;
+            }
+
+            existing.State = WorkflowLaunchIdempotencyClaimState.Completed;
+            existing.CompletionJson = completionJson;
+            existing.CompletedAtUtc = completion.CompletedAtUtc;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
+
         var affected = await ClaimQuery(dbContext, scope)
             .Where(record =>
                 record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
@@ -148,6 +209,27 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+                dbContext,
+                cancellationToken);
+            var existing = await ClaimQuery(dbContext, scope)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (existing is null ||
+                existing.State != WorkflowLaunchIdempotencyClaimState.Pending ||
+                existing.ClaimToken != claimToken.Value)
+            {
+                return false;
+            }
+
+            dbContext.Remove(existing);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
+
         var affected = await ClaimQuery(dbContext, scope)
             .Where(record =>
                 record.State == WorkflowLaunchIdempotencyClaimState.Pending &&
@@ -169,6 +251,62 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
                     item.CallerKey == callerKey.Value,
                 cancellationToken);
         return record is null ? null : ToRecord(record);
+    }
+
+    private async Task<WorkflowLaunchIdempotencyClaimResult> TryClaimInMemoryAsync(
+        WorkflowLaunchIdempotencyScope scope,
+        WorkflowLaunchRequestFingerprint fingerprint,
+        WorkflowLaunchIdempotencyClaimToken claimToken,
+        WorkflowRunId proposedRunId,
+        DateTimeOffset claimedAtUtc,
+        DateTimeOffset leaseExpiresAtUtc,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var existing = await ClaimQuery(dbContext, scope)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (existing is null)
+        {
+            dbContext.Add(WorkflowLaunchIdempotencyRecordEntity.CreatePending(
+                scope,
+                fingerprint,
+                claimToken,
+                proposedRunId,
+                claimedAtUtc,
+                leaseExpiresAtUtc));
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return new WorkflowLaunchIdempotencyClaimResult(
+                WorkflowLaunchIdempotencyClaimOutcome.Acquired,
+                proposedRunId);
+        }
+
+        ThrowIfPublicApiScopeConflicts(scope, existing);
+        ThrowIfFingerprintConflicts(scope, fingerprint, existing.Fingerprint);
+        if (existing.State == WorkflowLaunchIdempotencyClaimState.Completed)
+        {
+            existing.ReplayCount++;
+            existing.LastReplayedAtUtc = claimedAtUtc;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return Completed(existing);
+        }
+
+        if (existing.LeaseExpiresAtUtc <= claimedAtUtc)
+        {
+            existing.ClaimToken = claimToken.Value;
+            existing.ClaimedAtUtc = claimedAtUtc;
+            existing.LeaseExpiresAtUtc = leaseExpiresAtUtc;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return new WorkflowLaunchIdempotencyClaimResult(
+                WorkflowLaunchIdempotencyClaimOutcome.Acquired,
+                existing.ReservedRunIdAsValue());
+        }
+
+        return new WorkflowLaunchIdempotencyClaimResult(
+            WorkflowLaunchIdempotencyClaimOutcome.InProgress,
+            existing.ReservedRunIdAsValue());
     }
 
     private async Task<bool> TryInsertClaimAsync(
@@ -230,6 +368,26 @@ public sealed class PersistentWorkflowLaunchIdempotencyStore(
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+                dbContext,
+                cancellationToken);
+            var record = await dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>()
+                .SingleOrDefaultAsync(item => item.Id == recordId, cancellationToken);
+            if (record is null)
+            {
+                return;
+            }
+
+            record.ReplayCount++;
+            record.LastReplayedAtUtc = replayedAtUtc;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
+
         await dbContext.Set<WorkflowLaunchIdempotencyRecordEntity>()
             .Where(record => record.Id == recordId)
             .ExecuteUpdateAsync(setters => setters

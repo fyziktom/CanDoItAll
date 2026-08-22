@@ -348,6 +348,15 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.AddMafWorkflowAdapterServices(ServiceLifetime.Scoped);
+        services.Replace(ServiceDescriptor.Scoped<
+            IWorkflowExternalRequestAuthorizer,
+            WorkflowExternalRequestAuthorizer>());
+        services.Replace(ServiceDescriptor.Scoped<
+            IWorkflowLaunchAuthorizationScopeResolver,
+            WorkflowLaunchAuthorizationScopeResolver>());
+        services.TryAddScoped<
+            IWorkflowExternalResponseActorContextFactory,
+            WorkflowExternalResponseActorContextFactory>();
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
@@ -363,6 +372,22 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<PersistentWorkflowBackendCheckpointPayloadStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowBackendCheckpointPayloadStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowBackendCheckpointPayloadStore>()));
+        services.TryAddScoped<PersistentWorkflowExternalRequestBoundaryStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowExternalRequestBoundaryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowExternalRequestBoundaryStore>()));
+        services.TryAddScoped<PersistentWorkflowExternalResponseOperationStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowExternalResponseOperationStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowExternalResponseOperationStore>()));
+        services.TryAddScoped<PersistentWorkflowResumeBoundaryStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowResumeBoundaryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowResumeBoundaryStore>()));
+        services.TryAddScoped<PersistentWorkflowExecutorInvocationDeduplicationStore>();
+        services.Replace(ServiceDescriptor.Scoped<IWorkflowExecutorInvocationDeduplicationStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<PersistentWorkflowExecutorInvocationDeduplicationStore>()));
+        services.AddWorkflowExecutorInvocationDeduplication();
         services.TryAddScoped<PersistentWorkflowLaunchIdempotencyStore>();
         services.Replace(ServiceDescriptor.Scoped<IWorkflowLaunchIdempotencyStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowLaunchIdempotencyStore>()));
@@ -382,6 +407,7 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         {
             services.AddHostedService<AgentFrameworkCatalogWarmupWorker>();
             services.AddHostedService<AgentFrameworkExecutionRecoveryWorker>();
+            services.AddHostedService<WorkflowExternalResponseRecoveryWorker>();
         }
 
         return services;

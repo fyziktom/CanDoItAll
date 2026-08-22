@@ -740,7 +740,25 @@ public sealed record WorkflowExternalRequestRecord(
     string RequestJson,
     string ResponseJson,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset? RespondedAtUtc);
+    DateTimeOffset? RespondedAtUtc)
+{
+    public WorkflowExternalRequestVersion Version { get; init; } = WorkflowExternalRequestVersion.Initial;
+
+    public WorkflowExternalRequestState State { get; init; } = WorkflowExternalRequestState.LegacyNonResumable;
+
+    public WorkflowExternalResponseContract? ResponseContract { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExternalRequestContinuation? Continuation { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExternalRequestAuthorizationPolicySnapshot? AuthorizationPolicy { get; init; }
+
+    [JsonIgnore]
+    public WorkflowExternalRequestState EffectiveState => State == WorkflowExternalRequestState.LegacyNonResumable && RespondedAtUtc.HasValue
+        ? WorkflowExternalRequestState.Responded
+        : State;
+}
 
 public sealed record WorkflowCheckpointRecord(
     WorkflowCheckpointId Id,

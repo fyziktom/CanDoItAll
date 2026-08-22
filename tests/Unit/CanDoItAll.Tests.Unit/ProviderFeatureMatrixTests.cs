@@ -72,7 +72,7 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
-    public void ResolveFeatureMatrix_limits_ollama_to_local_tool_bridge_capabilities()
+    public void ResolveFeatureMatrix_marks_ollama_as_structured_output_and_local_tool_bridge_capable()
     {
         var service = new ProviderProfileService();
         var provider = CreateProvider(
@@ -83,13 +83,13 @@ public sealed class ProviderFeatureMatrixTests
 
         var matrix = service.ResolveFeatureMatrix(provider);
 
-        Assert.False(matrix.SupportsStructuredOutput);
+        Assert.True(matrix.SupportsStructuredOutput);
         Assert.False(matrix.SupportsNativeWebSearch);
         Assert.False(matrix.SupportsHostedMcpServer);
         Assert.True(matrix.SupportsLocalMcpBridge);
         Assert.False(matrix.SupportsServiceManagedHistory);
         Assert.False(matrix.SupportsVision);
-        Assert.False(matrix.SupportsResponseFormatJsonSchema);
+        Assert.True(matrix.SupportsResponseFormatJsonSchema);
         Assert.False(matrix.SupportsToolApprovalRequests);
         Assert.False(matrix.SupportsApprovalRequiredAIFunction);
     }
@@ -112,7 +112,7 @@ public sealed class ProviderFeatureMatrixTests
 
         Assert.True(matrix.SupportsVision);
         Assert.True(matrix.SupportsFunctionTools);
-        Assert.False(matrix.SupportsStructuredOutput);
+        Assert.True(matrix.SupportsStructuredOutput);
         Assert.False(matrix.SupportsNativeWebSearch);
     }
 
@@ -183,7 +183,7 @@ public sealed class ProviderFeatureMatrixTests
         var matrix = service.ResolveFeatureMatrix(provider);
 
         Assert.True(matrix.SupportsVision);
-        Assert.False(matrix.SupportsStructuredOutput);
+        Assert.True(matrix.SupportsStructuredOutput);
     }
 
     [Fact]

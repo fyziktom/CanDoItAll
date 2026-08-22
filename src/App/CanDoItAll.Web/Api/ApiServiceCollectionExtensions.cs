@@ -53,6 +53,8 @@ public static class ApiServiceCollectionExtensions
         {
             options.AddOperationTransformer(
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
+            options.AddOperationTransformer(
+                WorkflowExternalResponseOpenApiContract.TransformOperationAsync);
         });
         services.AddAuthorization(options =>
         {
@@ -108,8 +110,13 @@ public static class ApiServiceCollectionExtensions
                 options,
                 ApiAuthorizationPolicies.ExecuteLlmChats,
                 ApiAccessScopeNames.ExecuteLlmChats);
+            AddExactScopePolicy(
+                options,
+                ApiAuthorizationPolicies.RespondWorkflows,
+                ApiAccessScopeNames.RespondWorkflows);
         });
         services.AddHttpContextAccessor();
+        services.TryAddScoped<WorkflowExternalResponseApiActorResolver>();
         services.Replace(ServiceDescriptor.Singleton<IWorkflowEventSink, WorkflowApiEventSink>());
         services.TryAddScoped<ProcessRuntimeProjectionProjector>();
         services.Replace(ServiceDescriptor.Scoped<IProcessRuntimeProjector>(serviceProvider =>

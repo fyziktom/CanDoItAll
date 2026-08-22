@@ -17,6 +17,11 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<IWorkflowActiveRunRegistry, WorkflowActiveRunRegistry>();
+        services.TryAddScoped<IWorkflowExternalResponseContinuation, WorkflowExternalResponseContinuation>();
+        services.TryAddScoped<WorkflowExternalResponseRecoveryCoordinator>();
+        services.TryAddScoped<IWorkflowExternalRequestAuthorizer, DenyAllWorkflowExternalRequestAuthorizer>();
+        services.TryAddScoped<IWorkflowExternalResponseValidator, WorkflowExternalResponseValidator>();
+        services.TryAddScoped<IWorkflowExternalResponseService, WorkflowExternalResponseService>();
         services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
 
         return services;
@@ -34,6 +39,7 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         var resolvedScope = workspaceScope ?? WorkspaceScopeDescriptor.Sandbox;
 
         services.TryAddSingleton<InMemoryWorkflowRunStore>();
+        services.TryAddSingleton<InMemoryWorkflowBackendCheckpointPayloadStore>();
         services.TryAddSingleton<InMemoryWorkflowUsageObservationStore>();
         services.TryAddSingleton<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
@@ -42,6 +48,20 @@ public static class WorkflowRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowBackendCheckpointPayloadStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<InMemoryWorkflowBackendCheckpointPayloadStore>());
+        services.TryAddSingleton<InMemoryWorkflowExternalRequestBoundaryStore>(serviceProvider =>
+            new InMemoryWorkflowExternalRequestBoundaryStore(
+                serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>(),
+                serviceProvider.GetRequiredService<InMemoryWorkflowBackendCheckpointPayloadStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IWorkflowExternalRequestBoundaryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<InMemoryWorkflowExternalRequestBoundaryStore>()));
+        services.TryAddSingleton<InMemoryWorkflowExternalResponseOperationStore>();
+        services.Replace(ServiceDescriptor.Singleton<IWorkflowExternalResponseOperationStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<InMemoryWorkflowExternalResponseOperationStore>()));
+        services.TryAddSingleton<InMemoryWorkflowResumeBoundaryStore>();
+        services.Replace(ServiceDescriptor.Singleton<IWorkflowResumeBoundaryStore>(serviceProvider =>
+            serviceProvider.GetRequiredService<InMemoryWorkflowResumeBoundaryStore>()));
         services.TryAddScoped<IWorkflowArtifactContentStore>(serviceProvider =>
         {
             IPhysicalFileSystemPathPolicyFactory pathPolicyFactory =

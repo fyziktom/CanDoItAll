@@ -227,9 +227,9 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             payload["options"] = options;
         }
 
-        if (request.ResponseFormat is { RequireJson: true })
+        if (request.ResponseFormat is { RequireJson: true } responseFormat)
         {
-            payload["format"] = "json";
+            payload["format"] = ResolveResponseFormat(responseFormat);
         }
 
         var thinkingEffort = AgentThinkingEffortPolicy.ResolveEffectiveEffort(
@@ -248,6 +248,17 @@ public sealed class OllamaProviderDriver(HttpClient httpClient) :
             thinkingCapability,
             thinkingEffort.Value);
         return payload;
+    }
+
+    private static object ResolveResponseFormat(ProviderChatResponseFormat responseFormat)
+    {
+        if (string.IsNullOrWhiteSpace(responseFormat.SchemaJson))
+        {
+            return "json";
+        }
+
+        using var document = JsonDocument.Parse(responseFormat.SchemaJson);
+        return document.RootElement.Clone();
     }
 
     private async Task<ProviderModelDescriptor> CreateModelDescriptorAsync(

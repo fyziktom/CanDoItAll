@@ -21,6 +21,8 @@ internal static class ApiAuthorizationPolicies
 
     public const string ExecuteLlmChats = "Api.LlmChats.Execute";
 
+    public const string RespondWorkflows = "Api.Workflows.Respond";
+
     public static bool HasScope(ClaimsPrincipal principal, string requiredScope)
     {
         ArgumentNullException.ThrowIfNull(principal);

@@ -21,6 +21,18 @@ Registration is only the first gate. Actual attachment depends on:
 - project, process, HR, scheduler, memory, or curator authorization scope
 - tool invocation policy and approval requirements
 
+## Tool Call Scheduling Policy
+
+CanDoItAll permits a provider to return multiple tool calls in one model response, but the
+MAF invocation layer executes those calls serially in provider order. The central agent
+options factory explicitly sets `AllowConcurrentInvocation` to `false`; approval-required
+calls remain dependency barriers and are not bypassed by later calls in the same response.
+
+Concurrent tool execution is not a configurable runtime capability. Enabling it requires a
+separate design for ordering, authorization, cancellation, side-effect isolation, receipts,
+and replay safety. Declaration-only function-call storage is likewise not enabled by the
+current runtime policy.
+
 ## Current First-Party Providers
 
 | Provider | Source | Responsibility |

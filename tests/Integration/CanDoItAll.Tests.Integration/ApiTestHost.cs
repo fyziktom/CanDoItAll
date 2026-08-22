@@ -28,17 +28,21 @@ namespace CanDoItAll.Tests.Integration;
 
 internal sealed class ApiTestHost : IAsyncDisposable
 {
+    private readonly bool ownsTestEnvironment;
+
     private ApiTestHost(
         CanDoItAllTestEnvironment testEnvironment,
         TestDatabaseProfile activeProfile,
         WebApplication app,
-        HttpClient client)
+        HttpClient client,
+        bool ownsTestEnvironment)
     {
         TestEnvironment = testEnvironment;
         ActiveProfile = activeProfile;
         RootPath = testEnvironment.RootPath;
         App = app;
         Client = client;
+        this.ownsTestEnvironment = ownsTestEnvironment;
     }
 
     public string RootPath { get; }
@@ -56,14 +60,35 @@ internal sealed class ApiTestHost : IAsyncDisposable
         Action<IServiceCollection>? configureServices = null,
         bool useInMemoryDatabase = false,
         string? environmentName = null,
-        IFakeAgentRuntime? agentRuntimeOverride = null)
+        IFakeAgentRuntime? agentRuntimeOverride = null,
+        CanDoItAllTestEnvironment? sharedTestEnvironment = null,
+        TestDatabaseProfile? sharedActiveProfile = null)
     {
-        var testEnvironment = CanDoItAllTestEnvironment.Create("candoitall-api-tests");
-        var activeProfile = useInMemoryDatabase
+        if ((sharedTestEnvironment is null) != (sharedActiveProfile is null))
+        {
+            throw new ArgumentException(
+                "A shared API test environment and active profile must be supplied together.");
+        }
+
+        bool ownsTestEnvironment = sharedTestEnvironment is null;
+        var testEnvironment = sharedTestEnvironment ??
+            CanDoItAllTestEnvironment.Create("candoitall-api-tests");
+        var activeProfile = sharedActiveProfile ?? (useInMemoryDatabase
             ? testEnvironment.CreateInMemoryProfile("api-host")
-            : testEnvironment.CreatePostgreSqlProfile("api-host");
+            : testEnvironment.CreatePostgreSqlProfile("api-host"));
+        if (!ownsTestEnvironment &&
+            useInMemoryDatabase != (activeProfile.Provider == TestDatabaseProviderKind.InMemory))
+        {
+            throw new ArgumentException(
+                "The shared API test profile provider does not match the requested database mode.");
+        }
+
         var configurationOverrides = new Dictionary<string, string?>
         {
+            ["ControlPlane:RootPath"] = testEnvironment.ControlPlaneRootPath,
+            ["ControlPlane:StateRootPath"] = Path.Combine(testEnvironment.RootPath, "state"),
+            ["ControlPlane:LogsRootPath"] = Path.Combine(testEnvironment.RootPath, "logs"),
+            ["ControlPlane:RuntimeTemporaryRootPath"] = Path.Combine(testEnvironment.RootPath, "runtime"),
             ["DevelopmentManager:TuningModeEnabled"] = "false",
             [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind,
             ["Api:Enabled"] = "true",
@@ -141,7 +166,12 @@ internal sealed class ApiTestHost : IAsyncDisposable
         await app.StartAsync();
 
         var client = CreateClient(app);
-        return new ApiTestHost(testEnvironment, activeProfile, app, client);
+        return new ApiTestHost(
+            testEnvironment,
+            activeProfile,
+            app,
+            client,
+            ownsTestEnvironment);
     }
 
     private static string CreateDataProtectionCertificate(string rootPath)
@@ -233,7 +263,10 @@ internal sealed class ApiTestHost : IAsyncDisposable
         Client.Dispose();
         await App.StopAsync();
         await App.DisposeAsync();
-        await TestEnvironment.DisposeAsync();
+        if (ownsTestEnvironment)
+        {
+            await TestEnvironment.DisposeAsync();
+        }
     }
 
     private static HttpClient CreateClient(WebApplication app)

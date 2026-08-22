@@ -55,6 +55,12 @@ public partial class WorkflowsPage
     public IWorkflowRuntimeManager RuntimeManager { get; set; } = default!;
 
     [Inject]
+    public IWorkflowExternalResponseService ExternalResponseService { get; set; } = default!;
+
+    [Inject]
+    public IWorkflowExternalResponsePageActorContextProvider ExternalResponseActorContextProvider { get; set; } = default!;
+
+    [Inject]
     public IWorkflowRunStore RunStore { get; set; } = default!;
 
     [Inject]
@@ -1354,9 +1360,32 @@ public partial class WorkflowsPage
     {
         try
         {
-            selectedRun = await RuntimeManager.RespondToExternalRequestAsync(request.Id, pendingResponseJson);
-            NotificationService.Success("Workflow request answered", selectedRun.Summary);
-            await LoadPageAsync(preferredDefinitionId: CurrentDefinitionId, preferredRunId: selectedRun.RunId);
+            using var responseDocument = JsonDocument.Parse(pendingResponseJson);
+            var actorContext = await ExternalResponseActorContextProvider.GetCurrentAsync();
+            var result = await ExternalResponseService.SubmitAsync(
+                new WorkflowExternalResponseCommand(
+                    actorContext,
+                    request.Id,
+                    request.Version,
+                    responseDocument.RootElement,
+                    WorkflowExternalResponseCallerRequestFactory.CreateUiIdempotencyKey(
+                        request.Id,
+                        request.Version),
+                    WorkflowExternalResponseCallerRequestFactory.CreateUiCorrelationId(
+                        request.Id,
+                        request.Version)));
+            if (!IsAcceptedExternalResponseOutcome(result.Outcome))
+            {
+                errorMessage = result.SafeMessage;
+                NotificationService.Error("Workflow response failed", errorMessage);
+                return;
+            }
+
+            selectedRun = result.Run;
+            NotificationService.Success("Workflow request answered", result.SafeMessage);
+            await LoadPageAsync(
+                preferredDefinitionId: CurrentDefinitionId,
+                preferredRunId: result.Run?.RunId ?? request.RunId);
         }
         catch (Exception exception)
         {
@@ -1364,6 +1393,13 @@ public partial class WorkflowsPage
             NotificationService.Error("Workflow response failed", errorMessage);
         }
     }
+
+    private static bool IsAcceptedExternalResponseOutcome(
+        WorkflowExternalResponseServiceOutcome outcome)
+        => outcome is WorkflowExternalResponseServiceOutcome.Completed or
+            WorkflowExternalResponseServiceOutcome.WaitingAgain or
+            WorkflowExternalResponseServiceOutcome.Denied or
+            WorkflowExternalResponseServiceOutcome.Resuming;
 
     private async Task HandleCanvasDefinitionSavedAsync(WorkflowDefinition definition)
     {

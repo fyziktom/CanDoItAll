@@ -1311,8 +1311,10 @@ public sealed class ConcreteProviderDriverTests
     }
 
     [Fact]
-    public async Task OllamaProviderDriver_SendsTemperatureOptionAndJsonFormatButNeverParsesCachedTokens()
+    public async Task OllamaProviderDriver_SendsTemperatureOptionAndJsonSchemaFormatButNeverParsesCachedTokens()
     {
+        const string responseSchema =
+            """{"type":"object","additionalProperties":false,"required":["message"],"properties":{"message":{"type":"string"}}}""";
         var handler = new CapturingHandler((request, body) =>
             request.RequestUri!.AbsolutePath switch
             {
@@ -1330,14 +1332,38 @@ public sealed class ConcreteProviderDriverTests
             [],
             "prompt",
             Temperature: 0.5,
-            ResponseFormat: new ProviderChatResponseFormat(true, """{"type":"object"}""", "ollama_result")));
+            ResponseFormat: new ProviderChatResponseFormat(true, responseSchema, "ollama_result")));
 
         Assert.Equal(0, result.CachedInputTokens);
         var request = Assert.Single(handler.Requests);
         using var body = JsonDocument.Parse(request.Body);
         var root = body.RootElement;
-        Assert.Equal("json", root.GetProperty("format").GetString());
+        var format = root.GetProperty("format");
+        using var expectedFormat = JsonDocument.Parse(responseSchema);
+        Assert.True(JsonElement.DeepEquals(expectedFormat.RootElement, format));
         Assert.Equal(0.5, root.GetProperty("options").GetProperty("temperature").GetDouble());
+    }
+
+    [Fact]
+    public async Task OllamaProviderDriver_UsesJsonFormatWhenNoSchemaIsConfigured()
+    {
+        var handler = new CapturingHandler((request, body) =>
+            JsonResponse("""{"message":{"content":"lightweight response"},"prompt_eval_count":5,"eval_count":2}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OllamaProviderDriver(httpClient);
+        var provider = CreateProvider(ProviderKind.Ollama, "http://ollama.test", "llama3.1");
+
+        await driver.CompleteChatAsync(new ProviderChatCompletionRequest(
+            provider,
+            "llama3.1",
+            "system",
+            [],
+            "prompt",
+            ResponseFormat: new ProviderChatResponseFormat(true)));
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body);
+        Assert.Equal("json", body.RootElement.GetProperty("format").GetString());
     }
 
     private static ProviderChatCompletionRequest CreateChatRequest(

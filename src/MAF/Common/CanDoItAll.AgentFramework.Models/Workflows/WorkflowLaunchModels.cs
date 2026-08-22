@@ -213,6 +213,10 @@ public abstract record WorkflowLaunchOrigin
 
     public WorkflowLaunchCorrelationId CorrelationId { get; }
 
+    public WorkspaceScopeDescriptor? AuthorizationScope { get; init; }
+
+    public string AuthorizationPolicyFingerprint { get; init; } = string.Empty;
+
     public sealed record Api : WorkflowLaunchOrigin
     {
         [JsonConstructor]

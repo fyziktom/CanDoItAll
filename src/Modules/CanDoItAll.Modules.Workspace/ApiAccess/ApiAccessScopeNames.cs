@@ -19,4 +19,6 @@ public static class ApiAccessScopeNames
     public const string ManageLlmChats = "api.llm-chats.manage";
 
     public const string ExecuteLlmChats = "api.llm-chats.execute";
+
+    public const string RespondWorkflows = "api.workflows.respond";
 }

@@ -562,14 +562,17 @@
                             </label>
                         </Grid>
 
-                        <label class="workflow-canvas-field">
-                            <span>@(selected.Kind == WorkflowNodeKind.LlmCall ? "Immutable prompt snapshot" : "Instructions")</span>
-                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
-                                      value="@selected.Instructions"
-                                      @onchange="args => HandleSelectedInstructionsChanged(selected, args)"
-                                      readonly="@(selected.Kind == WorkflowNodeKind.LlmCall)"
-                                      data-testid="workflow-canvas-node-instructions"></textarea>
-                        </label>
+                        @if (ShouldRenderNodeInstructions(selected))
+                        {
+                            <label class="workflow-canvas-field">
+                                <span>@(selected.Kind == WorkflowNodeKind.LlmCall ? "Immutable prompt snapshot" : "Instructions")</span>
+                                <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                                          value="@selected.Instructions"
+                                          @onchange="args => HandleSelectedInstructionsChanged(selected, args)"
+                                          readonly="@(selected.Kind == WorkflowNodeKind.LlmCall)"
+                                          data-testid="workflow-canvas-node-instructions"></textarea>
+                            </label>
+                        }
 
                         <Button Text="Remove node"
                                 ButtonStyle="ButtonStyle.Danger"
@@ -1395,14 +1398,17 @@
                         </section>
                     }
 
-                    <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--instructions">
-                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Instructions" />
-                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
-                                  value="@modalNode.Instructions"
-                                  @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
-                                  readonly="@(modalNode.Kind == WorkflowNodeKind.LlmCall)"
-                                  data-testid="workflow-canvas-node-modal-instructions"></textarea>
-                    </section>
+                    @if (ShouldRenderNodeInstructions(modalNode))
+                    {
+                        <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--instructions">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Instructions" />
+                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
+                                      value="@modalNode.Instructions"
+                                      @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
+                                      readonly="@(modalNode.Kind == WorkflowNodeKind.LlmCall)"
+                                      data-testid="workflow-canvas-node-modal-instructions"></textarea>
+                        </section>
+                    }
 
                     @if (!string.IsNullOrWhiteSpace(errorMessage))
                     {
