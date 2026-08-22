@@ -86,7 +86,7 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
     }
 
     [Fact]
-    public async Task WorkflowApi_MapsTypedCancellationAndExternalResponseOutcomesToHttpSemantics()
+    public async Task WorkflowApi_MapsTypedCancellationOutcomesToHttpSemantics()
     {
         var launchService = new RecordingLaunchService();
         var runtimeManager = new OutcomeRuntimeManager();
@@ -109,36 +109,8 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
         var cancellationUnsupported = await host.Client.PostAsJsonAsync(
             $"/api/workflows/runs/{Guid.NewGuid():D}/cancel",
             new { });
-        runtimeManager.ExternalResponseResult = new WorkflowExternalResponseResult(
-            WorkflowExternalResponseOutcome.AlreadyResponded,
-            Run: null,
-            Request: null,
-            "Already responded.");
-        var responseConflict = await host.Client.PostAsJsonAsync(
-            $"/api/workflows/external-requests/{Guid.NewGuid():D}/response",
-            new { responseJson = "{}" });
-        runtimeManager.ExternalResponseResult = new WorkflowExternalResponseResult(
-            WorkflowExternalResponseOutcome.BackendUnavailable,
-            Run: null,
-            Request: null,
-            "Backend unavailable.");
-        var responseUnavailable = await host.Client.PostAsJsonAsync(
-            $"/api/workflows/external-requests/{Guid.NewGuid():D}/response",
-            new { responseJson = "{}" });
-        runtimeManager.ExternalResponseResult = new WorkflowExternalResponseResult(
-            WorkflowExternalResponseOutcome.ResumeFailed,
-            Run: null,
-            Request: null,
-            "Resume failed.");
-        var responseFailed = await host.Client.PostAsJsonAsync(
-            $"/api/workflows/external-requests/{Guid.NewGuid():D}/response",
-            new { responseJson = "{}" });
-
         Assert.Equal(HttpStatusCode.NotFound, cancellationNotFound.StatusCode);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, cancellationUnsupported.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, responseConflict.StatusCode);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, responseUnavailable.StatusCode);
-        Assert.Equal(HttpStatusCode.BadGateway, responseFailed.StatusCode);
     }
 
     [Fact]
@@ -288,12 +260,6 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
             Run: null,
             "Cancellation requested.");
 
-        public WorkflowExternalResponseResult ExternalResponseResult { get; set; } = new(
-            WorkflowExternalResponseOutcome.Accepted,
-            Run: null,
-            Request: null,
-            "Response accepted.");
-
         public Task<WorkflowRunSnapshot> StartAsync(
             WorkflowDefinition definition,
             WorkflowRunStartRequest request,
@@ -335,17 +301,6 @@ public sealed class WorkflowCallerLaunchBoundaryIntegrationTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(CancellationResult);
 
-        public Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => throw new InvalidOperationException("API responses must use the typed outcome method.");
-
-        public Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-            WorkflowExternalRequestId requestId,
-            string responseJson,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(ExternalResponseResult);
     }
 
 }

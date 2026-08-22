@@ -1256,6 +1256,41 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             await ReadManagedOpenAiImageProviderModelAsync(dbContextFactory));
     }
 
+    [Fact]
+    public async Task Organization_workspace_upgrades_managed_local_ollama_structured_output_capability()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var provider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+                .SingleAsync(item => item.Name == "Local Ollama");
+            provider.SupportsStructuredOutput = false;
+            await dbContext.SaveChangesAsync();
+        }
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var provider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+                .SingleAsync(item => item.Name == "Local Ollama");
+            Assert.True(provider.SupportsStructuredOutput);
+        }
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var provider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+                .SingleAsync(item => item.Name == "Local Ollama");
+            Assert.True(provider.SupportsStructuredOutput);
+        }
+    }
+
     [Theory]
     [InlineData(OpenAiModelIds.GptImage1Mini, OpenAiModelIds.GptImage2)]
     [InlineData("GPT-IMAGE-1-MINI", "GPT-IMAGE-1-MINI")]

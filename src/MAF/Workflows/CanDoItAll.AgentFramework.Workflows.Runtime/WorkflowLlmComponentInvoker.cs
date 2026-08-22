@@ -61,7 +61,7 @@ public sealed class WorkflowLlmComponentInvoker(
                     "workflow_llm_component_result",
                     $"Workflow LLM component '{effectiveComponent.Name}' JSON result.")
                 : null,
-            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature ?? 0.2),
+            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature),
             correlationId: $"workflow:{definition.Id:N}:{node.Id}");
 
         LlmInvocationResult response;

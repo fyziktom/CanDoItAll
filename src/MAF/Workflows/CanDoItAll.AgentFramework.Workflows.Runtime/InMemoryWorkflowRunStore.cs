@@ -6,6 +6,7 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed class InMemoryWorkflowRunStore :
     IWorkflowRunStore,
+    IWorkflowRedactedExternalResponseAcceptanceStore,
     IWorkflowArtifactStore,
     IWorkflowExternalRequestStore,
     IWorkflowOverviewStore,
@@ -107,6 +108,30 @@ public sealed class InMemoryWorkflowRunStore :
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
+        return TryAcceptExternalResponseCore(
+            requestId,
+            responseJson,
+            respondedAtUtc,
+            cancellationToken);
+    }
+
+    Task<WorkflowExternalResponseAcceptanceResult>
+        IWorkflowRedactedExternalResponseAcceptanceStore.TryAcceptRedactedExternalResponseAsync(
+            WorkflowExternalRequestId requestId,
+            DateTimeOffset respondedAtUtc,
+            CancellationToken cancellationToken)
+        => TryAcceptExternalResponseCore(
+            requestId,
+            string.Empty,
+            respondedAtUtc,
+            cancellationToken);
+
+    private Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseCore(
+        WorkflowExternalRequestId requestId,
+        string responseJson,
+        DateTimeOffset respondedAtUtc,
+        CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         lock (mutationSync)
         {
@@ -133,6 +158,69 @@ public sealed class InMemoryWorkflowRunStore :
             return Task.FromResult(new WorkflowExternalResponseAcceptanceResult(
                 WorkflowExternalResponseAcceptanceOutcome.Accepted,
                 accepted));
+        }
+    }
+
+    internal bool TryApplyResumeCommit(
+        InMemoryWorkflowRunCommitPlan plan,
+        out WorkflowRunSnapshot? currentRun)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        lock (mutationSync)
+        {
+            if (!runs.TryGetValue(plan.ExpectedRun.RunId, out currentRun) ||
+                currentRun != plan.ExpectedRun ||
+                !requests.TryGetValue(plan.ExpectedRequest.Id, out var currentRequest) ||
+                currentRequest != plan.ExpectedRequest ||
+                currentRequest.EffectiveState != WorkflowExternalRequestState.Pending ||
+                currentRequest.RespondedAtUtc.HasValue ||
+                plan.NextRequests.Select(request => request.Id).Distinct().Count() != plan.NextRequests.Count ||
+                plan.NextRequests.Any(request => requests.ContainsKey(request.Id)) ||
+                plan.Checkpoints.Select(checkpoint => checkpoint.Id).Distinct().Count() != plan.Checkpoints.Count ||
+                plan.Checkpoints.Any(checkpoint => checkpoints.ContainsKey(checkpoint.Id)) ||
+                HasArtifactConflict(plan) ||
+                HasEventConflict(plan))
+            {
+                return false;
+            }
+
+            requests[plan.RespondedRequest.Id] = plan.RespondedRequest;
+            foreach (var request in plan.NextRequests)
+            {
+                requests[request.Id] = request;
+                requestsByRun.GetOrAdd(request.RunId, _ => new ConcurrentQueue<WorkflowExternalRequestId>())
+                    .Enqueue(request.Id);
+            }
+
+            foreach (var checkpoint in plan.Checkpoints)
+            {
+                checkpoints[checkpoint.Id] = checkpoint;
+                checkpointsByRun.GetOrAdd(checkpoint.RunId, _ => new ConcurrentQueue<WorkflowCheckpointId>())
+                    .Enqueue(checkpoint.Id);
+            }
+
+            foreach (var artifact in plan.Artifacts)
+            {
+                artifacts.GetOrAdd(artifact.RunId, _ => new ConcurrentQueue<WorkflowArtifactRecord>())
+                    .Enqueue(artifact);
+            }
+
+            var eventQueue = events.GetOrAdd(
+                plan.UpdatedRun.RunId,
+                _ => new ConcurrentQueue<WorkflowEventRecord>());
+            foreach (var workflowEvent in plan.Events)
+            {
+                eventQueue.Enqueue(workflowEvent);
+            }
+
+            runs[plan.UpdatedRun.RunId] = plan.UpdatedRun;
+            if (plan.TransitionEvent is not null)
+            {
+                eventQueue.Enqueue(plan.TransitionEvent);
+            }
+
+            currentRun = plan.UpdatedRun;
+            return true;
         }
     }
 
@@ -562,6 +650,33 @@ public sealed class InMemoryWorkflowRunStore :
         artifacts.GetOrAdd(artifact.RunId, _ => new ConcurrentQueue<WorkflowArtifactRecord>())
             .Enqueue(artifact);
         return Task.FromResult(artifact);
+    }
+
+    private bool HasArtifactConflict(InMemoryWorkflowRunCommitPlan plan)
+    {
+        var artifactIds = plan.Artifacts.Select(artifact => artifact.Id).ToArray();
+        if (artifactIds.Distinct().Count() != artifactIds.Length)
+        {
+            return true;
+        }
+
+        return artifacts.TryGetValue(plan.UpdatedRun.RunId, out var storedArtifacts) &&
+            storedArtifacts.Any(stored => artifactIds.Contains(stored.Id));
+    }
+
+    private bool HasEventConflict(InMemoryWorkflowRunCommitPlan plan)
+    {
+        var eventIds = plan.Events
+            .Select(workflowEvent => workflowEvent.Id)
+            .Concat(plan.TransitionEvent is { } transitionEvent ? [transitionEvent.Id] : [])
+            .ToArray();
+        if (eventIds.Distinct().Count() != eventIds.Length)
+        {
+            return true;
+        }
+
+        return events.TryGetValue(plan.UpdatedRun.RunId, out var storedEvents) &&
+            storedEvents.Any(stored => eventIds.Contains(stored.Id));
     }
 
     private static int NormalizePageIndex(int pageIndex)

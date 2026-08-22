@@ -127,6 +127,23 @@ public sealed class WorkflowLlmLightweightPathTests
     }
 
     [Fact]
+    public async Task InvokerPreservesAnUnsetComponentTemperature()
+    {
+        var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
+            Task.FromResult(new LlmInvocationResult(request.Model, "{\"ok\":true}", new LlmUsage(1, 1))));
+        var provider = CreateProviderProfile();
+        var invoker = new WorkflowLlmComponentInvoker(port, new SingleProviderSource(provider), new ProviderProfileService());
+        var component = CreateComponent(temperature: null);
+        var node = CreateNode(component.Id);
+        var definition = CreateDefinition(node);
+
+        await invoker.ExecuteAsync(definition, node, component, new WorkflowNodeInput("{}"));
+
+        Assert.NotNull(port.LastRequest);
+        Assert.Null(port.LastRequest!.Settings?.Temperature);
+    }
+
+    [Fact]
     public async Task InvokerPreservesZeroedUsageObservationOnPortFailure()
     {
         var port = new RecordingLlmInvocationPort((request, cancellationToken) =>
@@ -282,7 +299,9 @@ public sealed class WorkflowLlmLightweightPathTests
             LastCheckedAtUtc: null,
             SuggestedModels: ["gpt-lightweight-path"]);
 
-    private static LlmCallComponent CreateComponent(string responseFormatJsonSchema = "")
+    private static LlmCallComponent CreateComponent(
+        string responseFormatJsonSchema = "",
+        double? temperature = 0.2)
         => new(
             WorkflowComponentId.New(),
             "Lightweight path component",
@@ -290,7 +309,7 @@ public sealed class WorkflowLlmLightweightPathTests
             "gpt-lightweight-path",
             WorkflowModality.Text,
             new WorkflowModelSettings(
-                Temperature: 0.2,
+                Temperature: temperature,
                 MaxOutputTokens: 200,
                 RequireJsonOutput: true,
                 ResponseFormatJsonSchema: responseFormatJsonSchema),

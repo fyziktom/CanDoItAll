@@ -128,16 +128,6 @@ public interface IWorkflowRuntimeManager
     Task<WorkflowRunCancellationResult> RequestCancellationAsync(
         WorkflowRunId runId,
         CancellationToken cancellationToken = default);
-
-    Task<WorkflowRunSnapshot> RespondToExternalRequestAsync(
-        WorkflowExternalRequestId requestId,
-        string responseJson,
-        CancellationToken cancellationToken = default);
-
-    Task<WorkflowExternalResponseResult> SubmitExternalResponseAsync(
-        WorkflowExternalRequestId requestId,
-        string responseJson,
-        CancellationToken cancellationToken = default);
 }
 
 public interface IWorkflowFailureDiagnosticSink

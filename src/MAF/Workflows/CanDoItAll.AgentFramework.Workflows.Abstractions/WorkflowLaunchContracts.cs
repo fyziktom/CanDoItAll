@@ -9,6 +9,15 @@ public interface IWorkflowLaunchService
         CancellationToken cancellationToken = default);
 }
 
+public sealed record WorkflowLaunchAuthorizationScope(
+    WorkspaceScopeDescriptor Scope,
+    string PolicyFingerprint);
+
+public interface IWorkflowLaunchAuthorizationScopeResolver
+{
+    WorkflowLaunchAuthorizationScope Resolve(WorkflowLaunchOrigin origin);
+}
+
 public interface IWorkflowRunLauncher
 {
     Task<WorkflowRunSnapshot> StartAsync(

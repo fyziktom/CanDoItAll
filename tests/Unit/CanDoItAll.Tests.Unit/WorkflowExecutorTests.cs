@@ -15,6 +15,7 @@ using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard;
 using CanDoItAll.Security.Abstractions;
+using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -102,6 +103,35 @@ public sealed class WorkflowExecutorTests
         Assert.Contains(typeof(ImageAnalyzeWorkflowExecutor), implementationTypes);
         Assert.Equal(BuiltInWorkflowExecutorDescriptors.Planned, plannedDescriptors);
         Assert.Equal(13, services.Count(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor)));
+    }
+
+    [Fact]
+    public void HttpFetchDescriptorUsesExplicitRequestFieldPresentation()
+    {
+        var descriptor = BuiltInWorkflowExecutorDescriptors.HttpFetch;
+        var fields = descriptor.ConfigurationSchema.Fields
+            .ToDictionary(field => field.Key, StringComparer.Ordinal);
+
+        Assert.Equal("HTTP request", descriptor.Name);
+        Assert.Equal("Endpoint URL", fields["url"].Label);
+        Assert.Equal(ConfigurationFieldType.Url, fields["url"].FieldType);
+        Assert.Contains("takes precedence", fields["url"].HelpText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("URL from input JSON path", fields["urlJsonPath"].Label);
+        Assert.Equal("Static query parameters", fields["queryParameters"].Label);
+        Assert.Equal(ConfigurationFieldType.Json, fields["queryParameters"].FieldType);
+        Assert.Equal("Query parameters from input JSON path", fields["queryParametersJsonPath"].Label);
+        Assert.Equal("JSON body", fields["body"].Label);
+        Assert.Equal(ConfigurationFieldType.MultilineText, fields["body"].FieldType);
+        Assert.Equal(WorkflowExecutorSideEffectKind.ExternalWrite, descriptor.SideEffects.Kind);
+        Assert.False(descriptor.SideEffects.SupportsPreview);
+        Assert.False(descriptor.SideEffects.SupportsDryRun);
+        Assert.False(descriptor.SideEffects.SupportsCommit);
+        Assert.False(descriptor.SideEffects.AllowsIdempotentRetry);
+        Assert.True(descriptor.PermissionPolicy.RequiredCapabilities.HasFlag(
+            WorkflowExecutorCapabilityFlags.WritesExternalData));
+        Assert.False(WorkflowExecutorSideEffectPolicy.IsRetryPolicySafe(
+            descriptor,
+            descriptor.DefaultPolicy with { MaxRetryAttempts = 1 }));
     }
 
     [Fact]
@@ -1661,6 +1691,51 @@ public sealed class WorkflowExecutorTests
         {
             Url = "http://127.0.0.1:12345"
         }));
+    }
+
+    [Fact]
+    public async Task HttpFetchCombinesFixedUrlWithEncodedStaticAndInputQueryParameters()
+    {
+        await using var server = SingleResponseHttpServer.Json(200, "{\"ok\":true}");
+
+        await ExecuteDirectAsync(
+            new HttpFetchWorkflowExecutor(),
+            new WorkflowHttpExecutorSettings
+            {
+                Url = server.Url,
+                QueryParameters = new Dictionary<string, string>
+                {
+                    ["take"] = "1",
+                    ["locale"] = "en-US"
+                },
+                QueryParametersJsonPath = "$.search.parameters",
+                AllowPrivateNetworkTargets = true
+            },
+            """{"search":{"parameters":{"q":"road cycling & repair","exact":true}}}""");
+
+        Assert.Contains(
+            "GET /scenario?exact=true&locale=en-US&q=road%20cycling%20%26%20repair&take=1 HTTP/1.1",
+            server.RequestHeaders,
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("{\"query\":[\"cycling\"]}", "must resolve to a JSON object")]
+    [InlineData("{\"query\":{\"filter\":[\"cycling\"]}}", "contains non-scalar query parameter 'filter'")]
+    public async Task HttpFetchRejectsInvalidInputQueryParameterShapes(
+        string payloadJson,
+        string expectedMessage)
+    {
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(
+            new HttpFetchWorkflowExecutor(),
+            new WorkflowHttpExecutorSettings
+            {
+                Url = "https://example.test/search",
+                QueryParametersJsonPath = "$.query"
+            },
+            payloadJson));
+
+        Assert.Contains(expectedMessage, exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

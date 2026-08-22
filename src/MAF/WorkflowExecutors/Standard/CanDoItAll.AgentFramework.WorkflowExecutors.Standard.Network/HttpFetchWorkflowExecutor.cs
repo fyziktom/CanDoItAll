@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Security.Abstractions;
@@ -21,12 +20,7 @@ public sealed class HttpFetchWorkflowExecutor(
         CancellationToken cancellationToken = default)
     {
         var settings = WorkflowExecutorJson.Deserialize<WorkflowHttpExecutorSettings>(context.SettingsJson);
-        var resolvedUrl = ResolveUrl(settings, input);
-        if (!Uri.TryCreate(resolvedUrl, UriKind.Absolute, out var uri) ||
-            uri.Scheme is not ("http" or "https"))
-        {
-            throw new InvalidOperationException("HTTP executor requires an absolute http or https URL.");
-        }
+        var uri = WorkflowHttpRequestUriResolver.Resolve(settings, input);
 
         var maxBytes = Math.Clamp(settings.MaxResponseBytes, 1024, 5 * 1024 * 1024);
         using var request = new HttpRequestMessage(ToHttpMethod(settings.Method), uri);
@@ -288,99 +282,6 @@ public sealed class HttpFetchWorkflowExecutor(
         }
 
         return normalized;
-    }
-
-    private static string ResolveUrl(
-        WorkflowHttpExecutorSettings settings,
-        WorkflowNodeInput input)
-    {
-        if (!string.IsNullOrWhiteSpace(settings.Url))
-        {
-            return settings.Url.Trim();
-        }
-
-        var url = ResolveInputJsonString(input, settings.UrlJsonPath, nameof(settings.UrlJsonPath));
-        return string.IsNullOrWhiteSpace(url)
-            ? throw new InvalidOperationException("HTTP executor setting 'Url' or 'UrlJsonPath' is required.")
-            : url.Trim();
-    }
-
-    private static string? ResolveInputJsonString(
-        WorkflowNodeInput input,
-        string jsonPath,
-        string settingName)
-    {
-        if (string.IsNullOrWhiteSpace(jsonPath))
-        {
-            return null;
-        }
-
-        if (!WorkflowRoutingValidation.TryParseJsonPath(jsonPath.Trim(), out var path, out var pathError))
-        {
-            throw new InvalidOperationException($"HTTP executor setting '{settingName}' has invalid JSON path: {pathError}.");
-        }
-
-        if (string.IsNullOrWhiteSpace(input.PayloadJson))
-        {
-            throw new InvalidOperationException($"HTTP executor setting '{settingName}' requires a workflow JSON payload.");
-        }
-
-        using var document = JsonDocument.Parse(input.PayloadJson);
-        if (!TryResolve(document.RootElement, path, out var value))
-        {
-            throw new InvalidOperationException($"HTTP executor setting '{settingName}' path '{jsonPath}' was not found in the workflow payload.");
-        }
-
-        return value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : value.GetRawText();
-    }
-
-    private static bool TryResolve(
-        JsonElement root,
-        IReadOnlyList<BuiltInJsonPathSegment> path,
-        out JsonElement value)
-    {
-        value = root;
-        foreach (var segment in path)
-        {
-            if (segment.PropertyName is not null)
-            {
-                if (value.ValueKind != JsonValueKind.Object ||
-                    !value.TryGetProperty(segment.PropertyName, out value))
-                {
-                    return false;
-                }
-
-                continue;
-            }
-
-            if (segment.Index is not { } targetIndex || value.ValueKind != JsonValueKind.Array)
-            {
-                return false;
-            }
-
-            var currentIndex = 0;
-            var matched = false;
-            foreach (var item in value.EnumerateArray())
-            {
-                if (currentIndex == targetIndex)
-                {
-                    value = item;
-                    matched = true;
-                    break;
-                }
-
-                currentIndex++;
-            }
-
-            if (!matched)
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private static async Task<(string Text, bool IsTruncated)> ReadBoundedBodyAsync(

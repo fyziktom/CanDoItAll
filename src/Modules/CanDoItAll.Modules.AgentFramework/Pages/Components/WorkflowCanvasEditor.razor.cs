@@ -1328,6 +1328,11 @@ public partial class WorkflowCanvasEditor
         node.Instructions = args.Value?.ToString() ?? string.Empty;
     }
 
+    private static bool ShouldRenderNodeInstructions(WorkflowCanvasNodeDraft node)
+    {
+        return node.Kind != WorkflowNodeKind.Executor;
+    }
+
     private void HandleSelectedNodeKindChanged(WorkflowCanvasNodeDraft node, ChangeEventArgs args)
     {
         if (!Enum.TryParse<WorkflowNodeKind>(args.Value?.ToString(), out var kind))

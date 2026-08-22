@@ -24,7 +24,18 @@ or opening a pull request.
 ```powershell
 dotnet restore ./CanDoItAll.slnx
 dotnet build ./CanDoItAll.slnx --configuration Release --no-restore /m:1
-dotnet test ./CanDoItAll.slnx --configuration Release --no-build --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined" /m:1
+dotnet restore ./tests/Solutions/CanDoItAll.Tests.Stable.slnx
+dotnet build ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-restore /m:1
+dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx --configuration Release --no-build --no-restore --filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true" /m:1
+```
+
+`CanDoItAll.slnx` is the product build graph and deliberately contains no test projects.
+Never use `dotnet test ./CanDoItAll.slnx` as a test gate; the stable test aggregate above
+is the repository broad gate.
+
+Validate maintained documentation separately:
+
+```powershell
 ./tools/Validation/Test-Documentation.ps1
 ```
 

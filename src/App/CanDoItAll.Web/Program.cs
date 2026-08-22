@@ -62,6 +62,7 @@ builder.Services.AddCanDoItAllRuntimeModules(
     builder.Configuration,
     builder.Environment,
     builder.Environment.ContentRootPath);
+builder.Services.AddAgentFrameworkUi();
 builder.Services.AddCanDoItAllDashboard();
 builder.Services.AddCanDoItAllFileToolsStoragePlacementRevision();
 builder.Services.AddCanDoItAllApi(builder.Configuration);

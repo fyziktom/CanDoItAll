@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -6,20 +7,36 @@ public sealed class WorkflowExecutorInvoker(
     IWorkflowExecutorCatalog catalog,
     IEnumerable<IWorkflowExecutor> executors,
     IWorkflowExecutorExecutionObserver? executionObserver = null,
-    IWorkflowExecutorApprovalGate? approvalGate = null) : IWorkflowExecutorInvoker
+    IWorkflowExecutorApprovalGate? approvalGate = null,
+    TimeProvider? timeProvider = null) : IWorkflowExecutorInvoker
 {
     private readonly IReadOnlyDictionary<WorkflowExecutorId, IWorkflowExecutor> executorsById = BuildExecutorsById(executors);
     private readonly IWorkflowExecutorExecutionObserver executionObserver = executionObserver ?? new NullWorkflowExecutorExecutionObserver();
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
         WorkflowDefinition definition,
         WorkflowNode node,
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default)
+        => await ExecuteAsync(
+            definition,
+            node,
+            input,
+            WorkflowExecutorInvocationContext.Empty,
+            cancellationToken);
+
+    public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        WorkflowNodeInput input,
+        WorkflowExecutorInvocationContext invocationContext,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(invocationContext);
 
         if (node.Settings.ExecutorId is not { } executorId)
         {
@@ -53,6 +70,8 @@ public sealed class WorkflowExecutorInvoker(
             definition,
             node,
             descriptor,
+            input,
+            invocationContext,
             redactedSettingsSummary,
             cancellationToken);
         var context = new WorkflowExecutorExecutionContext(
@@ -64,7 +83,12 @@ public sealed class WorkflowExecutorInvoker(
         {
             RunId = WorkflowExecutorExecutionAuditScope.CurrentRunId,
             PluginConnectionId = pluginConnectionId,
-            RedactedSettingsSummary = redactedSettingsSummary
+            RedactedSettingsSummary = redactedSettingsSummary,
+            CausationRequestId = invocationContext.CausationRequestId,
+            CausationRequestVersion = invocationContext.CausationRequestVersion,
+            CausationOperationId = invocationContext.CausationOperationId,
+            InvocationGeneration = invocationContext.InvocationGeneration,
+            IdempotencyKey = invocationContext.IdempotencyKey
         };
 
         Exception? lastException = null;
@@ -165,12 +189,48 @@ public sealed class WorkflowExecutorInvoker(
         WorkflowDefinition definition,
         WorkflowNode node,
         WorkflowExecutorDescriptor descriptor,
+        WorkflowNodeInput input,
+        WorkflowExecutorInvocationContext invocationContext,
         string redactedSettingsSummary,
         CancellationToken cancellationToken)
     {
+        var authorization = invocationContext.ApprovalAuthorization;
         if (!descriptor.PermissionPolicy.RequiresApproval)
         {
+            if (authorization is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Workflow executor '{descriptor.Id}' received approval authorization although its permission policy does not require approval.");
+            }
+
             return;
+        }
+
+        if (authorization is not null)
+        {
+            ValidateApprovalAuthorization(
+                definition,
+                node,
+                descriptor,
+                input,
+                invocationContext,
+                clock.GetUtcNow());
+            if (!authorization.Approved)
+            {
+                throw WorkflowExecutorFailureDiagnosticMapper.CreateApprovalDeniedException(
+                    definition,
+                    node,
+                    descriptor,
+                    authorization.Message);
+            }
+
+            return;
+        }
+
+        if (HasRecoveryAuthorizationContext(invocationContext))
+        {
+            throw new InvalidOperationException(
+                $"Workflow executor '{descriptor.Id}' cannot use an approval gate for an external-response recovery invocation without reconstructed authorization.");
         }
 
         if (approvalGate is null)
@@ -194,6 +254,77 @@ public sealed class WorkflowExecutorInvoker(
                 decision.Message);
         }
     }
+
+    internal static void ValidateApprovalAuthorization(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        WorkflowExecutorDescriptor descriptor,
+        WorkflowNodeInput input,
+        WorkflowExecutorInvocationContext invocationContext,
+        DateTimeOffset nowUtc)
+    {
+        var authorization = invocationContext.ApprovalAuthorization ?? throw new InvalidOperationException(
+            $"Workflow executor approval authorization is missing for node '{node.Id}'.");
+        var responseAuthorization = authorization.ExternalResponseAuthorization ?? throw new InvalidOperationException(
+            $"Workflow executor external-response authorization is missing for node '{node.Id}'.");
+        var activeRunId = WorkflowExecutorExecutionAuditScope.CurrentRunId;
+        if (activeRunId is null || authorization.RunId != activeRunId ||
+            authorization.WorkflowId != definition.Id ||
+            authorization.WorkflowVersionId != definition.VersionId ||
+            authorization.NodeId != node.Id ||
+            authorization.ExecutorId != descriptor.Id ||
+            authorization.RequiredCapabilities != descriptor.PermissionPolicy.RequiredCapabilities ||
+            authorization.ApprovalRequirement != descriptor.PermissionPolicy.ApprovalRequirement ||
+            authorization.InputHash != WorkflowExecutorInputHash.Compute(input) ||
+            !authorization.ExpectedToken.FixedTimeEquals(authorization.PresentedToken) ||
+            invocationContext.ExternalResponseAuthorization != responseAuthorization ||
+            invocationContext.CausationOperationId != responseAuthorization.OperationId ||
+            invocationContext.CausationRequestId != responseAuthorization.RequestId ||
+            invocationContext.CausationRequestVersion != responseAuthorization.RequestVersion ||
+            invocationContext.InvocationGeneration.Value != responseAuthorization.RequestVersion.Value ||
+            responseAuthorization.RunId != activeRunId ||
+            responseAuthorization.RunId != authorization.RunId ||
+            responseAuthorization.WorkflowId != definition.Id ||
+            responseAuthorization.WorkflowId != authorization.WorkflowId ||
+            responseAuthorization.WorkflowVersionId != definition.VersionId ||
+            responseAuthorization.WorkflowVersionId != authorization.WorkflowVersionId ||
+            responseAuthorization.RequestKind is not (WorkflowExternalRequestKind.Approval or WorkflowExternalRequestKind.ToolApproval) ||
+            responseAuthorization.Action != ResolveExpectedAction(authorization.Approved) ||
+            responseAuthorization.Actor is null ||
+            responseAuthorization.Actor.Kind == WorkflowLaunchActorKind.Agent ||
+            IsAutonomousSelfApproval(responseAuthorization) ||
+            responseAuthorization.AuthorizationScope is null ||
+            !string.Equals(
+                responseAuthorization.AuthorizationPolicyFingerprint,
+                WorkflowExternalResponseAuthorizationPolicy.CurrentFingerprint,
+                StringComparison.Ordinal) ||
+            responseAuthorization.AuthorizedAtUtc == default ||
+            responseAuthorization.AuthorizedAtUtc > nowUtc ||
+            responseAuthorization.ExpiresAtUtc <= responseAuthorization.AuthorizedAtUtc ||
+            responseAuthorization.ExpiresAtUtc != responseAuthorization.AuthorizedAtUtc.AddSeconds(
+                WorkflowExternalResponseAuthorizationPolicy.ResponseLifetimeSeconds) ||
+            responseAuthorization.IsExpired(nowUtc))
+        {
+            throw new InvalidOperationException(
+                $"Workflow executor approval authorization does not match the active invocation for node '{node.Id}'.");
+        }
+    }
+
+    private static bool HasRecoveryAuthorizationContext(WorkflowExecutorInvocationContext context)
+        => context.ExternalResponseAuthorization is not null ||
+            context.CausationOperationId is not null ||
+            context.CausationRequestId is not null ||
+            context.CausationRequestVersion is not null ||
+            context.InvocationGeneration != WorkflowExecutorInvocationGeneration.Initial;
+
+    private static WorkflowExternalResponseAction ResolveExpectedAction(bool approved)
+        => approved
+            ? WorkflowExternalResponseAction.Approve
+            : WorkflowExternalResponseAction.Deny;
+
+    private static bool IsAutonomousSelfApproval(WorkflowExternalResponseAuthorization authorization)
+        => authorization.OriginActor is { Kind: WorkflowLaunchActorKind.Agent or WorkflowLaunchActorKind.Service } origin &&
+            origin == authorization.Actor;
 
     private async ValueTask RecordExecutionAuditAsync(
         WorkflowExecutorExecutionContext context,
@@ -221,7 +352,7 @@ public sealed class WorkflowExecutorInvoker(
             context.RedactedSettingsSummary,
             WorkflowExecutorRedaction.RedactText(message),
             payloadCharacters,
-            DateTimeOffset.UtcNow);
+            clock.GetUtcNow());
 
         await executionObserver.RecordAsync(record, cancellationToken);
     }

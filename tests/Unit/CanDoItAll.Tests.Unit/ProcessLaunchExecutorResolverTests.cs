@@ -656,7 +656,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             LiveRunProfile: null,
             Variables: new Dictionary<string, string>()));
 
-        Assert.False(featureMatrix.SupportsStructuredOutput);
+        Assert.True(featureMatrix.SupportsStructuredOutput);
         Assert.True(featureMatrix.SupportsFunctionTools);
         Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
         var binding = Assert.Single(result.Bindings);
@@ -666,7 +666,7 @@ public sealed class ProcessLaunchExecutorResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_rejects_local_provider_without_tool_finalizer_support()
+    public async Task ResolveAsync_allows_structured_local_provider_without_tool_support()
     {
         var providerId = Guid.Parse("388d2d44-e423-4d26-8b92-7d260089a0b0");
         var developerAgent = CreateAgent(
@@ -679,6 +679,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             AgentWorkspaceToolProfileKind.SoftwareDevelopment,
             ["dotnet", "programming", "blazor"]);
         var localProvider = CreateProvider(providerId, ProviderKind.Ollama, supportsTools: false);
+        var featureMatrix = new ProviderProfileService().ResolveFeatureMatrix(localProvider);
         var workspace = new ResolverWorkspaceService([developerAgent], [localProvider]);
         var workspaceFactory = new ResolverWorkspaceFactory(workspace);
         var resolver = CreateResolver(workspaceFactory);
@@ -689,11 +690,13 @@ public sealed class ProcessLaunchExecutorResolverTests
             LiveRunProfile: null,
             Variables: new Dictionary<string, string>()));
 
-        Assert.Empty(result.Bindings);
-        Assert.Contains(result.Findings, finding =>
-            finding.Severity == ProcessLaunchReadinessSeverity.Error &&
-            finding.Code == "process.launch.agent_missing" &&
-            finding.Message.Contains("governed-output-capable provider", StringComparison.OrdinalIgnoreCase));
+        Assert.True(featureMatrix.SupportsStructuredOutput);
+        Assert.False(featureMatrix.SupportsFunctionTools);
+        Assert.DoesNotContain(result.Findings, finding => finding.Severity == ProcessLaunchReadinessSeverity.Error);
+        var binding = Assert.Single(result.Bindings);
+        Assert.Equal("implement-blazor-change", binding.StepKey);
+        Assert.Equal("blazor-engineer", binding.RoleKey);
+        Assert.Equal(developerAgent.Id.ToString("D"), binding.ExecutorId);
     }
 
     [Fact]

@@ -78,7 +78,7 @@ public sealed class MafWorkflowEventNormalizer : IMafWorkflowEventNormalizer
         }
 
         var payloadJson = ResolveInlinePayloadJson(workflowEvent);
-        var message = CreateMessage(workflowEvent, eventType, sourceId, nodeId);
+        var message = CreateMessage(workflowEvent, eventType, nodeId);
         return new WorkflowEventRecord(
             Guid.NewGuid(),
             runId,
@@ -98,7 +98,6 @@ public sealed class MafWorkflowEventNormalizer : IMafWorkflowEventNormalizer
     private static string CreateMessage(
         WorkflowEvent workflowEvent,
         string eventType,
-        string? sourceId,
         WorkflowNodeId? nodeId)
     {
         return workflowEvent switch
@@ -113,8 +112,8 @@ public sealed class MafWorkflowEventNormalizer : IMafWorkflowEventNormalizer
                 ? $"Workflow external request emitted by node '{nodeId.Value}'."
                 : "Workflow external request emitted.",
             SuperStepEvent superStepEvent => $"Workflow superstep {superStepEvent.StepNumber} completed.",
-            ExecutorEvent => !string.IsNullOrWhiteSpace(sourceId)
-                ? $"MAF executor '{sourceId}' emitted {eventType}."
+            ExecutorEvent => nodeId.HasValue
+                ? $"MAF executor for node '{nodeId.Value}' emitted {eventType}."
                 : $"MAF executor emitted {eventType}.",
             _ => $"MAF event '{eventType}' emitted."
         };

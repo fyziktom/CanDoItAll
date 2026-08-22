@@ -266,7 +266,12 @@ public sealed class ApiResponseContractIntegrationTests
             "message");
         AssertNullableProperty(schemas, "WorkflowStableIdentityResolution", "workflowId");
         AssertNullableProperty(schemas, "WorkflowStableIdentityResolution", "runnableVersionId");
-        AssertNullableProperty(schemas, "WorkflowRunStartApiResponse", "idempotencyKeyHash");
+        Assert.False(
+            schemas
+                .GetProperty("WorkflowRunStartApiResponse")
+                .GetProperty("properties")
+                .TryGetProperty("idempotencyKeyHash", out _),
+            "WorkflowRunStartApiResponse must not expose the idempotency-key hash.");
 
         AssertStringEnum(
             schemas,

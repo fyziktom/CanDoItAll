@@ -93,6 +93,7 @@ public sealed class WorkflowRuntimeExtractionTests
         try
         {
             var services = new ServiceCollection();
+            services.AddLogging();
             services.AddSingleton<IPhysicalFileSystemPathPolicyFactory, PhysicalFileSystemPathPolicyFactory>();
             services.AddWorkflowRuntimeServices();
             services.AddInMemoryWorkflowRuntimeStores(workspaceRoot);
@@ -179,7 +180,7 @@ public sealed class WorkflowRuntimeExtractionTests
     public async Task RuntimeManagerRejectsUnregisteredBackendWithTypedDiagnostics()
     {
         var definition = CreateDefinition();
-        var manager = new WorkflowRuntimeManager([], new InMemoryWorkflowRunStore());
+        var manager = WorkflowRuntimeManager.CreateInMemory([], new InMemoryWorkflowRunStore());
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => manager.StartAsync(
             definition,
@@ -204,7 +205,7 @@ public sealed class WorkflowRuntimeExtractionTests
     public async Task RuntimeManagerDoesNotFabricateCancellationForInactiveRun()
     {
         var store = new InMemoryWorkflowRunStore();
-        var manager = new WorkflowRuntimeManager([], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([], store);
         var now = DateTimeOffset.UtcNow;
         var run = new WorkflowRunSnapshot(
             WorkflowRunId.New(),
@@ -234,7 +235,7 @@ public sealed class WorkflowRuntimeExtractionTests
         var definition = CreateDefinition();
         var expected = new InvalidOperationException("runtime store write failed connectionString=[REDACTED]");
         var store = new ThrowingSaveRunStore(expected);
-        var manager = new WorkflowRuntimeManager([new CompletedBackend()], store);
+        var manager = WorkflowRuntimeManager.CreateInMemory([new CompletedBackend()], store);
 
         var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => manager.StartAsync(
             definition,

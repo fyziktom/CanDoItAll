@@ -932,6 +932,7 @@ public sealed class AppDatabaseBootstrapper(
             if (byId is not null)
             {
                 changed |= UpgradeManagedOpenAiImageProviderModel(byId);
+                changed |= UpgradeManagedLocalOllamaCapabilities(byId);
                 continue;
             }
 
@@ -957,6 +958,19 @@ public sealed class AppDatabaseBootstrapper(
         }
 
         provider.DefaultModel = RuntimeBootstrapOpenAiImageModel;
+        return true;
+    }
+
+    private static bool UpgradeManagedLocalOllamaCapabilities(
+        CanDoItAll.Modules.Workspace.ProviderProfile provider)
+    {
+        if (provider.Id != RuntimeBootstrapLocalOllamaProviderId ||
+            provider.SupportsStructuredOutput)
+        {
+            return false;
+        }
+
+        provider.SupportsStructuredOutput = true;
         return true;
     }
 
@@ -1024,7 +1038,7 @@ public sealed class AppDatabaseBootstrapper(
                 RuntimeBootstrapLocalOllamaTimeoutSeconds,
                 SupportsStreaming: true,
                 SupportsToolCalling: true,
-                SupportsStructuredOutput: false,
+                SupportsStructuredOutput: true,
                 BuildManagedProviderConfigurationJson(
                     JsonSerializer.Serialize(new
                     {

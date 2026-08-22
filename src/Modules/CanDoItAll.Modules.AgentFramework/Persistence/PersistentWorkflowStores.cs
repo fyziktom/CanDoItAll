@@ -1492,6 +1492,17 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            await CreateRunWithStartedEventInMemoryAsync(
+                dbContext,
+                run,
+                startedEvent,
+                cancellationToken);
+            return;
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
@@ -1530,6 +1541,18 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            return await TryTransitionRunInMemoryAsync(
+                dbContext,
+                runId,
+                states,
+                updatedRun,
+                transitionEvent,
+                cancellationToken);
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
@@ -1583,6 +1606,17 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (WorkflowPersistenceProvider.IsInMemory(dbContext))
+        {
+            return await TryAcceptExternalResponseInMemoryAsync(
+                dbContext,
+                requestId,
+                responseJson,
+                respondedAtUtc,
+                cancellationToken);
+        }
+
+        WorkflowPersistenceProvider.EnsureRelational(dbContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
@@ -1607,7 +1641,106 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             affected == 1
                 ? WorkflowExternalResponseAcceptanceOutcome.Accepted
                 : WorkflowExternalResponseAcceptanceOutcome.AlreadyResponded,
-            record.ToRequest());
+            await HydrateExternalRequestAsync(dbContext, record, cancellationToken));
+    }
+
+    private static async Task CreateRunWithStartedEventInMemoryAsync(
+        AppDbContext dbContext,
+        WorkflowRunSnapshot run,
+        WorkflowEventRecord startedEvent,
+        CancellationToken cancellationToken)
+    {
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        if (await dbContext.Set<WorkflowRunRecordEntity>()
+            .AnyAsync(record => record.RunId == run.RunId.Value, cancellationToken))
+        {
+            throw new WorkflowRunAlreadyExistsException(run.RunId);
+        }
+
+        dbContext.Set<WorkflowRunRecordEntity>().Add(WorkflowRunRecordEntity.FromSnapshot(run));
+        dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(startedEvent));
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task<WorkflowRunTransitionResult> TryTransitionRunInMemoryAsync(
+        AppDbContext dbContext,
+        WorkflowRunId runId,
+        IReadOnlyCollection<WorkflowRunState> expectedStates,
+        WorkflowRunSnapshot updatedRun,
+        WorkflowEventRecord? transitionEvent,
+        CancellationToken cancellationToken)
+    {
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var record = await dbContext.Set<WorkflowRunRecordEntity>()
+            .SingleOrDefaultAsync(item => item.RunId == runId.Value, cancellationToken);
+        if (record is null || !expectedStates.Contains(record.State))
+        {
+            return new WorkflowRunTransitionResult(false, record?.ToSnapshot());
+        }
+
+        ApplySnapshot(record, updatedRun);
+        if (transitionEvent is not null)
+        {
+            dbContext.Set<WorkflowEventRecordEntity>().Add(WorkflowEventRecordEntity.FromEvent(transitionEvent));
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new WorkflowRunTransitionResult(true, updatedRun);
+    }
+
+    private static async Task<WorkflowExternalResponseAcceptanceResult> TryAcceptExternalResponseInMemoryAsync(
+        AppDbContext dbContext,
+        WorkflowExternalRequestId requestId,
+        string responseJson,
+        DateTimeOffset respondedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        using var mutationLease = await WorkflowPersistenceProvider.EnterInMemoryMutationAsync(
+            dbContext,
+            cancellationToken);
+        var record = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
+            .SingleOrDefaultAsync(item => item.Id == requestId.Value, cancellationToken);
+        if (record is null)
+        {
+            return new WorkflowExternalResponseAcceptanceResult(
+                WorkflowExternalResponseAcceptanceOutcome.NotFound,
+                Request: null);
+        }
+
+        if (record.RespondedAtUtc.HasValue)
+        {
+            return new WorkflowExternalResponseAcceptanceResult(
+                WorkflowExternalResponseAcceptanceOutcome.AlreadyResponded,
+                await HydrateExternalRequestAsync(dbContext, record, cancellationToken));
+        }
+
+        record.ResponseJson = responseJson;
+        record.RespondedAtUtc = respondedAtUtc;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new WorkflowExternalResponseAcceptanceResult(
+            WorkflowExternalResponseAcceptanceOutcome.Accepted,
+            await HydrateExternalRequestAsync(dbContext, record, cancellationToken));
+    }
+
+    private static void ApplySnapshot(
+        WorkflowRunRecordEntity record,
+        WorkflowRunSnapshot snapshot)
+    {
+        record.WorkflowId = snapshot.WorkflowId.Value;
+        record.VersionId = snapshot.VersionId.Value;
+        record.State = snapshot.State;
+        record.Backend = snapshot.Backend;
+        record.BackendRunId = snapshot.BackendRunId;
+        record.Summary = snapshot.Summary;
+        record.CreatedAtUtc = snapshot.CreatedAtUtc;
+        record.UpdatedAtUtc = snapshot.UpdatedAtUtc;
+        record.TerminalAtUtc = snapshot.TerminalAtUtc;
+        record.OriginJson = WorkflowRunRecordEntity.SerializeOrigin(snapshot.Origin);
+        record.SetOriginProjection(snapshot.Origin);
     }
 
     public async Task SaveRunAsync(
@@ -2201,8 +2334,12 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         var record = await dbContext.Set<WorkflowExternalRequestRecordEntity>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == requestId.Value, cancellationToken);
+        if (record is null)
+        {
+            return null;
+        }
 
-        return record?.ToRequest();
+        return await HydrateExternalRequestAsync(dbContext, record, cancellationToken);
     }
 
     public async Task<IReadOnlyList<WorkflowExternalRequestRecord>> ListPendingExternalRequestsAsync(
@@ -2216,9 +2353,16 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         var records = await query
             .OrderBy(item => item.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+        var requestIds = records.Select(item => item.Id).ToArray();
+        var boundaries = await dbContext.Set<WorkflowExternalRequestBoundaryEntity>()
+            .AsNoTracking()
+            .Where(item => requestIds.Contains(item.RequestId))
+            .ToDictionaryAsync(item => item.RequestId, cancellationToken);
 
         return records
-            .Select(item => item.ToRequest())
+            .Select(item => PersistentWorkflowExternalRequestBoundaryStore.HydrateRequest(
+                item,
+                boundaries.GetValueOrDefault(item.Id)))
             .ToArray();
     }
 
@@ -2250,7 +2394,7 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
         record.ResponseJson = responseJson;
         record.RespondedAtUtc = respondedAtUtc;
         await dbContext.SaveChangesAsync(cancellationToken);
-        return record.ToRequest();
+        return await HydrateExternalRequestAsync(dbContext, record, cancellationToken);
     }
 
     public async Task SaveArtifactAsync(
@@ -2309,6 +2453,17 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return request;
+    }
+
+    private static async Task<WorkflowExternalRequestRecord> HydrateExternalRequestAsync(
+        AppDbContext dbContext,
+        WorkflowExternalRequestRecordEntity request,
+        CancellationToken cancellationToken)
+    {
+        var boundary = await dbContext.Set<WorkflowExternalRequestBoundaryEntity>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.RequestId == request.Id, cancellationToken);
+        return PersistentWorkflowExternalRequestBoundaryStore.HydrateRequest(request, boundary);
     }
 
     private async Task<WorkflowArtifactRecord> SaveArtifactCoreAsync(
