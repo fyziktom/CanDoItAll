@@ -77,6 +77,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.Equal(matchingAgent.Id, item.Agent.Id);
                 Assert.True(item.CanRead);
                 Assert.False(item.CanWrite);
+                Assert.False(item.CanMutate);
                 Assert.Equal("This project", item.ScopeLabel);
             },
             item =>
@@ -86,6 +87,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.True(item.CanWriteNonTaskStructure);
                 Assert.False(item.CanWriteTasks);
                 Assert.False(item.CanWrite);
+                Assert.True(item.CanMutate);
                 Assert.Equal("All projects", item.ScopeLabel);
             },
             item =>
@@ -95,6 +97,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.False(item.CanWriteNonTaskStructure);
                 Assert.True(item.CanWriteTasks);
                 Assert.False(item.CanWrite);
+                Assert.True(item.CanMutate);
                 Assert.Equal("All projects", item.ScopeLabel);
             },
             item =>
@@ -102,6 +105,7 @@ public sealed class ContextualAgentAccessResolverTests
                 Assert.Equal(writeAgent.Id, item.Agent.Id);
                 Assert.True(item.CanRead);
                 Assert.True(item.CanWrite);
+                Assert.True(item.CanMutate);
                 Assert.Equal("All projects", item.ScopeLabel);
             });
     }
@@ -130,6 +134,7 @@ public sealed class ContextualAgentAccessResolverTests
         Assert.True(result.CanWriteNonTaskStructure);
         Assert.True(result.CanWriteTasks);
         Assert.False(result.CanWrite);
+        Assert.True(result.CanMutate);
         Assert.Equal("This project", result.ScopeLabel);
     }
 
@@ -157,6 +162,7 @@ public sealed class ContextualAgentAccessResolverTests
         Assert.False(result.CanWrite);
         Assert.False(result.CanCreateProjects);
         Assert.True(result.CanCreateSubprojects);
+        Assert.True(result.CanMutate);
         Assert.Equal("This project", result.ScopeLabel);
     }
 

@@ -153,11 +153,7 @@ Read hierarchy and project content only through the authorized project tools; do
         ContextualAgentAccessSummary access)
     {
         var permissions = AgentChatContextPermission.Read;
-        if (access.CanWrite ||
-            access.CanWriteTasks ||
-            access.CanWriteNonTaskStructure ||
-            access.CanCreateProjects ||
-            access.CanCreateSubprojects)
+        if (access.CanMutate)
         {
             permissions |= AgentChatContextPermission.Mutate;
         }

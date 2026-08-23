@@ -338,11 +338,7 @@ Current project workspace view: Manager Summary.
         ContextualAgentAccessSummary access)
     {
         var permissions = AgentChatContextPermission.Read;
-        if (access.CanWrite ||
-            access.CanWriteTasks ||
-            access.CanWriteNonTaskStructure ||
-            access.CanCreateProjects ||
-            access.CanCreateSubprojects)
+        if (access.CanMutate)
         {
             permissions |= AgentChatContextPermission.Mutate;
         }

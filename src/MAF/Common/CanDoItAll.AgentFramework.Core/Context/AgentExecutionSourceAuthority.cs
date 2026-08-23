@@ -79,7 +79,7 @@ public static class ProjectScopedExecutionAuthority
         return new AgentExecutionSourceAuthorityDecision(
             canonicalScope,
             ReadAllowed: true,
-            MutationAllowed: summary.CanWrite,
+            MutationAllowed: summary.CanMutate,
             AgentExecutionAuthorityPolicyVersions.Canonical);
     }
 }
