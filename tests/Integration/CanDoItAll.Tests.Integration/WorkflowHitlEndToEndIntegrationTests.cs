@@ -433,8 +433,8 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
     [Fact]
     public async Task RestartableResponsesAndLogs_DoNotExposeCheckpointOrSecrets()
     {
-        const string inputSentinel = "input-secret-SB06-f47aa920";
-        const string responseSentinel = "response-secret-SB06-9fb8b2c1";
+        const string inputSentinel = "input-secret-hitl-f47aa920";
+        const string responseSentinel = "response-secret-hitl-9fb8b2c1";
         await using var fixture = RestartableHitlFixture.Create(
             "safe-projections",
             captureLogs: true);
@@ -1207,7 +1207,7 @@ public sealed class WorkflowHitlEndToEndIntegrationTests
             cancellationToken.ThrowIfCancellationRequested();
             if (point == target && Interlocked.Exchange(ref armed, 0) == 1)
             {
-                throw new InvalidOperationException($"Injected SB06 crash at {point}.");
+                throw new InvalidOperationException($"Injected workflow HITL crash at {point}.");
             }
 
             return ValueTask.CompletedTask;
