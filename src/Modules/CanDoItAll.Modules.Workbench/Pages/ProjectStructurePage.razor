@@ -1516,6 +1516,7 @@ else
         }
 
         var uiState = NormalizePersistedCanvasUiState(CanvasWorkbenchUiState.Parse(stateJson));
+        uiState.WindowStates = ResolveEditableUiState().WindowStates;
         if (!string.IsNullOrWhiteSpace(pendingClientSelectionId) &&
             surface.Nodes.Any(node => string.Equals(node.Id, pendingClientSelectionId, StringComparison.Ordinal)) &&
             uiState.SelectedNodeIds.Count <= 1 &&
@@ -2650,8 +2651,8 @@ else
         currentViewStateJson = uiState.ToJson();
         surface = surface with { ViewStateJson = currentViewStateJson };
         RefreshCanvasSurface();
-        await PersistCurrentViewStateAsync();
         await InvokeAsync(StateHasChanged);
+        await PersistCurrentViewStateAsync();
     }
 
     private bool TryPatchSurfaceNodePositions(IReadOnlyCollection<CanvasWorkbenchNodePositionChange> positions)

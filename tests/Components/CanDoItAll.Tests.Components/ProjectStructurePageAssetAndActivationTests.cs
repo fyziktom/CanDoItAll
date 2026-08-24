@@ -254,7 +254,7 @@ public sealed class ProjectStructurePageAssetAndActivationTests
     }
 
     [Fact]
-    public async Task Opening_a_projected_process_run_folder_shows_the_file_browser_window()
+    public async Task Opening_a_projected_process_run_folder_keeps_the_file_browser_open_after_a_late_canvas_state_dispatch()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
@@ -299,6 +299,7 @@ public sealed class ProjectStructurePageAssetAndActivationTests
         page.WaitForAssertion(() => Assert.Contains(
             canvas.Instance.Surface.Nodes,
             node => string.Equals(node.Id, outputNodeId, StringComparison.Ordinal)));
+        string staleCanvasStateJson = canvas.Instance.Surface.UiState.ToJson();
 
         await page.InvokeAsync(() => canvas.Instance.NodeOpened.InvokeAsync(outputNodeId));
 
@@ -308,6 +309,17 @@ public sealed class ProjectStructurePageAssetAndActivationTests
                 page.FindComponents<ProjectStructureFileBrowserWindow>());
             var request = Assert.IsType<ProjectStructureNodeFileCollectionRequest>(fileBrowser.Instance.Request);
             Assert.Equal(outputNodeId, request.NodeId);
+        });
+
+        await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnStateChanged(
+            staleCanvasStateJson,
+            dispatchId: 1));
+
+        page.WaitForAssertion(() =>
+        {
+            IRenderedComponent<ProjectStructureFileBrowserWindow> fileBrowser = Assert.Single(
+                page.FindComponents<ProjectStructureFileBrowserWindow>());
+            Assert.True(fileBrowser.Instance.State.IsVisible);
         });
     }
 
