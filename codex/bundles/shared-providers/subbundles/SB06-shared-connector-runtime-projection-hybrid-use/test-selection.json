@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB06",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderRuntimeProfileMaterializerTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests",
+      "plannedExpectedDiscovery": 18,
+      "selectionReason": "Covers effective profile mapping, capabilities, transport, purpose and unavailable states."
+    },
+    {
+      "topic": "SharedProviderRuntimeProjectionIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRuntimeProjectionIntegrationTests",
+      "plannedExpectedDiscovery": 16,
+      "selectionReason": "Covers catalog projection, composition and actual runtime invocation."
+    },
+    {
+      "topic": "SharedProviderHybridSelectionTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderHybridSelectionTests",
+      "plannedExpectedDiscovery": 10,
+      "selectionReason": "Covers personal/shared coexistence and no silent fallback."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB09",
+  "broadGateAllowed": false,
+  "playwrightAllowed": true,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderUiComponentTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Components.slnx",
+      "filter": "FullyQualifiedName~SharedProvider",
+      "plannedExpectedDiscovery": 28,
+      "selectionReason": "Frozen combined component topic after SB08 implementation."
+    },
+    {
+      "topic": "SharedProviderManagementPlaywrightTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Playwright.slnx",
+      "filter": "FullyQualifiedName~SharedProviderManagementPlaywrightTests",
+      "plannedExpectedDiscovery": 10,
+      "selectionReason": "One focused browser lane for real central/client workflows and screenshots."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

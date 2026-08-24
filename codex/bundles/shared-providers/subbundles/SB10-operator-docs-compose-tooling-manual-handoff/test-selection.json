@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB10",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderToolingValidation",
+      "project": "tools/SharedProviders",
+      "filter": "help,dry-run,safe-reset",
+      "plannedExpectedDiscovery": 6,
+      "selectionReason": "Validates operator tooling without starting the final lane."
+    },
+    {
+      "topic": "DocumentationValidation",
+      "project": "repository documentation validators",
+      "filter": "shared-providers docs/index/links",
+      "plannedExpectedDiscovery": 4,
+      "selectionReason": "Validates documentation structure, links and prohibited secret patterns."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

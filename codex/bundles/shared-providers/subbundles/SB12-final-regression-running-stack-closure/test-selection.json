@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB12",
+  "broadGateAllowed": true,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": true,
+  "selections": [
+    {
+      "topic": "CanDoItAll stable aggregate",
+      "project": "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+      "filter": "full stable graph at frozen checkpoint",
+      "plannedExpectedDiscovery": -1,
+      "selectionReason": "Single final broad gate justified by project, Web, auth, EF, middleware and OpenAPI changes."
+    },
+    {
+      "topic": "SharedProviderMultiInstanceE2E",
+      "project": "tools/SharedProviders E2E orchestrator",
+      "filter": "scenario-set:final-clean",
+      "plannedExpectedDiscovery": 19,
+      "selectionReason": "Final clean real-system proof and leave-running handoff."
+    },
+    {
+      "topic": "BundleClosureValidation",
+      "project": "bundle scripts and SharedInfo validators",
+      "filter": "closure, traceability, hashes, running handoff",
+      "plannedExpectedDiscovery": 6,
+      "selectionReason": "Ensures artifact-backed final closure."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB00",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderArchitectureCharacterizationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderArchitectureCharacterizationTests",
+      "plannedExpectedDiscovery": 8,
+      "selectionReason": "Protects current ownership, connector registry, and dependency assumptions."
+    },
+    {
+      "topic": "SharedProviderRuntimePathCharacterizationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRuntimePathCharacterizationTests",
+      "plannedExpectedDiscovery": 6,
+      "selectionReason": "Proves current effective provider mapping and custom endpoint behavior without live providers."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

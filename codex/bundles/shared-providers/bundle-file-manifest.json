@@ -1,0 +1,925 @@
+{
+  "schemaVersion": "1.0",
+  "bundleId": "candoitall-shared-providers-2026-08-24",
+  "algorithm": "SHA-256",
+  "selfExcluded": true,
+  "fileCount": 183,
+  "totalContentBytes": 361992,
+  "files": [
+    {
+      "path": "BUNDLE-CONTENTS.md",
+      "sizeBytes": 4008,
+      "sha256": "fbb1bdcf0a1c51cd4ce8c84baba5404eb9942cf12c2bb3a9fd054998b7fc612d"
+    },
+    {
+      "path": "CLOSURE.md",
+      "sizeBytes": 654,
+      "sha256": "74ef19d21b1a9912d2325d97a47e9baf736d44289097fefc855c5a5d5b138669"
+    },
+    {
+      "path": "CODEX-EXECUTION-CONTRACT.md",
+      "sizeBytes": 7694,
+      "sha256": "91a204965a1ed159580a7d6b4ec9c6276ca2e371c8fea21835c34a5251950237"
+    },
+    {
+      "path": "EXECUTION-REPORT.md",
+      "sizeBytes": 483,
+      "sha256": "0ee3015ef088e9f3ca9ff14a38a20037b3853405d3cd20aa013b4418f63ef2df"
+    },
+    {
+      "path": "PREPARATION-REPORT.md",
+      "sizeBytes": 4431,
+      "sha256": "2053fd1d1d51cc65db88822c10523a05925d8cdf41fc79c36fc288c4b29c7342"
+    },
+    {
+      "path": "README.md",
+      "sizeBytes": 3608,
+      "sha256": "422176baae99e1fef35b560a03b241dac1aed7d57d142d69acccb1df47d83345"
+    },
+    {
+      "path": "START-CODEX-PROMPT.md",
+      "sizeBytes": 2034,
+      "sha256": "97dd38197cf4d0f825781529c0d62f32a366f8136f07c476fae50b31a19525cd"
+    },
+    {
+      "path": "STATUS.md",
+      "sizeBytes": 1325,
+      "sha256": "bdacc7e77ebb04a21664be4f1730ae48d594def3656237b4cf32233168d47232"
+    },
+    {
+      "path": "architecture/00-csharp-current-state-inventory.md",
+      "sizeBytes": 3960,
+      "sha256": "ace5d63005896500ba6be4800768b248c6108d83228b59b13f5473f2df86e4c1"
+    },
+    {
+      "path": "architecture/01-csharp-boundary-map.md",
+      "sizeBytes": 4368,
+      "sha256": "e11ceb5234a03965ae3b6fb17decea60c9f3a330ee08fde6d35afa5b9216ef10"
+    },
+    {
+      "path": "architecture/02-csharp-dependency-direction.md",
+      "sizeBytes": 2961,
+      "sha256": "d43744f5846b910e7c2dfc1f70df16622e54c623a1b3bf1124910cb3f9166f72"
+    },
+    {
+      "path": "architecture/03-csharp-pattern-selection-records.md",
+      "sizeBytes": 5144,
+      "sha256": "5953cacc3737b0fb4edb2cbe23a699241a3c5aed1e45a92c827c11d271a332b1"
+    },
+    {
+      "path": "architecture/04-csharp-testability-plan.md",
+      "sizeBytes": 3710,
+      "sha256": "0ffea8598e8b18e853619c7337ed5e7f59848b76fc826769bc7fa6802ef403e8"
+    },
+    {
+      "path": "architecture/05-target-domain-and-data-model.md",
+      "sizeBytes": 6222,
+      "sha256": "fa9b1a5301a22570dd203b35d349e4329cebfd9a0950644d347bd3a8e34994fd"
+    },
+    {
+      "path": "architecture/06-protocol-and-api-contract.md",
+      "sizeBytes": 5692,
+      "sha256": "cbaef5c3c35b0131315a778191aa438f70f35c110660f36688d71191ebba95c6"
+    },
+    {
+      "path": "architecture/07-central-relay-and-capability-mapping.md",
+      "sizeBytes": 5745,
+      "sha256": "0b57c1a59df20d9973b613a6c2ec2b5a43adf584962ed08b78957528db53d423"
+    },
+    {
+      "path": "architecture/08-client-source-sync-and-runtime-projection.md",
+      "sizeBytes": 4727,
+      "sha256": "bc6229b76f0c39a23a7824490efbfcfe0f8712b6352da7796f1bd07e0d7471d0"
+    },
+    {
+      "path": "architecture/09-security-access-context-egcp.md",
+      "sizeBytes": 3901,
+      "sha256": "85a5f6350ff812741b0f34bdd959d6c254942acfa32568227b84961d4b66a6e4"
+    },
+    {
+      "path": "architecture/10-ui-architecture.md",
+      "sizeBytes": 3409,
+      "sha256": "333ace7c30e6b1636b3ed3c3b68499663cc2650f865c000ccf6d4e0685d90b19"
+    },
+    {
+      "path": "architecture/11-docker-multi-instance-topology.md",
+      "sizeBytes": 3661,
+      "sha256": "a2927aa1a4f0294a3b977323810c25b6ea5fb75ed676177535f5e19f90271605"
+    },
+    {
+      "path": "architecture/12-decisions-non-goals-deferred.md",
+      "sizeBytes": 2539,
+      "sha256": "0b653fb6da96049432316209d68572abd995f5fbae3e1691f89fb2544c1bbda2"
+    },
+    {
+      "path": "bundle.json",
+      "sizeBytes": 1126,
+      "sha256": "cbc2884693ec36e106f8231080f77f867627bb0560ad6eef986013de8b77ba28"
+    },
+    {
+      "path": "current-state/00-provider-domain-and-runtime.md",
+      "sizeBytes": 2962,
+      "sha256": "2ba50c226395059039a57e4696c5b6cab6cf6d5ed1490c7c8f336fc38b86f358"
+    },
+    {
+      "path": "current-state/01-workspace-persistence-and-ui.md",
+      "sizeBytes": 2890,
+      "sha256": "11fbe29c958e5e974a264851b2dfa6c23a59e9cd796ad0e407bf29f9ab3bfd0f"
+    },
+    {
+      "path": "current-state/02-api-auth-openapi.md",
+      "sizeBytes": 2513,
+      "sha256": "7e14d058e03172f8ca02237bd15efb6e778756afed4be605872f226eaba7f8d0"
+    },
+    {
+      "path": "current-state/03-testing-compose-sharedinfo.md",
+      "sizeBytes": 1831,
+      "sha256": "51f99a546920c7ee34ec567be765c5d271dc952f29edf4cf62fe04260fdfbed7"
+    },
+    {
+      "path": "current-state/04-risk-register.md",
+      "sizeBytes": 3040,
+      "sha256": "9256201014fdead096e12262c3b3eded6665342fee7f1062fb0c58408d00701d"
+    },
+    {
+      "path": "evidence/00-repository-evidence.md",
+      "sizeBytes": 2470,
+      "sha256": "d806aa239f52bc0722d5ad248a4f5377e1014de874e6a9af598210121ec33c32"
+    },
+    {
+      "path": "evidence/01-standards-research.md",
+      "sizeBytes": 1935,
+      "sha256": "5d068dd55b64fa51efd614729ba26caacf127a2a3bead8e936805f331d265861"
+    },
+    {
+      "path": "inputs/00-user-request-verbatim.md",
+      "sizeBytes": 5264,
+      "sha256": "6879ba7e7dc91ab0bb8588f79d070437fb2b0968c309f377c3af50908b6c56f1"
+    },
+    {
+      "path": "inputs/01-repository-baselines.md",
+      "sizeBytes": 1528,
+      "sha256": "7cd21eeb4cf1bb6168d0859aa12d75a5b57518022d459e2877afcc8fe681097d"
+    },
+    {
+      "path": "inputs/02-source-artifacts-and-standards.md",
+      "sizeBytes": 4119,
+      "sha256": "0729cbe77d8e839d381feae2746fa911c9686e7ff2add7029e2bf8c86a773274"
+    },
+    {
+      "path": "inventories/00-source-impact-map.md",
+      "sizeBytes": 3366,
+      "sha256": "2c45d0b58cdd1eeeea7d0ae890fe94a76f7d1a4f122604df158017a11f3eb8ca"
+    },
+    {
+      "path": "inventories/01-symbol-and-reference-map.md",
+      "sizeBytes": 2946,
+      "sha256": "3be6ad19fc6ee775d4da5518c9b63229f291addfd01bc8989bb65c6382db4568"
+    },
+    {
+      "path": "inventories/02-test-impact-map.md",
+      "sizeBytes": 2473,
+      "sha256": "b0448c3bec3a651448a79e86cca412837237028a427c8b36dbe6bec0070fc17f"
+    },
+    {
+      "path": "inventories/03-sharedinfo-impact-map.md",
+      "sizeBytes": 1742,
+      "sha256": "af60f8449d4795e050c24d5ce90b5b15acaff5a4555d82768f00f80012bdae12"
+    },
+    {
+      "path": "plan/00-dependency-graph.md",
+      "sizeBytes": 1873,
+      "sha256": "cd28ccabe6f41d07f4010f8f324096a2b055adfef14fa30ea762471355dfadd2"
+    },
+    {
+      "path": "plan/01-execution-order.md",
+      "sizeBytes": 1798,
+      "sha256": "c067429ec2c816bb6c57f11c6aaf1fd00d93f308e5e2801400007e70888d3315"
+    },
+    {
+      "path": "plan/02-test-budget-and-gates.md",
+      "sizeBytes": 2778,
+      "sha256": "6067cba147a0ee76331450e1ef4e091ac9a551835432df052e3f6fdecd448dbc"
+    },
+    {
+      "path": "plan/03-docker-e2e-runbook-plan.md",
+      "sizeBytes": 2053,
+      "sha256": "b1a77cf94741fbfebc05c5c5068efa0d5d8586588a944149d7580792f476068c"
+    },
+    {
+      "path": "plan/04-openapi-sharedinfo-plan.md",
+      "sizeBytes": 1725,
+      "sha256": "9a6ea20b0196fa99d59e8c9e07736089cdc5f2020a50e77bb7ccfcc26bc70d90"
+    },
+    {
+      "path": "plan/architecture-checkpoints.md",
+      "sizeBytes": 2046,
+      "sha256": "43e5141a6d1f1e56b3e2b8600181f86e82bd9a000c8420fe865527cad23ccd24"
+    },
+    {
+      "path": "preparation-validation.json",
+      "sizeBytes": 700,
+      "sha256": "43c45268bffb8b5cf0795e040840fd815266d45e673d3eda6d5a4a1c82887ea8"
+    },
+    {
+      "path": "requirements/00-scope-and-outcomes.md",
+      "sizeBytes": 2610,
+      "sha256": "46f732bc94f28471dfc0aa6be3f2eb5d130619cf1b4355f34c41d6710316e2fb"
+    },
+    {
+      "path": "requirements/01-functional-requirements.md",
+      "sizeBytes": 6092,
+      "sha256": "e69de7c22786174594b74a0bcd37fe0e3d2e3d935b0149b5466f21a113b2a7f4"
+    },
+    {
+      "path": "requirements/02-security-and-nonfunctional.md",
+      "sizeBytes": 4834,
+      "sha256": "fa734a5fa01d57f1b0c896a7b8182c7470ccccbfbdcbf6aa52adf9a229cdad9d"
+    },
+    {
+      "path": "requirements/03-acceptance-criteria.md",
+      "sizeBytes": 3031,
+      "sha256": "5f9a70209e1eba56e5767ae174830ad2ae2439f64b0dabc80d02319559d56660"
+    },
+    {
+      "path": "reviews/backend-checkpoint-gate.md",
+      "sizeBytes": 950,
+      "sha256": "5cc87036476d10e38ba3a86b54675f608bfecb6fa5d33eef246023c2745648f2"
+    },
+    {
+      "path": "reviews/csharp-architecture-gate.md",
+      "sizeBytes": 2112,
+      "sha256": "07d25726c2b0164fe7a8e6e29aa7fa28dc68c72b84992d0489e9c6dc5b2f49ac"
+    },
+    {
+      "path": "reviews/final-closure-gate.md",
+      "sizeBytes": 596,
+      "sha256": "d716efd682f2035bbd0959090d395fdce8dabb1162a8772c46e1744280035635"
+    },
+    {
+      "path": "reviews/ui-gate.md",
+      "sizeBytes": 559,
+      "sha256": "536ee1f00a0d65073adb16fba74d1f17a2e4e319ecc947bb37d1f668e986ed8c"
+    },
+    {
+      "path": "scripts/README.md",
+      "sizeBytes": 451,
+      "sha256": "bd26ed46d22b94e64a0fab2b2fb3353fa5ab37845cc0e0060ce1173a8de0b891"
+    },
+    {
+      "path": "scripts/validate_bundle.ps1",
+      "sizeBytes": 229,
+      "sha256": "e586800d4056ec5af294f18dfbceb0e3ef87ab68fbfc3d00e013b46c5f6a3774"
+    },
+    {
+      "path": "scripts/validate_bundle.py",
+      "sizeBytes": 10595,
+      "sha256": "518220ef64c774405b38090323723773737cf3fc012e11b3466de402463ec318"
+    },
+    {
+      "path": "scripts/validate_bundle.sh",
+      "sizeBytes": 173,
+      "sha256": "1602f8e1e53329e14823ce4bdebdeda5be98fac69e89d8140473127c07b8d1e5"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/README.md",
+      "sizeBytes": 8050,
+      "sha256": "64bd637f8bf2081d924a3cead440c52d3f6b98b426f2941fbaeebd0249d88c70"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/SESSION-HANDOFF.md",
+      "sizeBytes": 1072,
+      "sha256": "cf557932adaa62b7e723eb3e3f6563bd12e50c332addba27ae04fa57a3edfad7"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "18fedef7701291f0b30b04ea9827664d916f70cd9794d22b41a073ec87470226"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/proof/proof-manifest.json",
+      "sizeBytes": 2596,
+      "sha256": "f1080751184732c98cce6ae38f54c6f59c78cf10e767b41de554668521f28d77"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB00-baseline-characterization-and-decision-lock/test-selection.json",
+      "sizeBytes": 1239,
+      "sha256": "1c3c7c10ac2b73f3d6289c3fa52af3fc0eab67f4303f28e854fe79d3569dc8c2"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/README.md",
+      "sizeBytes": 8167,
+      "sha256": "e6494adb9e270f2707198dbaac7d08b2975c6970212d2c21e4aa1063b6ae4c60"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/SESSION-HANDOFF.md",
+      "sizeBytes": 1082,
+      "sha256": "1c3ce239cc0baa952590b54391f4f4d453d067bac40c148dca45cc7780642100"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "1395d92ca73d3aee56e1700ebe15da255866dfc0a0e57b9a8896baff6ce4c5f8"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/proof/proof-manifest.json",
+      "sizeBytes": 3022,
+      "sha256": "2534e7f8a626959347e39b6da169f74a9dc620369a4c1f2c2d48ee5a90225040"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB01-protocol-identities-and-access-context/test-selection.json",
+      "sizeBytes": 1469,
+      "sha256": "471bfd95c8d19632508b75cce4473a86aacb6ffbd13329938969b1163b6b0ed9"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/README.md",
+      "sizeBytes": 8712,
+      "sha256": "ba8d4434df02438fc597df2ec094b8cc3a39acb8162a1ed6396be78000db6014"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/SESSION-HANDOFF.md",
+      "sizeBytes": 1091,
+      "sha256": "8a2dbf18d1d98e46d9862d6254af4cc31b6b67561eb389c6a32cb87f274dd706"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "cf3f2d0f608649c5c0f8fbd1af7f780b50750d213107a6f1a13e2cadf1767347"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/proof/proof-manifest.json",
+      "sizeBytes": 3117,
+      "sha256": "1b512e4b74c659f85606a97cec7592574afc037b95dd6cc92b45225bf38fdfba"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB02-publication-source-import-persistence/test-selection.json",
+      "sizeBytes": 1532,
+      "sha256": "e93a7805d48135ac3cee5c49342ec9abde115b6bd2b9404a75686ca2750c6e33"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/README.md",
+      "sizeBytes": 8255,
+      "sha256": "5876b35a22cea162aa30eae9f5d992276565af0cb4974954169e34f9810696ee"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/SESSION-HANDOFF.md",
+      "sizeBytes": 1099,
+      "sha256": "2051926e7d29f79bf54ff836c5b38d38bf0781f2b22c9c4b51a7f26b609c7c15"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "600c9482f0df53102c00e34e3c938ccf3c7ada7f49d40ea4ef799dc1d1925198"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/proof/proof-manifest.json",
+      "sizeBytes": 3106,
+      "sha256": "0c579b0e1fce0dd59f4e5a7ecc5c8c5078455a58e21afd4992b25187b0a4e7db"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB03-central-catalog-api-auth-etag/test-selection.json",
+      "sizeBytes": 1507,
+      "sha256": "6a041b2dc71ed3f015b356ec2175d65b9ebc66eb11952eb4a8990345e58a7a11"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/README.md",
+      "sizeBytes": 9171,
+      "sha256": "ad220a3e228f338673ac0d9b0f4b3c4e538d24bc7e5a576773c161094a18699d"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/SESSION-HANDOFF.md",
+      "sizeBytes": 1097,
+      "sha256": "9e50cb55b41d1ba44645865ae2648bfe5367f6754cc1ecbece9a547ad16a1e9c"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "58e0e13a7e350fbcf2a8bf853b66b0cf1fb19a6b1ee6cd866c30be0f4e80d6d8"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/proof/proof-manifest.json",
+      "sizeBytes": 3060,
+      "sha256": "a0deb2e1037c08ce0d8016ab124bbffb69a1a27a098a6957b0dfd910234a7c6f"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB04-openai-compatible-relay-streaming-images/test-selection.json",
+      "sizeBytes": 1554,
+      "sha256": "355a9db59725ba7168200ec02b725c5cfea55e7097b8bad30330ef68ed6a6444"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/README.md",
+      "sizeBytes": 8370,
+      "sha256": "0eb6c8435f4ba2fcc02d9a3036f54b7f0c34e1cbf9d6d8c9e51dc0ecc5168f81"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/SESSION-HANDOFF.md",
+      "sizeBytes": 1104,
+      "sha256": "ec066eca06dc66183bf8c9bd4ee4c64ff12b6597f802f4b573f41f6f2102c16f"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "a438418241c591b2572cf9669d1dda0b6e3a3c0f23ee6b553a9b25811925d8ad"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/proof/proof-manifest.json",
+      "sizeBytes": 3136,
+      "sha256": "7111133a69bc1346a917fdda13005c8da08873b4afe756073f24e775396d60a2"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB05-client-source-sync-selection-reconciliation/test-selection.json",
+      "sizeBytes": 1492,
+      "sha256": "41e1ba13bd6a593567c4f847c6530bc30f28c29dd574cc588107fbaa431533a3"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/README.md",
+      "sizeBytes": 8531,
+      "sha256": "062af4b11536193ce54f0894531b2456c1ef3bd4d753e79fb33a4c70b8d1fa0b"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/SESSION-HANDOFF.md",
+      "sizeBytes": 1100,
+      "sha256": "655aadd2750454e88fc538078ff9f8e0e7e2b56100714544cc92bb6ce824e406"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "5a4fbfc2562ce4eeba680e562ddfccafcfc9e7c7aa240547fbe803261421953d"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/proof-manifest.json",
+      "sizeBytes": 3090,
+      "sha256": "c6d9f80a5416ce37691937bcdf10203acfd6efb9e481cdce919af64fb505a590"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB06-shared-connector-runtime-projection-hybrid-use/test-selection.json",
+      "sizeBytes": 1562,
+      "sha256": "ab973f40b9345e0685e6f8bd85bb4dd16874b3fdf49b1de3e60e5a53f50f4755"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/README.md",
+      "sizeBytes": 7762,
+      "sha256": "d0f532ea4d6aa85f8fecec047bd7733df08d7f43fca459e485ca22f47a3821df"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/SESSION-HANDOFF.md",
+      "sizeBytes": 1079,
+      "sha256": "c23b979aa4853f8b4bc4ac3915a8a4e7945ee92040d6a3544c772db4ad9bf90d"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "16b0f86c781f9602f48a209d139c702a10f75fad8fde06e5b954e4b1ed4bc57e"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/proof/proof-manifest.json",
+      "sizeBytes": 2558,
+      "sha256": "d397908f21f2b22f8769da87c5af796d2274e5a00a1c3034aa96741607c79dbb"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB07-backend-checkpoint-three-instance-proof/test-selection.json",
+      "sizeBytes": 1131,
+      "sha256": "90ea9d06f4c6a1d00718f28e90834efbb5ad6e72c9b449eae10a2bd9c0fa3b08"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/README.md",
+      "sizeBytes": 7677,
+      "sha256": "15ac61981bd897ad87571419d7ca5a2bd1461ff5798afa800c37e410e25160f6"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/SESSION-HANDOFF.md",
+      "sizeBytes": 1084,
+      "sha256": "96869a2d3265d3ebb8ad7e09a07d6a55fe9b815ae3bd41429b795935d13ccefe"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "442717ad631410787819e9985e9c39f042ee82418e5b5f1c46bfa53b906fed6c"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/proof/proof-manifest.json",
+      "sizeBytes": 2550,
+      "sha256": "6d5eac8cc032a3b0b89899c4fa83206b5384f697fbbd8cc5da9c4e3348ed365c"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB08-provider-sharing-source-import-ui/test-selection.json",
+      "sizeBytes": 1171,
+      "sha256": "0c1a060222aa7b301f2ea6ced56093d0064b204cca7e22dadceaea9906cb86bf"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/README.md",
+      "sizeBytes": 7035,
+      "sha256": "6ee7b85822a477ac7046969e6ca43564cb9fb670883bd46414c166c90c201bb8"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/SESSION-HANDOFF.md",
+      "sizeBytes": 1100,
+      "sha256": "65bb5a697caf57bcb9ce9455944e33c0346002022555c97f8167ff72176f06f8"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "302cf0338fbfc795d325623285c29e6f09034323f22b91bd5df845fa83eee336"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/proof-manifest.json",
+      "sizeBytes": 2500,
+      "sha256": "94cde8fe8c43179d51e04709540d5d076f43c0e54a699eba9b81d9f49d2903e3"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/screenshots/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB09-ui-component-playwright-failure-proof/test-selection.json",
+      "sizeBytes": 1145,
+      "sha256": "9ff8a2d707c1c19c4dac9564faccdfa753e46dea76f89dd78769bd87f90ed4ef"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/README.md",
+      "sizeBytes": 7138,
+      "sha256": "79c9b19705bf65bfc35a27b64be7c6b51b5205f6aa18922395be5fc54e34c80e"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/SESSION-HANDOFF.md",
+      "sizeBytes": 1103,
+      "sha256": "80b83b227d5167a633a5a220b707cb103b3ed8523b004255f97e7f935d15777d"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "2ae9b3fa03874d021274dd8f348a5d3cd4e5b08ed1a45a5de1fb610ff5340d9e"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/proof-manifest.json",
+      "sizeBytes": 2397,
+      "sha256": "3de498a7b609c586fe00ed99f9128c6b3bcc7bc7816d45081e7ed85aa820e946"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB10-operator-docs-compose-tooling-manual-handoff/test-selection.json",
+      "sizeBytes": 1052,
+      "sha256": "f1cefd7afc36d3234df8f4fb1212fb1cd56e0089734ca7bb57ae7f88b817240a"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/README.md",
+      "sizeBytes": 6938,
+      "sha256": "bb86895ae6a7fd68458770858ae05bc5bd5728145978cf312ad363d899bcfb26"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/SESSION-HANDOFF.md",
+      "sizeBytes": 1097,
+      "sha256": "1b526c020be1cdcc13938d57f0cab48b18e06f7811433aa251573338099593a9"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "63d478e8fa6d4d735217b6ab5704e2dc2fd0ef5287ee8f415bdd34e4bbd27039"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/proof/proof-manifest.json",
+      "sizeBytes": 2520,
+      "sha256": "4bd3a110cebf99c7301a64cae4fb0f1b77d9f7972cf4da376774134119e7be6f"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB11-openapi-export-sharedinfo-skills/test-selection.json",
+      "sizeBytes": 1129,
+      "sha256": "f218f4f09ecbfc9228ecc93d4db15af4a8c40ae22e63a8a7475cc5242fb1180e"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/README.md",
+      "sizeBytes": 7343,
+      "sha256": "935768ef3b7892911ae719614b4517c455d55de7148376ac8e481ea9e5330f18"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/SESSION-HANDOFF.md",
+      "sizeBytes": 1115,
+      "sha256": "61ace08e2952b929cdd5476ac2ad122650b0d16aedd5bc646f19896dd03d5819"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/README.md",
+      "sizeBytes": 397,
+      "sha256": "08756948b00fcf1713bb029094a71ce1dfb8deb1bbc19a36bbd8db7e71959ca5"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/architecture/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/behavior/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/proof-manifest.json",
+      "sizeBytes": 2867,
+      "sha256": "bd75d0e74ce2a762c22234a40804f1121756e84a8a5dbac5c0eb41b2aed5763e"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/screenshots/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/security/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/proof/transcripts/.gitkeep",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "subbundles/SB12-final-regression-running-stack-closure/test-selection.json",
+      "sizeBytes": 1389,
+      "sha256": "96b8191aba62bc3aba7b65adb7de84a220bf1b2864406e32e082420696f32c23"
+    },
+    {
+      "path": "templates/architecture-review.md",
+      "sizeBytes": 297,
+      "sha256": "6e1d375db44a97dda69b338bf3ce3391d8d18cb71e303f1a1e6addfbd7007623"
+    },
+    {
+      "path": "templates/execution-report.md",
+      "sizeBytes": 249,
+      "sha256": "52ac55e06f3fed30e3ada33b4aef2b49562fd832c3d9de2e31d6c554a348df26"
+    },
+    {
+      "path": "templates/manual-test-handoff.md",
+      "sizeBytes": 1034,
+      "sha256": "4a7d915dddcfe4b93c49deb7721d25b78b39d8976034d4303e0cfd92b99fb867"
+    },
+    {
+      "path": "templates/proof-manifest.json",
+      "sizeBytes": 1279,
+      "sha256": "de971bcf2cd018b25430b26e94003974ad0a0b3c96a15f8a231fca342f55e631"
+    },
+    {
+      "path": "templates/session-handoff.md",
+      "sizeBytes": 634,
+      "sha256": "c5b4314b0c04f6b5d194d93eccb716525a3818a9a59bd97e6c5a0986fe60c755"
+    },
+    {
+      "path": "test-budget.json",
+      "sizeBytes": 1626,
+      "sha256": "c1e2b65252e2ca89b18d27a44b1e082236e5abce6b452e5e26e98f2b8a94e47f"
+    },
+    {
+      "path": "traceability/00-input-coverage.md",
+      "sizeBytes": 1818,
+      "sha256": "30aa81c361c3605f8937b976248f80a6562fe54ea4421b13f6e8727b1b2a68fe"
+    },
+    {
+      "path": "traceability/01-requirements-matrix.md",
+      "sizeBytes": 10516,
+      "sha256": "7b2f610bb78e162499141b7e72a96dc6dc5dfdb3f2c8cef7ed8e93e5f80ef631"
+    },
+    {
+      "path": "traceability/02-risk-to-proof-map.md",
+      "sizeBytes": 2429,
+      "sha256": "ea0cb08db67e8b7090b05011e698a4a656a6d5da94a880e666458b1c681b8eaa"
+    }
+  ]
+}

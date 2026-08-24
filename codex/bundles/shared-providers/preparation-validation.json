@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "validatedAtUtc": "2026-08-24T16:00:00Z",
+  "bundleValidator": {
+    "command": "python scripts/validate_bundle.py .",
+    "result": "PASS",
+    "warnings": 0
+  },
+  "contentChecks": {
+    "jsonFilesParsedBeforeReport": 29,
+    "placeholderTermsFound": 0,
+    "commonSecretLiteralPatternsFound": 0,
+    "initialReadySubbundles": [
+      "SB00"
+    ],
+    "subbundleCount": 13,
+    "canDoItAllApplicationInstancesRequired": 3,
+    "finalStackMustRemainRunning": true
+  },
+  "limitations": [
+    "This validates the prepared bundle, not future implementation code.",
+    "Execution must re-run repository, architecture, test, security, OpenAPI, and artifact gates."
+  ]
+}

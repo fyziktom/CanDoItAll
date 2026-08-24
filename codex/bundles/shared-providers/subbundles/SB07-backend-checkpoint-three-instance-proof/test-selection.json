@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB07",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": true,
+  "selections": [
+    {
+      "topic": "SharedProviderBackendCheckpointIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderBackendCheckpointIntegrationTests",
+      "plannedExpectedDiscovery": 10,
+      "selectionReason": "Focused pre-Docker regression for backend checkpoint contracts."
+    },
+    {
+      "topic": "SharedProviderMultiInstanceE2E",
+      "project": "tools/SharedProviders E2E orchestrator",
+      "filter": "scenario-set:backend-checkpoint",
+      "plannedExpectedDiscovery": 19,
+      "selectionReason": "Required real central plus two client system proof."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

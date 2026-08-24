@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "REPLACE_WITH_SUBBUNDLE_ID",
+  "proofTier": "Governed",
+  "status": "not-executed",
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "development",
+    "commitBefore": "",
+    "commitAfter": "",
+    "workingTreeBefore": "",
+    "workingTreeAfter": ""
+  },
+  "architecture": {
+    "checkpoint": "",
+    "projectReferencesBeforeArtifact": "",
+    "projectReferencesAfterArtifact": "",
+    "codeAnalyticsSnapshotBefore": "",
+    "codeAnalyticsSnapshotAfter": "",
+    "cycleResult": "",
+    "assertions": []
+  },
+  "changedFiles": [],
+  "commands": [],
+  "testSelections": [
+    {
+      "topic": "",
+      "listCommand": "",
+      "expectedDiscovery": 0,
+      "actualDiscovery": 0,
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "transcript": ""
+    }
+  ],
+  "artifacts": [],
+  "semanticInvariants": [],
+  "negativeEvidence": [],
+  "secretAndContentScan": {
+    "performed": false,
+    "command": "",
+    "result": "",
+    "artifact": ""
+  },
+  "broadGate": {
+    "run": false,
+    "namedInvalidationTrigger": "",
+    "command": "",
+    "result": ""
+  },
+  "progressionDecision": {
+    "result": "not-decided",
+    "nextSubbundle": "",
+    "reason": ""
+  },
+  "notes": []
+}

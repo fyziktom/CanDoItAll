@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB03",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderPublicationAndCatalogTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderPublicationAndCatalogTests",
+      "plannedExpectedDiscovery": 18,
+      "selectionReason": "Covers policy intersection, projection, hash and redaction."
+    },
+    {
+      "topic": "SharedProviderCatalogApiIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderCatalogApiIntegrationTests",
+      "plannedExpectedDiscovery": 14,
+      "selectionReason": "Covers HTTP catalog/models, ETag and error envelopes."
+    },
+    {
+      "topic": "SharedProviderAuthorizationIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderAuthorizationIntegrationTests",
+      "plannedExpectedDiscovery": 10,
+      "selectionReason": "Covers umbrella/granular/missing/invalid token behavior."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

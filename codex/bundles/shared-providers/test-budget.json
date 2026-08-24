@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0",
+  "policy": "Focused-first; no broad safety runs by habit.",
+  "configuration": "Release",
+  "maxParallelMsbuildNodes": 1,
+  "routineRules": {
+    "requireAffectedProductionBuild": true,
+    "requireListTestsBeforeExecution": true,
+    "requireExpectedDiscoveryCount": true,
+    "rejectZeroDiscovery": true,
+    "preferNoBuildNoRestoreAfterFreshBuild": true,
+    "allowUnfilteredTestProject": false
+  },
+  "prohibitedBeforeSB12": [
+    "dotnet test ./tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+    "unfiltered Unit solution",
+    "unfiltered Integration solution",
+    "unfiltered Playwright solution",
+    "Category=LiveProcess",
+    "Category=LongRunning",
+    "live external AI provider calls"
+  ],
+  "laneLimits": {
+    "stableAggregateRuns": 1,
+    "playwrightRuns": 1,
+    "multiInstanceRuns": 2,
+    "dockerApplicationImageBuilds": 2,
+    "openApiSnapshotCaptures": 1
+  },
+  "routineSubbundleBudget": {
+    "productionBuildCommands": 4,
+    "listTestCommands": 3,
+    "filteredTestCommands": 3,
+    "documentationValidationCommands": 2
+  },
+  "broadGateInvalidationTriggers": [
+    "new project or ProjectReference graph",
+    "Web or Composition root registration",
+    "cross-cutting access-context middleware",
+    "API authorization policies or scopes",
+    "EF Core entities, model registry, migration, or snapshot",
+    "public OpenAPI operations or schemas"
+  ],
+  "dockerPolicy": {
+    "buildOneApplicationImageAndReuse": true,
+    "canDoItAllApplicationInstances": 3,
+    "leaveFinalStackRunning": true,
+    "usePaidProvider": false,
+    "directSqlFixturesAllowed": false
+  }
+}

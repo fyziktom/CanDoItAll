@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB11",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderOpenApiIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderOpenApiIntegrationTests",
+      "plannedExpectedDiscovery": 10,
+      "selectionReason": "Proves final route/schema/auth/error surface before capture."
+    },
+    {
+      "topic": "SharedInfoValidation",
+      "project": "CanDoItAll.SharedInfo/tools/validation",
+      "filter": "OpenAPI, route parity, skill manifest, repository validation",
+      "plannedExpectedDiscovery": 4,
+      "selectionReason": "Proves snapshot provenance and skill synchronization."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

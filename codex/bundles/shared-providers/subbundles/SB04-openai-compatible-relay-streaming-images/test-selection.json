@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB04",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderRelayPolicyTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRelayPolicyTests",
+      "plannedExpectedDiscovery": 24,
+      "selectionReason": "Covers allowlist, routing, capability, errors and usage extraction."
+    },
+    {
+      "topic": "SharedProviderOpenAiCompatibilityIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderOpenAiCompatibilityIntegrationTests",
+      "plannedExpectedDiscovery": 22,
+      "selectionReason": "Covers Responses/Chat/tools/structured/image and errors through real Web HTTP."
+    },
+    {
+      "topic": "SharedProviderStreamingIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderStreamingIntegrationTests",
+      "plannedExpectedDiscovery": 12,
+      "selectionReason": "Covers incremental SSE, terminal usage, cancellation, timeout and header policy."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}

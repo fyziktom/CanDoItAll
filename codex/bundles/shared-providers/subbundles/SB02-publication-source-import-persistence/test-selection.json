@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB02",
+  "broadGateAllowed": false,
+  "playwrightAllowed": false,
+  "multiInstanceAllowed": false,
+  "selections": [
+    {
+      "topic": "SharedProviderStateModelTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderStateModelTests",
+      "plannedExpectedDiscovery": 18,
+      "selectionReason": "Covers publication/source/import transitions and invariants."
+    },
+    {
+      "topic": "SharedProviderPersistenceIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderPersistenceIntegrationTests",
+      "plannedExpectedDiscovery": 14,
+      "selectionReason": "Covers EF mappings, indexes, transactions, concurrency and clean PostgreSQL migration."
+    },
+    {
+      "topic": "SharedProviderDeletionReferenceIntegrationTests",
+      "project": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderDeletionReferenceIntegrationTests",
+      "plannedExpectedDiscovery": 6,
+      "selectionReason": "Prevents orphaned publication/import/local profile identity."
+    }
+  ],
+  "rules": [
+    "List .NET tests before execution.",
+    "Reject zero discovery.",
+    "Update planned expected discovery only before the first run with a written reason.",
+    "Record exact command, counts, duration, exit code, and transcript.",
+    "Do not widen the lane because a focused test fails."
+  ]
+}
