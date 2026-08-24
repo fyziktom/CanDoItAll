@@ -6,4 +6,5 @@ public sealed record ProjectStructureTaskDialogResult(
     CanvasWorkbenchCreateActionRequest CreateRequest,
     ProjectStructureTaskResourceSelection? Assignee,
     ProjectTaskExecutionSnapshot? Execution = null,
-    ProjectTaskEstimate? Estimate = null);
+    ProjectTaskEstimate? Estimate = null,
+    ProjectStructureTaskResourceSelection? ResourceToAttach = null);

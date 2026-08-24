@@ -129,7 +129,8 @@ public partial class ProjectStructurePage
             ProjectId,
             BuildNodeOptions(ProjectObjectType.Repository),
             CreateCanvasTaskNodeAsync,
-            ReloadSurfaceAsync);
+            ReloadSurfaceAsync,
+            CreateProjectStructureUiAgentContext());
 
     private Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
         CanvasWorkbenchCreateActionRequest createRequest,

@@ -2,6 +2,11 @@ namespace CanDoItAll.Modules.Workbench;
 
 public static class ProjectStructureTaskResourceSelectionPolicy
 {
+    internal const string WorkflowInputSettingsResourceKindInvalidErrorCode =
+        "TaskWorkflowInputSettingsResourceKindInvalid";
+    internal const string DefinitionAttachmentResourceKindInvalidErrorCode =
+        "TaskAttachedResourceKindInvalid";
+
     public static void Validate(ProjectStructureTaskResourceSelection selection)
     {
         ArgumentNullException.ThrowIfNull(selection);
@@ -46,5 +51,42 @@ public static class ProjectStructureTaskResourceSelectionPolicy
                 "TaskWorkflowVersionRequired",
                 "A task workflow resource requires an exact workflow version.");
         }
+    }
+
+    public static void ValidateDefinitionAttachment(
+        ProjectStructureTaskResourceSelection selection)
+    {
+        Validate(selection);
+        if (selection.Kind is ProjectStructureTaskResourceKind.Workflow or
+            ProjectStructureTaskResourceKind.Process)
+        {
+            return;
+        }
+
+        throw new ProjectStructureAgentException(
+            400,
+            DefinitionAttachmentResourceKindInvalidErrorCode,
+            "Only a workflow or process can be attached through the typed task-resource path.");
+    }
+
+    internal static ProjectStructureWorkflowInputSettings? ValidateAndNormalizeWorkflowInputSettings(
+        ProjectStructureTaskResourceSelection selection,
+        ProjectStructureWorkflowInputSettings? workflowInputSettings)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        if (workflowInputSettings is null)
+        {
+            return null;
+        }
+
+        if (selection.Kind != ProjectStructureTaskResourceKind.Workflow)
+        {
+            throw new ProjectStructureAgentException(
+                400,
+                WorkflowInputSettingsResourceKindInvalidErrorCode,
+                "Workflow input settings can only be supplied when attaching a workflow.");
+        }
+
+        return ProjectStructureWorkflowInputSettingsNormalizer.Normalize(workflowInputSettings);
     }
 }

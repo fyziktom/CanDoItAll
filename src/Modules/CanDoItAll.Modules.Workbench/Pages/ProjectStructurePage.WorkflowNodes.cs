@@ -130,24 +130,62 @@ public partial class ProjectStructurePage
 
         try
         {
-            var parentNode = ResolveNode(dialog.ParentNodeId);
-            var created = await WorkflowNodeService.CreateAsync(
-                ProjectId,
-                dialog.ParentNodeId,
-                new ProjectStructureWorkflowNodeCreateInput(
-                    dialog.SelectedWorkflowId.Value,
-                    dialog.SelectedVersionId,
-                    InputSettings: dialog.InputSettings,
-                    X: parentNode?.X + 320,
-                    Y: parentNode?.Y + 120),
-                CreateProjectStructureUiAgentContext());
+            var parentNode = ResolveNode(dialog.ParentNodeId)
+                ?? throw new InvalidOperationException("The selected project-structure node is no longer available.");
+            string addedNodeTitle;
+            string createdWorkflowNodeId;
+            if (IsCanonicalTaskNode(parentNode))
+            {
+                var selectedWorkflowId = dialog.SelectedWorkflowId.Value;
+                var selectedOption = dialog.Options.FirstOrDefault(option =>
+                    option.WorkflowId == selectedWorkflowId);
+                var selectedVersionId = dialog.SelectedVersionId
+                    ?? selectedOption?.VersionId
+                    ?? throw new InvalidOperationException(
+                        "The selected workflow version is no longer available.");
+                var execution = ProjectStructureTaskEditStatePolicy.Read(parentNode).Execution;
+                var attached = await TaskResourceAttachmentService.AttachAsync(
+                    ProjectId,
+                    parentNode.Id,
+                    new ProjectStructureTaskResourceAttachRequest(
+                        new ProjectStructureTaskResourceSelection(
+                            ProjectStructureTaskResourceKind.Workflow,
+                            selectedWorkflowId.Value,
+                            selectedVersionId.Value),
+                        execution,
+                        dialog.InputSettings),
+                    CreateProjectStructureUiAgentContext());
+                if (string.IsNullOrWhiteSpace(attached.CreatedNodeId))
+                {
+                    throw new InvalidOperationException(
+                        "The workflow attachment did not return its created project-structure node id.");
+                }
+
+                addedNodeTitle = selectedOption?.DisplayName ?? "Workflow";
+                createdWorkflowNodeId = attached.CreatedNodeId;
+            }
+            else
+            {
+                var created = await WorkflowNodeService.CreateAsync(
+                    ProjectId,
+                    dialog.ParentNodeId,
+                    new ProjectStructureWorkflowNodeCreateInput(
+                        dialog.SelectedWorkflowId.Value,
+                        dialog.SelectedVersionId,
+                        InputSettings: dialog.InputSettings,
+                        X: parentNode.X + 320,
+                        Y: parentNode.Y + 120),
+                    CreateProjectStructureUiAgentContext());
+                addedNodeTitle = created.Node.Title;
+                createdWorkflowNodeId = created.Node.Id;
+            }
 
             workflowAddDialog = null;
             selectedWorkflowStatus = null;
-            workflowFeedback = $"{created.Node.Title} was added under {parentNode?.Title ?? "the selected node"}.";
+            workflowFeedback = $"{addedNodeTitle} was added under {parentNode.Title}.";
             workflowFeedbackTone = "mint";
-            await ReloadSurfaceAsync(created.Node.Id);
-            await TryRefreshWorkflowStatusAsync(created.Node.Id, reloadSurface: true);
+            await ReloadSurfaceAsync(createdWorkflowNodeId);
+            await TryRefreshWorkflowStatusAsync(createdWorkflowNodeId, reloadSurface: true);
         }
         catch (Exception exception) when (IsWorkflowUiException(exception))
         {

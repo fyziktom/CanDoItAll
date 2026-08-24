@@ -74,8 +74,7 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
 
         var (resourceOptions, resourceWarnings) = await LoadResourceOptionsAsync(
             context,
-            taskId.Value,
-            assigneeResolution.Representative,
+            assigneeResolution,
             cancellationToken);
         var editModel = new ProjectStructureGanttTaskEditModel(
             taskId,
@@ -138,12 +137,20 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
             return;
         }
 
-        if (!TryValidateResourceToAttach(proposed.ResourceToAttach, out var resourceValidationError))
+        if (proposed.ResourceToAttach is { } resourceToAttach)
         {
-            notificationService.Error(
-                "Task resource could not be attached",
-                resourceValidationError);
-            return;
+            try
+            {
+                ProjectStructureTaskResourceSelectionPolicy
+                    .ValidateDefinitionAttachment(resourceToAttach);
+            }
+            catch (ProjectStructureAgentException exception)
+            {
+                notificationService.Error(
+                    "Task resource could not be attached",
+                    exception.Message);
+                return;
+            }
         }
 
         GanttTaskScheduleChangeRequest? scheduleChange = null;
@@ -341,14 +348,16 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
 
     private async Task<(IReadOnlyList<ProjectStructureTaskResourceOption> Options, IReadOnlyList<string> Warnings)> LoadResourceOptionsAsync(
         ProjectStructureGanttTaskEditContext context,
-        string taskNodeId,
-        ProjectStructureTaskResourceSelection? assignee,
+        ProjectStructureTaskAssigneeSelectionResult assigneeResolution,
         CancellationToken cancellationToken)
     {
         try
         {
             var options = await taskResourceService.ListOptionsAsync(context.ProjectId, cancellationToken);
-            return (IncludeCurrentAssigneeOption(options, context.Assignments, taskNodeId, assignee), []);
+            return (
+                ProjectStructureTaskAssigneeSelectionPolicy
+                    .IncludeRepresentativeOption(options, assigneeResolution),
+                []);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -361,38 +370,10 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
                 Mask(context.ProjectId),
                 exception.GetType().Name);
             return (
-                IncludeCurrentAssigneeOption([], context.Assignments, taskNodeId, assignee),
+                ProjectStructureTaskAssigneeSelectionPolicy
+                    .IncludeRepresentativeOption([], assigneeResolution),
                 ["Task resources could not be loaded. Existing task details can still be saved without changing the assignee."]);
         }
-    }
-
-    private static bool TryValidateResourceToAttach(
-        ProjectStructureTaskResourceSelection? resource,
-        out string validationError)
-    {
-        validationError = string.Empty;
-        if (resource is null)
-        {
-            return true;
-        }
-
-        try
-        {
-            ProjectStructureTaskResourceSelectionPolicy.Validate(resource);
-        }
-        catch (ProjectStructureAgentException exception)
-        {
-            validationError = exception.Message;
-            return false;
-        }
-
-        if (resource.Kind is not (ProjectStructureTaskResourceKind.Workflow or ProjectStructureTaskResourceKind.Process))
-        {
-            validationError = "Only a workflow or process can be staged as an attached task resource.";
-            return false;
-        }
-
-        return true;
     }
 
     private static ProjectTaskEstimate ReadEstimate(ProjectWorkItemMetadata? workItem)
@@ -418,50 +399,6 @@ public sealed class ProjectStructureGanttTaskEditCoordinator(
         => pricing is null
             ? string.Empty
             : ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(pricing);
-
-    private static IReadOnlyList<ProjectStructureTaskResourceOption> IncludeCurrentAssigneeOption(
-        IReadOnlyList<ProjectStructureTaskResourceOption> options,
-        IReadOnlyList<ProjectPartyAssignmentDetail> assignments,
-        string taskNodeId,
-        ProjectStructureTaskResourceSelection? assignee)
-    {
-        if (assignee is null || options.Any(option =>
-                option.Kind == assignee.Kind && option.ResourceId == assignee.ResourceId))
-        {
-            return options;
-        }
-
-        var assignment = assignments.FirstOrDefault(item =>
-            item.Role == ProjectPartyAssignmentRole.WorkItemAssignee &&
-            string.Equals(item.NodeKey, taskNodeId, StringComparison.Ordinal) &&
-            item.PartyId == assignee.ResourceId &&
-            IsCompatibleAssigneeType(item.PartyType, assignee.Kind));
-        if (assignment is null)
-        {
-            return options;
-        }
-
-        return options
-            .Append(new ProjectStructureTaskResourceOption(
-                assignee.Kind,
-                assignee.ResourceId,
-                VersionId: null,
-                assignment.PartyDisplayName,
-                assignment.PartyTypeLabel,
-                string.Empty,
-                IsFavorite: false,
-                IsSensitive: false))
-            .OrderBy(static option => option.Kind)
-            .ThenBy(static option => option.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static bool IsCompatibleAssigneeType(
-        ProjectPartyType partyType,
-        ProjectStructureTaskResourceKind resourceKind)
-        => (partyType, resourceKind) is
-            (ProjectPartyType.Person, ProjectStructureTaskResourceKind.Person) or
-            (ProjectPartyType.AiAgent, ProjectStructureTaskResourceKind.Agent);
 
     private static string Mask(Guid value)
     {
