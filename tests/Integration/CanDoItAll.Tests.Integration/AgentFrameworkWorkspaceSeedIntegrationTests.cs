@@ -1828,7 +1828,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_write_spreadsheet", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategistEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
-        Assert.DoesNotContain("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", financialStrategistEditor.Instructions, StringComparison.Ordinal);
 
         var qaObserver = Assert.Single(
             await workspaceService.ListAgentsAsync(includeTemplates: false),
@@ -2488,7 +2488,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("workspace_spreadsheet_function_catalog", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_analyze_image", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("image_generation_create", financialStrategist.Instructions, StringComparison.Ordinal);
-        Assert.DoesNotContain("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", financialStrategist.Instructions, StringComparison.Ordinal);
         Assert.Contains("go-to-market", marketingSpecialist.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("campaign-brief.md", marketingSpecialist.Instructions, StringComparison.Ordinal);
     }

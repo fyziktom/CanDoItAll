@@ -125,6 +125,9 @@ public static class ApiServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ProfileBoundedReplayEventStream<ProcessApiRunEvent>>(),
                 serviceProvider.GetRequiredService<ILogger<ApiNotifyingProcessRuntimeProjector>>())));
         services.TryAddScoped<IAgentRecruitingTargetResolver, WorkspaceAgentRecruitingTargetResolver>();
+        services.TryAddScoped<
+            IInteractiveAccessPrincipalProvider,
+            AnonymousInteractiveAccessPrincipalProvider>();
         services.Replace(ServiceDescriptor.Scoped<IFileAccessContextProvider, HttpFileAccessContextProvider>());
         services.Replace(ServiceDescriptor.Singleton<IFileAccessPolicy, WebFileAccessPolicy>());
 

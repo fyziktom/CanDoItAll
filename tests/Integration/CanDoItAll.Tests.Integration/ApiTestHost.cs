@@ -13,6 +13,7 @@ using CanDoItAll.Tests.Support;
 using CanDoItAll.Web;
 using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Composition;
+using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -159,6 +160,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
         app.MapCanDoItAllApiDocumentation();
 
+        app.MapCanDoItAllManagedFiles();
         app.MapProjectStructureAgentApi();
         app.MapCanDoItAllApi();
 

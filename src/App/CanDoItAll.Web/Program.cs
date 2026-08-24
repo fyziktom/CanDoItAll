@@ -66,6 +66,7 @@ builder.Services.AddAgentFrameworkUi();
 builder.Services.AddCanDoItAllDashboard();
 builder.Services.AddCanDoItAllFileToolsStoragePlacementRevision();
 builder.Services.AddCanDoItAllApi(builder.Configuration);
+builder.Services.AddCanDoItAllLocalOperatorUiAuthentication();
 builder.Services.AddCanDoItAllLlmChatsUi();
 builder.Services.AddCanDoItAllMermaid();
 builder.Services.AddHttpClient<DevelopmentManagerClient>();
@@ -80,15 +81,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.Use(async (context, next) =>
 {
-    app.Use(async (context, next) =>
-    {
-        context.Items[DevelopmentEndpointAccess.OriginalRemoteIpItemKey] =
-            context.Connection.RemoteIpAddress;
-        await next();
-    });
-}
+    context.Items[DevelopmentEndpointAccess.OriginalRemoteIpItemKey] =
+        context.Connection.RemoteIpAddress;
+    await next();
+});
 
 app.UseForwardedHeaders();
 

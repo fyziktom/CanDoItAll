@@ -65,6 +65,34 @@ public sealed class CanonicalAgentExecutionAuthorityResolverTests
         Assert.True(authority.MutationAllowed);
     }
 
+    [Theory]
+    [InlineData(true, false, false, false)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, false, false, true)]
+    public async Task Project_structure_narrow_mutation_configuration_grants_mutation_authority(
+        bool canWriteNonTaskStructure,
+        bool canWriteTasks,
+        bool canCreateProjects,
+        bool canCreateSubprojects)
+    {
+        var agent = CreateAgent(new AgentProjectStructureAccessSettings
+        {
+            CanRead = true,
+            CanWrite = false,
+            CanWriteNonTaskStructure = canWriteNonTaskStructure,
+            CanWriteTasks = canWriteTasks,
+            CanCreateProjects = canCreateProjects,
+            CanCreateSubprojects = canCreateSubprojects,
+            AllowAllProjects = true
+        });
+        var resolver = CreateResolver(agent);
+
+        var authority = await resolver.ResolveAsync(CreateRequest(agent.Id));
+
+        Assert.True(authority.MutationAllowed);
+    }
+
     [Fact]
     public async Task Agent_without_project_grant_is_denied()
     {

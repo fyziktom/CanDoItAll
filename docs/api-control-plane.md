@@ -39,6 +39,13 @@ Defaults are defined in [`appsettings.json`](../src/App/CanDoItAll.Web/appsettin
 
 The Project Structure API is mapped separately from `Api:Enabled`, but it applies the same authorization switch. The development default of open access is not suitable for a remotely reachable deployment. Keep signing keys and bearer tokens out of tracked files and logs.
 
+When authorization is enabled on an interactive host profile, an anonymous Blazor
+circuit receives narrowly scoped local-operator access for in-process FileTools and
+Simple Chats only when both the original and effective connection addresses are
+loopback. This circuit identity is not installed in `HttpContext.User` and never
+authenticates HTTP API or authorized-file routes; those boundaries still require a
+valid bearer token.
+
 When authorization is enabled, `/api/access/tokens` requires the privileged
 `api.tokens.issue` scope. Memory-provider routes accept the existing umbrella `api`
 scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`, and
