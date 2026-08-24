@@ -39,12 +39,14 @@ internal static class ProcessesApi
         processes.MapPost("/launch/check", async (
                 ProcessLaunchApiRequest request,
                 ProcessLaunchApplicationService launchService,
+                ProcessLaunchVariablePreparationService launchVariablePreparationService,
                 ProjectStructureProcessNodeService projectStructureProcessNodeService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
             await ExecuteLaunchOperationAsync(
                 request,
                 launchService,
+                launchVariablePreparationService,
                 projectStructureProcessNodeService,
                 loggerFactory,
                 previewOnly: true,
@@ -54,12 +56,14 @@ internal static class ProcessesApi
         processes.MapPost("/launch", async (
                 ProcessLaunchApiRequest request,
                 ProcessLaunchApplicationService launchService,
+                ProcessLaunchVariablePreparationService launchVariablePreparationService,
                 ProjectStructureProcessNodeService projectStructureProcessNodeService,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
             await ExecuteLaunchOperationAsync(
                 request,
                 launchService,
+                launchVariablePreparationService,
                 projectStructureProcessNodeService,
                 loggerFactory,
                 previewOnly: false,
@@ -240,6 +244,7 @@ internal static class ProcessesApi
     private static async Task<IResult> ExecuteLaunchOperationAsync(
         ProcessLaunchApiRequest request,
         ProcessLaunchApplicationService launchService,
+        ProcessLaunchVariablePreparationService launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
         ILoggerFactory loggerFactory,
         bool previewOnly,
@@ -249,6 +254,7 @@ internal static class ProcessesApi
         {
             var launchRequest = await MapLaunchRequestAsync(
                 request,
+                launchVariablePreparationService,
                 projectStructureProcessNodeService,
                 cancellationToken).ConfigureAwait(false);
             var result = previewOnly
@@ -283,6 +289,7 @@ internal static class ProcessesApi
 
     private static async Task<ProcessLaunchRequest> MapLaunchRequestAsync(
         ProcessLaunchApiRequest request,
+        ProcessLaunchVariablePreparationService launchVariablePreparationService,
         ProjectStructureProcessNodeService projectStructureProcessNodeService,
         CancellationToken cancellationToken)
     {
@@ -302,6 +309,7 @@ internal static class ProcessesApi
                         request.ProcessDefinitionId is { } scopedDefinitionId ? new ProcessDefinitionId(scopedDefinitionId) : null,
                         string.IsNullOrWhiteSpace(request.RequestedBy) ? "process-api" : request.RequestedBy,
                         variables),
+                    launchVariablePreparationService,
                     cancellationToken).ConfigureAwait(false),
                 StringComparer.Ordinal);
         }

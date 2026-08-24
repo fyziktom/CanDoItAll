@@ -18,6 +18,7 @@ using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Templates;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.Processes;
@@ -8613,6 +8614,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         var assignment = CreateManagedArtifactAssignment("exception-non-disclosure", agent.Id);
         var exception = new InvalidOperationException(secretSentinel + new string('x', 10000));
         var workspace = new ThrowingWorkspaceService(agent, exception);
+        var logger = new CapturingLogger<AgentFrameworkProcessStepExecutor>();
         var workspaceFiles = CreateWorkspaceFileService(out var workspaceRoot);
         try
         {
@@ -8624,7 +8626,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     assignment.RunId,
                     assignment.RunId,
                     ProcessRuntimeStatus.Active)),
-                workspaceFiles);
+                workspaceFiles,
+                logger: logger);
 
             var result = await adapter.ExecuteAsync(CreateAdapterRequest(
                 assignment,
@@ -8635,7 +8638,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 []));
 
             Assert.Equal(StrategyOutcome.Failed, result.Outcome);
-            Assert.Contains("restricted execution log", result.UserSafeSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Host diagnostics", result.UserSafeSummary, StringComparison.Ordinal);
             Assert.True(result.UserSafeSummary.Length < 800);
             Assert.All(result.Diagnostics, diagnostic => Assert.True(diagnostic.SafeSummary.Length < 800));
             AssertPublicAndPersistedReceiptExclude(
@@ -8644,6 +8647,13 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 secretSentinel,
                 "raw-exception-token",
                 @"C:\private\host");
+            var logEntry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Error, logEntry.Level);
+            Assert.Null(logEntry.Exception);
+            Assert.Contains("ExecutionStage=AgentExecution", logEntry.Message, StringComparison.Ordinal);
+            Assert.Contains(typeof(InvalidOperationException).FullName!, logEntry.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(secretSentinel, logEntry.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("raw-exception-token", logEntry.Message, StringComparison.Ordinal);
         }
         finally
         {
@@ -12808,7 +12818,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         IParentSubprocessArtifactBridge? parentSubprocessArtifactBridge = null,
         IEnumerable<IProcessRuntimeOwnedStepExecutor>? runtimeOwnedStepExecutors = null,
         IProcessWorkflowStepExecutor? workflowStepExecutor = null,
-        WorkspaceFileInspectionScopeFactory? workspaceFileInspectionScopeFactory = null)
+        WorkspaceFileInspectionScopeFactory? workspaceFileInspectionScopeFactory = null,
+        ILogger<AgentFrameworkProcessStepExecutor>? logger = null)
     {
         var toolReceiptPolicies = CreateToolReceiptPolicyCatalog();
         var completionIssueResultFactory = ProcessCompletionTestServices.CreateIssueResultFactory(
@@ -12880,8 +12891,34 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             new ProcessExecutionMetadataComposer(
             [
                 new BrowserExecutionMetadataContribution()
-            ]));
+            ]),
+            logger ?? NullLogger<AgentFrameworkProcessStepExecutor>.Instance);
         return new AgentFrameworkProcessExecutionAdapter(executor);
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        {
+            return null;
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            Entries.Add((logLevel, formatter(state, exception), exception));
+        }
     }
 
     private sealed class UnexpectedProcessWorkflowStepExecutor : IProcessWorkflowStepExecutor

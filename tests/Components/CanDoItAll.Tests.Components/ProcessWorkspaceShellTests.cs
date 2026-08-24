@@ -207,7 +207,7 @@ public sealed class ProcessWorkspaceShellTests
             Assert.Equal("/processes/live", position.Route);
             Assert.Equal("process-run", position.PrimarySelection?.Kind);
             Assert.Equal(selectedRunId.ToString("D"), position.PrimarySelection?.Id);
-            Assert.Equal(WorkspaceScopeKind.Process, snapshot.Scope.WorkspaceScope?.Kind);
+            Assert.Null(snapshot.Scope.WorkspaceScope);
             Assert.Contains(position.Facts, fact => fact.Name == "run-process-name" && fact.Value.Contains("customer onboarding", StringComparison.Ordinal));
             Assert.DoesNotContain(position.Facts, fact => fact.Name is "events" or "tools" or "diagnostics");
         });
@@ -734,6 +734,7 @@ public sealed class ProcessWorkspaceShellTests
     public void Project_shell_passes_project_scope_and_selection_to_projection_client()
     {
         using var context = CreateContext(out var client);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var projectId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var processId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");
@@ -748,6 +749,9 @@ public sealed class ProcessWorkspaceShellTests
         Assert.Equal(projectId, client.LastRequest?.Scope.ProjectId);
         Assert.Equal(processId, client.LastRequest?.Selection.ProcessId);
         Assert.Equal(runId, client.LastRequest?.Selection.RunId);
+        Assert.Equal(
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D")),
+            registry.Capture()?.Scope.WorkspaceScope);
     }
 
     [Fact]
@@ -1600,6 +1604,8 @@ public sealed class ProcessWorkspaceShellTests
             orchestrator.LastSendRequest!.AttachmentPaths!.ToArray());
         var contextSnapshot = Assert.IsType<AgentChatContextSnapshot>(
             orchestrator.LastCapturedContext);
+        Assert.Equal("workspace:global", contextSnapshot.Scope.Source.Id.Value);
+        Assert.Null(contextSnapshot.Scope.WorkspaceScope);
         var attachment = Assert.Single(contextSnapshot.Attachments);
         Assert.True(attachment.TryGetAttachment<ProcessInvocationSnapshot>(out var processSnapshot));
         Assert.Equal(runId, processSnapshot!.SelectedRunId);

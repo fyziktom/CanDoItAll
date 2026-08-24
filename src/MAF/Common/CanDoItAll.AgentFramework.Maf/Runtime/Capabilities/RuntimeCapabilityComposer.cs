@@ -384,7 +384,8 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
         var accessScope = EffectiveExternalTargetAccessResolver.Resolve(
             configuredAccess,
             auditScope?.AllowedExternalTargetAliases,
-            auditScope?.ReadOnlyExternalTargetAliases);
+            auditScope?.ReadOnlyExternalTargetAliases,
+            auditScope?.InvocationExternalTargetScopeIsAuthoritative == true);
         var writeOperationsAvailable = auditScope?.ProcessAllowsProductMutation != false &&
                                        state.Tools.Any(tool =>
                                            ToolCapabilityRegistry.TryResolve(tool.Name, out var capability) &&

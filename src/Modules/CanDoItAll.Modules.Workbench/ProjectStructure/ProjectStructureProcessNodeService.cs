@@ -135,9 +135,11 @@ public sealed class ProjectStructureProcessNodeService(
 
     public async Task<IReadOnlyDictionary<string, string>> BuildProjectScopedLaunchVariablesAsync(
         ProjectStructureProcessLaunchVariableBuildRequest request,
+        ProcessLaunchVariablePreparationService launchVariablePreparationService,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(launchVariablePreparationService);
 
         if (request.ProjectId == Guid.Empty)
         {
@@ -190,7 +192,7 @@ public sealed class ProjectStructureProcessNodeService(
             processDefinitionId,
             targetNode,
             agent,
-            dependencies.LaunchVariablePreparationService,
+            launchVariablePreparationService,
             definitionKey);
         var variables = CopyLaunchVariables(request.Variables);
 
