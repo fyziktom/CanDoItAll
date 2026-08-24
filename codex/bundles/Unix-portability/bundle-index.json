@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-22T23:53:35.912906+00:00",
+  "generated_utc": "2026-08-24T15:00:28.707556+00:00",
   "root_name": "Unix-portability",
   "payload_file_count": 328,
-  "payload_total_bytes": 4897560,
+  "payload_total_bytes": 4899141,
   "excluded_integrity_files": [
     "bundle-index.json",
     "CHECKSUMS.sha256"
@@ -1601,8 +1601,8 @@
     },
     {
       "path": "shared/portability-risk-baseline.json",
-      "size_bytes": 3236824,
-      "sha256": "8eddd1e08112fb8550f47d983befc9d1ad927decaf8691f28d04f7bbc0501bb2"
+      "size_bytes": 3238405,
+      "sha256": "16baa897e8e35e9c81e0236e68a7ea6e4881a2e18ba7681967f806f33dbed44e"
     },
     {
       "path": "shared/portability-taxonomy.md",
