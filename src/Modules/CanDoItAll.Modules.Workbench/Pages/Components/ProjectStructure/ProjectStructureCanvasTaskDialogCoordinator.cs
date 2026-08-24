@@ -14,11 +14,14 @@ public sealed record ProjectStructureCanvasTaskDialogContext(
     Guid ProjectId,
     IReadOnlyList<CanvasWorkbenchInputOption> RepositoryOptions,
     ProjectStructureCanvasTaskNodeCreator CreateTaskNodeAsync,
-    Func<string?, Task> ReloadAuthoritativeProject);
+    Func<string?, Task> ReloadAuthoritativeProject,
+    ProjectStructureAgentContext MutationOwner);
 
 public sealed class ProjectStructureCanvasTaskDialogCoordinator(
     ProjectStructureWorkItemAssigneeService assigneeService,
+    ProjectStructureTaskResourceService taskResourceService,
     ProjectStructureTaskResourceCostService resourceCostService,
+    ProjectStructureTaskResourceAttachmentService taskResourceAttachmentService,
     ProjectStructureTaskApplicationService taskApplicationService,
     ProjectWorkbenchService projectWorkbenchService,
     DialogService dialogService,
@@ -64,8 +67,8 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = context.ProjectId,
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = createRequest,
                 [nameof(ProjectStructureTaskCreateDialog.RepositoryOptions)] = context.RepositoryOptions,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assigneeOptions,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeWarnings)] = assigneeWarnings,
+                [nameof(ProjectStructureTaskCreateDialog.ResourceOptions)] = assigneeOptions,
+                [nameof(ProjectStructureTaskCreateDialog.ResourceWarnings)] = assigneeWarnings,
                 [nameof(ProjectStructureTaskCreateDialog.QuoteResolver)] =
                     new Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>(
                         resourceCostService.GetQuoteAsync)
@@ -114,8 +117,8 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             return;
         }
 
-        IReadOnlyList<ProjectStructureTaskResourceOption> assigneeOptions = [];
-        IReadOnlyList<string> assigneeWarnings = [];
+        IReadOnlyList<ProjectStructureTaskResourceOption> resourceOptions = [];
+        IReadOnlyList<string> resourceWarnings = [];
         var assigneeResolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
             [],
             taskNode.Id);
@@ -123,39 +126,43 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         var assignmentContextLoaded = false;
         try
         {
-            var optionsTask = assigneeService.ListOptionsAsync(
+            var resourcesTask = LoadEditResourceOptionsAsync(
                 context.ProjectId,
                 cancellationToken);
-            var assignmentSnapshotTask = assigneeService.ReadAsync(
+            var assignmentContextTask = LoadEditAssignmentContextAsync(
                 context.ProjectId,
                 taskNode.Id,
                 cancellationToken);
-            await Task.WhenAll(optionsTask, assignmentSnapshotTask);
-            assigneeOptions = await optionsTask;
-            assigneeResolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
-                (await assignmentSnapshotTask).DirectAssignments,
-                taskNode.Id);
-            assignmentContextLoaded = true;
-            canChangeDirectAssignee = assigneeResolution.CanChangeDirectAssignee;
-            if (ResolveAssigneeWarning(assigneeResolution.Status) is { } warning)
-            {
-                assigneeWarnings = [warning];
-            }
+            await Task.WhenAll(resourcesTask, assignmentContextTask);
+            var resources = await resourcesTask;
+            var assignmentContext = await assignmentContextTask;
+            assigneeResolution = assignmentContext.Resolution;
+            assignmentContextLoaded = assignmentContext.Loaded;
+            canChangeDirectAssignee =
+                assignmentContextLoaded &&
+                resources.Loaded &&
+                assigneeResolution.CanChangeDirectAssignee;
+            resourceOptions =
+                ProjectStructureTaskAssigneeSelectionPolicy
+                    .IncludeRepresentativeOption(
+                        resources.Options,
+                        assigneeResolution);
+            var assignmentWarnings =
+                resources.Loaded && !canChangeDirectAssignee
+                    ? assignmentContext.Warnings
+                        .Select(static warning =>
+                            $"{warning} Workflow or process definitions can still be attached when available.")
+                        .ToArray()
+                    : assignmentContext.Warnings;
+            resourceWarnings =
+            [
+                .. resources.Warnings,
+                .. assignmentWarnings
+            ];
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return;
-        }
-        catch (Exception exception)
-        {
-            canChangeDirectAssignee = false;
-            assigneeWarnings =
-                ["People and agents could not be loaded. Existing task fields can still be edited without changing the assignee."];
-            logger.LogWarning(
-                exception,
-                "Failed to load canvas task edit assignees for project {ProjectId} and task {TaskNodeId}.",
-                context.ProjectId,
-                taskNode.Id);
         }
 
         var result = await dialogService.OpenAsync<ProjectStructureTaskCreateDialog>(
@@ -165,8 +172,8 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                 [nameof(ProjectStructureTaskCreateDialog.ProjectId)] = context.ProjectId,
                 [nameof(ProjectStructureTaskCreateDialog.CreateRequest)] = editRequest,
                 [nameof(ProjectStructureTaskCreateDialog.RepositoryOptions)] = context.RepositoryOptions,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeOptions)] = assigneeOptions,
-                [nameof(ProjectStructureTaskCreateDialog.AssigneeWarnings)] = assigneeWarnings,
+                [nameof(ProjectStructureTaskCreateDialog.ResourceOptions)] = resourceOptions,
+                [nameof(ProjectStructureTaskCreateDialog.ResourceWarnings)] = resourceWarnings,
                 [nameof(ProjectStructureTaskCreateDialog.IsEditMode)] = true,
                 [nameof(ProjectStructureTaskCreateDialog.InitialAssignee)] = assigneeResolution.Representative,
                 [nameof(ProjectStructureTaskCreateDialog.InitialExecution)] = snapshot.Execution,
@@ -178,7 +185,7 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             new DialogOptions
             {
                 Eyebrow = "Project structure task",
-                Subtitle = "Edit task details, pure effort, expected cost, execution state, and the direct CRM person or AI agent assignment.",
+                Subtitle = "Edit task details, pure effort, expected cost, execution state, direct assignee, and additive workflow or process resources.",
                 Size = ModalSize.Wide,
                 DenseChrome = true,
                 TestId = "project-structure-task-edit-dialog",
@@ -295,11 +302,27 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             return;
         }
 
+        if (submission.ResourceToAttach is { } resourceToAttach)
+        {
+            try
+            {
+                ProjectStructureTaskResourceSelectionPolicy
+                    .ValidateDefinitionAttachment(resourceToAttach);
+            }
+            catch (ProjectStructureAgentException exception)
+            {
+                notificationService.Error(
+                    "Task resource could not be attached",
+                    exception.Message);
+                return;
+            }
+        }
+
+        var proposedExecution =
+            submission.Execution ?? openedSnapshot.Execution;
         ProjectStructureTaskEditApplicationResult<ProjectStructureNode> result;
         try
         {
-            var proposedExecution =
-                submission.Execution ?? openedSnapshot.Execution;
             var assignmentWasChanged =
                 assignmentContextLoaded &&
                 submission.Assignee !=
@@ -371,12 +394,82 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
             return;
         }
 
+        var committedPricing = result.Pricing;
+        if (submission.ResourceToAttach is not null)
+        {
+            try
+            {
+                var attachmentResult =
+                    await taskResourceAttachmentService.AttachAfterTransitionAsync(
+                        context.ProjectId,
+                        openedTask.Id,
+                        submission.ResourceToAttach,
+                        openedSnapshot.Execution,
+                        proposedExecution,
+                        context.MutationOwner,
+                        cancellationToken);
+                committedPricing = attachmentResult.Pricing;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await TryReloadAfterPartialSaveAsync(
+                    context,
+                    openedTask.Id,
+                    submission.ResourceToAttach.Kind);
+                notificationService.Warning(
+                    "Task partially saved",
+                    "The task changes were saved, but resource pricing or attachment was canceled. Any newly created attachment was rolled back; reload before trying again.");
+                logger.LogWarning(
+                    "Canvas task changes were committed before resource attachment pricing completed. ProjectId={ProjectId} TaskNodeId={TaskNodeId} ResourceKind={ResourceKind}",
+                    context.ProjectId,
+                    openedTask.Id,
+                    submission.ResourceToAttach.Kind);
+                return;
+            }
+            catch (Exception exception)
+            {
+                await TryReloadAfterPartialSaveAsync(
+                    context,
+                    openedTask.Id,
+                    submission.ResourceToAttach.Kind);
+                if (exception is ProjectStructureAgentException
+                    {
+                        ErrorCode: ProjectStructureTaskResourceAttachmentService.CompensationFailedErrorCode
+                    })
+                {
+                    notificationService.Error(
+                        "Task resource requires attention",
+                        exception.Message);
+                }
+                else
+                {
+                    notificationService.Warning(
+                        "Task partially saved",
+                        "The task changes were saved, but the selected workflow or process could not be priced and attached. Any newly created attachment was rolled back; reload before trying again.");
+                }
+
+                logger.LogWarning(
+                    exception,
+                    "Canvas task changes were committed but attached-resource pricing did not complete. ProjectId={ProjectId} TaskNodeId={TaskNodeId} ResourceKind={ResourceKind} FailureType={FailureType}",
+                    context.ProjectId,
+                    openedTask.Id,
+                    submission.ResourceToAttach.Kind,
+                    exception.GetType().Name);
+                return;
+            }
+        }
+
+        var pricingFeedback =
+            ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(
+                committedPricing);
         try
         {
             await context.ReloadAuthoritativeProject(openedTask.Id);
             notificationService.Success(
                 "Task saved",
-                $"{submission.CreateRequest.Title} was updated.{ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing)}");
+                submission.ResourceToAttach is null
+                    ? $"{submission.CreateRequest.Title} was updated.{pricingFeedback}"
+                    : $"{submission.CreateRequest.Title} was updated with its selected {submission.ResourceToAttach.Kind.ToString().ToLowerInvariant()}.{pricingFeedback}");
         }
         catch (Exception exception)
         {
@@ -387,7 +480,106 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
                 openedTask.Id);
             notificationService.Warning(
                 "Task saved; refresh required",
-                $"{submission.CreateRequest.Title} was saved.{ProjectStructureTaskPricingFeedback.BuildNotificationSuffix(result.Pricing)} Reload the project structure to see the latest state.");
+                $"{submission.CreateRequest.Title} was saved.{pricingFeedback} Reload the project structure to see the latest state.");
+        }
+    }
+
+    private async Task<(
+        IReadOnlyList<ProjectStructureTaskResourceOption> Options,
+        bool Loaded,
+        IReadOnlyList<string> Warnings)> LoadEditResourceOptionsAsync(
+        Guid projectId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (
+                await taskResourceService.ListOptionsAsync(
+                    projectId,
+                    cancellationToken),
+                Loaded: true,
+                []);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Failed to load canvas task resources for project {ProjectId}.",
+                projectId);
+            return (
+                [],
+                Loaded: false,
+                ["Task resources could not be loaded. Existing task fields can still be edited without changing the assignee or attaching a workflow or process."]);
+        }
+    }
+
+    private async Task<(
+        ProjectStructureTaskAssigneeSelectionResult Resolution,
+        bool Loaded,
+        IReadOnlyList<string> Warnings)> LoadEditAssignmentContextAsync(
+        Guid projectId,
+        string taskNodeId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var snapshot = await assigneeService.ReadAsync(
+                projectId,
+                taskNodeId,
+                cancellationToken);
+            var resolution = ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
+                snapshot.DirectAssignments,
+                taskNodeId);
+            IReadOnlyList<string> warnings =
+                ResolveAssigneeWarning(resolution.Status) is { } warning
+                    ? [warning]
+                    : [];
+            return (
+                resolution,
+                Loaded: true,
+                warnings);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Failed to load canvas task direct assignments for project {ProjectId} and task {TaskNodeId}.",
+                projectId,
+                taskNodeId);
+            return (
+                ProjectStructureTaskAssigneeSelectionPolicy.Resolve(
+                    [],
+                    taskNodeId),
+                Loaded: false,
+                ["Direct assignments could not be loaded. Person and agent changes are disabled."]);
+        }
+    }
+
+    private async Task TryReloadAfterPartialSaveAsync(
+        ProjectStructureCanvasTaskDialogContext context,
+        string taskNodeId,
+        ProjectStructureTaskResourceKind resourceKind)
+    {
+        try
+        {
+            await context.ReloadAuthoritativeProject(taskNodeId);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Canvas task was partially saved and the authoritative project could not be reloaded. ProjectId={ProjectId} TaskNodeId={TaskNodeId} ResourceKind={ResourceKind}",
+                context.ProjectId,
+                taskNodeId,
+                resourceKind);
         }
     }
 
@@ -403,7 +595,7 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         => status switch
         {
             ProjectStructureTaskAssigneeSelectionStatus.MultipleWithPrimary =>
-                "This task has multiple direct assignees. Its primary assignee is shown, but direct person or agent changes are disabled to preserve the complete assignment set.",
+                "This task has multiple direct assignees. Its primary assignee remains unchanged, and direct person or agent changes are disabled to preserve the complete assignment set.",
             ProjectStructureTaskAssigneeSelectionStatus.Ambiguous =>
                 "This task has multiple direct assignees without one primary assignee. Direct person or agent changes are disabled to preserve the complete assignment set.",
             ProjectStructureTaskAssigneeSelectionStatus.UnsupportedPartyType =>
@@ -439,5 +631,6 @@ public sealed class ProjectStructureCanvasTaskDialogCoordinator(
         ArgumentNullException.ThrowIfNull(context.RepositoryOptions);
         ArgumentNullException.ThrowIfNull(context.CreateTaskNodeAsync);
         ArgumentNullException.ThrowIfNull(context.ReloadAuthoritativeProject);
+        ArgumentNullException.ThrowIfNull(context.MutationOwner);
     }
 }

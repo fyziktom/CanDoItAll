@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-08-22T19:41:17.766179+00:00",
+  "generated_utc": "2026-08-24T15:00:28.431333+00:00",
   "review_gate": "A07 Core Gate C4 portability static guard",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 13777,
+  "allowance_count": 13784,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -15850,6 +15850,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs",
       "category": "case-policy",
+      "source_fingerprint": "f92936ecfc5ee8bcb5731c556b2c64a2437580336c559acb066fd5ad636f648f",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs",
+      "category": "case-policy",
       "source_fingerprint": "fdb1a46e22531e50448ee8c603aa90da40b60286076532d20860998dff77dc62",
       "count": 1
     },
@@ -16143,6 +16149,18 @@
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "538d94dca3d0a27d9f65d96804b1210654033ef824e764274e41bac7aea1cb6d",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "fa0ed1671415fbba21a64ac2bedc7b3158767a75bd873c40f8b3b84d28e3a329",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
       "category": "case-policy",
       "source_fingerprint": "11e8420450052e9788b342be775cdf5ac0094a2e2a890155535484bcc262cf8c",
       "count": 1
@@ -16354,6 +16372,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
       "category": "mcp",
+      "source_fingerprint": "6e6b469128b81daa46c489975ccc25bccbdeb2de186eeee40ba0cac294c333e0",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+      "category": "mcp",
       "source_fingerprint": "77db453ffa16cf11e8eaf851409c8c5b3c732711c7db8140877a5c251b57dd7c",
       "count": 1
     },
@@ -16522,6 +16546,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
       "category": "path-api",
+      "source_fingerprint": "098ca9fecffd7687cfa752ff9ac153edc6d0c2bb5f73c8e2c0999cf4daee66bd",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
+      "category": "path-api",
       "source_fingerprint": "32a3a171ca2d0eaa5159f10f3596d81d1b9a0f38f0449957cb6d35ac06c3e43b",
       "count": 1
     },
@@ -16559,7 +16589,7 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
       "category": "path-api",
       "source_fingerprint": "700e724bd8ee172f1cf40c178fc086073b9d0e3230605fabaafc8e7d0cb4b9e9",
-      "count": 1
+      "count": 2
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
@@ -16613,12 +16643,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
       "category": "path-api",
       "source_fingerprint": "af06248221f257faba528ca22674f91da5c990fc1dc08ba4f00593b023db2d19",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Mcp/PlaywrightMcpLaunchResolver.cs",
-      "category": "path-api",
-      "source_fingerprint": "bfae80452aa117fb4c3eda75b81ec8ce47ca2bd56c7080fd49d6ff06499423cb",
       "count": 1
     },
     {
@@ -57074,12 +57098,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureGanttTaskEditCoordinator.cs",
-      "category": "case-policy",
-      "source_fingerprint": "bafa8c00b85f537c22a576334f9de210e5d3f29f9731b0ed5862e62157836d89",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureObjectIndexWindow.razor",
       "category": "case-policy",
       "source_fingerprint": "30e94957c7966c34bc91828a8b318c22943dac6d92d3f5493cafa55f4d9fbd21",
@@ -58782,6 +58800,12 @@
       "category": "absolute-path-field",
       "source_fingerprint": "43d092a5adc4e0b0f1e49f4462884431d6cddb47eef83eeee20d7262ebe2450c",
       "count": 2
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCreateRequestComposer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "456510861e56cad16dedcc4abcef6e87ae0e938f8c296a0ba1c91cf93dd1af2c",
+      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCreateRequestComposer.cs",
@@ -62678,6 +62702,12 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskAssigneeSelectionPolicy.cs",
+      "category": "case-policy",
+      "source_fingerprint": "48a3a4a7c6ad03ed3754281ddebe8d35385baf703d2d3d634eca90032c706e37",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskCreationService.cs",
       "category": "case-policy",
       "source_fingerprint": "b4b8802722a69cf927cd1c2d61948553ee324161ecace722e622b77e743e2a24",
@@ -62693,6 +62723,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskPricingCommitService.cs",
       "category": "case-policy",
       "source_fingerprint": "e57dec04eabb85865a95ca1f8cd7a812ccbd9c00f96f7ced36c601a5025a7ae5",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureTaskResourceAttachmentService.cs",
+      "category": "link-reparse",
+      "source_fingerprint": "3b0a6de915b70203a5f9bbb1f66becae6a449db147e3abc91d26485dc9366a59",
       "count": 1
     },
     {

@@ -87,6 +87,47 @@ public static class ProjectStructureTaskAssigneeSelectionPolicy
             directAssignments);
     }
 
+    public static IReadOnlyList<ProjectStructureTaskResourceOption>
+        IncludeRepresentativeOption(
+            IReadOnlyList<ProjectStructureTaskResourceOption> options,
+            ProjectStructureTaskAssigneeSelectionResult resolution)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(resolution);
+        var representative = resolution.Representative;
+        if (representative is null || options.Any(option =>
+                option.Kind == representative.Kind &&
+                option.ResourceId == representative.ResourceId))
+        {
+            return options;
+        }
+
+        var assignment = resolution.DirectAssignments.FirstOrDefault(item =>
+            item.PartyId == representative.ResourceId &&
+            IsCompatibleAssigneeType(item.PartyType, representative.Kind));
+        if (assignment is null)
+        {
+            return options;
+        }
+
+        return options
+            .Append(new ProjectStructureTaskResourceOption(
+                representative.Kind,
+                representative.ResourceId,
+                VersionId: null,
+                assignment.PartyDisplayName,
+                assignment.PartyTypeLabel,
+                string.Empty,
+                IsFavorite: false,
+                IsSensitive: false))
+            .OrderBy(static option => option.Kind)
+            .ThenBy(
+                static option => option.DisplayName,
+                StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static option => option.ResourceId)
+            .ToArray();
+    }
+
     private static ProjectStructureTaskResourceSelection? ToSelection(
         ProjectPartyAssignmentDetail assignment)
     {
@@ -100,4 +141,11 @@ public static class ProjectStructureTaskAssigneeSelectionPolicy
             ? new ProjectStructureTaskResourceSelection(kind.Value, assignment.PartyId)
             : null;
     }
+
+    private static bool IsCompatibleAssigneeType(
+        ProjectPartyType partyType,
+        ProjectStructureTaskResourceKind resourceKind)
+        => (partyType, resourceKind) is
+            (ProjectPartyType.Person, ProjectStructureTaskResourceKind.Person) or
+            (ProjectPartyType.AiAgent, ProjectStructureTaskResourceKind.Agent);
 }

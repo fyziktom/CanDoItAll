@@ -72,10 +72,25 @@ public sealed class ProjectStructureTaskResourceService(
             .ToList();
     }
 
+    internal Task<ProjectStructureTaskResourceAttachment> AttachAsync(
+        Guid projectId,
+        string taskNodeId,
+        ProjectStructureTaskResourceSelection selection,
+        ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default)
+        => AttachAsync(
+            projectId,
+            taskNodeId,
+            selection,
+            workflowInputSettings: null,
+            agent,
+            cancellationToken);
+
     internal async Task<ProjectStructureTaskResourceAttachment> AttachAsync(
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection selection,
+        ProjectStructureWorkflowInputSettings? workflowInputSettings,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
@@ -84,6 +99,10 @@ public sealed class ProjectStructureTaskResourceService(
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentNullException.ThrowIfNull(agent);
         ProjectStructureTaskResourceSelectionPolicy.Validate(selection);
+        workflowInputSettings =
+            ProjectStructureTaskResourceSelectionPolicy.ValidateAndNormalizeWorkflowInputSettings(
+                selection,
+                workflowInputSettings);
         await EnsureCanonicalTaskAsync(projectId, taskNodeId, cancellationToken);
 
         switch (selection.Kind)
@@ -105,6 +124,7 @@ public sealed class ProjectStructureTaskResourceService(
                     projectId,
                     taskNodeId,
                     selection,
+                    workflowInputSettings,
                     agent,
                     cancellationToken);
             case ProjectStructureTaskResourceKind.Process:
@@ -181,6 +201,7 @@ public sealed class ProjectStructureTaskResourceService(
         Guid projectId,
         string taskNodeId,
         ProjectStructureTaskResourceSelection selection,
+        ProjectStructureWorkflowInputSettings? workflowInputSettings,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken)
     {
@@ -192,7 +213,8 @@ public sealed class ProjectStructureTaskResourceService(
             taskNodeId,
             new ProjectStructureWorkflowNodeCreateInput(
                 new WorkflowId(selection.ResourceId),
-                versionId),
+                versionId,
+                InputSettings: workflowInputSettings),
             agent,
             cancellationToken);
         return new ProjectStructureTaskResourceAttachment(

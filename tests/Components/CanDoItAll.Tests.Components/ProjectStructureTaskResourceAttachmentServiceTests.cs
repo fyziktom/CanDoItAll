@@ -8,6 +8,75 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskResourceAttachmentServiceTests
 {
+    [Theory]
+    [InlineData(ProjectStructureTaskResourceKind.Workflow, ProjectStructureTaskResourceKind.Process, "custom:workflow", "process-definition:1")]
+    [InlineData(ProjectStructureTaskResourceKind.Workflow, ProjectStructureTaskResourceKind.Workflow, null, null)]
+    [InlineData(ProjectStructureTaskResourceKind.Process, ProjectStructureTaskResourceKind.Process, null, null)]
+    public void Malformed_attachment_receipts_are_rejected_before_pricing_commit(
+        ProjectStructureTaskResourceKind requestedKind,
+        ProjectStructureTaskResourceKind receiptKind,
+        string? createdNodeId,
+        string? linkTargetNodeId)
+    {
+        var resource = new ProjectStructureTaskResourceSelection(
+            requestedKind,
+            Guid.NewGuid(),
+            requestedKind == ProjectStructureTaskResourceKind.Workflow ? Guid.NewGuid() : null);
+        var receipt = new ProjectStructureTaskResourceAttachment(
+            receiptKind,
+            createdNodeId,
+            linkTargetNodeId);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            ProjectStructureTaskResourceAttachmentService.ValidateAttachmentReceipt(resource, receipt));
+    }
+
+    [Theory]
+    [InlineData(ProjectStructureTaskResourceKind.Person)]
+    [InlineData(ProjectStructureTaskResourceKind.Agent)]
+    [InlineData(ProjectStructureTaskResourceKind.Process)]
+    public async Task Non_workflow_resources_reject_workflow_input_settings(
+        ProjectStructureTaskResourceKind resourceKind)
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = Guid.NewGuid();
+        var resource = new ProjectStructureTaskResourceSelection(resourceKind, Guid.NewGuid());
+        var inputSettings = new ProjectStructureWorkflowInputSettings
+        {
+            IncludeParentSubtree = true
+        };
+        var agent = CreateAgent(projectId);
+
+        var attachmentException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            services.GetRequiredService<ProjectStructureTaskResourceAttachmentService>().AttachAsync(
+                projectId,
+                "custom:task",
+                new ProjectStructureTaskResourceAttachRequest(
+                    resource,
+                    ProjectTaskExecutionSnapshot.NotStarted,
+                    inputSettings),
+                agent));
+        var resourceException = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            services.GetRequiredService<ProjectStructureTaskResourceService>().AttachAsync(
+                projectId,
+                "custom:task",
+                resource,
+                inputSettings,
+                agent));
+
+        Assert.Equal(400, attachmentException.StatusCode);
+        Assert.Equal(
+            resourceKind == ProjectStructureTaskResourceKind.Process
+                ? ProjectStructureTaskResourceSelectionPolicy.WorkflowInputSettingsResourceKindInvalidErrorCode
+                : ProjectStructureTaskResourceSelectionPolicy.DefinitionAttachmentResourceKindInvalidErrorCode,
+            attachmentException.ErrorCode);
+        Assert.Equal(400, resourceException.StatusCode);
+        Assert.Equal(
+            ProjectStructureTaskResourceSelectionPolicy.WorkflowInputSettingsResourceKindInvalidErrorCode,
+            resourceException.ErrorCode);
+    }
+
     [Fact]
     public async Task Pricing_conflict_rolls_back_attachment_and_preserves_concurrent_task_change()
     {
