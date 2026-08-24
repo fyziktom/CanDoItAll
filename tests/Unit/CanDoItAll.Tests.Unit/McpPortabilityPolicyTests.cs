@@ -277,7 +277,7 @@ public sealed class McpPortabilityPolicyTests
     }
 
     [Fact]
-    public async Task Playwright_resolver_publishes_versioned_hash_evidence_and_reuses_only_a_valid_install()
+    public async Task Playwright_resolver_preserves_package_integrity_and_reattests_runtime_changes()
     {
         using var workspace = new TemporaryDirectory();
         using var runtime = new TemporaryDirectory();
@@ -377,29 +377,25 @@ public sealed class McpPortabilityPolicyTests
 
                 var nodeMode = File.GetUnixFileMode(nodePath);
                 File.SetUnixFileMode(nodePath, nodeMode ^ UnixFileMode.GroupWrite);
-                var nodeModeException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                    PlaywrightMcpLaunchResolver.TryResolveAsync(
-                        workspace.Path,
-                        "npx",
-                        ["@playwright/mcp@0.0.78"],
-                        reuseHost,
-                        CancellationToken.None));
-                Assert.Contains("integrity", nodeModeException.Message, StringComparison.OrdinalIgnoreCase);
-                File.SetUnixFileMode(nodePath, nodeMode);
-            }
-
-            await File.AppendAllTextAsync(nodePath, "tampered-runtime");
-            var runtimeIntegrityException = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                PlaywrightMcpLaunchResolver.TryResolveAsync(
+                Assert.NotNull(await PlaywrightMcpLaunchResolver.TryResolveAsync(
                     workspace.Path,
-                    OperatingSystem.IsWindows() ? "npx.cmd" : "npx",
+                    "npx",
                     ["@playwright/mcp@0.0.78"],
                     reuseHost,
                     CancellationToken.None));
-            Assert.Contains(
-                "integrity",
-                runtimeIntegrityException.Message,
-                StringComparison.OrdinalIgnoreCase);
+                File.SetUnixFileMode(nodePath, nodeMode);
+            }
+
+            var evidencePath = Path.Combine(versionRoot, ".candoitall-install.json");
+            var originalEvidence = await File.ReadAllTextAsync(evidencePath);
+            await File.AppendAllTextAsync(nodePath, "tampered-runtime");
+            Assert.NotNull(await PlaywrightMcpLaunchResolver.TryResolveAsync(
+                workspace.Path,
+                OperatingSystem.IsWindows() ? "npx.cmd" : "npx",
+                ["@playwright/mcp@0.0.78"],
+                reuseHost,
+                CancellationToken.None));
+            Assert.NotEqual(originalEvidence, await File.ReadAllTextAsync(evidencePath));
             Assert.Equal(0, reuseHost.ExecutionCount);
         }
         finally

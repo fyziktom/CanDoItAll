@@ -34,15 +34,17 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
     private const int MaxCandidateClaims = 250;
     private const string RecoveryRequestedBy = "agent-execution-reconciliation";
     private static readonly TimeSpan ExecutionCreationSkew = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan TerminalExecutionRecoveryGrace = TimeSpan.FromSeconds(30);
 
     public async Task<int> ReconcileAsync(CancellationToken cancellationToken = default)
     {
         var candidates = await LoadActiveClaimCandidatesAsync(dbContext, cancellationToken).ConfigureAwait(false);
+        var observedAtUtc = DateTimeOffset.UtcNow;
         var recoveredCount = 0;
         foreach (var candidate in candidates)
         {
             var executionRuns = await LoadExecutionRunsForClaimAsync(candidate, cancellationToken).ConfigureAwait(false);
-            var executionRun = SelectRecoverableExecution(executionRuns, candidate);
+            var executionRun = SelectRecoverableExecution(executionRuns, candidate, observedAtUtc);
             if (executionRun is null)
             {
                 continue;
@@ -119,6 +121,12 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
     internal static ExecutionRunRecord? SelectRecoverableExecution(
         IReadOnlyList<ExecutionRunRecord> executionRuns,
         ActiveProcessClaimCandidate candidate)
+        => SelectRecoverableExecution(executionRuns, candidate, DateTimeOffset.UtcNow);
+
+    internal static ExecutionRunRecord? SelectRecoverableExecution(
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        ActiveProcessClaimCandidate candidate,
+        DateTimeOffset observedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(executionRuns);
 
@@ -141,7 +149,9 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
             .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
             .FirstOrDefault();
 
+        var terminalAtUtc = latestExecution?.CompletedAtUtc ?? latestExecution?.UpdatedAtUtc;
         return latestExecution is not null &&
+               terminalAtUtc <= observedAtUtc - TerminalExecutionRecoveryGrace &&
                (AgentFrameworkProcessExecutionClaimRecoveryCoordinator.IsRecoverableExecutionFailure(
                     latestExecution.State,
                     latestExecution.Outcome) ||
@@ -189,4 +199,3 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryReconciler(
         DateTimeOffset ExpiresAtUtc);
 
 }
-

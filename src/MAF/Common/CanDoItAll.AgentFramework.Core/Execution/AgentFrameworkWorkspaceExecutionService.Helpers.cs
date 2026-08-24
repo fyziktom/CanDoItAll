@@ -714,7 +714,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         {
             var workspaceToolAccess = AgentWorkspaceToolAccessMetadata.Read(agent.ConfigurationJson);
             var externalTargetPathRegistry = externalTargetPathRegistryFactory.Create(
-                workspaceToolAccess.ExternalTargetRootBindings);
+                ExecutionInvocationMetadata.ResolveExternalTargetRootBindings(
+                    metadataJson,
+                    workspaceToolAccess.ExternalTargetRootBindings));
             metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
                 metadataJson,
                 prompt,

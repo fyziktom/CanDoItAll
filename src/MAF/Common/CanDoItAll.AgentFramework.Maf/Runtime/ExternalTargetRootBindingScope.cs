@@ -10,11 +10,14 @@ internal static class ExternalTargetRootBindingScope
     public static IReadOnlyList<ExternalTargetRootBinding> Resolve(AgentDefinition agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
-        var bindings = AgentWorkspaceToolAccessMetadata
+        var configuredBindings = AgentWorkspaceToolAccessMetadata
             .Read(agent.ConfigurationJson)
-            .ExternalTargetRootBindings
-            .Concat(WorkspaceExecutionAuditContext.Current?.ExternalTargetRootBindings ?? [])
-            .ToArray();
+            .ExternalTargetRootBindings;
+        var auditScope = WorkspaceExecutionAuditContext.Current;
+        var invocationBindings = auditScope?.ExternalTargetRootBindings ?? [];
+        var bindings = auditScope?.InvocationExternalTargetScopeIsAuthoritative == true
+            ? invocationBindings.ToArray()
+            : configuredBindings.Concat(invocationBindings).ToArray();
         var conflicts = bindings
             .GroupBy(binding => binding.RootId, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(group => group.Distinct().Count() > 1);

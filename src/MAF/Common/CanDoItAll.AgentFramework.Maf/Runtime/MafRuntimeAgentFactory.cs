@@ -507,7 +507,8 @@ internal sealed class MafRuntimeAgentFactory
             var externalTargetAccess = EffectiveExternalTargetAccessResolver.Resolve(
                 configuredWorkspaceAccess,
                 auditScope?.AllowedExternalTargetAliases,
-                auditScope?.ReadOnlyExternalTargetAliases);
+                auditScope?.ReadOnlyExternalTargetAliases,
+                auditScope?.InvocationExternalTargetScopeIsAuthoritative == true);
             var scriptSideEffectManifestJson = MafScriptPolicyInspectionService.TryGetStringArgument(
                 invocationArguments,
                 GovernedScriptSideEffectManifest.ArgumentName) ?? string.Empty;

@@ -41,7 +41,7 @@ public static partial class PlaywrightMcpLaunchResolver
         EnsureManagedPathHasNoReparsePoints(fullWorkspaceRoot, versionRoot);
         var cliPath = ResolveCliPath(versionRoot);
         var nodePath = new WorkspaceExecutableLocator().ResolveExecutablePath(["node"], workspaceRoot);
-        if (!await HasValidEvidenceAsync(
+        if (!await ValidateOrRefreshEvidenceAsync(
                 versionRoot,
                 packageSpec,
                 version,
@@ -68,7 +68,7 @@ public static partial class PlaywrightMcpLaunchResolver
                 .ConfigureAwait(false);
         }
 
-        if (!await HasValidEvidenceAsync(
+        if (!await ValidateOrRefreshEvidenceAsync(
                 versionRoot,
                 packageSpec,
                 version,
@@ -186,7 +186,7 @@ public static partial class PlaywrightMcpLaunchResolver
             catch (IOException)
             {
                 if (!Directory.Exists(versionRoot) ||
-                    !await HasValidEvidenceAsync(
+                    !await ValidateOrRefreshEvidenceAsync(
                             versionRoot,
                             packageSpec,
                             version,
@@ -295,14 +295,44 @@ public static partial class PlaywrightMcpLaunchResolver
             nodeHash,
             nodeMode,
             contentTreeHash);
-        await File.WriteAllTextAsync(
-                Path.Combine(versionRoot, EvidenceFileName),
-                JsonSerializer.Serialize(evidence),
+        await WriteEvidenceFileAtomicallyAsync(
+                versionRoot,
+                evidence,
                 cancellationToken)
             .ConfigureAwait(false);
     }
 
-    private static async Task<bool> HasValidEvidenceAsync(
+    private static async Task WriteEvidenceFileAtomicallyAsync(
+        string versionRoot,
+        InstallEvidence evidence,
+        CancellationToken cancellationToken)
+    {
+        var parentRoot = Directory.GetParent(versionRoot)?.FullName
+            ?? throw new InvalidOperationException(
+                "The managed Playwright MCP version root has no parent directory.");
+        var temporaryEvidencePath = Path.Combine(
+            parentRoot,
+            $".{Path.GetFileName(versionRoot)}-evidence-{Guid.NewGuid():N}.tmp");
+        var evidencePath = Path.Combine(versionRoot, EvidenceFileName);
+        try
+        {
+            await File.WriteAllTextAsync(
+                    temporaryEvidencePath,
+                    JsonSerializer.Serialize(evidence),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            File.Move(temporaryEvidencePath, evidencePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryEvidencePath))
+            {
+                File.Delete(temporaryEvidencePath);
+            }
+        }
+    }
+
+    private static async Task<bool> ValidateOrRefreshEvidenceAsync(
         string versionRoot,
         string packageSpec,
         string version,
@@ -349,31 +379,36 @@ public static partial class PlaywrightMcpLaunchResolver
                 return false;
             }
 
-            await using var nodeStream = File.OpenRead(nodePath);
-            var nodeHash = Convert.ToHexString(
-                await SHA256.HashDataAsync(nodeStream, cancellationToken).ConfigureAwait(false));
-            if (!string.Equals(nodeHash, evidence.NodeExecutableSha256, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-
+            var contentTreeHash = await ComputeContentTreeSha256Async(
+                    versionRoot,
+                    cancellationToken)
+                .ConfigureAwait(false);
             if (!string.Equals(
-                    GetModeIdentity(nodePath),
-                    evidence.NodeExecutableMode,
+                    contentTreeHash,
+                    evidence.ContentTreeSha256,
                     StringComparison.Ordinal))
             {
                 return false;
             }
 
-            var contentTreeHash = await ComputeContentTreeSha256Async(
+            await using var nodeStream = File.OpenRead(nodePath);
+            var nodeHash = Convert.ToHexString(
+                await SHA256.HashDataAsync(nodeStream, cancellationToken).ConfigureAwait(false));
+            var nodeMode = GetModeIdentity(nodePath);
+            if (string.Equals(nodeHash, evidence.NodeExecutableSha256, StringComparison.Ordinal) &&
+                string.Equals(nodeMode, evidence.NodeExecutableMode, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            await WriteEvidenceAsync(
                     versionRoot,
+                    packageSpec,
+                    version,
+                    nodePath,
                     cancellationToken)
                 .ConfigureAwait(false);
-            return string.Equals(
-                contentTreeHash,
-                evidence.ContentTreeSha256,
-                StringComparison.Ordinal);
+            return true;
         }
         catch (JsonException)
         {
