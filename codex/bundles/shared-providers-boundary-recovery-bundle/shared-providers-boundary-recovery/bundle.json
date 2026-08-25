@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "shared-providers-boundary-recovery",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "providers-shared",
+  "auditedHead": "fdf1ff9702c376ad0ffd101a34d6bf542c9857d2",
+  "implementationCommit": "fdf1ff9702c376ad0ffd101a34d6bf542c9857d2",
+  "modelProfile": "codex-gpt-5.6-xhigh",
+  "dockerAllowed": false,
+  "canonicalOwnerProject": "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement",
+  "subbundles": [
+    "BR00-freeze-and-characterize",
+    "BR01-create-provider-management-boundary",
+    "BR02-extract-canonical-provider-control-plane",
+    "BR03-relocate-shared-provider-control-plane",
+    "BR04-unify-provider-runtime",
+    "BR05-rewire-ui-api-composition-and-transfer",
+    "BR06-preserve-persistence-and-cleanup",
+    "BR07-architecture-guards-and-focused-gates",
+    "BR08-handoff-to-original-sb07"
+  ],
+  "lockedCompatibility": {
+    "publicRoutes": true,
+    "wireContracts": true,
+    "physicalTableNames": true,
+    "persistedIds": true,
+    "secretReferences": true
+  },
+  "forbiddenCanonicalOwner": "CanDoItAll.Modules.Workspace",
+  "auditedTree": "ca9681db8764fc14301d9ab0277cf97df711b02b"
+}
