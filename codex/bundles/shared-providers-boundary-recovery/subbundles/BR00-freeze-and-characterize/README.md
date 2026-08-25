@@ -55,6 +55,13 @@ When a finding is no longer true because the branch changed, record the exact ne
 
 No restore, build, test, EF, Docker, or package operation is required.
 
+## Proof tier and selection
+
+- Proof tier: Standard.
+- Owning check: the inventory guard above, expected to exit zero and create the baseline JSON.
+- Automated tests: N/A because BR00 changes no production behavior.
+- Broad gate: not authorized or required; no production contract changes in BR00.
+
 ## Commit
 
 `BR00: characterize provider boundary baseline`

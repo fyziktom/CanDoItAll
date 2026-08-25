@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -85,14 +86,21 @@ def run_git(repo: Path, *args: str) -> str:
 def iter_source_files(root: Path) -> Iterable[Path]:
     if not root.exists():
         return []
-    return (
-        path
-        for path in root.rglob("*")
-        if path.is_file()
-        and path.suffix in SOURCE_SUFFIXES
-        and "/obj/" not in path.as_posix()
-        and "/bin/" not in path.as_posix()
-    )
+
+    def walk() -> Iterable[Path]:
+        for directory, child_directories, file_names in os.walk(root, onerror=lambda _: None):
+            child_directories[:] = [
+                name
+                for name in child_directories
+                if name not in {"artifacts", "bin", "obj"}
+            ]
+            directory_path = Path(directory)
+            for file_name in file_names:
+                path = directory_path / file_name
+                if path.suffix in SOURCE_SUFFIXES:
+                    yield path
+
+    return walk()
 
 
 def read_text(path: Path) -> str:
