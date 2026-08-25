@@ -43,6 +43,15 @@ Create the new outer AgentFramework ProviderManagement project and enforce its z
 - run the new architecture test only
 - `git diff --check`
 
+## Proof tier and test selection
+
+- Proof tier: Standard.
+- Test project: `tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj`.
+- Filter: exact `FullyQualifiedName=CanDoItAll.Tests.Unit.ProviderManagementBoundaryTests.Provider_management_project_has_no_outer_feature_dependency`.
+- Expected discovery: exactly 1 test.
+- Invalidation keys: ProviderManagement `.csproj`/source, `CanDoItAll.slnx`, Composition project references, and `ModuleAssemblies.All`.
+- Broad gate: not authorized or required; the new boundary has no application behavior.
+
 ## Commit
 
 `BR01: create provider management boundary`
