@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\..\src\Integration\CanDoItAll.SharedProviders.Abstractions\CanDoItAll.SharedProviders.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Integration\CanDoItAll.SharedProviders.Http\CanDoItAll.SharedProviders.Http.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />

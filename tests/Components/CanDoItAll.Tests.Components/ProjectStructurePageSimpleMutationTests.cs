@@ -402,12 +402,12 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
-            dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(new CanDoItAll.Modules.Workspace.ProviderProfile
+            dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>().Add(new CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile
             {
                 Id = providerId,
                 Name = "OpenAI image generation",
-                ProviderKind = CanDoItAll.Modules.Workspace.ProviderKind.OpenAi,
-                ConnectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                ProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind.OpenAi,
+                ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
                 ConfigSchemaVersion = "1.0",
                 BaseUrl = "https://api.openai.com/v1",
                 DefaultModel = "gpt-image-1-mini",
@@ -419,7 +419,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 SupportsVision = false,
                 ExtraSettingsJson = JsonSerializer.Serialize(new
                 {
-                    connectorPluginKey = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter.PluginKey,
+                    connectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
                     configSchemaVersion = "1.0",
                     timeoutSeconds = 45,
                     providerTransport = ProviderTransportKind.Responses.ToString(),

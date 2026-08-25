@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Security.Abstractions;
@@ -1084,7 +1085,7 @@ public sealed class SharedProviderSourceSyncIntegrationTests
     }
 
     private sealed class RecordingProfileObserver(SharedProviderDbContextFactory factory)
-        : IWorkspaceProviderProfileCommitObserver
+        : IProviderProfileCommitObserver
     {
         private readonly List<Guid> savedProviderIds = [];
         private readonly List<IReadOnlyList<ObservedProfileConfiguration>> committedProfileSets = [];

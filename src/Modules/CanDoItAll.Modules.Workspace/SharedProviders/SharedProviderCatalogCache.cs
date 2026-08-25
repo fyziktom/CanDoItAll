@@ -70,7 +70,7 @@ internal sealed class SharedProviderCatalogPublicationCommitObserver(
 
 internal sealed class SharedProviderCatalogProfileCommitObserver(
     SharedProviderCatalogCache cache)
-    : IWorkspaceProviderProfileCommitObserver
+    : IProviderProfileCommitObserver
 {
     public Task ProviderSavedAsync(
         Guid providerId,

@@ -2,28 +2,14 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Globalization;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Modules.Workspace;
-
-public sealed record ProviderExecutionRequest(
-    Guid ProviderProfileId,
-    string Prompt,
-    string? ModelOverride = null,
-    string OutputFormat = "Markdown",
-    bool ContainsSensitiveContent = false);
-
-public sealed record ProviderExecutionResponse(
-    string ProviderName,
-    string Model,
-    string OutputText,
-    string OutputFormat,
-    bool ContainsWarnings,
-    string? WarningSummary = null);
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed record ProviderModelPricingDiscoveryResult(
     IReadOnlyList<ProviderDiscoveredModelPrice> Models,
@@ -42,20 +28,21 @@ public static class ProviderConnectorFieldKeys
     public const string ComfyUiPollIntervalMilliseconds = "pollIntervalMilliseconds";
 }
 
-public interface IProviderAdapter : IConnectorPlugin
+// Temporary compatibility implementation; BR04 removes direct provider inference adapters.
+internal interface IProviderAdapter : IConnectorPlugin
 {
     ProviderKind? LegacyProviderKind { get; }
 
-    Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default);
+    Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default);
 
-    Task<Result<ProviderExecutionResponse>> SendAsync(
+    Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default);
 }
 
-public interface IProviderModelPricingSource
+internal interface IProviderModelPricingSource
 {
     Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
         ProviderProfile profile,
@@ -63,7 +50,9 @@ public interface IProviderModelPricingSource
         CancellationToken cancellationToken = default);
 }
 
-public sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) : IConnectorManifestSource
+internal sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) :
+    IConnectorManifestSource,
+    IProviderManifestCatalog
 {
     private readonly IReadOnlyDictionary<string, IProviderAdapter> adaptersByKey =
         adapters.ToDictionary(adapter => adapter.Manifest.PluginKey, StringComparer.OrdinalIgnoreCase);
@@ -133,6 +122,11 @@ public sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) : I
             .OrderBy(manifest => manifest.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    public ConnectorPluginManifest? ResolveManifest(
+        string? connectorPluginKey,
+        ProviderKind? legacyProviderKind = null)
+        => Resolve(connectorPluginKey, legacyProviderKind)?.Manifest;
 }
 
 /* codex-capsule
@@ -143,13 +137,13 @@ owns: openai-health, openai-send
 deps: IHttpClientFactory
 risks: api-shape-drift, wrong-base-url
 tests: unit:ProviderAdapterTests
-inputs: ProviderProfile, ProviderExecutionRequest
-outputs: ProviderExecutionResponse
+inputs: ProviderProfile, ProviderPromptExecutionRequest
+outputs: ProviderPromptExecutionResponse
 */
-public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
+internal sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
-    public const string PluginKey = "provider.openai";
-    public const string DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
+    public const string PluginKey = ProviderConnectorKeys.OpenAi;
+    public const string DefaultModel = ProviderConnectorDefaults.OpenAiModel;
     private static readonly string[] ModelIdPropertyNames = ["id", "model"];
     private static readonly string[] InputPricePropertyNames = ["inputPerMillionTokensUsd", "input_per_million_tokens_usd"];
     private static readonly string[] CachedInputPricePropertyNames = ["cachedInputPerMillionTokensUsd", "cached_input_per_million_tokens_usd"];
@@ -178,27 +172,27 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
 
     public ProviderKind? LegacyProviderKind => ProviderKind.OpenAi;
 
-    public async Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
+    public async Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(secretValue))
         {
-            return new ProviderHealthResult(false, "OpenAI profiles require an API key secret.");
+            return new ProviderHealthCheckResult(false, "OpenAI profiles require an API key secret.");
         }
 
         using var client = CreateClient(profile, secretValue);
         using var response = await client.GetAsync(GetModelsUrl(profile.BaseUrl), cancellationToken);
-        return new ProviderHealthResult(response.IsSuccessStatusCode, response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
+        return new ProviderHealthCheckResult(response.IsSuccessStatusCode, response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
     }
 
-    public async Task<Result<ProviderExecutionResponse>> SendAsync(
+    public async Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(secretValue))
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Validation("OpenAI profiles require an API key secret."));
+            return Result<ProviderPromptExecutionResponse>.Failure(Error.Validation("OpenAI profiles require an API key secret."));
         }
 
         using var client = CreateClient(profile, secretValue);
@@ -214,11 +208,11 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
         var payload = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Failure($"OpenAI call failed with HTTP {(int)response.StatusCode}."));
+            return Result<ProviderPromptExecutionResponse>.Failure(Error.Failure($"OpenAI call failed with HTTP {(int)response.StatusCode}."));
         }
 
         var output = TryReadOpenAiOutput(payload);
-        return Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+        return Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
             profile.Name,
             string.IsNullOrWhiteSpace(request.ModelOverride) ? profile.DefaultModel : request.ModelOverride!,
             output,
@@ -449,11 +443,11 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
     }
 }
 
-public sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
+internal sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
 {
-    public const string PluginKey = "provider.scenario-harness";
-    public const string BaseUrl = "scenario://harness";
-    public const string DefaultModel = "scenario-local";
+    public const string PluginKey = ProviderConnectorKeys.ScenarioHarness;
+    public const string BaseUrl = ProviderConnectorDefaults.ScenarioHarnessBaseUrl;
+    public const string DefaultModel = ProviderConnectorDefaults.ScenarioHarnessModel;
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,
@@ -476,7 +470,7 @@ public sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
 
     public ProviderKind? LegacyProviderKind => null;
 
-    public Task<ProviderHealthResult> CheckHealthAsync(
+    public Task<ProviderHealthCheckResult> CheckHealthAsync(
         ProviderProfile profile,
         string? secretValue,
         CancellationToken cancellationToken = default)
@@ -486,22 +480,22 @@ public sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
             ? "Scenario harness provider is available for deterministic proof runs."
             : $"Scenario harness profiles must use '{BaseUrl}'.";
 
-        return Task.FromResult(new ProviderHealthResult(isConfigured, message));
+        return Task.FromResult(new ProviderHealthCheckResult(isConfigured, message));
     }
 
-    public Task<Result<ProviderExecutionResponse>> SendAsync(
+    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
         if (!string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(Result<ProviderExecutionResponse>.Failure(
+            return Task.FromResult(Result<ProviderPromptExecutionResponse>.Failure(
                 Error.Validation($"Scenario harness profiles must use '{BaseUrl}'.")));
         }
 
-        return Task.FromResult(Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+        return Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
             profile.Name,
             string.IsNullOrWhiteSpace(request.ModelOverride) ? ResolveModel(profile) : request.ModelOverride!,
             "Scenario harness provider routes execution through the integrated AgentFramework runtime. Run SC03, SC04, SC10, or SC11 from the integrated shell instead of a raw provider send.",
@@ -518,11 +512,11 @@ public sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
     }
 }
 
-public sealed class ProcessMockProviderAdapter : IProviderAdapter
+internal sealed class ProcessMockProviderAdapter : IProviderAdapter
 {
-    public const string PluginKey = "provider.process-mock";
-    public const string BaseUrl = "process-mock://agents";
-    public const string DefaultModel = "process-mock-local";
+    public const string PluginKey = ProviderConnectorKeys.ProcessMock;
+    public const string BaseUrl = ProviderConnectorDefaults.ProcessMockBaseUrl;
+    public const string DefaultModel = ProviderConnectorDefaults.ProcessMockModel;
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,
@@ -545,7 +539,7 @@ public sealed class ProcessMockProviderAdapter : IProviderAdapter
 
     public ProviderKind? LegacyProviderKind => null;
 
-    public Task<ProviderHealthResult> CheckHealthAsync(
+    public Task<ProviderHealthCheckResult> CheckHealthAsync(
         ProviderProfile profile,
         string? secretValue,
         CancellationToken cancellationToken = default)
@@ -555,22 +549,22 @@ public sealed class ProcessMockProviderAdapter : IProviderAdapter
             ? "Process mock provider is available for deterministic process automation flow tuning."
             : $"Process mock profiles must use '{BaseUrl}'.";
 
-        return Task.FromResult(new ProviderHealthResult(isConfigured, message));
+        return Task.FromResult(new ProviderHealthCheckResult(isConfigured, message));
     }
 
-    public Task<Result<ProviderExecutionResponse>> SendAsync(
+    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
         if (!string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(Result<ProviderExecutionResponse>.Failure(
+            return Task.FromResult(Result<ProviderPromptExecutionResponse>.Failure(
                 Error.Validation($"Process mock profiles must use '{BaseUrl}'.")));
         }
 
-        return Task.FromResult(Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+        return Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
             profile.Name,
             string.IsNullOrWhiteSpace(request.ModelOverride) ? ResolveModel(profile) : request.ModelOverride!,
             "Process mock provider routes execution through the AgentFramework process mock runtime. Use role-specific process mock agents from a process run instead of raw provider send.",
@@ -587,10 +581,10 @@ public sealed class ProcessMockProviderAdapter : IProviderAdapter
     }
 }
 
-public sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
+internal sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
 {
-    public const string PluginKey = "provider.comfyui.local";
-    public const string DefaultModel = "comfyui-workflow";
+    public const string PluginKey = ProviderConnectorKeys.ComfyUi;
+    public const string DefaultModel = ProviderConnectorDefaults.ComfyUiModel;
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,
@@ -619,7 +613,7 @@ public sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactory)
 
     public ProviderKind? LegacyProviderKind => null;
 
-    public async Task<ProviderHealthResult> CheckHealthAsync(
+    public async Task<ProviderHealthCheckResult> CheckHealthAsync(
         ProviderProfile profile,
         string? secretValue,
         CancellationToken cancellationToken = default)
@@ -629,30 +623,30 @@ public sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactory)
         try
         {
             using var response = await client.GetAsync($"{profile.BaseUrl.TrimEnd('/')}/system_stats", cancellationToken);
-            return new ProviderHealthResult(
+            return new ProviderHealthCheckResult(
                 response.IsSuccessStatusCode,
                 response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return new ProviderHealthResult(false, $"ComfyUI health check failed: {exception.Message}");
+            return new ProviderHealthCheckResult(false, $"ComfyUI health check failed: {exception.Message}");
         }
     }
 
-    public Task<Result<ProviderExecutionResponse>> SendAsync(
+    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(Result<ProviderExecutionResponse>.Failure(
+        return Task.FromResult(Result<ProviderPromptExecutionResponse>.Failure(
             Error.Validation("ComfyUI provider profiles are image-generation only and cannot run generic chat prompt execution.")));
     }
 }
 
-public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
+internal sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
-    public const string PluginKey = "provider.ollama.local";
+    public const string PluginKey = ProviderConnectorKeys.Ollama;
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,
@@ -675,16 +669,16 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
 
     public ProviderKind? LegacyProviderKind => ProviderKind.OllamaLocal;
 
-    public async Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
+    public async Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
     {
         using var client = CreateClient(profile);
         using var response = await client.GetAsync($"{profile.BaseUrl.TrimEnd('/')}/api/tags", cancellationToken);
-        return new ProviderHealthResult(response.IsSuccessStatusCode, response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
+        return new ProviderHealthCheckResult(response.IsSuccessStatusCode, response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
     }
 
-    public async Task<Result<ProviderExecutionResponse>> SendAsync(
+    public async Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default)
     {
@@ -702,7 +696,7 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
         var payload = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Failure($"Ollama call failed with HTTP {(int)response.StatusCode}."));
+            return Result<ProviderPromptExecutionResponse>.Failure(Error.Failure($"Ollama call failed with HTTP {(int)response.StatusCode}."));
         }
 
         using var document = JsonDocument.Parse(payload);
@@ -710,7 +704,7 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
             ? responseElement.GetString() ?? string.Empty
             : payload;
 
-        return Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+        return Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
             profile.Name,
             string.IsNullOrWhiteSpace(request.ModelOverride) ? profile.DefaultModel : request.ModelOverride!,
             output,
@@ -807,9 +801,9 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
     }
 }
 
-public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
+internal sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
-    public const string PluginKey = "provider.ollama.remote";
+    public const string PluginKey = ProviderConnectorKeys.OllamaRemote;
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,
@@ -834,12 +828,12 @@ public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFac
 
     public ProviderKind? LegacyProviderKind => ProviderKind.OllamaRemote;
 
-    public Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
+    public Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
         => _inner.CheckHealthAsync(profile, secretValue, cancellationToken);
 
-    public Task<Result<ProviderExecutionResponse>> SendAsync(
+    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
         ProviderProfile profile,
-        ProviderExecutionRequest request,
+        ProviderPromptExecutionRequest request,
         string? secretValue,
         CancellationToken cancellationToken = default)
         => _inner.SendAsync(profile, request, secretValue, cancellationToken);
@@ -859,16 +853,6 @@ owns: profile-resolution, adapter-dispatch, prompt-usage-send-boundary
 deps: AppDbContext, ProviderRegistry, SecretService, IActivityStream
 risks: missing-secret, unsupported-provider
 tests: unit:ProviderExecutionServiceTests
-inputs: ProviderExecutionRequest
-outputs: ProviderExecutionResponse
+inputs: ProviderPromptExecutionRequest
+outputs: ProviderPromptExecutionResponse
 */
-public sealed class ProviderExecutionService(
-    IProviderRuntimeGateway providerRuntimeGateway)
-{
-    public Task<Result<ProviderExecutionResponse>> SendAsync(ProviderExecutionRequest request, CancellationToken cancellationToken = default)
-    {
-        return providerRuntimeGateway.SendAsync(request, cancellationToken);
-    }
-}
-
-

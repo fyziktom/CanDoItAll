@@ -3,15 +3,13 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
-using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CanDoItAll.Modules.AgentFramework;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
 public enum ProviderCatalogProjectionOperationKind
 {
@@ -38,16 +36,17 @@ public sealed class ProviderCatalogProjectionException(
     public string RepairAction { get; } = repairAction;
 }
 
-internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
+internal sealed class DatabaseProviderProfileRegistry(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ISandboxWorkspaceStore store,
     ProviderRegistry providerRegistry,
     IProviderProfileService providerProfileService,
-    WorkspaceAgentProviderProfileMapper providerMapper,
+    ProviderProfileMapper providerMapper,
     IProviderRuntimeProfileSnapshotLoader runtimeProfileLoader,
-    IEnumerable<IWorkspaceProviderProfileCommitObserver>
+    IEnumerable<IProviderProfileDeletionGuard> providerProfileDeletionGuards,
+    IEnumerable<IProviderProfileCommitObserver>
         providerProfileCommitObservers,
-    ILogger<WorkspaceBackedAgentProviderProfileRegistry> logger) :
+    ILogger<DatabaseProviderProfileRegistry> logger) :
     IProviderProfileRegistry
 {
     public async Task<IReadOnlyList<AgentFrameworkProviderProfile>> ListProvidersAsync(
@@ -185,7 +184,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             normalizedEditor,
             currentProfile);
         var defaultModel = string.IsNullOrWhiteSpace(capabilityProfile.DefaultModel)
-            ? WorkspaceAgentProviderProfileMapper.ResolveDefaultModel(
+            ? ProviderProfileMapper.ResolveDefaultModel(
                 providerAdapter.Manifest.PluginKey)
             : capabilityProfile.DefaultModel;
         capabilityProfile = capabilityProfile with
@@ -197,13 +196,13 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 capabilityProfile.ModelPrices)
         };
         var featureMatrix = providerProfileService.ResolveFeatureMatrix(capabilityProfile);
-        var entity = current ?? new WorkspaceProviderProfile
+        var entity = current ?? new ProviderProfile
         {
             Id = capabilityProfile.Id
         };
         if (current is null)
         {
-            dbContext.Set<WorkspaceProviderProfile>().Add(entity);
+            dbContext.Set<ProviderProfile>().Add(entity);
         }
 
         entity.Name = capabilityProfile.Name;
@@ -220,7 +219,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         entity.SupportsStructuredOutput = featureMatrix.SupportsStructuredOutput;
         entity.SupportsVision = featureMatrix.SupportsVision;
         entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
-            AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
+            ProviderMetadata.BuildExtraSettingsJson(
                 capabilityProfile.ConfigurationJson,
                 providerAdapter.Manifest.PluginKey,
                 configSchemaVersion,
@@ -257,14 +256,17 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<ProviderProfile>()
             .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
         if (provider is not null)
         {
-            await SharedProviderProfileDeletionPolicy.EnsureCanDeleteAsync(
-                dbContext,
-                provider.Id,
-                cancellationToken);
+            foreach (var deletionGuard in providerProfileDeletionGuards)
+            {
+                await deletionGuard.EnsureCanDeleteAsync(
+                    dbContext,
+                    provider.Id,
+                    cancellationToken);
+            }
             dbContext.Remove(provider);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
@@ -294,7 +296,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var updated = update(current);
         var editor = providerProfileService.CreateEditor(updated);
         editor.ConfigurationJson =
-            AgentFrameworkProviderMetadata.WriteThinkingEffortCapabilities(
+            ProviderMetadata.WriteThinkingEffortCapabilities(
                 editor.ConfigurationJson,
                 updated.ModelThinkingEffortCapabilities);
         await SaveProviderAsync(editor, cancellationToken);
@@ -466,11 +468,11 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
     private static string ResolveConnectorPluginKeyForSave(
         AgentFrameworkProviderProfileEditorModel model,
-        WorkspaceProviderProfile? current)
+        ProviderProfile? current)
     {
         try
         {
-            return AgentFrameworkProviderMetadata.ResolveConnectorPluginKey(
+            return ProviderMetadata.ResolveConnectorPluginKey(
                 model,
                 current);
         }
@@ -483,12 +485,12 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
 
     private static string ResolveConfigSchemaVersionForSave(
         AgentFrameworkProviderProfileEditorModel model,
-        WorkspaceProviderProfile? current,
+        ProviderProfile? current,
         string defaultVersion)
     {
         try
         {
-            return AgentFrameworkProviderMetadata.ResolveConfigSchemaVersion(
+            return ProviderMetadata.ResolveConfigSchemaVersion(
                 model,
                 current,
                 defaultVersion);
@@ -505,7 +507,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         try
         {
-            return AgentFrameworkProviderMetadata.ResolveSecretRecordId(model);
+            return ProviderMetadata.ResolveSecretRecordId(model);
         }
         catch (InvalidOperationException)
         {
@@ -520,7 +522,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         try
         {
-            return AgentFrameworkProviderMetadata.ResolveTimeoutSeconds(
+            return ProviderMetadata.ResolveTimeoutSeconds(
                 model,
                 fallbackValue);
         }
@@ -537,9 +539,9 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     {
         try
         {
-            return AgentFrameworkProviderMetadata.HasThinkingEffortCapabilities(
+            return ProviderMetadata.HasThinkingEffortCapabilities(
                     model.ConfigurationJson)
-                ? AgentFrameworkProviderMetadata.ReadThinkingEffortCapabilities(
+                ? ProviderMetadata.ReadThinkingEffortCapabilities(
                     model.ConfigurationJson)
                 : model.ModelThinkingEffortCapabilities ?? [];
         }

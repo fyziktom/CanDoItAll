@@ -54,6 +54,22 @@ A transitional direct execution implementation may not remain in Workspace; if s
 
 ## Focused tests
 
+Proof tier: Behavioral
+
+Selected owning tests:
+
+- `ProviderCatalogProjectionFailureTests`
+- `ProviderProfileSaveValidationTests`
+- `ProviderRuntimeProfileSnapshotServiceTests`
+- `ProviderManagementBoundaryTests`
+- provider database-transfer tests added by this subbundle
+
+The exact test filter and expected discovery count are frozen before the
+focused run after the owning test sources have been updated. The impacted-test
+analyzer is rerun after implementation; any healthy, high-confidence additions
+are included in the frozen checkpoint. The broad non-container unit suite is
+deferred to BR07 as required by the bundle execution contract.
+
 Add/update tests for:
 
 - provider profile CRUD

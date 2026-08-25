@@ -2,16 +2,14 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Workspace;
 
-namespace CanDoItAll.Modules.AgentFramework;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
-internal static class AgentFrameworkProviderMetadata
+public static class ProviderMetadata
 {
     private const string ConnectorPluginKeyPropertyName = "connectorPluginKey";
     private const string ConfigSchemaVersionPropertyName = "configSchemaVersion";
@@ -58,7 +56,7 @@ internal static class AgentFrameworkProviderMetadata
     };
 
     public static string BuildConfigurationJson(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
 
@@ -127,7 +125,7 @@ internal static class AgentFrameworkProviderMetadata
     }
 
     public static IReadOnlyList<string> ReadSuggestedModels(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
         return ReadSuggestedModels(provider.ExtraSettingsJson);
@@ -168,7 +166,7 @@ internal static class AgentFrameworkProviderMetadata
     }
 
     public static IReadOnlyList<string> ReadTags(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
         return ReadTags(provider.ExtraSettingsJson);
@@ -194,7 +192,7 @@ internal static class AgentFrameworkProviderMetadata
     }
 
     public static ProviderTransportKind ResolveTransport(
-        WorkspaceProviderProfile provider,
+        ProviderProfile provider,
         ProviderTransportKind fallback)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -205,7 +203,7 @@ internal static class AgentFrameworkProviderMetadata
     }
 
     public static AgentFrameworkProviderKind ResolveProviderKind(
-        WorkspaceProviderProfile provider,
+        ProviderProfile provider,
         AgentFrameworkProviderKind fallback)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -289,7 +287,7 @@ internal static class AgentFrameworkProviderMetadata
     }
 
     public static ProviderProfilePurpose ResolvePurpose(
-        WorkspaceProviderProfile provider,
+        ProviderProfile provider,
         ProviderProfilePurpose fallback)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -345,7 +343,7 @@ internal static class AgentFrameworkProviderMetadata
 
     public static string ResolveConnectorPluginKey(
         AgentFrameworkProviderProfileEditorModel model,
-        WorkspaceProviderProfile? current)
+        ProviderProfile? current)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -408,7 +406,7 @@ internal static class AgentFrameworkProviderMetadata
 
     public static string ResolveConfigSchemaVersion(
         AgentFrameworkProviderProfileEditorModel model,
-        WorkspaceProviderProfile? current,
+        ProviderProfile? current,
         string defaultVersion)
     {
         ArgumentNullException.ThrowIfNull(model);

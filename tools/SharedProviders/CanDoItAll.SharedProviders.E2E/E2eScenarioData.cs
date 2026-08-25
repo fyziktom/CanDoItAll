@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;

@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -20,7 +21,7 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
         await AssertPolicyBlocksAsync(
             SharedProviderProfileReferenceKinds.Publication,
             static (services, providerId) => services
-                .GetRequiredService<WorkspaceService>()
+                .GetRequiredService<IProviderAdministrationService>()
                 .DeleteProviderAsync(providerId));
     }
 
@@ -30,7 +31,7 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
         await AssertPolicyBlocksAsync(
             SharedProviderProfileReferenceKinds.Import,
             static (services, providerId) => services
-                .GetRequiredService<WorkspaceService>()
+                .GetRequiredService<IProviderAdministrationService>()
                 .DeleteProviderAsync(providerId));
     }
 
@@ -80,7 +81,8 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
         await using var sourceDbContext = await dbContextFactory.CreateDbContextAsync();
         await using var targetDbContext = await dbContextFactory.CreateDbContextAsync();
         var transferContext = CreateTransferContext(sourceDbContext, targetDbContext);
-        var transferHandler = new AiProvidersDatabaseTransferHandler();
+        var transferHandler = new AiProvidersDatabaseTransferHandler(
+            [new SharedProviderDatabaseTransferGuard()]);
         var preview = await transferHandler.PreviewAsync(transferContext);
         Assert.False(preview.IsAvailable);
         Assert.Contains(
@@ -112,13 +114,14 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
         await using (var targetDbContext = await dbContextFactory.CreateDbContextAsync())
         {
             var transferContext = CreateTransferContext(sourceDbContext, targetDbContext);
-            var preview = await new AiProvidersDatabaseTransferHandler().PreviewAsync(transferContext);
+            var preview = await new AiProvidersDatabaseTransferHandler(
+                [new SharedProviderDatabaseTransferGuard()]).PreviewAsync(transferContext);
             Assert.True(preview.IsAvailable);
             Assert.Null(preview.Warning);
         }
 
         await scope.ServiceProvider
-            .GetRequiredService<WorkspaceService>()
+            .GetRequiredService<IProviderAdministrationService>()
             .DeleteProviderAsync(workspaceProviderId);
         await scope.ServiceProvider
             .GetRequiredService<IProviderProfileRegistry>()

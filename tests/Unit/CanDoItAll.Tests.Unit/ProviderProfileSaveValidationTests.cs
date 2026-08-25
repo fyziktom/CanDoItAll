@@ -7,6 +7,8 @@ using CanDoItAll.Modules.AgentFramework;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
+
 public sealed class ProviderProfileSaveValidationTests
 {
     [Theory]
@@ -97,7 +99,7 @@ public sealed class ProviderProfileSaveValidationTests
         editor.ConfigurationJson = configurationJson;
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            AgentFrameworkProviderMetadata.ResolveConnectorPluginKey(
+            ProviderMetadata.ResolveConnectorPluginKey(
                 editor,
                 current: null));
 
@@ -126,7 +128,7 @@ public sealed class ProviderProfileSaveValidationTests
             }
             """;
 
-        var result = AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
+        var result = ProviderMetadata.BuildExtraSettingsJson(
             configurationJson,
             "provider.openai",
             "1",
@@ -199,7 +201,7 @@ public sealed class ProviderProfileSaveValidationTests
                 .ToArray());
         Assert.True(document.RootElement.GetProperty("customSetting").GetBoolean());
 
-        var emptySuggestedModelsResult = AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
+        var emptySuggestedModelsResult = ProviderMetadata.BuildExtraSettingsJson(
             configurationJson,
             "provider.openai",
             "1",
@@ -226,7 +228,7 @@ public sealed class ProviderProfileSaveValidationTests
         string configurationJson)
     {
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            AgentFrameworkProviderMetadata.ReadSuggestedModels(configurationJson));
+            ProviderMetadata.ReadSuggestedModels(configurationJson));
 
         Assert.Contains("suggestedModels", exception.Message, StringComparison.Ordinal);
     }
@@ -243,7 +245,7 @@ public sealed class ProviderProfileSaveValidationTests
             $"secret:{inlineSecretRecordId:D}";
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            AgentFrameworkProviderMetadata.ResolveSecretRecordId(editor));
+            ProviderMetadata.ResolveSecretRecordId(editor));
 
         Assert.Contains(
             "conflicting explicit secret record references",
@@ -255,7 +257,7 @@ public sealed class ProviderProfileSaveValidationTests
     public void Metadata_read_path_does_not_hide_corrupt_persisted_json()
     {
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            AgentFrameworkProviderMetadata.ReadTags("[]"));
+            ProviderMetadata.ReadTags("[]"));
 
         Assert.Contains(
             "JSON object",

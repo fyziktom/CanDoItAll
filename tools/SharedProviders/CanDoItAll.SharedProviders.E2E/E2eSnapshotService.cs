@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;

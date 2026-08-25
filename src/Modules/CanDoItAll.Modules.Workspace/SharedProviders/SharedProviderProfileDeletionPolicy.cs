@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.Workspace;
@@ -47,9 +48,10 @@ public sealed class SharedProviderProfileDeletionBlockedException : InvalidOpera
     }
 }
 
-public static class SharedProviderProfileDeletionPolicy
+public sealed class SharedProviderProfileDeletionGuard :
+    IProviderProfileDeletionGuard
 {
-    public static async Task EnsureCanDeleteAsync(
+    public async Task EnsureCanDeleteAsync(
         AppDbContext dbContext,
         Guid providerProfileId,
         CancellationToken cancellationToken)

@@ -4,9 +4,9 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel.Configuration;
 
-using WorkspaceOllamaProviderAdapter = CanDoItAll.Modules.Workspace.OllamaProviderAdapter;
-using WorkspaceOpenAiProviderAdapter = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceOllamaProviderAdapter = CanDoItAll.Modules.AgentFramework.ProviderManagement.OllamaProviderAdapter;
+using WorkspaceOpenAiProviderAdapter = CanDoItAll.Modules.AgentFramework.ProviderManagement.OpenAiProviderAdapter;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 

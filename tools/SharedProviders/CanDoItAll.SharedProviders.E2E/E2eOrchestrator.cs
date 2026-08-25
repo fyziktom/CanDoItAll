@@ -10,13 +10,14 @@ namespace CanDoItAll.SharedProviders.E2E;
 using AgentProviderEditor = CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
 using AgentProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
+using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
 
 internal sealed class E2eOrchestrator(
     E2eOptions options,
     E2eArtifactStore artifacts,
     E2eSnapshotService snapshots,
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
-    WorkspaceService workspaceService,
+    IProviderAdministrationService providerAdministrationService,
     SecretService secretService,
     SharedProviderServiceIdentityStore identityStore,
     SharedProviderPublicationStore publicationStore,
@@ -391,17 +392,17 @@ internal sealed class E2eOrchestrator(
         try
         {
             var providerId = await workspace.SaveProviderAsync(editor, cancellationToken);
-            var workspaceEditor = await workspaceService.GetProviderAsync(
+            var workspaceEditor = await providerAdministrationService.GetProviderAsync(
                 providerId,
                 cancellationToken);
             workspaceEditor.SupportsStructuredOutput = fixture.SupportsStructuredOutput;
-            var capabilityUpdate = await workspaceService.SaveProviderAsync(
+            var capabilityUpdate = await providerAdministrationService.SaveProviderAsync(
                 workspaceEditor,
                 cancellationToken);
             if (capabilityUpdate.IsFailure || capabilityUpdate.Value != providerId)
             {
                 throw new E2eSafeException(
-                    $"Saving provider fixture '{fixture.Id}' capabilities through WorkspaceService failed.");
+                    $"Saving provider fixture '{fixture.Id}' capabilities through provider administration failed.");
             }
 
             return providerId;

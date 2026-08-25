@@ -6,15 +6,25 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-using WorkspaceProviderProfile =
-    CanDoItAll.Modules.Workspace.ProviderProfile;
+using PersistedProviderProfile =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using IProviderProfileCommitObserver =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderProfileCommitObserver;
+using IProviderRuntimeProfileSnapshotLoader =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeProfileSnapshotLoader;
+using ProviderCatalogProjectionException =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderCatalogProjectionException;
+using ProviderCatalogProjectionOperationKind =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderCatalogProjectionOperationKind;
+using SharedProviderProfileOwnershipPolicy =
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderProfileOwnershipPolicy;
 
 internal sealed class SharedProviderCatalogProjectionCommitObserver(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IProviderRuntimeProfileSnapshotLoader runtimeProfileLoader,
     ISandboxWorkspaceCatalogStore catalogStore,
     ILogger<SharedProviderCatalogProjectionCommitObserver> logger) :
-    IWorkspaceProviderProfileCommitObserver
+    IProviderProfileCommitObserver
 {
     public async Task ProviderSavedAsync(
         Guid providerId,
@@ -91,7 +101,7 @@ internal sealed class SharedProviderCatalogProjectionCommitObserver(
         await using var dbContext =
             await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var connectorPluginKey = await dbContext
-            .Set<WorkspaceProviderProfile>()
+            .Set<PersistedProviderProfile>()
             .AsNoTracking()
             .Where(provider => provider.Id == providerId)
             .Select(provider => provider.ConnectorPluginKey)

@@ -7,17 +7,17 @@ namespace CanDoItAll.Modules.Workspace;
 
 public sealed class SharedProviderReconciliationCoordinator
 {
-    public const string ImportedConnectorPluginKey = "provider.candoitall-shared";
+    public const string ImportedConnectorPluginKey = ProviderConnectorKeys.SharedImport;
 
     public const string ImportedConfigurationSchemaVersion = "1.0";
     private readonly IDbContextFactory<AppDbContext> dbContextFactory;
     private readonly IClock clock;
-    private readonly IReadOnlyList<IWorkspaceProviderProfileCommitObserver> providerProfileCommitObservers;
+    private readonly IReadOnlyList<IProviderProfileCommitObserver> providerProfileCommitObservers;
 
     public SharedProviderReconciliationCoordinator(
         IDbContextFactory<AppDbContext> dbContextFactory,
         IClock clock,
-        IEnumerable<IWorkspaceProviderProfileCommitObserver> providerProfileCommitObservers)
+        IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers)
     {
         this.dbContextFactory = dbContextFactory;
         this.clock = clock;

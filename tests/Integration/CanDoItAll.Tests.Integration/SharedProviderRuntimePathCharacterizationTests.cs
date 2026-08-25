@@ -7,6 +7,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
 using OpenAI;
 using OpenAI.Chat;
@@ -16,7 +17,7 @@ namespace CanDoItAll.Tests.Integration;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 #pragma warning disable OPENAI001
 public sealed class SharedProviderRuntimePathCharacterizationTests
@@ -27,7 +28,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         var mapper = CreateMapper();
         var endpoint = "https://relay.example.test/custom/v1";
         var provider = CreateWorkspaceProvider(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             AgentFrameworkProviderKind.OpenAi,
             ProviderTransportKind.Responses,
             ProviderProfilePurpose.Chat,
@@ -99,7 +100,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         var mapper = CreateMapper();
         var endpoint = "https://contoso.openai.azure.com";
         var provider = CreateWorkspaceProvider(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             AgentFrameworkProviderKind.AzureOpenAi,
             ProviderTransportKind.Responses,
             ProviderProfilePurpose.Chat,
@@ -107,7 +108,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
 
         var mapped = mapper.Map(provider);
 
-        Assert.Equal(OpenAiProviderAdapter.PluginKey, provider.ConnectorPluginKey);
+        Assert.Equal(CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi, provider.ConnectorPluginKey);
         Assert.Equal(AgentFrameworkProviderKind.AzureOpenAi, mapped.Kind);
         Assert.Equal(endpoint, mapped.BaseUrl);
     }
@@ -117,7 +118,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     {
         var mapper = CreateMapper();
         var provider = CreateWorkspaceProvider(
-            ComfyUiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.ComfyUi,
             AgentFrameworkProviderKind.ComfyUi,
             ProviderTransportKind.ChatCompletions,
             ProviderProfilePurpose.ImageGeneration,
@@ -150,10 +151,10 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
 
         Assert.Equal(
         [
-            ComfyUiProviderAdapter.PluginKey,
-            OllamaProviderAdapter.PluginKey,
-            OllamaRemoteProviderAdapter.PluginKey,
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.ComfyUi,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.Ollama,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OllamaRemote,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ProcessMockProviderAdapter.PluginKey,
             ScenarioHarnessProviderAdapter.PluginKey
         ], pluginKeys);
@@ -226,7 +227,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         Assert.Equal("Bearer test-key", handler.Authorization);
     }
 
-    private static WorkspaceAgentProviderProfileMapper CreateMapper()
+    private static ProviderProfileMapper CreateMapper()
     {
         var httpClientFactory = new FixedHttpClientFactory();
         var registry = new ProviderRegistry(
@@ -234,7 +235,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
             new OpenAiProviderAdapter(httpClientFactory),
             new ComfyUiProviderAdapter(httpClientFactory)
         ]);
-        return new WorkspaceAgentProviderProfileMapper(registry, new ProviderProfileService());
+        return new ProviderProfileMapper(registry, new ProviderProfileService());
     }
 
     private static CreateResponseOptions CreateResponseOptions(
@@ -281,7 +282,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
             IsEnabled = true,
             SupportsStreaming = true,
             SupportsToolCalling = false,
-            ExtraSettingsJson = AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
+            ExtraSettingsJson = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata.BuildExtraSettingsJson(
                 "{}",
                 connectorPluginKey,
                 "1.0",

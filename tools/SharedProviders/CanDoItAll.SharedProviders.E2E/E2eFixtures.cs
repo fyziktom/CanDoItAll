@@ -5,6 +5,7 @@ using CanDoItAll.Modules.Workspace;
 namespace CanDoItAll.SharedProviders.E2E;
 
 using AgentProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using ProviderConnectorFieldKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorFieldKeys;
 
 internal static class E2eFixtures
 {

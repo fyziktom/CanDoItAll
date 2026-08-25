@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 namespace CanDoItAll.Modules.AgentFramework;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
 internal sealed class SecretStoreAgentProviderCredentialResolver(
     ISecretRuntimeResolver secretResolver,
@@ -107,7 +108,7 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
         }
 
         var secretRecordId =
-            AgentFrameworkProviderMetadata.ResolveSecretRecordId(provider);
+            ProviderMetadata.ResolveSecretRecordId(provider);
         if (secretRecordId.HasValue)
         {
             try

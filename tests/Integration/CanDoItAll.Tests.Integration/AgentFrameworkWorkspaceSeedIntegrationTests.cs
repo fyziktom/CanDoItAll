@@ -8,8 +8,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
@@ -1266,7 +1266,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
-            var provider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            var provider = await dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>()
                 .SingleAsync(item => item.Name == "Local Ollama");
             provider.SupportsStructuredOutput = false;
             await dbContext.SaveChangesAsync();
@@ -1276,7 +1276,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
-            var provider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            var provider = await dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>()
                 .SingleAsync(item => item.Name == "Local Ollama");
             Assert.True(provider.SupportsStructuredOutput);
         }
@@ -1285,7 +1285,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
         {
-            var provider = await dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>()
+            var provider = await dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>()
                 .SingleAsync(item => item.Name == "Local Ollama");
             Assert.True(provider.SupportsStructuredOutput);
         }
@@ -3082,7 +3082,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
         provider.ProviderKind = WorkspaceProviderKind.OllamaRemote;
         provider.ConnectorPluginKey =
-            CanDoItAll.Modules.Workspace.OllamaRemoteProviderAdapter.PluginKey;
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OllamaRemote;
         provider.ConfigSchemaVersion = "customer-v7";
         provider.BaseUrl = "https://customer.example.test/image-api";
         provider.ApiKeySecretId = Guid.Parse("9EFFD604-8A0C-497C-AD48-7FB9BB405EDD");

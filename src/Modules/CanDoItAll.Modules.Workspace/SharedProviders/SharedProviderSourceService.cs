@@ -12,13 +12,13 @@ public sealed class SharedProviderSourceService
 
     private readonly IDbContextFactory<AppDbContext> dbContextFactory;
     private readonly IClock clock;
-    private readonly IReadOnlyList<IWorkspaceProviderProfileCommitObserver> providerProfileCommitObservers;
+    private readonly IReadOnlyList<IProviderProfileCommitObserver> providerProfileCommitObservers;
     private readonly ISharedProviderSourceUriPolicy sourceUriPolicy;
 
     public SharedProviderSourceService(
         IDbContextFactory<AppDbContext> dbContextFactory,
         IClock clock,
-        IEnumerable<IWorkspaceProviderProfileCommitObserver> providerProfileCommitObservers,
+        IEnumerable<IProviderProfileCommitObserver> providerProfileCommitObservers,
         ISharedProviderSourceUriPolicy sourceUriPolicy)
     {
         this.dbContextFactory = dbContextFactory;

@@ -6,6 +6,8 @@ using CanDoItAll.SharedProviders.Abstractions;
 namespace CanDoItAll.Modules.Workspace;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public enum SharedProviderRuntimeProfileAvailability
 {
@@ -107,7 +109,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
     private const int MaximumSourceAddressLength = 2_048;
 
     public SharedProviderRuntimeProfileMaterializationResult Materialize(
-        ProviderProfile? profile,
+        PersistedProviderProfile? profile,
         SharedProviderImport? import,
         SharedProviderSource? source)
     {
@@ -229,7 +231,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
         => SharedProviderRuntimeProfileMaterializationResult.Unavailable(availability);
 
     private static bool HasValidRelationship(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         SharedProviderImport import,
         SharedProviderSource source)
         => profile.Id != Guid.Empty &&
@@ -334,7 +336,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
     }
 
     private static SharedProviderRuntimeProfileAvailability ResolveOperationalAvailability(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         SharedProviderSource source,
         SharedProviderRuntimeProfileAvailability sourceStatusAvailability,
         SharedProviderRuntimeProfileAvailability importAvailability,
@@ -461,7 +463,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
     }
 
     private static bool HasValidProfileCache(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         SharedProviderSource source,
         SharedProviderCatalogPublication publication,
         Uri expectedBaseUri)
@@ -478,7 +480,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
                 { Length: > 0 and <= MaximumProfileNameLength } &&
             profile.Name == profile.Name.Trim() &&
             !profile.Name.Any(char.IsControl) &&
-            profile.ProviderKind == ProviderKind.OpenAi &&
+            profile.ProviderKind == PersistedProviderKind.OpenAi &&
             string.Equals(
                 profile.ConnectorPluginKey,
                 SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,

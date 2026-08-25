@@ -2,7 +2,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class ProviderProfileSecretMutationScope : IAsyncDisposable
 {

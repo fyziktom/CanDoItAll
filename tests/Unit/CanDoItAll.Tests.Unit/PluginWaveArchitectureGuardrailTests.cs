@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
@@ -76,15 +78,15 @@ public sealed class PluginWaveArchitectureGuardrailTests
             new ConnectorAgentExposure("noop", false, true, "noop"),
             null);
 
-        public Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
-            => Task.FromResult(new ProviderHealthResult(true, "Healthy"));
+        public Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProviderHealthCheckResult(true, "Healthy"));
 
-        public Task<Result<ProviderExecutionResponse>> SendAsync(
+        public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
             ProviderProfile profile,
-            ProviderExecutionRequest request,
+            ProviderPromptExecutionRequest request,
             string? secretValue,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+            => Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
                 profile.Name,
                 profile.DefaultModel,
                 string.Empty,

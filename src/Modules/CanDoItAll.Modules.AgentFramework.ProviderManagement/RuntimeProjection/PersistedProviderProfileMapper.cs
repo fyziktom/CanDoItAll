@@ -1,38 +1,34 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Workspace;
-using CanDoItAll.SharedProviders.Abstractions;
-using System.Text.Json;
 
-namespace CanDoItAll.Modules.AgentFramework;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
-internal sealed class WorkspaceAgentProviderProfileMapper(
-    ProviderRegistry providerRegistry,
+public sealed class ProviderProfileMapper(
+    IProviderManifestCatalog providerManifestCatalog,
     IProviderProfileService providerProfileService)
 {
     private const string OpenAiChatCompletionsProviderName =
         "OpenAI chat completions";
 
-    public AgentFrameworkProviderProfile Map(WorkspaceProviderProfile provider)
+    public AgentFrameworkProviderProfile Map(ProviderProfile provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
 
         var legacyMappedKind = ResolveMappedProviderKind(
             provider.ConnectorPluginKey);
-        var mappedKind = AgentFrameworkProviderMetadata.ResolveProviderKind(
+        var mappedKind = ProviderMetadata.ResolveProviderKind(
             provider,
             legacyMappedKind);
         var legacyMappedTransport = ResolveLegacyMappedTransport(provider);
-        var mappedTransport = AgentFrameworkProviderMetadata.ResolveTransport(
+        var mappedTransport = ProviderMetadata.ResolveTransport(
             provider,
             legacyMappedTransport);
         var legacyMappedPurpose = ResolveLegacyMappedPurpose(provider);
-        var mappedPurpose = AgentFrameworkProviderMetadata.ResolvePurpose(
+        var mappedPurpose = ProviderMetadata.ResolvePurpose(
             provider,
             legacyMappedPurpose);
         var preferFrameworkManagedChatHistory =
@@ -55,93 +51,30 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
             provider.SupportsToolCalling,
             preferFrameworkManagedChatHistory,
             supportsBackgroundResponses,
-            AgentFrameworkProviderMetadata.BuildConfigurationJson(provider),
-            providerRegistry.Resolve(provider)?.Manifest.DisplayName ??
+            ProviderMetadata.BuildConfigurationJson(provider),
+            providerManifestCatalog.ResolveManifest(
+                provider.ConnectorPluginKey,
+                provider.ProviderKind)?.DisplayName ??
             provider.ConnectorPluginKey,
             provider.LastHealthStatus ?? "Not checked",
             provider.LastHealthCheckAtUtc,
-            ResolveWorkspaceProviderSuggestedModels(
+            ResolvePersistedProviderSuggestedModels(
                 provider,
                 mappedKind,
                 mappedPurpose),
             mappedPurpose)
         {
             ConnectorPluginKey = provider.ConnectorPluginKey,
-            Tags = ResolveWorkspaceProviderTags(
+            Tags = ResolvePersistedProviderTags(
                 provider,
                 mappedKind,
                 mappedTransport),
             ModelThinkingEffortCapabilities =
-                AgentFrameworkProviderMetadata.ReadThinkingEffortCapabilities(
+                ProviderMetadata.ReadThinkingEffortCapabilities(
                     provider.ExtraSettingsJson)
         };
 
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
-    }
-
-    public AgentFrameworkProviderProfile MapShared(
-        SharedProviderRuntimeProfileMaterializationResult materialization)
-    {
-        ArgumentNullException.ThrowIfNull(materialization);
-        var provider = materialization.Profile
-            ?? throw new InvalidOperationException(
-                "A shared-provider runtime profile cannot be projected from an invalid source graph.");
-        var configurationJson = JsonSerializer.Serialize(new
-        {
-            timeoutSeconds = Math.Max(5, provider.TimeoutSeconds)
-        });
-        var allowedModels = provider.Models
-            .Select(model => model.Id.Value)
-            .ToArray();
-        return new AgentFrameworkProviderProfile(
-            provider.ProviderProfileId,
-            provider.Name,
-            provider.Kind,
-            provider.BaseUri.AbsoluteUri,
-            AgentFrameworkProviderMetadata.CreateSecretReference(
-                provider.SourceTokenSecretReferenceId),
-            provider.DefaultModelId.Value,
-            provider.Transport,
-            materialization.IsAvailable,
-            provider.SupportsStreaming,
-            provider.SupportsTools,
-            provider.PreferFrameworkManagedChatHistory,
-            provider.SupportsBackgroundResponses,
-            configurationJson,
-            "Source-managed CanDoItAll shared provider.",
-            materialization.Availability.ToString(),
-            null,
-            allowedModels,
-            provider.Purpose)
-        {
-            ConnectorPluginKey = provider.ConnectorPluginKey,
-            CredentialBinding = new ProviderCredentialBinding(
-                provider.SourceTokenSecretReferenceId,
-                ProviderCredentialPurpose.SourceAccessToken,
-                ProviderCredentialConsumerKind.Source,
-                provider.SourceId),
-            NetworkAccessPolicy = provider.NetworkPolicy switch
-            {
-                SharedProviderSourceNetworkPolicy.PublicOnly =>
-                    ProviderNetworkAccessPolicy.PublicOnly,
-                SharedProviderSourceNetworkPolicy.AllowPrivateNetwork =>
-                    ProviderNetworkAccessPolicy.AllowPrivateNetwork,
-                _ => throw new InvalidOperationException(
-                    "The shared-provider source network policy is invalid.")
-            },
-            FeatureConstraints = new ProviderFeatureConstraints(
-                provider.SupportsStructuredOutput,
-                provider.SupportsVision,
-                AllowsNativeTools: false,
-                AllowsHostedMcp: false,
-                AllowsServiceManagedHistory: false,
-                AllowsCompaction: false),
-            ModelSelectionConstraint =
-                new ProviderModelSelectionConstraint(allowedModels),
-            IsPrivateProvider = false,
-            ModelPrices = [],
-            Tags = provider.Tags
-        };
     }
 
     public AgentFrameworkProviderProfile CreateRuntimeFallback()
@@ -198,8 +131,8 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     }
 
     private static IReadOnlyList<string>
-        ResolveWorkspaceProviderSuggestedModels(
-            WorkspaceProviderProfile provider,
+        ResolvePersistedProviderSuggestedModels(
+            ProviderProfile provider,
             AgentFrameworkProviderKind mappedKind,
             ProviderProfilePurpose mappedPurpose)
     {
@@ -208,7 +141,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
                 ? []
                 : [provider.DefaultModel.Trim()];
         var persistedModels =
-            AgentFrameworkProviderMetadata.ReadSuggestedModels(provider);
+            ProviderMetadata.ReadSuggestedModels(provider);
         if (provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey ||
             mappedKind != AgentFrameworkProviderKind.OpenAi ||
             mappedPurpose != ProviderProfilePurpose.Chat)
@@ -228,12 +161,12 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
             .ToList();
     }
 
-    private static IReadOnlyList<string> ResolveWorkspaceProviderTags(
-        WorkspaceProviderProfile provider,
+    private static IReadOnlyList<string> ResolvePersistedProviderTags(
+        ProviderProfile provider,
         AgentFrameworkProviderKind mappedKind,
         ProviderTransportKind mappedTransport)
     {
-        var storedTags = AgentFrameworkProviderMetadata.ReadTags(provider);
+        var storedTags = ProviderMetadata.ReadTags(provider);
         if (storedTags.Count > 0)
         {
             return storedTags;
@@ -290,7 +223,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     }
 
     private static ProviderTransportKind ResolveLegacyMappedTransport(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         return provider.ConnectorPluginKey switch
         {
@@ -314,7 +247,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     }
 
     private static ProviderProfilePurpose ResolveLegacyMappedPurpose(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         if (provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey)
         {
@@ -328,7 +261,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     }
 
     private static bool LooksLikeLegacyOpenAiImageGenerationProvider(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         if (provider.Name.Contains("image", StringComparison.OrdinalIgnoreCase))
         {
@@ -340,7 +273,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
             return true;
         }
 
-        return AgentFrameworkProviderMetadata.ReadTags(provider)
+        return ProviderMetadata.ReadTags(provider)
             .Any(tag =>
                 string.Equals(
                     tag,
@@ -369,15 +302,15 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
     }
 
     private static string ResolveSecretReference(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         return provider.ApiKeySecretId.HasValue
-            ? AgentFrameworkProviderMetadata.CreateSecretReference(provider.ApiKeySecretId.Value)
+            ? ProviderMetadata.CreateSecretReference(provider.ApiKeySecretId.Value)
             : string.Empty;
     }
 
     private static bool IsOpenAiChatCompletionsProvider(
-        WorkspaceProviderProfile provider)
+        ProviderProfile provider)
     {
         return string.Equals(
             provider.Name,

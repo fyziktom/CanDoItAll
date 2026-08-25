@@ -1,18 +1,18 @@
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-internal sealed record WorkspaceProviderCapabilityDefaults(
+public sealed record ProviderCapabilityDefaults(
     bool SupportsStreaming,
     bool SupportsToolCalling,
     bool SupportsStructuredOutput,
     bool SupportsVision)
 {
-    public static WorkspaceProviderCapabilityDefaults Disabled { get; } = new(
+    public static ProviderCapabilityDefaults Disabled { get; } = new(
         SupportsStreaming: false,
         SupportsToolCalling: false,
         SupportsStructuredOutput: false,
         SupportsVision: false);
 
-    public static WorkspaceProviderCapabilityDefaults Resolve(string? pluginKey)
+    public static ProviderCapabilityDefaults Resolve(string? pluginKey)
     {
         if (string.IsNullOrWhiteSpace(pluginKey))
         {

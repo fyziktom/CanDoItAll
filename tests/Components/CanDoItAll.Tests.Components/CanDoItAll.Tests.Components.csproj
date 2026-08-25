@@ -47,6 +47,7 @@
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj" />

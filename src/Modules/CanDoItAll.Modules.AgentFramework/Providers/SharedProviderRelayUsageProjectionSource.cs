@@ -7,9 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
+using ProviderProfileMapper = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileMapper;
+
 internal sealed class SharedProviderRelayUsageProjectionSource(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    WorkspaceAgentProviderProfileMapper providerMapper,
+    ProviderProfileMapper providerMapper,
     ILogger<SharedProviderRelayUsageProjectionSource> logger) :
     IProviderUsageProjectionSource
 {
@@ -27,7 +29,7 @@ internal sealed class SharedProviderRelayUsageProjectionSource(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             var rows = await (
                 from invocation in dbContext.Set<SharedProviderInvocationRecord>().AsNoTracking()
-                join profile in dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().AsNoTracking()
+                join profile in dbContext.Set<CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile>().AsNoTracking()
                     on invocation.ProviderProfileId equals profile.Id
                 orderby invocation.StartedAtUtc, invocation.Id
                 select new UsageRow(invocation, profile))
@@ -225,7 +227,7 @@ internal sealed class SharedProviderRelayUsageProjectionSource(
 
     private sealed record UsageRow(
         SharedProviderInvocationRecord Invocation,
-        CanDoItAll.Modules.Workspace.ProviderProfile Profile);
+        CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile Profile);
 
     private sealed record ProjectedUsage(
         ProviderUsageCompleteness Completeness,

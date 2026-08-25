@@ -1,38 +1,35 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-public interface IProviderRuntimeGateway
-{
-    Task<ProviderHealthResult> CheckHealthAsync(Guid providerProfileId, CancellationToken cancellationToken = default);
-
-    Task<Result<ProviderExecutionResponse>> SendAsync(ProviderExecutionRequest request, CancellationToken cancellationToken = default);
-}
-
-public sealed class LegacyProviderRuntimeGateway(
+// Temporary compatibility implementation; BR04 removes this direct inference path.
+internal sealed class LegacyProviderRuntimeGateway(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ProviderRegistry providerRegistry,
     ISecretRuntimeResolver secretRuntimeResolver,
     IActivityStream activityStream,
-    IClock clock) : IProviderRuntimeGateway
+    IClock clock) :
+    IProviderHealthCheckService,
+    IProviderPromptExecutionService
 {
-    public async Task<ProviderHealthResult> CheckHealthAsync(Guid providerProfileId, CancellationToken cancellationToken = default)
+    public async Task<ProviderHealthCheckResult> CheckHealthAsync(Guid providerProfileId, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var provider = await dbContext.Set<ProviderProfile>()
             .FirstOrDefaultAsync(item => item.Id == providerProfileId, cancellationToken);
         if (provider is null)
         {
-            return new ProviderHealthResult(false, "Provider profile not found.");
+            return new ProviderHealthCheckResult(false, "Provider profile not found.");
         }
 
         var adapter = providerRegistry.Resolve(provider);
         if (adapter is null)
         {
-            return new ProviderHealthResult(false, $"No adapter is registered for provider profile '{provider.Name}'.");
+            return new ProviderHealthCheckResult(false, $"No adapter is registered for provider profile '{provider.Name}'.");
         }
 
         var secretValue = await ResolveProviderSecretValueAsync(provider, cancellationToken);
@@ -62,24 +59,24 @@ public sealed class LegacyProviderRuntimeGateway(
             provider.LastHealthCheckAtUtc = clock.GetUtcNow();
             provider.LastHealthStatus = exception.Message;
             await dbContext.SaveChangesAsync(cancellationToken);
-            return new ProviderHealthResult(false, exception.Message);
+            return new ProviderHealthCheckResult(false, exception.Message);
         }
     }
 
-    public async Task<Result<ProviderExecutionResponse>> SendAsync(ProviderExecutionRequest request, CancellationToken cancellationToken = default)
+    public async Task<Result<ProviderPromptExecutionResponse>> ExecuteAsync(ProviderPromptExecutionRequest request, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var profile = await dbContext.Set<ProviderProfile>()
             .FirstOrDefaultAsync(item => item.Id == request.ProviderProfileId && item.IsEnabled, cancellationToken);
         if (profile is null)
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Validation("Provider profile not found or disabled."));
+            return Result<ProviderPromptExecutionResponse>.Failure(Error.Validation("Provider profile not found or disabled."));
         }
 
         var adapter = providerRegistry.Resolve(profile);
         if (adapter is null)
         {
-            return Result<ProviderExecutionResponse>.Failure(Error.Failure(
+            return Result<ProviderPromptExecutionResponse>.Failure(Error.Failure(
                 $"No adapter is registered for provider profile '{profile.Name}'."));
         }
 

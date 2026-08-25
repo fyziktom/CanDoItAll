@@ -14,7 +14,7 @@ namespace CanDoItAll.Tests.Integration;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderHybridSelectionTests(
     SharedProviderHybridSelectionFixture fixture) :
@@ -33,7 +33,7 @@ public sealed class SharedProviderHybridSelectionTests(
         Assert.Equal(2, providers.Count);
         Assert.Contains(providers, provider =>
             provider.Id == hybrid.PersonalProviderId &&
-            provider.ConnectorPluginKey == OpenAiProviderAdapter.PluginKey &&
+            provider.ConnectorPluginKey == CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi &&
             provider.IsEnabled);
         Assert.Contains(providers, provider =>
             provider.Id == hybrid.Shared.ProviderProfileId &&

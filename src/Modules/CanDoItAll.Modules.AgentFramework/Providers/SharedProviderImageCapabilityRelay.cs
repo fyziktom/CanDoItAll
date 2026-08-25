@@ -6,10 +6,11 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Modules.AgentFramework;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
+using ProviderProfileMapper = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileMapper;
 
 internal sealed class SharedProviderImageCapabilityRelay(
     ISharedProviderImageExecutionTargetResolver targetResolver,
-    WorkspaceAgentProviderProfileMapper providerMapper,
+    ProviderProfileMapper providerMapper,
     IAgentImageGenerationService imageGenerationService,
     ILogger<SharedProviderImageCapabilityRelay> logger) :
     ISharedProviderImageCapabilityRelay

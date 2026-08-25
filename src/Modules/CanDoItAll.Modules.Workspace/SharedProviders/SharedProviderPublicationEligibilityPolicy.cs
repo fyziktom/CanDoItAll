@@ -4,6 +4,7 @@ using CanDoItAll.SharedProviders.Abstractions;
 namespace CanDoItAll.Modules.Workspace;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public enum SharedProviderPublicationEligibilityCode
 {
@@ -46,7 +47,7 @@ public sealed class SharedProviderPublicationEligibilityPolicy(
     ISharedProviderRelaySupportCatalog relaySupportCatalog)
 {
     public SharedProviderPublicationEligibility Evaluate(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         ConnectorPluginManifest? connectorManifest,
         bool requiredSecretExists)
     {
@@ -150,15 +151,15 @@ public sealed class SharedProviderPublicationEligibilityPolicy(
             Array.AsReadOnly(models));
     }
 
-    private static bool IsExplicitlyNonProduction(ProviderProfile profile)
+    private static bool IsExplicitlyNonProduction(PersistedProviderProfile profile)
         => profile.Id == ProviderProfileWellKnownIds.RuntimeFallbackOllama ||
             profile.ConnectorPluginKey is
-                ScenarioHarnessProviderAdapter.PluginKey or
-                ProcessMockProviderAdapter.PluginKey or
+                ProviderConnectorKeys.ScenarioHarness or
+                ProviderConnectorKeys.ProcessMock or
                 SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey;
 
     private static bool IsBasicProfileValid(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         ConnectorPluginManifest manifest)
     {
         if (profile.Id == Guid.Empty ||
@@ -184,22 +185,22 @@ public sealed class SharedProviderPublicationEligibilityPolicy(
     }
 
     private static bool TryResolvePurpose(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         SharedProviderProfilePublicationMetadata metadata,
         out SharedProviderPurpose purpose)
     {
         purpose = default;
         var valid = (profile.ConnectorPluginKey, metadata.ProviderKind, metadata.Purpose) switch
         {
-            (OpenAiProviderAdapter.PluginKey, AgentFrameworkProviderKind.OpenAi, ProviderProfilePurpose.Chat) =>
+            (ProviderConnectorKeys.OpenAi, AgentFrameworkProviderKind.OpenAi, ProviderProfilePurpose.Chat) =>
                 Assign(SharedProviderPurpose.Chat, out purpose),
-            (OpenAiProviderAdapter.PluginKey, AgentFrameworkProviderKind.OpenAi, ProviderProfilePurpose.ImageGeneration) =>
+            (ProviderConnectorKeys.OpenAi, AgentFrameworkProviderKind.OpenAi, ProviderProfilePurpose.ImageGeneration) =>
                 Assign(SharedProviderPurpose.ImageGeneration, out purpose),
-            (OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey,
+            (ProviderConnectorKeys.Ollama or ProviderConnectorKeys.OllamaRemote,
                 AgentFrameworkProviderKind.Ollama,
                 ProviderProfilePurpose.Chat) =>
                 Assign(SharedProviderPurpose.Chat, out purpose),
-            (ComfyUiProviderAdapter.PluginKey,
+            (ProviderConnectorKeys.ComfyUi,
                 AgentFrameworkProviderKind.ComfyUi,
                 ProviderProfilePurpose.ImageGeneration) =>
                 Assign(SharedProviderPurpose.ImageGeneration, out purpose),
@@ -210,7 +211,7 @@ public sealed class SharedProviderPublicationEligibilityPolicy(
     }
 
     private static bool TryResolveCapabilities(
-        ProviderProfile profile,
+        PersistedProviderProfile profile,
         SharedProviderProfilePublicationMetadata metadata,
         SharedProviderPurpose purpose,
         SharedProviderRelaySupportDescriptor relaySupport,

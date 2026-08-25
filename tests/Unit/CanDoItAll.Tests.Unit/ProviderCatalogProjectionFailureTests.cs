@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 using WorkspaceProviderProfile =
-    CanDoItAll.Modules.Workspace.ProviderProfile;
+    CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
 using AgentFrameworkProviderKind =
@@ -62,7 +63,8 @@ public sealed class ProviderCatalogProjectionFailureTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
@@ -73,19 +75,19 @@ public sealed class ProviderCatalogProjectionFailureTests
             [new ScenarioHarnessProviderAdapter()]);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
-        var providerMapper = new WorkspaceAgentProviderProfileMapper(
+        var providerMapper = new ProviderProfileMapper(
             providerRegistry,
             providerProfileService);
         var observer = new RecordingCommitObserver();
         var logger = new RecordingLogger<
-            WorkspaceBackedAgentProviderProfileRegistry>();
+            DatabaseProviderProfileRegistry>();
         var blockedWorkspaceRoot = Path.GetTempFileName();
         var providerId = Guid.NewGuid();
 
         try
         {
             var registry =
-                new WorkspaceBackedAgentProviderProfileRegistry(
+                new DatabaseProviderProfileRegistry(
                     dbContextFactory,
                     new FileSandboxWorkspaceStore(blockedWorkspaceRoot),
                     providerRegistry,
@@ -94,7 +96,9 @@ public sealed class ProviderCatalogProjectionFailureTests
                     new DatabaseProviderRuntimeProfileSnapshotLoader(
                         dbContextFactory,
                         providerMapper,
+                        new SharedProviderProfileMapper(),
                         new SharedProviderRuntimeProfileMaterializer()),
+                    [],
                     [observer],
                     logger);
             var model = new AgentFrameworkProviderProfileEditorModel
@@ -602,7 +606,8 @@ public sealed class ProviderCatalogProjectionFailureTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
@@ -613,12 +618,12 @@ public sealed class ProviderCatalogProjectionFailureTests
             [new ScenarioHarnessProviderAdapter()]);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
-        var providerMapper = new WorkspaceAgentProviderProfileMapper(
+        var providerMapper = new ProviderProfileMapper(
             providerRegistry,
             providerProfileService);
         var store = new FailingCatalogProjectionStore();
         var registry =
-            new WorkspaceBackedAgentProviderProfileRegistry(
+            new DatabaseProviderProfileRegistry(
                 dbContextFactory,
                 store,
                 providerRegistry,
@@ -627,10 +632,12 @@ public sealed class ProviderCatalogProjectionFailureTests
                 new DatabaseProviderRuntimeProfileSnapshotLoader(
                     dbContextFactory,
                     providerMapper,
+                    new SharedProviderProfileMapper(),
                     new SharedProviderRuntimeProfileMaterializer()),
+                [],
                 [new RecordingCommitObserver()],
                 new RecordingLogger<
-                    WorkspaceBackedAgentProviderProfileRegistry>());
+                    DatabaseProviderProfileRegistry>());
         var providerId = Guid.NewGuid();
         var model = new AgentFrameworkProviderProfileEditorModel
         {
@@ -668,19 +675,19 @@ public sealed class ProviderCatalogProjectionFailureTests
             providerId);
     }
 
-    private static WorkspaceBackedAgentProviderProfileRegistry
+    private static DatabaseProviderProfileRegistry
         CreateScenarioRegistry()
     {
         return CreateRegistry(new ScenarioHarnessProviderAdapter());
     }
 
-    private static WorkspaceBackedAgentProviderProfileRegistry CreateRegistry(
+    private static DatabaseProviderProfileRegistry CreateRegistry(
         params IProviderAdapter[] providerAdapters)
     {
         return CreateRegistryFixture(providerAdapters).Registry;
     }
 
-    private static async Task<WorkspaceBackedAgentProviderProfileRegistry>
+    private static async Task<DatabaseProviderProfileRegistry>
         CreateRegistryWithSecretsAsync(
         IReadOnlyCollection<Guid> secretRecordIds,
         params IProviderAdapter[] providerAdapters)
@@ -706,7 +713,8 @@ public sealed class ProviderCatalogProjectionFailureTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly
         ]);
         var options = AppDbContextTestOptionsBuilder.Create()
             .UseInMemoryDatabase(
@@ -716,10 +724,10 @@ public sealed class ProviderCatalogProjectionFailureTests
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
         var dbContextFactory = new TestDbContextFactory(options);
-        var providerMapper = new WorkspaceAgentProviderProfileMapper(
+        var providerMapper = new ProviderProfileMapper(
             providerRegistry,
             providerProfileService);
-        var registry = new WorkspaceBackedAgentProviderProfileRegistry(
+        var registry = new DatabaseProviderProfileRegistry(
             dbContextFactory,
             new FailingCatalogProjectionStore(),
             providerRegistry,
@@ -728,10 +736,12 @@ public sealed class ProviderCatalogProjectionFailureTests
             new DatabaseProviderRuntimeProfileSnapshotLoader(
                 dbContextFactory,
                 providerMapper,
+                new SharedProviderProfileMapper(),
                 new SharedProviderRuntimeProfileMaterializer()),
+            [],
             [new RecordingCommitObserver()],
             new RecordingLogger<
-                WorkspaceBackedAgentProviderProfileRegistry>());
+                DatabaseProviderProfileRegistry>());
         return new RegistryFixture(registry, dbContextFactory);
     }
 
@@ -782,7 +792,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private sealed class RecordingCommitObserver :
-        IWorkspaceProviderProfileCommitObserver
+        IProviderProfileCommitObserver
     {
         public Guid? SavedProviderId { get; private set; }
 
@@ -837,12 +847,12 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private sealed record ProjectionFailureFixture(
-        WorkspaceBackedAgentProviderProfileRegistry Registry,
+        DatabaseProviderProfileRegistry Registry,
         FailingCatalogProjectionStore Store,
         Guid ProviderId);
 
     private sealed record RegistryFixture(
-        WorkspaceBackedAgentProviderProfileRegistry Registry,
+        DatabaseProviderProfileRegistry Registry,
         TestDbContextFactory DbContextFactory);
 
     private sealed class FailingCatalogProjectionStore :

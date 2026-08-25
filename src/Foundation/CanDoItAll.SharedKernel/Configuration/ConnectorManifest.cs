@@ -1,7 +1,6 @@
 using CanDoItAll.SharedKernel;
-using CanDoItAll.SharedKernel.Configuration;
 
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.SharedKernel.Configuration;
 
 [Flags]
 public enum ConnectorManifestCapability

@@ -137,7 +137,7 @@
                                         }
                                         @foreach (var secret in secrets)
                                         {
-                                            <option value="@AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
+                                            <option value="@CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata.CreateSecretReference(secret.Id)">@secret.Name</option>
                                         }
                                     </InputSelect>
                                     @if (HasUnavailableSecretReference)

@@ -7,6 +7,8 @@ namespace CanDoItAll.Tests.Unit;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderPurpose = CanDoItAll.AgentFramework.Models.ProviderProfilePurpose;
 using AgentFrameworkProviderTransport = CanDoItAll.AgentFramework.Models.ProviderTransportKind;
+using ProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using ProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderRuntimeProfileMaterializerTests
 {

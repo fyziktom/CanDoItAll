@@ -1,6 +1,6 @@
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
-public interface IWorkspaceProviderProfileCommitObserver
+public interface IProviderProfileCommitObserver
 {
     Task ProviderSavedAsync(
         Guid providerId,

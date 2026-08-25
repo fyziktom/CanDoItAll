@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\Integration\CanDoItAll.SharedProviders.Abstractions\CanDoItAll.SharedProviders.Abstractions.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Modules.AgentFramework.ProviderManagement\CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,13 +1,11 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-using WorkspaceProviderHealthResult = CanDoItAll.Modules.Workspace.ProviderHealthResult;
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
 internal sealed class AgentFrameworkProviderRuntimeGateway(
@@ -15,9 +13,10 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
     IProviderRuntimeProfileSource providerSource,
     IActivityStream activityStream,
     ILogger<AgentFrameworkProviderRuntimeGateway> logger) :
-    IProviderRuntimeGateway
+    IProviderHealthCheckService,
+    IProviderPromptExecutionService
 {
-    public async Task<WorkspaceProviderHealthResult> CheckHealthAsync(
+    public async Task<ProviderHealthCheckResult> CheckHealthAsync(
         Guid providerProfileId,
         CancellationToken cancellationToken = default)
     {
@@ -30,7 +29,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                 cancellationToken);
             if (provider is null)
             {
-                return new WorkspaceProviderHealthResult(false, "Provider profile not found.");
+                return new ProviderHealthCheckResult(false, "Provider profile not found.");
             }
 
             var result = ProviderFailureDisclosurePolicy.SanitizeHealthResult(
@@ -49,7 +48,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     Route: "/agents?tab=providers"),
                 cancellationToken);
 
-            return new WorkspaceProviderHealthResult(result.Success, result.Summary);
+            return new ProviderHealthCheckResult(result.Success, result.Summary);
         }
         catch (OperationCanceledException)
             when (cancellationToken.IsCancellationRequested)
@@ -66,7 +65,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     exception.GetType().FullName);
             }
 
-            return new WorkspaceProviderHealthResult(
+            return new ProviderHealthCheckResult(
                 false,
                 provider is null
                     ? ProviderFailureDisclosurePolicy
@@ -78,8 +77,8 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
         }
     }
 
-    public async Task<Result<ProviderExecutionResponse>> SendAsync(
-        ProviderExecutionRequest request,
+    public async Task<Result<ProviderPromptExecutionResponse>> ExecuteAsync(
+        ProviderPromptExecutionRequest request,
         CancellationToken cancellationToken = default)
     {
         AgentFrameworkProviderProfile? provider = null;
@@ -95,7 +94,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
             }
             if (provider is null)
             {
-                return Result<ProviderExecutionResponse>.Failure(
+                return Result<ProviderPromptExecutionResponse>.Failure(
                     Error.Validation("Provider profile not found or disabled."));
             }
 
@@ -119,8 +118,8 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     Route: "/agents?tab=providers"),
                 cancellationToken);
 
-            return Result<ProviderExecutionResponse>.Success(
-                new ProviderExecutionResponse(
+            return Result<ProviderPromptExecutionResponse>.Success(
+                new ProviderPromptExecutionResponse(
                     provider.Name,
                     response.Model,
                     response.ResponseText,
@@ -152,7 +151,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     provider,
                     ProviderFailureOperation.RuntimeRequest,
                     exception.Message);
-            return Result<ProviderExecutionResponse>.Failure(
+            return Result<ProviderPromptExecutionResponse>.Failure(
                 Error.Failure(message));
         }
     }

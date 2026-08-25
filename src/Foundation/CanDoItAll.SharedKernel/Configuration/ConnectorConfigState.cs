@@ -1,6 +1,4 @@
-using CanDoItAll.SharedKernel.Configuration;
-
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.SharedKernel.Configuration;
 
 public sealed class ConnectorConfigState : ConfigurationState
 {

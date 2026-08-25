@@ -1,5 +1,6 @@
 using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -101,7 +102,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
             {
                 Name = "Concurrent publication owner",
                 ProviderKind = ProviderKind.OpenAi,
-                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+                ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
                 ConfigSchemaVersion = "1.0",
                 BaseUrl = "https://provider.example.test/v1",
                 DefaultModel = "upstream-model",
@@ -454,7 +455,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
             {
                 Name = "Mismatched invocation owner",
                 ProviderKind = ProviderKind.OpenAi,
-                ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+                ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
                 ConfigSchemaVersion = "1.0",
                 BaseUrl = "https://other-provider.example.test/v1",
                 DefaultModel = "upstream-model",
@@ -739,7 +740,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         {
             Name = "Invocation owner",
             ProviderKind = ProviderKind.OpenAi,
-            ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+            ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0",
             BaseUrl = "https://provider.example.test/v1",
             DefaultModel = "upstream-model",
@@ -762,7 +763,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
     }
 
     private sealed class PersistedProfileObserver(SharedProviderDbContextFactory factory)
-        : IWorkspaceProviderProfileCommitObserver
+        : IProviderProfileCommitObserver
     {
         public List<Guid> SavedProviderIds { get; } = [];
 

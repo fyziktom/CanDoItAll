@@ -1,4 +1,4 @@
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public enum ProviderKind
 {

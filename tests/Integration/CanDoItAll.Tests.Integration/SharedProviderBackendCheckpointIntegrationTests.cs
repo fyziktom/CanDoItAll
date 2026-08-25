@@ -25,8 +25,8 @@ namespace CanDoItAll.Tests.Integration;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
-using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderBackendCheckpointIntegrationTests
 {
@@ -223,12 +223,12 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         await using var upstream = DirectRelayFixture.Create(
             baseUri: new Uri("https://deterministic-upstream.example.test/reverse/v1"));
         var chatResult = await upstream.DispatchAsync(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             SharedProviderPurpose.Chat,
             SharedProviderRelayOperation.ChatCompletions,
             ChatJson(upstream.ModelId));
         var responsesResult = await upstream.DispatchAsync(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             SharedProviderPurpose.Chat,
             SharedProviderRelayOperation.Responses,
             ResponsesJson(upstream.ModelId));
@@ -383,12 +383,12 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             "\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"answer\",\"schema\":{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"}},\"required\":[\"value\"]},\"strict\":true}}");
 
         Assert.IsType<SharedProviderRelayDispatchResult.Buffered>(await upstream.DispatchAsync(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             SharedProviderPurpose.Chat,
             SharedProviderRelayOperation.ChatCompletions,
             toolsPayload));
         Assert.IsType<SharedProviderRelayDispatchResult.Buffered>(await upstream.DispatchAsync(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             SharedProviderPurpose.Chat,
             SharedProviderRelayOperation.ChatCompletions,
             structuredPayload));
@@ -399,16 +399,16 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
 
         await using (var scope = relayFixture.PersistedHost.App.Services.CreateAsyncScope())
         {
-            var workspaceService = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
-            var editor = await workspaceService.GetProviderAsync(relayFixture.PersistedChatProfileId);
+            var providerAdministration = scope.ServiceProvider.GetRequiredService<CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService>();
+            var editor = await providerAdministration.GetProviderAsync(relayFixture.PersistedChatProfileId);
             Assert.True(editor.SupportsStructuredOutput);
 
             editor.SupportsStructuredOutput = false;
-            var saveResult = await workspaceService.SaveProviderAsync(editor);
+            var saveResult = await providerAdministration.SaveProviderAsync(editor);
             Assert.True(saveResult.IsSuccess);
             Assert.Equal(relayFixture.PersistedChatProfileId, saveResult.Value);
 
-            var reloaded = await workspaceService.GetProviderAsync(relayFixture.PersistedChatProfileId);
+            var reloaded = await providerAdministration.GetProviderAsync(relayFixture.PersistedChatProfileId);
             Assert.False(reloaded.SupportsStructuredOutput);
         }
 
@@ -454,7 +454,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
     {
         await using var openAi = DirectRelayFixture.Create();
         var openAiResult = await openAi.DispatchAsync(
-            OpenAiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             SharedProviderPurpose.ImageGeneration,
             SharedProviderRelayOperation.ImageGenerations,
             ImagesJson(openAi.ModelId));
@@ -470,7 +470,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
                 "safe prompt")]);
         await using var comfyUi = DirectRelayFixture.Create(imageRelay: imageRelay);
         var comfyResult = await comfyUi.DispatchAsync(
-            ComfyUiProviderAdapter.PluginKey,
+            CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.ComfyUi,
             SharedProviderPurpose.ImageGeneration,
             SharedProviderRelayOperation.ImageGenerations,
             ImagesJson(comfyUi.ModelId));
@@ -549,12 +549,12 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             item.Id == clientASeed.ProviderProfileId &&
             item.ConnectorPluginKey == SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey);
         Assert.Contains(providersA, item =>
-            item.Id == personalA && item.ConnectorPluginKey == OpenAiProviderAdapter.PluginKey);
+            item.Id == personalA && item.ConnectorPluginKey == CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi);
         Assert.Contains(providersB, item =>
             item.Id == clientBSeed.ProviderProfileId &&
             item.ConnectorPluginKey == SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey);
         Assert.Contains(providersB, item =>
-            item.Id == personalB && item.ConnectorPluginKey == OpenAiProviderAdapter.PluginKey);
+            item.Id == personalB && item.ConnectorPluginKey == CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi);
     }
 
     [Fact]
@@ -923,7 +923,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             Id = Guid.NewGuid(),
             Name = name,
             ProviderKind = WorkspaceProviderKind.OpenAi,
-            ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+            ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0",
             BaseUrl = "https://private-upstream.example.test/v1",
             ApiKeySecretId = Guid.NewGuid(),

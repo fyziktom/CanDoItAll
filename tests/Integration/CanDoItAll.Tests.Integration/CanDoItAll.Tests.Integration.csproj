@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\..\src\Integration\CanDoItAll.SharedProviders.Abstractions\CanDoItAll.SharedProviders.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Integration\CanDoItAll.SharedProviders.Http\CanDoItAll.SharedProviders.Http.csproj" />
     <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj" />

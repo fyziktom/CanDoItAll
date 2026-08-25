@@ -1,4 +1,4 @@
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public static class SharedProviderProfileOwnershipPolicy
 {
@@ -9,7 +9,7 @@ public static class SharedProviderProfileOwnershipPolicy
     {
         return string.Equals(
             connectorPluginKey?.Trim(),
-            SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
+            ProviderConnectorKeys.SharedImport,
             StringComparison.OrdinalIgnoreCase);
     }
 }

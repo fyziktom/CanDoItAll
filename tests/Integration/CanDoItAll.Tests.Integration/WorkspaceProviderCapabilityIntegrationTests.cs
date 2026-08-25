@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +14,13 @@ public sealed class WorkspaceProviderCapabilityIntegrationTests
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
-        var workspaceService = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        var providerAdministration = scope.ServiceProvider.GetRequiredService<IProviderAdministrationService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var saveResult = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        var saveResult = await providerAdministration.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Ollama capability truth",
-            ConnectorPluginKey = OllamaProviderAdapter.PluginKey,
+            ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.Ollama,
             ConfigSchemaVersion = "1.0",
             Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -43,7 +44,7 @@ public sealed class WorkspaceProviderCapabilityIntegrationTests
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
-        var workspaceService = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        var providerAdministration = scope.ServiceProvider.GetRequiredService<IProviderAdministrationService>();
         var secretService = scope.ServiceProvider.GetRequiredService<SecretService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var secretResult = await secretService.SaveAsync(new SecretEditorModel
@@ -55,16 +56,16 @@ public sealed class WorkspaceProviderCapabilityIntegrationTests
         });
         Assert.True(secretResult.IsSuccess);
 
-        var saveResult = await workspaceService.SaveProviderAsync(new ProviderProfileEditorModel
+        var saveResult = await providerAdministration.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "OpenAI capability truth",
-            ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+            ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0",
             ApiKeySecretId = secretResult.Value,
             Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["baseUrl"] = "https://api.openai.com/v1/models",
-                ["defaultModel"] = OpenAiProviderAdapter.DefaultModel,
+                ["defaultModel"] = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorDefaults.OpenAiModel,
                 ["timeoutSeconds"] = "45"
             }),
             IsEnabled = true,

@@ -114,7 +114,7 @@ public sealed class SharedProviderArchitectureCharacterizationTests
             "ProviderImageGenerationRequest",
             "ProviderSpeechToTextRequest",
             "ProviderTextToSpeechRequest",
-            "ProviderExecutionRequest"
+            "ProviderPromptExecutionRequest"
         ];
 
         Assert.DoesNotContain(
@@ -128,7 +128,7 @@ public sealed class SharedProviderArchitectureCharacterizationTests
         var mapper = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceAgentProviderProfileMapper.cs");
         var mafProject = Read(InnerProviderProjects[2]);
 
-        Assert.Contains("using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile", mapper, StringComparison.Ordinal);
+        Assert.Contains("using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile", mapper, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderProfile Map(WorkspaceProviderProfile provider)", mapper, StringComparison.Ordinal);
         Assert.DoesNotContain("CanDoItAll.Modules.Workspace", mafProject, StringComparison.Ordinal);
     }

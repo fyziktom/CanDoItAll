@@ -25,7 +25,7 @@ public interface ISharedProviderImageExecutionTargetResolver
 
 internal sealed class SharedProviderImageExecutionTargetResolver(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ProviderRegistry providerRegistry,
+    IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     ISharedProviderRelaySupportCatalog relaySupportCatalog) :
     ISharedProviderImageExecutionTargetResolver
@@ -62,7 +62,9 @@ internal sealed class SharedProviderImageExecutionTargetResolver(
 
         var eligibility = eligibilityPolicy.Evaluate(
             row.Profile,
-            providerRegistry.Resolve(row.Profile)?.Manifest,
+            providerManifestCatalog.ResolveManifest(
+                row.Profile.ConnectorPluginKey,
+                row.Profile.ProviderKind),
             row.RequiredSecretExists);
         if (!eligibility.IsEligible ||
             eligibility.Purpose != SharedProviderPurpose.ImageGeneration ||

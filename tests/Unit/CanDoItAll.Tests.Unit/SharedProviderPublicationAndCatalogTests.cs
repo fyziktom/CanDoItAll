@@ -1,7 +1,9 @@
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -13,8 +15,8 @@ using Microsoft.Extensions.Options;
 namespace CanDoItAll.Tests.Unit;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
-using WorkspaceProviderProfileEditorModel = CanDoItAll.Modules.Workspace.ProviderProfileEditorModel;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using WorkspaceProviderProfileEditorModel = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileEditorModel;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class SharedProviderPublicationAndCatalogTests
@@ -254,7 +256,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             maximumOutputTokens: 1,
             maximumImageCount: 4);
         var openAiProfile = CreateProfile(
-            connectorPluginKey: OpenAiProviderAdapter.PluginKey,
+            connectorPluginKey: ProviderConnectorKeys.OpenAi,
             providerKind: AgentFrameworkProviderKind.OpenAi,
             purpose: ProviderProfilePurpose.ImageGeneration,
             defaultModel: "gpt-image-1",
@@ -605,7 +607,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             new NoOpSecretProtector(),
             referencedFixture.Clock,
             deletionActivity,
-            [new WorkspaceProviderSecretDeletionReferencePolicy()]);
+            [new ProviderSecretDeletionReferencePolicy()]);
         var deletionException = await Assert.ThrowsAsync<
             SecretDeletionBlockedException>(() => secretService.DeleteAsync(
             referencedFixture.SecretRecordId));
@@ -645,7 +647,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             raceActivity,
             raceObserver);
         var gatedDeletionPolicy = new GatedSecretDeletionReferencePolicy(
-            new WorkspaceProviderSecretDeletionReferencePolicy());
+            new ProviderSecretDeletionReferencePolicy());
         var raceSecretService = new SecretService(
             referencedFixture.DbContextFactory,
             new NoOpSecretVault(),
@@ -772,7 +774,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
 
     private static SharedProviderPublicationEligibilityPolicy CreatePolicy(
         SharedProviderRelaySupportDescriptor? support = null,
-        string connectorPluginKey = OpenAiProviderAdapter.PluginKey,
+        string connectorPluginKey = ProviderConnectorKeys.OpenAi,
         SharedProviderPurpose purpose = SharedProviderPurpose.Chat,
         SharedProviderRelayAdapterClassification classification =
             SharedProviderRelayAdapterClassification.Production,
@@ -843,7 +845,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
     private static WorkspaceProviderProfile CreateProfile(
         Guid? id = null,
         string name = "Central provider",
-        string connectorPluginKey = OpenAiProviderAdapter.PluginKey,
+        string connectorPluginKey = ProviderConnectorKeys.OpenAi,
         AgentFrameworkProviderKind providerKind = AgentFrameworkProviderKind.OpenAi,
         ProviderTransportKind transport = ProviderTransportKind.Responses,
         ProviderProfilePurpose purpose = ProviderProfilePurpose.Chat,
@@ -1057,9 +1059,9 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 EligibilityPolicy,
                 cache);
 
-        public WorkspaceService CreateWorkspaceService(
+        public ProviderAdministrationService CreateWorkspaceService(
             IActivityStream activityStream,
-            IWorkspaceProviderProfileCommitObserver observer)
+            IProviderProfileCommitObserver observer)
         {
             var secretService = new SecretService(
                 DbContextFactory,
@@ -1067,18 +1069,15 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 new NoOpSecretProtector(),
                 Clock,
                 activityStream,
-                [new WorkspaceProviderSecretDeletionReferencePolicy()]);
-            return new WorkspaceService(
+                [new ProviderSecretDeletionReferencePolicy()]);
+            return new ProviderAdministrationService(
                 DbContextFactory,
-                Clock,
                 secretService,
                 secretRuntimeResolver: null!,
                 ProviderRegistry,
-                providerRuntimeGateway: null!,
-                storageCatalogService: null!,
-                storageDriverRegistry: null!,
+                providerHealthCheckService: null!,
                 activityStream,
-                new CurrencyDisplayState(Options.Create(new CurrencyOptions())),
+                [],
                 [observer]);
         }
     }
@@ -1164,18 +1163,18 @@ public sealed class SharedProviderPublicationAndCatalogTests
     {
         public ConnectorPluginManifest Manifest { get; } = manifest;
 
-        public CanDoItAll.Modules.Workspace.ProviderKind? LegacyProviderKind => null;
+        public CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind? LegacyProviderKind => null;
 
-        public Task<CanDoItAll.Modules.Workspace.ProviderHealthResult> CheckHealthAsync(
+        public Task<CanDoItAll.AgentFramework.Core.ProviderHealthCheckResult> CheckHealthAsync(
             WorkspaceProviderProfile profile,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException(
                 "The publication test adapter must not perform health checks.");
 
-        public Task<Result<ProviderExecutionResponse>> SendAsync(
+        public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
             WorkspaceProviderProfile profile,
-            ProviderExecutionRequest request,
+            ProviderPromptExecutionRequest request,
             string? secretValue,
             CancellationToken cancellationToken = default)
             => throw new InvalidOperationException(
@@ -1226,7 +1225,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
     }
 
     private sealed class RecordingWorkspaceProviderProfileCommitObserver
-        : IWorkspaceProviderProfileCommitObserver
+        : IProviderProfileCommitObserver
     {
         public List<Guid> ProviderProfileIds { get; } = [];
 

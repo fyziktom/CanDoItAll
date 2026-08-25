@@ -12,7 +12,7 @@ public sealed class SharedProviderRelayApplicationService(
     ISharedProviderRelayRequestPolicy requestPolicy,
     ISharedProviderRoutingResolver routingResolver,
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ProviderRegistry providerRegistry,
+    IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     ISharedProviderRelaySupportCatalog relaySupportCatalog,
     ISecretRuntimeResolver secretRuntimeResolver,
@@ -214,10 +214,12 @@ public sealed class SharedProviderRelayApplicationService(
             return null;
         }
 
-        var adapter = providerRegistry.Resolve(row.Profile);
+        var manifest = providerManifestCatalog.ResolveManifest(
+            row.Profile.ConnectorPluginKey,
+            row.Profile.ProviderKind);
         var eligibility = eligibilityPolicy.Evaluate(
             row.Profile,
-            adapter?.Manifest,
+            manifest,
             row.RequiredSecretExists);
         if (!eligibility.IsEligible ||
             eligibility.Purpose != route.Purpose ||

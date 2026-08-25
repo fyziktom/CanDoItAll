@@ -18,7 +18,7 @@ public sealed record SharedProviderPublicationChangeRequest(
 
 public sealed class SharedProviderPublicationApplicationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ProviderRegistry providerRegistry,
+    IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     IActivityStream activityStream,
     IClock clock,
@@ -94,7 +94,9 @@ public sealed class SharedProviderPublicationApplicationService(
                         cancellationToken);
             var eligibility = eligibilityPolicy.Evaluate(
                 profile,
-                providerRegistry.Resolve(profile)?.Manifest,
+                providerManifestCatalog.ResolveManifest(
+                    profile.ConnectorPluginKey,
+                    profile.ProviderKind),
                 requiredSecretExists);
             if (!eligibility.IsEligible)
             {

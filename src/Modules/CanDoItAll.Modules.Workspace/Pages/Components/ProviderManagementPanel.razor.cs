@@ -11,7 +11,7 @@ using ProviderPricingDefaults = CanDoItAll.AgentFramework.Models.ProviderPricing
 public partial class ProviderManagementPanel
 {
     [Inject]
-    public WorkspaceService WorkspaceService { get; set; } = default!;
+    public IProviderAdministrationService ProviderAdministrationService { get; set; } = default!;
 
     [Inject]
     public SecretService SecretService { get; set; } = default!;
@@ -48,9 +48,9 @@ public partial class ProviderManagementPanel
 
     private async Task LoadAsync()
     {
-        providerManifests = WorkspaceService.ListProviderManifests();
-        providers = await WorkspaceService.ListProviderProfilesAsync();
-        secrets = await WorkspaceService.ListSecretsAsync();
+        providerManifests = ProviderAdministrationService.ListProviderManifests();
+        providers = await ProviderAdministrationService.ListProviderProfilesAsync();
+        secrets = await ProviderAdministrationService.ListSecretsAsync();
         NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
     }
 
@@ -58,14 +58,14 @@ public partial class ProviderManagementPanel
     {
         try
         {
-            var result = await WorkspaceService.SaveProviderAsync(providerModel);
+            var result = await ProviderAdministrationService.SaveProviderAsync(providerModel);
             if (!result.IsSuccess)
             {
                 NotificationService.Warning("Provider profile was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
                 return;
             }
 
-            providers = await WorkspaceService.ListProviderProfilesAsync();
+            providers = await ProviderAdministrationService.ListProviderProfilesAsync();
             await ResetProviderAsync();
             NotificationService.Success("Provider profile saved", "Provider profile saved.");
         }
@@ -78,7 +78,7 @@ public partial class ProviderManagementPanel
     private async Task EditProviderAsync(
         Guid id)
     {
-        providerModel = await WorkspaceService.GetProviderAsync(id);
+        providerModel = await ProviderAdministrationService.GetProviderAsync(id);
         NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
     }
 
@@ -87,7 +87,7 @@ public partial class ProviderManagementPanel
     {
         try
         {
-            var result = await WorkspaceService.TestProviderAsync(id);
+            var result = await ProviderAdministrationService.TestProviderAsync(id);
             if (result.Success)
             {
                 NotificationService.Success("Provider health check passed", result.Message);
@@ -97,7 +97,7 @@ public partial class ProviderManagementPanel
                 NotificationService.Warning("Provider health check failed", result.Message);
             }
 
-            providers = await WorkspaceService.ListProviderProfilesAsync();
+            providers = await ProviderAdministrationService.ListProviderProfilesAsync();
         }
         catch (Exception exception)
         {
@@ -110,7 +110,7 @@ public partial class ProviderManagementPanel
         try
         {
             NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
-            var result = await WorkspaceService.RefreshProviderModelPricesAsync(providerModel);
+            var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(providerModel);
             if (!result.IsSuccess)
             {
                 NotificationService.Warning(
@@ -133,8 +133,8 @@ public partial class ProviderManagementPanel
     {
         try
         {
-            await WorkspaceService.DeleteProviderAsync(id);
-            providers = await WorkspaceService.ListProviderProfilesAsync();
+            await ProviderAdministrationService.DeleteProviderAsync(id);
+            providers = await ProviderAdministrationService.ListProviderProfilesAsync();
             await ResetProviderAsync();
             NotificationService.Success("Provider profile deleted", "Provider profile deleted.");
         }
@@ -166,9 +166,9 @@ public partial class ProviderManagementPanel
         string? connectorPluginKey = null)
     {
         var normalizedPluginKey = string.IsNullOrWhiteSpace(connectorPluginKey)
-            ? OpenAiProviderAdapter.PluginKey
+            ? ProviderConnectorKeys.OpenAi
             : connectorPluginKey.Trim();
-        var defaults = WorkspaceProviderCapabilityDefaults.Resolve(normalizedPluginKey);
+        var defaults = ProviderCapabilityDefaults.Resolve(normalizedPluginKey);
         var configuration = BuildDefaultProviderConfiguration(normalizedPluginKey);
         var pricingKind = ResolveAgentFrameworkProviderKind(normalizedPluginKey);
         return new ProviderProfileEditorModel
@@ -225,7 +225,7 @@ public partial class ProviderManagementPanel
             return;
         }
 
-        var defaults = WorkspaceProviderCapabilityDefaults.Resolve(manifest.PluginKey);
+        var defaults = ProviderCapabilityDefaults.Resolve(manifest.PluginKey);
         providerModel.SupportsStreaming = defaults.SupportsStreaming;
         providerModel.SupportsToolCalling = defaults.SupportsToolCalling;
         providerModel.SupportsStructuredOutput = defaults.SupportsStructuredOutput;
@@ -263,28 +263,28 @@ public partial class ProviderManagementPanel
     {
         return pluginKey switch
         {
-            OpenAiProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ProviderConnectorKeys.OpenAi => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
-                [ProviderConnectorFieldKeys.DefaultModel] = OpenAiProviderAdapter.DefaultModel,
+                [ProviderConnectorFieldKeys.DefaultModel] = ProviderConnectorDefaults.OpenAiModel,
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             }),
-            OllamaProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ProviderConnectorKeys.Ollama => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.BaseUrl] = "http://127.0.0.1:11434",
                 [ProviderConnectorFieldKeys.DefaultModel] = "llama3.1",
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             }),
-            OllamaRemoteProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ProviderConnectorKeys.OllamaRemote => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.BaseUrl] = "https://ollama.example.com",
                 [ProviderConnectorFieldKeys.DefaultModel] = "llama3.1",
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
             }),
-            ComfyUiProviderAdapter.PluginKey => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ProviderConnectorKeys.ComfyUi => new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 [ProviderConnectorFieldKeys.BaseUrl] = "http://127.0.0.1:8188",
-                [ProviderConnectorFieldKeys.DefaultModel] = ComfyUiProviderAdapter.DefaultModel,
+                [ProviderConnectorFieldKeys.DefaultModel] = ProviderConnectorDefaults.ComfyUiModel,
                 [ProviderConnectorFieldKeys.TimeoutSeconds] = "120",
                 [ProviderConnectorFieldKeys.ComfyUiPositivePromptNodeId] = "6",
                 [ProviderConnectorFieldKeys.ComfyUiPollIntervalMilliseconds] = "1000"
@@ -318,16 +318,16 @@ public partial class ProviderManagementPanel
     {
         switch (connectorPluginKey?.Trim())
         {
-            case ScenarioHarnessProviderAdapter.PluginKey:
-            case ProcessMockProviderAdapter.PluginKey:
-            case OpenAiProviderAdapter.PluginKey:
+            case ProviderConnectorKeys.ScenarioHarness:
+            case ProviderConnectorKeys.ProcessMock:
+            case ProviderConnectorKeys.OpenAi:
                 kind = AgentFrameworkProviderKind.OpenAi;
                 return true;
-            case ComfyUiProviderAdapter.PluginKey:
+            case ProviderConnectorKeys.ComfyUi:
                 kind = AgentFrameworkProviderKind.ComfyUi;
                 return true;
-            case OllamaProviderAdapter.PluginKey:
-            case OllamaRemoteProviderAdapter.PluginKey:
+            case ProviderConnectorKeys.Ollama:
+            case ProviderConnectorKeys.OllamaRemote:
                 kind = AgentFrameworkProviderKind.Ollama;
                 return true;
             default:

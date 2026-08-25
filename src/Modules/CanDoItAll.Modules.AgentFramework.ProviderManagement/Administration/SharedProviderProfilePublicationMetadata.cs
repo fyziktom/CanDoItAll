@@ -4,11 +4,11 @@ using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedProviders.Abstractions;
 
-namespace CanDoItAll.Modules.Workspace;
+namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 
-internal sealed record SharedProviderProfilePublicationMetadata(
+public sealed record SharedProviderProfilePublicationMetadata(
     AgentFrameworkProviderKind ProviderKind,
     ProviderTransportKind Transport,
     ProviderProfilePurpose Purpose,
@@ -176,7 +176,7 @@ public static class SharedProviderProfilePublicationMetadataWriter
     }
 }
 
-internal static class SharedProviderProfilePublicationMetadataReader
+public static class SharedProviderProfilePublicationMetadataReader
 {
     public static bool TryRead(
         ProviderProfile profile,

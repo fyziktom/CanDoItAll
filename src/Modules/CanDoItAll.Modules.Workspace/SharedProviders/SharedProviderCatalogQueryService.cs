@@ -24,7 +24,7 @@ public interface ISharedProviderRoutingResolver
 public sealed class SharedProviderCatalogQueryService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     SharedProviderServiceIdentityStore serviceIdentityStore,
-    ProviderRegistry providerRegistry,
+    IProviderManifestCatalog providerManifestCatalog,
     SharedProviderPublicationEligibilityPolicy eligibilityPolicy,
     SharedProviderCatalogCache cache)
     : ISharedProviderCatalogQueryService,
@@ -68,7 +68,9 @@ public sealed class SharedProviderCatalogQueryService(
                 row.Profile,
                 eligibilityPolicy.Evaluate(
                     row.Profile,
-                    providerRegistry.Resolve(row.Profile)?.Manifest,
+                    providerManifestCatalog.ResolveManifest(
+                        row.Profile.ConnectorPluginKey,
+                        row.Profile.ProviderKind),
                     row.RequiredSecretExists)))
             .ToArray();
         var persistedStamp = CreatePersistedStamp(sourceInstanceId, rows);

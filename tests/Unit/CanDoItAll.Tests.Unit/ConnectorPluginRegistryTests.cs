@@ -1,3 +1,4 @@
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -16,9 +17,9 @@ public sealed class ConnectorPluginRegistryTests
             .Select(item => item.PluginKey)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.Contains(OpenAiProviderAdapter.PluginKey, pluginKeys);
-        Assert.Contains(OllamaProviderAdapter.PluginKey, pluginKeys);
-        Assert.Contains(OllamaRemoteProviderAdapter.PluginKey, pluginKeys);
+        Assert.Contains(ProviderConnectorKeys.OpenAi, pluginKeys);
+        Assert.Contains(ProviderConnectorKeys.Ollama, pluginKeys);
+        Assert.Contains(ProviderConnectorKeys.OllamaRemote, pluginKeys);
         Assert.Contains(WebhookResourceConnectorPlugin.PluginKey, pluginKeys);
         Assert.Contains(
             SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
@@ -85,6 +86,7 @@ public sealed class ConnectorPluginRegistryTests
     private static ServiceProvider BuildServiceProvider()
     {
         var services = new ServiceCollection();
+        services.AddAgentFrameworkProviderManagement();
         services.AddWorkspaceModule();
         services.AddResourcesModule();
         return services.BuildServiceProvider();

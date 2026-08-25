@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
@@ -712,7 +713,7 @@ public partial class ProjectStructurePage
         }
 
         var metadata = ProjectObjectMetadataSerializer.Parse(transcriptNode.MetadataJson);
-        var providers = (await WorkspaceService.ListProviderProfilesAsync())
+        var providers = (await ProviderRuntimeProfileSource.ListProvidersAsync())
             .Where(profile => profile.IsEnabled)
             .ToList();
         var selectedProviderId = transcriptNode.NodeReferences?.TranscriptProviderProfileId ?? providers.FirstOrDefault()?.Id;
@@ -768,8 +769,8 @@ public partial class ProjectStructurePage
             return;
         }
 
-        var result = await ProviderExecutionService.SendAsync(
-            new ProviderExecutionRequest(
+        var result = await ProviderPromptExecutionService.ExecuteAsync(
+            new ProviderPromptExecutionRequest(
                 provider.Id,
                 BuildTranscriptPrompt(pendingTranscriptAction.ActionKind, transcriptNode.Title, transcriptText),
                 OutputFormat: "Markdown"));

@@ -21,8 +21,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
-using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -98,7 +98,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
             item => item.Request.Operation == SharedProviderRelayOperation.ChatCompletions);
         Assert.Equal(fixture.PersistedChatPublicationId, dispatched.Target.PublicationId);
         Assert.Equal(fixture.PersistedChatProfileId, dispatched.Target.ProviderProfileId);
-        Assert.Equal(OpenAiProviderAdapter.PluginKey, dispatched.Target.ConnectorPluginKey);
+        Assert.Equal(CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi, dispatched.Target.ConnectorPluginKey);
         Assert.Equal(new Uri("https://persisted-upstream.example.test/private/v1"), dispatched.Target.BaseUri);
         Assert.Equal(
             SharedProviderOpenAiCompatibilityFixture.PersistedChatUpstreamModel,
@@ -1274,7 +1274,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
             Id = id,
             Name = name,
             ProviderKind = WorkspaceProviderKind.OpenAi,
-            ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+            ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0",
             BaseUrl = "https://persisted-upstream.example.test/private/v1",
             ApiKeySecretId = secretId,
@@ -1285,7 +1285,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
             SupportsToolCalling = supportsTools,
             SupportsStructuredOutput = supportsStructuredOutput,
             SupportsVision = false,
-            ExtraSettingsJson = SharedProviderProfilePublicationMetadataWriter.Write(
+            ExtraSettingsJson = CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderProfilePublicationMetadataWriter.Write(
                 "{}",
                 AgentFrameworkProviderKind.OpenAi,
                 transport,

@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Resources;
 using CanDoItAll.Modules.Security;
@@ -27,7 +29,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
             configureServices: RegisterUnknownConnectorPlugins);
         await using var scope = services.CreateAsyncScope();
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
-        var workspace = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        var providerAdministration = scope.ServiceProvider.GetRequiredService<IProviderAdministrationService>();
         var resources = scope.ServiceProvider.GetRequiredService<ResourcesService>();
         var secrets = scope.ServiceProvider.GetRequiredService<SecretService>();
 
@@ -42,7 +44,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         Assert.True(secretResult.IsSuccess);
         var secretId = secretResult.Value;
 
-        var saveProviderResult = await workspace.SaveProviderAsync(new ProviderProfileEditorModel
+        var saveProviderResult = await providerAdministration.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Round trip provider",
             ConnectorPluginKey = UnknownManifestProviderAdapter.PluginKey,
@@ -60,7 +62,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         });
         Assert.True(saveProviderResult.IsSuccess);
 
-        var providerEditor = await workspace.GetProviderAsync(saveProviderResult.Value);
+        var providerEditor = await providerAdministration.GetProviderAsync(saveProviderResult.Value);
         Assert.Equal(UnknownManifestProviderAdapter.PluginKey, providerEditor.ConnectorPluginKey);
         Assert.Equal("https://provider.example.com/v1", providerEditor.Configuration.GetText(ProviderBaseUrlFieldKey));
         Assert.Equal("wave-10", providerEditor.Configuration.GetText(ProviderDefaultModelFieldKey));
@@ -146,18 +148,18 @@ public sealed class UnknownConnectorManifestIntegrationTests
 
         public ProviderKind? LegacyProviderKind => null;
 
-        public Task<ProviderHealthResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
+        public Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new ProviderHealthResult(true, "Healthy"));
+            return Task.FromResult(new ProviderHealthCheckResult(true, "Healthy"));
         }
 
-        public Task<Result<ProviderExecutionResponse>> SendAsync(
+        public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
             ProviderProfile profile,
-            ProviderExecutionRequest request,
+            ProviderPromptExecutionRequest request,
             string? secretValue,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Result<ProviderExecutionResponse>.Success(new ProviderExecutionResponse(
+            return Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
                 profile.Name,
                 profile.DefaultModel,
                 "ok",

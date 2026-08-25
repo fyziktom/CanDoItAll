@@ -26,10 +26,13 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Integration.SharedProviders;
 
+using CanonicalProviderRuntimeProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.CanonicalProviderRuntimeProfile;
+using IProviderRuntimeProfileSnapshotLoader = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeProfileSnapshotLoader;
+
 using AgentProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
-using WorkspaceProviderKind = CanDoItAll.Modules.Workspace.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
+using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     SharedProviderRuntimeProjectionFixture fixture) :
@@ -604,15 +607,17 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         Assert.Empty(manifest.ConfigurationSchema.Fields);
         Assert.Empty(manifest.SecretRequirements);
 
-        var gateway = firstScope.ServiceProvider
-            .GetRequiredService<IProviderRuntimeGateway>();
+        var healthService = firstScope.ServiceProvider
+            .GetRequiredService<IProviderHealthCheckService>();
+        var promptExecutionService = firstScope.ServiceProvider
+            .GetRequiredService<IProviderPromptExecutionService>();
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            gateway.CheckHealthAsync(Guid.NewGuid(), cancellation.Token));
+            healthService.CheckHealthAsync(Guid.NewGuid(), cancellation.Token));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            gateway.SendAsync(
-                new ProviderExecutionRequest(
+            promptExecutionService.ExecuteAsync(
+                new ProviderPromptExecutionRequest(
                     Guid.NewGuid(),
                     "cancelled request"),
                 cancellation.Token));
@@ -967,7 +972,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             LastCheckedAtUtc: null,
             SuggestedModels: ["personal-model"])
         {
-            ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+            ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             NetworkAccessPolicy = ProviderNetworkAccessPolicy.Default
         };
 

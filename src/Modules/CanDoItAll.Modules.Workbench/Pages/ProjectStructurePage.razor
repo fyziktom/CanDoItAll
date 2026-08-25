@@ -11,6 +11,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.Providers
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Modules.Projects
@@ -37,7 +38,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @inject ProjectStructureLocalFileActionCoordinator LocalFileActionCoordinator
 @inject WorkspaceService WorkspaceService
 @inject SecretService SecretService
-@inject ProviderExecutionService ProviderExecutionService
+@inject IProviderRuntimeProfileSource ProviderRuntimeProfileSource
+@inject IProviderPromptExecutionService ProviderPromptExecutionService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<ProjectStructurePage> Logger

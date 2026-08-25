@@ -6,9 +6,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-using WorkspaceProviderConnectorFieldKeys = CanDoItAll.Modules.Workspace.ProviderConnectorFieldKeys;
-using WorkspaceProviderPricingRefreshResult = CanDoItAll.Modules.Workspace.ProviderModelPricingRefreshResult;
-using WorkspaceProviderService = CanDoItAll.Modules.Workspace.WorkspaceService;
+using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
+using WorkspaceProviderConnectorFieldKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorFieldKeys;
+using WorkspaceProviderPricingRefreshResult = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderModelPricingRefreshResult;
 
 public partial class AgentProviderProfilesPanel
 {
@@ -16,7 +17,7 @@ public partial class AgentProviderProfilesPanel
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
     [Inject]
-    public WorkspaceProviderService WorkspaceProviderService { get; set; } = default!;
+    public IProviderAdministrationService ProviderAdministrationService { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -51,7 +52,7 @@ public partial class AgentProviderProfilesPanel
     private bool HasUnavailableSecretReference =>
         !string.IsNullOrWhiteSpace(providerModel.ApiKeyEnvironmentVariable) &&
         !secrets.Any(secret => string.Equals(
-            AgentFrameworkProviderMetadata.CreateSecretReference(secret.Id),
+            ProviderMetadata.CreateSecretReference(secret.Id),
             providerModel.ApiKeyEnvironmentVariable,
             StringComparison.OrdinalIgnoreCase));
 
@@ -66,7 +67,7 @@ public partial class AgentProviderProfilesPanel
         try
         {
             var providersTask = WorkspaceService.ListProvidersAsync();
-            var secretsTask = WorkspaceProviderService.ListSecretsAsync();
+            var secretsTask = ProviderAdministrationService.ListSecretsAsync();
             await Task.WhenAll(providersTask, secretsTask);
             providers = await providersTask;
             secrets = await secretsTask;
@@ -219,7 +220,7 @@ public partial class AgentProviderProfilesPanel
         isBusy = true;
         try
         {
-            var workspaceProviders = await WorkspaceProviderService.ListProviderProfilesAsync();
+            var workspaceProviders = await ProviderAdministrationService.ListProviderProfilesAsync();
             if (!workspaceProviders.Any(provider => provider.Id == providerModel.Id.Value))
             {
                 NotificationService.Warning(
@@ -228,7 +229,7 @@ public partial class AgentProviderProfilesPanel
                 return;
             }
 
-            var workspaceModel = await WorkspaceProviderService.GetProviderAsync(providerModel.Id.Value);
+            var workspaceModel = await ProviderAdministrationService.GetProviderAsync(providerModel.Id.Value);
             if (workspaceModel.Id != providerModel.Id)
             {
                 NotificationService.Warning(
@@ -242,7 +243,7 @@ public partial class AgentProviderProfilesPanel
             workspaceModel.IsPrivateProvider = providerModel.IsPrivateProvider;
             workspaceModel.ModelPrices = CloneModelPrices(providerModel.ModelPrices);
 
-            var result = await WorkspaceProviderService.RefreshProviderModelPricesAsync(workspaceModel);
+            var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(workspaceModel);
             if (!result.IsSuccess)
             {
                 NotificationService.Warning(
