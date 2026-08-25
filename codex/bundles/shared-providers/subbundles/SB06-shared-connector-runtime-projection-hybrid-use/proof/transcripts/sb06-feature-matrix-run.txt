@@ -1,0 +1,23 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' -c Release --no-build --no-restore --filter 'FullyQualifiedName~ProviderFeatureMatrixTests' -nologo -v: minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T08:16:59.245404+00:00
+completed-utc: 2026-08-25T08:17:02.156932+00:00
+duration-seconds: 2.912
+exit-code: 1
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata [3 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Sub-string not found
+String:    "using System.Text.Json;\nusing System.Text"···
+Not found: "providerTransport"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderFeatureMatrixTests.cs:line 289
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    14, Přeskočeno:     0, Celkem:    15, Doba trvání: 82 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+
+stderr:
+[xUnit.net 00:00:01.10]     CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata [FAIL]

@@ -1,0 +1,473 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.16kB 0.0s done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 0.8s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#3 resolve docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32 0.0s done
+#3 DONE 0.0s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#3 CACHED
+
+#4 [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0.302
+#4 ...
+
+#5 [internal] load metadata for mcr.microsoft.com/dotnet/aspnet:10.0.10
+#5 DONE 0.3s
+
+#6 [context filetools] load .dockerignore
+#6 transferring filetools: 2B done
+#6 DONE 0.4s
+
+#4 [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0.302
+#4 DONE 0.4s
+
+#7 [context components] load .dockerignore
+#7 transferring components: 486B done
+#7 DONE 0.4s
+
+#8 [internal] load metadata for docker.io/library/busybox:1.37.0-musl
+#8 DONE 0.5s
+
+#9 [internal] load .dockerignore
+#9 transferring context: 451B done
+#9 DONE 0.0s
+
+#10 [runtime 1/6] FROM mcr.microsoft.com/dotnet/aspnet:10.0.10@sha256:f1126d438ccc359f51cc6d4701a8deae513856cf10f5fe645d29ea6403dcac6b
+#10 resolve mcr.microsoft.com/dotnet/aspnet:10.0.10@sha256:f1126d438ccc359f51cc6d4701a8deae513856cf10f5fe645d29ea6403dcac6b 0.0s done
+#10 DONE 0.1s
+
+#11 [build 1/7] FROM mcr.microsoft.com/dotnet/sdk:10.0.302@sha256:72dd743782f2ae7e5476fd64f6a460045e3998dc862218b80e6944cba79a01b0
+#11 resolve mcr.microsoft.com/dotnet/sdk:10.0.302@sha256:72dd743782f2ae7e5476fd64f6a460045e3998dc862218b80e6944cba79a01b0 0.0s done
+#11 DONE 0.1s
+
+#12 [healthcheck 1/1] FROM docker.io/library/busybox:1.37.0-musl@sha256:fc6dddc4c44b1bfe37f41cae8e67d1693828e8f42a91862816d7953e2c9d3f23
+#12 resolve docker.io/library/busybox:1.37.0-musl@sha256:fc6dddc4c44b1bfe37f41cae8e67d1693828e8f42a91862816d7953e2c9d3f23 0.0s done
+#12 CACHED
+
+#13 [runtime 2/6] WORKDIR /app
+#13 CACHED
+
+#14 [runtime 3/6] RUN apt-get update     && apt-get install --yes --no-install-recommends libgssapi-krb5-2 util-linux     && rm -rf /var/lib/apt/lists/*
+#14 1.034 Get:1 http://archive.ubuntu.com/ubuntu noble InRelease [256 kB]
+#14 1.101 Get:2 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+#14 1.790 Get:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+#14 1.979 Get:4 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+#14 2.071 Get:5 http://security.ubuntu.com/ubuntu noble-security/main amd64 Packages [1196 kB]
+#14 2.179 Get:6 http://archive.ubuntu.com/ubuntu noble/restricted amd64 Packages [117 kB]
+#14 2.237 Get:7 http://archive.ubuntu.com/ubuntu noble/universe amd64 Packages [19.3 MB]
+#14 2.991 Get:8 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Packages [1526 kB]
+#14 3.288 Get:9 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Packages [50.0 kB]
+#14 3.291 Get:10 http://security.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [1725 kB]
+#14 4.541 Get:11 http://archive.ubuntu.com/ubuntu noble/multiverse amd64 Packages [331 kB]
+#14 4.559 Get:12 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages [1808 kB]
+#14 4.709 Get:13 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1525 kB]
+#14 4.857 Get:14 http://archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [1842 kB]
+#14 4.964 Get:15 http://archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Packages [55.8 kB]
+#14 4.969 Get:16 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [2146 kB]
+#14 5.144 Get:17 http://archive.ubuntu.com/ubuntu noble-backports/universe amd64 Packages [35.9 kB]
+#14 5.145 Get:18 http://archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Packages [671 B]
+#14 5.145 Get:19 http://archive.ubuntu.com/ubuntu noble-backports/main amd64 Packages [48.9 kB]
+#14 ...
+
+#15 [internal] load build context
+#15 transferring context: 29.22MB 5.6s
+#15 ...
+
+#16 [context components] load from client
+#16 transferring components: 22.08MB 9.9s
+#16 ...
+
+#17 [context filetools] load from client
+#17 transferring filetools: 67.18MB 10.0s
+#17 ...
+
+#16 [context components] load from client
+#16 ...
+
+#14 [runtime 3/6] RUN apt-get update     && apt-get install --yes --no-install-recommends libgssapi-krb5-2 util-linux     && rm -rf /var/lib/apt/lists/*
+#14 6.158 Fetched 32.4 MB in 5s (5929 kB/s)
+#14 6.158 Reading package lists...
+#14 7.856 Reading package lists...
+#14 9.993 Building dependency tree...
+#14 10.45 Reading state information...
+#14 10.91 util-linux is already the newest version (2.39.3-9ubuntu6.5).
+#14 10.91 The following additional packages will be installed:
+#14 10.91   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0
+#14 10.91 Suggested packages:
+#14 10.91   krb5-doc krb5-user
+#14 10.91 Recommended packages:
+#14 10.91   krb5-locales
+#14 10.95 The following NEW packages will be installed:
+#14 10.96   libgssapi-krb5-2 libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0
+#14 11.33 0 upgraded, 5 newly installed, 0 to remove and 2 not upgraded.
+#14 11.33 Need to get 616 kB of archives.
+#14 11.33 After this operation, 1918 kB of additional disk space will be used.
+#14 11.33 Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libkrb5support0 amd64 1.20.1-6ubuntu2.8 [34.7 kB]
+#14 11.65 Get:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libk5crypto3 amd64 1.20.1-6ubuntu2.8 [81.9 kB]
+#14 11.88 Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libkeyutils1 amd64 1.6.3-3build1 [9490 B]
+#14 11.90 Get:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libkrb5-3 amd64 1.20.1-6ubuntu2.8 [348 kB]
+#14 12.19 Get:5 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libgssapi-krb5-2 amd64 1.20.1-6ubuntu2.8 [143 kB]
+#14 12.60 debconf: delaying package configuration, since apt-utils is not installed
+#14 12.68 Fetched 616 kB in 1s (484 kB/s)
+#14 12.73 Selecting previously unselected package libkrb5support0:amd64.
+#14 12.73 (Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 6111 files and directories currently installed.)
+#14 12.89 Preparing to unpack .../libkrb5support0_1.20.1-6ubuntu2.8_amd64.deb ...
+#14 12.91 Unpacking libkrb5support0:amd64 (1.20.1-6ubuntu2.8) ...
+#14 12.97 Selecting previously unselected package libk5crypto3:amd64.
+#14 12.97 Preparing to unpack .../libk5crypto3_1.20.1-6ubuntu2.8_amd64.deb ...
+#14 12.98 Unpacking libk5crypto3:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.04 Selecting previously unselected package libkeyutils1:amd64.
+#14 13.04 Preparing to unpack .../libkeyutils1_1.6.3-3build1_amd64.deb ...
+#14 13.04 Unpacking libkeyutils1:amd64 (1.6.3-3build1) ...
+#14 13.09 Selecting previously unselected package libkrb5-3:amd64.
+#14 13.10 Preparing to unpack .../libkrb5-3_1.20.1-6ubuntu2.8_amd64.deb ...
+#14 13.10 Unpacking libkrb5-3:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.18 Selecting previously unselected package libgssapi-krb5-2:amd64.
+#14 13.18 Preparing to unpack .../libgssapi-krb5-2_1.20.1-6ubuntu2.8_amd64.deb ...
+#14 13.18 Unpacking libgssapi-krb5-2:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.24 Setting up libkeyutils1:amd64 (1.6.3-3build1) ...
+#14 13.26 Setting up libkrb5support0:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.28 Setting up libk5crypto3:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.29 Setting up libkrb5-3:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.30 Setting up libgssapi-krb5-2:amd64 (1.20.1-6ubuntu2.8) ...
+#14 13.33 Processing triggers for libc-bin (2.39-0ubuntu8.8) ...
+#14 DONE 14.0s
+
+#16 [context components] load from client
+#16 ...
+
+#18 [runtime 4/6] COPY --from=healthcheck /bin/busybox /usr/local/bin/busybox
+#18 DONE 0.1s
+
+#16 [context components] load from client
+#16 transferring components: 32.70MB 15.0s
+#16 ...
+
+#17 [context filetools] load from client
+#17 transferring filetools: 178.72MB 18.8s done
+#17 DONE 18.9s
+
+#16 [context components] load from client
+#16 transferring components: 43.76MB 20.0s
+#16 ...
+
+#15 [internal] load build context
+#15 transferring context: 170.73MB 20.1s
+#15 ...
+
+#16 [context components] load from client
+#16 transferring components: 62.77MB 25.2s
+#16 ...
+
+#15 [internal] load build context
+#15 transferring context: 278.65MB 29.9s done
+#15 DONE 30.1s
+
+#16 [context components] load from client
+#16 ...
+
+#19 [build 2/7] WORKDIR /source
+#19 CACHED
+
+#16 [context components] load from client
+#16 transferring components: 98.12MB 30.2s
+#16 transferring components: 106.14MB 30.7s done
+#16 DONE 30.8s
+
+#20 [build 3/7] COPY . .
+#20 DONE 3.6s
+
+#21 [build 4/7] COPY --from=components . /CanDoItAll.Components
+#21 DONE 2.0s
+
+#22 [build 5/7] COPY --from=filetools . /CanDoItAll.FileTools
+#22 DONE 0.8s
+
+#23 [build 6/7] RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages     dotnet restore "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"     /p:UseLocalCanDoItAllLibraries=true
+#23 1.741   Determining projects to restore...
+#23 10.16   Restored /source/src/Processes/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj (in 324 ms).
+#23 10.16   Restored /source/src/Processes/CanDoItAll.Processes.Projections/CanDoItAll.Processes.Projections.csproj (in 324 ms).
+#23 10.16   Restored /source/src/Processes/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj (in 324 ms).
+#23 10.17   Restored /source/src/MAF/Skills/CanDoItAll.AgentFramework.Skills/CanDoItAll.AgentFramework.Skills.csproj (in 324 ms).
+#23 10.17   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileBrowser.Core/CanDoItAll.FileTools.FileBrowser.Core.csproj (in 324 ms).
+#23 10.18   Restored /source/src/Memory/CanDoItAll.Memory.Http.Contracts/CanDoItAll.Memory.Http.Contracts.csproj (in 4 ms).
+#23 10.18   Restored /source/src/Memory/CanDoItAll.Memory.Abstractions/CanDoItAll.Memory.Abstractions.csproj (in 2 ms).
+#23 10.19   Restored /source/src/Processes/CanDoItAll.Processes.Builder/CanDoItAll.Processes.Builder.csproj (in 12 ms).
+#23 10.20   Restored /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/CanDoItAll.AgentFramework.Workflows.Abstractions.csproj (in 6 ms).
+#23 13.91   Restored /source/src/Memory/CanDoItAll.Memory.Mock/CanDoItAll.Memory.Mock.csproj (in 4.09 sec).
+#23 13.91   Restored /source/src/Memory/CanDoItAll.Memory.Application/CanDoItAll.Memory.Application.csproj (in 3.72 sec).
+#23 13.91   Restored /source/src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj (in 4.09 sec).
+#23 13.91   Restored /source/src/Memory/CanDoItAll.Memory.Http/CanDoItAll.Memory.Http.csproj (in 3.73 sec).
+#23 13.91   Restored /source/src/Memory/CanDoItAll.Memory.Mcp/CanDoItAll.Memory.Mcp.csproj (in 3.73 sec).
+#23 13.91   Restored /source/src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Plugins/CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj (in 4.09 sec).
+#23 13.92   Restored /source/src/Foundation/CanDoItAll.Infrastructure.Abstractions/CanDoItAll.Infrastructure.Abstractions.csproj (in 2 ms).
+#23 13.92   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj (in 3.69 sec).
+#23 13.93   Restored /source/src/MAF/Skills/CanDoItAll.AgentFramework.Skills.Abstractions/CanDoItAll.AgentFramework.Skills.Abstractions.csproj (in 4 ms).
+#23 13.93   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj (in 4.09 sec).
+#23 13.93   Restored /source/src/Foundation/CanDoItAll.Git/CanDoItAll.Git.csproj (in 5 ms).
+#23 13.95   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Core/CanDoItAll.FileTools.FileInteraction.Core.csproj (in 9 ms).
+#23 13.96   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj (in 24 ms).
+#23 13.97   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Components/CanDoItAll.FileTools.FileInteraction.Components.csproj (in 6 ms).
+#23 13.97   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileBrowser.Components/CanDoItAll.FileTools.FileBrowser.Components.csproj (in 7 ms).
+#23 14.00   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.Desktop/CanDoItAll.FileTools.Desktop.csproj (in 25 ms).
+#23 14.00   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.Abstractions/CanDoItAll.FileTools.Abstractions.csproj (in 22 ms).
+#23 14.39   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Markdown/CanDoItAll.FileTools.FileInteraction.Markdown.csproj (in 444 ms).
+#23 15.55   Restored /source/src/Processes/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj (in 5.72 sec).
+#23 15.56   Restored /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj (in 1.63 sec).
+#23 15.57   Restored /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.csproj (in 1.63 sec).
+#23 15.72   Restored /source/src/Integration/CanDoItAll.FileTools.Integration/CanDoItAll.FileTools.Integration.csproj (in 131 ms).
+#23 15.73   Restored /source/src/Integration/CanDoItAll.FileTools.Integration.Abstractions/CanDoItAll.FileTools.Integration.Abstractions.csproj (in 4 ms).
+#23 15.74   Restored /source/src/Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj (in 2 ms).
+#23 15.75   Restored /source/src/Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj (in 2 ms).
+#23 16.44   Restored /source/src/Modules/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj (in 6.62 sec).
+#23 16.45   Restored /source/src/Modules/CanDoItAll.Modules.Memory/CanDoItAll.Modules.Memory.csproj (in 6.62 sec).
+#23 16.45   Restored /source/src/UI/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj (in 671 ms).
+#23 16.46   Restored /source/src/Processes/Drivers/CanDoItAll.Processes.Drivers.Standard/CanDoItAll.Processes.Drivers.Standard.csproj (in 7 ms).
+#23 16.49   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj (in 6.64 sec).
+#23 16.49   Restored /source/src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/CanDoItAll.Processes.Drivers.Abstractions.csproj (in 5 ms).
+#23 16.49   Restored /CanDoItAll.Components/src/CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.csproj (in 2.45 sec).
+#23 16.49   Restored /CanDoItAll.Components/src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj (in 6.66 sec).
+#23 16.50   Restored /CanDoItAll.Components/src/CanDoItAll.Components.OverlayLib/CanDoItAll.Components.OverlayLib.csproj (in 2.45 sec).
+#23 16.51   Restored /source/src/Modules/CanDoItAll.Modules.TestLab/CanDoItAll.Modules.TestLab.csproj (in 870 ms).
+#23 16.52   Restored /source/src/Processes/CanDoItAll.Processes.Templates/CanDoItAll.Processes.Templates.csproj (in 35 ms).
+#23 16.52   Restored /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Builder/CanDoItAll.AgentFramework.Workflows.Builder.csproj (in 8 ms).
+#23 16.53   Restored /source/src/Processes/CanDoItAll.Processes.Runtime/CanDoItAll.Processes.Runtime.csproj (in 35 ms).
+#23 16.53   Restored /source/src/Modules/CanDoItAll.Modules.Plugins/CanDoItAll.Modules.Plugins.csproj (in 6.64 sec).
+#23 16.53   Restored /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/CanDoItAll.AgentFramework.Workflows.Core.csproj (in 18 ms).
+#23 16.53   Restored /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/CanDoItAll.AgentFramework.Workflows.Runtime.csproj (in 21 ms).
+#23 16.53   Restored /source/src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj (in 2.04 sec).
+#23 16.54   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/CanDoItAll.AgentFramework.Llm.Abstractions.csproj (in 15 ms).
+#23 16.55   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/CanDoItAll.AgentFramework.Llm.Conversations.csproj (in 16 ms).
+#23 16.55   Restored /source/src/Modules/CanDoItAll.Modules.CrmHr/CanDoItAll.Modules.CrmHr.csproj (in 6.65 sec).
+#23 16.56   Restored /source/src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj (in 2 ms).
+#23 16.56   Restored /source/src/Integration/CanDoItAll.SharedProviders.Http/CanDoItAll.SharedProviders.Http.csproj (in 4 ms).
+#23 16.56   Restored /source/src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Access/CanDoItAll.AgentFramework.Capabilities.Access.csproj (in 3 ms).
+#23 16.57   Restored /source/src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Templates/CanDoItAll.AgentFramework.Capabilities.Templates.csproj (in 3 ms).
+#23 16.57   Restored /CanDoItAll.Components/src/CanDoItAll.Components.Common/CanDoItAll.Components.Common.csproj (in 11 ms).
+#23 16.58   Restored /source/src/Integration/CanDoItAll.SharedProviders.Abstractions/CanDoItAll.SharedProviders.Abstractions.csproj (in 6 ms).
+#23 16.58   Restored /CanDoItAll.Components/src/CanDoItAll.Components.Gantt/CanDoItAll.Components.Gantt.csproj (in 21 ms).
+#23 16.59   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj (in 35 ms).
+#23 16.59   Restored /CanDoItAll.Components/src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj (in 8 ms).
+#23 16.60   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj (in 19 ms).
+#23 16.61   Restored /source/src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Core/CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj (in 17 ms).
+#23 16.62   Restored /source/src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj (in 7 ms).
+#23 16.63   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj (in 25 ms).
+#23 16.63   Restored /source/src/MAF/Tools/CanDoItAll.AgentFramework.Tools.Abstractions/CanDoItAll.AgentFramework.Tools.Abstractions.csproj (in 17 ms).
+#23 16.63   Restored /source/src/MAF/Tools/CanDoItAll.AgentFramework.Tools/CanDoItAll.AgentFramework.Tools.csproj (in 20 ms).
+#23 16.63   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj (in 19 ms).
+#23 16.65   Restored /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj (in 7 ms).
+#23 16.67   Restored /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj (in 17 ms).
+#23 16.68   Restored /source/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp.Abstractions/CanDoItAll.AgentFramework.Mcp.Abstractions.csproj (in 3 ms).
+#23 16.70   Restored /source/src/plugins/Implementations/CanDoItAll.Plugin.Office365/CanDoItAll.Plugin.Office365.csproj (in 33 ms).
+#23 16.70   Restored /source/src/MAF/Memory/CanDoItAll.AgentFramework.Memory/CanDoItAll.AgentFramework.Memory.csproj (in 16 ms).
+#23 16.72   Restored /source/src/plugins/Implementations/CanDoItAll.Plugin.Gmail/CanDoItAll.Plugin.Gmail.csproj (in 41 ms).
+#23 16.72   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Usage/CanDoItAll.AgentFramework.Usage.csproj (in 13 ms).
+#23 16.73   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj (in 14 ms).
+#23 16.73   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj (in 28 ms).
+#23 16.73   Restored /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj (in 47 ms).
+#23 16.74   Restored /source/src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions/CanDoItAll.Memory.SourceGateway.Abstractions.csproj (in 2 ms).
+#23 16.75   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Providers/CanDoItAll.AgentFramework.Providers.csproj (in 14 ms).
+#23 16.75   Restored /source/src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/CanDoItAll.Memory.Drivers.CognitiveMemory.csproj (in 10 ms).
+#23 16.76   Restored /source/src/Memory/CanDoItAll.Memory.Persistence/CanDoItAll.Memory.Persistence.csproj (in 12 ms).
+#23 16.76   Restored /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Templates/CanDoItAll.AgentFramework.Workflows.Templates.csproj (in 252 ms).
+#23 16.76   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj (in 9 ms).
+#23 16.76   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.ProviderPipelines/CanDoItAll.AgentFramework.ProviderPipelines.csproj (in 9 ms).
+#23 16.79   Restored /source/src/plugins/Abstractions/CanDoItAll.Plugins.Abstractions/CanDoItAll.Plugins.Abstractions.csproj (in 7 ms).
+#23 16.79   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Llm.ProviderRuntime/CanDoItAll.AgentFramework.Llm.ProviderRuntime.csproj (in 9 ms).
+#23 16.81   Restored /source/src/UI/CanDoItAll.Conversations.Shell/CanDoItAll.Conversations.Shell.csproj (in 8 ms).
+#23 16.82   Restored /source/src/plugins/Implementations/CanDoItAll.Plugin.Email/CanDoItAll.Plugin.Email.csproj (in 27 ms).
+#23 16.82   Restored /source/src/UI/CanDoItAll.Conversations.Components/CanDoItAll.Conversations.Components.csproj (in 13 ms).
+#23 16.82   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj (in 32 ms).
+#23 16.83   Restored /source/src/UI/CanDoItAll.Components.Git/CanDoItAll.Components.Git.csproj (in 9 ms).
+#23 16.83   Restored /source/src/Processes/CanDoItAll.Processes.Abstractions/CanDoItAll.Processes.Abstractions.csproj (in 4 ms).
+#23 16.85   Restored /source/src/Modules/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj (in 12 ms).
+#23 16.85   Restored /source/src/Processes/CanDoItAll.Processes.Application/CanDoItAll.Processes.Application.csproj (in 13 ms).
+#23 16.90   Restored /source/src/Modules/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj (in 22 ms).
+#23 16.93   Restored /source/src/Modules/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj (in 41 ms).
+#23 16.94   Restored /source/src/Modules/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj (in 58 ms).
+#23 17.52   Restored /source/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/CanDoItAll.AgentFramework.Mcp.csproj (in 7.7 sec).
+#23 19.10   Restored /CanDoItAll.Components/src/CanDoItAll.Components.Charts/CanDoItAll.Components.Charts.csproj (in 2.54 sec).
+#23 20.76   Restored /source/src/Modules/CanDoItAll.Modules.SchedulerPlanner/CanDoItAll.Modules.SchedulerPlanner.csproj (in 3.89 sec).
+#23 21.85   Restored /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Spreadsheet/CanDoItAll.FileTools.FileInteraction.Spreadsheet.csproj (in 7.91 sec).
+#23 22.58   Restored /source/src/Foundation/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj (in 8.66 sec).
+#23 35.02   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj (in 18.41 sec).
+#23 35.02   Restored /source/src/MAF/Tools/CanDoItAll.Tools.Documents/CanDoItAll.Tools.Documents.csproj (in 18.39 sec).
+#23 35.03   Restored /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj (in 18.49 sec).
+#23 35.04   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj (in 18.23 sec).
+#23 35.04   Restored /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj (in 24.8 sec).
+#23 35.05   Restored /source/src/MAF/Common/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj (in 18.46 sec).
+#23 35.07   Restored /source/src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj (in 19.44 sec).
+#23 35.09   Restored /source/src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj (in 18.27 sec).
+#23 35.10   Restored /source/src/Modules/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj (in 25.2 sec).
+#23 35.12   Restored /source/src/Foundation/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj (in 25.21 sec).
+#23 35.12   Restored /source/src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj (in 25.21 sec).
+#23 35.12   Restored /source/src/App/CanDoItAll.Web/CanDoItAll.Web.csproj (in 21.08 sec).
+#23 DONE 36.4s
+
+#24 [build 7/7] RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages     dotnet publish "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj"     --configuration Release     --output /app/publish     --no-restore     /p:UseAppHost=false     /p:UseLocalCanDoItAllLibraries=true
+#24 10.67   CanDoItAll.Infrastructure.Abstractions -> /source/src/Foundation/CanDoItAll.Infrastructure.Abstractions/bin/Release/net10.0/CanDoItAll.Infrastructure.Abstractions.dll
+#24 10.68   CanDoItAll.Security.Abstractions -> /source/src/Foundation/CanDoItAll.Security.Abstractions/bin/Release/net10.0/CanDoItAll.Security.Abstractions.dll
+#24 10.68   CanDoItAll.Components.Common -> /CanDoItAll.Components/src/CanDoItAll.Components.Common/bin/Release/net10.0/CanDoItAll.Components.Common.dll
+#24 10.71   CanDoItAll.FileTools.Desktop -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.Desktop/bin/Release/net10.0/CanDoItAll.FileTools.Desktop.dll
+#24 10.71   CanDoItAll.Memory.SourceGateway.Abstractions -> /source/src/Memory/CanDoItAll.Memory.SourceGateway.Abstractions/bin/Release/net10.0/CanDoItAll.Memory.SourceGateway.Abstractions.dll
+#24 10.72   CanDoItAll.AgentFramework.Capabilities.Abstractions -> /source/src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+#24 10.80   CanDoItAll.SharedProviders.Abstractions -> /source/src/Integration/CanDoItAll.SharedProviders.Abstractions/bin/Release/net10.0/CanDoItAll.SharedProviders.Abstractions.dll
+#24 10.81   CanDoItAll.Memory.Abstractions -> /source/src/Memory/CanDoItAll.Memory.Abstractions/bin/Release/net10.0/CanDoItAll.Memory.Abstractions.dll
+#24 10.84   CanDoItAll.SharedKernel -> /source/src/Foundation/CanDoItAll.SharedKernel/bin/Release/net10.0/CanDoItAll.SharedKernel.dll
+#24 11.00   CanDoItAll.FileTools.Abstractions -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.Abstractions/bin/Release/net10.0/CanDoItAll.FileTools.Abstractions.dll
+#24 12.77   CanDoItAll.AgentFramework.Mcp.Abstractions -> /source/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Mcp.Abstractions.dll
+#24 13.11   CanDoItAll.AgentFramework.Capabilities.Access -> /source/src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Access/bin/Release/net10.0/CanDoItAll.AgentFramework.Capabilities.Access.dll
+#24 13.65   CanDoItAll.AgentFramework.Tools.Abstractions -> /source/src/MAF/Tools/CanDoItAll.AgentFramework.Tools.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Tools.Abstractions.dll
+#24 14.32   CanDoItAll.AgentFramework.Skills.Abstractions -> /source/src/MAF/Skills/CanDoItAll.AgentFramework.Skills.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Skills.Abstractions.dll
+#24 14.99   CanDoItAll.Processes.Contracts -> /source/src/Processes/CanDoItAll.Processes.Contracts/bin/Release/net10.0/CanDoItAll.Processes.Contracts.dll
+#24 15.89   CanDoItAll.AgentFramework.Capabilities.Templates -> /source/src/MAF/Capabilities/CanDoItAll.AgentFramework.Capabilities.Templates/bin/Release/net10.0/CanDoItAll.AgentFramework.Capabilities.Templates.dll
+#24 16.71   CanDoItAll.Memory.Application -> /source/src/Memory/CanDoItAll.Memory.Application/bin/Release/net10.0/CanDoItAll.Memory.Application.dll
+#24 17.35   CanDoItAll.Git -> /source/src/Foundation/CanDoItAll.Git/bin/Release/net10.0/CanDoItAll.Git.dll
+#24 17.48   CanDoItAll.Processes.Abstractions -> /source/src/Processes/CanDoItAll.Processes.Abstractions/bin/Release/net10.0/CanDoItAll.Processes.Abstractions.dll
+#24 17.95   CanDoItAll.AgentFramework.Skills -> /source/src/MAF/Skills/CanDoItAll.AgentFramework.Skills/bin/Release/net10.0/CanDoItAll.AgentFramework.Skills.dll
+#24 18.21   CanDoItAll.Processes.Core -> /source/src/Processes/CanDoItAll.Processes.Core/bin/Release/net10.0/CanDoItAll.Processes.Core.dll
+#24 18.26   CanDoItAll.Memory.Mock -> /source/src/Memory/CanDoItAll.Memory.Mock/bin/Release/net10.0/CanDoItAll.Memory.Mock.dll
+#24 18.53   CanDoItAll.Components.Charts -> /CanDoItAll.Components/src/CanDoItAll.Components.Charts/bin/Release/net10.0/CanDoItAll.Components.Charts.dll
+#24 18.79   CanDoItAll.Memory.Http.Contracts -> /source/src/Memory/CanDoItAll.Memory.Http.Contracts/bin/Release/net10.0/CanDoItAll.Memory.Http.Contracts.dll
+#24 19.02   CanDoItAll.Processes.Drivers.Abstractions -> /source/src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/bin/Release/net10.0/CanDoItAll.Processes.Drivers.Abstractions.dll
+#24 19.10   CanDoItAll.FileTools.FileBrowser.Core -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileBrowser.Core/bin/Release/net10.0/CanDoItAll.FileTools.FileBrowser.Core.dll
+#24 19.11   CanDoItAll.Infrastructure -> /source/src/Foundation/CanDoItAll.Infrastructure/bin/Release/net10.0/CanDoItAll.Infrastructure.dll
+#24 19.49   CanDoItAll.FileTools.FileInteraction.Core -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Core/bin/Release/net10.0/CanDoItAll.FileTools.FileInteraction.Core.dll
+#24 19.57   CanDoItAll.AgentFramework.Models -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Models/bin/Release/net10.0/CanDoItAll.AgentFramework.Models.dll
+#24 20.14   CanDoItAll.Memory.Http -> /source/src/Memory/CanDoItAll.Memory.Http/bin/Release/net10.0/CanDoItAll.Memory.Http.dll
+#24 20.16   CanDoItAll.FileTools.Integration.Abstractions -> /source/src/Integration/CanDoItAll.FileTools.Integration.Abstractions/bin/Release/net10.0/CanDoItAll.FileTools.Integration.Abstractions.dll
+#24 20.83   CanDoItAll.Memory.Persistence -> /source/src/Memory/CanDoItAll.Memory.Persistence/bin/Release/net10.0/CanDoItAll.Memory.Persistence.dll
+#24 21.01   CanDoItAll.Processes.Drivers.Standard -> /source/src/Processes/Drivers/CanDoItAll.Processes.Drivers.Standard/bin/Release/net10.0/CanDoItAll.Processes.Drivers.Standard.dll
+#24 21.49   CanDoItAll.AgentFramework.Usage -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Usage/bin/Release/net10.0/CanDoItAll.AgentFramework.Usage.dll
+#24 21.56   CanDoItAll.AgentFramework.Tools -> /source/src/MAF/Tools/CanDoItAll.AgentFramework.Tools/bin/Release/net10.0/CanDoItAll.AgentFramework.Tools.dll
+#24 21.85   CanDoItAll.AgentFramework.Workflows.Abstractions -> /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+#24 21.86   CanDoItAll.AgentFramework.Runtime.Abstractions -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Runtime.Abstractions.dll
+#24 21.89   CanDoItAll.Plugins.Abstractions -> /source/src/plugins/Abstractions/CanDoItAll.Plugins.Abstractions/bin/Release/net10.0/CanDoItAll.Plugins.Abstractions.dll
+#24 21.92   CanDoItAll.AgentFramework.Tooling -> /source/src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/bin/Release/net10.0/CanDoItAll.AgentFramework.Tooling.dll
+#24 21.93   CanDoItAll.Memory.Drivers.CognitiveMemory -> /source/src/Memory/Drivers/CanDoItAll.Memory.Drivers.CognitiveMemory/bin/Release/net10.0/CanDoItAll.Memory.Drivers.CognitiveMemory.dll
+#24 22.41   CanDoItAll.AgentFramework.Llm.Abstractions -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Llm.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.Abstractions.dll
+#24 22.81   CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> /source/src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+#24 22.93   CanDoItAll.AgentFramework.Workflows.Builder -> /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Builder/bin/Release/net10.0/CanDoItAll.AgentFramework.Workflows.Builder.dll
+#24 23.26   CanDoItAll.FileTools.Integration -> /source/src/Integration/CanDoItAll.FileTools.Integration/bin/Release/net10.0/CanDoItAll.FileTools.Integration.dll
+#24 23.30   CanDoItAll.SharedProviders.Http -> /source/src/Integration/CanDoItAll.SharedProviders.Http/bin/Release/net10.0/CanDoItAll.SharedProviders.Http.dll
+#24 24.02   CanDoItAll.AgentFramework.Llm.SimpleChats.Core -> /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.SimpleChats.Core.dll
+#24 24.13   CanDoItAll.AgentFramework.Llm.Conversations -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Llm.Conversations/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.Conversations.dll
+#24 24.27   CanDoItAll.Processes.Projections -> /source/src/Processes/CanDoItAll.Processes.Projections/bin/Release/net10.0/CanDoItAll.Processes.Projections.dll
+#24 24.85   CanDoItAll.AgentFramework.ProviderPipelines -> /source/src/MAF/Common/CanDoItAll.AgentFramework.ProviderPipelines/bin/Release/net10.0/CanDoItAll.AgentFramework.ProviderPipelines.dll
+#24 25.01   CanDoItAll.FileTools.FileInteraction.Components -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Components/bin/Release/net10.0/CanDoItAll.FileTools.FileInteraction.Components.dll
+#24 25.06   CanDoItAll.FileTools.FileBrowser.Components -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileBrowser.Components/bin/Release/net10.0/CanDoItAll.FileTools.FileBrowser.Components.dll
+#24 25.06   CanDoItAll.AgentFramework.WorkflowExecutors.Core -> /source/src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+#24 26.06   CanDoItAll.Processes.Templates -> /source/src/Processes/CanDoItAll.Processes.Templates/bin/Release/net10.0/CanDoItAll.Processes.Templates.dll
+#24 26.56   CanDoItAll.AgentFramework.Providers -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Providers/bin/Release/net10.0/CanDoItAll.AgentFramework.Providers.dll
+#24 26.68   CanDoItAll.Components.Git -> /source/src/UI/CanDoItAll.Components.Git/bin/Release/net10.0/CanDoItAll.Components.Git.dll
+#24 26.80   CanDoItAll.AgentFramework.Llm.SimpleChats.Application -> /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Application/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.SimpleChats.Application.dll
+#24 26.87   CanDoItAll.Processes.Builder -> /source/src/Processes/CanDoItAll.Processes.Builder/bin/Release/net10.0/CanDoItAll.Processes.Builder.dll
+#24 27.43   CanDoItAll.AgentFramework.Llm.ProviderRuntime -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Llm.ProviderRuntime/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.ProviderRuntime.dll
+#24 28.13   CanDoItAll.Components.BaseLib -> /CanDoItAll.Components/src/CanDoItAll.Components.BaseLib/bin/Release/net10.0/CanDoItAll.Components.BaseLib.dll
+#24 28.63   CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime -> /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.dll
+#24 28.76   CanDoItAll.Processes.Runtime -> /source/src/Processes/CanDoItAll.Processes.Runtime/bin/Release/net10.0/CanDoItAll.Processes.Runtime.dll
+#24 29.09   CanDoItAll.FileTools.FileInteraction.Markdown -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Markdown/bin/Release/net10.0/CanDoItAll.FileTools.FileInteraction.Markdown.dll
+#24 29.60   CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence -> /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.dll
+#24 30.67   CanDoItAll.Memory.Mcp -> /source/src/Memory/CanDoItAll.Memory.Mcp/bin/Release/net10.0/CanDoItAll.Memory.Mcp.dll
+#24 30.94   CanDoItAll.FileTools.FileInteraction.Spreadsheet -> /CanDoItAll.FileTools/src/CanDoItAll.FileTools.FileInteraction.Spreadsheet/bin/Release/net10.0/CanDoItAll.FileTools.FileInteraction.Spreadsheet.dll
+#24 31.11   CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> /source/src/MAF/WorkflowExecutors/CanDoItAll.AgentFramework.WorkflowExecutors.Plugins/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+#24 31.97   CanDoItAll.Modules.Security -> /source/src/Modules/CanDoItAll.Modules.Security/bin/Release/net10.0/CanDoItAll.Modules.Security.dll
+#24 32.18   CanDoItAll.Processes.Application -> /source/src/Processes/CanDoItAll.Processes.Application/bin/Release/net10.0/CanDoItAll.Processes.Application.dll
+#24 32.54   CanDoItAll.AgentFramework.Core -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll
+#24 33.82   CanDoItAll.Processes.Persistence -> /source/src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll
+#24 34.23   CanDoItAll.Tools.Documents -> /source/src/MAF/Tools/CanDoItAll.Tools.Documents/bin/Release/net10.0/CanDoItAll.Tools.Documents.dll
+#24 34.39   CanDoItAll.Components.Mermaid -> /CanDoItAll.Components/src/CanDoItAll.Components.Mermaid/bin/Release/net10.0/CanDoItAll.Components.Mermaid.dll
+#24 34.40   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.dll
+#24 34.40   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.dll
+#24 34.40   CanDoItAll.AgentFramework.Voice -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Voice/bin/Release/net10.0/CanDoItAll.AgentFramework.Voice.dll
+#24 34.40   CanDoItAll.AgentFramework.Workflows.Core -> /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Workflows.Core.dll
+#24 34.41   CanDoItAll.AgentFramework.Mcp -> /source/src/MAF/Mcp/CanDoItAll.AgentFramework.Mcp/bin/Release/net10.0/CanDoItAll.AgentFramework.Mcp.dll
+#24 34.42   CanDoItAll.AgentFramework.Memory -> /source/src/MAF/Memory/CanDoItAll.AgentFramework.Memory/bin/Release/net10.0/CanDoItAll.AgentFramework.Memory.dll
+#24 34.42   CanDoItAll.Modules.Collaboration -> /source/src/Modules/CanDoItAll.Modules.Collaboration/bin/Release/net10.0/CanDoItAll.Modules.Collaboration.dll
+#24 34.48   CanDoItAll.Components.OverlayLib -> /CanDoItAll.Components/src/CanDoItAll.Components.OverlayLib/bin/Release/net10.0/CanDoItAll.Components.OverlayLib.dll
+#24 34.96   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.dll
+#24 35.09   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.dll
+#24 35.37   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.dll
+#24 36.95   CanDoItAll.AgentFramework.Workflows.Runtime -> /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Runtime/bin/Release/net10.0/CanDoItAll.AgentFramework.Workflows.Runtime.dll
+#24 37.08   CanDoItAll.Modules.Memory -> /source/src/Modules/CanDoItAll.Modules.Memory/bin/Release/net10.0/CanDoItAll.Modules.Memory.dll
+#24 37.27   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.dll
+#24 37.45   CanDoItAll.Plugin.Email -> /source/src/plugins/Implementations/CanDoItAll.Plugin.Email/bin/Release/net10.0/CanDoItAll.Plugin.Email.dll
+#24 37.46   CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.dll
+#24 37.93   CanDoItAll.AgentFramework.Maf -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Maf/bin/Release/net10.0/CanDoItAll.AgentFramework.Maf.dll
+#24 38.30   CanDoItAll.Conversations.Components -> /source/src/UI/CanDoItAll.Conversations.Components/bin/Release/net10.0/CanDoItAll.Conversations.Components.dll
+#24 38.67   CanDoItAll.AgentFramework.Workflows.Templates -> /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Templates/bin/Release/net10.0/CanDoItAll.AgentFramework.Workflows.Templates.dll
+#24 39.82   CanDoItAll.Components.CanvasLib -> /CanDoItAll.Components/src/CanDoItAll.Components.CanvasLib/bin/Release/net10.0/CanDoItAll.Components.CanvasLib.dll
+#24 40.11   CanDoItAll.Conversations.Shell -> /source/src/UI/CanDoItAll.Conversations.Shell/bin/Release/net10.0/CanDoItAll.Conversations.Shell.dll
+#24 40.63   CanDoItAll.AgentFramework.Persistence -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll
+#24 41.12   CanDoItAll.Modules.Plugins -> /source/src/Modules/CanDoItAll.Modules.Plugins/bin/Release/net10.0/CanDoItAll.Modules.Plugins.dll
+#24 41.83   CanDoItAll.Components.Gantt -> /CanDoItAll.Components/src/CanDoItAll.Components.Gantt/bin/Release/net10.0/CanDoItAll.Components.Gantt.dll
+#24 42.69   CanDoItAll.Plugin.Office365 -> /source/src/plugins/Implementations/CanDoItAll.Plugin.Office365/bin/Release/net10.0/CanDoItAll.Plugin.Office365.dll
+#24 42.98   CanDoItAll.Plugin.Gmail -> /source/src/plugins/Implementations/CanDoItAll.Plugin.Gmail/bin/Release/net10.0/CanDoItAll.Plugin.Gmail.dll
+#24 43.00   CanDoItAll.AgentFramework.WorkflowExecutors.Standard -> /source/src/MAF/WorkflowExecutors/Standard/CanDoItAll.AgentFramework.WorkflowExecutors.Standard/bin/Release/net10.0/CanDoItAll.AgentFramework.WorkflowExecutors.Standard.dll
+#24 43.12   CanDoItAll.AppComponents -> /source/src/UI/CanDoItAll.AppComponents/bin/Release/net10.0/CanDoItAll.AppComponents.dll
+#24 43.82   CanDoItAll.AgentFramework.Components -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Components/bin/Release/net10.0/CanDoItAll.AgentFramework.Components.dll
+#24 43.84   CanDoItAll.AgentFramework.Workflows.MafAdapter -> /source/src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.MafAdapter/bin/Release/net10.0/CanDoItAll.AgentFramework.Workflows.MafAdapter.dll
+#24 47.03   CanDoItAll.AgentFramework.Hosting -> /source/src/MAF/Common/CanDoItAll.AgentFramework.Hosting/bin/Release/net10.0/CanDoItAll.AgentFramework.Hosting.dll
+#24 47.26   CanDoItAll.Modules.Prompts -> /source/src/Modules/CanDoItAll.Modules.Prompts/bin/Release/net10.0/CanDoItAll.Modules.Prompts.dll
+#24 47.28   CanDoItAll.AgentFramework.Llm.SimpleChats.Components -> /source/src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/bin/Release/net10.0/CanDoItAll.AgentFramework.Llm.SimpleChats.Components.dll
+#24 47.53   CanDoItAll.Modules.SchedulerPlanner -> /source/src/Modules/CanDoItAll.Modules.SchedulerPlanner/bin/Release/net10.0/CanDoItAll.Modules.SchedulerPlanner.dll
+#24 47.59   CanDoItAll.Modules.Projects -> /source/src/Modules/CanDoItAll.Modules.Projects/bin/Release/net10.0/CanDoItAll.Modules.Projects.dll
+#24 51.53   CanDoItAll.Modules.Workspace -> /source/src/Modules/CanDoItAll.Modules.Workspace/bin/Release/net10.0/CanDoItAll.Modules.Workspace.dll
+#24 51.66   CanDoItAll.Modules.TestLab -> /source/src/Modules/CanDoItAll.Modules.TestLab/bin/Release/net10.0/CanDoItAll.Modules.TestLab.dll
+#24 60.96   CanDoItAll.Modules.Resources -> /source/src/Modules/CanDoItAll.Modules.Resources/bin/Release/net10.0/CanDoItAll.Modules.Resources.dll
+#24 61.31   CanDoItAll.Modules.CrmHr -> /source/src/Modules/CanDoItAll.Modules.CrmHr/bin/Release/net10.0/CanDoItAll.Modules.CrmHr.dll
+#24 73.74   CanDoItAll.Modules.Workbench -> /source/src/Modules/CanDoItAll.Modules.Workbench/bin/Release/net10.0/CanDoItAll.Modules.Workbench.dll
+#24 82.23   CanDoItAll.Modules.AgentFramework -> /source/src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll
+#24 88.03   CanDoItAll.Modules.Processes -> /source/src/Modules/CanDoItAll.Modules.Processes/bin/Release/net10.0/CanDoItAll.Modules.Processes.dll
+#24 88.78   CanDoItAll.Composition -> /source/src/App/CanDoItAll.Composition/bin/Release/net10.0/CanDoItAll.Composition.dll
+#24 91.84   CanDoItAll.Migrations.PostgreSql -> /source/src/Foundation/CanDoItAll.Migrations.PostgreSql/bin/Release/net10.0/CanDoItAll.Migrations.PostgreSql.dll
+#24 96.05   CanDoItAll.Web -> /source/src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll
+#24 104.1   CanDoItAll.Web -> /app/publish/
+#24 DONE 104.6s
+
+#25 [runtime 5/6] COPY --from=build --chown=app:app /app/publish .
+#25 DONE 0.8s
+
+#26 [runtime 6/6] RUN mkdir -p         /data/config         /data/control-plane         /data/logs         /data/state         /data/workspace     && chown -R app:app /data
+#26 DONE 0.2s
+
+#27 exporting to image
+#27 exporting layers
+#27 exporting layers 18.5s done
+#27 exporting manifest sha256:79811f90723b39fc28bdafa935c3306070d14fca3d0e75c269467c5bfff35a84 0.0s done
+#27 exporting config sha256:30715753fe9c366a47b0838c373c4ea874b5b365f5473d1b40e56a0af92ee4b0 0.0s done
+#27 exporting attestation manifest sha256:13af2d8e961bd409d09d8ae31584b425f00f94d417ccf96fb5ccd185ec40c301 0.0s done
+#27 exporting manifest list sha256:ce3dca4354c0112d9a9d5f972ca36dba3808d65e0dd8a126700dd7f8fb1e990a 0.0s done
+#27 naming to docker.io/library/candoitall-shared-providers:e46f81d5 done
+#27 unpacking to docker.io/library/candoitall-shared-providers:e46f81d5
+#27 unpacking to docker.io/library/candoitall-shared-providers:e46f81d5 3.6s done
+#27 DONE 22.3s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/c4srk6x19mdfy155ewxanq2lk

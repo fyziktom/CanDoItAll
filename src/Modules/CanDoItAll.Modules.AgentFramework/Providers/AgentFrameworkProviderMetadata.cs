@@ -19,11 +19,14 @@ internal static class AgentFrameworkProviderMetadata
         ProviderProfileMetadataPropertyNames.SecretRecordId;
     private const string SecretReferencePrefix = "secret:";
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
-    private const string TransportPropertyName = "providerTransport";
-    private const string PurposePropertyName = "providerPurpose";
+    private const string TransportPropertyName =
+        ProviderProfileMetadataPropertyNames.ProviderTransport;
+    private const string PurposePropertyName =
+        ProviderProfileMetadataPropertyNames.ProviderPurpose;
     private const string ProviderKindPropertyName =
         ProviderProfileMetadataPropertyNames.ProviderKind;
-    private const string SuggestedModelsPropertyName = "suggestedModels";
+    private const string SuggestedModelsPropertyName =
+        ProviderProfileMetadataPropertyNames.SuggestedModels;
     private const string TagsPropertyName = "tags";
     private const string SupportsVisionPropertyName = "supportsVision";
     private const string ThinkingEffortCapabilitiesPropertyName =
@@ -94,6 +97,7 @@ internal static class AgentFrameworkProviderMetadata
         AgentFrameworkProviderKind providerKind,
         ProviderTransportKind transport,
         ProviderProfilePurpose purpose,
+        string defaultModel,
         IReadOnlyList<ProviderModelThinkingEffortCapability> thinkingEffortCapabilities,
         IEnumerable<string>? tags = null,
         IEnumerable<string>? suggestedModels = null)
@@ -102,11 +106,7 @@ internal static class AgentFrameworkProviderMetadata
         configuration[ConnectorPluginKeyPropertyName] = connectorPluginKey;
         configuration[ConfigSchemaVersionPropertyName] = configSchemaVersion;
         configuration[TimeoutSecondsPropertyName] = timeoutSeconds;
-        configuration[ProviderKindPropertyName] = providerKind.ToString();
-        configuration[TransportPropertyName] = transport.ToString();
-        configuration[PurposePropertyName] = purpose.ToString();
         WriteThinkingEffortCapabilities(configuration, thinkingEffortCapabilities);
-        WriteSuggestedModels(configuration, suggestedModels);
         WriteTags(configuration, tags);
         if (secretRecordId.HasValue)
         {
@@ -117,7 +117,13 @@ internal static class AgentFrameworkProviderMetadata
             configuration.Remove(SecretRecordIdPropertyName);
         }
 
-        return configuration.ToJsonString();
+        return SharedProviderProfilePublicationMetadataWriter.Write(
+            configuration.ToJsonString(),
+            providerKind,
+            transport,
+            purpose,
+            defaultModel,
+            suggestedModels);
     }
 
     public static IReadOnlyList<string> ReadSuggestedModels(
@@ -646,26 +652,6 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         configuration[TagsPropertyName] = tagArray;
-    }
-
-    private static void WriteSuggestedModels(
-        JsonObject configuration,
-        IEnumerable<string>? suggestedModels)
-    {
-        var normalizedModels = NormalizeSuggestedModels(suggestedModels);
-        if (normalizedModels.Count == 0)
-        {
-            configuration.Remove(SuggestedModelsPropertyName);
-            return;
-        }
-
-        var modelArray = new JsonArray();
-        foreach (var model in normalizedModels)
-        {
-            modelArray.Add(JsonValue.Create(model));
-        }
-
-        configuration[SuggestedModelsPropertyName] = modelArray;
     }
 
     private static IReadOnlyList<string> NormalizeSuggestedModels(

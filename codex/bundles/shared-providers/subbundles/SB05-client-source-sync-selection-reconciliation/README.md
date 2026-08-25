@@ -1,6 +1,6 @@
 # SB05 — Client source HTTP, trusted URI policy, selection, sync, and reconciliation
 
-State: `LOCKED`  
+State: `DONE`
 Proof tier: `Governed`  
 Depends on: `SB02, SB03, SB04`  
 Next on pass: `SB06`
@@ -176,17 +176,17 @@ On failure, keep downstream work locked. Do not call a missing proof a residual 
 
 ## Execution checklist
 
-- [ ] Current branch/commit/worktree captured.
-- [ ] Mandatory skills loaded.
-- [ ] Bundle and subbundle readiness validated.
-- [ ] Dependencies are `DONE`.
-- [ ] Before architecture/reference evidence captured.
-- [ ] Scope implemented without widening.
-- [ ] Affected production projects built.
-- [ ] Test discovery recorded and nonzero.
-- [ ] Focused positive/negative tests passed.
-- [ ] Security/redaction checks passed where applicable.
-- [ ] After architecture/reference evidence captured.
-- [ ] Proof manifest completed with artifact hashes.
-- [ ] Session handoff completed.
-- [ ] Status/traceability/review updated.
+- [x] Current branch/commit/worktree captured.
+- [x] Mandatory skills loaded.
+- [x] Bundle and subbundle readiness validated.
+- [x] Dependencies are `DONE`.
+- [x] Before architecture/reference evidence captured.
+- [x] Scope implemented without widening.
+- [x] Affected production projects built.
+- [x] Test discovery recorded and nonzero.
+- [x] Focused positive/negative tests passed.
+- [x] Security/redaction checks passed where applicable.
+- [x] After architecture/reference evidence captured.
+- [x] Proof manifest completed with artifact hashes.
+- [x] Session handoff completed.
+- [x] Status/traceability/review updated.

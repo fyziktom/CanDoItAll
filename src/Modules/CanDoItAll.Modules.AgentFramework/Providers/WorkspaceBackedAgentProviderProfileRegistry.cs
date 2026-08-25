@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -43,6 +44,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     ProviderRegistry providerRegistry,
     IProviderProfileService providerProfileService,
     WorkspaceAgentProviderProfileMapper providerMapper,
+    IProviderRuntimeProfileSnapshotLoader runtimeProfileLoader,
     IEnumerable<IWorkspaceProviderProfileCommitObserver>
         providerProfileCommitObservers,
     ILogger<WorkspaceBackedAgentProviderProfileRegistry> logger) :
@@ -54,8 +56,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         var mappedProviders = await LoadDatabaseProvidersAsync(cancellationToken);
         return mappedProviders
             .Where(item =>
-                item.Id != WorkspaceAgentProviderProfileMapper
-                    .RuntimeFallbackOllamaProviderId)
+                item.Id != ProviderProfileWellKnownIds.RuntimeFallbackOllama)
             .Append(providerMapper.CreateRuntimeFallback())
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -66,7 +67,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         CancellationToken cancellationToken = default)
     {
         if (providerId ==
-            WorkspaceAgentProviderProfileMapper.RuntimeFallbackOllamaProviderId)
+            ProviderProfileWellKnownIds.RuntimeFallbackOllama)
         {
             return providerMapper.CreateRuntimeFallback();
         }
@@ -96,11 +97,22 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         ArgumentNullException.ThrowIfNull(model);
 
         var capabilityProfile = providerProfileService.CreateProfile(model);
+        var secretRecordId = ResolveSecretRecordIdForSave(model);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var current = model.Id.HasValue
-            ? await dbContext.Set<WorkspaceProviderProfile>()
-                .SingleOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
+        await using var secretMutationScope =
+            await ProviderProfileSecretMutationScope.BeginAsync(
+                dbContext,
+                model.Id,
+                secretRecordId,
+                cancellationToken);
+        var current = secretMutationScope.Profile;
+        if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                current?.ConnectorPluginKey))
+        {
+            throw new ProviderProfileValidationException(
+                SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage);
+        }
+
         var currentProfile = current is null
             ? null
             : providerMapper.Map(current);
@@ -112,6 +124,13 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         }
 
         var connectorPluginKey = ResolveConnectorPluginKeyForSave(model, current);
+        if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                connectorPluginKey))
+        {
+            throw new ProviderProfileValidationException(
+                SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage);
+        }
+
         if (!providerRegistry.TryResolve(connectorPluginKey, out var providerAdapter))
         {
             throw new ProviderProfileValidationException(
@@ -132,12 +151,26 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 $"Provider plugin '{providerAdapter.Manifest.PluginKey}' requires schema '{providerAdapter.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied.");
         }
 
-        var secretRecordId = ResolveSecretRecordIdForSave(model);
         if (providerAdapter.Manifest.SecretRequirements.Any(item => item.IsRequired) &&
-            !secretRecordId.HasValue)
+            (!secretRecordId.HasValue || secretRecordId.Value == Guid.Empty))
         {
             throw new ProviderProfileValidationException(
                 $"{providerAdapter.Manifest.DisplayName} requires an explicit secret record reference.");
+        }
+
+        if (secretRecordId is { } targetSecretRecordId)
+        {
+            var secretExists = targetSecretRecordId != Guid.Empty &&
+                await dbContext.Set<SecretRecord>()
+                    .AsNoTracking()
+                    .AnyAsync(
+                        secret => secret.Id == targetSecretRecordId,
+                        cancellationToken);
+            if (!secretExists)
+            {
+                throw new ProviderProfileValidationException(
+                    "The selected provider secret reference does not exist.");
+            }
         }
 
         var timeoutSeconds = ResolveTimeoutSecondsForSave(
@@ -196,6 +229,7 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 capabilityProfile.Kind,
                 capabilityProfile.Transport,
                 capabilityProfile.Purpose,
+                capabilityProfile.DefaultModel,
                 capabilityProfile.ModelThinkingEffortCapabilities,
                 capabilityProfile.Tags,
                 capabilityProfile.SuggestedModels),
@@ -203,6 +237,9 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             capabilityProfile.ModelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await secretMutationScope.CommitAsync(cancellationToken);
+        await secretMutationScope.DisposeAsync();
+
         await NotifyProviderSavedAsync(entity.Id);
         await ProjectCatalogAsync(
             entity.Id,
@@ -224,6 +261,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             .SingleOrDefaultAsync(item => item.Id == providerId, cancellationToken);
         if (provider is not null)
         {
+            await SharedProviderProfileDeletionPolicy.EnsureCanDeleteAsync(
+                dbContext,
+                provider.Id,
+                cancellationToken);
             dbContext.Remove(provider);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
@@ -350,14 +391,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         LoadDatabaseProvidersAsync(
         CancellationToken cancellationToken)
     {
-        await using var dbContext =
-            await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var providers = await dbContext.Set<WorkspaceProviderProfile>()
-            .AsNoTracking()
-            .OrderBy(item => item.Name)
-            .ToListAsync(cancellationToken);
+        var providers = await runtimeProfileLoader
+            .LoadAllAsync(cancellationToken);
         return providers
-            .Select(providerMapper.Map)
+            .Select(item => item.Profile)
             .ToArray();
     }
 
@@ -366,16 +403,10 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         Guid providerId,
         CancellationToken cancellationToken)
     {
-        await using var dbContext =
-            await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(
-                item => item.Id == providerId,
-                cancellationToken);
-        return provider is null
-            ? null
-            : providerMapper.Map(provider);
+        var provider = await runtimeProfileLoader.LoadAsync(
+            providerId,
+            cancellationToken);
+        return provider?.Profile;
     }
 
     private static void ValidateConnectorBaseUrl(

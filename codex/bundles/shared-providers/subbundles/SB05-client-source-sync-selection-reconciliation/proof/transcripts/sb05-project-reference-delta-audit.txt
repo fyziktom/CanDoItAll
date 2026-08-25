@@ -1,0 +1,10 @@
+command: powershell -NoProfile -Command '$before = Select-String -LiteralPath "codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/transcripts/sb05-project-references-before.txt" -Pattern "^src/.*<ProjectReference" | ForEach-Object Line; $after = Select-String -LiteralPath "codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/transcripts/sb05-project-references-after.txt" -Pattern "^src/.*<ProjectReference" | ForEach-Object Line; $delta = Compare-Object $before $after; if ($delta) { $delta; exit 1 }; Write-Output "No ProjectReference delta across the six SB05 boundary projects."'
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T06:46:08.525406+00:00
+completed-utc: 2026-08-25T06:46:08.898063+00:00
+duration-seconds: 0.373
+exit-code: 0
+output:
+No ProjectReference delta across the six SB05 boundary projects.
+
+stderr:

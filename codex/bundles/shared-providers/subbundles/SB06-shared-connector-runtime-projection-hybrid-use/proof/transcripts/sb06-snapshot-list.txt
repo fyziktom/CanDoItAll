@@ -1,0 +1,19 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~ProviderRuntimeProfileSnapshotServiceTests' -nologo -v: minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T08:16:41.761701+00:00
+completed-utc: 2026-08-25T08:16:44.464591+00:00
+duration-seconds: 2.703
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Warm_reads_probe_revisions_without_full_profile_reload
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Same_process_commit_observer_publishes_new_revision_before_acquisition
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_revision_change_refreshes_from_database_and_ignores_catalog
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_delete_removes_provider_instead_of_serving_stale_lease
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Revision_probe_failure_faults_snapshot_and_never_serves_stale_lease
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Superseded_profile_rebuild_cannot_publish_old_data
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cancelled_initialization_remains_not_ready
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Committed_projection_failure_is_an_explicit_fault
+
+stderr:

@@ -31,6 +31,8 @@ Focused browser evidence demonstrates the complete operator workflows and visual
 - Inspect keyboard navigation, focus trap/restore, labels and non-color status.
 - Capture normal and relevant open-overlay screenshots at supported desktop viewport.
 - Record first viewport, sizing and scroll owner findings.
+- Inspect supporting-content placement, supporting-only stats, list/editor organization,
+  semantic dialog sizing, and constrained compound controls against the locked composition.
 - Fix UI defects with focused component/browser reruns only.
 - Do not run full Playwright suite.
 
@@ -122,6 +124,12 @@ Do not run an unfiltered project or broader lane unless this subbundle explicitl
 
 - All UI acceptance criteria pass.
 - Normal and open-overlay screenshots are inspected.
+- The normal screenshot at `1600x1000` proves the useful primary task is in the first viewport
+  and identifies the single page scroll owner.
+- Medium source, wide catalog, and compact confirmation overlays are opened and inspected for
+  clipping, layering, internal scrolling, validation, visible actions, and focus behavior.
+- Representative tabs/action rows/field groups are inspected in the selected-detail and dialog
+  columns and respond to containing width without lateral overflow.
 - No secret rendered or captured.
 - Existing local provider workflow remains green.
 - UI gate is PASS.

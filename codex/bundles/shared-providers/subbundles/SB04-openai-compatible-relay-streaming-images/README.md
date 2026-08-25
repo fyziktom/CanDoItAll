@@ -1,6 +1,6 @@
 # SB04 — Bounded OpenAI-compatible relay, streaming, tools, images, and usage
 
-State: `LOCKED`  
+State: `DONE`
 Proof tier: `Governed`  
 Depends on: `SB03`  
 Next on pass: `SB05`
@@ -55,7 +55,7 @@ A caller can use published OpenAI/Ollama/ComfyUI capabilities through a truthful
 3. Resolve only public routing IDs and replace with stored upstream model.
 4. Use adapter-owned upstream URI/auth normalization and disable/revalidate redirects.
 5. Stream without buffering the whole response; tee only bounded usage/event metadata.
-6. Map ComfyUI bytes to b64_json or existing authorized artifact URL, never file path/private URL.
+6. Map ComfyUI bytes to bounded `b64_json` only, never a file path, private URL, or unimplemented artifact URL.
 7. Capture provider usage when present; mark unavailable otherwise.
 8. Finalize invocation record on success/failure/cancel using idempotent semantics.
 9. Add architecture guardrail proving endpoint has no connector switch/open proxy behavior.
@@ -132,6 +132,29 @@ Before running a test topic:
 
 Do not run an unfiltered project or broader lane unless this subbundle explicitly owns it.
 
+## August 25 wire-contract reopen
+
+SB07 proof invalidated the SB04-owned Responses allowlist/wire contract. The reopened contract is
+exact and retention-safe: an omitted Responses `store` member is added to the canonical upstream
+request as JSON `false`; explicit JSON `false` is accepted; `true`, `null`, strings, numbers,
+objects, and arrays are rejected before dispatch. The request never relies on an upstream provider
+default for retention.
+
+The reopen retained the three frozen selections and their planned discovery counts. Existing Facts
+were strengthened with real-Web and recorded-upstream assertions, so no new Fact changed discovery:
+
+- relay policy: 24 discovered and 24/24 passed;
+- OpenAI compatibility: 22 discovered and 22/22 passed;
+- streaming: 12 discovered and 12/12 passed.
+
+The chronology is preserved honestly. `proof/transcripts/sb04-reopen-entry-validator.txt` passed.
+The first Unit build failed with four missing `System.Text.Json` symbol errors and the final Unit
+build passed with zero warnings/errors. The Web build passed with zero warnings/errors. The first
+Integration build failed because the new assertion referenced a nonexistent fixture constant and
+the final Integration build passed with zero warnings/errors. The authoritative reopen transcripts
+are listed in `proof/manifest.md`; the earlier failures are evidence of repair, not hidden or
+represented as passing gates.
+
 ## Acceptance criteria
 
 - Published route invokes exactly its upstream target.
@@ -146,7 +169,7 @@ Do not run an unfiltered project or broader lane unless this subbundle explicitl
 
 - Unknown/unpublished/mismatched-purpose model fails.
 - Caller-supplied upstream URL/header is rejected or impossible.
-- store/background/web/file/MCP/computer/code-interpreter tool forms fail.
+- Persistence-enabling or malformed `store` values and background/web/file/MCP/computer/code-interpreter tool forms fail.
 - Oversized body/tool/image limits fail before upstream.
 - Access context and client Authorization are absent upstream.
 - Raw upstream error/body/private URI is not reflected.
@@ -186,17 +209,17 @@ On failure, keep downstream work locked. Do not call a missing proof a residual 
 
 ## Execution checklist
 
-- [ ] Current branch/commit/worktree captured.
-- [ ] Mandatory skills loaded.
-- [ ] Bundle and subbundle readiness validated.
-- [ ] Dependencies are `DONE`.
-- [ ] Before architecture/reference evidence captured.
-- [ ] Scope implemented without widening.
-- [ ] Affected production projects built.
-- [ ] Test discovery recorded and nonzero.
-- [ ] Focused positive/negative tests passed.
-- [ ] Security/redaction checks passed where applicable.
-- [ ] After architecture/reference evidence captured.
-- [ ] Proof manifest completed with artifact hashes.
-- [ ] Session handoff completed.
-- [ ] Status/traceability/review updated.
+- [x] Current branch/commit/worktree captured.
+- [x] Mandatory skills loaded.
+- [x] Bundle and subbundle readiness validated.
+- [x] Dependencies are `DONE`.
+- [x] Before architecture/reference evidence captured.
+- [x] Scope implemented without widening.
+- [x] Affected production projects built.
+- [x] Test discovery recorded and nonzero.
+- [x] Focused positive/negative tests passed.
+- [x] Security/redaction checks passed where applicable.
+- [x] After architecture/reference evidence captured.
+- [x] Proof manifest completed with artifact hashes.
+- [x] Session handoff completed.
+- [x] Status/traceability/review updated.

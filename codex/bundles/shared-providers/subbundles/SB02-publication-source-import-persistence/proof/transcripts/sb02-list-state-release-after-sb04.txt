@@ -1,0 +1,29 @@
+command: dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderStateModelTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T04:59:00.969747+00:00
+completed-utc: 2026-08-25T04:59:03.978432+00:00
+duration-seconds: 3.009
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.PublicationCreationDefaultsToUnpublishedAndKeepsPublicIdentitySeparate
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.PublicationCreationRejectsEmptyOrExposedProfileIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.PublicationTransitionsAreIdempotentAndPreserveStableIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceCreationCanonicalizesAddressAndDefaultsToNeverSynchronized
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceCreationRejectsUnsafeAddressOrMissingSecretReference
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceConfigurationEditPreservesPinnedIdentityAndInvalidatesConditionalCache
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.FirstSuccessfulCatalogPinsRemoteIdentityAndEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.DifferentCatalogIdentityBlocksReconciliationAndPreservesTrustedPin
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.SourceFailureKeepsTrustedIdentityAndConditionalEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.ImportCreationSelectsAvailableRemotePublicationWithStableLocalProfile
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.AvailableReconciliationUpdatesRemoteFieldsWithoutChangingLocalIdentityOrIntent
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.AuthoritativeMissingPreservesImportAndLocalProviderIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.AuthoritativeUnpublishIsDistinctFromMissingAndRejectsTransientState
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.ReappearanceReconcilesExistingImportInsteadOfCreatingNewIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.TransientFailureNeverConvertsImportToAuthoritativeMissing
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.RetireAndReactivatePreserveRemoteAndLocalIdentity
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.InvocationShapeIsMetadataOnlyAndFinalizationIsTruthfulAndIdempotent
+    CanDoItAll.Tests.Unit.SharedProviderStateModelTests.ServiceIdentityUsesOneStableRowAndTypedPublicIdentity
+
+stderr:

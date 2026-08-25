@@ -184,7 +184,14 @@ public static class ProviderConfigurationFingerprintFactory
             provider.SupportsBackgroundResponses,
             CanonicalizeConfigurationJson(provider),
             provider.Purpose,
-            provider.IsPrivateProvider);
+            provider.IsPrivateProvider,
+            provider.ConnectorPluginKey.Trim(),
+            provider.CredentialBinding,
+            provider.NetworkAccessPolicy,
+            provider.FeatureConstraints,
+            provider.ModelSelectionConstraint?.AllowedModels
+                .Order(StringComparer.Ordinal)
+                .ToArray());
         var serialized = JsonSerializer.Serialize(material);
 
         return new ProviderConfigurationFingerprint(
@@ -205,7 +212,12 @@ public static class ProviderConfigurationFingerprintFactory
         bool SupportsBackgroundResponses,
         string ConfigurationJson,
         ProviderProfilePurpose Purpose,
-        bool IsPrivateProvider);
+        bool IsPrivateProvider,
+        string ConnectorPluginKey,
+        ProviderCredentialBinding? CredentialBinding,
+        ProviderNetworkAccessPolicy NetworkAccessPolicy,
+        ProviderFeatureConstraints? FeatureConstraints,
+        IReadOnlyList<string>? AllowedModels);
 
     private static string CanonicalizeConfigurationJson(
         ProviderProfile provider)

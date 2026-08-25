@@ -1,0 +1,56 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' -c Release --no-build --no-restore --filter 'FullyQualifiedName~SharedProviderHybridSelectionTests' -nologo -v: minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T08:31:22.891925+00:00
+completed-utc: 2026-08-25T08:31:39.872884+00:00
+duration-seconds: 16.981
+exit-code: 1
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_personal_selection_wins_when_workspace_default_is_shared [1 s]
+  Chybová zpráva:
+   System.InvalidOperationException : Agent 'b22cdbdab75b4f659dd206ed417cfbb7' references missing provider profile '9fd3c8bc30ec466f8e504eec83f0c5fa'.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Persistence.SandboxWorkspaceDocumentInvariantValidator.Validate(SandboxWorkspaceDocument document) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:line 42
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 231
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.PrepareAsync(TestApplication application, Guid providerId, String model) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 478
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.PrepareAsync(TestApplication application, Guid providerId, String model) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 495
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_personal_selection_wins_when_workspace_default_is_shared() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 108
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_shared_selection_wins_when_workspace_default_is_personal [192 ms]
+  Chybová zpráva:
+   System.InvalidOperationException : Agent '04f5ee8cda2a49b5b81108f1e9455771' references missing provider profile '09eb13e5b169431283e61eb8546444cf'.
+  Trasování zásobníku:
+     at CanDoItAll.AgentFramework.Persistence.SandboxWorkspaceDocumentInvariantValidator.Validate(SandboxWorkspaceDocument document) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:line 42
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 231
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.PrepareAsync(TestApplication application, Guid providerId, String model) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 478
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.PrepareAsync(TestApplication application, Guid providerId, String model) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 495
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_shared_selection_wins_when_workspace_default_is_personal() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 84
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Unavailable_shared_selection_never_falls_back_to_personal [171 ms]
+  Chybová zpráva:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(CanDoItAll.AgentFramework.Core.ProviderRuntimeProfileUnavailableException)
+Actual:   typeof(System.InvalidOperationException)
+---- System.InvalidOperationException : Agent 'd2af79fad0ce417298095a70b3d26531' references missing provider profile '134177202b4c4ccca7c66c5206b7e585'.
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Unavailable_shared_selection_never_falls_back_to_personal() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 262
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at CanDoItAll.AgentFramework.Persistence.SandboxWorkspaceDocumentInvariantValidator.Validate(SandboxWorkspaceDocument document) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:line 42
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 231
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogOnlyAsync(Func`2 update, Nullable`1 expectedRevision, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 249
+   at CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore.UpdateCatalogAsync(Func`2 update, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:line 183
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.PrepareAsync(TestApplication application, Guid providerId, String model) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 478
+   at CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.PrepareAsync(TestApplication application, Guid providerId, String model) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderHybridSelectionTests.cs:line 495
+
+Neúspěšné!  - Neúspěšné:     3, Úspěšné:     7, Přeskočeno:     0, Celkem:    10, Doba trvání: 6 s - CanDoItAll.Tests.Integration.dll (net10.0)
+
+stderr:
+[xUnit.net 00:00:10.11]     CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_personal_selection_wins_when_workspace_default_is_shared [FAIL]
+[xUnit.net 00:00:14.13]     CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_shared_selection_wins_when_workspace_default_is_personal [FAIL]
+[xUnit.net 00:00:14.56]     CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Unavailable_shared_selection_never_falls_back_to_personal [FAIL]

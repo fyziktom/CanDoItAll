@@ -24,6 +24,9 @@ The central and client user journeys are complete without exposing secrets or al
 ## Scope
 
 - Read current candoitall-components-mcp compact UI guidance and record first viewport/scroll owner.
+- Implement the locked primary-surface, supporting-content, stats, list/editor, semantic sizing,
+  first-viewport, scroll-owner, and constrained-container decisions in
+  `architecture/10-ui-architecture.md`.
 - Extend provider list summaries with Local/Shared origin, source, publication and availability badges.
 - Add local profile sharing section with eligibility reasons and publish/unpublish actions.
 - Add source list and add/edit/test/enable/disable workflow.
@@ -130,6 +133,10 @@ Do not run an unfiltered project or broader lane unless this subbundle explicitl
 - Personal and shared profiles coexist visually.
 - All required error/empty/loading states render.
 - Desktop first viewport/scroll owner decision is implemented.
+- At `1600x1000`, supporting content and supporting-only stats do not displace the provider
+  collection; source, catalog, and confirmation dialogs use the locked semantic sizes.
+- Tabs, action rows, and field groups remain usable in the selected-detail and dialog columns
+  according to containing width, without lateral overflow or hidden actions.
 
 ## Negative proof
 

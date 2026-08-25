@@ -1,0 +1,21 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderBackendCheckpointIntegrationTests' --nologo -v: minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T11:11:40.711451+00:00
+completed-utc: 2026-08-25T11:11:42.633347+00:00
+duration-seconds: 1.922
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Catalog_publication_defaults_off_filters_ineligible_and_supports_sanitized_conditional_get
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Catalog_and_inference_scopes_are_enforced_independently
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Public_model_ids_route_duplicate_upstream_model_names_without_cross_routing
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Chat_completions_and_responses_traverse_real_hosts_and_deterministic_upstream
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Both_streaming_surfaces_are_incremental_terminal_and_cancel_upstream
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Function_tools_round_trip_and_structured_output_obeys_public_capabilities
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Openai_and_comfyui_image_adapters_return_supported_formats
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Two_clients_sync_idempotently_preserve_ids_and_coexist_with_personal_profiles
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Unpublish_outage_recovery_and_source_identity_mismatch_are_non_destructive_without_fallback
+    CanDoItAll.Tests.Integration.SharedProviderBackendCheckpointIntegrationTests.Access_context_is_validated_audited_not_forwarded_and_audit_is_content_free
+
+stderr:

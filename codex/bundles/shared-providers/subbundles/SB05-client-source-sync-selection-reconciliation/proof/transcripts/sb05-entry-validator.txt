@@ -1,0 +1,10 @@
+command: python codex/bundles/shared-providers/scripts/validate_subbundle.py --phase entry --subbundle SB05 codex/bundles/shared-providers
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T05:37:50.976854+00:00
+completed-utc: 2026-08-25T05:37:51.058964+00:00
+duration-seconds: 0.082
+exit-code: 0
+output:
+PASS: SB05 entry gate passed
+
+stderr:

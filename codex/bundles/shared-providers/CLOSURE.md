@@ -19,3 +19,6 @@ The final report must also state:
 - any explicit blocker or residual risk.
 
 No success language belongs here before execution.
+
+`Partially solved` and `Not solved` are honest blocked-handoff classifications only. Final
+`DONE` and success language require every mandatory requirement to be `Solved` with evidence.

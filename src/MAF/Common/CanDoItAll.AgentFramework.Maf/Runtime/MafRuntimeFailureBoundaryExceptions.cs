@@ -6,6 +6,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal enum MafProviderConfigurationFailureReason
 {
+    ProviderUnavailable,
     MissingCredential,
     InvalidEndpoint,
     InvalidModel,

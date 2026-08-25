@@ -1,0 +1,10 @@
+command: pwsh -NoProfile -Command '$files = @(Get-ChildItem "src/Integration/CanDoItAll.SharedProviders.Abstractions" -File -Filter "*.cs"; Get-ChildItem "src/Integration/CanDoItAll.SharedProviders.Http" -File -Filter "*.cs"; Get-Item "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderRelayApplicationService.cs"; Get-Item "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderAuditedRelayStream.cs"; Get-Item "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderImageExecutionTargetResolver.cs"; Get-Item "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderImageCapabilityRelay.cs"; Get-Item "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderRelayUsageProjectionSource.cs"; Get-ChildItem "src/App/CanDoItAll.Web/Api" -File -Filter "SharedProvider*.cs"; Get-Item "tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRelayPolicyTests.cs"; Get-Item "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenAiCompatibilityIntegrationTests.cs"); python "codex/bundles/shared-providers/scripts/validate_no_stubs.py" @($files.FullName)'
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T03:29:28.344775+00:00
+completed-utc: 2026-08-25T03:29:28.962106+00:00
+duration-seconds: 0.617
+exit-code: 0
+output:
+Stub audit passed for 30 selected files.
+
+stderr:

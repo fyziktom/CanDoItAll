@@ -328,7 +328,8 @@ public sealed class SecretVaultTests
             vault,
             new TestSecretProtector(),
             new TestClock(new DateTimeOffset(2026, 5, 13, 12, 0, 0, TimeSpan.Zero)),
-            new NullActivityStream());
+            new NullActivityStream(),
+            []);
 
     private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options) : IDbContextFactory<AppDbContext>
     {

@@ -1,6 +1,6 @@
 # SB02 — Publication, source, import, audit persistence and state model
 
-State: `LOCKED`  
+State: `DONE`
 Proof tier: `Governed`  
 Depends on: `SB01`  
 Next on pass: `SB03`
@@ -177,19 +177,28 @@ On failure, keep downstream work locked. Do not call a missing proof a residual 
 - Model registry/migration convention changed.
 - Effective-profile materialization cannot preserve source ownership without a different relation.
 
+## Downstream revalidation overlay
+
+SB04 later changed invocation operation/image-usage persistence, the existing migration/model
+snapshot, and additive usage ABI. That named invalidation was revalidated without rewriting this
+subbundle's original PASS history or frozen 18/14/6 counts. The exact reruns, sandbox-only deletion
+failure chronology, EF no-pending-model result, hash comparison, and migration amendment assumption
+are recorded in
+[`proof/architecture/sb04-downstream-invalidation-revalidation.md`](proof/architecture/sb04-downstream-invalidation-revalidation.md).
+
 ## Execution checklist
 
-- [ ] Current branch/commit/worktree captured.
-- [ ] Mandatory skills loaded.
-- [ ] Bundle and subbundle readiness validated.
-- [ ] Dependencies are `DONE`.
-- [ ] Before architecture/reference evidence captured.
-- [ ] Scope implemented without widening.
-- [ ] Affected production projects built.
-- [ ] Test discovery recorded and nonzero.
-- [ ] Focused positive/negative tests passed.
-- [ ] Security/redaction checks passed where applicable.
-- [ ] After architecture/reference evidence captured.
-- [ ] Proof manifest completed with artifact hashes.
-- [ ] Session handoff completed.
-- [ ] Status/traceability/review updated.
+- [x] Current branch/commit/worktree captured.
+- [x] Mandatory skills loaded.
+- [x] Bundle and subbundle readiness validated.
+- [x] Dependencies are `DONE`.
+- [x] Before architecture/reference evidence captured.
+- [x] Scope implemented without widening.
+- [x] Affected production projects built.
+- [x] Test discovery recorded and nonzero.
+- [x] Focused positive/negative tests passed.
+- [x] Security/redaction checks passed where applicable.
+- [x] After architecture/reference evidence captured.
+- [x] Proof manifest completed with artifact hashes.
+- [x] Session handoff completed.
+- [x] Status/traceability/review updated.

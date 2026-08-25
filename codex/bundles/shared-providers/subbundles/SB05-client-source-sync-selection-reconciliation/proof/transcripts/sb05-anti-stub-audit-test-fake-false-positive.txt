@@ -1,0 +1,19 @@
+command: python codex/bundles/shared-providers/scripts/validate_no_stubs.py src/Foundation/CanDoItAll.Security.Abstractions/SecretRuntimeContracts.cs src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderPorts.cs src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCatalogTransportContracts.cs src/Integration/CanDoItAll.SharedProviders.Http/Properties/AssemblyInfo.cs src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderHttpServiceCollectionExtensions.cs src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderSourceUriPolicy.cs src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderSourceTransitions.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderPersistenceContracts.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderReconciliationPlanner.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderReconciliationCoordinator.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderSourceService.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderSourceSyncService.cs tests/Unit/CanDoItAll.Tests.Unit/SharedProviderProtocolContractTests.cs tests/Unit/CanDoItAll.Tests.Unit/SharedProviderStateModelTests.cs tests/Unit/CanDoItAll.Tests.Unit/SharedProviderReconciliationTests.cs tests/Unit/CanDoItAll.Tests.Unit/SharedProviderSourceUriPolicyTests.cs tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPersistenceIntegrationTests.cs tests/Integration/CanDoItAll.Tests.Integration/SharedProviderSourceSyncIntegrationTests.cs
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T06:40:25.336797+00:00
+completed-utc: 2026-08-25T06:40:25.449044+00:00
+duration-seconds: 0.112
+exit-code: 1
+output:
+Stub audit failed:
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:599: placeholder exception
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:603: placeholder exception
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:604: placeholder exception
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:616: placeholder exception
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:619: placeholder exception
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:622: placeholder exception
+C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderSourceUriPolicyTests.cs:625: placeholder exception
+C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderSourceSyncIntegrationTests.cs:1079: placeholder exception
+C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderSourceSyncIntegrationTests.cs:1081: placeholder exception
+
+stderr:

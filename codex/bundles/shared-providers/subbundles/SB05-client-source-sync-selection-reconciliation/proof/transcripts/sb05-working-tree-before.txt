@@ -1,0 +1,151 @@
+command: git status --short
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T05:38:05.066006+00:00
+completed-utc: 2026-08-25T05:38:05.160747+00:00
+duration-seconds: 0.095
+exit-code: 0
+output:
+ M .gitignore
+ M CanDoItAll.slnx
+ M codex/bundles/shared-providers/CLOSURE.md
+ M codex/bundles/shared-providers/CODEX-EXECUTION-CONTRACT.md
+ M codex/bundles/shared-providers/EXECUTION-REPORT.md
+ M codex/bundles/shared-providers/STATUS.md
+ M codex/bundles/shared-providers/architecture/00-csharp-current-state-inventory.md
+ M codex/bundles/shared-providers/architecture/01-csharp-boundary-map.md
+ M codex/bundles/shared-providers/architecture/02-csharp-dependency-direction.md
+ M codex/bundles/shared-providers/architecture/03-csharp-pattern-selection-records.md
+ M codex/bundles/shared-providers/architecture/04-csharp-testability-plan.md
+ M codex/bundles/shared-providers/architecture/05-target-domain-and-data-model.md
+ M codex/bundles/shared-providers/architecture/06-protocol-and-api-contract.md
+ M codex/bundles/shared-providers/architecture/07-central-relay-and-capability-mapping.md
+ M codex/bundles/shared-providers/architecture/10-ui-architecture.md
+ M codex/bundles/shared-providers/architecture/12-decisions-non-goals-deferred.md
+ M codex/bundles/shared-providers/bundle-file-manifest.json
+ M codex/bundles/shared-providers/bundle.json
+ M codex/bundles/shared-providers/plan/00-dependency-graph.md
+ M codex/bundles/shared-providers/plan/02-test-budget-and-gates.md
+ M codex/bundles/shared-providers/plan/architecture-checkpoints.md
+ M codex/bundles/shared-providers/requirements/01-functional-requirements.md
+ M codex/bundles/shared-providers/reviews/csharp-architecture-gate.md
+ M codex/bundles/shared-providers/reviews/ui-gate.md
+ M codex/bundles/shared-providers/scripts/README.md
+ M codex/bundles/shared-providers/scripts/validate_bundle.py
+ M codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/README.md
+ M codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/SESSION-HANDOFF.md
+ M codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/README.md
+ M codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/SESSION-HANDOFF.md
+ M codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/README.md
+ M codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/SESSION-HANDOFF.md
+ M codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/README.md
+ M codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/SESSION-HANDOFF.md
+ M codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/README.md
+ M codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/SESSION-HANDOFF.md
+ M codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/README.md
+ M codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/README.md
+ M codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/README.md
+ M codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/README.md
+ M codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/test-selection.json
+ M codex/bundles/shared-providers/templates/execution-report.md
+ M codex/bundles/shared-providers/traceability/00-input-coverage.md
+ M codex/bundles/shared-providers/traceability/01-requirements-matrix.md
+ M codex/bundles/shared-providers/traceability/02-risk-to-proof-map.md
+ M src/App/CanDoItAll.Composition/CanDoItAll.Composition.csproj
+ M src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs
+ M src/App/CanDoItAll.Web/Api/ApiAuthorizationPolicies.cs
+ M src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs
+ M src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs
+ M src/App/CanDoItAll.Web/CanDoItAll.Web.csproj
+ M src/App/CanDoItAll.Web/Program.cs
+ M src/Foundation/CanDoItAll.Infrastructure/Persistence/SerializableMutationScope.cs
+ M src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs
+ M src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderModels.cs
+ M src/MAF/Common/CanDoItAll.AgentFramework.Usage/ProviderUsageContracts.cs
+ M src/MAF/Common/CanDoItAll.AgentFramework.Usage/ProviderUsageQueryService.cs
+ M src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj
+ M src/Modules/CanDoItAll.Modules.AgentFramework/Providers/AgentFrameworkProviderMetadata.cs
+ M src/Modules/CanDoItAll.Modules.AgentFramework/Providers/ProviderRuntimeProfileSnapshotService.cs
+ M src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceAgentProviderProfileMapper.cs
+ M src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs
+ M src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs
+ M src/Modules/CanDoItAll.Modules.Security/SecurityModels.cs
+ M src/Modules/CanDoItAll.Modules.Workspace/ApiAccess/ApiAccessScopeNames.cs
+ M src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj
+ M src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/AiProvidersDatabaseTransferHandler.cs
+ M src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs
+ M src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs
+ M tests/Integration/CanDoItAll.Tests.Integration/ApiTestHost.cs
+ M tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+ M tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj
+ M tests/Unit/CanDoItAll.Tests.Unit/ProviderCatalogProjectionFailureTests.cs
+ M tests/Unit/CanDoItAll.Tests.Unit/ProviderProfileSaveValidationTests.cs
+ M tests/Unit/CanDoItAll.Tests.Unit/ProviderUsageAggregationTests.cs
+ M tests/Unit/CanDoItAll.Tests.Unit/SecretRuntimeAuthorizationTests.cs
+ M tests/Unit/CanDoItAll.Tests.Unit/SecretVaultTests.cs
+?? codex/bundles/shared-providers/evidence/
+?? codex/bundles/shared-providers/scripts/run_proof_command.py
+?? codex/bundles/shared-providers/scripts/update_changed_file_manifest.py
+?? codex/bundles/shared-providers/scripts/update_file_manifest.py
+?? codex/bundles/shared-providers/scripts/update_proof_hashes.py
+?? codex/bundles/shared-providers/scripts/validate_no_stubs.py
+?? codex/bundles/shared-providers/scripts/validate_subbundle.py
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/
+?? src/App/CanDoItAll.Web/Api/AccessContextReferenceMiddleware.cs
+?? src/App/CanDoItAll.Web/Api/AccessContextReferenceState.cs
+?? src/App/CanDoItAll.Web/Api/SharedProviderApiResponseWriter.cs
+?? src/App/CanDoItAll.Web/Api/SharedProviderCatalogApi.cs
+?? src/App/CanDoItAll.Web/Api/SharedProviderCatalogOpenApiContract.cs
+?? src/App/CanDoItAll.Web/Api/SharedProviderInferenceApi.cs
+?? src/App/CanDoItAll.Web/Api/SharedProviderInferenceOpenApiContract.cs
+?? src/App/CanDoItAll.Web/Api/SharedProviderOpenAiServerSentEventWriter.cs
+?? src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260824224847_AddSharedProviderPersistence.Designer.cs
+?? src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20260824224847_AddSharedProviderPersistence.cs
+?? src/Integration/CanDoItAll.SharedProviders.Abstractions/
+?? src/Integration/CanDoItAll.SharedProviders.Http/
+?? src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderImageCapabilityRelay.cs
+?? src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderRelayUsageProjectionSource.cs
+?? src/Modules/CanDoItAll.Modules.Security/SecretDeletionReferencePolicy.cs
+?? src/Modules/CanDoItAll.Modules.Workspace/Properties/
+?? src/Modules/CanDoItAll.Modules.Workspace/Providers/ProviderProfileSecretMutationScope.cs
+?? src/Modules/CanDoItAll.Modules.Workspace/Providers/WorkspaceProviderSecretDeletionReferencePolicy.cs
+?? src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderAccessContextTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderAuthorizationIntegrationTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderCatalogApiIntegrationTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderDeletionReferenceIntegrationTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderOpenAiCompatibilityIntegrationTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPersistenceIntegrationTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimePathCharacterizationTests.cs
+?? tests/Integration/CanDoItAll.Tests.Integration/SharedProviderStreamingIntegrationTests.cs
+?? tests/Unit/CanDoItAll.Tests.Unit/SharedProviderArchitectureCharacterizationTests.cs
+?? tests/Unit/CanDoItAll.Tests.Unit/SharedProviderProtocolContractTests.cs
+?? tests/Unit/CanDoItAll.Tests.Unit/SharedProviderPublicationAndCatalogTests.cs
+?? tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRelayPolicyTests.cs
+?? tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRoutingModelIdTests.cs
+?? tests/Unit/CanDoItAll.Tests.Unit/SharedProviderStateModelTests.cs
+
+stderr:

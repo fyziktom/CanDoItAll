@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.AI;
 
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
@@ -25,6 +26,53 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         Assert.Equal(provider.Id, exception.ProviderProfileId);
         Assert.Equal(provider.DefaultModel, exception.Model);
         Assert.Same(transportFailure, exception.InnerException);
+
+        var sourceSecretId = Guid.Parse(
+            "4cf1b375-b3c5-4f80-84ae-d23f4897ccbf");
+        var sourceProvider = provider with
+        {
+            BaseUrl = "http://10.23.45.67:43123/openai/v1",
+            CredentialBinding = new ProviderCredentialBinding(
+                sourceSecretId,
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("5c745ad6-4ccd-4921-a966-e64c3ace17c1")),
+            ModelSelectionConstraint = new ProviderModelSelectionConstraint(
+                [provider.DefaultModel])
+        };
+        const string remoteMarker = "raw-private-provider-failure";
+        using var sourceClient = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(
+                nonStreamingException: new HttpRequestException(
+                    $"{remoteMarker} at {sourceProvider.BaseUrl}; secret={sourceSecretId:D}.")),
+            sourceProvider,
+            sourceProvider.DefaultModel);
+
+        var sourceException = await Assert.ThrowsAsync<
+            MafProviderTransportException>(() =>
+            sourceClient.GetResponseAsync(CreateMessages()));
+
+        var boundary = Assert.IsType<ProviderFailureBoundaryException>(
+            sourceException.InnerException);
+        Assert.Equal(ProviderFailureOperation.RuntimeRequest,
+            boundary.Operation);
+        Assert.Null(boundary.InnerException);
+        Assert.Contains(
+            ProviderFailureDisclosurePolicy.SanitizedRuntimeFailureMessage,
+            sourceException.ToString(),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            sourceProvider.BaseUrl,
+            sourceException.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            sourceSecretId.ToString("D"),
+            sourceException.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            remoteMarker,
+            sourceException.ToString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]

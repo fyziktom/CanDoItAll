@@ -1,0 +1,23 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --configuration Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderProtocolContractTests'
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-24T21:27:00.641187+00:00
+completed-utc: 2026-08-24T21:27:03.408094+00:00
+duration-seconds: 2.767
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RoutesExposeOnlyTheVersionedCatalogAndSupportedOpenAiSubset
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RouteResolutionPreservesAReverseProxyBasePath
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogSerializationUsesTheFrozenPublicNamesAndStringValues
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogRoundTripPreservesTypedPublicIdentitiesAndCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownTopLevelMemberIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownNestedMemberIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnsupportedProtocolVersionIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.InvalidMissingOrIncoherentProtocolMembersAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.ModelRouteFromAnotherPublicationIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CanonicalRepresentationSortsInputsAndTracksPublicHealth
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.PublicContractsRejectSecretsInvalidDefaultsAndIncoherentPorts
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.AbstractionsAssemblyHasNoWebEfWorkspaceOrProviderSdkDependency
+
+stderr:

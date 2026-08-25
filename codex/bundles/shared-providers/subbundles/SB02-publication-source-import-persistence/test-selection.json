@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "shared-provider EF entities/configurations",
+    "PostgreSQL migration or model snapshot",
+    "publication/source/import identity and deletion invariants"
+  ],
+  "broadGateDecision": "Not authorized; EF graph invalidation is carried to the single SB12 gate.",
   "selections": [
     {
       "topic": "SharedProviderStateModelTests",

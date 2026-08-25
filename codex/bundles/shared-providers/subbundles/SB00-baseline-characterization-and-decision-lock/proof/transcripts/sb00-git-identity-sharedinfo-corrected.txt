@@ -1,0 +1,12 @@
+command: git -c safe.directory=C:/repositories/CanDoItAll.SharedInfo show -s --format=%H%n%T%n%D HEAD
+working-directory: C:\repositories\CanDoItAll.SharedInfo
+started-utc: 2026-08-24T19:25:29.309097+00:00
+completed-utc: 2026-08-24T19:25:29.400657+00:00
+duration-seconds: 0.092
+exit-code: 0
+output:
+053f8b356fbc8a28bf822e0a051c25804bd81b65
+f1ec476b45ef10f9e2de43b0a1af455f68a6bb87
+HEAD -> main, origin/main, origin/HEAD
+
+stderr:

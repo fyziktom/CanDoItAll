@@ -1,0 +1,35 @@
+command: dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderRelayPolicyTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T05:07:48.171888+00:00
+completed-utc: 2026-08-25T05:07:50.875467+00:00
+duration-seconds: 2.704
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ChatCompletionsSupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesSupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ImagesBase64SupportedSubset_NormalizesCanonicalRequest
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.UnknownMembers_AreRejectedOnEverySurface
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.MalformedDuplicateAndExcessivelyDeepJson_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BodyMessagesToolsSchemasAndImages_AreBoundedBeforeDispatch
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.InvalidGenerationNumbersEnumsAndConflicts_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BuiltInAndHostedTools_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.FunctionToolsAndToolChoice_RoundTripCanonically
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ParallelTools_RequireAdvertisedCapability
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.StructuredOutput_RequiresAdvertisedCapability
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.VisionDataUri_RequiresCapabilityAndRejectsUnknownSiblingFields
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.StoreBackgroundConversationIncludeUserAndModalities_AreRejected
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.MalformedRoutingModelId_FailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.DuplicateUpstreamNames_RemainSeparatedByPublication
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.RelayTarget_RechecksPurposeOperationAndCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.RelayTarget_UsesOnlyStoredUriModelTimeoutAndCredential
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.Registry_ContainsExactlyFiveProductionRowsAndNoSyntheticAdapter
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.TargetNormalization_PreservesBasePathAndRejectsCallerUriOrHeaders
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.UpstreamFailures_AreSanitizedAndRetryAfterIsBounded
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponseHeaderAllowlist_StripsUnsafeAndPrivateHeaders
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.BufferedChatUsage_MapsCompletePartialAndUnavailableTruthfully
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.ResponsesAndTerminalSseUsage_MapWithoutInventingZero
+    CanDoItAll.Tests.Unit.SharedProviderRelayPolicyTests.InvocationAuditTransition_StoresMetadataOnlyAndRecoversInterruptedFinalizationIdempotently
+
+stderr:

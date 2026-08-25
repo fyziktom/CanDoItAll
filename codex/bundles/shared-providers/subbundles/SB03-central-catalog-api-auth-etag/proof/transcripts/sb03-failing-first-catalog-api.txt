@@ -1,0 +1,159 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' -c Release --no-build --no-restore --filter 'FullyQualifiedName~SharedProviderCatalogApiIntegrationTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T00:17:31.077151+00:00
+completed-utc: 2026-08-25T00:17:41.533730+00:00
+duration-seconds: 10.457
+exit-code: 1
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_EmitsPrivateNoCacheAndServerRequestId [823 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_EmitsPrivateNoCacheAndServerRequestId() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 211
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_NativeCatalog_ReturnsNativeBadRequest [37 ms]
+  Chybová zpráva:
+   Assert.True() Failure
+Expected: True
+Actual:   null
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.AssertSharedProviderResponseHeaders(HttpResponseMessage response) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 353
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_NativeCatalog_ReturnsNativeBadRequest() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 228
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_NativeCatalog_ReturnsNativeBadRequest [21 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: BadRequest
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_NativeCatalog_ReturnsNativeBadRequest() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 167
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsPrivateNoCacheAndServerRequestId [4 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsPrivateNoCacheAndServerRequestId() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 199
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_ReturnsCanonicalSanitizedCatalog [3 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_ReturnsCanonicalSanitizedCatalog() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 29
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_OpenAiModels_ReturnsOpenAiBadRequest [2 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: BadRequest
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_OpenAiModels_ReturnsOpenAiBadRequest() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 185
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_OpenAiModels_ReturnsOpenAiBadRequest [5 ms]
+  Chybová zpráva:
+   System.Text.Json.JsonException : The JSON property 'errors' could not be mapped to any .NET member contained in type 'CanDoItAll.SharedProviders.Abstractions.SharedProviderOpenAiErrorEnvelope'.
+  Trasování zásobníku:
+     at System.Text.Json.ThrowHelper.ThrowJsonException_UnmappedJsonProperty(Type type, String unmappedPropertyName)
+   at System.Text.Json.JsonSerializer.LookupProperty(Object obj, ReadOnlySpan`1 unescapedPropertyName, ReadStack& state, JsonSerializerOptions options, Boolean& useExtensionProperty, Boolean createExtensionProperty)
+   at System.Text.Json.Serialization.Converters.ObjectWithParameterizedConstructorConverter`1.TryLookupConstructorParameter(ReadOnlySpan`1 unescapedPropertyName, ReadStack& state, JsonSerializerOptions options, JsonPropertyInfo& jsonPropertyInfo, JsonParameterInfo& jsonParameterInfo)
+   at System.Text.Json.Serialization.Converters.ObjectWithParameterizedConstructorConverter`1.OnTryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, T& value)
+   at System.Text.Json.Serialization.JsonConverter`1.TryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, T& value, Boolean& isPopulatedValue)
+   at System.Text.Json.Serialization.JsonConverter`1.ReadCore(Utf8JsonReader& reader, T& value, JsonSerializerOptions options, ReadStack& state)
+   at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.Deserialize(Utf8JsonReader& reader, ReadStack& state)
+   at System.Text.Json.JsonSerializer.ReadFromSpan[TValue](ReadOnlySpan`1 utf8Json, JsonTypeInfo`1 jsonTypeInfo, Nullable`1 actualByteCount)
+   at System.Text.Json.JsonSerializer.ReadFromSpan[TValue](ReadOnlySpan`1 json, JsonTypeInfo`1 jsonTypeInfo)
+   at System.Text.Json.JsonSerializer.Deserialize[TValue](String json, JsonSerializerOptions options)
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.ReadOpenAiErrorAsync(HttpResponseMessage response) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 292
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_OpenAiModels_ReturnsOpenAiBadRequest() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 237
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NonMatchingStrongIfNoneMatch_ReturnsCurrentCatalog [1 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NonMatchingStrongIfNoneMatch_ReturnsCurrentCatalog() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 149
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsStrongCatalogEntityTag [2 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsStrongCatalogEntityTag() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 97
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_NativeCatalog_ReturnNotModified [3 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: NotModified
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_NativeCatalog_ReturnNotModified() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 113
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenApi_DescribesCatalogAndModelsOperationsAndResponses [1 s]
+  Chybová zpráva:
+   System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.
+  Trasování zásobníku:
+     at System.Text.Json.JsonElement.GetProperty(String propertyName)
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.AssertOpenApiOperation(JsonElement paths, String route, String operationId) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 364
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenApi_DescribesCatalogAndModelsOperationsAndResponses() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 268
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_OpenAiModels_ReturnNotModified [2 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: NotModified
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_OpenAiModels_ReturnNotModified() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 131
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_ReturnsOnlyPublicRoutingModels [31 ms]
+  Chybová zpráva:
+   System.Text.Json.JsonException : The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 0.
+---- System.Text.Json.JsonReaderException : The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. LineNumber: 0 | BytePositionInLine: 0.
+  Trasování zásobníku:
+     at System.Text.Json.ThrowHelper.ReThrowWithPath(ReadStack& state, JsonReaderException ex)
+   at System.Text.Json.Serialization.JsonConverter`1.ReadCore(Utf8JsonReader& reader, T& value, JsonSerializerOptions options, ReadStack& state)
+   at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.Deserialize(Utf8JsonReader& reader, ReadStack& state)
+   at System.Text.Json.JsonSerializer.ReadFromSpan[TValue](ReadOnlySpan`1 utf8Json, JsonTypeInfo`1 jsonTypeInfo, Nullable`1 actualByteCount)
+   at System.Text.Json.JsonSerializer.ReadFromSpan[TValue](ReadOnlySpan`1 json, JsonTypeInfo`1 jsonTypeInfo)
+   at System.Text.Json.JsonSerializer.Deserialize[TValue](String json, JsonSerializerOptions options)
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.ReadOpenAiModelsAsync(HttpResponseMessage response) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 282
+   at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_ReturnsOnlyPublicRoutingModels() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 81
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.Text.Json.ThrowHelper.ThrowJsonReaderException(Utf8JsonReader& json, ExceptionResource resource, Byte nextByte, ReadOnlySpan`1 bytes)
+   at System.Text.Json.Utf8JsonReader.Read()
+   at System.Text.Json.Serialization.JsonConverter`1.ReadCore(Utf8JsonReader& reader, T& value, JsonSerializerOptions options, ReadStack& state)
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.CatalogSurfaces_DoNotExposePrivateFieldsOrSentinelValues [2 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.CatalogSurfaces_DoNotExposePrivateFieldsOrSentinelValues() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderCatalogApiIntegrationTests.cs:line 253
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:    14, Úspěšné:     0, Přeskočeno:     0, Celkem:    14, Doba trvání: 1 s - CanDoItAll.Tests.Integration.dll (net10.0)
+
+stderr:
+[xUnit.net 00:00:07.45]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_EmitsPrivateNoCacheAndServerRequestId [FAIL]
+[xUnit.net 00:00:07.49]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_NativeCatalog_ReturnsNativeBadRequest [FAIL]
+[xUnit.net 00:00:07.51]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_NativeCatalog_ReturnsNativeBadRequest [FAIL]
+[xUnit.net 00:00:07.52]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsPrivateNoCacheAndServerRequestId [FAIL]
+[xUnit.net 00:00:07.52]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_ReturnsCanonicalSanitizedCatalog [FAIL]
+[xUnit.net 00:00:07.52]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_OpenAiModels_ReturnsOpenAiBadRequest [FAIL]
+[xUnit.net 00:00:07.53]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_OpenAiModels_ReturnsOpenAiBadRequest [FAIL]
+[xUnit.net 00:00:07.53]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NonMatchingStrongIfNoneMatch_ReturnsCurrentCatalog [FAIL]
+[xUnit.net 00:00:07.54]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsStrongCatalogEntityTag [FAIL]
+[xUnit.net 00:00:07.54]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_NativeCatalog_ReturnNotModified [FAIL]
+[xUnit.net 00:00:08.58]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenApi_DescribesCatalogAndModelsOperationsAndResponses [FAIL]
+[xUnit.net 00:00:08.58]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_OpenAiModels_ReturnNotModified [FAIL]
+[xUnit.net 00:00:08.61]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_ReturnsOnlyPublicRoutingModels [FAIL]
+[xUnit.net 00:00:08.62]     CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.CatalogSurfaces_DoNotExposePrivateFieldsOrSentinelValues [FAIL]

@@ -1,0 +1,47 @@
+command: dotnet build src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj -c Release --no-restore --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T03:15:06.689895+00:00
+completed-utc: 2026-08-25T03:15:14.797310+00:00
+duration-seconds: 8.107
+exit-code: 0
+output:
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Release\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.FileTools.Abstractions -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.Abstractions\bin\Release\net10.0\CanDoItAll.FileTools.Abstractions.dll
+  CanDoItAll.FileTools.FileInteraction.Core -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Core\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Core.dll
+  CanDoItAll.FileTools.Integration.Abstractions -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.FileTools.Integration.Abstractions\bin\Release\net10.0\CanDoItAll.FileTools.Integration.Abstractions.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\bin\Release\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\bin\Release\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\bin\Release\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib\bin\Release\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.FileTools.FileBrowser.Core -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileBrowser.Core\bin\Release\net10.0\CanDoItAll.FileTools.FileBrowser.Core.dll
+  CanDoItAll.FileTools.FileBrowser.Components -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileBrowser.Components\bin\Release\net10.0\CanDoItAll.FileTools.FileBrowser.Components.dll
+  CanDoItAll.FileTools.FileInteraction.Components -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Components\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Components.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.AppComponents\bin\Release\net10.0\CanDoItAll.AppComponents.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Release\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.Infrastructure.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure.Abstractions\bin\Release\net10.0\CanDoItAll.Infrastructure.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Release\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure\bin\Release\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.SharedProviders.Abstractions -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.SharedProviders.Abstractions\bin\Release\net10.0\CanDoItAll.SharedProviders.Abstractions.dll
+  CanDoItAll.Memory.SourceGateway.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\bin\Release\net10.0\CanDoItAll.Memory.SourceGateway.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.ProviderPipelines\bin\Release\net10.0\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Providers\bin\Release\net10.0\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.AgentFramework.Runtime.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Runtime.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Runtime.Abstractions.dll
+  CanDoItAll.AgentFramework.Usage -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Usage\bin\Release\net10.0\CanDoItAll.AgentFramework.Usage.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Release\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Release\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Projects\bin\Release\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Security.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Security.Abstractions\bin\Release\net10.0\CanDoItAll.Security.Abstractions.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Security\bin\Release\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workspace\bin\Release\net10.0\CanDoItAll.Modules.Workspace.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:07.77
+
+stderr:

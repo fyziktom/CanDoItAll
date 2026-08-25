@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "source URI/network/redirect policy",
+    "catalog client or source identity contract",
+    "import reconciliation transaction and observer behavior"
+  ],
+  "broadGateDecision": "Not authorized; source/sync behavior is bounded by the three declared topics.",
   "selections": [
     {
       "topic": "SharedProviderSourceUriPolicyTests",

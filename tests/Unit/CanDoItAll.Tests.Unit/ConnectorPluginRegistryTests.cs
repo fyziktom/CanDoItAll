@@ -20,6 +20,35 @@ public sealed class ConnectorPluginRegistryTests
         Assert.Contains(OllamaProviderAdapter.PluginKey, pluginKeys);
         Assert.Contains(OllamaRemoteProviderAdapter.PluginKey, pluginKeys);
         Assert.Contains(WebhookResourceConnectorPlugin.PluginKey, pluginKeys);
+        Assert.Contains(
+            SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
+            pluginKeys);
+
+        var sharedManifest = registry.Resolve(
+            SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey);
+        Assert.Equal("CanDoItAll shared provider", sharedManifest.DisplayName);
+        Assert.Equal(
+            ConnectorManifestCapability.ProviderExecution |
+            ConnectorManifestCapability.AgentExposure,
+            sharedManifest.Capabilities);
+        Assert.Equal(
+            SharedProviderReconciliationCoordinator.ImportedConfigurationSchemaVersion,
+            sharedManifest.ConfigurationSchema.Version);
+        Assert.Empty(sharedManifest.ConfigurationSchema.Fields);
+        Assert.Empty(sharedManifest.SecretRequirements);
+        Assert.Equal("shared-provider-status", sharedManifest.HealthCheck.OperationName);
+        Assert.True(sharedManifest.AgentExposure.IsExposed);
+        Assert.True(sharedManifest.AgentExposure.RequiresApproval);
+        Assert.Null(sharedManifest.WorkbenchNodeHook);
+        Assert.Contains(
+            services.GetServices<IConnectorManifestSource>(),
+            source => source is SharedProviderConnectorManifestSource);
+        Assert.DoesNotContain(
+            services.GetServices<IProviderAdapter>(),
+            adapter => string.Equals(
+                adapter.Manifest.PluginKey,
+                SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
+                StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

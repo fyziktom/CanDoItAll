@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB09",
+  "title": "UI component, Playwright, screenshot, accessibility, and recovery proof",
+  "proofTier": "Governed",
+  "status": "not-executed",
+  "dependencies": [
+    "SB08"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "",
+    "commitBefore": "",
+    "commitAfter": "",
+    "workingTreeBefore": "",
+    "workingTreeAfter": ""
+  },
+  "skillsLoaded": [],
+  "architecture": {
+    "checkpoint": "",
+    "projectReferencesBeforeArtifact": "",
+    "projectReferencesAfterArtifact": "",
+    "codeAnalyticsSnapshotBefore": "",
+    "codeAnalyticsSnapshotAfter": "",
+    "cycleResult": "",
+    "assertions": [
+      "Playwright proof is focused and deterministic.",
+      "Screenshots are inspected, not count-only.",
+      "No UI artifact contains credentials."
+    ],
+    "partialClassReview": ""
+  },
+  "changedFiles": [],
+  "commands": [],
+  "testSelections": [
+    {
+      "topic": "SharedProviderUiComponentTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Components.slnx",
+      "filter": "FullyQualifiedName~SharedProvider",
+      "plannedExpectedDiscovery": 28,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    },
+    {
+      "topic": "SharedProviderManagementPlaywrightTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Playwright.slnx",
+      "filter": "FullyQualifiedName~SharedProviderManagementPlaywrightTests",
+      "plannedExpectedDiscovery": 10,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    }
+  ],
+  "artifacts": [],
+  "semanticInvariants": [
+    "Playwright proof is focused and deterministic.",
+    "Screenshots are inspected, not count-only.",
+    "No UI artifact contains credentials."
+  ],
+  "positiveEvidence": [],
+  "negativeEvidence": [],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": false,
+    "command": "",
+    "result": "",
+    "artifact": ""
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "namedInvalidationTriggers": [],
+    "command": "",
+    "result": ""
+  },
+  "progressionDecision": {
+    "result": "not-decided",
+    "nextSubbundle": "SB10",
+    "reason": ""
+  },
+  "notes": []
+}

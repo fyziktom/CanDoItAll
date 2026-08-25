@@ -1,0 +1,130 @@
+command: git status --short --branch --untracked-files=all
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-24T19:24:53.450954+00:00
+completed-utc: 2026-08-24T19:24:53.621275+00:00
+duration-seconds: 0.170
+exit-code: 0
+output:
+## providers-shared
+ M .gitignore
+ M codex/bundles/shared-providers/CLOSURE.md
+ M codex/bundles/shared-providers/CODEX-EXECUTION-CONTRACT.md
+ M codex/bundles/shared-providers/EXECUTION-REPORT.md
+ M codex/bundles/shared-providers/STATUS.md
+ M codex/bundles/shared-providers/architecture/10-ui-architecture.md
+ M codex/bundles/shared-providers/bundle-file-manifest.json
+ M codex/bundles/shared-providers/bundle.json
+ M codex/bundles/shared-providers/plan/00-dependency-graph.md
+ M codex/bundles/shared-providers/plan/02-test-budget-and-gates.md
+ M codex/bundles/shared-providers/requirements/01-functional-requirements.md
+ M codex/bundles/shared-providers/reviews/ui-gate.md
+ M codex/bundles/shared-providers/scripts/README.md
+ M codex/bundles/shared-providers/scripts/validate_bundle.py
+ M codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/README.md
+ M codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/README.md
+ M codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/README.md
+ M codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/README.md
+ M codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/test-selection.json
+ M codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/test-selection.json
+ M codex/bundles/shared-providers/templates/execution-report.md
+ M codex/bundles/shared-providers/traceability/00-input-coverage.md
+ M codex/bundles/shared-providers/traceability/01-requirements-matrix.md
+?? codex/bundles/shared-providers/evidence/00-repository-evidence.md
+?? codex/bundles/shared-providers/evidence/01-standards-research.md
+?? codex/bundles/shared-providers/scripts/run_proof_command.py
+?? codex/bundles/shared-providers/scripts/update_file_manifest.py
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-entry-prepared-validator.txt
+?? codex/bundles/shared-providers/subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-repository-runtime-baseline.txt
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB02-publication-source-import-persistence/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB03-central-catalog-api-auth-etag/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB05-client-source-sync-selection-reconciliation/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB07-backend-checkpoint-three-instance-proof/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB08-provider-sharing-source-import-ui/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/screenshots/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB09-ui-component-playwright-failure-proof/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB10-operator-docs-compose-tooling-manual-handoff/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB11-openapi-export-sharedinfo-skills/proof/transcripts/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/README.md
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/architecture/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/behavior/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/proof-manifest.json
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/screenshots/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/security/.gitkeep
+?? codex/bundles/shared-providers/subbundles/SB12-final-regression-running-stack-closure/proof/transcripts/.gitkeep
+
+stderr:

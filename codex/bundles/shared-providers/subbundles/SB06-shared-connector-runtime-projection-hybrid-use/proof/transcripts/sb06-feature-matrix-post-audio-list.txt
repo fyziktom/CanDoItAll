@@ -1,0 +1,27 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --list-tests --filter 'FullyQualifiedName~ProviderFeatureMatrixTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T10:00:58.152884+00:00
+completed-utc: 2026-08-25T10:01:00.665518+00:00
+duration-seconds: 2.513
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_responses_as_structured_output_and_native_tool_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.AudioCapabilityPolicyRejectsSourceProfilesAndPreservesPersonalProfiles
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_chat_completions_as_structured_output_with_maf_approval
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_with_maf_approval
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_as_structured_output_and_local_tool_bridge_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_vision_model_as_vision_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_uses_selected_model_instead_of_provider_suggestions
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_does_not_let_ollama_provider_wide_vision_metadata_override_text_model
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_configured_ollama_provider_as_vision_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_image_generation_provider_by_explicit_purpose
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_comfyui_as_private_image_provider_without_chat_tools
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Workspace_backed_provider_registry_uses_feature_matrix_and_transport_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_has_explicit_plugin_mapping_and_comfyui_typed_fields
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Agent_framework_provider_mapping_and_workflow_image_selection_do_not_fallback_to_chat_providers
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_does_not_expose_non_persisted_batch_controls
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Runtime_bootstrap_provider_uses_managed_openai_responses_defaults
+
+stderr:

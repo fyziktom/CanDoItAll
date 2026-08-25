@@ -298,21 +298,30 @@
 
     private string ResolveVoiceProviderIdText(Guid? currentProviderId)
     {
-        var candidates = OpenAiVoiceProviders;
-        if (currentProviderId is { } providerId &&
-            candidates.Any(provider => provider.Id == providerId))
+        return ResolveVoiceProviderIdText(currentProviderId, OpenAiVoiceProviders);
+    }
+
+    internal static string ResolveVoiceProviderIdText(
+        Guid? currentProviderId,
+        IReadOnlyList<ProviderProfile> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        if (currentProviderId is { } providerId)
         {
-            return providerId.ToString("D");
+            return candidates.Any(provider => provider.Id == providerId)
+                ? providerId.ToString("D")
+                : string.Empty;
         }
 
         return candidates.FirstOrDefault()?.Id.ToString("D") ?? string.Empty;
     }
 
-    private static bool IsOpenAiVoiceProvider(ProviderProfile provider)
+    internal static bool IsOpenAiVoiceProvider(ProviderProfile provider)
     {
         return provider.Kind == ProviderKind.OpenAi &&
                provider.Purpose == ProviderProfilePurpose.Chat &&
-               provider.IsEnabled;
+               provider.IsEnabled &&
+               ProviderAudioCapabilityPolicy.IsAvailable(provider);
     }
 
     private static bool IsPreferredOpenAiVoiceProvider(ProviderProfile provider)

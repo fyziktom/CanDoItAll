@@ -48,7 +48,8 @@ public static class MafProviderRuntimeServiceCollectionExtensions
         {
             return CreateDefaultProviderFactory(
                 serviceProvider.GetRequiredService<MafProviderDriverHttpClientPool>(),
-                serviceProvider.GetRequiredService<IProviderDriverCredentialResolver>());
+                serviceProvider.GetRequiredService<IProviderDriverCredentialResolver>(),
+                serviceProvider.GetService<IProviderHttpClientSelector>());
         });
         services.TryAddSingleton<IProviderDispatchLaneGate, ProviderDispatchLaneGate>();
         services.TryAddSingleton<IMafProviderStreamingDispatchGate, MafProviderStreamingDispatchGate>();
@@ -65,10 +66,14 @@ public static class MafProviderRuntimeServiceCollectionExtensions
 
     private static IAgentProviderFactory CreateDefaultProviderFactory(
         MafProviderDriverHttpClientPool httpClients,
-        IProviderDriverCredentialResolver credentialResolver)
+        IProviderDriverCredentialResolver credentialResolver,
+        IProviderHttpClientSelector? httpClientSelector)
     {
         return new AgentProviderDriverRegistryBuilder()
-            .AddOpenAiProviderDriver(httpClients.OpenAi, credentialResolver)
+            .AddOpenAiProviderDriver(
+                httpClients.OpenAi,
+                credentialResolver,
+                httpClientSelector)
             .AddAzureOpenAiProviderDriver(httpClients.AzureOpenAi, credentialResolver)
             .AddOllamaProviderDriver(httpClients.Ollama)
             .AddComfyUiProviderDriver(httpClients.ComfyUi)

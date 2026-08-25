@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "shared connector manifest or runtime profile materialization",
+    "Workspace-to-MAF composition",
+    "hybrid provider selection or unavailable-state policy"
+  ],
+  "broadGateDecision": "Not authorized; runtime/composition invalidation is carried to the single SB12 gate.",
   "selections": [
     {
       "topic": "SharedProviderRuntimeProfileMaterializerTests",
@@ -33,5 +39,13 @@
     "Update planned expected discovery only before the first run with a written reason.",
     "Record exact command, counts, duration, exit code, and transcript.",
     "Do not widen the lane because a focused test fails."
-  ]
+  ],
+  "downstreamRevalidation": {
+    "date": "2026-08-25",
+    "trigger": "SB07 changed named SB04 Responses wire-contract and relay capability/operation semantics.",
+    "configuration": "Release",
+    "result": "The unchanged frozen 18/16/10 selections were listed and passed in genuine Release.",
+    "broadGateRun": false,
+    "multiInstanceRun": false
+  }
 }

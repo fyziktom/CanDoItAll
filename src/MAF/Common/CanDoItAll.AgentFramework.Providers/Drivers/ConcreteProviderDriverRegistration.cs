@@ -5,11 +5,15 @@ public static class ConcreteProviderDriverRegistration
     public static AgentProviderDriverRegistryBuilder AddOpenAiProviderDriver(
         this AgentProviderDriverRegistryBuilder builder,
         HttpClient httpClient,
-        IProviderDriverCredentialResolver credentialResolver)
+        IProviderDriverCredentialResolver credentialResolver,
+        IProviderHttpClientSelector? httpClientSelector = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        return builder.AddDriver(new OpenAiProviderDriver(httpClient, credentialResolver));
+        return builder.AddDriver(new OpenAiProviderDriver(
+            httpClient,
+            credentialResolver,
+            httpClientSelector));
     }
 
     public static AgentProviderDriverRegistryBuilder AddAzureOpenAiProviderDriver(

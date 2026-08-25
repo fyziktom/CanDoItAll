@@ -1,0 +1,300 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB04",
+  "title": "Bounded OpenAI-compatible relay, streaming, tools, images, and usage",
+  "proofTier": "Governed",
+  "status": "passed",
+  "dependencies": [
+    "SB03"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "providers-shared",
+    "commitBefore": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "commitAfter": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "workingTreeBefore": "uncommitted completed SB00-SB03 implementation and governed evidence",
+    "workingTreeAfter": "uncommitted cumulative SB00-SB04 implementation and governed evidence; no commit, staging, discard, push, or unrelated-file overwrite"
+  },
+  "skillsLoaded": [
+    "candoitall-bundle-workflow",
+    "candoitall-bundle-preparation",
+    "candoitall-bundle-execution",
+    "candoitall-subbundle-validator",
+    "candoitall-bundle-validator",
+    "apply-candoitall-shared-standards",
+    "candoitall-csharp-architecture-bundle-guard",
+    "csharp-architecture-governor",
+    "csharp-architecture-review-gate",
+    "csharp-dependency-graph-audit",
+    "csharp-design-pattern-selection",
+    "csharp-factory-builder-composition",
+    "csharp-project-boundary-extraction",
+    "csharp-provider-tool-plugin-isolation",
+    "csharp-testability-contracts",
+    "candoitall-codeanalytics-mcp",
+    "aspnet-core",
+    "security-best-practices",
+    "candoitall-components-mcp"
+  ],
+  "architecture": {
+    "checkpoint": "PASS_SB04_AUGUST_25_REVALIDATION",
+    "projectReferencesBeforeArtifact": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/project-references-before.md",
+    "projectReferencesAfterArtifact": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/project-references-after.md",
+    "codeAnalyticsSnapshotBefore": "snap-20260825012213-a17e36ed",
+    "codeAnalyticsSnapshotAfter": "snap-20260825051057-300644c7",
+    "metrics": {
+      "projects": 14,
+      "documents": 752,
+      "modules": 35,
+      "dependencyFacts": 5158,
+      "directProductReferences": 34,
+      "projectCycles": 0,
+      "moduleCycles": 2,
+      "nestedTypeCycles": 1,
+      "errorFindings": 0
+    },
+    "assertions": [
+      "Web owns exactly three authorized inference POST surfaces and delegates through the Workspace application boundary.",
+      "Workspace re-resolves current publication, profile, eligibility, routing model, secret, audit, recovery, and exact image target state.",
+      "Http owns exact per-surface policy, adapter registry, connector URI/auth, bounded response rewriting, and SSE while depending only on Abstractions.",
+      "AgentFramework remains a narrow existing-image and existing-usage bridge; it performs no Workspace persistence lookup.",
+      "The sole product-reference delta is the authorized Modules.AgentFramework to SharedProviders.Abstractions edge; no project cycle is introduced.",
+      "Additive ImageCount properties preserve primary constructor/deconstruction arity; the deterministic recovery schedule is internal.",
+      "Responses retention is explicit: omission canonicalizes to store:false and any persistence-enabling or malformed value fails before dispatch.",
+      "Operation/model capability mismatch is checked at the Workspace application boundary and returns a fixed sanitized conflict before target creation, audit creation, or dispatch."
+    ],
+    "partialClassReview": "No partial class was introduced or extended. Contracts and implementation responsibilities remain cohesive top-level types."
+  },
+  "semanticDelta": {
+    "inventory": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/semantic-changed-files.md",
+    "cumulativeWorktreeInventory": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/changed-files.md",
+    "sb02DownstreamRevalidation": "bundle://subbundles/SB02-publication-source-import-persistence/proof/architecture/sb04-downstream-invalidation-revalidation.md"
+  },
+  "revalidation": {
+    "id": "SB04-REVALIDATION-2026-08-25-RESPONSES-STORE",
+    "status": "passed",
+    "triggeredInvalidationKeys": [
+      "OpenAI-compatible allowlist or wire contract",
+      "relay adapter/capability registry",
+      "streaming, cancellation, image, usage, or audit semantics"
+    ],
+    "behavior": "Responses requests are canonicalized to include store:false when omitted; explicit JSON false is accepted; true, null, and non-Boolean values are rejected before dispatch. Persisted operation/model capability mismatches return a sanitized conflict before dispatch.",
+    "frozenSelections": "Fresh sequential Release discovery and execution preserved 24/24 relay-policy, 22/22 real-Web compatibility, and 12/12 streaming.",
+    "downstream": "SB06-SB12 require explicit downstream recheck before progression; no broad, Docker, Playwright, or stable-aggregate lane was authorized by this reopen."
+  },
+  "commands": [
+    {
+      "purpose": "final Web Release build",
+      "result": "passed with 0 warnings and 0 errors in 23.389 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-build-web-release-closure-final.txt"
+    },
+    {
+      "purpose": "final Unit Release build after malformed image-count repair",
+      "result": "passed with 0 warnings and 0 errors in 46.320 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-build-unit-release-after-image-count-fix.txt"
+    },
+    {
+      "purpose": "final Integration Release build",
+      "result": "passed with 0 warnings and 0 errors in 26.196 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-build-integration-release-closure-final.txt"
+    },
+    {
+      "purpose": "expanded anti-stub audit",
+      "result": "passed for 69 selected source and focused-test files",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-anti-stub-audit-semantic-final.txt"
+    },
+    {
+      "purpose": "expanded secret/content containment scan",
+      "result": "passed; ImageCount is permitted metadata and no prompt, response, tool, image bytes, credential, access context, subject, correlation, secret, or private endpoint entered the prohibited boundary",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-secret-content-scan-semantic-final.txt"
+    },
+    {
+      "purpose": "ProjectReference refresh",
+      "result": "passed; one authorized product edge and zero forbidden direction",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-project-references-after-semantic-final.txt"
+    },
+    {
+      "purpose": "August 25 named-invalidation entry gate",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-entry-validator.txt"
+    },
+    {
+      "purpose": "August 25 Unit Release build failing-first",
+      "result": "failed with four compile errors because the new semantic JSON assertions lacked the System.Text.Json import; repaired test-only",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-unit-release.txt"
+    },
+    {
+      "purpose": "August 25 final Unit Release build",
+      "result": "passed with 0 warnings and 0 errors in 23.313 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-unit-release-final.txt"
+    },
+    {
+      "purpose": "August 25 Web Release build",
+      "result": "passed with 0 warnings and 0 errors in 16.728 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-web-release.txt"
+    },
+    {
+      "purpose": "August 25 Integration Release build failing-first",
+      "result": "failed with one compile error because the focused assertion referenced a nonexistent fixture model alias; repaired test-only",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-integration-release.txt"
+    },
+    {
+      "purpose": "August 25 final Integration Release build",
+      "result": "passed with 0 warnings and 0 errors in 19.660 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-integration-release-final.txt"
+    },
+    {
+      "purpose": "August 25 anti-stub audit",
+      "result": "passed for 77 selected source and focused-test files",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-anti-stub.txt"
+    },
+    {
+      "purpose": "August 25 security scan failing-first",
+      "result": "failed because the historical directory-wide context assertion incorrectly included the later central catalog client, which is required to propagate context between CanDoItAll hosts",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-secret-content-scan.txt"
+    },
+    {
+      "purpose": "August 25 final security scan",
+      "result": "passed; credentials/content remain absent and access context is absent from the exact upstream relay/adapter boundary",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-secret-content-scan-final.txt"
+    },
+    {
+      "purpose": "August 25 ProjectReference refresh",
+      "result": "passed; no project file changed in the reopen delta",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-project-references.txt"
+    }
+  ],
+  "testSelections": [
+    {
+      "topic": "SharedProviderRelayPolicyTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRelayPolicyTests",
+      "plannedExpectedDiscovery": 24,
+      "actualDiscovery": 24,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderRelayPolicyTests --nologo /m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderRelayPolicyTests --nologo --verbosity minimal /m:1",
+      "listTranscript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-list-relay-policy-release.txt",
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 2.201,
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-run-relay-policy-release.txt"
+    },
+    {
+      "topic": "SharedProviderOpenAiCompatibilityIntegrationTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderOpenAiCompatibilityIntegrationTests",
+      "plannedExpectedDiscovery": 22,
+      "actualDiscovery": 22,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderOpenAiCompatibilityIntegrationTests --nologo /m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderOpenAiCompatibilityIntegrationTests --nologo --verbosity minimal /m:1",
+      "listTranscript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-list-openai-compatibility-release.txt",
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 13.554,
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-run-openai-compatibility-release.txt"
+    },
+    {
+      "topic": "SharedProviderStreamingIntegrationTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderStreamingIntegrationTests",
+      "plannedExpectedDiscovery": 12,
+      "actualDiscovery": 12,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderStreamingIntegrationTests --nologo /m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderStreamingIntegrationTests --nologo --verbosity minimal /m:1",
+      "listTranscript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-list-streaming-release.txt",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 6.940,
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-run-streaming-release.txt"
+    }
+  ],
+  "supportingRevalidation": {
+    "providerUsageAggregation": {
+      "expected": 7,
+      "discovered": 7,
+      "passed": 7,
+      "failed": 0,
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-run-provider-usage-aggregation-release-semantic-final.txt"
+    },
+    "sb02": {
+      "state": "18/18",
+      "persistence": "14/14",
+      "deletionReference": "6/6 on approved identical rerun; initial sandbox-only bootstrap failure preserved",
+      "efPendingModel": "no pending model changes",
+      "artifact": "bundle://subbundles/SB02-publication-source-import-persistence/proof/architecture/sb04-downstream-invalidation-revalidation.md"
+    },
+    "migrationAssumption": "Amending 20260824224847_AddSharedProviderPersistence is valid only if it has never been applied to a durable/non-disposable database; otherwise create a new migration."
+  },
+  "artifacts": [
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/manifest.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/semantic-invariants.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/semantic-changed-files.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/changed-files.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/hashes.sha256",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/project-references-before.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/project-references-after.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/codeanalytics-before.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/codeanalytics-after.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/changed-namespace-public-surface-review.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/semantic-reopen-review.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/august-25-contract-revalidation.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/architecture/independent-review.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/behavior/supported-denied-fields.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/behavior/relay-streaming-images.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/security/relay-containment.md",
+    "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/security/august-25-contract-revalidation.md",
+    "bundle://subbundles/SB02-publication-source-import-persistence/proof/architecture/sb04-downstream-invalidation-revalidation.md"
+  ],
+  "semanticInvariants": [
+    "Central dispatch is publication-namespaced and adapter-owned, never an arbitrary URI/header proxy.",
+    "Chat and Responses use exact distinct tool, named-choice, structured-output, text, and image shapes; cross-surface and unsupported forms fail closed.",
+    "Function tools execute on the client; hosted and built-in tools are rejected centrally.",
+    "Access context, subject, prompt/response/tool/image content, secrets, private endpoints, and raw upstream failures are absent from provider shape and metadata persistence.",
+    "Chat/Responses token usage and Images ImageCount are operation-disjoint; missing usage is unavailable rather than zero.",
+    "Invocation terminal transitions are idempotent and the hosted worker recovers only stale InProgress rows; no forced finalizer-save failure is claimed."
+  ],
+  "positiveEvidence": [
+    "August 25 sequential final Release builds pass with zero warnings/errors and fresh exact named-invalidation lanes pass 24/24, 22/22, and 12/12.",
+    "Responses omission and explicit false produce canonical store:false at the real Web dispatch and actual upstream adapter boundary, without enabling provider-side persistence.",
+    "The real PostgreSQL application lane proves current Workspace routing, secret resolution, metadata-only audit, hosted recovery, image target eligibility, token/image usage, aggregation, and missing-usage behavior using a neutral deterministic dispatcher.",
+    "Supporting usage 7/7 and invalidated SB02 18/14/6 plus EF no-drift restore persistence and public-usage trust.",
+    "The force-refreshed dependency graph has 14 projects, 34 direct references, zero project cycles, and zero error findings."
+  ],
+  "negativeEvidence": [
+    "Responses store true, null, and non-Boolean values plus unknown, duplicate, oversized, caller-routing, cross-surface, undeclared-tool, unsupported capability, invalid Base64/detail/role, and malformed explicit image-count forms fail before dispatch.",
+    "Persisted operation/model capability mismatches return a fixed sanitized conflict and perform zero dispatch.",
+    "Caller authorization/access context and private upstream headers/URIs/raw errors/secrets do not cross the Http or response boundary.",
+    "Malformed, oversized, idle, cancelled, and transport-failed streams use typed failure and never synthesize terminal success.",
+    "Projection/aggregation and PostgreSQL constraints reject non-positive or mixed token/image usage."
+  ],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": true,
+    "result": "passed",
+    "artifact": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-secret-content-scan-final.txt"
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "result": "not authorized; exact focused lanes carry SB04 and the single aggregate remains SB12-owned"
+  },
+  "progressionDecision": {
+    "result": "pass",
+    "nextSubbundle": "SB06",
+    "reason": "The August 25 named wire-contract invalidation is revalidated by fresh exact 24/22/12 Release proof, real-Web and upstream store assertions, architecture review, and a boundary-correct security scan. SB06 downstream trust must be restored before SB07 resumes."
+  },
+  "notes": [
+    "Historical failing-first evidence is a genuine pre-contract compile failure, not a claim that every later semantic repair had its final test body recorded red.",
+    "The compatibility lane uses real Workspace and PostgreSQL services but a neutral deterministic dispatcher; no live provider network call is claimed.",
+    "Bounded finalizer retry is source-reviewed; behavior proof covers idempotent transitions and hosted stale-only recovery, not a forced persistence failure.",
+    "The August 25 reopen preserves honest failing Unit/Integration build transcripts and the initially overbroad security scan; only the repaired final artifacts are authoritative.",
+    "The central catalog client legitimately propagates access context between CanDoItAll hosts; the upstream relay/adapter boundary remains context-free.",
+    "No broad, browser, multi-instance, source-sync, UI, paid-provider, or live-network lane ran during the reopen."
+  ]
+}

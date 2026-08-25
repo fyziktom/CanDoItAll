@@ -1,0 +1,11 @@
+command: git diff --check
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T04:02:40.504706+00:00
+completed-utc: 2026-08-25T04:02:40.641098+00:00
+duration-seconds: 0.136
+exit-code: 0
+output:
+
+stderr:
+warning: in the working copy of 'codex/bundles/shared-providers/bundle-file-manifest.json', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs', CRLF will be replaced by LF the next time Git touches it

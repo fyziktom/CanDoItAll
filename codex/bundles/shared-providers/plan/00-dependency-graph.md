@@ -22,6 +22,7 @@ flowchart TD
     SB03 --> SB04
     SB02 --> SB05
     SB03 --> SB05
+    SB04 --> SB05
     SB04 --> SB06
     SB05 --> SB06
     SB06 --> SB07

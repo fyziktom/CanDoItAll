@@ -4,6 +4,15 @@
   "broadGateAllowed": true,
   "playwrightAllowed": false,
   "multiInstanceAllowed": true,
+  "invalidationKeys": [
+    "new SharedProviders projects and ProjectReferences",
+    "CanDoItAll.Web and composition-root registration",
+    "shared-provider API authorization scopes and policies",
+    "cross-cutting access-context middleware",
+    "shared-provider EF entities, migration, and model snapshot",
+    "public OpenAPI operations and schemas"
+  ],
+  "broadGateDecision": "Authorized exactly once at SB12-FINAL-FROZEN-V1 after SB11 is DONE and all production, test, documentation, SharedInfo, and application-image inputs are frozen.",
   "selections": [
     {
       "topic": "CanDoItAll stable aggregate",

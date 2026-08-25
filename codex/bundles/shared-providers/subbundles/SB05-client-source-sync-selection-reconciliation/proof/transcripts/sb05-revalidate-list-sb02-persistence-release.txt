@@ -1,0 +1,25 @@
+command: dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderPersistenceIntegrationTests' --nologo
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T06:28:07.954946+00:00
+completed-utc: 2026-08-25T06:28:09.870981+00:00
+duration-seconds: 1.916
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Model_has_explicit_shared_provider_indexes_foreign_keys_and_no_content_columns
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.PostgreSql_clean_database_migrates_shared_provider_schema
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Service_and_publication_identity_are_stable_across_concurrent_contexts
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Source_create_normalizes_uri_and_persists_one_secret_reference
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Source_update_propagates_endpoint_and_secret_reference_to_all_import_profiles
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Reconciliation_creates_import_and_profile_once_and_is_idempotent
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Reconciliation_preserves_local_profile_alias_enabled_and_id
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Authoritative_absence_marks_missing_without_deleting_profile
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Transient_failure_preserves_import_remote_state_and_profile
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Reappearance_reuses_import_and_profile_identity
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Source_identity_mismatch_blocks_remote_mutation_and_marks_imports
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Stale_source_concurrency_token_raises_typed_conflict
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Invocation_audit_is_metadata_only_and_finalization_is_idempotent
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderPersistenceIntegrationTests.Reconciliation_notifies_observers_only_after_committed_profiles
+
+stderr:

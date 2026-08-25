@@ -1,0 +1,276 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB01",
+  "title": "Protocol, identities, routing IDs, and access context",
+  "proofTier": "Governed",
+  "status": "passed",
+  "dependencies": [
+    "SB00"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "providers-shared",
+    "commitBefore": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "commitAfter": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "workingTreeBefore": "uncommitted readiness-repair and completed SB00 changes; exact state captured by the SB01 entry and working-tree transcripts",
+    "workingTreeAfter": "uncommitted SB00/SB01 implementation and governed evidence; no commit, staging, discard, or unrelated-file mutation"
+  },
+  "skillsLoaded": [
+    "candoitall-bundle-workflow",
+    "candoitall-bundle-preparation",
+    "candoitall-bundle-execution",
+    "candoitall-subbundle-validator",
+    "candoitall-bundle-validator",
+    "apply-candoitall-shared-standards",
+    "candoitall-csharp-architecture-bundle-guard",
+    "csharp-architecture-governor",
+    "csharp-architecture-review-gate",
+    "csharp-dependency-graph-audit",
+    "csharp-provider-tool-plugin-isolation",
+    "candoitall-codeanalytics-mcp",
+    "feature-block-architecture-review",
+    "canonical-model-review",
+    "aspnet-core",
+    "security-best-practices"
+  ],
+  "architecture": {
+    "checkpoint": "PASS_SB01",
+    "projectReferencesBeforeArtifact": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/project-references-before.md",
+    "projectReferencesAfterArtifact": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/project-references-after.md",
+    "codeAnalyticsSnapshotBefore": "snap-20260824204913-6a7763ae",
+    "codeAnalyticsSnapshotAfter": "snap-20260824213007-c65710b4",
+    "cycleResult": "12 projects and 24 direct product references after; zero project-level cycles; two pre-existing module cycles and one nested-type cycle unchanged",
+    "assertions": [
+      "No serializable catalog type contains upstream secret or internal-profile data.",
+      "Access context is optional opaque metadata and is not authorization.",
+      "Abstractions has zero outgoing package/project edges and Web is the only new production consumer.",
+      "Canonical strong revisions include sanitized public health state and exclude revision fields and volatile timestamps."
+    ],
+    "partialClassReview": "No partial class was created or extended; all production additions are cohesive top-level files and the existing Workspace/runtime partials are unchanged."
+  },
+  "changedFiles": [
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Abstractions",
+      "kind": "production-contract-project",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256 for eight files"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/AccessContextReferenceMiddleware.cs",
+      "kind": "production-web",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/AccessContextReferenceState.cs",
+      "kind": "production-web",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs",
+      "kind": "production-composition",
+      "beforeSha256": "baseline commit",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "repo://src/App/CanDoItAll.Web/Program.cs",
+      "kind": "production-pipeline",
+      "beforeSha256": "baseline commit",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderProtocolContractTests.cs",
+      "kind": "test",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRoutingModelIdTests.cs",
+      "kind": "test",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderAccessContextTests.cs",
+      "kind": "test",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256"
+    },
+    {
+      "path": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof",
+      "kind": "governed-evidence",
+      "beforeSha256": "placeholder",
+      "afterSha256": "see proof/hashes.sha256"
+    }
+  ],
+  "commands": [
+    {
+      "purpose": "entry readiness",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-entry-validator.txt"
+    },
+    {
+      "purpose": "retrospective failing-first replay against unchanged baseline for protocol/routing tests",
+      "result": "expected failure: baseline lacks SharedProviders contracts",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-failing-first-unit-baseline.txt"
+    },
+    {
+      "purpose": "retrospective failing-first replay against unchanged baseline for access-context tests",
+      "result": "expected failure: baseline lacks SharedProviders contract and Web binding",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-failing-first-access-baseline.txt"
+    },
+    {
+      "purpose": "unit Release build",
+      "result": "passed with 0 warnings and 0 errors",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-build-unit-release.txt"
+    },
+    {
+      "purpose": "integration Release build",
+      "result": "passed with 0 warnings and 0 errors",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-build-integration-release.txt"
+    },
+    {
+      "purpose": "protocol test discovery",
+      "result": "12 discovered",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-list-protocol-release.txt"
+    },
+    {
+      "purpose": "routing test discovery",
+      "result": "10 discovered",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-list-routing-release.txt"
+    },
+    {
+      "purpose": "access-context test discovery",
+      "result": "10 discovered",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-list-access-release.txt"
+    },
+    {
+      "purpose": "anti-stub audit",
+      "result": "passed for 13 selected files",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-anti-stub-audit.txt"
+    },
+    {
+      "purpose": "forbidden dependency scan",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-forbidden-dependency-scan.txt"
+    },
+    {
+      "purpose": "access-context trust-boundary scan",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-access-boundary-scan.txt"
+    },
+    {
+      "purpose": "secret/content scan",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-secret-scan.txt"
+    }
+  ],
+  "testSelections": [
+    {
+      "topic": "SharedProviderProtocolContractTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderProtocolContractTests",
+      "plannedExpectedDiscovery": 12,
+      "actualDiscovery": 12,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderProtocolContractTests",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderProtocolContractTests",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 2.814,
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-run-protocol-release.txt"
+    },
+    {
+      "topic": "SharedProviderRoutingModelIdTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRoutingModelIdTests",
+      "plannedExpectedDiscovery": 10,
+      "actualDiscovery": 10,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderRoutingModelIdTests",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderRoutingModelIdTests",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 2.918,
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-run-routing-release.txt"
+    },
+    {
+      "topic": "SharedProviderAccessContextTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderAccessContextTests",
+      "plannedExpectedDiscovery": 10,
+      "actualDiscovery": 10,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderAccessContextTests",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderAccessContextTests",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 19.306,
+      "transcript": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-run-access-release.txt"
+    }
+  ],
+  "artifacts": [
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/manifest.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/semantic-invariants.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/changed-files.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/hashes.sha256",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/project-references-before.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/project-references-after.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/codeanalytics-before.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/codeanalytics-after.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/public-type-inventory.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/production-source-assertions.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/architecture/architecture-review-checklist.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/behavior/protocol-routing-access.md",
+    "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/security/contract-boundary.md"
+  ],
+  "semanticInvariants": [
+    "No serializable catalog type contains upstream secret or internal-profile data.",
+    "Access context is optional opaque metadata and is not authorization.",
+    "Inner project dependency direction is preserved.",
+    "Routing IDs are publication-scoped, opaque, and cannot select an upstream URI.",
+    "Canonical public revisions are deterministic and change with sanitized public health state."
+  ],
+  "positiveEvidence": [
+    "Exact protocol/routing/access selections discover 12/10/10 and pass 12/10/10 after implementation.",
+    "The real Web host binds an exact access reference with concurrent scoped isolation.",
+    "Canonical catalog serialization and routing vectors exercise production codecs and validators, not fixture-only stand-ins."
+  ],
+  "negativeEvidence": [
+    "Exact new adversarial test sources fail to compile against the unchanged baseline commit because the production contract/binding does not exist.",
+    "Unknown JSON/version/capabilities, cross-publication routes, malformed IDs, invalid/default/repeated access headers, and forged authorization fail explicitly.",
+    "Forbidden-dependency, access-boundary, anti-stub, and credential/private-key scans pass."
+  ],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": true,
+    "command": "credential-shaped token and private-key scan over SB01 source, tests, and proof",
+    "result": "passed; no credential-shaped values or private-key blocks found",
+    "artifact": "bundle://subbundles/SB01-protocol-identities-and-access-context/proof/transcripts/sb01-secret-scan.txt"
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "namedInvalidationTriggers": [
+      "public protocol or routing-model-id contract",
+      "access-context middleware or header binding",
+      "SharedProviders project/reference graph"
+    ],
+    "command": "",
+    "result": "not authorized; only the three declared focused topics ran and SB12 retains the one broad gate"
+  },
+  "progressionDecision": {
+    "result": "pass",
+    "nextSubbundle": "SB02",
+    "reason": "All SB01 acceptance criteria, architecture assertions, exact Release selections, failing-first baseline replay, negative behavior, and security scans have durable evidence."
+  },
+  "notes": [
+    "The failing-first runs are transparent retrospective replays: the exact committed working-tree test sources were copied into a disposable detached worktree at the unchanged baseline commit, failed on the missing production contracts, and the verified temporary worktree was removed after transcripts were captured.",
+    "No public checkedAtUtc field exists; advertised health state changes the canonical strong revision while volatile timestamps and revision self-fields are excluded.",
+    "No broad, browser, multi-instance, paid-provider, or live-network validation ran."
+  ]
+}

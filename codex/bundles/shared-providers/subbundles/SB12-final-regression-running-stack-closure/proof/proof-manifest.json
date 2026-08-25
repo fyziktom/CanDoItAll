@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB12",
+  "title": "Final architecture/stable gate, clean multi-instance run, running handoff, and closure",
+  "proofTier": "Governed",
+  "status": "not-executed",
+  "dependencies": [
+    "SB11"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "",
+    "commitBefore": "",
+    "commitAfter": "",
+    "workingTreeBefore": "",
+    "workingTreeAfter": ""
+  },
+  "skillsLoaded": [],
+  "architecture": {
+    "checkpoint": "",
+    "projectReferencesBeforeArtifact": "",
+    "projectReferencesAfterArtifact": "",
+    "codeAnalyticsSnapshotBefore": "",
+    "codeAnalyticsSnapshotAfter": "",
+    "cycleResult": "",
+    "assertions": [
+      "Only one stable aggregate run.",
+      "Final stack is left running.",
+      "Closure, code, OpenAPI, SharedInfo and proof agree."
+    ],
+    "partialClassReview": ""
+  },
+  "changedFiles": [],
+  "commands": [],
+  "testSelections": [
+    {
+      "topic": "CanDoItAll stable aggregate",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Stable.slnx",
+      "filter": "full stable graph at frozen checkpoint",
+      "plannedExpectedDiscovery": -1,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    },
+    {
+      "topic": "SharedProviderMultiInstanceE2E",
+      "owningProject": "tools/SharedProviders E2E orchestrator",
+      "filter": "scenario-set:final-clean",
+      "plannedExpectedDiscovery": 19,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    },
+    {
+      "topic": "BundleClosureValidation",
+      "owningProject": "bundle scripts and SharedInfo validators",
+      "filter": "closure, traceability, hashes, running handoff",
+      "plannedExpectedDiscovery": 6,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    }
+  ],
+  "artifacts": [],
+  "semanticInvariants": [
+    "Only one stable aggregate run.",
+    "Final stack is left running.",
+    "Closure, code, OpenAPI, SharedInfo and proof agree."
+  ],
+  "positiveEvidence": [],
+  "negativeEvidence": [],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": false,
+    "command": "",
+    "result": "",
+    "artifact": ""
+  },
+  "broadGate": {
+    "allowed": true,
+    "run": false,
+    "frozenCheckpoint": "SB12-FINAL-FROZEN-V1",
+    "namedInvalidationTriggers": [
+      "new SharedProviders projects and ProjectReferences",
+      "CanDoItAll.Web and composition-root registration",
+      "shared-provider API authorization scopes and policies",
+      "cross-cutting access-context middleware",
+      "shared-provider EF entities, migration, and model snapshot",
+      "public OpenAPI operations and schemas"
+    ],
+    "command": "",
+    "result": ""
+  },
+  "progressionDecision": {
+    "result": "not-decided",
+    "nextSubbundle": "NONE",
+    "reason": ""
+  },
+  "notes": []
+}

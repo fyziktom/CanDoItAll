@@ -1,0 +1,13 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --filter 'FullyQualifiedName~ConnectorPluginRegistryTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T09:31:19.143463+00:00
+completed-utc: 2026-08-25T09:31:21.767075+00:00
+duration-seconds: 2.624
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 58 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+
+stderr:

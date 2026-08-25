@@ -1,0 +1,22 @@
+command: pwsh -NoProfile -File tools/SharedProviders/Run-SharedProviderE2E.ps1 -Reset
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T15:12:09.258887+00:00
+completed-utc: 2026-08-25T15:15:57.864947+00:00
+duration-seconds: 228.606
+exit-code: 1
+output:
+[shared-providers-e2e] Verifying Docker Engine and Compose.
+[shared-providers-e2e] Building the E2E orchestrator sequentially.
+[shared-providers-e2e] Building the application image once for all three app roles.
+[shared-providers-e2e] Building the deterministic upstream image once for both fixtures.
+[shared-providers-e2e] Stopping only the dedicated Compose project before credential reset.
+[shared-providers-e2e] Preparing the exact marked artifact root and ephemeral credentials.
+[shared-providers-e2e] Starting the isolated database and deterministic upstreams.
+[shared-providers-e2e] Seeding central through canonical application services.
+
+stderr:
+Exception: C:\repositories\CanDoItAll\tools\SharedProviders\Run-SharedProviderE2E.ps1:1219
+Line |
+1219 |  …             throw "A Compose command failed and its exact one-off con …
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | A Compose command failed and its exact one-off container could not be removed within the cleanup deadline.

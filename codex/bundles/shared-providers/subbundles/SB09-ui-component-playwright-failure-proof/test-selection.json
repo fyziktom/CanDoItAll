@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": true,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "shared-provider Razor/component behavior",
+    "desktop compact-composition or overlay contract",
+    "browser selectors, accessibility names, or backend UI service contract"
+  ],
+  "broadGateDecision": "Not authorized; SB09 owns one focused Playwright lane only.",
   "selections": [
     {
       "topic": "SharedProviderUiComponentTests",

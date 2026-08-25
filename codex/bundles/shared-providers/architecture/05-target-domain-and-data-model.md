@@ -92,7 +92,8 @@ Metadata-only durable record:
 - operation and public/upstream model;
 - start/end timestamps and latency;
 - status/outcome/error category;
-- usage counts, completeness, pricing completeness, and cost when available;
+- prompt/completion token counts or generated-image count, usage completeness, pricing
+  completeness, and cost when available;
 - no request/response content;
 - retention/cleanup timestamp or policy metadata.
 
@@ -153,3 +154,39 @@ Additional terminal/blocking states:
 
 A transient sync failure updates source status but does not mark every import missing or
 delete it. Absence is concluded only from a successful authoritative catalog response.
+
+## SB02 realized model — 2026-08-24
+
+The proposed five-row model is implemented under Workspace with the specified unique identities,
+application-managed concurrency, restrictive relationships, retention lookup, and completion/
+identity checks. `SharedProviderServiceIdentity` is the selected one-row stable installation
+identity because no suitable existing public installation identifier was found.
+
+SB02 selected the derived-cache materialization option: `SharedProviderSource` owns the canonical
+URI and one existing secret-record ID; every linked profile caches the resolved shared OpenAI base
+and the same reference ID. A real two-import transaction test proves both caches change together
+while both local aliases/enabled intents remain unchanged. The stale-token test proves rejected
+state does not persist.
+
+Remote catalog cache JSON is limited to a versioned 256-KiB sanitized contract envelope and owns
+no identity. Generic imported-profile editing remains fail-closed until SB06/SB08 add the runtime
+connector and server-side ownership policy in that order.
+
+## SB04 realized invocation usage — 2026-08-25
+
+Relay usage is operation-disjoint and never invents zero:
+
+- unavailable usage has null prompt tokens, completion tokens, and image count;
+- partial token usage has exactly one token count and no image count;
+- complete Chat/Responses usage has both token counts and no image count;
+- complete Image Generations usage has only a positive image count;
+- image count is bounded to 1–16 in persistence, while the selected adapter descriptor may impose
+  a narrower request maximum.
+
+`SharedProviderInvocationRecord.ImageCount` is nullable. The Workspace EF configuration,
+PostgreSQL migration, migration designer, and model snapshot carry the same operation-aware check
+constraint. Projection maps complete image observations into the existing usage pipeline and
+fails explicitly for inconsistent stored rows; aggregation rejects non-positive and mixed
+token/image observations. Additive init-only `ImageCount` properties preserve the existing
+constructor and deconstruction ABI on invocation completion, usage contribution, and usage
+totals contracts.

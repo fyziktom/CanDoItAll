@@ -1,0 +1,23 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~ProviderCatalogProjectionFailureTests' -nologo -v: minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T08:19:38.131271+00:00
+completed-utc: 2026-08-25T08:19:40.619488+00:00
+duration-seconds: 2.488
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.GetProviderAsync_does_not_resurrect_stale_catalog_entry_after_committed_delete
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.ListProvidersAsync_does_not_resurrect_stale_catalog_entry_after_committed_delete
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Projection_failures_report_committed_upsert_and_delete_with_repair_actions
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_persists_kind_and_defined_thinking_capabilities_through_database_mapping
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_round_trips_ollama_suggested_models_through_database_mapping
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_update_persists_discovered_thinking_capabilities_through_database_mapping
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_drops_discovered_capabilities_when_provider_identity_changes
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_malformed_configuration_without_mutating_stored_profile
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_non_http_url_for_real_connector_without_database_mutation
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_requires_explicit_secret_binding_for_real_connector
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Optional_connector_secret_can_be_explicitly_unbound
+
+stderr:

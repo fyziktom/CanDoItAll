@@ -11,8 +11,10 @@ namespace CanDoItAll.Modules.Workspace;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using ProviderModelTokenPriceEditorModel = CanDoItAll.AgentFramework.Models.ProviderModelTokenPriceEditorModel;
+using ProviderProfilePurpose = CanDoItAll.AgentFramework.Models.ProviderProfilePurpose;
 using ProviderPricingDefaults = CanDoItAll.AgentFramework.Models.ProviderPricingDefaults;
 using ProviderPricingMetadata = CanDoItAll.AgentFramework.Models.ProviderPricingMetadata;
+using ProviderTransportKind = CanDoItAll.AgentFramework.Models.ProviderTransportKind;
 
 public sealed class WorkspaceSettings
 {
@@ -332,6 +334,15 @@ public sealed partial class WorkspaceService(
 
     public async Task<Result<Guid>> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
+        if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                model.ConnectorPluginKey))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage));
+        }
+
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             return Result<Guid>.Failure(Error.Validation("Provider profile name is required."));
@@ -353,8 +364,11 @@ public sealed partial class WorkspaceService(
             return Result<Guid>.Failure(providerResolutionError);
         }
 
+        var secretRecordId = model.ApiKeySecretId;
         var requiresSecret = providerManifest.SecretRequirements.Any(requirement => requirement.IsRequired);
-        if (requiresSecret && !model.ApiKeySecretId.HasValue)
+        if (requiresSecret &&
+            (!secretRecordId.HasValue ||
+                secretRecordId.Value == Guid.Empty))
         {
             return Result<Guid>.Failure(Error.Validation(
                 $"{providerManifest.DisplayName} requires a secret reference."));
@@ -381,9 +395,35 @@ public sealed partial class WorkspaceService(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entity = model.Id.HasValue
-            ? await dbContext.Set<ProviderProfile>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
-            : null;
+        await using var secretMutationScope =
+            await ProviderProfileSecretMutationScope.BeginAsync(
+                dbContext,
+                model.Id,
+                secretRecordId,
+                cancellationToken);
+        var entity = secretMutationScope.Profile;
+        var isNewProfile = entity is null;
+        if (SharedProviderProfileOwnershipPolicy.IsSourceManagedConnector(
+                entity?.ConnectorPluginKey))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage));
+        }
+
+        if (secretRecordId is { } targetSecretRecordId)
+        {
+            var secretExists = targetSecretRecordId != Guid.Empty &&
+                await dbContext.Set<SecretRecord>()
+                    .AsNoTracking()
+                    .AnyAsync(
+                        secret => secret.Id == targetSecretRecordId,
+                        cancellationToken);
+            if (!secretExists)
+            {
+                return Result<Guid>.Failure(Error.Validation(
+                    "The selected provider secret reference does not exist."));
+            }
+        }
 
         if (entity is null)
         {
@@ -391,29 +431,64 @@ public sealed partial class WorkspaceService(
             await dbContext.Set<ProviderProfile>().AddAsync(entity, cancellationToken);
         }
 
+        if (!TryResolveSharedProviderPublicationMetadata(
+                entity,
+                providerPlugin.Manifest.PluginKey,
+                out var publicationMetadata))
+        {
+            return Result<Guid>.Failure(Error.Validation(
+                $"Provider connector '{providerPlugin.Manifest.PluginKey}' does not define a supported publication classification."));
+        }
+
+        string extraSettingsJson;
+        try
+        {
+            var pricedConfiguration = ProviderPricingMetadata.Write(
+                model.Configuration.ToJson(),
+                hasPricingKind
+                    ? ProviderPricingDefaults.ResolveIsPrivateProvider(
+                        pricingKind,
+                        model.IsPrivateProvider)
+                    : model.IsPrivateProvider,
+                modelPrices);
+            extraSettingsJson =
+                SharedProviderProfilePublicationMetadataWriter.Write(
+                    pricedConfiguration,
+                    publicationMetadata.ProviderKind,
+                    publicationMetadata.Transport,
+                    publicationMetadata.Purpose,
+                    defaultModel,
+                    publicationMetadata.Models);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException)
+        {
+            return Result<Guid>.Failure(Error.Validation(exception.Message));
+        }
+
         entity.Name = model.Name.Trim();
         entity.ConnectorPluginKey = providerPlugin.Manifest.PluginKey;
         entity.ProviderKind = providerPlugin.LegacyProviderKind;
         entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = configuredBaseUrl.Trim().TrimEnd('/');
-        entity.ApiKeySecretId = model.ApiKeySecretId;
+        entity.ApiKeySecretId = secretRecordId;
         entity.DefaultModel = defaultModel;
         entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
         var capabilityDefaults = WorkspaceProviderCapabilityDefaults.Resolve(providerPlugin.Manifest.PluginKey);
         entity.SupportsStreaming = capabilityDefaults.SupportsStreaming || model.SupportsStreaming;
         entity.SupportsToolCalling = capabilityDefaults.SupportsToolCalling || model.SupportsToolCalling;
-        entity.SupportsStructuredOutput = capabilityDefaults.SupportsStructuredOutput;
+        entity.SupportsStructuredOutput =
+            capabilityDefaults.SupportsStructuredOutput &&
+            (isNewProfile || model.SupportsStructuredOutput);
         entity.SupportsVision = string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) &&
                                 model.SupportsVision;
-        entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
-            model.Configuration.ToJson(),
-            hasPricingKind
-                ? ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, model.IsPrivateProvider)
-                : model.IsPrivateProvider,
-            modelPrices);
+        entity.ExtraSettingsJson = extraSettingsJson;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await secretMutationScope.CommitAsync(cancellationToken);
+        await secretMutationScope.DisposeAsync();
+
         foreach (var observer in providerProfileCommitObservers)
         {
             await observer.ProviderSavedAsync(
@@ -516,6 +591,10 @@ public sealed partial class WorkspaceService(
             return;
         }
 
+        await SharedProviderProfileDeletionPolicy.EnsureCanDeleteAsync(
+            dbContext,
+            entity.Id,
+            cancellationToken);
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
         foreach (var observer in providerProfileCommitObservers)
@@ -673,6 +752,100 @@ public sealed partial class WorkspaceService(
         }
     }
 
+    private static bool TryResolveSharedProviderPublicationMetadata(
+        ProviderProfile current,
+        string connectorPluginKey,
+        out SharedProviderProfilePublicationMetadata metadata)
+    {
+        if (string.Equals(
+                current.ConnectorPluginKey,
+                connectorPluginKey,
+                StringComparison.Ordinal) &&
+            SharedProviderProfilePublicationMetadataReader.TryRead(
+                current,
+                out var currentMetadata,
+                out _) &&
+            IsCompatiblePublicationMetadata(
+                connectorPluginKey,
+                currentMetadata))
+        {
+            metadata = currentMetadata;
+            return true;
+        }
+
+        SharedProviderProfilePublicationMetadata? resolved =
+            connectorPluginKey switch
+            {
+                OpenAiProviderAdapter.PluginKey => new(
+                    AgentFrameworkProviderKind.OpenAi,
+                    ProviderTransportKind.Responses,
+                    ProviderProfilePurpose.Chat,
+                    []),
+                OllamaProviderAdapter.PluginKey or
+                    OllamaRemoteProviderAdapter.PluginKey => new(
+                        AgentFrameworkProviderKind.Ollama,
+                        ProviderTransportKind.ChatCompletions,
+                        ProviderProfilePurpose.Chat,
+                        []),
+                ComfyUiProviderAdapter.PluginKey => new(
+                    AgentFrameworkProviderKind.ComfyUi,
+                    ProviderTransportKind.ChatCompletions,
+                    ProviderProfilePurpose.ImageGeneration,
+                    []),
+                ScenarioHarnessProviderAdapter.PluginKey or
+                    ProcessMockProviderAdapter.PluginKey => new(
+                        AgentFrameworkProviderKind.OpenAi,
+                        ProviderTransportKind.Responses,
+                        ProviderProfilePurpose.Chat,
+                        []),
+                _ => null
+            };
+        if (resolved is null)
+        {
+            metadata = null!;
+            return false;
+        }
+
+        metadata = resolved;
+        return true;
+    }
+
+    private static bool IsCompatiblePublicationMetadata(
+        string connectorPluginKey,
+        SharedProviderProfilePublicationMetadata metadata)
+        => connectorPluginKey switch
+        {
+            OpenAiProviderAdapter.PluginKey =>
+                metadata.ProviderKind is
+                    AgentFrameworkProviderKind.OpenAi or
+                    AgentFrameworkProviderKind.AzureOpenAi &&
+                metadata.Purpose switch
+                {
+                    ProviderProfilePurpose.Chat =>
+                        metadata.Transport is
+                            ProviderTransportKind.Responses or
+                            ProviderTransportKind.ChatCompletions,
+                    ProviderProfilePurpose.ImageGeneration =>
+                        metadata.Transport == ProviderTransportKind.Responses,
+                    _ => false
+                },
+            OllamaProviderAdapter.PluginKey or
+                OllamaRemoteProviderAdapter.PluginKey =>
+                    metadata.ProviderKind == AgentFrameworkProviderKind.Ollama &&
+                    metadata.Transport == ProviderTransportKind.ChatCompletions &&
+                    metadata.Purpose == ProviderProfilePurpose.Chat,
+            ComfyUiProviderAdapter.PluginKey =>
+                metadata.ProviderKind == AgentFrameworkProviderKind.ComfyUi &&
+                metadata.Transport == ProviderTransportKind.ChatCompletions &&
+                metadata.Purpose == ProviderProfilePurpose.ImageGeneration,
+            ScenarioHarnessProviderAdapter.PluginKey or
+                ProcessMockProviderAdapter.PluginKey =>
+                    metadata.ProviderKind == AgentFrameworkProviderKind.OpenAi &&
+                    metadata.Transport == ProviderTransportKind.Responses &&
+                    metadata.Purpose == ProviderProfilePurpose.Chat,
+            _ => false
+        };
+
     private static string BuildProviderPricingRefreshMessage(
         string providerDisplayName,
         string adapterMessage,
@@ -688,5 +861,3 @@ public sealed partial class WorkspaceService(
         return $"{providerDisplayName}: {adapterMessage} Applied {exactPart} and {modelOnlyPart}; manual rows were preserved unless an exact API price matched the same model.";
     }
 }
-
-

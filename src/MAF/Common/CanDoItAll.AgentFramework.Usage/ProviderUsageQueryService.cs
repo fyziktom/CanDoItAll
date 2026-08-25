@@ -87,6 +87,7 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
         var deduplicated = new List<ProviderUsageContribution>();
         foreach (var contribution in contributions)
         {
+            ValidateContribution(contribution);
             var key = (contribution.WorkloadKind, contribution.ContributionId);
             if (seen.TryGetValue(key, out var existing))
             {
@@ -104,6 +105,25 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
         }
 
         return deduplicated;
+    }
+
+    private static void ValidateContribution(ProviderUsageContribution contribution)
+    {
+        ArgumentNullException.ThrowIfNull(contribution);
+        ArgumentNullException.ThrowIfNull(contribution.Tokens);
+        if (contribution.ImageCount is <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Usage contribution '{contribution.WorkloadKind}:{contribution.ContributionId}' has a non-positive image count.");
+        }
+
+        if (contribution.ImageCount.HasValue &&
+            (contribution.UsageCompleteness != ProviderUsageCompleteness.Observed ||
+                contribution.Tokens != ProviderUsageTokenCounts.Empty))
+        {
+            throw new InvalidOperationException(
+                $"Usage contribution '{contribution.WorkloadKind}:{contribution.ContributionId}' has an invalid image-usage shape.");
+        }
     }
 
     private static IReadOnlyList<ProviderUsageConsumerRow> BuildConsumers(
@@ -171,6 +191,7 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
         var outputTokens = 0;
         var reasoningTokens = 0;
         var totalTokens = 0;
+        var imageCount = 0;
         var knownCostUsd = 0m;
         foreach (var item in source)
         {
@@ -190,6 +211,7 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
                 outputTokens += item.Tokens.OutputTokens;
                 reasoningTokens += item.Tokens.ReasoningTokens;
                 totalTokens += item.Tokens.TotalTokens;
+                imageCount += item.ImageCount ?? 0;
             }
 
             if (item.PricingCompleteness == ProviderUsagePricingCompleteness.Unpriced ||
@@ -226,7 +248,10 @@ public sealed class ProviderUsageQueryService(IEnumerable<IProviderUsageProjecti
                 outputTokens,
                 reasoningTokens,
                 totalTokens),
-            decimal.Round(knownCostUsd, 6, MidpointRounding.AwayFromZero));
+            decimal.Round(knownCostUsd, 6, MidpointRounding.AwayFromZero))
+        {
+            ImageCount = imageCount
+        };
     }
 
     private static bool IsKnownUsage(ProviderUsageContribution contribution)

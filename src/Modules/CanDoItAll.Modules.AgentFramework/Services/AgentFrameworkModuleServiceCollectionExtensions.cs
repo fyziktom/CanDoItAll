@@ -34,6 +34,7 @@ using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Conversations.Shell;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Streaming;
+using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.Tools.Documents;
 using CanDoItAll.AgentFramework.Workflows.Templates;
 using CanDoItAll.Memory.Application;
@@ -204,11 +205,17 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
             AgentProviderUsageProjectionSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderUsageProjectionSource,
+            SharedProviderRelayUsageProjectionSource>());
         services.TryAddScoped<ProviderUsageQueryService>();
+        services.TryAddScoped<
+            ISharedProviderImageCapabilityRelay,
+            SharedProviderImageCapabilityRelay>();
         services.TryAddScoped<IAgentRecruitingEvidenceStore>(serviceProvider =>
             (IAgentRecruitingEvidenceStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentRecruitingEvidenceService, AgentRecruitingEvidenceService>();
         services.TryAddSingleton<IAgentExecutionCancellationRegistry, AgentExecutionCancellationRegistry>();
+        services.TryAddSingleton<SharedProviderRuntimeProfileMaterializer>();
         services.AddScoped<WorkspaceAgentProviderProfileMapper>();
         services.AddScoped<
             IProviderRuntimeProfileSnapshotLoader,
@@ -231,6 +238,10 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             ServiceDescriptor.Scoped<
                 IWorkspaceProviderProfileCommitObserver,
                 AgentFrameworkProviderRuntimeSnapshotCommitObserver>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<
+                IWorkspaceProviderProfileCommitObserver,
+                SharedProviderCatalogProjectionCommitObserver>());
         services.AddScoped<WorkspaceBackedAgentProviderProfileRegistry>();
         services.AddScoped<IProviderProfileRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<WorkspaceBackedAgentProviderProfileRegistry>());

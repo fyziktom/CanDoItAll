@@ -1,0 +1,21 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --configuration Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderRoutingModelIdTests'
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-24T21:27:12.282629+00:00
+completed-utc: 2026-08-24T21:27:15.171423+00:00
+duration-seconds: 2.889
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.CreateMatchesTheFrozenStableVector
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.CreateRejectsOuterWhitespaceToPreserveExactModelIdentity
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.DuplicateModelNamesFromDifferentPublicationsRemainDistinct
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.UpstreamModelIdentityIsCaseSensitive
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.RoutingIdDoesNotRevealUpstreamModelOrInternalProfileId
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.TryParseReturnsOnlyPublicPublicationAndFullFingerprint
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.UnknownCodecVersionFailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.UppercasePublicationEncodingFailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.TruncatedOrNonBase64UrlFingerprintFailsClosed
+    CanDoItAll.Tests.Unit.SharedProviderRoutingModelIdTests.MatchesRequiresTheExactPublicationAndModel
+
+stderr:

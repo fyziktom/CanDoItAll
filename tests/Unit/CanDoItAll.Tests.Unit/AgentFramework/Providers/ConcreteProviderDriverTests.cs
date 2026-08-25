@@ -91,6 +91,62 @@ public sealed class ConcreteProviderDriverTests
         Assert.Contains(handler.Requests, request => request.PathAndQuery == "/v1/audio/speech" && request.Body.Contains("\"voice\":\"alloy\"", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(AgentProviderOperationKind.TranscribeSpeech)]
+    [InlineData(AgentProviderOperationKind.SynthesizeSpeech)]
+    public async Task OpenAiProviderDriver_RejectsSourceManagedAudioBeforeHttpDispatch(
+        AgentProviderOperationKind operation)
+    {
+        var handler = new CapturingHandler((_, _) =>
+            JsonResponse("""{"error":{"message":"unexpected dispatch"}}"""));
+        using var httpClient = new HttpClient(handler);
+        var driver = new OpenAiProviderDriver(
+            httpClient,
+            new FixedCredentialResolver("source-access-token"));
+        var provider = CreateProvider(
+            ProviderKind.OpenAi,
+            "https://private-source.example.test/openai/v1",
+            "shared-routing-model") with
+        {
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.Parse("50b04e84-8c11-4aed-a7c2-064f71ba7f2c"),
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("a592f45c-20d5-4f0b-925e-10fbdd9e0d97"))
+        };
+
+        Task InvokeAsync()
+        {
+            return operation switch
+            {
+                AgentProviderOperationKind.TranscribeSpeech =>
+                    driver.TranscribeSpeechAsync(new ProviderSpeechToTextRequest(
+                        provider,
+                        "gpt-4o-mini-transcribe",
+                        [new ProviderSpeechToTextAudio("voice.webm", "audio/webm", [1, 2, 3])],
+                        "en",
+                        string.Empty)),
+                AgentProviderOperationKind.SynthesizeSpeech =>
+                    driver.SynthesizeSpeechAsync(new ProviderTextToSpeechRequest(
+                        provider,
+                        "gpt-4o-mini-tts",
+                        "hello",
+                        "alloy",
+                        "mp3",
+                        string.Empty)),
+                _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+            };
+        }
+
+        var exception = await Assert.ThrowsAsync<ProviderAudioCapabilityException>(InvokeAsync);
+
+        Assert.Equal(provider.Id, exception.ProviderProfileId);
+        Assert.Equal(operation, exception.Operation);
+        Assert.Equal(ProviderAudioCapabilityException.PublicMessage, exception.Message);
+        Assert.DoesNotContain(provider.BaseUrl, exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
     [Fact]
     public async Task OpenAiProviderDriver_UsesResponsesEndpointPayloadAndUsage()
     {
@@ -764,6 +820,51 @@ public sealed class ConcreteProviderDriverTests
         Assert.False(result.Success);
         Assert.Contains("chat probe failed", result.Summary, StringComparison.Ordinal);
         Assert.Contains("gpt-test", result.SuggestedModels);
+
+        var sourceSecretId = Guid.Parse("6f679478-0efe-4f5e-9e6c-52d231f56093");
+        var sourceProvider = CreateProvider(
+            ProviderKind.OpenAi,
+            "http://10.23.45.67:43123/openai/v1",
+            "shared-routing-model") with
+        {
+            CredentialBinding = new ProviderCredentialBinding(
+                sourceSecretId,
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("2682028d-69a8-48e1-b30f-68a856812639"))
+        };
+        const string promptMarker = "private-prompt-must-not-escape";
+        const string credentialMarker = "source-token-must-not-escape";
+        using var sourceHttpClient = new HttpClient(new CapturingHandler((_, _) =>
+            throw new HttpRequestException(
+                $"Connection failed at {sourceProvider.BaseUrl}; secret={sourceSecretId:D}; credential={credentialMarker}; prompt={promptMarker}.")));
+        var sourceDriver = new OpenAiProviderDriver(
+            sourceHttpClient,
+            new FixedCredentialResolver("source-access-token"));
+
+        var sourceResult = await sourceDriver.TestHealthAsync(sourceProvider);
+
+        Assert.False(sourceResult.Success);
+        Assert.Equal(
+            ProviderFailureDisclosurePolicy.SanitizedHealthFailureMessage,
+            sourceResult.Summary);
+        Assert.Contains("shared-routing-model", sourceResult.SuggestedModels);
+        Assert.DoesNotContain(
+            sourceProvider.BaseUrl,
+            sourceResult.Summary,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            sourceSecretId.ToString("D"),
+            sourceResult.Summary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            credentialMarker,
+            sourceResult.Summary,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            promptMarker,
+            sourceResult.Summary,
+            StringComparison.Ordinal);
     }
 
     [Fact]

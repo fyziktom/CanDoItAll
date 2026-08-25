@@ -57,6 +57,11 @@ are frozen.
 
 No earlier subbundle may run it "for safety."
 
+The single SB12 aggregate consumes its budget whether it passes or fails. All focused and
+specialized gates must be green before the frozen checkpoint. A failure blocks SB12; diagnosis
+and repair use affected-scope checks only. A replacement aggregate requires explicit operator
+authorization and a durable budget amendment.
+
 ## Docker image budget
 
 - build application image once in SB07 after backend freeze;

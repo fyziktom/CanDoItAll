@@ -1,0 +1,9 @@
+command: docker compose --env-file .env.shared-providers.e2e.example -f compose.shared-providers.e2e.yaml --profile orchestrator config --quiet
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T10:54:31.377296+00:00
+completed-utc: 2026-08-25T10:54:31.614576+00:00
+duration-seconds: 0.237
+exit-code: 0
+output:
+
+stderr:

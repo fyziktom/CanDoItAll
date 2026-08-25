@@ -1,0 +1,63 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --list-tests --filter 'FullyQualifiedName~ConcreteProviderDriverTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T09:05:50.893460+00:00
+completed-utc: 2026-08-25T09:05:53.590646+00:00
+duration-seconds: 2.697
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.ConcreteDrivers_RegisterThroughProviderBuilder
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_BuildsModelChatImageAndVoiceRequests
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_UsesResponsesEndpointPayloadAndUsage
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_UsesResponsesWireNamesForReasoningAndMaxOutputTokens
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_UsesNativeMinimalReasoningValue
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_UsesChatCompletionsWireNamesForReasoningAndMaxOutputTokens
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ResponsesFiltersReasoningTextFromAssistantOutput
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ResponsesReturnsRefusalOutput
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ResponsesRejectsNonCompletedTwoHundredStatuses(responseJson: "{\"status\":\"failed\",\"error\":{\"message\":\"mo"···, status: "failed", detail: "model overloaded")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ResponsesRejectsNonCompletedTwoHundredStatuses(responseJson: "{\"status\":\"incomplete\",\"incomplete_details\":"···, status: "incomplete", detail: "max_output_tokens")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(baseUrl: "https://azure-openai.test")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(baseUrl: "https://azure-openai.test/")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(baseUrl: "https://azure-openai.test/openai")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(baseUrl: "https://azure-openai.test/openai/")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(baseUrl: "https://azure-openai.test/openai/v1")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_InterpretsSupportedBaseUrlsConsistently(baseUrl: "https://azure-openai.test/openai/v1/")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_ChatCompletionsUsesDeploymentEndpointAndAgentReasoningOverride
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_ResponsesUsesV1EndpointAndAgentReasoningOverride
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_RejectsReasoningEffortWithoutProviderMetadataBeforeDispatch
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_RejectsUnsupportedBaseUrlsBeforeDispatch(baseUrl: "https://azure-openai.test/openai/deployments/gpt-4"···, expectedMessage: "legacy deployment endpoint")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_RejectsUnsupportedBaseUrlsBeforeDispatch(baseUrl: "https://azure-openai.test?api-version=preview", expectedMessage: "query parameters or fragments")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_RejectsUnsupportedBaseUrlsBeforeDispatch(baseUrl: "https://azure-openai.test#configuration", expectedMessage: "query parameters or fragments")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_RejectsUnsupportedBaseUrlsBeforeDispatch(baseUrl: "https://azure-openai.test/openai/v1/chat/completio"···, expectedMessage: "must use the resource base URL")
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_SerializesImageAttachmentsAsVisionContent
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_IgnoresLegacyOllamaThinkingAliasesForGpt4o
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_SerializesImageAttachmentsAsNativeImages
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_DoesNotExposeThinkingWhenAssistantContentIsEmpty
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_SerializesExplicitNoneAsFalseAndConfiguredNumPredictAsChatOptions
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_SerializesDefaultFastGenerationOptions
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_MapsBinaryEnabledEffortToTrueAndPrefersRequestParameters
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_MapsGptOssEffortToNativeLevel
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_RejectsGptOssDisableBeforeHttpDispatch
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_RejectsExtraHighBeforeHttpDispatch
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.ConcreteDrivers_HealthReturnsStructuredFailureInsteadOfThrowing
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ImageHealthUsesNonBillableModelCatalogProbe
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ImageHealthFailsWhenConfiguredModelIsAbsentFromCatalog
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_UsesShowCapabilitiesWhenTagsOmitThinkingMetadata
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_RejectsInvalidShowCapabilityShape
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_UsesTagsChatAndCreateEndpoints
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.ConcreteDrivers_ReportProviderSpecificDispatchLimits
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.ConcreteDrivers_NormalizeHttpFailureMessages
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_PropagatesCancellationToken
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.ConcreteDrivers_ConsumersUseProviderRuntimeAdoptionBoundaries
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ChatCompletionsSendsTemperatureAndJsonSchemaResponseFormat
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ChatCompletionsSendsStrictFalseForOpenWorldSchema
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ResponsesSendsStrictFalseWhenNestedObjectIsOpenWorld
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ChatCompletionsRequestsGenericJsonObjectWhenSchemaIsMissing
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ChatCompletionsOmitsTemperatureAndResponseFormatWhenAbsent
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OpenAiProviderDriver_ResponsesSendsTemperatureAndJsonSchemaTextFormat
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.AzureOpenAiProviderDriver_ChatCompletionsSendsTemperatureAndResponseFormat
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_SendsTemperatureOptionAndJsonSchemaFormatButNeverParsesCachedTokens
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ConcreteProviderDriverTests.OllamaProviderDriver_UsesJsonFormatWhenNoSchemaIsConfigured
+
+stderr:

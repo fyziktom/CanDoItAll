@@ -24,6 +24,21 @@
   "initialReadySubbundle": "SB00",
   "backendUiGate": "SB07",
   "finalSubbundle": "SB12",
+  "governedProofContract": {
+    "portableManifest": "subbundles/<SBxx>-*/proof/manifest.md",
+    "semanticInvariants": "subbundles/<SBxx>-*/proof/semantic-invariants.md",
+    "requiredManifestSections": [
+      "owned requirements and raw notes",
+      "portable invariant contract",
+      "before and after SHA-256 hashes",
+      "failing-first and passing transcripts",
+      "production source assertions",
+      "anti-stub audit",
+      "critical-foundation downstream proof when applicable",
+      "producer consumer lifecycle matrix when applicable",
+      "browser host or red-team proof when applicable"
+    ]
+  },
   "requiredRootFiles": [
     "README.md",
     "START-CODEX-PROMPT.md",

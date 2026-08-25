@@ -1,0 +1,25 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderCatalogApiIntegrationTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T01:22:04.306490+00:00
+completed-utc: 2026-08-25T01:22:06.747517+00:00
+duration-seconds: 2.441
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_ReturnsCanonicalSanitizedCatalog
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_ReturnsOnlyPublicRoutingModels
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsStrongCatalogEntityTag
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_NativeCatalog_ReturnNotModified
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MatchingWeakStrongListAndWildcardIfNoneMatch_OpenAiModels_ReturnNotModified
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NonMatchingStrongIfNoneMatch_ReturnsCurrentCatalog
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_NativeCatalog_ReturnsNativeBadRequest
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedIfNoneMatch_OpenAiModels_ReturnsOpenAiBadRequest
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.NativeCatalog_EmitsPrivateNoCacheAndServerRequestId
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenAiModels_EmitsPrivateNoCacheAndServerRequestId
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_NativeCatalog_ReturnsNativeBadRequest
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.MalformedAccessContext_OpenAiModels_ReturnsOpenAiBadRequest
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.CatalogSurfaces_DoNotExposePrivateFieldsOrSentinelValues
+    CanDoItAll.Tests.Integration.SharedProviderCatalogApiIntegrationTests.OpenApi_DescribesCatalogAndModelsOperationsAndResponses
+
+stderr:

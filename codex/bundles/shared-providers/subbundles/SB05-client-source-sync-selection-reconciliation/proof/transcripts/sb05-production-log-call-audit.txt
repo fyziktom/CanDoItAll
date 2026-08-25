@@ -1,0 +1,11 @@
+command: rg -n 'Log(Trace|Debug|Information|Warning|Error|Critical)' src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderSourceService.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderSourceSyncService.cs src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderReconciliationCoordinator.cs
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T06:45:30.691511+00:00
+completed-utc: 2026-08-25T06:45:30.713102+00:00
+duration-seconds: 0.022
+exit-code: 0
+output:
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs:76:            logger.LogWarning(
+src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs:163:            logger.LogWarning(
+
+stderr:

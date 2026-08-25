@@ -1,0 +1,62 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' -c Release --no-build --no-restore --filter 'FullyQualifiedName~ProviderCatalogProjectionFailureTests' -nologo -v: minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T08:19:43.401623+00:00
+completed-utc: 2026-08-25T08:19:47.283241+00:00
+duration-seconds: 3.882
+exit-code: 1
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Release\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_malformed_configuration_without_mutating_stored_profile [979 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Sub-string not found
+String:    "Provider secret-reference metadata is inv"···
+Not found: "valid JSON object"
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_malformed_configuration_without_mutating_stored_profile() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderCatalogProjectionFailureTests.cs:line 404
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source [14 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Core.ProviderProfileValidationException : The selected provider secret reference does not exist.
+  Trasování zásobníku:
+     at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 171
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderCatalogProjectionFailureTests.cs:line 551
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Optional_connector_secret_can_be_explicitly_unbound [1 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Core.ProviderProfileValidationException : The selected provider secret reference does not exist.
+  Trasování zásobníku:
+     at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 171
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Optional_connector_secret_can_be_explicitly_unbound() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderCatalogProjectionFailureTests.cs:line 568
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_drops_discovered_capabilities_when_provider_identity_changes [47 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Core.ProviderProfileValidationException : The selected provider secret reference does not exist.
+  Trasování zásobníku:
+     at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 171
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_drops_discovered_capabilities_when_provider_identity_changes() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderCatalogProjectionFailureTests.cs:line 358
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_requires_explicit_secret_binding_for_real_connector [3 ms]
+  Chybová zpráva:
+   CanDoItAll.AgentFramework.Core.ProviderProfileValidationException : The selected provider secret reference does not exist.
+  Trasování zásobníku:
+     at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 171
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Modules.AgentFramework.WorkspaceBackedAgentProviderProfileRegistry.SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken) in C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\Providers\WorkspaceBackedAgentProviderProfileRegistry.cs:line 252
+   at CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_requires_explicit_secret_binding_for_real_connector() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\ProviderCatalogProjectionFailureTests.cs:line 478
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:     5, Úspěšné:     7, Přeskočeno:     0, Celkem:    12, Doba trvání: 1 s - CanDoItAll.Tests.Unit.dll (net10.0)
+
+stderr:
+[xUnit.net 00:00:02.12]     CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_rejects_malformed_configuration_without_mutating_stored_profile [FAIL]
+[xUnit.net 00:00:02.21]     CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_accepts_metadata_only_secret_and_projects_one_editor_source [FAIL]
+[xUnit.net 00:00:02.28]     CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Optional_connector_secret_can_be_explicitly_unbound [FAIL]
+[xUnit.net 00:00:02.34]     CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_drops_discovered_capabilities_when_provider_identity_changes [FAIL]
+[xUnit.net 00:00:02.42]     CanDoItAll.Tests.Unit.AgentFramework.ProviderCatalogProjectionFailureTests.Provider_save_requires_explicit_secret_binding_for_real_connector [FAIL]

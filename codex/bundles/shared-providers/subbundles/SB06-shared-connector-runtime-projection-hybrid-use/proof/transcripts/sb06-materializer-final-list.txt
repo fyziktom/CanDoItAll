@@ -1,0 +1,29 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --list-tests --filter 'FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T09:30:16.685933+00:00
+completed-utc: 2026-08-25T09:30:19.220810+00:00
+duration-seconds: 2.535
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ResponsesChat_MapsCanonicalEffectiveProfileWithoutSecretValue
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ChatCompletions_MapsHistoryModeAndPrivateNetworkPolicy
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ImageGeneration_MapsPurposeAndImageCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MultipleModels_PreservesCatalogAndUsesSafeCapabilityIntersection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_DegradedPublication_RemainsAvailableWithValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_LocalProfileDisabled_RetainsAliasAndDisabledIntent
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceDisabledRetainsProjection_ButNeverSynchronizedDoesNot
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceOffline_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_AuthorizationFailed_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceIdentityMismatch_RetainsOnlyPreviouslyValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_IncompatibleContract_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RetiredImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_UnpublishedImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RemoteUnavailableHealth_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingOrMismatchedRelationship_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_TamperedSnapshotOrDuplicatedImportFields_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ForgedDerivedProfileCaches_ProducesNoProjection
+
+stderr:

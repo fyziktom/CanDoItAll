@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.SharedProviders.Abstractions;
+using System.Text.Json;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -15,9 +17,6 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
 {
     private const string OpenAiChatCompletionsProviderName =
         "OpenAI chat completions";
-
-    internal static readonly Guid RuntimeFallbackOllamaProviderId =
-        Guid.Parse("12E4C814-E822-0B58-9B9F-52577D7B374E");
 
     public AgentFrameworkProviderProfile Map(WorkspaceProviderProfile provider)
     {
@@ -67,6 +66,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
                 mappedPurpose),
             mappedPurpose)
         {
+            ConnectorPluginKey = provider.ConnectorPluginKey,
             Tags = ResolveWorkspaceProviderTags(
                 provider,
                 mappedKind,
@@ -79,10 +79,75 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
     }
 
+    public AgentFrameworkProviderProfile MapShared(
+        SharedProviderRuntimeProfileMaterializationResult materialization)
+    {
+        ArgumentNullException.ThrowIfNull(materialization);
+        var provider = materialization.Profile
+            ?? throw new InvalidOperationException(
+                "A shared-provider runtime profile cannot be projected from an invalid source graph.");
+        var configurationJson = JsonSerializer.Serialize(new
+        {
+            timeoutSeconds = Math.Max(5, provider.TimeoutSeconds)
+        });
+        var allowedModels = provider.Models
+            .Select(model => model.Id.Value)
+            .ToArray();
+        return new AgentFrameworkProviderProfile(
+            provider.ProviderProfileId,
+            provider.Name,
+            provider.Kind,
+            provider.BaseUri.AbsoluteUri,
+            AgentFrameworkProviderMetadata.CreateSecretReference(
+                provider.SourceTokenSecretReferenceId),
+            provider.DefaultModelId.Value,
+            provider.Transport,
+            materialization.IsAvailable,
+            provider.SupportsStreaming,
+            provider.SupportsTools,
+            provider.PreferFrameworkManagedChatHistory,
+            provider.SupportsBackgroundResponses,
+            configurationJson,
+            "Source-managed CanDoItAll shared provider.",
+            materialization.Availability.ToString(),
+            null,
+            allowedModels,
+            provider.Purpose)
+        {
+            ConnectorPluginKey = provider.ConnectorPluginKey,
+            CredentialBinding = new ProviderCredentialBinding(
+                provider.SourceTokenSecretReferenceId,
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                provider.SourceId),
+            NetworkAccessPolicy = provider.NetworkPolicy switch
+            {
+                SharedProviderSourceNetworkPolicy.PublicOnly =>
+                    ProviderNetworkAccessPolicy.PublicOnly,
+                SharedProviderSourceNetworkPolicy.AllowPrivateNetwork =>
+                    ProviderNetworkAccessPolicy.AllowPrivateNetwork,
+                _ => throw new InvalidOperationException(
+                    "The shared-provider source network policy is invalid.")
+            },
+            FeatureConstraints = new ProviderFeatureConstraints(
+                provider.SupportsStructuredOutput,
+                provider.SupportsVision,
+                AllowsNativeTools: false,
+                AllowsHostedMcp: false,
+                AllowsServiceManagedHistory: false,
+                AllowsCompaction: false),
+            ModelSelectionConstraint =
+                new ProviderModelSelectionConstraint(allowedModels),
+            IsPrivateProvider = false,
+            ModelPrices = [],
+            Tags = provider.Tags
+        };
+    }
+
     public AgentFrameworkProviderProfile CreateRuntimeFallback()
     {
         return new AgentFrameworkProviderProfile(
-            RuntimeFallbackOllamaProviderId,
+            ProviderProfileWellKnownIds.RuntimeFallbackOllama,
             ManagedSeedProviderFallbacks.FallbackProviderName,
             AgentFrameworkProviderKind.Ollama,
             ManagedSeedProviderFallbacks.FallbackBaseUrl,
@@ -107,6 +172,7 @@ internal sealed class WorkspaceAgentProviderProfileMapper(
                 "phi4-16k"
             ])
         {
+            ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
             IsPrivateProvider = true,
             ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
                 AgentFrameworkProviderKind.Ollama,

@@ -13,6 +13,11 @@ Turn the proven implementation into a repeatable, documented operator/developer 
 
 A developer can configure central/client sharing, run/reset/test the three-instance stack, troubleshoot failures, and later clean it up without reading implementation code.
 
+## Owned requirement
+
+- `FR-061` product documentation, operator runbook, repeatable tooling, troubleshooting, and
+  deliberate cleanup.
+
 ## Inputs and current-state anchors
 
 - Bundle root execution contract and architecture documents.

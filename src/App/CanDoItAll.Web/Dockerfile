@@ -27,6 +27,7 @@ RUN --mount=type=cache,id=candoitall-nuget,target=/root/.nuget/packages \
 FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_RUNTIME_VERSION} AS runtime
 ARG BUILD_DATE
 ARG BUILD_REVISION
+ARG BUILD_SOURCE_FINGERPRINT
 ARG BUILD_VERSION=dev
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
@@ -37,7 +38,8 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.source="https://github.com/fyziktom/CanDoItAll" \
       org.opencontainers.image.title="CanDoItAll.Web" \
       org.opencontainers.image.vendor="CanDoItAll" \
-      org.opencontainers.image.version="${BUILD_VERSION}"
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      io.candoitall.source-fingerprint="${BUILD_SOURCE_FINGERPRINT}"
 
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080

@@ -11,6 +11,7 @@ using OllamaSharp.Models;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Responses;
+using System.ClientModel.Primitives;
 using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Maf;
@@ -204,16 +205,19 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
 {
     private readonly IMafProviderCredentialService credentialService;
     private readonly IMafProviderStreamingDispatchGate dispatchGate;
+    private readonly IProviderHttpClientSelector? httpClientSelector;
     private readonly ILoggerFactory loggerFactory;
 
     public MafProviderAgentFactory(
         IMafProviderCredentialService credentialService,
         IMafProviderStreamingDispatchGate dispatchGate,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        IProviderHttpClientSelector? httpClientSelector = null)
     {
         this.credentialService = credentialService ?? throw new ArgumentNullException(nameof(credentialService));
         this.dispatchGate = dispatchGate ?? throw new ArgumentNullException(nameof(dispatchGate));
         this.loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        this.httpClientSelector = httpClientSelector;
     }
 
     public AIAgent CreateFrameworkAgent(
@@ -226,6 +230,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(options);
 
+        ValidateProviderAvailability(provider, model);
         ValidateModel(provider, model);
         ValidateProviderKind(provider, model);
         ValidateProviderTransport(provider, model);
@@ -473,7 +478,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             logger);
     }
 
-    private static OpenAIClientOptions CreateOpenAiClientOptions(
+    private OpenAIClientOptions CreateOpenAiClientOptions(
         ProviderProfile provider,
         string model)
     {
@@ -486,6 +491,11 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
         if (!MafProviderRuntimeSettings.ShouldUseDefaultOpenAiEndpoint(provider.BaseUrl))
         {
             options.Endpoint = ResolveProviderEndpoint(provider, model);
+        }
+
+        if (httpClientSelector?.TryGetClient(provider, out var httpClient) == true)
+        {
+            options.Transport = new HttpClientPipelineTransport(httpClient);
         }
 
         return options;
@@ -559,6 +569,7 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
     {
         if (!string.IsNullOrWhiteSpace(model))
         {
+            ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
             return;
         }
 
@@ -566,6 +577,21 @@ internal sealed class MafProviderAgentFactory : IMafProviderAgentFactory
             provider,
             string.Empty,
             MafProviderConfigurationFailureReason.InvalidModel);
+    }
+
+    private static void ValidateProviderAvailability(
+        ProviderProfile provider,
+        string model)
+    {
+        if (provider.IsEnabled)
+        {
+            return;
+        }
+
+        throw new MafProviderConfigurationException(
+            provider,
+            model,
+            MafProviderConfigurationFailureReason.ProviderUnavailable);
     }
 
     private static void ValidateProviderKind(

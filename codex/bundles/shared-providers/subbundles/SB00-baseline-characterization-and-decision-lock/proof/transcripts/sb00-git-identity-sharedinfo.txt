@@ -1,0 +1,17 @@
+command: git show -s --format=%H%n%T%n%D HEAD
+working-directory: C:\repositories\CanDoItAll.SharedInfo
+started-utc: 2026-08-24T19:25:09.118716+00:00
+completed-utc: 2026-08-24T19:25:09.220300+00:00
+duration-seconds: 0.102
+exit-code: 128
+output:
+
+stderr:
+fatal: detected dubious ownership in repository at 'C:/repositories/CanDoItAll.SharedInfo'
+'C:/repositories/CanDoItAll.SharedInfo' is owned by:
+	LucysPower/lucys (S-1-5-21-1076182574-553775154-3108208145-1005)
+but the current user is:
+	LucysPower/CodexSandboxOffline (S-1-5-21-1076182574-553775154-3108208145-1009)
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory C:/repositories/CanDoItAll.SharedInfo

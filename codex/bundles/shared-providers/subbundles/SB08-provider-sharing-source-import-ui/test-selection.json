@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "provider publication/source/import UI state contract",
+    "Workspace application-service mutation contract",
+    "shared component composition or semantic tokens"
+  ],
+  "broadGateDecision": "Not authorized; UI implementation is bounded by component topics and Playwright remains locked to SB09.",
   "selections": [
     {
       "topic": "SharedProviderPublicationPanelTests",

@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+    <ProjectReference Include="..\..\Integration\CanDoItAll.SharedProviders.Http\CanDoItAll.SharedProviders.Http.csproj" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
     <ProjectReference Include="..\..\plugins\Implementations\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj" />
     <ProjectReference Include="..\..\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj" />

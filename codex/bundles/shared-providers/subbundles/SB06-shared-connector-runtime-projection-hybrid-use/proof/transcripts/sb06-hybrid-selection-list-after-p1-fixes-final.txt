@@ -1,0 +1,21 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' --no-build --list-tests --filter 'FullyQualifiedName~SharedProviderHybridSelectionTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T09:04:14.417065+00:00
+completed-utc: 2026-08-25T09:04:16.409184+00:00
+duration-seconds: 1.992
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Personal_and_shared_profiles_coexist_in_the_production_registry
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Identical_alias_and_model_text_do_not_collapse_profile_identity
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_shared_selection_wins_when_workspace_default_is_personal
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Explicit_personal_selection_wins_when_workspace_default_is_shared
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Source_outage_retains_the_shared_profile_as_disabled
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Authoritative_unpublish_retains_the_shared_profile_as_disabled
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Retirement_and_identity_mismatch_retain_distinct_disabled_profiles
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Reappearance_reuses_import_and_profile_identity
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Unavailable_shared_selection_never_falls_back_to_personal
+    CanDoItAll.Tests.Integration.SharedProviderHybridSelectionTests.Independent_client_databases_keep_local_import_identity_and_intent_separate
+
+stderr:

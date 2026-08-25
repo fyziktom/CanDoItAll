@@ -1,0 +1,13 @@
+command: dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter 'FullyQualifiedName~SharedProviderBackendCheckpointIntegrationTests' --nologo -v:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T17:19:38.358037+00:00
+completed-utc: 2026-08-25T17:20:21.131004+00:00
+duration-seconds: 42.773
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    10, Přeskočeno:     0, Celkem:    10, Doba trvání: 41 s - CanDoItAll.Tests.Integration.dll (net10.0)
+
+stderr:

@@ -1,0 +1,364 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB06",
+  "title": "Shared connector, effective runtime projection, and hybrid provider use",
+  "proofTier": "Governed",
+  "status": "passed",
+  "dependencies": [
+    "SB04",
+    "SB05"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "providers-shared",
+    "commitBefore": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "commitAfter": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "workingTreeBefore": "uncommitted completed SB00-SB05 implementation and evidence",
+    "workingTreeAfter": "uncommitted completed SB00-SB06 implementation/evidence plus preserved in-progress SB07 implementation/evidence"
+  },
+  "skillsLoaded": [
+    "candoitall-bundle-workflow",
+    "candoitall-bundle-preparation",
+    "candoitall-bundle-execution",
+    "candoitall-subbundle-validator",
+    "candoitall-bundle-validator",
+    "apply-candoitall-shared-standards",
+    "candoitall-csharp-architecture-bundle-guard",
+    "csharp-architecture-governor",
+    "csharp-architecture-review-gate",
+    "csharp-dependency-graph-audit",
+    "csharp-design-pattern-selection",
+    "csharp-factory-builder-composition",
+    "csharp-project-boundary-extraction",
+    "csharp-provider-tool-plugin-isolation",
+    "csharp-testability-contracts",
+    "candoitall-codeanalytics-mcp",
+    "aspnet-core",
+    "security-best-practices"
+  ],
+  "architecture": {
+    "checkpoint": "PASS_SB06",
+    "projectReferencesBeforeArtifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/project-references-before.md",
+    "projectReferencesAfterArtifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/project-references-after.md",
+    "projectReferencesAfterTranscript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-project-references-after.txt",
+    "codeAnalyticsSnapshotBefore": "snap-20260825070408-300644c7",
+    "codeAnalyticsSnapshotAfter": "snap-20260825100508-300644c7",
+    "codeAnalyticsAfterArtifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/codeanalytics-after.md",
+    "metrics": {
+      "projects": 14,
+      "documents": 766,
+      "modules": 35,
+      "dependencyFacts": 5281,
+      "directProductReferences": 34,
+      "projectCycles": 0,
+      "moduleCycles": 2,
+      "nestedTypeCycles": 1,
+      "errorFindings": 0,
+      "sharedProviderWarnings": 14,
+      "sharedProviderInfoFindings": 50,
+      "sharedProviderOpenQuestions": 0
+    },
+    "cycleResult": "zero project cycles; unchanged governed two module cycles and one nested-type cycle",
+    "assertions": [
+      "Shared connector is an origin adapter, not a second agent runtime.",
+      "Provider selection remains explicit and an unavailable shared selection never falls back.",
+      "Inner MAF dependency direction remains unchanged.",
+      "Source-managed runtime models are restricted to the selected publication.",
+      "Per-request access context never becomes cached client state.",
+      "Source-managed health/runtime failures cross public and activity boundaries only as deterministic safe messages.",
+      "Source-managed audio is denied before credential/network access and explicit ineligible voice selection never falls back."
+    ],
+    "partialClassReview": "SB06 introduced no partial declaration; the August 25 delta changes only existing SaveProviderAsync behavior, adds no member or responsibility, and keeps focused responsibilities in separate types."
+  },
+  "changedFiles": [
+    "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+    "src/App/CanDoItAll.Composition/SharedProviderRuntimeAccessContextHandler.cs",
+    "src/App/CanDoItAll.Composition/SharedProviderRuntimeHttpClientSelector.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProvidersAndCapabilities.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Preparation/AgentExecutionPreparationCache.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Preparation/AgentExecutionPreparationService.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/MafRuntimeFailureBoundaryExceptions.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderAgentFactory.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderRuntimeGateway.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Providers/MafProviderTransportBoundaryChatClient.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderDispatchModels.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderModels.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Providers/Diagnostics/ProviderFailureDisclosurePolicy.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Providers/Drivers/ConcreteProviderDriverRegistration.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Providers/Drivers/IProviderHttpClientSelector.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Providers/Drivers/OpenAiProviderDriver.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Providers/Drivers/ProviderDriverProtocol.cs",
+    "src/MAF/Common/CanDoItAll.AgentFramework.Providers/Runtime/ProviderRuntimeContracts.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentVoiceSettingsPanel.razor",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/AgentFrameworkProviderRuntimeGateway.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/Credentials/SecretStoreAgentProviderCredentialResolver.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/ProviderRuntimeProfileSnapshotService.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderCatalogProjectionCommitObserver.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceAgentProviderProfileMapper.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs",
+    "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+    "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+    "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs",
+    "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderConnectorManifestSource.cs",
+    "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderProfileOwnershipPolicy.cs",
+    "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderReconciliationCoordinator.cs",
+    "src/Modules/CanDoItAll.Modules.Workspace/SharedProviders/SharedProviderRuntimeProfileMaterializer.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderHybridSelectionTests.cs",
+    "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimeProjectionIntegrationTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionPreparationServiceTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentFramework/Providers/ConcreteProviderDriverTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/AgentProviderCredentialDispatchScopeTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/ConnectorPluginRegistryTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/MafProviderTransportBoundaryChatClientTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/MafWorkflowExecutorFailureDiagnosticsTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/ProviderCatalogProjectionFailureTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/ProviderFeatureMatrixTests.cs",
+    "tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRuntimeProfileMaterializerTests.cs"
+  ],
+  "commands": [
+    {
+      "purpose": "August 25 SB06 downstream-revalidation entry gate",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-entry.txt"
+    },
+    {
+      "purpose": "current Unit solution Release build used by the August 25 downstream revalidation",
+      "result": "passed with 0 warnings and 0 errors in 23.313 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-unit-release-final.txt"
+    },
+    {
+      "purpose": "current Integration solution Release build used by the August 25 downstream revalidation",
+      "result": "passed with 0 warnings and 0 errors in 19.660 seconds",
+      "transcript": "bundle://subbundles/SB04-openai-compatible-relay-streaming-images/proof/transcripts/sb04-reopen-build-integration-release-final.txt"
+    },
+    {
+      "purpose": "selected ProjectReference after capture",
+      "result": "passed; 103 before and 103 after selected rows with no delta",
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-project-references-after.txt"
+    },
+    {
+      "purpose": "supporting model, credential, catalog, runtime, redaction, and cancellation revalidation",
+      "result": "all focused selections passed; see supportingFocusedRevalidation",
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/manifest.md"
+    },
+    {
+      "purpose": "August 25 SB04 downstream invalidation revalidation in genuine Release",
+      "result": "passed; exact frozen selections discovered and passed 18/18, 16/16, and 10/10",
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/sb04-downstream-invalidation-release-revalidation.md"
+    },
+    {
+      "purpose": "governed SB06 closure validation",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-closure.txt"
+    }
+  ],
+  "testSelections": [
+    {
+      "topic": "SharedProviderRuntimeProfileMaterializerTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests",
+      "plannedExpectedDiscovery": 18,
+      "actualDiscovery": 18,
+      "configuration": "Release",
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests --nologo -v:minimal -m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx -c Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests --nologo -v:minimal -m:1",
+      "listTranscript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-list-materializer-release.txt",
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 2.266,
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-run-materializer-release.txt"
+    },
+    {
+      "topic": "SharedProviderRuntimeProjectionIntegrationTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRuntimeProjectionIntegrationTests",
+      "plannedExpectedDiscovery": 16,
+      "actualDiscovery": 16,
+      "configuration": "Release",
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderRuntimeProjectionIntegrationTests --nologo -v:minimal -m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderRuntimeProjectionIntegrationTests --nologo -v:minimal -m:1",
+      "listTranscript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-list-runtime-projection-release.txt",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 17.791,
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-run-runtime-projection-release.txt"
+    },
+    {
+      "topic": "SharedProviderHybridSelectionTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderHybridSelectionTests",
+      "plannedExpectedDiscovery": 10,
+      "actualDiscovery": 10,
+      "configuration": "Release",
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderHybridSelectionTests --nologo -v:minimal -m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderHybridSelectionTests --nologo -v:minimal -m:1",
+      "listTranscript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-list-hybrid-release.txt",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 18.008,
+      "transcript": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-run-hybrid-release.txt"
+    }
+  ],
+  "downstreamRevalidation": {
+    "date": "2026-08-25",
+    "trigger": "SB07 changed the SB04 Responses wire contract and relay operation/capability pre-dispatch policy.",
+    "reason": "Historical SB06 test transcripts resolved to Debug assemblies and could not serve as current Release authority.",
+    "result": "passed",
+    "configuration": "Release",
+    "frozenCounts": {
+      "materializer": 18,
+      "runtimeProjection": 16,
+      "hybridSelection": 10
+    },
+    "architectureArtifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/sb04-downstream-invalidation-release-revalidation.md",
+    "scope": "No broad, Playwright, multi-instance, application-image, live-provider, or paid-provider lane ran."
+  },
+  "supportingFocusedRevalidation": [
+    {
+      "topic": "SharedProviderArchitectureCharacterizationTests",
+      "result": "8/8",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-architecture-final-run.txt"
+    },
+    {
+      "topic": "ProviderRuntimeProfileSnapshotServiceTests",
+      "result": "8/8",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-snapshot-final-run.txt"
+    },
+    {
+      "topic": "ProviderFeatureMatrixTests",
+      "result": "16/16",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-feature-matrix-post-audio-run.txt"
+    },
+    {
+      "topic": "AgentExecutionPreparationServiceTests",
+      "result": "9/9",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-preparation-final-run.txt"
+    },
+    {
+      "topic": "ConnectorPluginRegistryTests",
+      "result": "3/3",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-connector-registry-final-run.txt"
+    },
+    {
+      "topic": "ProviderProfileSaveValidationTests",
+      "result": "30/30",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-profile-save-final-run.txt"
+    },
+    {
+      "topic": "ProviderCatalogProjectionFailureTests",
+      "result": "12/12",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-catalog-projection-final-run.txt"
+    },
+    {
+      "topic": "ConcreteProviderDriverTests",
+      "result": "54/54",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-concrete-driver-post-audio-run.txt"
+    },
+    {
+      "topic": "AgentVoiceTests",
+      "result": "29/29",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-agent-voice-post-audio-run.txt"
+    },
+    {
+      "topic": "MafProviderTransportBoundaryChatClientTests",
+      "result": "13/13",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-transport-boundary-final-run.txt"
+    },
+    {
+      "topic": "MafWorkflowExecutorFailureDiagnosticsTests",
+      "result": "4/4",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-workflow-diagnostics-final-run.txt"
+    },
+    {
+      "topic": "AgentProviderCredentialDispatchScopeTests",
+      "result": "10/10",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-credential-dispatch-final-run-after-setup-fix.txt"
+    },
+    {
+      "topic": "SharedProviderRuntimePathCharacterizationTests",
+      "result": "6/6",
+      "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-runtime-path-final-run.txt"
+    }
+  ],
+  "artifacts": [
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/manifest.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/semantic-invariants.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/semantic-changed-files.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/changed-files.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/hashes.sha256",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/project-references-before.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/project-references-after.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/codeanalytics-before.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/codeanalytics-after.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/changed-namespace-public-surface-review.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/cross-review.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/architecture/sb04-downstream-invalidation-release-revalidation.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-entry.txt",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/behavior/runtime-projection-hybrid-selection.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/security/runtime-boundary-redaction.md",
+    "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/transcripts/sb06-revalidate-closure.txt"
+  ],
+  "semanticInvariants": [
+    "Shared connector is an origin adapter, not a second agent runtime.",
+    "Provider selection remains explicit and an unavailable shared selection never falls back.",
+    "Inner MAF dependency direction remains unchanged.",
+    "Source-managed model selection is restricted to the selected publication.",
+    "Per-request access context never becomes cached client state.",
+    "Source-managed failure disclosure excludes secret, endpoint, prompt, response, and raw network details.",
+    "Caller-requested cancellation remains cancellation.",
+    "Source-managed STT/TTS fails before credential/network access and an explicit ineligible voice selection never falls back."
+  ],
+  "positiveEvidence": [
+    "Sequential Unit and Integration solution builds pass with zero warnings/errors; exact frozen lanes pass 18/18, 16/16, and 10/10.",
+    "Real PostgreSQL projection and deterministic HTTP proof cover raw chat, Responses, image, MAF SDK chat/Responses, catalog projection, composite revision, personal compatibility, and unavailable retention.",
+    "The same cached named client propagates context A, context B, then no context without leakage.",
+    "Source-managed audio is denied before secret/network access while personal voice behavior remains available.",
+    "The force-refreshed 14-project graph retains 34 direct references, zero project cycles, and zero error findings; final architecture/security re-reviews have no P1/P2 blocker."
+  ],
+  "negativeEvidence": [
+    "Corrupt/missing/mismatched graphs are omitted; invalid shared bindings fail before default-client dispatch.",
+    "Foreign/cross-publication model IDs fail before raw image or MAF SDK network dispatch.",
+    "Outage, unpublish, retirement, and identity mismatch do not cause personal-provider fallback.",
+    "Source-managed STT/TTS produces a typed safe denial with zero HTTP requests, and an explicit ineligible shared voice ID resolves empty without personal fallback.",
+    "Source-managed public/activity/workflow failures omit private endpoint, secret identifier/value, prompt, routing model, provider GUID, and raw exception details.",
+    "Requested cancellation is never reclassified as provider failure."
+  ],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": true,
+    "command": "typed disclosure-boundary review plus focused concrete-driver, runtime-projection, MAF transport, workflow-diagnostic, credential-dispatch, feature-matrix, and voice tests",
+    "result": "passed",
+    "artifact": "bundle://subbundles/SB06-shared-connector-runtime-projection-hybrid-use/proof/security/runtime-boundary-redaction.md"
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "namedInvalidationTriggers": [
+      "effective profile materializer and mapper",
+      "catalog projection and preparation revision",
+      "runtime HTTP selection, publication model binding, and access-context propagation",
+      "health/runtime failure disclosure and cancellation",
+      "source-managed audio eligibility and explicit voice selection no-fallback"
+    ],
+    "command": "",
+    "result": "not authorized; exact focused lanes carry SB06 and the single broad aggregate remains SB12-owned"
+  },
+  "progressionDecision": {
+    "result": "pass",
+    "nextSubbundle": "SB07",
+    "reason": "Implementation, exact focused evidence, changed-file/hash packaging, and independent architecture/security re-reviews pass; the closure validator authorizes progression to SB07."
+  },
+  "notes": [
+    "Historical failed attempts are retained for honest chronology; only the final artifacts named in this manifest are authoritative.",
+    "The original SB06 build and supporting-lane transcripts target Debug assemblies and remain behavior chronology only; current Release authority is the August 25 Unit/Integration builds and frozen 18/16/10 revalidation named above.",
+    "Final review first closed context, model-binding, and disclosure P1s, then found and closed a source-managed audio/UI no-fallback P1; post-audio exact lanes and final re-reviews pass.",
+    "No broad, browser, Playwright, multi-instance, live-provider, or paid-provider lane ran; no SB08 provider-sharing UI flow was implemented."
+  ]
+}

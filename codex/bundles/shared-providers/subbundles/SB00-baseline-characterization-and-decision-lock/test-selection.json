@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "provider project/reference graph",
+    "provider connector registry or effective runtime mapping",
+    "mandatory skill or SDK baseline"
+  ],
+  "broadGateDecision": "Not authorized; characterization is bounded by the two declared topics.",
   "selections": [
     {
       "topic": "SharedProviderArchitectureCharacterizationTests",

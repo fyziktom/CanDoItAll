@@ -274,6 +274,21 @@ public sealed class ProviderProfileService : IProviderProfileService
                                            normalizedProvider.SupportsTools &&
                                            normalizedProvider.Transport is ProviderTransportKind.Responses or ProviderTransportKind.ChatCompletions;
         var supportsVision = supportsOpenAiFamily || SupportsConfiguredVision(normalizedProvider, requireSelectedModelMatch);
+        var supportsHostedMcpServer = supportsResponsesNativeTools;
+        var supportsCompaction = supportsOpenAiFamily;
+        if (normalizedProvider.FeatureConstraints is { } constraints)
+        {
+            supportsResponseFormatJsonSchema &=
+                constraints.AllowsStructuredOutput;
+            supportsStructuredOutput &= constraints.AllowsStructuredOutput;
+            supportsVision &= constraints.AllowsVision;
+            supportsResponsesNativeTools &= constraints.AllowsNativeTools;
+            supportsHostedMcpServer = supportsResponsesNativeTools &&
+                constraints.AllowsHostedMcp;
+            supportsServiceManagedHistory &=
+                constraints.AllowsServiceManagedHistory;
+            supportsCompaction &= constraints.AllowsCompaction;
+        }
 
         return new ProviderFeatureMatrix(
             Kind: normalizedProvider.Kind,
@@ -288,11 +303,11 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsNativeCodeInterpreter: supportsResponsesNativeTools,
             SupportsNativeFileSearch: supportsResponsesNativeTools,
             SupportsNativeWebSearch: supportsResponsesNativeTools,
-            SupportsHostedMcpServer: supportsResponsesNativeTools,
+            SupportsHostedMcpServer: supportsHostedMcpServer,
             SupportsLocalMcpBridge: normalizedProvider.SupportsTools,
             SupportsServiceManagedHistory: supportsServiceManagedHistory,
             SupportsVision: supportsVision,
-            SupportsCompaction: supportsOpenAiFamily,
+            SupportsCompaction: supportsCompaction,
             GitHubCopilotRecommendation: GitHubCopilotRecommendation,
             SupportsFunctionTools: supportsFunctionTools,
             SupportsRunAsyncTypedOutput: supportsStructuredOutput,
@@ -300,7 +315,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             SupportsToolApprovalRequests: supportsToolApprovalRequests,
             SupportsApprovalRequiredAIFunction: supportsToolApprovalRequests,
             SupportsHostedTools: supportsResponsesNativeTools,
-            SupportsHostedMcp: supportsResponsesNativeTools,
+            SupportsHostedMcp: supportsHostedMcpServer,
             SupportsLocalMcp: normalizedProvider.SupportsTools,
             SupportsImageGeneration: normalizedProvider.Purpose == ProviderProfilePurpose.ImageGeneration);
     }

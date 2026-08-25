@@ -135,6 +135,7 @@ public sealed class ProviderProfileSaveValidationTests
             ProviderKind.OpenAi,
             ProviderTransportKind.Responses,
             ProviderProfilePurpose.Chat,
+            "default-model",
             [],
             ["Planning"],
             [" gemma4-12b-256k ", "gptoss20b64k", "GPTOSS20B64K"]);
@@ -197,6 +198,24 @@ public sealed class ProviderProfileSaveValidationTests
                 .Select(item => item.GetString()!)
                 .ToArray());
         Assert.True(document.RootElement.GetProperty("customSetting").GetBoolean());
+
+        var emptySuggestedModelsResult = AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
+            configurationJson,
+            "provider.openai",
+            "1",
+            secretRecordId,
+            45,
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            "default-model",
+            [],
+            ["Planning"],
+            []);
+        using var emptySuggestedModelsDocument = JsonDocument.Parse(emptySuggestedModelsResult);
+        Assert.Empty(emptySuggestedModelsDocument.RootElement
+            .GetProperty("suggestedModels")
+            .EnumerateArray());
     }
 
     [Theory]

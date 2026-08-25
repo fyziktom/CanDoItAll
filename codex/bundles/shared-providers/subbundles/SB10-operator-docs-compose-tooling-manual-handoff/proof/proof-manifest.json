@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB10",
+  "title": "Operator documentation, Compose tooling, troubleshooting, and handoff flow",
+  "proofTier": "Behavioral",
+  "status": "not-executed",
+  "dependencies": [
+    "SB09"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "",
+    "commitBefore": "",
+    "commitAfter": "",
+    "workingTreeBefore": "",
+    "workingTreeAfter": ""
+  },
+  "skillsLoaded": [],
+  "architecture": {
+    "checkpoint": "",
+    "projectReferencesBeforeArtifact": "",
+    "projectReferencesAfterArtifact": "",
+    "codeAnalyticsSnapshotBefore": "",
+    "codeAnalyticsSnapshotAfter": "",
+    "cycleResult": "",
+    "assertions": [
+      "Operator tooling is safe and repeatable.",
+      "Examples never contain real secrets.",
+      "Documentation matches the tested subset."
+    ],
+    "partialClassReview": ""
+  },
+  "changedFiles": [],
+  "commands": [],
+  "testSelections": [
+    {
+      "topic": "SharedProviderToolingValidation",
+      "owningProject": "tools/SharedProviders",
+      "filter": "help,dry-run,safe-reset",
+      "plannedExpectedDiscovery": 6,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    },
+    {
+      "topic": "DocumentationValidation",
+      "owningProject": "repository documentation validators",
+      "filter": "shared-providers docs/index/links",
+      "plannedExpectedDiscovery": 4,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    }
+  ],
+  "artifacts": [],
+  "semanticInvariants": [
+    "Operator tooling is safe and repeatable.",
+    "Examples never contain real secrets.",
+    "Documentation matches the tested subset."
+  ],
+  "positiveEvidence": [],
+  "negativeEvidence": [],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": false,
+    "command": "",
+    "result": "",
+    "artifact": ""
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "namedInvalidationTriggers": [],
+    "command": "",
+    "result": ""
+  },
+  "progressionDecision": {
+    "result": "not-decided",
+    "nextSubbundle": "SB11",
+    "reason": ""
+  },
+  "notes": []
+}

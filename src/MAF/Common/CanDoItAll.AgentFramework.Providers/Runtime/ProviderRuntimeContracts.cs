@@ -105,7 +105,11 @@ public sealed record ProviderRuntimeDescriptor(
             secretReferenceIdentity,
             timeoutSeconds,
             configSchemaVersion,
-            configurationJson);
+            configurationJson,
+            JsonSerializer.Serialize(
+                provider.ModelSelectionConstraint?.AllowedModels
+                    .Order(StringComparer.Ordinal)
+                    .ToArray()));
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(fingerprintSource));
         return Convert.ToHexString(hashBytes);
     }
@@ -426,7 +430,14 @@ public sealed class ProviderRuntimeHandle : IProviderRuntimeHandle
         {
             if (pendingRequests.TryRemove(correlationId, out var pending))
             {
-                pending.TrySetException(exception);
+                var disclosedException =
+                    ProviderFailureDisclosurePolicy.RequiresSanitization(
+                        context.Query.Provider)
+                        ? ProviderFailureDisclosurePolicy.CreateBoundaryException(
+                            context.Query.Provider,
+                            ProviderFailureOperation.RuntimeRequest)
+                        : exception;
+                pending.TrySetException(disclosedException);
             }
         }
         finally

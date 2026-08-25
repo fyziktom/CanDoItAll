@@ -6208,6 +6208,339 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Workspace_ProviderProfiles", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ProviderSharePublication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PublicId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("PublicId");
+
+                    b.HasIndex("ProviderProfileId")
+                        .IsUnique();
+
+                    b.HasIndex("IsPublished", "UpdatedAtUtc");
+
+                    b.ToTable("Workspace_ProviderSharePublications", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Workspace_ProviderSharePublications_PublicIdentity", "\"PublicId\" <> \"ProviderProfileId\"");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AvailabilityState")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastSyncAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RemoteCatalogSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RemoteDefaultModelId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("RemoteDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("RemotePublicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RemotePurpose")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("RemoteRevision")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("RemoteTransport")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SelectionState")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderProfileId")
+                        .IsUnique();
+
+                    b.HasIndex("SourceId", "RemotePublicationId")
+                        .IsUnique();
+
+                    b.HasIndex("SelectionState", "AvailabilityState", "UpdatedAtUtc");
+
+                    b.ToTable("Workspace_SharedProviderImports", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderInvocationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccessContextReference")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("AuthenticatedSubject")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("DeleteAfterUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("DurationMilliseconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FailureCategory")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("ImageCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("InputTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<long?>("OutputTokenCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("Price")
+                        .HasPrecision(28, 12)
+                        .HasColumnType("numeric(28,12)");
+
+                    b.Property<string>("PricingCompleteness")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("ProviderProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PublicModelId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("PublicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TraceId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("UpstreamModelId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("UsageCompleteness")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("DeleteAfterUtc", "CompletedAtUtc");
+
+                    b.HasIndex("PublicationId", "ProviderProfileId");
+
+                    b.HasIndex("PublicationId", "StartedAtUtc");
+
+                    b.ToTable("Workspace_SharedProviderInvocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Workspace_SharedProviderInvocations_Completion", "(\"Outcome\" = 'InProgress' AND \"CompletedAtUtc\" IS NULL AND \"DurationMilliseconds\" IS NULL) OR (\"Outcome\" <> 'InProgress' AND \"CompletedAtUtc\" IS NOT NULL AND \"DurationMilliseconds\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Workspace_SharedProviderInvocations_Usage", "(\"InputTokenCount\" IS NULL OR \"InputTokenCount\" >= 0) AND (\"OutputTokenCount\" IS NULL OR \"OutputTokenCount\" >= 0) AND (\"ImageCount\" IS NULL OR \"ImageCount\" BETWEEN 1 AND 16) AND ((\"UsageCompleteness\" = 'Unavailable' AND \"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NULL AND \"ImageCount\" IS NULL AND \"Operation\" IN ('ChatCompletions', 'Responses', 'ImageGenerations')) OR (\"Operation\" IN ('ChatCompletions', 'Responses') AND \"ImageCount\" IS NULL AND ((\"UsageCompleteness\" = 'Partial' AND ((\"InputTokenCount\" IS NOT NULL AND \"OutputTokenCount\" IS NULL) OR (\"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NOT NULL))) OR (\"UsageCompleteness\" = 'Complete' AND \"InputTokenCount\" IS NOT NULL AND \"OutputTokenCount\" IS NOT NULL))) OR (\"Operation\" = 'ImageGenerations' AND \"UsageCompleteness\" = 'Complete' AND \"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NULL AND \"ImageCount\" IS NOT NULL))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderServiceIdentity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PublicId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublicId")
+                        .IsUnique();
+
+                    b.ToTable("Workspace_SharedProviderServiceIdentity", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Workspace_SharedProviderServiceIdentity_Singleton", "\"Id\" = '7d5f45ad-9b13-4f1a-9284-260e2e07c92c'");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowInsecurePrivateNetwork")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ApiTokenSecretId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BaseUri")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastCatalogETag")
+                        .HasMaxLength(73)
+                        .HasColumnType("character varying(73)");
+
+                    b.Property<int?>("LastStatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastStatusMessage")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<DateTimeOffset?>("LastSyncAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("RemoteInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApiTokenSecretId");
+
+                    b.HasIndex("BaseUri");
+
+                    b.HasIndex("IsEnabled", "Status", "UpdatedAtUtc");
+
+                    b.ToTable("Workspace_SharedProviderSources", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Workspace.WorkspaceSettings", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7605,6 +7938,49 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .WithMany()
                         .HasForeignKey("ConnectorCommandId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ProviderSharePublication", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workspace.ProviderProfile", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.Workspace.ProviderSharePublication", "ProviderProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderImport", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workspace.ProviderProfile", null)
+                        .WithOne()
+                        .HasForeignKey("CanDoItAll.Modules.Workspace.SharedProviderImport", "ProviderProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Modules.Workspace.SharedProviderSource", null)
+                        .WithMany()
+                        .HasForeignKey("SourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderInvocationRecord", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Workspace.ProviderSharePublication", null)
+                        .WithMany()
+                        .HasForeignKey("PublicationId", "ProviderProfileId")
+                        .HasPrincipalKey("PublicId", "ProviderProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.SharedProviderSource", b =>
+                {
+                    b.HasOne("CanDoItAll.Modules.Security.SecretRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ApiTokenSecretId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

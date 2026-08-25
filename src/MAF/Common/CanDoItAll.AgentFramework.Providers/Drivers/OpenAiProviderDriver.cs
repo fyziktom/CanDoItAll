@@ -9,7 +9,10 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Providers;
 
-public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverCredentialResolver credentialResolver) :
+public sealed class OpenAiProviderDriver(
+    HttpClient httpClient,
+    IProviderDriverCredentialResolver credentialResolver,
+    IProviderHttpClientSelector? httpClientSelector = null) :
     IProviderHealthDriver,
     IProviderModelCatalogDriver,
     IProviderChatCompletionDriver,
@@ -36,6 +39,29 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
     public ProviderDispatchLimits GetDispatchLimits(ProviderDispatchQuery query)
     {
         return ProviderDispatchLimits.Unbatched(ResolveTimeout(query.Provider));
+    }
+
+    private HttpClient ResolveHttpClient(ProviderProfile provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        return httpClientSelector?.TryGetClient(provider, out var selected) == true
+            ? selected
+            : httpClient;
+    }
+
+    private static Task EnsureSuccessAsync(
+        HttpResponseMessage response,
+        string operation,
+        ProviderProfile provider,
+        CancellationToken cancellationToken)
+    {
+        var includeRemoteError = provider.CredentialBinding?.Purpose !=
+            ProviderCredentialPurpose.SourceAccessToken;
+        return ProviderDriverProtocol.EnsureSuccessAsync(
+            response,
+            operation,
+            cancellationToken,
+            includeRemoteError);
     }
 
     public async Task<ProviderHealthResult> TestHealthAsync(
@@ -69,7 +95,15 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return new ProviderHealthResult(false, $"OpenAI health check failed: {exception.Message}", provider.SuggestedModels);
+            var detailedMessage =
+                $"OpenAI health check failed: {exception.Message}";
+            return new ProviderHealthResult(
+                false,
+                ProviderFailureDisclosurePolicy.SelectMessage(
+                    provider,
+                    ProviderFailureOperation.HealthCheck,
+                    detailedMessage),
+                provider.SuggestedModels);
         }
     }
 
@@ -111,15 +145,27 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         var credential = ResolveCredential(request.Provider);
         using var httpRequest = new HttpRequestMessage(HttpMethod.Get, BuildEndpoint(request.Provider, "models"));
         httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.ApiKey);
-        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI model catalog", cancellationToken).ConfigureAwait(false);
+        using var response = await ResolveHttpClient(request.Provider)
+            .SendAsync(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(
+            response,
+            "OpenAI model catalog",
+            request.Provider,
+            cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var selectionConstraint = request.Provider.ModelSelectionConstraint;
+        var modelComparer = selectionConstraint is null
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
         var models = document.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array
             ? data.EnumerateArray()
                 .Select(item => ProviderDriverJson.ReadString(item, "id"))
                 .Where(model => !string.IsNullOrWhiteSpace(model))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(model => selectionConstraint is null ||
+                    selectionConstraint.Allows(model))
+                .Distinct(modelComparer)
                 .Select(model => new ProviderModelDescriptor(
                     model,
                     model,
@@ -134,6 +180,10 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         ProviderChatCompletionRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ProviderModelSelectionPolicy.EnsureAllowed(
+            request.Provider,
+            request.Model);
         if (request.Provider.Transport == ProviderTransportKind.Responses)
         {
             return await CompleteResponseAsync(request, cancellationToken).ConfigureAwait(false);
@@ -155,8 +205,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
             payload,
             options: ProviderDriverJson.Options);
 
-        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI chat completion", cancellationToken).ConfigureAwait(false);
+        using var response = await ResolveHttpClient(request.Provider)
+            .SendAsync(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(
+            response,
+            "OpenAI chat completion",
+            request.Provider,
+            cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
         var choice = document.RootElement.GetProperty("choices")[0].GetProperty("message");
@@ -186,6 +242,9 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ProviderModelSelectionPolicy.EnsureAllowed(
+            request.Provider,
+            request.Model);
         var updates = request.Provider.Transport switch
         {
             ProviderTransportKind.ChatCompletions => StreamChatCompletionsAsync(request, cancellationToken),
@@ -217,13 +276,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
         ProviderDriverProtocol.AddOpenAiChatCompletionResponseFormat(payload, request);
         httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
-        using var response = await httpClient.SendAsync(
+        using var response = await ResolveHttpClient(request.Provider).SendAsync(
             httpRequest,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(
+        await EnsureSuccessAsync(
             response,
             "OpenAI chat completion",
+            request.Provider,
             cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await foreach (var update in ProviderStreamingProtocol.ReadOpenAiChatCompletionsAsync(
@@ -253,13 +313,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         ProviderDriverProtocol.AddTemperature(payload, request.Temperature);
         ProviderDriverProtocol.AddOpenAiResponsesResponseFormat(payload, request);
         httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
-        using var response = await httpClient.SendAsync(
+        using var response = await ResolveHttpClient(request.Provider).SendAsync(
             httpRequest,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(
+        await EnsureSuccessAsync(
             response,
             "OpenAI response",
+            request.Provider,
             cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await foreach (var update in ProviderStreamingProtocol.ReadOpenAiResponsesAsync(
@@ -290,8 +351,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         ProviderDriverProtocol.AddOpenAiResponsesResponseFormat(payload, request);
         httpRequest.Content = JsonContent.Create(payload, options: ProviderDriverJson.Options);
 
-        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI response", cancellationToken).ConfigureAwait(false);
+        using var response = await ResolveHttpClient(request.Provider)
+            .SendAsync(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(
+            response,
+            "OpenAI response",
+            request.Provider,
+            cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
         return ProviderDriverProtocol.ReadOpenAiResponsesResult(request.Model, document.RootElement);
@@ -302,13 +369,22 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ProviderModelSelectionPolicy.EnsureAllowed(
+            request.Provider,
+            request.Model);
         EnsureImageProviderPurpose(request.Provider);
         var credential = ResolveCredential(request.Provider);
         using var httpRequest = request.Sources.Count == 0
             ? CreateImageGenerationRequest(request, credential)
             : CreateImageEditRequest(request, credential);
-        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI image generation", cancellationToken).ConfigureAwait(false);
+        using var response = await ResolveHttpClient(request.Provider)
+            .SendAsync(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(
+            response,
+            "OpenAI image generation",
+            request.Provider,
+            cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
         var images = document.RootElement.GetProperty("data")
@@ -329,6 +405,9 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
     {
         ArgumentNullException.ThrowIfNull(request);
         EnsureVoiceProviderPurpose(request.Provider, "speech-to-text");
+        ProviderAudioCapabilityPolicy.EnsureAvailable(
+            request.Provider,
+            AgentProviderOperationKind.TranscribeSpeech);
         if (request.Audio.Count == 0)
         {
             throw new InvalidOperationException("At least one audio item is required for speech transcription.");
@@ -366,8 +445,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         form.Add(content, "file", firstAudio.FileName);
         httpRequest.Content = form;
 
-        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI speech transcription", cancellationToken).ConfigureAwait(false);
+        using var response = await ResolveHttpClient(request.Provider)
+            .SendAsync(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(
+            response,
+            "OpenAI speech transcription",
+            request.Provider,
+            cancellationToken).ConfigureAwait(false);
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
         return new ProviderSpeechToTextResult(request.Model, ProviderDriverJson.ReadString(document.RootElement, "text"));
@@ -379,6 +464,9 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
     {
         ArgumentNullException.ThrowIfNull(request);
         EnsureVoiceProviderPurpose(request.Provider, "text-to-speech");
+        ProviderAudioCapabilityPolicy.EnsureAvailable(
+            request.Provider,
+            AgentProviderOperationKind.SynthesizeSpeech);
         if (string.IsNullOrWhiteSpace(request.Text))
         {
             throw new InvalidOperationException("OpenAI text-to-speech input text is required.");
@@ -400,8 +488,14 @@ public sealed class OpenAiProviderDriver(HttpClient httpClient, IProviderDriverC
         }
 
         httpRequest.Content = JsonContent.Create(body, options: ProviderDriverJson.Options);
-        using var response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
-        await ProviderDriverProtocol.EnsureSuccessAsync(response, "OpenAI speech synthesis", cancellationToken).ConfigureAwait(false);
+        using var response = await ResolveHttpClient(request.Provider)
+            .SendAsync(httpRequest, cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(
+            response,
+            "OpenAI speech synthesis",
+            request.Provider,
+            cancellationToken).ConfigureAwait(false);
         var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         if (bytes.Length == 0)
         {

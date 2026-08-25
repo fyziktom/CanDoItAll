@@ -210,6 +210,28 @@ public sealed class SerializableMutationScope : IAsyncDisposable
         return false;
     }
 
+    public static bool IsUniqueConstraintConflict(
+        Exception exception,
+        IReadOnlySet<string> constraintNames)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(constraintNames);
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException
+                {
+                    SqlState: PostgresErrorCodes.UniqueViolation,
+                    ConstraintName: { } constraintName
+                } &&
+                constraintNames.Contains(constraintName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (disposed)

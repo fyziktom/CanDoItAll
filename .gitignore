@@ -17,6 +17,10 @@ output/
 outputs/
 evidence/
 proof/
+!codex/bundles/shared-providers/evidence/
+!codex/bundles/shared-providers/evidence/**
+!codex/bundles/shared-providers/subbundles/**/proof/
+!codex/bundles/shared-providers/subbundles/**/proof/**
 !codex/bundles/Agent-Chat-UI-Reuse-Refactor/proof/
 !codex/bundles/Agent-Chat-UI-Reuse-Refactor/proof/**
 !codex/bundles/Simple-Llm-Chats-UI-Integration/proof/
@@ -67,6 +71,7 @@ CanDoItAll.Mcp.*.settings.json
 .env
 .env.*
 !.env.example
+!.env.shared-providers.e2e.example
 compose.override.yaml
 compose.override.yml
 docker-compose.override.yaml

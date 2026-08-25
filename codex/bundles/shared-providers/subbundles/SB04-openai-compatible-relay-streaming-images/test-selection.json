@@ -4,6 +4,15 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "OpenAI-compatible allowlist or wire contract",
+    "relay adapter/capability registry",
+    "streaming, cancellation, image, usage, or audit semantics",
+    "SharedProviderInvocationRecord ImageCount schema, migration, or EF snapshot",
+    "public provider usage constructor/deconstruction ABI or operation-aware aggregation",
+    "SB02 state, persistence, deletion-reference, or pending-model proof"
+  ],
+  "broadGateDecision": "Not authorized; relay behavior is bounded by the three declared topics.",
   "selections": [
     {
       "topic": "SharedProviderRelayPolicyTests",
@@ -32,6 +41,77 @@
     "Reject zero discovery.",
     "Update planned expected discovery only before the first run with a written reason.",
     "Record exact command, counts, duration, exit code, and transcript.",
-    "Do not widen the lane because a focused test fails."
-  ]
+    "Do not widen the lane because a focused test fails.",
+    "Responses store omission canonicalizes to JSON false; explicit JSON false is accepted; true, null, and non-Boolean values are rejected before dispatch."
+  ],
+  "august25WireContractReopen": {
+    "reason": "SB07 invalidated the SB04-owned Responses wire contract when retention-safe upstream behavior required an explicit canonical store=false value.",
+    "factCountChange": "None; existing Facts gained real-Web and recorded-upstream assertions.",
+    "entryValidator": {
+      "result": "pass",
+      "transcript": "proof/transcripts/sb04-reopen-entry-validator.txt"
+    },
+    "builds": {
+      "unitFirst": {
+        "result": "fail",
+        "reason": "Four CS0103 errors for missing JsonDocument/JsonValueKind symbols.",
+        "transcript": "proof/transcripts/sb04-reopen-build-unit-release.txt"
+      },
+      "unitFinal": {
+        "result": "pass; 0 warnings; 0 errors",
+        "transcript": "proof/transcripts/sb04-reopen-build-unit-release-final.txt"
+      },
+      "web": {
+        "result": "pass; 0 warnings; 0 errors",
+        "transcript": "proof/transcripts/sb04-reopen-build-web-release.txt"
+      },
+      "integrationFirst": {
+        "result": "fail",
+        "reason": "One CS0117 error for a nonexistent ResponsesModelId fixture symbol.",
+        "transcript": "proof/transcripts/sb04-reopen-build-integration-release.txt"
+      },
+      "integrationFinal": {
+        "result": "pass; 0 warnings; 0 errors",
+        "transcript": "proof/transcripts/sb04-reopen-build-integration-release-final.txt"
+      }
+    },
+    "focusedResults": {
+      "relayPolicy": {
+        "discovered": 24,
+        "passed": 24,
+        "listTranscript": "proof/transcripts/sb04-reopen-list-relay-policy-release.txt",
+        "runTranscript": "proof/transcripts/sb04-reopen-run-relay-policy-release.txt"
+      },
+      "compatibility": {
+        "discovered": 22,
+        "passed": 22,
+        "listTranscript": "proof/transcripts/sb04-reopen-list-openai-compatibility-release.txt",
+        "runTranscript": "proof/transcripts/sb04-reopen-run-openai-compatibility-release.txt"
+      },
+      "streaming": {
+        "discovered": 12,
+        "passed": 12,
+        "listTranscript": "proof/transcripts/sb04-reopen-list-streaming-release.txt",
+        "runTranscript": "proof/transcripts/sb04-reopen-run-streaming-release.txt"
+      }
+    }
+  },
+  "downstreamRevalidationEvidence": {
+    "reason": "SB04 added operation-aware ImageCount persistence and public usage properties to SB02-owned surfaces.",
+    "supportingUsageSelection": {
+      "topic": "ProviderUsageAggregationTests",
+      "plannedExpectedDiscovery": 7,
+      "actualDiscovery": 7,
+      "passed": 7,
+      "transcript": "proof/transcripts/sb04-run-provider-usage-aggregation-release-semantic-final.txt"
+    },
+    "sb02": {
+      "state": "18/18",
+      "persistence": "14/14",
+      "deletionReference": "6/6",
+      "efPendingModel": "no pending model changes",
+      "artifact": "../SB02-publication-source-import-persistence/proof/architecture/sb04-downstream-invalidation-revalidation.md"
+    },
+    "broadAggregate": "Still reserved for SB12."
+  }
 }

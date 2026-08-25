@@ -1,6 +1,6 @@
 # SB07 — Backend checkpoint and three-instance Docker proof
 
-State: `LOCKED`  
+State: `BLOCKED`
 Proof tier: `Governed`  
 Depends on: `SB06`  
 Next on pass: `SB08`
@@ -165,6 +165,19 @@ negative proof is backed by an artifact. On pass mark this subbundle `DONE`, unl
 
 On failure, keep downstream work locked. Do not call a missing proof a residual risk.
 
+## Current blocker
+
+The local Release E2E-tool and Integration builds pass, and the exact frozen backend checkpoint is
+listed and green at 10/10. The governed Docker lifecycle has no passing run: seven lifecycle
+attempts and seven application-image build invocations are durably recorded against the unamended
+whole-bundle 2/2 ceiling. Attempt 24 preserves a sanitized partial result for all 19 scenario IDs
+as 10 passed, 5 failed, and 4 pending; it is not closure proof.
+
+No further Docker lifecycle or application-image build is authorized. Resumption requires explicit
+operator authority for exactly one replacement SB07 lifecycle plus one application-image build,
+followed by a durable cumulative 9/9 budget amendment that preserves one lane/build for SB12. See
+`proof/test-budget-exception.md`.
+
 ## Reopen triggers
 
 - Any backend scenario fails.
@@ -174,15 +187,15 @@ On failure, keep downstream work locked. Do not call a missing proof a residual 
 
 ## Execution checklist
 
-- [ ] Current branch/commit/worktree captured.
-- [ ] Mandatory skills loaded.
-- [ ] Bundle and subbundle readiness validated.
-- [ ] Dependencies are `DONE`.
-- [ ] Before architecture/reference evidence captured.
+- [x] Current branch/commit/worktree captured.
+- [x] Mandatory skills loaded.
+- [x] Bundle and subbundle readiness validated.
+- [x] Dependencies are `DONE`.
+- [x] Before architecture/reference evidence captured.
 - [ ] Scope implemented without widening.
-- [ ] Affected production projects built.
-- [ ] Test discovery recorded and nonzero.
-- [ ] Focused positive/negative tests passed.
+- [x] Affected production projects built.
+- [x] Test discovery recorded and nonzero.
+- [x] Focused positive/negative tests passed.
 - [ ] Security/redaction checks passed where applicable.
 - [ ] After architecture/reference evidence captured.
 - [ ] Proof manifest completed with artifact hashes.

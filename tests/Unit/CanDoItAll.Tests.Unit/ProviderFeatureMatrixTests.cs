@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -28,6 +29,79 @@ public sealed class ProviderFeatureMatrixTests
         Assert.True(matrix.SupportsResponseFormatJsonSchema);
         Assert.True(matrix.SupportsToolApprovalRequests);
         Assert.True(matrix.SupportsApprovalRequiredAIFunction);
+
+        var constrained = service.ResolveFeatureMatrix(provider with
+        {
+            FeatureConstraints = new ProviderFeatureConstraints(
+                AllowsStructuredOutput: false,
+                AllowsVision: false,
+                AllowsNativeTools: false,
+                AllowsHostedMcp: false,
+                AllowsServiceManagedHistory: false,
+                AllowsCompaction: false)
+        });
+
+        Assert.False(constrained.SupportsStructuredOutput);
+        Assert.False(constrained.SupportsResponseFormatJsonSchema);
+        Assert.False(constrained.SupportsRunAsyncTypedOutput);
+        Assert.False(constrained.SupportsVision);
+        Assert.False(constrained.SupportsNativeCodeInterpreter);
+        Assert.False(constrained.SupportsNativeFileSearch);
+        Assert.False(constrained.SupportsNativeWebSearch);
+        Assert.False(constrained.SupportsHostedMcpServer);
+        Assert.False(constrained.SupportsHostedTools);
+        Assert.False(constrained.SupportsHostedMcp);
+        Assert.False(constrained.SupportsServiceManagedHistory);
+        Assert.False(constrained.SupportsCompaction);
+        Assert.True(constrained.SupportsFunctionTools);
+        Assert.True(constrained.SupportsLocalMcpBridge);
+    }
+
+    [Fact]
+    public void AudioCapabilityPolicyRejectsSourceProfilesAndPreservesPersonalProfiles()
+    {
+        var personal = CreateProvider(
+            ProviderKind.OpenAi,
+            ProviderTransportKind.ChatCompletions,
+            supportsTools: false,
+            preferFrameworkManagedHistory: true);
+        var sourceManaged = personal with
+        {
+            Id = Guid.Parse("c45b659d-3054-465a-ad48-91049c458902"),
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.Parse("9f247304-1c4f-4404-a1d9-18d2488f2b05"),
+                ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source,
+                Guid.Parse("b647c53c-4dc0-4055-b46d-19c44fd9ed5d"))
+        };
+
+        Assert.True(ProviderAudioCapabilityPolicy.IsAvailable(personal));
+        Assert.False(ProviderAudioCapabilityPolicy.IsAvailable(sourceManaged));
+        ProviderAudioCapabilityPolicy.EnsureAvailable(
+            personal,
+            AgentProviderOperationKind.TranscribeSpeech);
+        var exception = Assert.Throws<ProviderAudioCapabilityException>(() =>
+            ProviderAudioCapabilityPolicy.EnsureAvailable(
+                sourceManaged,
+                AgentProviderOperationKind.SynthesizeSpeech));
+        Assert.Equal(sourceManaged.Id, exception.ProviderProfileId);
+        Assert.Equal(AgentProviderOperationKind.SynthesizeSpeech, exception.Operation);
+        Assert.Equal(ProviderAudioCapabilityException.PublicMessage, exception.Message);
+
+        var eligibleVoiceProviders = new[] { personal, sourceManaged }
+            .Where(AgentVoiceSettingsPanel.IsOpenAiVoiceProvider)
+            .ToArray();
+        Assert.Equal(personal, Assert.Single(eligibleVoiceProviders));
+        Assert.Equal(
+            personal.Id.ToString("D"),
+            AgentVoiceSettingsPanel.ResolveVoiceProviderIdText(
+                currentProviderId: null,
+                eligibleVoiceProviders));
+        Assert.Equal(
+            string.Empty,
+            AgentVoiceSettingsPanel.ResolveVoiceProviderIdText(
+                sourceManaged.Id,
+                eligibleVoiceProviders));
     }
 
     [Fact]
@@ -260,7 +334,7 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("ResolveFeatureMatrix", source, StringComparison.Ordinal);
         Assert.Contains("entity.SupportsVision = featureMatrix.SupportsVision;", source, StringComparison.Ordinal);
         Assert.Contains("ResolveTransport", mapperSource, StringComparison.Ordinal);
-        Assert.Contains("providerTransport", metadataSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderTransportKind transport", metadataSource, StringComparison.Ordinal);
         Assert.Contains("supportsVision", metadataSource, StringComparison.Ordinal);
         Assert.Contains("ComfyUiProviderAdapter.PluginKey", mapperSource, StringComparison.Ordinal);
         Assert.Contains("ProviderProfilePurpose.ImageGeneration", mapperSource, StringComparison.Ordinal);
@@ -373,6 +447,20 @@ public sealed class ProviderFeatureMatrixTests
             "Pages",
             "Components",
             "ProviderProfileTreeNodeBuilder.cs");
+        var voiceSettingsSource = ReadRepositoryFile(
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.AgentFramework",
+            "Pages",
+            "Components",
+            "AgentVoiceSettingsPanel.razor");
+        var openAiDriverSource = ReadRepositoryFile(
+            "src",
+            "MAF",
+            "Common",
+            "CanDoItAll.AgentFramework.Providers",
+            "Drivers",
+            "OpenAiProviderDriver.cs");
 
         Assert.Contains("ResolveMappedProviderKind", mapperSource, StringComparison.Ordinal);
         Assert.Contains("No AgentFramework provider kind mapping exists for connector plugin", mapperSource, StringComparison.Ordinal);
@@ -387,6 +475,8 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("not an available image-generation provider", workflowRendererSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProviderProfilePurpose.Chat", workflowRendererSource, StringComparison.Ordinal);
         Assert.Contains("ProviderKind.ComfyUi => \"image\"", treeNodeBuilderSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderAudioCapabilityPolicy.IsAvailable(provider)", voiceSettingsSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderAudioCapabilityPolicy.EnsureAvailable", openAiDriverSource, StringComparison.Ordinal);
     }
 
     [Fact]

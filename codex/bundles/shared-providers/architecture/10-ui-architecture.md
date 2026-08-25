@@ -28,6 +28,40 @@ components and presentation models.
 
 ## Desktop composition
 
+### Locked compact-composition decisions
+
+- **Primary surface:** the existing provider collection and selected-provider detail remain
+  the dominant split work surface. Shared providers are ordinary rows with explicit origin and
+  availability, not a separate decorative dashboard.
+- **Supporting content:** source status, filters, eligibility explanations, and short
+  diagnostics stay in the selected detail, compact section heads, badges, or dialogs. Long
+  diagnostics and protocol detail are collapsed or secondary and must not push the provider
+  collection below the first viewport.
+- **Stats treatment:** statistics are supporting only. Use counts beside headings, badges, or
+  `CompactStatStrip` when a count is useful. `SummaryTiles`, `StatsGrid`, and metric-card rows
+  are `N/A` unless implementation evidence proves metrics became a primary task.
+- **List/editor organization:** browsing/comparing providers remains list-first with the
+  selected existing editor/detail visible beside or immediately within the established
+  provider panel. Independent source create/edit uses a dialog; catalog discovery/import uses
+  a separate dialog so it cannot permanently displace the provider list.
+- **Text-area sizing:** no new prose text area is required by this feature, so semantic text-area
+  sizing is `N/A`. If implementation discovers a genuine notes/diagnostic edit field, reopen
+  this decision and use `TextAreaSize.Standard` for descriptions or `Extended` only for
+  intentional long-form content.
+- **Dialog sizing:** source create/edit uses `ModalSize.Medium`; catalog comparison and
+  multi-select import uses `ModalSize.Wide`; retire/unpublish confirmations use
+  `ModalSize.Compact`. Dialog bodies own overflow when needed while headers, validation, and
+  footer actions remain visible.
+- **First viewport:** at the named `1600x1000` viewport, provider identity, Local/Shared origin,
+  availability/publication state, the primary list, selected-detail summary, and add/source/sync
+  actions are reachable without page scrolling past repeated introductions or metric cards.
+- **Scroll owner:** the established provider page/panel is the single vertical scroll owner.
+  Only the catalog result region may own a bounded internal scroll inside its wide dialog; do
+  not introduce competing nested page/list/detail scrollbars.
+- **Compound controls:** tabs, filter/action rows, source actions, and dialog field groups must
+  respond to their immediate container width. Prove them in the selected-detail column and in
+  medium/wide dialog columns even though the viewport is wide.
+
 Recommended information architecture:
 
 ### Provider list
@@ -100,6 +134,11 @@ SB08 must record the current provider panel viewport. Preferred:
 
 The final compact composition decision must be validated against the current
 `candoitall-components-mcp` guidance.
+
+Preparation loaded the current compact-composition reference. The Components MCP transport was
+unavailable on two recommendation attempts (`Transport closed`); SB08 must retry the live MCP
+before component selection and record either its recommendations or the explicit continued
+tooling gap.
 
 ## Required states
 

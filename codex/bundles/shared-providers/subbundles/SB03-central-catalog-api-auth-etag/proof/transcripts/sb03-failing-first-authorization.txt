@@ -1,0 +1,109 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' -c Release --no-build --no-restore --filter 'FullyQualifiedName~SharedProviderAuthorizationIntegrationTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T00:17:50.758443+00:00
+completed-utc: 2026-08-25T00:18:00.752236+00:00
+duration-seconds: 9.994
+exit-code: 1
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels [1 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 49
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized [58 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Unauthorized
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.AssertNativeAuthorizationErrorAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, String expectedCode) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 234
+   at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 112
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized [11 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Unauthorized
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.AssertNativeAuthorizationErrorAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, String expectedCode) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 234
+   at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 85
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog [9 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 35
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels [7 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 75
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies [6 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: OK
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 61
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden [5 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.AssertNativeAuthorizationErrorAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, String expectedCode) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 234
+   at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 143
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized [6 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Unauthorized
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.AssertOpenAiAuthorizationErrorAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, String expectedCode, String expectedType) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 246
+   at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 128
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized [4 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Unauthorized
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.AssertOpenAiAuthorizationErrorAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, String expectedCode, String expectedType) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 246
+   at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 96
+--- End of stack trace from previous location ---
+  Neúspěšné CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden [3 ms]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   NotFound
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.AssertOpenAiAuthorizationErrorAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, String expectedCode, String expectedType) in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 246
+   at CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden() in C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\SharedProviderAuthorizationIntegrationTests.cs:line 160
+--- End of stack trace from previous location ---
+
+Neúspěšné!  - Neúspěšné:    10, Úspěšné:     0, Přeskočeno:     0, Celkem:    10, Doba trvání: 1 s - CanDoItAll.Tests.Integration.dll (net10.0)
+
+stderr:
+[xUnit.net 00:00:07.36]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels [FAIL]
+[xUnit.net 00:00:07.43]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized [FAIL]
+[xUnit.net 00:00:07.45]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized [FAIL]
+[xUnit.net 00:00:07.46]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog [FAIL]
+[xUnit.net 00:00:07.47]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels [FAIL]
+[xUnit.net 00:00:07.48]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies [FAIL]
+[xUnit.net 00:00:07.48]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden [FAIL]
+[xUnit.net 00:00:07.49]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized [FAIL]
+[xUnit.net 00:00:07.50]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized [FAIL]
+[xUnit.net 00:00:07.51]     CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden [FAIL]

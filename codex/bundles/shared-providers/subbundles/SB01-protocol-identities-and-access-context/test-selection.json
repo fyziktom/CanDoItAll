@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "public protocol or routing-model-id contract",
+    "access-context middleware or header binding",
+    "SharedProviders project/reference graph"
+  ],
+  "broadGateDecision": "Not authorized; public-contract invalidation is carried to the single SB12 gate.",
   "selections": [
     {
       "topic": "SharedProviderProtocolContractTests",

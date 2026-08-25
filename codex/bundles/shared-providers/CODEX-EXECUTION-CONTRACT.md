@@ -32,9 +32,14 @@ Load and follow the current versions of:
 - `csharp-provider-tool-plugin-isolation`
 - `architecture-reviews/feature-block-architecture-review`
 - `architecture-reviews/canonical-model-review`
-- `architecture-reviews/persistence-boundary-review`
-- `architecture-reviews/api-boundary-review`
-- `architecture-reviews/security-boundary-review`
+- `architecture-reviews/canonical-model-review` with the persistence lens for SB02; this is
+  the current semantic replacement for the retired `persistence-boundary-review` name
+- `aspnet-core` plus `architecture-reviews/feature-block-architecture-review` for SB03, SB04,
+  and SB11; these are the current semantic replacement for the retired `api-boundary-review`
+  name
+- `security-best-practices` plus `architecture-reviews/feature-block-architecture-review` for
+  SB01, SB03, SB04, SB05, and SB07; these are the current semantic replacement for the retired
+  `security-boundary-review` name
 - `candoitall-codeanalytics-mcp`
 - `candoitall-components-mcp` for SB08 and SB09
 - `candoitall-api-shared-providers` after SB11 creates and installs it
@@ -143,6 +148,24 @@ Every completed subbundle must contain:
 
 A verbal summary is not proof.
 
+For every `Governed` subbundle, the existing machine-state
+`proof/proof-manifest.json` is supplemented at closure by `proof/manifest.md` and
+`proof/semantic-invariants.md` under that subbundle. Those files use portable `repo://` and
+`bundle://` references and satisfy the active artifact-backed proof contract.
+
+## Final stable gate failure rule
+
+The SB12 stable aggregate is one evidence-bearing command and consumes its budget whether it
+passes or fails. Before running it, all affected builds, focused tests, Docker preconditions,
+documentation checks, and OpenAPI/SharedInfo checks must already be green at the named frozen
+checkpoint. If the stable aggregate fails:
+
+- record the complete failure and keep SB12 blocked;
+- diagnose and repair only with focused affected-scope checks;
+- do not run the stable aggregate again under the current budget;
+- a replacement aggregate requires explicit operator authorization and a durable amendment to
+  `test-budget.json`, this contract, and the SB12 proof manifest.
+
 ## Final-state contract
 
 SB12 exits only when:
@@ -156,3 +179,7 @@ SB12 exits only when:
   actions, log paths, and the cleanup command that was deliberately not run;
 - OpenAPI and SharedInfo are synchronized to the final implementation commit;
 - no bundle requirement is left in an ambiguous state.
+
+A successful `DONE` closure requires every mandatory requirement to be `Solved`. `Partially
+solved` and `Not solved` remain valid honest classifications for a blocked handoff, but they do
+not support success language or a `DONE` final state.

@@ -377,11 +377,18 @@ internal static class ProviderDriverProtocol
     public static async Task EnsureSuccessAsync(
         HttpResponseMessage response,
         string operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeRemoteError = true)
     {
         if (response.IsSuccessStatusCode)
         {
             return;
+        }
+
+        if (!includeRemoteError)
+        {
+            throw new InvalidOperationException(
+                $"{operation} failed with HTTP {(int)response.StatusCode}.");
         }
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

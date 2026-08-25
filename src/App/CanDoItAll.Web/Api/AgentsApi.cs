@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.AspNetCore.Mvc;
@@ -269,10 +270,29 @@ internal static class AgentsApi
         agents.MapPost("/providers/{providerId:guid}/test-chat", async (
                 Guid providerId,
                 ProviderTestChatRequest request,
+                HttpContext context,
                 IAgentFrameworkWorkspaceService workspaceService,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await workspaceService.RunProviderTestChatAsync(providerId, request, cancellationToken)))
-            .WithName("RunAgentProviderTestChat");
+        {
+            try
+            {
+                return Results.Ok(await workspaceService.RunProviderTestChatAsync(
+                    providerId,
+                    request,
+                    cancellationToken));
+            }
+            catch (ProviderRuntimeProfileUnavailableException)
+            {
+                return ApiEndpointResults.AgentFailure(
+                    context,
+                    StatusCodes.Status503ServiceUnavailable,
+                    "The provider runtime profile is unavailable.",
+                    LlmChatErrorCodes.ProviderUnavailable);
+            }
+        })
+        .WithName("RunAgentProviderTestChat")
+        .Produces<ProviderTestChatResult>(StatusCodes.Status200OK)
+        .ProducesApiErrors(StatusCodes.Status503ServiceUnavailable);
 
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", async (
                 Guid providerId,

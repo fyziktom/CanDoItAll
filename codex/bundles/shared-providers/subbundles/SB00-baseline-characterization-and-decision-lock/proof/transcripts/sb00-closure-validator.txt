@@ -1,0 +1,10 @@
+command: python codex/bundles/shared-providers/scripts/validate_subbundle.py --phase closure --subbundle SB00 codex/bundles/shared-providers
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-24T20:27:14.971916+00:00
+completed-utc: 2026-08-24T20:27:15.057507+00:00
+duration-seconds: 0.086
+exit-code: 0
+output:
+PASS: SB00 closure gate passed
+
+stderr:

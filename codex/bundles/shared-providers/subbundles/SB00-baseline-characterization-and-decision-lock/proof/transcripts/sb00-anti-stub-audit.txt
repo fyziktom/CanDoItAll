@@ -1,0 +1,10 @@
+command: python codex/bundles/shared-providers/scripts/validate_no_stubs.py tests/Unit/CanDoItAll.Tests.Unit/SharedProviderArchitectureCharacterizationTests.cs tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimePathCharacterizationTests.cs
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-24T20:20:03.770529+00:00
+completed-utc: 2026-08-24T20:20:03.850534+00:00
+duration-seconds: 0.080
+exit-code: 0
+output:
+Stub audit passed for 2 selected files.
+
+stderr:

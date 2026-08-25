@@ -29,10 +29,11 @@ Suggested response shape:
       "revision": "sha256:...",
       "displayName": "Company OpenAI",
       "purpose": "chat",
-      "defaultModelId": "sp.50f8...gpt5",
+      "transport": "openai-compatible",
+      "defaultModelId": "sp1.50f8b7d8....<base64url-sha256>",
       "models": [
         {
-          "id": "sp.50f8...gpt5",
+          "id": "sp1.50f8b7d8....<base64url-sha256>",
           "displayName": "GPT model",
           "capabilities": [
             "chat-completions",
@@ -44,8 +45,7 @@ Suggested response shape:
         }
       ],
       "health": {
-        "state": "available",
-        "checkedAtUtc": "2026-08-24T00:00:00Z"
+        "state": "available"
       }
     }
   ]
@@ -53,7 +53,12 @@ Suggested response shape:
 ```
 
 This is illustrative, not a generated schema. SB01 owns the exact repository records and JSON
-names.
+names. Its frozen v1 record is strict and case-sensitive, rejects unknown or duplicate
+properties, requires all constructor parameters, and uses the exact enum strings defined by
+`SharedProviderProtocolJson`. Provider, model, and capability arrays are recursively copied and
+canonicalized before serialization. Strong publication/catalog revisions are computed from the
+sanitized canonical representation: advertised health state participates, while revision fields
+and volatile check timestamps do not.
 
 Catalog must omit:
 
@@ -101,6 +106,13 @@ Required supported subset:
 - bounded generation parameters already supported by the upstream;
 - stop/temperature/top-p/max output parameters when mapped and tested.
 
+The frozen function-tool shape is
+`{"type":"function","function":{"name", "description"?, "parameters"?, "strict"?}}`.
+A named `tool_choice` nests its name under `function` and must match a declared tool. Chat
+structured output uses nested `response_format.json_schema`. A vision part is
+`{"type":"image_url","image_url":{"url":"data:...","detail"?}}`, is allowed only on a
+user message, and accepts `detail` values `auto`, `low`, or `high`.
+
 Denied by default:
 
 - unknown properties;
@@ -123,6 +135,13 @@ Required supported subset:
 - tested generation/reasoning parameters;
 - tool-call output events needed by the local runtime.
 
+The frozen Responses function-tool shape is flattened:
+`{"type":"function","name", "description"?, "parameters"?, "strict"?}`. A named
+`tool_choice` is likewise flattened and must match a declared tool. Structured output is under
+flattened `text.format`; text/image discriminators are `input_text` and `input_image`, and an
+image part is `{"type":"input_image","image_url":"data:..."}`. Chat shapes are rejected on
+this surface and Responses shapes are rejected on Chat.
+
 Denied by default:
 
 - `store=true`;
@@ -143,9 +162,18 @@ Required subset:
 - supported size/quality/output format;
 - bounded count;
 - `b64_json` response;
-- URL response only when it uses an existing authorized CanDoItAll artifact route with expiry
-  and authorization, never an internal file path or upstream private URL;
 - ComfyUI mapping through the existing image capability.
+
+The implemented v1 Images contract is Base64-only. `n` may be absent (default 1) or an explicit
+JSON integer within the selected descriptor maximum; null, strings, fractions, overflow, zero,
+and out-of-range values fail closed. No artifact-URL response mode is implemented or advertised.
+
+For both text surfaces, function description is bounded and type-checked, `strict` is Boolean,
+and the optional schema must have the exact surface-specific shape. Merely supplying
+`parallel_tool_calls` on Chat, including `false`, requires advertised parallel-tools support.
+Vision data URIs must contain nonempty whitespace-free valid Base64 and be PNG, JPEG, or WebP.
+The five production rows advertise no vision input; vision acceptance is policy proof only, not
+a production capability claim.
 
 Audio routes are not part of v1 unless SB00 discovers real current production drivers and the
 same bundle adds exact compatibility tests. Protocol records may reserve capability names but
@@ -169,6 +197,11 @@ The ID must:
 - distinguish duplicate model names;
 - fail closed on malformed/unknown IDs;
 - not contain a caller-controlled upstream path.
+
+SB01 freezes the exact format as
+`sp1.<publication-guid-N-lowercase>.<base64url-full-SHA256>`. The digest input is the exact,
+validated UTF-8 upstream model token; callers cannot trim, normalize, or recover that token from
+the public ID. The complete ID is exactly 80 ASCII characters.
 
 ## Errors
 

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB08",
+  "title": "Central publication and client source/import desktop UI",
+  "proofTier": "Behavioral",
+  "status": "not-executed",
+  "dependencies": [
+    "SB07"
+  ],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "",
+    "commitBefore": "",
+    "commitAfter": "",
+    "workingTreeBefore": "",
+    "workingTreeAfter": ""
+  },
+  "skillsLoaded": [],
+  "architecture": {
+    "checkpoint": "",
+    "projectReferencesBeforeArtifact": "",
+    "projectReferencesAfterArtifact": "",
+    "codeAnalyticsSnapshotBefore": "",
+    "codeAnalyticsSnapshotAfter": "",
+    "cycleResult": "",
+    "assertions": [
+      "UI never owns HTTP/persistence/security behavior.",
+      "Remote-owned fields remain immutable through service boundary.",
+      "No secret value is rendered."
+    ],
+    "partialClassReview": ""
+  },
+  "changedFiles": [],
+  "commands": [],
+  "testSelections": [
+    {
+      "topic": "SharedProviderPublicationPanelTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Components.slnx",
+      "filter": "FullyQualifiedName~SharedProviderPublicationPanelTests",
+      "plannedExpectedDiscovery": 10,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    },
+    {
+      "topic": "SharedProviderSourceAndImportComponentTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Components.slnx",
+      "filter": "FullyQualifiedName~SharedProviderSourceAndImportComponentTests",
+      "plannedExpectedDiscovery": 18,
+      "actualDiscovery": 0,
+      "listCommand": "",
+      "runCommand": "",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": null,
+      "durationSeconds": null,
+      "transcript": ""
+    }
+  ],
+  "artifacts": [],
+  "semanticInvariants": [
+    "UI never owns HTTP/persistence/security behavior.",
+    "Remote-owned fields remain immutable through service boundary.",
+    "No secret value is rendered."
+  ],
+  "positiveEvidence": [],
+  "negativeEvidence": [],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": false,
+    "command": "",
+    "result": "",
+    "artifact": ""
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "namedInvalidationTriggers": [],
+    "command": "",
+    "result": ""
+  },
+  "progressionDecision": {
+    "result": "not-decided",
+    "nextSubbundle": "SB09",
+    "reason": ""
+  },
+  "notes": []
+}

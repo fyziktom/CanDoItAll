@@ -98,3 +98,6 @@ Identifiers are stable and used by the traceability matrix.
 - **FR-058** The E2E stack starts one central and two independent client applications.
 - **FR-059** The final stack remains running for manual testing.
 - **FR-060** OpenAPI and SharedInfo skills reflect the final route and schema surface.
+- **FR-061** Product documentation and the operator runbook cover architecture, central and
+  client setup, the tested compatibility subset, security boundaries, troubleshooting,
+  repeatable three-instance tooling, and deliberate cleanup.

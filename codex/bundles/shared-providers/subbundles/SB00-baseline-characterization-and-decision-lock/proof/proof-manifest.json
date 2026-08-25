@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "1.0",
+  "subbundleId": "SB00",
+  "title": "Baseline characterization and decision lock",
+  "proofTier": "Governed",
+  "status": "passed",
+  "dependencies": [],
+  "baseline": {
+    "repository": "fyziktom/CanDoItAll",
+    "branch": "providers-shared",
+    "commitBefore": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "commitAfter": "e46f81d5ee33627dccb548732725e1c37e980ab5",
+    "workingTreeBefore": "repository was clean before readiness repair; formal SB00 execution entered with the readiness-repair and proof-scaffolding changes captured in sb00-git-state-main.txt",
+    "workingTreeAfter": "uncommitted readiness repair, governed bundle evidence, and two characterization test files; no production source change; see sb00-working-tree-final.txt"
+  },
+  "skillsLoaded": [
+    "candoitall-bundle-workflow",
+    "candoitall-bundle-preparation",
+    "candoitall-bundle-execution",
+    "candoitall-subbundle-validator",
+    "candoitall-bundle-validator",
+    "apply-candoitall-shared-standards",
+    "candoitall-csharp-architecture-bundle-guard",
+    "csharp-architecture-governor",
+    "csharp-architecture-review-gate",
+    "csharp-dependency-graph-audit",
+    "csharp-provider-tool-plugin-isolation",
+    "candoitall-codeanalytics-mcp",
+    "feature-block-architecture-review",
+    "canonical-model-review"
+  ],
+  "architecture": {
+    "checkpoint": "PASS_SB00",
+    "projectReferencesBeforeArtifact": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/project-references-before.md",
+    "projectReferencesAfterArtifact": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/project-references-after.md",
+    "codeAnalyticsSnapshotBefore": "snap-20260824190346-9451b9e9",
+    "codeAnalyticsSnapshotAfter": "snap-20260824195319-b6470538",
+    "cycleResult": "11 projects and 23 direct product references before/after; zero project-level cycles; two pre-existing module cycles and one nested-type cycle unchanged",
+    "assertions": [
+      "Workspace EF provider row is the canonical master.",
+      "Inner provider/runtime projects gain no outer reference.",
+      "The pinned OpenAI SDK preserves custom endpoints for Chat Completions and Responses, normal and streaming.",
+      "No feature implementation begins before the decision lock."
+    ],
+    "partialClassReview": "No product or partial class changed; two cohesive sealed test classes were added."
+  },
+  "changedFiles": [
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderArchitectureCharacterizationTests.cs",
+      "kind": "test",
+      "beforeSha256": "absent",
+      "afterSha256": "bb149bf1dde6019a7940b135e044dc4f0ec320aa7dac44f1778b09941e0b78ea"
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimePathCharacterizationTests.cs",
+      "kind": "test",
+      "beforeSha256": "absent",
+      "afterSha256": "f46cd0999a7a47483f5cae52b3ee85f6bca66b71e6f7802e1733fa13fde3c342"
+    },
+    {
+      "path": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof",
+      "kind": "governed-evidence",
+      "beforeSha256": "absent",
+      "afterSha256": "see proof/hashes.sha256"
+    }
+  ],
+  "commands": [
+    {
+      "purpose": "entry readiness",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-entry-prepared-validator.txt"
+    },
+    {
+      "purpose": "unit build",
+      "result": "passed with 0 warnings and 0 errors",
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-build-unit-escalated.txt"
+    },
+    {
+      "purpose": "final integration build",
+      "result": "passed with 0 warnings and 0 errors",
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-build-integration-sdk-transport.txt"
+    },
+    {
+      "purpose": "anti-stub audit",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-anti-stub-audit.txt"
+    },
+    {
+      "purpose": "secret/content scan",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-secret-scan-corrected.txt"
+    },
+    {
+      "purpose": "subbundle closure validation",
+      "result": "passed",
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-closure-validator.txt"
+    }
+  ],
+  "testSelections": [
+    {
+      "topic": "SharedProviderArchitectureCharacterizationTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Unit.slnx",
+      "filter": "FullyQualifiedName~SharedProviderArchitectureCharacterizationTests",
+      "plannedExpectedDiscovery": 8,
+      "actualDiscovery": 8,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderArchitectureCharacterizationTests /m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Unit.slnx --configuration Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderArchitectureCharacterizationTests /m:1",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 7.773,
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-run-unit.txt"
+    },
+    {
+      "topic": "SharedProviderRuntimePathCharacterizationTests",
+      "owningProject": "tests/Solutions/CanDoItAll.Tests.Integration.slnx",
+      "filter": "FullyQualifiedName~SharedProviderRuntimePathCharacterizationTests",
+      "plannedExpectedDiscovery": 6,
+      "actualDiscovery": 6,
+      "listCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --list-tests --filter FullyQualifiedName~SharedProviderRuntimePathCharacterizationTests /m:1",
+      "runCommand": "dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx --configuration Release --no-build --no-restore --filter FullyQualifiedName~SharedProviderRuntimePathCharacterizationTests /m:1",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 2.298,
+      "transcript": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-run-integration-sdk-transport.txt"
+    }
+  ],
+  "artifacts": [
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/manifest.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/semantic-invariants.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/changed-files.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/hashes.sha256",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/project-references-before.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/project-references-after.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/changed-namespace-type-report.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/codeanalytics-before.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/architecture/codeanalytics-after.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/behavior/runtime-call-paths.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/behavior/usage-and-deletion.md",
+    "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/behavior/openai-sdk-transport-characterization.md"
+  ],
+  "semanticInvariants": [
+    "Workspace EF provider row is the canonical master.",
+    "Inner provider/runtime projects gain no outer reference.",
+    "No feature implementation begins before the decision lock."
+  ],
+  "positiveEvidence": [
+    "The real Workspace mapper, connector registry, integrated gateway registration, OpenAI SDK clients, and OpenAI image driver are exercised without live provider calls.",
+    "Exact 8-test unit and 6-test integration selections pass."
+  ],
+  "negativeEvidence": [
+    "Architecture tests reject outer references, project cycles, internal API DTO reuse, invented Azure manifests, and direct UI storage/transport ownership.",
+    "The custom /custom/v1 endpoint rejects silent reset to a public base URI across Chat, Responses, streaming, and Images.",
+    "Secret scan and anti-stub audit pass; failed and superseded attempts remain classified in the governed manifest."
+  ],
+  "secretAndContentScan": {
+    "required": true,
+    "performed": true,
+    "command": "credential-shaped token and private-key scan over both test files and the SB00 proof tree",
+    "result": "passed; no credential-shaped values or private-key blocks found",
+    "artifact": "bundle://subbundles/SB00-baseline-characterization-and-decision-lock/proof/transcripts/sb00-secret-scan-corrected.txt"
+  },
+  "broadGate": {
+    "allowed": false,
+    "run": false,
+    "namedInvalidationTriggers": [
+      "provider project/reference graph",
+      "provider connector registry or effective runtime mapping",
+      "mandatory skill or SDK baseline"
+    ],
+    "command": "",
+    "result": "not authorized; only the two declared focused topics ran"
+  },
+  "progressionDecision": {
+    "result": "pass",
+    "nextSubbundle": "SB01",
+    "reason": "All SB00 assumptions are Confirmed or Amended, architecture and runtime selections pass exactly, and the dependency/ownership decision is locked."
+  },
+  "notes": [
+    "SB00 changed no production behavior and therefore has no manufactured failing-first product test.",
+    "The initial sandboxed unit build, ambiguous ProviderKind compile, invalid scans, ownership checks, whitespace check, and intermediate SDK completion assertion are preserved and superseded in proof/manifest.md.",
+    "Azure is configurable through OpenAI connector metadata without a separate Azure manifest; shared audio remains excluded from v1 because no Workspace audio manifest/purpose or shared relay proof exists."
+  ]
+}

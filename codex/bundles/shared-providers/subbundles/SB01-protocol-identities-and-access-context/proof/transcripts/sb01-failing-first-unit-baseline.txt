@@ -1,0 +1,245 @@
+command: dotnet test 'tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj' --configuration Release --filter 'FullyQualifiedName~SharedProviderProtocolContractTests' /m:1
+working-directory: C:\repositories\CanDoItAll-SB01Baseline
+started-utc: 2026-08-24T21:45:53.643297+00:00
+completed-utc: 2026-08-24T21:47:56.869954+00:00
+duration-seconds: 123.227
+exit-code: 1
+output:
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Standard\CanDoItAll.Processes.Drivers.Standard.csproj (v 227 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Infrastructure.Abstractions\CanDoItAll.Infrastructure.Abstractions.csproj (v 192 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Abstractions\CanDoItAll.Memory.Abstractions.csproj (v 192 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Templates\CanDoItAll.AgentFramework.Capabilities.Templates.csproj (v 226 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Git\CanDoItAll.Git.csproj (v 226 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj (v 146 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj (v 227 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Builder\CanDoItAll.AgentFramework.Workflows.Builder.csproj (v 147 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.ProviderPipelines\CanDoItAll.AgentFramework.ProviderPipelines.csproj (v 226 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\CanDoItAll.AgentFramework.Workflows.Abstractions.csproj (v 10 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\CanDoItAll.Memory.SourceGateway.Abstractions.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Application\CanDoItAll.Memory.Application.csproj (v 1,86 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Mock\CanDoItAll.Memory.Mock.csproj (v 1,52 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\CanDoItAll.AgentFramework.WorkflowExecutors.Core.csproj (v 1,86 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Llm.ProviderRuntime\CanDoItAll.AgentFramework.Llm.ProviderRuntime.csproj (v 1,78 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\CanDoItAll.AgentFramework.Workflows.Templates.csproj (v 1,86 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Http.Contracts\CanDoItAll.Memory.Http.Contracts.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Mcp\CanDoItAll.Memory.Mcp.csproj (v 5 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Http\CanDoItAll.Memory.Http.csproj (v 14 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\CanDoItAll.AgentFramework.Mcp.Abstractions.csproj (v 3 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\Drivers\CanDoItAll.Memory.Drivers.CognitiveMemory\CanDoItAll.Memory.Drivers.CognitiveMemory.csproj (v 1,59 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Memory\CanDoItAll.Modules.Memory.csproj (v 1,62 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj (v 1,63 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Persistence\CanDoItAll.Memory.Persistence.csproj (v 1,61 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Memory\CanDoItAll.AgentFramework.Memory\CanDoItAll.AgentFramework.Memory.csproj (v 47 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj (v 20 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Runtime.Abstractions\CanDoItAll.AgentFramework.Runtime.Abstractions.csproj (v 9 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Usage\CanDoItAll.AgentFramework.Usage.csproj (v 9 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj (v 1,93 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj (v 1,93 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj (v 1,63 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj (v 1,63 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\CanDoItAll.AgentFramework.Workflows.Core.csproj (v 24 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\CanDoItAll.AgentFramework.Workflows.Runtime.csproj (v 29 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.csproj (v 27 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.csproj (v 31 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.csproj (v 11 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.csproj (v 10 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.AgentFramework.Tools\CanDoItAll.AgentFramework.Tools.csproj (v 6 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.AgentFramework.Tools.Abstractions\CanDoItAll.AgentFramework.Tools.Abstractions.csproj (v 20 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj (v 4 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Skills\CanDoItAll.AgentFramework.Skills\CanDoItAll.AgentFramework.Skills.csproj (v 6 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\CanDoItAll.AgentFramework.Mcp.csproj (v 112 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj (v 9 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Builder\CanDoItAll.Processes.Builder.csproj (v 8 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Abstractions\CanDoItAll.Processes.Abstractions.csproj (v 5 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.csproj (v 23 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Application\CanDoItAll.Processes.Application.csproj (v 12 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj (v 29 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Skills\CanDoItAll.AgentFramework.Skills.Abstractions\CanDoItAll.AgentFramework.Skills.Abstractions.csproj (v 4 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj (v 38 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj (v 48 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj (v 52 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj (v 25 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.csproj (v 27 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.csproj (v 7 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj (v 46 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.csproj (v 23 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.Conversations.Components\CanDoItAll.Conversations.Components.csproj (v 25 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj (v 73 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.csproj (v 21 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\tests\Support\CanDoItAll.DurableFileWriter.TestHost\CanDoItAll.DurableFileWriter.TestHost.csproj (v 15 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj (v 2,18 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.Conversations.Shell\CanDoItAll.Conversations.Shell.csproj (v 29 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj (v 93 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.Components.Git\CanDoItAll.Components.Git.csproj (v 6 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Templates\CanDoItAll.Processes.Templates.csproj (v 17 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.csproj (v 233 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj (v 18 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj (v 6 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Runtime\CanDoItAll.Processes.Runtime.csproj (v 21 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Projections\CanDoItAll.Processes.Projections.csproj (v 20 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Abstractions\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj (v 8 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj (v 223 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.csproj (v 1,93 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj (v 35 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj (v 2,14 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\CanDoItAll.AgentFramework.Workflows.MafAdapter.csproj (v 269 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.csproj (v 78 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Abstractions\CanDoItAll.AgentFramework.Llm.Abstractions.csproj (v 10 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.csproj (v 32 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.csproj (v 30 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Conversations\CanDoItAll.AgentFramework.Llm.Conversations.csproj (v 39 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.csproj (v 34 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj (v 50 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\CanDoItAll.AgentFramework.Capabilities.Abstractions.csproj (v 3 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Access\CanDoItAll.AgentFramework.Capabilities.Access.csproj (v 7 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Integration\CanDoItAll.FileTools.Integration.Abstractions\CanDoItAll.FileTools.Integration.Abstractions.csproj (v 14 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj (v 32 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Security.Abstractions\CanDoItAll.Security.Abstractions.csproj (v 2 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\tools\App\CanDoItAll.Manager\CanDoItAll.Manager.csproj (v 70 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Integration\CanDoItAll.FileTools.Integration\CanDoItAll.FileTools.Integration.csproj (v 25 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj (v 84 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Persistence\CanDoItAll.Processes.Persistence.csproj (v 156 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj (v 55 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj (v 1,98 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj (v 225 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\App\CanDoItAll.Composition\CanDoItAll.Composition.csproj (v 2,27 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj (v 2,28 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj (v 114 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj (v 2,29 s).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj (v 143 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\tests\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj (v 204 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj (v 321 ms).
+  16 z 121 projektů jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Infrastructure.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Infrastructure.Abstractions\bin\Release\net10.0\CanDoItAll.Infrastructure.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.SharedKernel\bin\Release\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Infrastructure\bin\Release\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.FileTools.Abstractions -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.Abstractions\bin\Release\net10.0\CanDoItAll.FileTools.Abstractions.dll
+  CanDoItAll.FileTools.FileInteraction.Core -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Core\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Core.dll
+  CanDoItAll.FileTools.Integration.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Integration\CanDoItAll.FileTools.Integration.Abstractions\bin\Release\net10.0\CanDoItAll.FileTools.Integration.Abstractions.dll
+  CanDoItAll.FileTools.Desktop -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.Desktop\bin\Release\net10.0\CanDoItAll.FileTools.Desktop.dll
+  CanDoItAll.FileTools.Integration -> C:\repositories\CanDoItAll-SB01Baseline\src\Integration\CanDoItAll.FileTools.Integration\bin\Release\net10.0\CanDoItAll.FileTools.Integration.dll
+  CanDoItAll.DurableFileWriter.TestHost -> C:\repositories\CanDoItAll-SB01Baseline\tests\Support\CanDoItAll.DurableFileWriter.TestHost\bin\Release\net10.0\CanDoItAll.DurableFileWriter.TestHost.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\bin\Release\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\bin\Release\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\bin\Release\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib\bin\Release\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.FileTools.FileBrowser.Core -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileBrowser.Core\bin\Release\net10.0\CanDoItAll.FileTools.FileBrowser.Core.dll
+  CanDoItAll.FileTools.FileBrowser.Components -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileBrowser.Components\bin\Release\net10.0\CanDoItAll.FileTools.FileBrowser.Components.dll
+  CanDoItAll.FileTools.FileInteraction.Components -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Components\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Components.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.AppComponents\bin\Release\net10.0\CanDoItAll.AppComponents.dll
+  CanDoItAll.Conversations.Components -> C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.Conversations.Components\bin\Release\net10.0\CanDoItAll.Conversations.Components.dll
+  CanDoItAll.Conversations.Shell -> C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.Conversations.Shell\bin\Release\net10.0\CanDoItAll.Conversations.Shell.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Abstractions\bin\Release\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Release\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Memory.SourceGateway.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\bin\Release\net10.0\CanDoItAll.Memory.SourceGateway.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.ProviderPipelines\bin\Release\net10.0\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Providers\bin\Release\net10.0\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.AgentFramework.Runtime.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Runtime.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Runtime.Abstractions.dll
+  CanDoItAll.AgentFramework.Usage -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Usage\bin\Release\net10.0\CanDoItAll.AgentFramework.Usage.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Git\bin\Release\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Release\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Voice\bin\Release\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Components\bin\Release\net10.0\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.AgentFramework.Capabilities.Access -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Access\bin\Release\net10.0\CanDoItAll.AgentFramework.Capabilities.Access.dll
+  CanDoItAll.AgentFramework.Capabilities.Templates -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Templates\bin\Release\net10.0\CanDoItAll.AgentFramework.Capabilities.Templates.dll
+  CanDoItAll.AgentFramework.Llm.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.Abstractions.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Core -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.dll
+  CanDoItAll.AgentFramework.Llm.Conversations -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Conversations\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.Conversations.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Application -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Components -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.dll
+  CanDoItAll.AgentFramework.Llm.ProviderRuntime -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Llm.ProviderRuntime\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.ProviderRuntime.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.Tools.Documents\bin\Release\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.dll
+  CanDoItAll.Security.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Security.Abstractions\bin\Release\net10.0\CanDoItAll.Security.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.dll
+  CanDoItAll.AgentFramework.Workflows.MafAdapter -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.MafAdapter.dll
+  CanDoItAll.AgentFramework.Workflows.Builder -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Builder\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.Builder.dll
+  CanDoItAll.AgentFramework.Workflows.Templates -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\bin\Release\net10.0\CanDoItAll.AgentFramework.Workflows.Templates.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\bin\Release\net10.0\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.AgentFramework.Tooling\bin\Release\net10.0\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.AgentFramework.Mcp.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Mcp.Abstractions.dll
+  CanDoItAll.AgentFramework.Mcp -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\bin\Release\net10.0\CanDoItAll.AgentFramework.Mcp.dll
+  CanDoItAll.AgentFramework.Skills.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Skills\CanDoItAll.AgentFramework.Skills.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Skills.Abstractions.dll
+  CanDoItAll.AgentFramework.Skills -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Skills\CanDoItAll.AgentFramework.Skills\bin\Release\net10.0\CanDoItAll.AgentFramework.Skills.dll
+  CanDoItAll.AgentFramework.Tools.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.AgentFramework.Tools.Abstractions\bin\Release\net10.0\CanDoItAll.AgentFramework.Tools.Abstractions.dll
+  CanDoItAll.AgentFramework.Tools -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Tools\CanDoItAll.AgentFramework.Tools\bin\Release\net10.0\CanDoItAll.AgentFramework.Tools.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Maf\bin\Release\net10.0\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Common\CanDoItAll.AgentFramework.Hosting\bin\Release\net10.0\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Application\bin\Release\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.AgentFramework.Memory -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\Memory\CanDoItAll.AgentFramework.Memory\bin\Release\net10.0\CanDoItAll.AgentFramework.Memory.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Collaboration\bin\Release\net10.0\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Projects\bin\Release\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Security\bin\Release\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Workspace\bin\Release\net10.0\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.Components.Charts -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Charts\bin\Release\net10.0\CanDoItAll.Components.Charts.dll
+  CanDoItAll.Components.Gantt -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Gantt\bin\Release\net10.0\CanDoItAll.Components.Gantt.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.CrmHr\bin\Release\net10.0\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Prompts\bin\Release\net10.0\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Resources\bin\Release\net10.0\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.TestLab\bin\Release\net10.0\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Contracts\bin\Release\net10.0\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Abstractions\bin\Release\net10.0\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Core\bin\Release\net10.0\CanDoItAll.Processes.Core.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Templates\bin\Release\net10.0\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\bin\Release\net10.0\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Builder\bin\Release\net10.0\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Runtime\bin\Release\net10.0\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Projections\bin\Release\net10.0\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Application\bin\Release\net10.0\CanDoItAll.Processes.Application.dll
+  CanDoItAll.Processes.Persistence -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\CanDoItAll.Processes.Persistence\bin\Release\net10.0\CanDoItAll.Processes.Persistence.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid\bin\Release\net10.0\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.FileTools.FileInteraction.Markdown -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Markdown\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Markdown.dll
+  CanDoItAll.FileTools.FileInteraction.Spreadsheet -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Spreadsheet\bin\Release\net10.0\CanDoItAll.FileTools.FileInteraction.Spreadsheet.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Workbench\bin\Release\net10.0\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.AgentFramework\bin\Release\net10.0\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Memory.Http.Contracts -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Http.Contracts\bin\Release\net10.0\CanDoItAll.Memory.Http.Contracts.dll
+  CanDoItAll.Memory.Http -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Http\bin\Release\net10.0\CanDoItAll.Memory.Http.dll
+  CanDoItAll.Memory.Drivers.CognitiveMemory -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\Drivers\CanDoItAll.Memory.Drivers.CognitiveMemory\bin\Release\net10.0\CanDoItAll.Memory.Drivers.CognitiveMemory.dll
+  CanDoItAll.Memory.Mcp -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Mcp\bin\Release\net10.0\CanDoItAll.Memory.Mcp.dll
+  CanDoItAll.Memory.Mock -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Mock\bin\Release\net10.0\CanDoItAll.Memory.Mock.dll
+  CanDoItAll.Modules.Memory -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Memory\bin\Release\net10.0\CanDoItAll.Modules.Memory.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime\bin\Release\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Abstractions\CanDoItAll.Plugins.Abstractions\bin\Release\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll-SB01Baseline\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\bin\Release\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Plugins\bin\Release\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Processes.Drivers.Standard -> C:\repositories\CanDoItAll-SB01Baseline\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Standard\bin\Release\net10.0\CanDoItAll.Processes.Drivers.Standard.dll
+  CanDoItAll.Components.Git -> C:\repositories\CanDoItAll-SB01Baseline\src\UI\CanDoItAll.Components.Git\bin\Release\net10.0\CanDoItAll.Components.Git.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.Processes\bin\Release\net10.0\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Memory.Persistence -> C:\repositories\CanDoItAll-SB01Baseline\src\Memory\CanDoItAll.Memory.Persistence\bin\Release\net10.0\CanDoItAll.Memory.Persistence.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll-SB01Baseline\src\Modules\CanDoItAll.Modules.SchedulerPlanner\bin\Release\net10.0\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Email\bin\Release\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Gmail\bin\Release\net10.0\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Office365\bin\Release\net10.0\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll-SB01Baseline\src\App\CanDoItAll.Composition\bin\Release\net10.0\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll-SB01Baseline\src\Foundation\CanDoItAll.Migrations.PostgreSql\bin\Release\net10.0\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll-SB01Baseline\src\App\CanDoItAll.Web\bin\Release\net10.0\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll-SB01Baseline\tests\Support\CanDoItAll.Tests.Support\bin\Release\net10.0\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll-SB01Baseline\src\plugins\Implementations\CanDoItAll.Plugin.Docker\bin\Release\net10.0\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll-SB01Baseline\tools\App\CanDoItAll.Manager\bin\Release\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.Components.WebGlLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib\bin\Release\net10.0\CanDoItAll.Components.WebGlLib.dll
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(2,18): error CS0234: Typ nebo název oboru názvů SharedProviders neexistuje v oboru názvů CanDoItAll. (Nechybí odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRoutingModelIdTests.cs(1,18): error CS0234: Typ nebo název oboru názvů SharedProviders neexistuje v oboru názvů CanDoItAll. (Nechybí odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(491,20): error CS0246: Typ nebo název oboru názvů SharedProviderCatalogDocument se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(522,72): error CS0246: Typ nebo název oboru názvů SharedProviderCatalogDocument se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(522,20): error CS0246: Typ nebo název oboru názvů SharedProviderCatalogDocument se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(8,29): error CS0246: Typ nebo název oboru názvů SharedProviderSourceInstanceId se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(11,29): error CS0246: Typ nebo název oboru názvů SharedProviderPublicationId se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderProtocolContractTests.cs(14,29): error CS0246: Typ nebo název oboru názvů SharedProviderPublicRevision se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderRoutingModelIdTests.cs(7,29): error CS0246: Typ nebo název oboru názvů SharedProviderPublicationId se nenašel. (Nechybí direktiva using nebo odkaz na sestavení?) [C:\repositories\CanDoItAll-SB01Baseline\tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj]
+
+stderr:

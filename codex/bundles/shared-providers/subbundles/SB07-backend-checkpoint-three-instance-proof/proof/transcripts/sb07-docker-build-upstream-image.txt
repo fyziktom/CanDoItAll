@@ -1,0 +1,85 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.85kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 0.4s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+#3 resolve docker.io/docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32 0.0s done
+#3 CACHED
+
+#4 [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0.302
+#4 ...
+
+#5 [internal] load metadata for docker.io/library/busybox:1.37.0-musl
+#5 DONE 0.3s
+
+#4 [internal] load metadata for mcr.microsoft.com/dotnet/sdk:10.0.302
+#4 DONE 0.3s
+
+#6 [internal] load metadata for mcr.microsoft.com/dotnet/aspnet:10.0.10
+#6 DONE 0.4s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 164B done
+#7 DONE 0.0s
+
+#8 [runtime 1/4] FROM mcr.microsoft.com/dotnet/aspnet:10.0.10@sha256:f1126d438ccc359f51cc6d4701a8deae513856cf10f5fe645d29ea6403dcac6b
+#8 resolve mcr.microsoft.com/dotnet/aspnet:10.0.10@sha256:f1126d438ccc359f51cc6d4701a8deae513856cf10f5fe645d29ea6403dcac6b 0.0s done
+#8 DONE 0.1s
+
+#9 [build 1/6] FROM mcr.microsoft.com/dotnet/sdk:10.0.302@sha256:72dd743782f2ae7e5476fd64f6a460045e3998dc862218b80e6944cba79a01b0
+#9 resolve mcr.microsoft.com/dotnet/sdk:10.0.302@sha256:72dd743782f2ae7e5476fd64f6a460045e3998dc862218b80e6944cba79a01b0 0.0s done
+#9 DONE 0.1s
+
+#10 [build 2/6] WORKDIR /source
+#10 CACHED
+
+#11 [healthcheck 1/1] FROM docker.io/library/busybox:1.37.0-musl@sha256:fc6dddc4c44b1bfe37f41cae8e67d1693828e8f42a91862816d7953e2c9d3f23
+#11 resolve docker.io/library/busybox:1.37.0-musl@sha256:fc6dddc4c44b1bfe37f41cae8e67d1693828e8f42a91862816d7953e2c9d3f23 0.0s done
+#11 CACHED
+
+#12 [runtime 2/4] WORKDIR /app
+#12 CACHED
+
+#13 [runtime 3/4] COPY --from=healthcheck /bin/busybox /usr/local/bin/busybox
+#13 DONE 0.1s
+
+#14 [internal] load build context
+#14 transferring context: 56.87kB 0.0s done
+#14 DONE 0.1s
+
+#15 [build 3/6] COPY CanDoItAll.SharedProviders.TestUpstream.csproj ./
+#15 DONE 0.0s
+
+#16 [build 4/6] RUN --mount=type=cache,id=shared-providers-test-upstream-nuget,target=/root/.nuget/packages     dotnet restore CanDoItAll.SharedProviders.TestUpstream.csproj
+#16 1.111   Determining projects to restore...
+#16 1.677   Restored /source/CanDoItAll.SharedProviders.TestUpstream.csproj (in 107 ms).
+#16 DONE 1.7s
+
+#17 [build 5/6] COPY . ./
+#17 DONE 0.0s
+
+#18 [build 6/6] RUN --mount=type=cache,id=shared-providers-test-upstream-nuget,target=/root/.nuget/packages     dotnet publish CanDoItAll.SharedProviders.TestUpstream.csproj     --configuration Release     --output /app/publish     --no-restore     /p:UseAppHost=false
+#18 4.442   CanDoItAll.SharedProviders.TestUpstream -> /source/bin/Release/net10.0/CanDoItAll.SharedProviders.TestUpstream.dll
+#18 4.500   CanDoItAll.SharedProviders.TestUpstream -> /app/publish/
+#18 DONE 4.6s
+
+#19 [runtime 4/4] COPY --from=build --chown=app:app /app/publish ./
+#19 DONE 0.1s
+
+#20 exporting to image
+#20 exporting layers 0.1s done
+#20 exporting manifest sha256:00cde2ddb2b0ac2b04fe309226e4d0f8ad7f839ecbab471e68315cc6e40837fc 0.0s done
+#20 exporting config sha256:fcc7f2b03defaad605b78a3cc9b6df054e2e0f7ee324c0d35b52b7f50f64ba7f 0.0s done
+#20 exporting attestation manifest sha256:cf980336ec84b7f79afd647a02d93c96a06701467b8d9808ce4ab31eb69f06f6 0.0s done
+#20 exporting manifest list sha256:0c781d04896d7388b097f8c1bbd755ff01c6caf78ce715eac4f89879c7407606 0.0s done
+#20 naming to docker.io/library/candoitall-shared-providers-upstream:e46f81d5
+#20 naming to docker.io/library/candoitall-shared-providers-upstream:e46f81d5 done
+#20 unpacking to docker.io/library/candoitall-shared-providers-upstream:e46f81d5 0.1s done
+#20 DONE 0.4s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ldqnlvz863kw87b8bsfk6rd5l

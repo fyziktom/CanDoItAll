@@ -5,6 +5,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Composition.Memory;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Collaboration;
@@ -24,6 +25,7 @@ using CanDoItAll.Modules.TestLab;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Processes.Drivers.Abstractions;
+using CanDoItAll.SharedProviders.Http;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -56,6 +58,11 @@ public static class RuntimeHostServiceCollectionExtensions
 
         services.AddSecurityModule(configuration);
         services.AddWorkspaceModule();
+        services.AddSharedProviderHttpDescriptors();
+        services.AddSharedProviderRuntimeAccessContextPropagation();
+        services.TryAddSingleton<
+            IProviderHttpClientSelector,
+            SharedProviderRuntimeHttpClientSelector>();
         services.AddProjectsModule();
         services.AddCanDoItAllMemory(configuration);
         services.AddWorkbenchModule(configuration);
@@ -781,20 +788,9 @@ public sealed class AppDatabaseBootstrapper(
                 SupportsVision = false,
                 LastHealthStatus = "OpenAI active",
                 LastHealthCheckAtUtc = null,
-                ExtraSettingsJson = JsonSerializer.Serialize(new
-                {
-                    history = "service-managed",
-                    modelParameters = new
-                    {
-                        reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
-                    },
-                    apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-                    connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-                    configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-                    secretRecordId = openAiSecretId?.ToString("D"),
-                    providerTransport = nameof(ProviderTransportKind.Responses),
-                    timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
-                })
+                ExtraSettingsJson =
+                    BuildRuntimeBootstrapOpenAiProviderConfigurationJson(
+                        openAiSecretId)
             };
             dbContext.Set<CanDoItAll.Modules.Workspace.ProviderProfile>().Add(openAiProvider);
             changed = true;
@@ -933,6 +929,15 @@ public sealed class AppDatabaseBootstrapper(
             {
                 changed |= UpgradeManagedOpenAiImageProviderModel(byId);
                 changed |= UpgradeManagedLocalOllamaCapabilities(byId);
+                if (!string.Equals(
+                        byId.ExtraSettingsJson,
+                        seed.ExtraSettingsJson,
+                        StringComparison.Ordinal))
+                {
+                    byId.ExtraSettingsJson = seed.ExtraSettingsJson;
+                    changed = true;
+                }
+
                 continue;
             }
 
@@ -996,8 +1001,10 @@ public sealed class AppDatabaseBootstrapper(
                     OpenAiProviderAdapter.PluginKey,
                     openAiSecretId,
                     RuntimeBootstrapOpenAiTimeoutSeconds,
+                    CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
                     ProviderTransportKind.Responses,
                     ProviderProfilePurpose.ImageGeneration,
+                    RuntimeBootstrapOpenAiImageModel,
                     ["cloud", "image", "image-generation", "openai"],
                     isPrivateProvider: false,
                     ProviderPricingDefaults.CreateDefaultPrices(
@@ -1020,8 +1027,10 @@ public sealed class AppDatabaseBootstrapper(
                     ComfyUiProviderAdapter.PluginKey,
                     secretRecordId: null,
                     ComfyUiFluxProviderDefaults.TimeoutSeconds,
+                    CanDoItAll.AgentFramework.Models.ProviderKind.ComfyUi,
                     ProviderTransportKind.ChatCompletions,
                     ProviderProfilePurpose.ImageGeneration,
+                    ComfyUiFluxProviderDefaults.DefaultModel,
                     ["comfyui", "flux", "image", "image-generation", "local"],
                     isPrivateProvider: true,
                     ProviderPricingDefaults.CreateDefaultPrices(
@@ -1054,8 +1063,10 @@ public sealed class AppDatabaseBootstrapper(
                     OllamaProviderAdapter.PluginKey,
                     secretRecordId: null,
                     RuntimeBootstrapLocalOllamaTimeoutSeconds,
+                    CanDoItAll.AgentFramework.Models.ProviderKind.Ollama,
                     ProviderTransportKind.ChatCompletions,
                     ProviderProfilePurpose.Chat,
+                    RuntimeBootstrapLocalOllamaModel,
                     ["chat", "local", "ollama"],
                     isPrivateProvider: true,
                     ProviderPricingDefaults.CreateDefaultPrices(
@@ -1069,8 +1080,10 @@ public sealed class AppDatabaseBootstrapper(
         string connectorPluginKey,
         Guid? secretRecordId,
         int timeoutSeconds,
+        CanDoItAll.AgentFramework.Models.ProviderKind providerKind,
         ProviderTransportKind transport,
         ProviderProfilePurpose purpose,
+        string defaultModel,
         IEnumerable<string> tags,
         bool isPrivateProvider,
         IReadOnlyList<ProviderModelTokenPrice> modelPrices)
@@ -1081,8 +1094,6 @@ public sealed class AppDatabaseBootstrapper(
         configuration["configSchemaVersion"] =
             RuntimeBootstrapProviderSchemaVersion;
         configuration["timeoutSeconds"] = timeoutSeconds;
-        configuration["providerTransport"] = transport.ToString();
-        configuration["providerPurpose"] = purpose.ToString();
         if (secretRecordId.HasValue)
         {
             configuration["secretRecordId"] =
@@ -1102,10 +1113,16 @@ public sealed class AppDatabaseBootstrapper(
         }
 
         configuration["tags"] = tagArray;
-        return ProviderPricingMetadata.Write(
-            configuration.ToJsonString(),
-            isPrivateProvider,
-            modelPrices);
+        return SharedProviderProfilePublicationMetadataWriter.Write(
+            ProviderPricingMetadata.Write(
+                configuration.ToJsonString(),
+                isPrivateProvider,
+                modelPrices),
+            providerKind,
+            transport,
+            purpose,
+            defaultModel,
+            []);
     }
 
     private sealed record ManagedCatalogProviderSeed(
@@ -1323,20 +1340,9 @@ public sealed class AppDatabaseBootstrapper(
 
     private static bool UpdateRuntimeBootstrapOpenAiProviderConfigurationJson(CanDoItAll.Modules.Workspace.ProviderProfile provider)
     {
-        var expectedExtraSettingsJson = JsonSerializer.Serialize(new
-        {
-            history = "service-managed",
-            modelParameters = new
-            {
-                reasoningEffort = ManagedSeedProviderFallbacks.DefaultReasoningEffort
-            },
-            apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-            connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-            configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-            secretRecordId = provider.ApiKeySecretId?.ToString("D"),
-            providerTransport = nameof(ProviderTransportKind.Responses),
-            timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
-        });
+        var expectedExtraSettingsJson =
+            BuildRuntimeBootstrapOpenAiProviderConfigurationJson(
+                provider.ApiKeySecretId);
         if (string.Equals(provider.ExtraSettingsJson, expectedExtraSettingsJson, StringComparison.Ordinal))
         {
             return false;
@@ -1345,6 +1351,30 @@ public sealed class AppDatabaseBootstrapper(
         provider.ExtraSettingsJson = expectedExtraSettingsJson;
         return true;
     }
+
+    private static string BuildRuntimeBootstrapOpenAiProviderConfigurationJson(
+        Guid? secretRecordId)
+        => SharedProviderProfilePublicationMetadataWriter.Write(
+            JsonSerializer.Serialize(new
+            {
+                history = "service-managed",
+                modelParameters = new
+                {
+                    reasoningEffort =
+                        ManagedSeedProviderFallbacks.DefaultReasoningEffort
+                },
+                apiKeyEnvironmentVariable =
+                    RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
+                connectorPluginKey = OpenAiProviderAdapter.PluginKey,
+                configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
+                secretRecordId = secretRecordId?.ToString("D"),
+                timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
+            }),
+            CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            RuntimeBootstrapOpenAiModel,
+            []);
 
     private static bool UpdateRuntimeBootstrapOpenAiChatCompletionsProvider(CanDoItAll.Modules.Workspace.ProviderProfile provider)
     {
@@ -1443,16 +1473,22 @@ public sealed class AppDatabaseBootstrapper(
     }
 
     private static string BuildRuntimeBootstrapOpenAiChatCompletionsProviderConfigurationJson(Guid? secretRecordId)
-        => JsonSerializer.Serialize(new
-        {
-            history = "framework-managed",
-            apiKeyEnvironmentVariable = RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
-            connectorPluginKey = OpenAiProviderAdapter.PluginKey,
-            configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
-            secretRecordId = secretRecordId?.ToString("D"),
-            providerTransport = nameof(ProviderTransportKind.ChatCompletions),
-            timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
-        });
+        => SharedProviderProfilePublicationMetadataWriter.Write(
+            JsonSerializer.Serialize(new
+            {
+                history = "framework-managed",
+                apiKeyEnvironmentVariable =
+                    RuntimeBootstrapOpenAiApiKeyEnvironmentVariable,
+                connectorPluginKey = OpenAiProviderAdapter.PluginKey,
+                configSchemaVersion = RuntimeBootstrapProviderSchemaVersion,
+                secretRecordId = secretRecordId?.ToString("D"),
+                timeoutSeconds = RuntimeBootstrapOpenAiTimeoutSeconds
+            }),
+            CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            ProviderTransportKind.ChatCompletions,
+            ProviderProfilePurpose.Chat,
+            RuntimeBootstrapOpenAiModel,
+            []);
 
 }
 

@@ -7,6 +7,8 @@
 - OpenAI-compatible models, Responses, Chat Completions, streaming, function tools,
   structured output, tested vision, and images;
 - OpenAI/Ollama/ComfyUI connectors currently configurable in Workspace;
+- Azure OpenAI effective profiles configured through the OpenAI connector metadata, subject to
+  the same tested adapter/capability intersection and without an invented Azure connector;
 - source/import synchronization;
 - hybrid personal/shared providers;
 - access-context reference and usage/audit preparation;
@@ -16,9 +18,10 @@
 
 ## Conditional scope
 
-Azure OpenAI is included only if SB00 proves a current Workspace-configurable production
-connector and the implementation can add a relay adapter without distorting the bundle. An MAF
-driver alone does not justify advertising a central publication.
+Azure OpenAI is a resolved, configurable effective runtime kind carried by the production OpenAI
+connector metadata; it has no separate Workspace manifest. It may be published through the
+OpenAI-compatible adapter only after SB04 proves the Azure endpoint/auth mapping. Failure of that
+proof excludes Azure publication without blocking the OpenAI connector or inventing a fallback.
 
 Vision support is included per publication only when current local runtime and relay tests
 prove the exact content forms and size policy.
@@ -37,7 +40,8 @@ central usage owns cost.
 - arbitrary transparent HTTP proxy;
 - provider-side built-in tools;
 - provider file management;
-- audio endpoints without current production drivers;
+- shared audio endpoints in v1; current OpenAI STT/TTS drivers have no Workspace audio
+  manifest/purpose and no shared relay contract proof;
 - batch API;
 - fine-tuning/model maintenance through shared API;
 - automatic provider failover;
@@ -54,7 +58,8 @@ central usage owns cost.
 - quotas, budgets, per-tenant rate limits;
 - signed access-context tokens or lookup service;
 - public pricing policy and chargeback;
-- audio relay when production STT/TTS drivers exist;
+- audio relay publication, capability mapping, and contract proof over the existing production
+  STT/TTS drivers;
 - provider-specific advanced features behind explicit policies;
 - multi-central source priority/failover;
 - automatic background catalog refresh scheduling beyond safe manual/on-demand and simple

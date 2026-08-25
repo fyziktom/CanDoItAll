@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -46,7 +47,41 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
-        var result = await providerDiagnosticsService.TestProviderAsync(provider, cancellationToken);
+        if (IsSourceManagedProvider(provider) && !provider.IsEnabled)
+        {
+            return new ProviderHealthResult(
+                false,
+                $"The source-managed provider is unavailable ({provider.HealthStatus}).",
+                provider.SuggestedModels);
+        }
+
+        ProviderHealthResult result;
+        try
+        {
+            result = await providerDiagnosticsService.TestProviderAsync(
+                provider,
+                cancellationToken);
+        }
+        catch (Exception exception)
+            when (exception is not OperationCanceledException &&
+                IsSourceManagedProvider(provider))
+        {
+            result = new ProviderHealthResult(
+                false,
+                ProviderFailureDisclosurePolicy.SelectMessage(
+                    provider,
+                    ProviderFailureOperation.HealthCheck,
+                    exception.Message),
+                provider.SuggestedModels);
+        }
+
+        if (IsSourceManagedProvider(provider))
+        {
+            return ProviderFailureDisclosurePolicy.SanitizeHealthResult(
+                provider,
+                result);
+        }
+
         var checkedAtUtc = DateTimeOffset.UtcNow;
 
         await providerRegistry.UpdateProviderAsync(
@@ -65,7 +100,23 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
-        return await providerDiagnosticsService.RunProviderTestChatAsync(provider, request, cancellationToken);
+        EnsureProviderAvailable(provider);
+
+        try
+        {
+            return await providerDiagnosticsService.RunProviderTestChatAsync(
+                provider,
+                request,
+                cancellationToken);
+        }
+        catch (Exception exception)
+            when (exception is not OperationCanceledException &&
+                IsSourceManagedProvider(provider))
+        {
+            throw ProviderFailureDisclosurePolicy.CreateBoundaryException(
+                provider,
+                ProviderFailureOperation.RuntimeRequest);
+        }
     }
 
     public async Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(
@@ -76,6 +127,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var provider = await providerSource.GetProviderAsync(providerId, cancellationToken)
             ?? throw new InvalidOperationException("Provider profile was not found.");
 
+        EnsureProviderAvailable(provider);
+
         var result = await providerDiagnosticsService.CreateOrUpdateProviderModelAsync(provider, request, cancellationToken);
         var checkedAtUtc = DateTimeOffset.UtcNow;
 
@@ -85,6 +138,17 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             cancellationToken);
 
         return result;
+    }
+
+    private static bool IsSourceManagedProvider(ProviderProfile provider)
+        => ProviderFailureDisclosurePolicy.RequiresSanitization(provider);
+
+    private static void EnsureProviderAvailable(ProviderProfile provider)
+    {
+        if (!provider.IsEnabled)
+        {
+            throw new ProviderRuntimeProfileUnavailableException(provider.Id);
+        }
     }
 
     public async Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default)

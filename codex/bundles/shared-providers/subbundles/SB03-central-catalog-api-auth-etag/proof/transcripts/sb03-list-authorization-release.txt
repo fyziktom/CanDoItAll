@@ -1,0 +1,21 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Integration.slnx' -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderAuthorizationIntegrationTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T01:22:04.317994+00:00
+completed-utc: 2026-08-25T01:22:06.747517+00:00
+duration-seconds: 2.430
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsNativeCatalog
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.GranularCatalogReadScope_AllowsOpenAiModels
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsNativeCatalogAndBothSharedProviderPolicies
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.UmbrellaApiScope_AllowsOpenAiModels
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_NativeCatalog_ReturnsNativeUnauthorized
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MissingBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_NativeCatalog_ReturnsNativeUnauthorized
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.MalformedOrExpiredBearerToken_OpenAiModels_ReturnsOpenAiUnauthorized
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_NativeCatalog_ReturnsNativeForbidden
+    CanDoItAll.Tests.Integration.SharedProviderAuthorizationIntegrationTests.InvokeOnlyScope_OpenAiModels_ReturnsOpenAiForbidden
+
+stderr:

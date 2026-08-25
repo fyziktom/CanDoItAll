@@ -1,0 +1,13 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --filter 'FullyQualifiedName~SharedProviderArchitectureCharacterizationTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T09:31:48.211691+00:00
+completed-utc: 2026-08-25T09:32:00.313616+00:00
+duration-seconds: 12.102
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     8, Přeskočeno:     0, Celkem:     8, Doba trvání: 9 s - CanDoItAll.Tests.Unit.dll (net10.0)
+
+stderr:

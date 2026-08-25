@@ -1,0 +1,10 @@
+command: git branch --show-current
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T10:21:22.186673+00:00
+completed-utc: 2026-08-25T10:21:22.233732+00:00
+duration-seconds: 0.047
+exit-code: 0
+output:
+providers-shared
+
+stderr:

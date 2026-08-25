@@ -1,0 +1,17 @@
+command: dotnet test tests/Solutions/CanDoItAll.Tests.Integration.slnx -c Release --no-build --no-restore --list-tests --filter 'FullyQualifiedName~SharedProviderDeletionReferenceIntegrationTests' --nologo /m:1
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T05:00:24.456086+00:00
+completed-utc: 2026-08-25T05:00:26.816977+00:00
+duration-seconds: 2.361
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Integration\CanDoItAll.Tests.Integration\bin\Release\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.Workspace_delete_reports_publication_reference_and_preserves_profile
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.Workspace_delete_reports_import_reference_and_preserves_profile
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.Agent_registry_delete_reports_publication_reference_and_preserves_profile
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.Agent_registry_delete_reports_import_reference_and_preserves_profile
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.Database_restrict_remains_authoritative_for_publication_and_import_references
+    CanDoItAll.Tests.Integration.SharedProviders.SharedProviderDeletionReferenceIntegrationTests.Both_production_paths_delete_unreferenced_profiles
+
+stderr:

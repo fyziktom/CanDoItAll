@@ -1,8 +1,8 @@
 # SB06 — Shared connector, effective runtime projection, and hybrid provider use
 
-State: `LOCKED`  
-Proof tier: `Governed`  
-Depends on: `SB04, SB05`  
+State: `PASS`
+Proof tier: `Governed`
+Depends on: `SB04, SB05`
 Next on pass: `SB07`
 
 ## Objective
@@ -168,6 +168,16 @@ negative proof is backed by an artifact. On pass mark this subbundle `DONE`, unl
 
 On failure, keep downstream work locked. Do not call a missing proof a residual risk.
 
+## August 25 downstream revalidation
+
+SB07 relay repairs named SB04 wire-contract and capability/operation invalidation keys. The
+historical SB06 authority resolved to Debug assemblies, so it was retained as chronology and the
+unchanged frozen selections were listed and rerun with current Release assemblies. Materializer,
+runtime projection, and hybrid selection pass 18/18, 16/16, and 10/10 respectively. No broad,
+Playwright, multi-instance, application-image, live-provider, or paid-provider lane ran. Evidence
+is recorded in
+`proof/architecture/sb04-downstream-invalidation-release-revalidation.md`.
+
 ## Reopen triggers
 
 - Current MAF SDK cannot use the central custom endpoint without inner changes.
@@ -176,17 +186,17 @@ On failure, keep downstream work locked. Do not call a missing proof a residual 
 
 ## Execution checklist
 
-- [ ] Current branch/commit/worktree captured.
-- [ ] Mandatory skills loaded.
-- [ ] Bundle and subbundle readiness validated.
-- [ ] Dependencies are `DONE`.
-- [ ] Before architecture/reference evidence captured.
-- [ ] Scope implemented without widening.
-- [ ] Affected production projects built.
-- [ ] Test discovery recorded and nonzero.
-- [ ] Focused positive/negative tests passed.
-- [ ] Security/redaction checks passed where applicable.
-- [ ] After architecture/reference evidence captured.
-- [ ] Proof manifest completed with artifact hashes.
-- [ ] Session handoff completed.
-- [ ] Status/traceability/review updated.
+- [x] Current branch/commit/worktree captured.
+- [x] Mandatory skills loaded.
+- [x] Bundle and subbundle readiness validated.
+- [x] Dependencies are `DONE`.
+- [x] Before architecture/reference evidence captured.
+- [x] Scope implemented without widening.
+- [x] Affected production projects built.
+- [x] Test discovery recorded and nonzero.
+- [x] Focused positive/negative tests passed.
+- [x] Security/redaction checks passed where applicable.
+- [x] After architecture/reference evidence captured.
+- [x] Proof manifest completed with artifact hashes.
+- [x] Session handoff completed.
+- [x] Status/traceability/review updated.

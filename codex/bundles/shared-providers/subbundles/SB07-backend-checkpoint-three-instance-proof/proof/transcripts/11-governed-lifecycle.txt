@@ -1,0 +1,15 @@
+command: pwsh -NoProfile -File tools/SharedProviders/Run-SharedProviderE2E.ps1 -Reset
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T13:18:59.372135+00:00
+completed-utc: 2026-08-25T13:19:02.274739+00:00
+duration-seconds: 2.903
+exit-code: 1
+output:
+[shared-providers-e2e] Verifying Docker Engine and Compose.
+
+stderr:
+Exception: C:\repositories\CanDoItAll\tools\SharedProviders\Run-SharedProviderE2E.ps1:310
+Line |
+ 310 |          throw "A required native query failed with exit code $($resul …
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | A required native query failed with exit code 1.

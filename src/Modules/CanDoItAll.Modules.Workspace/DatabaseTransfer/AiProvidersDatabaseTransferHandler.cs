@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,6 +7,15 @@ namespace CanDoItAll.Modules.Workspace;
 
 public sealed class AiProvidersDatabaseTransferHandler : IDatabaseTransferHandler
 {
+    [Flags]
+    private enum SharedProviderTransferBlockReason
+    {
+        None = 0,
+        SourceContainsReferencedProfiles = 1,
+        TargetContainsReferencedProfiles = 2,
+        TargetSourceUsesTransferredSecret = 4
+    }
+
     public DatabaseTransferItemDescriptor Descriptor { get; } = new(
         "ai-providers",
         "AI providers",
@@ -23,16 +33,24 @@ public sealed class AiProvidersDatabaseTransferHandler : IDatabaseTransferHandle
             .Where(profile => profile.ApiKeySecretId.HasValue)
             .Select(profile => profile.ApiKeySecretId!.Value)
             .Distinct()
-            .CountAsync(cancellationToken);
+            .ToArrayAsync(cancellationToken);
         var targetProviders = await context.TargetDbContext.Set<ProviderProfile>()
             .CountAsync(cancellationToken);
+        var blockReason = await FindSharedProviderTransferBlockAsync(
+            context,
+            sourceSecretIds,
+            cancellationToken);
 
         return new DatabaseTransferItemPreview(
             Descriptor,
-            sourceProviders > 0,
-            $"{sourceProviders} provider profile(s) and {sourceSecretIds} referenced secret(s) are available.",
-            sourceProviders == 0 ? "The source database does not contain AI provider profiles." : null,
-            sourceProviders + sourceSecretIds,
+            sourceProviders > 0 && blockReason == SharedProviderTransferBlockReason.None,
+            $"{sourceProviders} provider profile(s) and {sourceSecretIds.Length} referenced secret(s) are available.",
+            sourceProviders == 0
+                ? "The source database does not contain AI provider profiles."
+                : blockReason == SharedProviderTransferBlockReason.None
+                    ? null
+                    : DescribeTransferBlock(blockReason),
+            sourceProviders + sourceSecretIds.Length,
             targetProviders);
     }
 
@@ -53,6 +71,14 @@ public sealed class AiProvidersDatabaseTransferHandler : IDatabaseTransferHandle
             .Select(provider => provider.ApiKeySecretId!.Value)
             .Distinct()
             .ToList();
+        var blockReason = await FindSharedProviderTransferBlockAsync(
+            context,
+            secretIds,
+            cancellationToken);
+        if (blockReason != SharedProviderTransferBlockReason.None)
+        {
+            throw new InvalidOperationException(DescribeTransferBlock(blockReason));
+        }
 
         List<SecretRecord> sourceSecrets = secretIds.Count == 0
             ? []
@@ -123,5 +149,73 @@ public sealed class AiProvidersDatabaseTransferHandler : IDatabaseTransferHandle
         targetSettings.CurrencyCode = sourceSettings.CurrencyCode;
         targetSettings.CurrencyCultureName = sourceSettings.CurrencyCultureName;
         targetSettings.UpdatedAtUtc = sourceSettings.UpdatedAtUtc;
+    }
+
+    private static async Task<SharedProviderTransferBlockReason> FindSharedProviderTransferBlockAsync(
+        DatabaseTransferContext context,
+        IReadOnlyCollection<Guid> sourceSecretIds,
+        CancellationToken cancellationToken)
+    {
+        var reason = SharedProviderTransferBlockReason.None;
+        if (await HasReferencedProviderProfilesAsync(context.SourceDbContext, cancellationToken))
+        {
+            reason |= SharedProviderTransferBlockReason.SourceContainsReferencedProfiles;
+        }
+
+        if (await HasReferencedProviderProfilesAsync(context.TargetDbContext, cancellationToken))
+        {
+            reason |= SharedProviderTransferBlockReason.TargetContainsReferencedProfiles;
+        }
+
+        if (sourceSecretIds.Count > 0 &&
+            await context.TargetDbContext.Set<SharedProviderSource>()
+                .AsNoTracking()
+                .AnyAsync(
+                    source => sourceSecretIds.Contains(source.ApiTokenSecretId),
+                    cancellationToken))
+        {
+            reason |= SharedProviderTransferBlockReason.TargetSourceUsesTransferredSecret;
+        }
+
+        return reason;
+    }
+
+    private static async Task<bool> HasReferencedProviderProfilesAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+        => await dbContext.Set<ProviderSharePublication>()
+                .AsNoTracking()
+                .AnyAsync(cancellationToken) ||
+            await dbContext.Set<SharedProviderImport>()
+                .AsNoTracking()
+                .AnyAsync(cancellationToken);
+
+    private static string DescribeTransferBlock(SharedProviderTransferBlockReason reason)
+    {
+        if (reason == SharedProviderTransferBlockReason.None)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(reason),
+                reason,
+                "A transfer block description requires at least one reason.");
+        }
+
+        var causes = new List<string>();
+        if (reason.HasFlag(SharedProviderTransferBlockReason.SourceContainsReferencedProfiles))
+        {
+            causes.Add("the source contains provider profiles referenced by shared-provider publications or imports");
+        }
+
+        if (reason.HasFlag(SharedProviderTransferBlockReason.TargetContainsReferencedProfiles))
+        {
+            causes.Add("the target contains provider profiles referenced by shared-provider publications or imports");
+        }
+
+        if (reason.HasFlag(SharedProviderTransferBlockReason.TargetSourceUsesTransferredSecret))
+        {
+            causes.Add("a target shared-provider source uses a secret that the transfer would replace");
+        }
+
+        return $"AI provider transfer is blocked because {string.Join("; ", causes)}. Transfer shared-provider state through its owning workflow first.";
     }
 }

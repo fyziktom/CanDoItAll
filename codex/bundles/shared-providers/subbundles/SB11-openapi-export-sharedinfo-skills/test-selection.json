@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "public route or OpenAPI schema surface",
+    "SharedInfo snapshot manifest or route parity",
+    "candoitall-api-shared-providers skill contract"
+  ],
+  "broadGateDecision": "Not authorized; external-contract invalidation is carried to the single SB12 gate.",
   "selections": [
     {
       "topic": "SharedProviderOpenApiIntegrationTests",

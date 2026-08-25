@@ -1,0 +1,40 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --list-tests --filter 'FullyQualifiedName~AgentVoiceTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T10:01:48.137126+00:00
+completed-utc: 2026-08-25T10:01:50.655658+00:00
+duration-seconds: 2.519
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.VoiceAccessMetadata_WriteAndRead_RoundTrips
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.VoiceAccessMetadata_Normalize_ClearsVoiceWhenVoiceModeDisabled
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.VoiceSettingsNormalizer_UsesAgentVoiceOverrideBeforeGeneralVoice
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.SpeechTextPreprocessor_RemovesFullGuidsAndAddsNotice
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.SpeechTextPreprocessor_RemovesTruncatedHexEllipsisIdsConservatively(text: "AI Tap id a845e5c9... is newest.", identifierFragment: "a845e5c9")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.SpeechTextPreprocessor_RemovesTruncatedHexEllipsisIdsConservatively(text: "Review item bf8ba85a… should be compared.", identifierFragment: "bf8ba85a")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.SpeechTextPreprocessor_DoesNotRemoveShortOrNonHexEllipsisText
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.SpeechTextPreprocessor_SuppressesNoticeWhenRequested
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.SpeechTextChunker_SplitsLongTextOnSentenceBoundaries
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.ConfirmationClassifier_ClassifiesExpectedPhrases(transcript: "yes", expectedIntent: Affirm)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.ConfirmationClassifier_ClassifiesExpectedPhrases(transcript: "ok this is good, store it", expectedIntent: Affirm)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.ConfirmationClassifier_ClassifiesExpectedPhrases(transcript: "no, do not store this", expectedIntent: Reject)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.ConfirmationClassifier_ClassifiesExpectedPhrases(transcript: "maybe change the wording", expectedIntent: Unknown)
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Transcription_BuildsExpectedRequest
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Synthesis_BuildsExpectedRequest
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Synthesis_ReturnsBrowserPlayableContentType(responseFormat: "opus", expectedContentType: "audio/ogg; codecs=opus")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Synthesis_ReturnsBrowserPlayableContentType(responseFormat: "aac", expectedContentType: "audio/aac")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Synthesis_ReturnsBrowserPlayableContentType(responseFormat: "flac", expectedContentType: "audio/flac")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Synthesis_ReturnsBrowserPlayableContentType(responseFormat: "wav", expectedContentType: "audio/wav")
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.OpenAiProviderDriver_Synthesis_WrapsPcmForBrowserPlayback
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Transcribe_RequiresConfiguredProvider
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Transcribe_UsesProviderRuntimeSpeechDriver
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Synthesize_RejectsImageGenerationProvider
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Synthesize_UsesPreparedSpeechText
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Synthesize_UnsupportedProviderCapabilityFailsExplicitly
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Synthesize_ConcurrentRuntimeRequestsReturnIndependentResults
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_SynthesizeChunks_UsesPreparedSpeechTextInOrder
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Transcribe_TranscribesOrderedAudioChunks
+    CanDoItAll.Tests.Unit.AgentFramework.AgentVoiceTests.AgentVoiceService_Transcribe_RejectsEmptyAudioChunk
+
+stderr:

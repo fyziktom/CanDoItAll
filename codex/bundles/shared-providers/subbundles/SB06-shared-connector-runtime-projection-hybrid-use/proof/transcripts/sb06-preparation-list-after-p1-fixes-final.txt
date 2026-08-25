@@ -1,0 +1,20 @@
+command: dotnet test 'tests\Solutions\CanDoItAll.Tests.Unit.slnx' --no-build --list-tests --filter 'FullyQualifiedName~AgentExecutionPreparationServiceTests' --nologo --verbosity:minimal
+working-directory: C:\repositories\CanDoItAll
+started-utc: 2026-08-25T09:06:01.562142+00:00
+completed-utc: 2026-08-25T09:06:04.140598+00:00
+duration-seconds: 2.578
+exit-code: 0
+output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Warm_acquisition_revalidates_canonical_provider_and_reuses_blueprint
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Atomic_consumer_uses_one_catalog_read_for_cold_and_warm_acquisition
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Use_time_validation_returns_typed_stale_reasons
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Unrelated_provider_update_does_not_invalidate_selected_provider_blueprint
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Deleted_selected_provider_returns_typed_configuration_change
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Catalog_revision_change_refreshes_only_after_current_data_is_loaded
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Database_profile_generation_change_refreshes_same_catalog_revision
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Revision_change_during_cold_load_discards_old_blueprint_and_retries
+    CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionPreparationServiceTests.Canonical_provider_configuration_overrides_divergent_catalog_shadow
+
+stderr:

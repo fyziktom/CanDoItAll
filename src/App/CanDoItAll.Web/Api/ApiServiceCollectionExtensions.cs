@@ -9,6 +9,7 @@ using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Processes.Projections;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
@@ -55,6 +56,10 @@ public static class ApiServiceCollectionExtensions
                 ProjectStructureHttpJsonContract.TransformOpenApiOperationAsync);
             options.AddOperationTransformer(
                 WorkflowExternalResponseOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(
+                SharedProviderCatalogOpenApiContract.TransformOperationAsync);
+            options.AddOperationTransformer(
+                SharedProviderInferenceOpenApiContract.TransformOperationAsync);
         });
         services.AddAuthorization(options =>
         {
@@ -90,6 +95,22 @@ public static class ApiServiceCollectionExtensions
                         context.User,
                         ApiAccessScopeNames.QueryMemoryProviders));
             });
+            options.AddPolicy(ApiAuthorizationPolicies.ReadSharedProviderCatalog, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.ReadSharedProviderCatalog));
+            });
+            options.AddPolicy(ApiAuthorizationPolicies.InvokeSharedProviders, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                    ApiAuthorizationPolicies.HasApiOrSpecificScope(
+                        context.User,
+                        ApiAccessScopeNames.InvokeSharedProviders));
+            });
             options.AddPolicy(ApiAuthorizationPolicies.WriteProjectStructure, policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -116,6 +137,9 @@ public static class ApiServiceCollectionExtensions
                 ApiAccessScopeNames.RespondWorkflows);
         });
         services.AddHttpContextAccessor();
+        services.TryAddScoped<AccessContextReferenceState>();
+        services.TryAddScoped<IAccessContextReferenceAccessor>(serviceProvider =>
+            serviceProvider.GetRequiredService<AccessContextReferenceState>());
         services.TryAddScoped<WorkflowExternalResponseApiActorResolver>();
         services.Replace(ServiceDescriptor.Singleton<IWorkflowEventSink, WorkflowApiEventSink>());
         services.TryAddScoped<ProcessRuntimeProjectionProjector>();
@@ -157,17 +181,13 @@ public static class ApiServiceCollectionExtensions
                     OnChallenge = context =>
                     {
                         context.HandleResponse();
-                        return WriteAuthorizationErrorAsync(
+                        return SharedProviderApiResponseWriter.WriteAuthorizationErrorAsync(
                             context.HttpContext,
-                            StatusCodes.Status401Unauthorized,
-                            "api.authorization-required",
-                            "A valid bearer token is required.");
+                            StatusCodes.Status401Unauthorized);
                     },
-                    OnForbidden = context => WriteAuthorizationErrorAsync(
+                    OnForbidden = context => SharedProviderApiResponseWriter.WriteAuthorizationErrorAsync(
                         context.HttpContext,
-                        StatusCodes.Status403Forbidden,
-                        "api.authorization-forbidden",
-                        "The bearer token does not authorize this operation.")
+                        StatusCodes.Status403Forbidden)
                 };
             });
 
@@ -221,16 +241,4 @@ public static class ApiServiceCollectionExtensions
         return services;
     }
 
-    private static Task WriteAuthorizationErrorAsync(
-        HttpContext httpContext,
-        int statusCode,
-        string code,
-        string message)
-    {
-        httpContext.Response.StatusCode = statusCode;
-        return httpContext.Response.WriteAsJsonAsync(
-            new ApiErrorResponse(
-                [new ApiErrorItem(code, message, ErrorSeverity.Error)]),
-            httpContext.RequestAborted);
-    }
 }

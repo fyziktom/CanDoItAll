@@ -4,6 +4,12 @@
   "broadGateAllowed": false,
   "playwrightAllowed": false,
   "multiInstanceAllowed": false,
+  "invalidationKeys": [
+    "catalog public projection or ETag representation",
+    "shared-provider API routes",
+    "API scope or authorization policy"
+  ],
+  "broadGateDecision": "Not authorized; Web/auth invalidation is carried to the single SB12 gate.",
   "selections": [
     {
       "topic": "SharedProviderPublicationAndCatalogTests",
