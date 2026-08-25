@@ -2,8 +2,10 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
@@ -23,8 +25,8 @@ public static class ProviderManagementServiceCollectionExtensions
         services.AddScoped<ProviderRegistry>();
         services.AddScoped<IProviderManifestCatalog>(serviceProvider =>
             serviceProvider.GetRequiredService<ProviderRegistry>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IConnectorManifestSource>(
-            serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>()));
+        services.AddScoped<IConnectorManifestSource>(
+            serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
         services.TryAddScoped<LegacyProviderRuntimeGateway>();
         services.TryAddScoped<IProviderHealthCheckService>(serviceProvider =>
             serviceProvider.GetRequiredService<LegacyProviderRuntimeGateway>());
@@ -52,6 +54,50 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             ISecretDeletionReferencePolicy,
             ProviderSecretDeletionReferencePolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IConnectorManifestSource,
+            SharedProviderConnectorManifestSource>());
+        services.TryAddScoped<SharedProviderServiceIdentityStore>();
+        services.TryAddScoped<SharedProviderPublicationStore>();
+        services.TryAddScoped<SharedProviderPublicationEligibilityPolicy>();
+        services.TryAddScoped<SharedProviderPublicationApplicationService>();
+        services.TryAddSingleton<SharedProviderCatalogCache>();
+        services.TryAddScoped<SharedProviderCatalogQueryService>();
+        services.TryAddScoped<ISharedProviderCatalogQueryService>(serviceProvider =>
+            serviceProvider.GetRequiredService<SharedProviderCatalogQueryService>());
+        services.TryAddScoped<ISharedProviderRoutingResolver>(serviceProvider =>
+            serviceProvider.GetRequiredService<SharedProviderCatalogQueryService>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            ISharedProviderPublicationCommitObserver,
+            SharedProviderCatalogPublicationCommitObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IProviderProfileCommitObserver,
+            SharedProviderCatalogProfileCommitObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            ISecretDeletionReferencePolicy,
+            SharedProviderSourceSecretDeletionReferencePolicy>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProviderProfileDeletionGuard,
+            SharedProviderProfileDeletionGuard>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<
+            IProviderDatabaseTransferGuard,
+            SharedProviderDatabaseTransferGuard>());
+        services.TryAddScoped<SharedProviderSourceService>();
+        services.TryAddScoped<SharedProviderReconciliationCoordinator>();
+        services.TryAddScoped<SharedProviderSourceSyncService>();
+        services.TryAddScoped<SharedProviderInvocationAuditService>();
+        services.TryAddScoped<SharedProviderInvocationRecoveryService>();
+        services.TryAddSingleton<SharedProviderInvocationRecoverySchedule>(_ =>
+            SharedProviderInvocationRecoverySchedule.Default);
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<
+            IHostedService,
+            SharedProviderInvocationRecoveryWorker>());
+        services.TryAddScoped<
+            ISharedProviderImageExecutionTargetResolver,
+            SharedProviderImageExecutionTargetResolver>();
+        services.TryAddScoped<
+            ISharedProviderRelayApplicationService,
+            SharedProviderRelayApplicationService>();
         services.AddScoped<IDatabaseTransferHandler, AiProvidersDatabaseTransferHandler>();
         return services;
     }

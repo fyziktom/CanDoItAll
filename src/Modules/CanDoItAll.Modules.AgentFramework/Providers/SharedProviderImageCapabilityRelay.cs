@@ -1,5 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.Logging;
 

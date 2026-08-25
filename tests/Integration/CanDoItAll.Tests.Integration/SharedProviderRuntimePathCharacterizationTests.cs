@@ -17,17 +17,17 @@ namespace CanDoItAll.Tests.Integration;
 
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 #pragma warning disable OPENAI001
 public sealed class SharedProviderRuntimePathCharacterizationTests
 {
     [Fact]
-    public async Task Workspace_openai_profile_supports_sdk_chat_responses_and_streaming_at_custom_endpoint()
+    public async Task Canonical_openai_profile_supports_sdk_chat_responses_and_streaming_at_custom_endpoint()
     {
         var mapper = CreateMapper();
         var endpoint = "https://relay.example.test/custom/v1";
-        var provider = CreateWorkspaceProvider(
+        var provider = CreatePersistedProvider(
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             AgentFrameworkProviderKind.OpenAi,
             ProviderTransportKind.Responses,
@@ -95,11 +95,11 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     }
 
     [Fact]
-    public void Workspace_azure_profile_roundtrips_through_openai_connector_metadata()
+    public void Canonical_azure_profile_roundtrips_through_openai_connector_metadata()
     {
         var mapper = CreateMapper();
         var endpoint = "https://contoso.openai.azure.com";
-        var provider = CreateWorkspaceProvider(
+        var provider = CreatePersistedProvider(
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             AgentFrameworkProviderKind.AzureOpenAi,
             ProviderTransportKind.Responses,
@@ -114,10 +114,10 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     }
 
     [Fact]
-    public void Workspace_comfyui_profile_maps_to_image_generation()
+    public void Canonical_comfyui_profile_maps_to_image_generation()
     {
         var mapper = CreateMapper();
-        var provider = CreateWorkspaceProvider(
+        var provider = CreatePersistedProvider(
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.ComfyUi,
             AgentFrameworkProviderKind.ComfyUi,
             ProviderTransportKind.ChatCompletions,
@@ -132,7 +132,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     }
 
     [Fact]
-    public void Workspace_registry_exposes_the_six_production_connector_manifests()
+    public void Provider_management_registry_exposes_the_six_production_connector_manifests()
     {
         var registry = new ProviderRegistry(
         [
@@ -162,15 +162,15 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     }
 
     [Fact]
-    public void Integrated_host_registration_replaces_the_legacy_workspace_gateway()
+    public void Integrated_host_registration_replaces_the_legacy_provider_management_gateway()
     {
         var root = FindRepositoryRoot();
         var composition = File.ReadAllText(Path.Combine(
             root,
             "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs"));
-        var workspaceRegistration = File.ReadAllText(Path.Combine(
+        var providerManagementRegistration = File.ReadAllText(Path.Combine(
             root,
-            "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs"));
+            "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs"));
         var agentFrameworkRegistration = File.ReadAllText(Path.Combine(
             root,
             "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs"));
@@ -180,9 +180,14 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
 
         Assert.True(workspaceIndex >= 0);
         Assert.True(agentFrameworkIndex > workspaceIndex);
-        Assert.Contains("TryAddScoped<IProviderRuntimeGateway>", workspaceRegistration, StringComparison.Ordinal);
+        Assert.Contains("TryAddScoped<LegacyProviderRuntimeGateway>", providerManagementRegistration, StringComparison.Ordinal);
+        Assert.Contains("services.AddScoped<AgentFrameworkProviderRuntimeGateway>();", agentFrameworkRegistration, StringComparison.Ordinal);
         Assert.Contains(
-            "AddScoped<IProviderRuntimeGateway, AgentFrameworkProviderRuntimeGateway>",
+            "services.AddScoped<IProviderHealthCheckService>(serviceProvider =>",
+            agentFrameworkRegistration,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "services.AddScoped<IProviderPromptExecutionService>(serviceProvider =>",
             agentFrameworkRegistration,
             StringComparison.Ordinal);
     }
@@ -264,14 +269,14 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         Assert.Equal(streaming, hasStreamingFlag && streamingElement.GetBoolean());
     }
 
-    private static WorkspaceProviderProfile CreateWorkspaceProvider(
+    private static PersistedProviderProfile CreatePersistedProvider(
         string connectorPluginKey,
         AgentFrameworkProviderKind kind,
         ProviderTransportKind transport,
         ProviderProfilePurpose purpose,
         string baseUrl)
     {
-        return new WorkspaceProviderProfile
+        return new PersistedProviderProfile
         {
             Id = Guid.NewGuid(),
             Name = $"{kind} profile",

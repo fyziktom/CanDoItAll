@@ -12,7 +12,7 @@
 | BR00 freeze and characterize | DONE | `subbundles/BR00-freeze-and-characterize/RESULT.md` |
 | BR01 create ProviderManagement boundary | DONE | `subbundles/BR01-create-provider-management-boundary/RESULT.md` |
 | BR02 extract canonical provider control plane | DONE | `subbundles/BR02-extract-canonical-provider-control-plane/RESULT.md` |
-| BR03 relocate shared-provider control plane | PLANNED | — |
+| BR03 relocate shared-provider control plane | DONE | `subbundles/BR03-relocate-shared-provider-control-plane/RESULT.md` |
 | BR04 unify provider runtime | PLANNED | — |
 | BR05 rewire UI/API/composition/transfer | PLANNED | — |
 | BR06 preserve persistence and clean up | PLANNED | — |

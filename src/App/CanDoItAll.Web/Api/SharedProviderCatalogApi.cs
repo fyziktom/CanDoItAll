@@ -1,6 +1,6 @@
 using System.Net.Mime;
 using System.Text;
-using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Net.Http.Headers;
 

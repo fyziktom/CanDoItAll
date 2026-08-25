@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
-using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework;

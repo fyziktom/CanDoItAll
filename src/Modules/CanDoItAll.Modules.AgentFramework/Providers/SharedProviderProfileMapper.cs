@@ -1,7 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedProviders.Abstractions;
 
 namespace CanDoItAll.Modules.AgentFramework;

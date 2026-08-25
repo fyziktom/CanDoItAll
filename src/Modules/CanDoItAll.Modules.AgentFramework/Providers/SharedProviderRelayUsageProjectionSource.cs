@@ -1,6 +1,6 @@
 using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

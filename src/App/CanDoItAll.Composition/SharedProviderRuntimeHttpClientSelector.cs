@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
-using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Http;
 
 namespace CanDoItAll.Composition;

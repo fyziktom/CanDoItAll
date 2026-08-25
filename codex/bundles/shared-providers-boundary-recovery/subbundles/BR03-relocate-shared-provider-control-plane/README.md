@@ -53,6 +53,45 @@ No table rename, drop, recreate, or data copy is allowed.
 
 ## Focused tests
 
+Proof tier: Behavioral
+
+Selected owning tests:
+
+- `SharedProviderPublicationAndCatalogTests`
+- `SharedProviderStateModelTests`
+- `SharedProviderReconciliationTests`
+- `SharedProviderRuntimeProfileMaterializerTests`
+- `SharedProviderRelayPolicyTests`
+- `ProviderCatalogProjectionFailureTests`
+- `ProviderManagementBoundaryTests`
+- `SharedProviderArchitectureCharacterizationTests`
+- `SharedProviderSourceSyncIntegrationTests`
+- `SharedProviderDeletionReferenceIntegrationTests`
+- `SharedProviderAuthorizationIntegrationTests`
+- `SharedProviderCatalogApiIntegrationTests`
+- `SharedProviderOpenAiCompatibilityIntegrationTests`
+- `SharedProviderBackendCheckpointIntegrationTests`
+- `SharedProviderRuntimeProjectionIntegrationTests`
+- `SharedProviderRuntimePathCharacterizationTests`
+
+`SharedProviderPersistenceIntegrationTests` is not executed because every test
+in the class provisions PostgreSQL through `docker compose`, while Docker is
+explicitly denied for this bundle. Physical mapping preservation is verified by
+source scans, migration-diff checks, and the non-container state-model tests.
+
+The exact filters and discovery counts are frozen after the owning sources are
+updated and before the focused runs. The impacted-test analyzer is rerun after
+implementation; healthy high-confidence additions are included before freeze.
+The broad non-container suites remain deferred to BR07.
+
+Frozen unit filter (121 discovered tests):
+
+`FullyQualifiedName~SharedProviderPublicationAndCatalogTests|FullyQualifiedName~SharedProviderStateModelTests|FullyQualifiedName~SharedProviderReconciliationTests|FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests|FullyQualifiedName~SharedProviderRelayPolicyTests|FullyQualifiedName~ProviderCatalogProjectionFailureTests|FullyQualifiedName~ProviderManagementBoundaryTests|FullyQualifiedName~SharedProviderArchitectureCharacterizationTests`
+
+Frozen integration filter (100 discovered tests):
+
+`FullyQualifiedName~SharedProviderSourceSyncIntegrationTests|FullyQualifiedName~SharedProviderDeletionReferenceIntegrationTests|FullyQualifiedName~SharedProviderAuthorizationIntegrationTests|FullyQualifiedName~SharedProviderCatalogApiIntegrationTests|FullyQualifiedName~SharedProviderOpenAiCompatibilityIntegrationTests|FullyQualifiedName~SharedProviderBackendCheckpointIntegrationTests|FullyQualifiedName~SharedProviderRuntimeProjectionIntegrationTests|FullyQualifiedName~SharedProviderRuntimePathCharacterizationTests`
+
 Move or update tests for:
 
 - publication eligibility and catalog projection

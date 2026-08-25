@@ -12,15 +12,15 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     ];
 
     [Fact]
-    public void Workspace_provider_row_is_the_canonical_persisted_master()
+    public void Provider_management_owns_the_canonical_persisted_master()
     {
-        var workspaceModels = Read("src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs");
-        var registry = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs");
+        var providerProfile = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Persistence/ProviderProfile.cs");
+        var registry = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/DatabaseProviderProfileRegistry.cs");
 
-        Assert.Contains("public sealed class ProviderProfile : IHasConcurrencyToken", workspaceModels, StringComparison.Ordinal);
-        Assert.Contains("IEntityTypeConfiguration<ProviderProfile>", workspaceModels, StringComparison.Ordinal);
-        Assert.Contains("Workspace_ProviderProfiles", workspaceModels, StringComparison.Ordinal);
-        Assert.Contains("dbContext.Set<WorkspaceProviderProfile>()", registry, StringComparison.Ordinal);
+        Assert.Contains("public sealed class ProviderProfile : IHasConcurrencyToken", providerProfile, StringComparison.Ordinal);
+        Assert.Contains("IEntityTypeConfiguration<ProviderProfile>", providerProfile, StringComparison.Ordinal);
+        Assert.Contains("Workspace_ProviderProfiles", providerProfile, StringComparison.Ordinal);
+        Assert.Contains("dbContext.Set<ProviderProfile>()", registry, StringComparison.Ordinal);
         Assert.Contains("await dbContext.SaveChangesAsync(cancellationToken)", registry, StringComparison.Ordinal);
     }
 
@@ -68,9 +68,9 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     }
 
     [Fact]
-    public void Production_workspace_connector_registration_is_explicit()
+    public void Production_provider_management_connector_registration_is_explicit()
     {
-        var registration = Read("src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs");
+        var registration = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs");
         string[] expectedAdapters =
         [
             "OpenAiProviderAdapter",
@@ -90,15 +90,15 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     }
 
     [Fact]
-    public void Azure_is_runtime_metadata_without_a_workspace_connector_manifest()
+    public void Azure_is_runtime_metadata_without_a_dedicated_connector_manifest()
     {
         var providerKinds = Read("src/MAF/Common/CanDoItAll.AgentFramework.Models/Common/Enums.cs");
-        var providerMetadata = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Providers/AgentFrameworkProviderMetadata.cs");
-        var workspaceProviders = Read("src/Modules/CanDoItAll.Modules.Workspace/Providers/ProviderExecution.cs");
+        var providerMetadata = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderMetadata.cs");
+        var providerAdapters = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/LegacyProviderAdapters.cs");
 
         Assert.Contains("AzureOpenAi", providerKinds, StringComparison.Ordinal);
         Assert.Contains("AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdapter.PluginKey", providerMetadata, StringComparison.Ordinal);
-        Assert.DoesNotContain("class AzureOpenAiProviderAdapter", workspaceProviders, StringComparison.Ordinal);
+        Assert.DoesNotContain("class AzureOpenAiProviderAdapter", providerAdapters, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -123,13 +123,12 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     }
 
     [Fact]
-    public void Workspace_to_agentframework_mapping_stays_in_the_outer_module()
+    public void Persisted_to_runtime_mapping_stays_in_provider_management()
     {
-        var mapper = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceAgentProviderProfileMapper.cs");
+        var mapper = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/PersistedProviderProfileMapper.cs");
         var mafProject = Read(InnerProviderProjects[2]);
 
-        Assert.Contains("using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile", mapper, StringComparison.Ordinal);
-        Assert.Contains("AgentFrameworkProviderProfile Map(WorkspaceProviderProfile provider)", mapper, StringComparison.Ordinal);
+        Assert.Contains("AgentFrameworkProviderProfile Map(ProviderProfile provider)", mapper, StringComparison.Ordinal);
         Assert.DoesNotContain("CanDoItAll.Modules.Workspace", mafProject, StringComparison.Ordinal);
     }
 
@@ -138,7 +137,8 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     {
         var component = Read("src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderManagementPanel.razor.cs");
 
-        Assert.Contains("WorkspaceService", component, StringComparison.Ordinal);
+        Assert.Contains("IProviderAdministrationService", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("WorkspaceService", component, StringComparison.Ordinal);
         Assert.DoesNotContain("HttpClient", component, StringComparison.Ordinal);
         Assert.DoesNotContain("AppDbContext", component, StringComparison.Ordinal);
     }

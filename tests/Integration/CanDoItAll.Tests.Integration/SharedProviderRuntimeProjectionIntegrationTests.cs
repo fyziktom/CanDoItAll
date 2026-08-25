@@ -9,6 +9,7 @@ using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedProviders.Abstractions;
