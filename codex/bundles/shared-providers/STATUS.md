@@ -29,6 +29,7 @@ Overall state: `BLOCKED_SB07_TEST_BUDGET_AUTHORITY`
 
 ## Restored trust and active blocker
 
+- Boundary recovery handoff: the corrected ProviderManagement ownership and original SB07 continuation constraints are recorded in [BOUNDARY-RECOVERY-HANDOFF.md](BOUNDARY-RECOVERY-HANDOFF.md); the existing Docker budget blocker and required authority remain unchanged.
 - Trigger: SB07 repairs changed the SB04 `OpenAI-compatible allowlist or wire contract` and
   `relay adapter/capability registry` invalidation keys by making Responses persistence explicit
   (`store` is canonicalized to `false`) and rejecting operation/model capability mismatches before
