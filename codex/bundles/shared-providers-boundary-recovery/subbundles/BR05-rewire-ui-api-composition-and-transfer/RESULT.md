@@ -54,3 +54,50 @@
 - `IProviderRuntimeAdministrationService` deliberately uses the stable MAF runtime models at the AgentFramework/ProviderManagement boundary so existing UI/API DTO behavior remains compatible; it does not reintroduce Workspace ownership.
 - The narrow Workspace provider catalog is read-only by design. Provider creation, editing, deletion, health, pricing, source state, and secrets remain exclusively in ProviderManagement/AgentFramework.
 - Persistence compatibility cleanup and residual-name removal remain BR06 work; broad guards and complete focused gates remain BR07.
+
+## Post-closure correction — 2026-08-26
+
+The live `/agents?tab=providers` editor exposed only Connection, Prices, and Runtime. The
+recovery implementation had correctly moved existing provider UI/API dependencies onto
+ProviderManagement, but BR05 did not implement the separately locked original SB08
+publication/source/import experience. Backend publication, catalog, source synchronization,
+import, relay, persistence, and authorization services existed without an AgentFramework Razor
+surface.
+
+The user-directed correction added a ProviderManagement application facade and a fourth Sharing
+tab to the authoritative provider editor. Local profiles now expose eligibility and explicit
+publish/unpublish actions; source management exposes add/edit/test/enable/disable/delete,
+catalog discovery, multi-select synchronization, and explicit failure state; imported profiles
+expose only local alias/enabled intent while source-owned fields remain read-only. The UI uses
+existing BaseLib components and never accesses EF, HTTP, secret values, or provider credentials.
+The frozen source model still requires one stored secret-record reference; the UI states that
+open remote APIs ignore that credential while JWT-enabled APIs use it as the Bearer token.
+
+Correction proof:
+
+- Component test discovery: 3 publication tests, 3 source/import tests, and 2 existing provider
+  editor regressions; actual 8, zero discovery rejected.
+- Focused component execution: PASS, 8/8.
+- Existing shared-provider publication/catalog, reconciliation, and source-URI tests: PASS, 58/58.
+- Provider boundary architecture guards: PASS, 11/11.
+- `check_provider_boundary.py --mode final`: PASS, zero violations.
+- Clean Release rebuild of `CanDoItAll.Web.csproj`: PASS, 0 warnings/errors.
+- Live access status, native catalog, OpenAI models, agent catalog/bootstrap, and provider page:
+  HTTP 200; API authorization was disabled and the empty catalog remained versioned/redacted.
+- Live standard-agent chat: `.NET Application Developer` returned the exact requested smoke-test
+  text; the durable run completed successfully with one provider-usage observation, persisted
+  messages, execution logs, and metrics.
+- Real-browser proof at 1920×1080: Sharing tab, eligibility, publish action, catalog routes, and
+  source controls rendered on port 5032. Screenshot:
+  `output/playwright/shared-provider-sharing-tab.png`.
+- Final port 5032 listener after the wording-only rebuild: `CanDoItAll.Web`, PID 21860, started
+  2026-08-26 10:52:40; `artifacts/runtime/candoitall-5032-20260826-105238.err.log` is empty and
+  `artifacts/runtime/candoitall-5032-20260826-105238.out.log` contains both `Now listening` and
+  `Application started` with no `fail:`, `crit:`, or unhandled-exception entry.
+- A second independent live-browser pass against PID 21860 confirmed the Sharing tab, local
+  publication state, source controls, and the open-API/JWT credential guidance. The successful
+  chat workspace and durable execution evidence remained readable after this final restart.
+
+This correction does not claim completion of original SB08/SB09, does not reopen the separately
+authorized original SB07 Docker proof, and did not publish or modify an existing provider during
+live verification.

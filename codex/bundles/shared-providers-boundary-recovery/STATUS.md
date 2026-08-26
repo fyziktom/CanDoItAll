@@ -6,6 +6,7 @@
 - Audited HEAD: `fdf1ff9702c376ad0ffd101a34d6bf542c9857d2`
 - State: `DONE`
 - Docker authorization: `DENIED_FOR_THIS_BUNDLE`
+- Post-closure correction: `2026-08-26 provider-sharing UI integration repaired and revalidated; see BR05 result`
 
 | Subbundle | State | Result |
 |---|---|---|

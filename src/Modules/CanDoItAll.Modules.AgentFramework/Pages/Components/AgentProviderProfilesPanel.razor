@@ -79,6 +79,8 @@
                           AriaLabel="Provider editor tabs"
                           data-testid="provider-editor-tabs">
                         <TabsItem Text="Connection" Icon="plug" data-testid="provider-editor-tab-connection">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
                             <div class="agent-provider-connection-tab">
                                 <FormSection Title="Identity" Description="Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2" ColumnsXl="4">
@@ -160,16 +162,22 @@
                                            InputTestId="providers-tags-input" />
                                 </FormSection>
                             </div>
+                            </fieldset>
                         </TabsItem>
                         <TabsItem Text="Prices" Icon="paid" data-testid="provider-editor-tab-prices">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
                             <div class="agent-provider-prices-tab">
                                 <ProviderModelPricingEditor Model="providerModel"
                                                             PricingKind="@providerModel.Kind"
                                                             DefaultModel="@providerModel.DefaultModel"
                                                             OnRefreshPrices="RefreshProviderModelPricesAsync" />
                             </div>
+                            </fieldset>
                         </TabsItem>
                         <TabsItem Text="Runtime" Icon="tune" data-testid="provider-editor-tab-runtime">
+                            <fieldset disabled="@SelectedProviderIsSourceManaged"
+                                      class="agent-provider-readonly-fields">
                             <div class="agent-provider-runtime-tab">
                                 <FormSection Title="Runtime behavior" Description="Keep transport and advertised runtime capabilities explicit.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
@@ -218,6 +226,12 @@
                                     </Grid>
                                 </FormSection>
                             </div>
+                            </fieldset>
+                        </TabsItem>
+                        <TabsItem Text="Sharing" Icon="share" data-testid="provider-editor-tab-sharing">
+                            <SharedProviderManagementPanel ProviderProfileId="providerModel.Id"
+                                                           Secrets="secrets"
+                                                           ProvidersChanged="RefreshProvidersAfterSharedChangeAsync" />
                         </TabsItem>
                     </Tabs>
                 </div>
@@ -225,20 +239,23 @@
                 <StickyActionFooter StatusLabel="Provider profiles">
                     <SecondaryActions>
                         <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
-                        @if (providerModel.Id.HasValue)
+                        @if (providerModel.Id.HasValue && !SelectedProviderIsSourceManaged)
                         {
                             <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@isBusy" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
                         }
                     </SecondaryActions>
                     <PrimaryActions>
-                        <Button Text="Save provider"
-                                Type="submit"
-                                Disabled="@isBusy"
-                                IsBusy="@isBusy"
-                                data-testid="providers-save" />
+                        @if (!SelectedProviderIsSourceManaged)
+                        {
+                            <Button Text="Save provider"
+                                    Type="submit"
+                                    Disabled="@isBusy"
+                                    IsBusy="@isBusy"
+                                    data-testid="providers-save" />
+                        }
                     </PrimaryActions>
                     <DangerActions>
-                        @if (providerModel.Id.HasValue)
+                        @if (providerModel.Id.HasValue && !SelectedProviderIsSourceManaged)
                         {
                             <Button Text="Delete"
                                     ButtonStyle="ButtonStyle.Danger"

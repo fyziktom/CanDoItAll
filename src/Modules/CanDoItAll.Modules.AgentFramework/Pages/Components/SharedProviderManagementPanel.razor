@@ -1,0 +1,314 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.AgentFramework.ProviderManagement
+@using CanDoItAll.Modules.Security
+@using CanDoItAll.SharedProviders.Abstractions
+
+<div class="shared-provider-management" data-testid="shared-provider-management">
+    @if (isLoading)
+    {
+        <EmptyState Eyebrow="Loading"
+                    Title="Loading sharing state"
+                    Description="Reading publication, source, and import state." />
+    }
+    else if (!ProviderProfileId.HasValue)
+    {
+        <EmptyState Eyebrow="Save required"
+                    Title="Save this provider before sharing it"
+                    Description="A stable provider identity is required before a public publication can be created." />
+    }
+    else if (profileState is null)
+    {
+        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined">
+            Sharing state is unavailable. Refresh the provider editor and try again.
+        </Alert>
+    }
+    else
+    {
+        @if (profileState.Ownership == SharedProviderProfileOwnership.Local)
+        {
+            <SharedProviderLocalPublicationContent State="profileState"
+                                                   IsBusy="isBusy"
+                                                   Publish="PublishAsync"
+                                                   Unpublish="OpenUnpublishConfirmation" />
+        }
+        else if (profileState.Ownership == SharedProviderProfileOwnership.Imported)
+        {
+            <SharedProviderImportedProfileContent Import="profileState.Import!"
+                                                  IsBusy="isBusy"
+                                                  Save="SaveImportedProfileAsync"
+                                                  Retire="OpenRetireConfirmation" />
+        }
+        else
+        {
+            <EmptyState Eyebrow="Runtime provider"
+                        Title="This provider is not persisted"
+                        Description="Seeded runtime-only providers cannot be published. Create a saved provider profile first." />
+        }
+
+        <FormSection Title="Shared provider sources"
+                     Description="Connect another CanDoItAll instance, inspect its published catalog, and select providers to import.">
+            <Stack GapScale="LayoutGap.Medium">
+                <Split Breakpoint="LayoutBreakpoint.None"
+                       Gap="LayoutGap.Small"
+                       AlignItems="AlignItems.Center"
+                       JustifyContent="JustifyContent.SpaceBetween"
+                       Wrap="FlexWrap.Wrap">
+                    <Cluster Gap="LayoutGap.Small">
+                        <StatusBadge Tone="info" Text="@($"{sources.Count} source(s)")" />
+                        <StatusBadge Tone="neutral" Text="@($"{sources.Sum(source => source.Imports.Count)} import(s)")" />
+                    </Cluster>
+                    <Cluster Gap="LayoutGap.Small">
+                        <Button Text="Add source"
+                                Icon="add_link"
+                                Size="ButtonSize.Small"
+                                Click="OpenNewSourceDialog"
+                                data-testid="shared-provider-source-add" />
+                        <Button Text="Refresh"
+                                Icon="refresh"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Disabled="@isBusy"
+                                Click="LoadAsync"
+                                data-testid="shared-provider-source-refresh" />
+                    </Cluster>
+                </Split>
+
+                @if (sources.Count == 0)
+                {
+                    <EmptyState Eyebrow="No sources"
+                                Title="No remote CanDoItAll instances are connected"
+                                Description="Add a source using the other instance's base URL and a stored source credential. Open APIs ignore it; JWT-enabled APIs use it as a Bearer token." />
+                }
+                else
+                {
+                    <div class="shared-provider-source-list" data-testid="shared-provider-source-list">
+                        @foreach (var source in sources)
+                        {
+                            <SurfaceCard Soft="true" data-testid="shared-provider-source-card">
+                                <Stack GapScale="LayoutGap.Small">
+                                    <Split Breakpoint="LayoutBreakpoint.None"
+                                           Gap="LayoutGap.Small"
+                                           AlignItems="AlignItems.Start"
+                                           JustifyContent="JustifyContent.SpaceBetween"
+                                           Wrap="FlexWrap.Wrap">
+                                        <div class="min-w-0">
+                                            <p class="font-semibold">@source.Source.Name</p>
+                                            <p class="cda-body-muted break-all">@source.Source.BaseUri.AbsoluteUri</p>
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Tiny">
+                                            <StatusBadge Tone="@ResolveSourceTone(source.Source.Status)"
+                                                         Text="@FormatStatus(source.Source.Status)" />
+                                            <StatusBadge Tone="@(source.Source.IsEnabled ? "success" : "neutral")"
+                                                         Text="@(source.Source.IsEnabled ? "Enabled" : "Disabled")" />
+                                            <StatusBadge Tone="info" Text="@($"{source.Imports.Count} import(s)")" />
+                                        </Cluster>
+                                    </Split>
+
+                                    @if (!string.IsNullOrWhiteSpace(source.Source.LastStatusMessage))
+                                    {
+                                        <p class="shared-provider-status-note">@source.Source.LastStatusMessage</p>
+                                    }
+
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <Button Text="Edit"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => OpenEditSourceDialog(source.Source))" />
+                                        <Button Text="Test"
+                                                ButtonStyle="ButtonStyle.Info"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isBusy"
+                                                Click="@(() => TestSourceAsync(source.Source.Id))"
+                                                data-testid="shared-provider-source-test" />
+                                        <Button Text="Discover and import"
+                                                Icon="travel_explore"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@(isBusy || !source.Source.IsEnabled)"
+                                                Click="@(() => DiscoverSourceAsync(source))"
+                                                data-testid="shared-provider-source-discover" />
+                                        @if (source.Imports.Count > 0)
+                                        {
+                                            <Button Text="Sync selected"
+                                                    Icon="sync"
+                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@(isBusy || !source.Source.IsEnabled)"
+                                                    Click="@(() => SynchronizeExistingAsync(source))"
+                                                    data-testid="shared-provider-source-sync" />
+                                        }
+                                        <Button Text="@(source.Source.IsEnabled ? "Disable" : "Enable")"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Disabled="@isBusy"
+                                                Click="@(() => ToggleSourceAsync(source.Source))" />
+                                        @if (source.Imports.Count == 0)
+                                        {
+                                            <Button Text="Delete"
+                                                    ButtonStyle="ButtonStyle.Danger"
+                                                    Size="ButtonSize.Small"
+                                                    Disabled="@isBusy"
+                                                    Click="@(() => DeleteSourceAsync(source.Source))" />
+                                        }
+                                    </Cluster>
+                                </Stack>
+                            </SurfaceCard>
+                        }
+                    </div>
+                }
+
+                <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                    Catalog and inference access follow the remote instance's API Access settings. The source model always references a stored credential; open APIs ignore it and JWT-enabled APIs use it as a Bearer token. Upstream provider credentials never leave the publishing instance.
+                </Alert>
+            </Stack>
+        </FormSection>
+    }
+</div>
+
+<Dialog IsOpen="@sourceDialogOpen"
+        Title="@(sourceEditor.Id.HasValue ? "Edit shared provider source" : "Add shared provider source")"
+        Eyebrow="Shared providers"
+        Subtitle="Use the base URL of another CanDoItAll instance."
+        Size="ModalSize.Medium"
+        OnClose="CloseSourceDialog"
+        TestId="shared-provider-source-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <div>
+                <label class="cda-field-label">Source name</label>
+                <InputText @bind-Value="sourceEditor.Name"
+                           class="cda-input"
+                           data-testid="shared-provider-source-name" />
+            </div>
+            <div>
+                <label class="cda-field-label">CanDoItAll base URL</label>
+                <InputText @bind-Value="sourceEditor.BaseUri"
+                           class="cda-input"
+                           placeholder="https://candoitall.example.net/"
+                           data-testid="shared-provider-source-uri" />
+                <p class="cda-body-muted mt-1">Use the instance root; catalog and OpenAI-compatible paths are resolved automatically.</p>
+            </div>
+            <div>
+                <label class="cda-field-label">Source credential secret</label>
+                <InputSelect @bind-Value="sourceEditor.ApiTokenSecretId"
+                             class="cda-input"
+                             data-testid="shared-provider-source-secret">
+                    <option value="@Guid.Empty">Select a stored token</option>
+                    @foreach (var secret in Secrets)
+                    {
+                        <option value="@secret.Id">@secret.Name</option>
+                    }
+                </InputSelect>
+                <p class="cda-body-muted mt-1">Create the credential in Settings → Secrets first. For an open API it can be a dedicated placeholder; JWT-enabled APIs require the actual token. Secret values are never rendered here.</p>
+            </div>
+            <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                <label class="cda-inline-option">
+                    <InputCheckbox @bind-Value="sourceEditor.IsEnabled" />
+                    Enabled
+                </label>
+                <label class="cda-inline-option">
+                    <InputCheckbox @bind-Value="sourceEditor.AllowInsecurePrivateNetwork" />
+                    Allow HTTP on a private network
+                </label>
+            </Grid>
+            @if (!string.IsNullOrWhiteSpace(sourceDialogError))
+            {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                    @sourceDialogError
+                </Alert>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+            <Button Text="Cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="CloseSourceDialog" />
+            <Button Text="Save source"
+                    Disabled="@isBusy"
+                    IsBusy="@isBusy"
+                    Click="SaveSourceAsync"
+                    data-testid="shared-provider-source-save" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+<Dialog IsOpen="@catalogDialogOpen"
+        Title="Published providers"
+        Eyebrow="Shared provider catalog"
+        Subtitle="@catalogDialogSubtitle"
+        Size="ModalSize.Wide"
+        OnClose="CloseCatalogDialog"
+        TestId="shared-provider-catalog-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            @if (catalogPublications.Count == 0)
+            {
+                <EmptyState Eyebrow="Empty catalog"
+                            Title="This instance has no published providers"
+                            Description="Publish an eligible local provider on the remote instance, then refresh discovery." />
+            }
+            else
+            {
+                <Split Breakpoint="LayoutBreakpoint.None"
+                       Gap="LayoutGap.Small"
+                       JustifyContent="JustifyContent.SpaceBetween"
+                       Wrap="FlexWrap.Wrap">
+                    <p class="cda-body-muted">Select the remote providers that should be available in this instance.</p>
+                    <StatusBadge Tone="info" Text="@($"{selectedPublicationIds.Count} selected")" />
+                </Split>
+                <div class="shared-provider-catalog-list" data-testid="shared-provider-catalog-list">
+                    @foreach (var publication in catalogPublications)
+                    {
+                        <label class="shared-provider-catalog-item">
+                            <input type="checkbox"
+                                   checked="@selectedPublicationIds.Contains(publication.PublicationId)"
+                                   @onchange="@(args => SetPublicationSelected(publication.PublicationId, args))"
+                                   data-testid="shared-provider-catalog-selection" />
+                            <span class="min-w-0">
+                                <strong>@publication.DisplayName</strong>
+                                <span>@FormatStatus(publication.Purpose) · @FormatStatus(publication.Transport) · @publication.Models.Count model(s)</span>
+                                <small>@string.Join(", ", publication.Models.SelectMany(model => model.Capabilities).Distinct())</small>
+                            </span>
+                            <StatusBadge Tone="@ResolveHealthTone(publication.Health.State)"
+                                         Text="@FormatStatus(publication.Health.State)" />
+                        </label>
+                    }
+                </div>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+            <Button Text="Cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="CloseCatalogDialog" />
+            <Button Text="Apply selection"
+                    Disabled="@(isBusy || catalogSourceId == Guid.Empty)"
+                    IsBusy="@isBusy"
+                    Click="ApplyCatalogSelectionAsync"
+                    data-testid="shared-provider-catalog-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+<Dialog IsOpen="@confirmationDialogOpen"
+        Title="@confirmationTitle"
+        Eyebrow="Confirm change"
+        Subtitle="@confirmationMessage"
+        Size="ModalSize.Compact"
+        OnClose="CloseConfirmationDialog"
+        TestId="shared-provider-confirmation-dialog">
+    <Footer>
+        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+            <Button Text="Cancel"
+                    ButtonStyle="ButtonStyle.Light"
+                    Click="CloseConfirmationDialog" />
+            <Button Text="@confirmationActionText"
+                    ButtonStyle="ButtonStyle.Danger"
+                    Disabled="@isBusy"
+                    IsBusy="@isBusy"
+                    Click="ConfirmDestructiveActionAsync"
+                    data-testid="shared-provider-confirmation-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>

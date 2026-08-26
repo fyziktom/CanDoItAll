@@ -1,0 +1,105 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Modules.AgentFramework.ProviderManagement
+
+<FormSection Title="Imported shared provider"
+             Description="Only the local alias and local enabled intent are editable. Remote-owned routing and capability fields follow the source catalog.">
+    <Stack GapScale="LayoutGap.Medium">
+        <Cluster Gap="LayoutGap.Small">
+            <StatusBadge Tone="info" Text="Shared" />
+            <StatusBadge Tone="@ResolveAvailabilityTone(Import.AvailabilityState)"
+                         Text="@FormatStatus(Import.AvailabilityState)"
+                         data-testid="shared-provider-import-availability" />
+            <StatusBadge Tone="@(Import.SelectionState == SharedProviderSelectionState.Selected ? "success" : "neutral")"
+                         Text="@FormatStatus(Import.SelectionState)" />
+        </Cluster>
+
+        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+            <div>
+                <label class="cda-field-label">Local alias</label>
+                <InputText @bind-Value="editModel.LocalAlias"
+                           class="cda-input"
+                           data-testid="shared-provider-import-alias" />
+            </div>
+            <label class="cda-inline-option self-end">
+                <InputCheckbox @bind-Value="editModel.IsEnabled" />
+                Enabled locally
+            </label>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+            <ReadOnlyFact Label="Source" Value="@Import.SourceName" />
+            <ReadOnlyFact Label="Remote display name" Value="@Import.RemoteDisplayName" />
+            <ReadOnlyFact Label="Purpose" Value="@FormatStatus(Import.Purpose)" />
+            <ReadOnlyFact Label="Transport" Value="@FormatStatus(Import.Transport)" />
+            <ReadOnlyFact Label="Default routing model" Value="@Import.DefaultModelId.Value" Monospace="true" />
+            <ReadOnlyFact Label="Published models" Value="@Import.Models.Count.ToString()" />
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Save local settings"
+                    Disabled="@IsBusy"
+                    IsBusy="@IsBusy"
+                    Click="SaveAsync"
+                    data-testid="shared-provider-import-save" />
+            @if (Import.SelectionState == SharedProviderSelectionState.Selected)
+            {
+                <Button Text="Retire import"
+                        ButtonStyle="ButtonStyle.Danger"
+                        Disabled="@IsBusy"
+                        Click="Retire"
+                        data-testid="shared-provider-import-retire" />
+            }
+        </Cluster>
+    </Stack>
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public required SharedProviderImportedProfileSnapshot Import { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback<SharedProviderImportedProfileEditModel> Save { get; set; }
+
+    [Parameter]
+    public EventCallback Retire { get; set; }
+
+    private SharedProviderImportedProfileEditModel editModel = new();
+    private Guid loadedImportId;
+
+    protected override void OnParametersSet()
+    {
+        if (loadedImportId == Import.ImportId)
+        {
+            return;
+        }
+
+        loadedImportId = Import.ImportId;
+        editModel = new SharedProviderImportedProfileEditModel
+        {
+            LocalAlias = Import.LocalAlias,
+            IsEnabled = Import.IsEnabled
+        };
+    }
+
+    private Task SaveAsync()
+        => Save.InvokeAsync(editModel);
+
+    private static string ResolveAvailabilityTone(SharedProviderAvailabilityState state) => state switch
+    {
+        SharedProviderAvailabilityState.Available => "success",
+        SharedProviderAvailabilityState.SourceOffline => "warning",
+        _ => "danger"
+    };
+
+    private static string FormatStatus<T>(T value) where T : struct, Enum
+    {
+        var text = value.ToString();
+        return string.Concat(text.Select((character, index) =>
+            index > 0 && char.IsUpper(character)
+                ? $" {char.ToLowerInvariant(character)}"
+                : char.ToLowerInvariant(character).ToString()));
+    }
+}

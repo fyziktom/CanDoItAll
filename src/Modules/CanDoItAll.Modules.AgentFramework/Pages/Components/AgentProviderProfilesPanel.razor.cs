@@ -9,6 +9,7 @@ namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
 using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using ProviderConnectorFieldKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorFieldKeys;
+using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys;
 using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 using ProviderPricingRefreshResult = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderModelPricingRefreshResult;
 
@@ -56,6 +57,14 @@ public partial class AgentProviderProfilesPanel
             ProviderMetadata.CreateSecretReference(secret.Id),
             providerModel.ApiKeyEnvironmentVariable,
             StringComparison.OrdinalIgnoreCase));
+
+    private bool SelectedProviderIsSourceManaged => providerModel.Id.HasValue &&
+        providers.Any(provider =>
+            provider.Id == providerModel.Id.Value &&
+            string.Equals(
+                provider.ConnectorPluginKey,
+                ProviderConnectorKeys.SharedImport,
+                StringComparison.Ordinal));
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,6 +128,18 @@ public partial class AgentProviderProfilesPanel
     {
         providerModel = await ProviderRuntimeAdministrationService.GetProviderEditorAsync(providerId);
         SyncProviderEditorText();
+    }
+
+    private async Task RefreshProvidersAfterSharedChangeAsync()
+    {
+        var selectedProviderId = providerModel.Id;
+        providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
+        RefreshProviderTreeExpansionDefaults();
+        if (selectedProviderId.HasValue &&
+            providers.Any(provider => provider.Id == selectedProviderId.Value))
+        {
+            await EditProviderAsync(selectedProviderId.Value);
+        }
     }
 
     private async Task SaveProviderAsync()

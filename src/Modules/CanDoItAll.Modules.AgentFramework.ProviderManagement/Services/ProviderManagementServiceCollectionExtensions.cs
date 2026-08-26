@@ -83,6 +83,7 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddScoped<SharedProviderSourceService>();
         services.TryAddScoped<SharedProviderReconciliationCoordinator>();
         services.TryAddScoped<SharedProviderSourceSyncService>();
+        services.TryAddScoped<ISharedProviderManagementService, SharedProviderManagementService>();
         services.TryAddScoped<SharedProviderInvocationAuditService>();
         services.TryAddScoped<SharedProviderInvocationRecoveryService>();
         services.TryAddSingleton<SharedProviderInvocationRecoverySchedule>(_ =>

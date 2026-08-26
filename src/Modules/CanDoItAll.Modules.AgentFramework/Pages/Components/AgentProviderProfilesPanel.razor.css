@@ -10,7 +10,7 @@
 
     .agent-provider-editor-tabs-shell ::deep .cad-tabs__list {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.5rem;
         align-items: stretch;
         padding-block-end: 0.5rem;
@@ -50,4 +50,11 @@
     .agent-provider-runtime-tab ::deep textarea[data-testid="providers-notes"] {
         min-height: 20rem;
     }
+}
+
+.agent-provider-readonly-fields {
+    border: 0;
+    margin: 0;
+    min-width: 0;
+    padding: 0;
 }
