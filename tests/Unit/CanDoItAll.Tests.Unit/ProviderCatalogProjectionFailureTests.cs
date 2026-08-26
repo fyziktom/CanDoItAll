@@ -71,8 +71,8 @@ public sealed class ProviderCatalogProjectionFailureTests
                 $"provider-catalog-projection-{Guid.NewGuid():N}")
             .Options;
         var dbContextFactory = new TestDbContextFactory(options);
-        var providerRegistry = new ProviderRegistry(
-            [new ScenarioHarnessProviderAdapter()]);
+        var providerRegistry = new ProviderAdministrationConnectorCatalog(
+            [new ScenarioHarnessProviderAdministrationConnector()]);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
         var providerMapper = new ProviderProfileMapper(
@@ -105,8 +105,8 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Id = providerId,
                 Name = "Canonical scenario provider",
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
-                DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
+                DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
                 Transport = ProviderTransportKind.Responses,
                 IsEnabled = true,
                 SupportsStreaming = true,
@@ -176,7 +176,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Azure deployment provider",
                 Kind = AgentFrameworkProviderKind.AzureOpenAi,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "reasoning-deployment",
                 Transport = ProviderTransportKind.ChatCompletions,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -230,7 +230,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     public async Task Provider_save_round_trips_ollama_suggested_models_through_database_mapping()
     {
         var registry = CreateRegistry(
-            new OllamaProviderAdapter(new UnexpectedHttpClientFactory()));
+            new OllamaProviderAdministrationConnector(new UnexpectedHttpClientFactory()));
         var providerId = await registry.SaveProviderAsync(
             new AgentFrameworkProviderProfileEditorModel
             {
@@ -280,7 +280,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Local model provider",
                 Kind = AgentFrameworkProviderKind.Ollama,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "qwen3.5:2b",
                 Transport = ProviderTransportKind.ChatCompletions,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -333,8 +333,8 @@ public sealed class ProviderCatalogProjectionFailureTests
         var secretRecordId = Guid.NewGuid();
         var registry = await CreateRegistryWithSecretsAsync(
             [secretRecordId],
-            new ScenarioHarnessProviderAdapter(),
-            new OpenAiProviderAdapter(
+            new ScenarioHarnessProviderAdministrationConnector(),
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var discoveredCapability = AgentThinkingEffortPolicy.CreateDiscoveredCapability(
             "qwen3.5:2b",
@@ -345,7 +345,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Changing provider identity",
                 Kind = AgentFrameworkProviderKind.Ollama,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "qwen3.5:2b",
                 Transport = ProviderTransportKind.ChatCompletions,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -388,7 +388,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             {
                 Name = "Stored provider",
                 Kind = AgentFrameworkProviderKind.AzureOpenAi,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = "reasoning-deployment",
                 Transport = ProviderTransportKind.Responses,
                 Purpose = ProviderProfilePurpose.Chat,
@@ -418,7 +418,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     public async Task Provider_save_rejects_non_http_url_for_real_connector_without_database_mutation()
     {
         var registry = CreateRegistry(
-            new OpenAiProviderAdapter(
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var editor = new AgentFrameworkProviderProfileEditorModel
         {
@@ -454,7 +454,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         var replacementSecretRecordId = Guid.NewGuid();
         var registry = await CreateRegistryWithSecretsAsync(
             [secretRecordId, replacementSecretRecordId],
-            new OpenAiProviderAdapter(
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var editor = new AgentFrameworkProviderProfileEditorModel
         {
@@ -542,7 +542,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         var secretRecordId = Guid.NewGuid();
         var registry = await CreateRegistryWithSecretsAsync(
             [secretRecordId],
-            new OpenAiProviderAdapter(
+            new OpenAiProviderAdministrationConnector(
                 new UnexpectedHttpClientFactory()));
         var editor = new AgentFrameworkProviderProfileEditorModel
         {
@@ -575,15 +575,15 @@ public sealed class ProviderCatalogProjectionFailureTests
         var secretRecordId = Guid.NewGuid();
         var registry = await CreateRegistryWithSecretsAsync(
             [secretRecordId],
-            new ScenarioHarnessProviderAdapter());
+            new ScenarioHarnessProviderAdministrationConnector());
         var providerId = await registry.SaveProviderAsync(
             new AgentFrameworkProviderProfileEditorModel
             {
                 Name = "Optional scenario secret",
                 Kind = AgentFrameworkProviderKind.OpenAi,
-                BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
+                BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 ApiKeyEnvironmentVariable = $"secret:{secretRecordId:D}",
-                DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+                DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
                 Transport = ProviderTransportKind.Responses,
                 Purpose = ProviderProfilePurpose.Chat,
                 ConfigurationJson = "{}"
@@ -614,8 +614,8 @@ public sealed class ProviderCatalogProjectionFailureTests
                 $"provider-catalog-stale-projection-{Guid.NewGuid():N}")
             .Options;
         var dbContextFactory = new TestDbContextFactory(options);
-        var providerRegistry = new ProviderRegistry(
-            [new ScenarioHarnessProviderAdapter()]);
+        var providerRegistry = new ProviderAdministrationConnectorCatalog(
+            [new ScenarioHarnessProviderAdministrationConnector()]);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
         var providerMapper = new ProviderProfileMapper(
@@ -643,8 +643,8 @@ public sealed class ProviderCatalogProjectionFailureTests
         {
             Id = providerId,
             Name = "Stale projected provider",
-            BaseUrl = ScenarioHarnessProviderAdapter.BaseUrl,
-            DefaultModel = ScenarioHarnessProviderAdapter.DefaultModel,
+            BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
+            DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
             Transport = ProviderTransportKind.Responses,
             IsEnabled = true,
             SupportsStreaming = true,
@@ -678,11 +678,11 @@ public sealed class ProviderCatalogProjectionFailureTests
     private static DatabaseProviderProfileRegistry
         CreateScenarioRegistry()
     {
-        return CreateRegistry(new ScenarioHarnessProviderAdapter());
+        return CreateRegistry(new ScenarioHarnessProviderAdministrationConnector());
     }
 
     private static DatabaseProviderProfileRegistry CreateRegistry(
-        params IProviderAdapter[] providerAdapters)
+        params IProviderAdministrationConnector[] providerAdapters)
     {
         return CreateRegistryFixture(providerAdapters).Registry;
     }
@@ -690,7 +690,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     private static async Task<DatabaseProviderProfileRegistry>
         CreateRegistryWithSecretsAsync(
         IReadOnlyCollection<Guid> secretRecordIds,
-        params IProviderAdapter[] providerAdapters)
+        params IProviderAdministrationConnector[] providerAdapters)
     {
         var fixture = CreateRegistryFixture(providerAdapters);
         await using var dbContext =
@@ -709,7 +709,7 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private static RegistryFixture CreateRegistryFixture(
-        params IProviderAdapter[] providerAdapters)
+        params IProviderAdministrationConnector[] providerAdapters)
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
@@ -720,7 +720,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             .UseInMemoryDatabase(
                 $"provider-thinking-capability-{Guid.NewGuid():N}")
             .Options;
-        var providerRegistry = new ProviderRegistry(providerAdapters);
+        var providerRegistry = new ProviderAdministrationConnectorCatalog(providerAdapters);
         IProviderProfileService providerProfileService =
             new ProviderProfileService();
         var dbContextFactory = new TestDbContextFactory(options);

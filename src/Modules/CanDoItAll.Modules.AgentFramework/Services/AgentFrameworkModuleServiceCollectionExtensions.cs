@@ -338,6 +338,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
         services.AddScoped<IProviderPromptExecutionService>(serviceProvider =>
             serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
+        services.AddScoped<IProviderInferenceRelayRuntime>(serviceProvider =>
+            serviceProvider.GetRequiredService<AgentFrameworkProviderRuntimeGateway>());
         services.AddScoped<IAiTechnicalAgentBridge, AgentFrameworkAiTechnicalAgentBridge>();
         services.TryAddScoped<IPluginStorageGateway, PluginStorageGateway>();
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();

@@ -12,11 +12,13 @@ namespace CanDoItAll.AgentFramework.Providers;
 public sealed class OpenAiProviderDriver(
     HttpClient httpClient,
     IProviderDriverCredentialResolver credentialResolver,
-    IProviderHttpClientSelector? httpClientSelector = null) :
+    IProviderHttpClientSelector? httpClientSelector = null,
+    IProviderInferenceRelayTransport? inferenceRelayTransport = null) :
     IProviderHealthDriver,
     IProviderModelCatalogDriver,
     IProviderChatCompletionDriver,
     IProviderStreamingChatCompletionDriver,
+    IProviderInferenceRelayDriver,
     IProviderImageGenerationDriver,
     IProviderSpeechToTextDriver,
     IProviderTextToSpeechDriver
@@ -227,6 +229,56 @@ public sealed class OpenAiProviderDriver(
         {
             CachedInputTokens = ProviderDriverProtocol.ReadChatCompletionsCachedTokens(usage)
         };
+    }
+
+    public Task<ProviderInferenceRelayTransportResponse> RelayAsync(
+        ProviderInferenceRelayRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ProviderModelSelectionPolicy.EnsureAllowed(request.Provider, request.Model);
+        var transport = inferenceRelayTransport ??
+            throw new InvalidOperationException("The provider inference relay transport is unavailable.");
+        var relativePath = request.Operation switch
+        {
+            ProviderInferenceRelayOperation.ChatCompletions => "chat/completions",
+            ProviderInferenceRelayOperation.Responses => "responses",
+            ProviderInferenceRelayOperation.ImageGenerations => "images/generations",
+            _ => throw new ArgumentOutOfRangeException(nameof(request))
+        };
+        var httpRequest = new HttpRequestMessage(
+            HttpMethod.Post,
+            BuildInferenceRelayEndpoint(request.Provider, relativePath))
+        {
+            Content = new ReadOnlyMemoryContent(request.PayloadUtf8)
+        };
+        httpRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+        {
+            CharSet = "utf-8"
+        };
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(
+            request.Stream ? "text/event-stream" : "application/json"));
+        if (request.Credential is not null)
+        {
+            request.Credential.UseValue(value =>
+            {
+                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", value);
+                return true;
+            });
+        }
+
+        return SendInferenceRelayAsync(transport, httpRequest, cancellationToken);
+    }
+
+    private static async Task<ProviderInferenceRelayTransportResponse> SendInferenceRelayAsync(
+        IProviderInferenceRelayTransport transport,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        using (request)
+        {
+            return await transport.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public ProviderChatStreamingMode ResolveStreamingMode(ProviderChatCompletionRequest request)
@@ -636,6 +688,20 @@ public sealed class OpenAiProviderDriver(
         return baseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)
             ? $"{baseUrl}/{relativePath.TrimStart('/')}"
             : $"{baseUrl}/v1/{relativePath.TrimStart('/')}";
+    }
+
+    private static string BuildInferenceRelayEndpoint(
+        ProviderProfile provider,
+        string relativePath)
+    {
+        var baseUrl = provider.BaseUrl.Trim().TrimEnd('/');
+        const string ModelsSuffix = "/models";
+        if (baseUrl.EndsWith(ModelsSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            baseUrl = baseUrl[..^ModelsSuffix.Length];
+        }
+
+        return $"{baseUrl}/{relativePath.TrimStart('/')}";
     }
 
     private static TimeSpan ResolveTimeout(ProviderProfile provider)

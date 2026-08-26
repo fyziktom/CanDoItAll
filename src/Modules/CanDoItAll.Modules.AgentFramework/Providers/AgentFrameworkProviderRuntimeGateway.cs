@@ -11,11 +11,16 @@ using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderP
 internal sealed class AgentFrameworkProviderRuntimeGateway(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProviderRuntimeProfileSource providerSource,
+    IProviderRuntimeDescriptorStore descriptorStore,
+    IProviderRuntimePool runtimePool,
     IActivityStream activityStream,
     ILogger<AgentFrameworkProviderRuntimeGateway> logger) :
     IProviderHealthCheckService,
-    IProviderPromptExecutionService
+    IProviderPromptExecutionService,
+    IProviderInferenceRelayRuntime
 {
+    private const string InferenceRelayCredentialIdentity = "shared-provider-relay";
+
     public async Task<ProviderHealthCheckResult> CheckHealthAsync(
         Guid providerProfileId,
         CancellationToken cancellationToken = default)
@@ -153,6 +158,61 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     exception.Message);
             return Result<ProviderPromptExecutionResponse>.Failure(
                 Error.Failure(message));
+        }
+    }
+
+    public async Task<ProviderInferenceRelayTransportResponse> SendAsync(
+        ProviderInferenceRelayRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        descriptorStore.Upsert(
+            request.Provider,
+            request.Provider.ConnectorPluginKey,
+            request.Credential is null
+                ? string.Empty
+                : InferenceRelayCredentialIdentity);
+        var handle = await runtimePool.GetRequiredAsync(
+            request.Provider.Id,
+            cancellationToken);
+        var query = request.Operation == ProviderInferenceRelayOperation.ImageGenerations
+            ? new ProviderDispatchQuery(
+                request.Provider,
+                AgentProviderCapabilityKind.ImageGeneration,
+                AgentProviderOperationKind.GenerateImage,
+                request.Model)
+            : new ProviderDispatchQuery(
+                request.Provider,
+                AgentProviderCapabilityKind.ChatCompletion,
+                AgentProviderOperationKind.CompleteChat,
+                request.Model);
+        return await handle.DispatchAsync(
+            new ProviderRuntimeDispatchRequest<ProviderInferenceRelayRequest>(
+                query,
+                request),
+            async (context, token) =>
+            {
+                EnsureProviderKindMatches(
+                    context.Descriptor,
+                    context.Query.Provider);
+                var driver = handle.ProviderFactory.Resolve<
+                    IProviderInferenceRelayDriver>(
+                    context.Query.Provider.Kind);
+                return await driver.RelayAsync(
+                    context.Payload,
+                    token);
+            },
+            cancellationToken);
+    }
+
+    private static void EnsureProviderKindMatches(
+        ProviderRuntimeDescriptor descriptor,
+        AgentFrameworkProviderProfile provider)
+    {
+        if (descriptor.ProviderKind != provider.Kind)
+        {
+            throw new InvalidOperationException(
+                "Provider runtime descriptor kind does not match the inference-relay provider kind.");
         }
     }
 }

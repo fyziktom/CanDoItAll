@@ -101,7 +101,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
     public void SyntheticImportedAndRuntimeFallbackProfilesAreIneligible()
     {
         var policy = CreatePolicy();
-        var synthetic = CreateProfile(connectorPluginKey: ScenarioHarnessProviderAdapter.PluginKey);
+        var synthetic = CreateProfile(connectorPluginKey: ScenarioHarnessProviderAdministrationConnector.PluginKey);
         var imported = CreateProfile(
             connectorPluginKey: SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey);
         var fallback = CreateProfile(id: ProviderProfileWellKnownIds.RuntimeFallbackOllama);
@@ -231,7 +231,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
     public void ImageProfileRequiresImageRelayAndAdvertisesOnlyImageCapabilities()
     {
         var profile = CreateProfile(
-            connectorPluginKey: ComfyUiProviderAdapter.PluginKey,
+            connectorPluginKey: ComfyUiProviderAdministrationConnector.PluginKey,
             providerKind: AgentFrameworkProviderKind.ComfyUi,
             transport: ProviderTransportKind.ChatCompletions,
             purpose: ProviderProfilePurpose.ImageGeneration,
@@ -1018,7 +1018,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         }
 
         var manifest = CreateManifest(profile.ConnectorPluginKey);
-        var registry = new ProviderRegistry([new TestProviderAdapter(manifest)]);
+        var registry = new ProviderAdministrationConnectorCatalog([new TestProviderAdministrationConnector(manifest)]);
         var policy = CreatePolicy();
         return new PersistenceFixture(
             dbContextFactory,
@@ -1035,7 +1035,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         WorkspaceProviderProfile Profile,
         ProviderSharePublication Publication,
         Guid SecretRecordId,
-        ProviderRegistry ProviderRegistry,
+        ProviderAdministrationConnectorCatalog ProviderAdministrationConnectorCatalog,
         SharedProviderPublicationEligibilityPolicy EligibilityPolicy,
         IClock Clock)
     {
@@ -1044,7 +1044,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             ISharedProviderPublicationCommitObserver observer)
             => new(
                 DbContextFactory,
-                ProviderRegistry,
+                ProviderAdministrationConnectorCatalog,
                 EligibilityPolicy,
                 activityStream,
                 Clock,
@@ -1055,7 +1055,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             => new(
                 DbContextFactory,
                 new SharedProviderServiceIdentityStore(DbContextFactory, Clock),
-                ProviderRegistry,
+                ProviderAdministrationConnectorCatalog,
                 EligibilityPolicy,
                 cache);
 
@@ -1074,7 +1074,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 DbContextFactory,
                 secretService,
                 secretRuntimeResolver: null!,
-                ProviderRegistry,
+                ProviderAdministrationConnectorCatalog,
                 providerHealthCheckService: null!,
                 activityStream,
                 [],
@@ -1159,26 +1159,18 @@ public sealed class SharedProviderPublicationAndCatalogTests
         public void Release() => release.TrySetResult();
     }
 
-    private sealed class TestProviderAdapter(ConnectorPluginManifest manifest) : IProviderAdapter
+    private sealed class TestProviderAdministrationConnector(ConnectorPluginManifest manifest) : IProviderAdministrationConnector
     {
         public ConnectorPluginManifest Manifest { get; } = manifest;
 
         public CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind? LegacyProviderKind => null;
 
-        public Task<CanDoItAll.AgentFramework.Core.ProviderHealthCheckResult> CheckHealthAsync(
-            WorkspaceProviderProfile profile,
-            string? secretValue,
-            CancellationToken cancellationToken = default)
-            => throw new InvalidOperationException(
-                "The publication test adapter must not perform health checks.");
+        public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+            AgentFrameworkProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ProviderProfilePurpose.Chat,
+            []);
 
-        public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-            WorkspaceProviderProfile profile,
-            ProviderPromptExecutionRequest request,
-            string? secretValue,
-            CancellationToken cancellationToken = default)
-            => throw new InvalidOperationException(
-                "The publication test adapter must not execute provider requests.");
     }
 
     private sealed class TestDbContextFactory(DbContextOptions<AppDbContext> options)

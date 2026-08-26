@@ -4,6 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.SharedProviders.Abstractions\CanDoItAll.SharedProviders.Abstractions.csproj" />
+    <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\..\MAF\Common\CanDoItAll.AgentFramework.Providers\CanDoItAll.AgentFramework.Providers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsPackageVersion)" />

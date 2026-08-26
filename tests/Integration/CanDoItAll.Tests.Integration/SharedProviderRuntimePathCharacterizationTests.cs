@@ -134,14 +134,14 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     [Fact]
     public void Provider_management_registry_exposes_the_six_production_connector_manifests()
     {
-        var registry = new ProviderRegistry(
+        var registry = new ProviderAdministrationConnectorCatalog(
         [
-            new OpenAiProviderAdapter(new FixedHttpClientFactory()),
-            new ScenarioHarnessProviderAdapter(),
-            new ProcessMockProviderAdapter(),
-            new ComfyUiProviderAdapter(new FixedHttpClientFactory()),
-            new OllamaProviderAdapter(new FixedHttpClientFactory()),
-            new OllamaRemoteProviderAdapter(new FixedHttpClientFactory())
+            new OpenAiProviderAdministrationConnector(new FixedHttpClientFactory()),
+            new ScenarioHarnessProviderAdministrationConnector(),
+            new ProcessMockProviderAdministrationConnector(),
+            new ComfyUiProviderAdministrationConnector(),
+            new OllamaProviderAdministrationConnector(new FixedHttpClientFactory()),
+            new OllamaRemoteProviderAdministrationConnector(new FixedHttpClientFactory())
         ]);
 
         var pluginKeys = registry.ListManifests()
@@ -155,14 +155,14 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.Ollama,
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OllamaRemote,
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
-            ProcessMockProviderAdapter.PluginKey,
-            ScenarioHarnessProviderAdapter.PluginKey
+            ProcessMockProviderAdministrationConnector.PluginKey,
+            ScenarioHarnessProviderAdministrationConnector.PluginKey
         ], pluginKeys);
         Assert.DoesNotContain(pluginKeys, pluginKey => pluginKey.Contains("azure", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public void Integrated_host_registration_replaces_the_legacy_provider_management_gateway()
+    public void Integrated_host_registers_only_the_MAF_backed_provider_execution_gateway()
     {
         var root = FindRepositoryRoot();
         var composition = File.ReadAllText(Path.Combine(
@@ -175,12 +175,13 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
             root,
             "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs"));
 
-        var workspaceIndex = composition.IndexOf("services.AddWorkspaceModule()", StringComparison.Ordinal);
         var agentFrameworkIndex = composition.IndexOf("services.AddAgentFrameworkModule(configuration)", StringComparison.Ordinal);
 
-        Assert.True(workspaceIndex >= 0);
-        Assert.True(agentFrameworkIndex > workspaceIndex);
-        Assert.Contains("TryAddScoped<LegacyProviderRuntimeGateway>", providerManagementRegistration, StringComparison.Ordinal);
+        Assert.True(agentFrameworkIndex >= 0);
+        Assert.DoesNotContain("LegacyProviderRuntimeGateway", providerManagementRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderHealthCheckService", providerManagementRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderPromptExecutionService", providerManagementRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderInferenceRelayRuntime", providerManagementRegistration, StringComparison.Ordinal);
         Assert.Contains("services.AddScoped<AgentFrameworkProviderRuntimeGateway>();", agentFrameworkRegistration, StringComparison.Ordinal);
         Assert.Contains(
             "services.AddScoped<IProviderHealthCheckService>(serviceProvider =>",
@@ -188,6 +189,10 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
             StringComparison.Ordinal);
         Assert.Contains(
             "services.AddScoped<IProviderPromptExecutionService>(serviceProvider =>",
+            agentFrameworkRegistration,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "services.AddScoped<IProviderInferenceRelayRuntime>(serviceProvider =>",
             agentFrameworkRegistration,
             StringComparison.Ordinal);
     }
@@ -235,10 +240,10 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
     private static ProviderProfileMapper CreateMapper()
     {
         var httpClientFactory = new FixedHttpClientFactory();
-        var registry = new ProviderRegistry(
+        var registry = new ProviderAdministrationConnectorCatalog(
         [
-            new OpenAiProviderAdapter(httpClientFactory),
-            new ComfyUiProviderAdapter(httpClientFactory)
+            new OpenAiProviderAdministrationConnector(httpClientFactory),
+            new ComfyUiProviderAdministrationConnector()
         ]);
         return new ProviderProfileMapper(registry, new ProviderProfileService());
     }

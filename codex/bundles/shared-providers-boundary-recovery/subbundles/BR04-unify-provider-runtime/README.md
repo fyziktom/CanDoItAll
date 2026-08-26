@@ -42,6 +42,47 @@ Use the BR00 caller inventory and source search to account for every caller of t
 
 ## Focused tests
 
+Proof tier: Behavioral
+
+Selected owning tests:
+
+- `ConnectorPluginRegistryTests`
+- `PluginWaveArchitectureGuardrailTests`
+- `ProviderCatalogProjectionFailureTests`
+- `ProviderPricingTests`
+- `ProviderFeatureMatrixTests`
+- `SharedProviderPublicationAndCatalogTests`
+- `SharedProviderArchitectureCharacterizationTests`
+- `ProjectStructurePageArchitectureTests`
+- `MafAgentRuntimeProviderHealthTests`
+- `ProviderRuntimeProfileSnapshotServiceTests`
+- `SharedProviderRuntimeProfileMaterializerTests`
+- `ProviderRuntimeLifecycleTests`
+- `SharedProviderRuntimeProjectionIntegrationTests`
+- `SharedProviderRuntimePathCharacterizationTests`
+- `UnknownConnectorManifestIntegrationTests`
+- `SharedProviderBackendCheckpointIntegrationTests`
+- `SharedProviderOpenAiCompatibilityIntegrationTests`
+
+The impacted-test analyzer is rerun after implementation. Healthy
+high-confidence additions are included before exact filters and discovery
+counts are frozen. Broad non-container validation remains deferred to BR07.
+
+Post-change analyzer outcome: unavailable. Two bounded analyses across the
+Unit, Integration, Components, and Playwright projects did not complete; the
+final retry used a 2,500-member traversal budget and was terminated after two
+minutes. No analyzer-derived selectors are claimed. The explicit owning suites
+below remain the authoritative BR04 proof, with broad validation still deferred
+to BR07.
+
+Frozen exact unit command (131 discovered tests):
+
+`dotnet test tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --no-restore --nologo -v:minimal --filter "FullyQualifiedName~ConnectorPluginRegistryTests|FullyQualifiedName~PluginWaveArchitectureGuardrailTests|FullyQualifiedName~ProviderCatalogProjectionFailureTests|FullyQualifiedName~ProviderPricingTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~SharedProviderPublicationAndCatalogTests|FullyQualifiedName~SharedProviderArchitectureCharacterizationTests|FullyQualifiedName~ProjectStructurePageArchitectureTests|FullyQualifiedName~MafAgentRuntimeProviderHealthTests|FullyQualifiedName~ProviderRuntimeProfileSnapshotServiceTests|FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests|FullyQualifiedName~ProviderRuntimeLifecycleTests"`
+
+Frozen exact integration command (55 discovered tests):
+
+`dotnet test tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --no-restore --nologo -v:minimal --filter "FullyQualifiedName~SharedProviderRuntimeProjectionIntegrationTests|FullyQualifiedName~SharedProviderRuntimePathCharacterizationTests|FullyQualifiedName~UnknownConnectorManifestIntegrationTests|FullyQualifiedName~SharedProviderBackendCheckpointIntegrationTests|FullyQualifiedName~SharedProviderOpenAiCompatibilityIntegrationTests"`
+
 - Workbench rewrite uses the MAF-backed execution port.
 - Shared relay invokes the same port.
 - Personal and shared provider profiles select the correct driver.

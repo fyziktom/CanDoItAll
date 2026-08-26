@@ -105,7 +105,7 @@ public sealed class ProviderProfileMapper(
                 "phi4-16k"
             ])
         {
-            ConnectorPluginKey = OllamaRemoteProviderAdapter.PluginKey,
+            ConnectorPluginKey = OllamaRemoteProviderAdministrationConnector.PluginKey,
             IsPrivateProvider = true,
             ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
                 AgentFrameworkProviderKind.Ollama,
@@ -118,14 +118,14 @@ public sealed class ProviderProfileMapper(
     {
         return connectorPluginKey switch
         {
-            ScenarioHarnessProviderAdapter.PluginKey =>
-                ScenarioHarnessProviderAdapter.DefaultModel,
-            ProcessMockProviderAdapter.PluginKey =>
-                ProcessMockProviderAdapter.DefaultModel,
-            OpenAiProviderAdapter.PluginKey =>
-                OpenAiProviderAdapter.DefaultModel,
-            ComfyUiProviderAdapter.PluginKey =>
-                ComfyUiProviderAdapter.DefaultModel,
+            ScenarioHarnessProviderAdministrationConnector.PluginKey =>
+                ScenarioHarnessProviderAdministrationConnector.DefaultModel,
+            ProcessMockProviderAdministrationConnector.PluginKey =>
+                ProcessMockProviderAdministrationConnector.DefaultModel,
+            OpenAiProviderAdministrationConnector.PluginKey =>
+                OpenAiProviderAdministrationConnector.DefaultModel,
+            ComfyUiProviderAdministrationConnector.PluginKey =>
+                ComfyUiProviderAdministrationConnector.DefaultModel,
             _ => "llama3.1"
         };
     }
@@ -142,7 +142,7 @@ public sealed class ProviderProfileMapper(
                 : [provider.DefaultModel.Trim()];
         var persistedModels =
             ProviderMetadata.ReadSuggestedModels(provider);
-        if (provider.ConnectorPluginKey != OpenAiProviderAdapter.PluginKey ||
+        if (provider.ConnectorPluginKey != OpenAiProviderAdministrationConnector.PluginKey ||
             mappedKind != AgentFrameworkProviderKind.OpenAi ||
             mappedPurpose != ProviderProfilePurpose.Chat)
         {
@@ -206,16 +206,16 @@ public sealed class ProviderProfileMapper(
     {
         return connectorPluginKey switch
         {
-            ScenarioHarnessProviderAdapter.PluginKey =>
+            ScenarioHarnessProviderAdministrationConnector.PluginKey =>
                 AgentFrameworkProviderKind.OpenAi,
-            ProcessMockProviderAdapter.PluginKey =>
+            ProcessMockProviderAdministrationConnector.PluginKey =>
                 AgentFrameworkProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey =>
+            OpenAiProviderAdministrationConnector.PluginKey =>
                 AgentFrameworkProviderKind.OpenAi,
-            ComfyUiProviderAdapter.PluginKey =>
+            ComfyUiProviderAdministrationConnector.PluginKey =>
                 AgentFrameworkProviderKind.ComfyUi,
-            OllamaProviderAdapter.PluginKey or
-                OllamaRemoteProviderAdapter.PluginKey =>
+            OllamaProviderAdministrationConnector.PluginKey or
+                OllamaRemoteProviderAdministrationConnector.PluginKey =>
                 AgentFrameworkProviderKind.Ollama,
             _ => throw new InvalidOperationException(
                 $"No AgentFramework provider kind mapping exists for connector plugin '{connectorPluginKey}'.")
@@ -227,19 +227,19 @@ public sealed class ProviderProfileMapper(
     {
         return provider.ConnectorPluginKey switch
         {
-            ScenarioHarnessProviderAdapter.PluginKey =>
+            ScenarioHarnessProviderAdministrationConnector.PluginKey =>
                 ProviderTransportKind.Responses,
-            ProcessMockProviderAdapter.PluginKey =>
+            ProcessMockProviderAdministrationConnector.PluginKey =>
                 ProviderTransportKind.Responses,
-            OpenAiProviderAdapter.PluginKey
+            OpenAiProviderAdministrationConnector.PluginKey
                 when IsOpenAiChatCompletionsProvider(provider) =>
                 ProviderTransportKind.ChatCompletions,
-            OpenAiProviderAdapter.PluginKey =>
+            OpenAiProviderAdministrationConnector.PluginKey =>
                 ProviderTransportKind.Responses,
-            ComfyUiProviderAdapter.PluginKey =>
+            ComfyUiProviderAdministrationConnector.PluginKey =>
                 ProviderTransportKind.ChatCompletions,
-            OllamaProviderAdapter.PluginKey or
-                OllamaRemoteProviderAdapter.PluginKey =>
+            OllamaProviderAdministrationConnector.PluginKey or
+                OllamaRemoteProviderAdministrationConnector.PluginKey =>
                 ProviderTransportKind.ChatCompletions,
             _ => throw new InvalidOperationException(
                 $"No AgentFramework provider transport mapping exists for connector plugin '{provider.ConnectorPluginKey}'.")
@@ -249,12 +249,12 @@ public sealed class ProviderProfileMapper(
     private static ProviderProfilePurpose ResolveLegacyMappedPurpose(
         ProviderProfile provider)
     {
-        if (provider.ConnectorPluginKey == ComfyUiProviderAdapter.PluginKey)
+        if (provider.ConnectorPluginKey == ComfyUiProviderAdministrationConnector.PluginKey)
         {
             return ProviderProfilePurpose.ImageGeneration;
         }
 
-        return provider.ConnectorPluginKey == OpenAiProviderAdapter.PluginKey &&
+        return provider.ConnectorPluginKey == OpenAiProviderAdministrationConnector.PluginKey &&
                LooksLikeLegacyOpenAiImageGenerationProvider(provider)
             ? ProviderProfilePurpose.ImageGeneration
             : ProviderProfilePurpose.Chat;

@@ -28,20 +28,20 @@ public sealed class PluginWaveArchitectureGuardrailTests
     }
 
     [Fact]
-    public void Provider_registry_prefers_connector_plugin_key_over_legacy_provider_kind()
+    public void Provider_administration_catalog_prefers_connector_plugin_key_over_legacy_provider_kind()
     {
-        var legacyAdapter = new TestProviderAdapter(ProviderKind.OpenAi, "provider.openai");
-        var pluginKeyAdapter = new TestProviderAdapter(ProviderKind.OllamaLocal, "provider.custom");
-        var registry = new ProviderRegistry([legacyAdapter, pluginKeyAdapter]);
+        var legacyConnector = new TestProviderAdministrationConnector(ProviderKind.OpenAi, "provider.openai");
+        var pluginKeyConnector = new TestProviderAdministrationConnector(ProviderKind.OllamaLocal, "provider.custom");
+        var catalog = new ProviderAdministrationConnectorCatalog([legacyConnector, pluginKeyConnector]);
         var profile = new ProviderProfile
         {
             ProviderKind = ProviderKind.OpenAi,
             ConnectorPluginKey = "provider.custom"
         };
 
-        var resolved = registry.Resolve(profile);
+        var resolved = catalog.Resolve(profile);
 
-        Assert.Same(pluginKeyAdapter, resolved);
+        Assert.Same(pluginKeyConnector, resolved);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class PluginWaveArchitectureGuardrailTests
         Assert.Null(type.GetProperty(propertyName));
     }
 
-    private sealed class TestProviderAdapter(ProviderKind providerKind, string pluginKey) : IProviderAdapter
+    private sealed class TestProviderAdministrationConnector(ProviderKind providerKind, string pluginKey) : IProviderAdministrationConnector
     {
         public ProviderKind? LegacyProviderKind => providerKind;
 
@@ -78,20 +78,6 @@ public sealed class PluginWaveArchitectureGuardrailTests
             new ConnectorAgentExposure("noop", false, true, "noop"),
             null);
 
-        public Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
-            => Task.FromResult(new ProviderHealthCheckResult(true, "Healthy"));
-
-        public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-            ProviderProfile profile,
-            ProviderPromptExecutionRequest request,
-            string? secretValue,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
-                profile.Name,
-                profile.DefaultModel,
-                string.Empty,
-                request.OutputFormat,
-                false)));
     }
 
     private sealed class TestResourceConnectorPlugin(string pluginKey, ResourceKind? legacyResourceKind) : IResourceConnectorPlugin

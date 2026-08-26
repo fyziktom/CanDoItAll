@@ -16,22 +16,17 @@ public static class ProviderManagementServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddHttpClient();
-        services.AddScoped<IProviderAdapter, OpenAiProviderAdapter>();
-        services.AddScoped<IProviderAdapter, ScenarioHarnessProviderAdapter>();
-        services.AddScoped<IProviderAdapter, ProcessMockProviderAdapter>();
-        services.AddScoped<IProviderAdapter, ComfyUiProviderAdapter>();
-        services.AddScoped<IProviderAdapter, OllamaProviderAdapter>();
-        services.AddScoped<IProviderAdapter, OllamaRemoteProviderAdapter>();
-        services.AddScoped<ProviderRegistry>();
+        services.AddScoped<IProviderAdministrationConnector, OpenAiProviderAdministrationConnector>();
+        services.AddScoped<IProviderAdministrationConnector, ScenarioHarnessProviderAdministrationConnector>();
+        services.AddScoped<IProviderAdministrationConnector, ProcessMockProviderAdministrationConnector>();
+        services.AddScoped<IProviderAdministrationConnector, ComfyUiProviderAdministrationConnector>();
+        services.AddScoped<IProviderAdministrationConnector, OllamaProviderAdministrationConnector>();
+        services.AddScoped<IProviderAdministrationConnector, OllamaRemoteProviderAdministrationConnector>();
+        services.AddScoped<ProviderAdministrationConnectorCatalog>();
         services.AddScoped<IProviderManifestCatalog>(serviceProvider =>
-            serviceProvider.GetRequiredService<ProviderRegistry>());
+            serviceProvider.GetRequiredService<ProviderAdministrationConnectorCatalog>());
         services.AddScoped<IConnectorManifestSource>(
-            serviceProvider => serviceProvider.GetRequiredService<ProviderRegistry>());
-        services.TryAddScoped<LegacyProviderRuntimeGateway>();
-        services.TryAddScoped<IProviderHealthCheckService>(serviceProvider =>
-            serviceProvider.GetRequiredService<LegacyProviderRuntimeGateway>());
-        services.TryAddScoped<IProviderPromptExecutionService>(serviceProvider =>
-            serviceProvider.GetRequiredService<LegacyProviderRuntimeGateway>());
+            serviceProvider => serviceProvider.GetRequiredService<ProviderAdministrationConnectorCatalog>());
         services.AddScoped<ProviderAdministrationService>();
         services.AddScoped<IProviderAdministrationService>(serviceProvider =>
             serviceProvider.GetRequiredService<ProviderAdministrationService>());

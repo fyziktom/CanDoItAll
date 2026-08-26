@@ -182,7 +182,8 @@ public sealed class AgentProviderDriverRegistry : IAgentProviderFactory
         }
 
         if (driverType == typeof(IProviderChatCompletionDriver) ||
-            driverType == typeof(IProviderStreamingChatCompletionDriver))
+            driverType == typeof(IProviderStreamingChatCompletionDriver) ||
+            driverType == typeof(IProviderInferenceRelayDriver))
         {
             return AgentProviderCapabilityKind.ChatCompletion;
         }

@@ -384,22 +384,22 @@ public static class ProviderMetadata
             return current.ConnectorPluginKey;
         }
 
-        if (string.Equals(model.BaseUrl, ScenarioHarnessProviderAdapter.BaseUrl, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(model.BaseUrl, ScenarioHarnessProviderAdministrationConnector.BaseUrl, StringComparison.OrdinalIgnoreCase))
         {
-            return ScenarioHarnessProviderAdapter.PluginKey;
+            return ScenarioHarnessProviderAdministrationConnector.PluginKey;
         }
 
-        if (string.Equals(model.BaseUrl, ProcessMockProviderAdapter.BaseUrl, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(model.BaseUrl, ProcessMockProviderAdministrationConnector.BaseUrl, StringComparison.OrdinalIgnoreCase))
         {
-            return ProcessMockProviderAdapter.PluginKey;
+            return ProcessMockProviderAdministrationConnector.PluginKey;
         }
 
         return model.Kind switch
         {
-            AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdapter.PluginKey,
-            AgentFrameworkProviderKind.Ollama when LooksLikeLocalOllama(model.BaseUrl) => OllamaProviderAdapter.PluginKey,
-            AgentFrameworkProviderKind.Ollama => OllamaRemoteProviderAdapter.PluginKey,
-            AgentFrameworkProviderKind.OpenAi or AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdapter.PluginKey,
+            AgentFrameworkProviderKind.ComfyUi => ComfyUiProviderAdministrationConnector.PluginKey,
+            AgentFrameworkProviderKind.Ollama when LooksLikeLocalOllama(model.BaseUrl) => OllamaProviderAdministrationConnector.PluginKey,
+            AgentFrameworkProviderKind.Ollama => OllamaRemoteProviderAdministrationConnector.PluginKey,
+            AgentFrameworkProviderKind.OpenAi or AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdministrationConnector.PluginKey,
             _ => throw new InvalidOperationException($"No workspace connector plugin mapping exists for provider kind '{model.Kind}'.")
         };
     }
@@ -752,24 +752,24 @@ public static class ProviderMetadata
     {
         return connectorPluginKey switch
         {
-            ScenarioHarnessProviderAdapter.PluginKey => string.Equals(
+            ScenarioHarnessProviderAdministrationConnector.PluginKey => string.Equals(
                 model.BaseUrl,
-                ScenarioHarnessProviderAdapter.BaseUrl,
+                ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 StringComparison.OrdinalIgnoreCase),
-            ProcessMockProviderAdapter.PluginKey => string.Equals(
+            ProcessMockProviderAdministrationConnector.PluginKey => string.Equals(
                 model.BaseUrl,
-                ProcessMockProviderAdapter.BaseUrl,
+                ProcessMockProviderAdministrationConnector.BaseUrl,
                 StringComparison.OrdinalIgnoreCase),
-            OpenAiProviderAdapter.PluginKey =>
+            OpenAiProviderAdministrationConnector.PluginKey =>
                 model.Kind is AgentFrameworkProviderKind.OpenAi or
                     AgentFrameworkProviderKind.AzureOpenAi,
-            OllamaProviderAdapter.PluginKey =>
+            OllamaProviderAdministrationConnector.PluginKey =>
                 model.Kind == AgentFrameworkProviderKind.Ollama &&
                 LooksLikeLocalOllama(model.BaseUrl),
-            OllamaRemoteProviderAdapter.PluginKey =>
+            OllamaRemoteProviderAdministrationConnector.PluginKey =>
                 model.Kind == AgentFrameworkProviderKind.Ollama &&
                 !LooksLikeLocalOllama(model.BaseUrl),
-            ComfyUiProviderAdapter.PluginKey =>
+            ComfyUiProviderAdministrationConnector.PluginKey =>
                 model.Kind == AgentFrameworkProviderKind.ComfyUi,
             _ => true
         };

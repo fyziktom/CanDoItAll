@@ -8,8 +8,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
 {
     private const int MaximumFrames = 100_000;
 
-    private readonly HttpResponseMessage response;
-    private readonly HttpClient client;
+    private readonly IDisposable transportLifetime;
     private readonly CancellationTokenSource lifetimeSource;
     private readonly CancellationToken callerCancellationToken;
     private readonly SharedProviderRelayOperation operation;
@@ -22,8 +21,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
     private int disposed;
 
     public SharedProviderSseRelayStream(
-        HttpResponseMessage response,
-        HttpClient client,
+        IDisposable transportLifetime,
         Stream responseStream,
         CancellationTokenSource lifetimeSource,
         CancellationToken callerCancellationToken,
@@ -32,8 +30,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
         TimeSpan idleTimeout,
         SharedProviderRelayResponseHeaders headers)
     {
-        ArgumentNullException.ThrowIfNull(response);
-        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(transportLifetime);
         ArgumentNullException.ThrowIfNull(responseStream);
         ArgumentNullException.ThrowIfNull(lifetimeSource);
         ArgumentNullException.ThrowIfNull(headers);
@@ -42,8 +39,7 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
             throw new ArgumentOutOfRangeException(nameof(idleTimeout));
         }
 
-        this.response = response;
-        this.client = client;
+        this.transportLifetime = transportLifetime;
         this.lifetimeSource = lifetimeSource;
         this.callerCancellationToken = callerCancellationToken;
         this.operation = operation;
@@ -262,9 +258,8 @@ internal sealed class SharedProviderSseRelayStream : ISharedProviderRelayStream
 
         lifetimeSource.Cancel();
         lineReader.Dispose();
-        response.Dispose();
+        transportLifetime.Dispose();
         lifetimeSource.Dispose();
-        client.Dispose();
         return ValueTask.CompletedTask;
     }
 }

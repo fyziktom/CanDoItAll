@@ -45,7 +45,7 @@ public sealed class ConnectorPluginRegistryTests
             services.GetServices<IConnectorManifestSource>(),
             source => source is SharedProviderConnectorManifestSource);
         Assert.DoesNotContain(
-            services.GetServices<IProviderAdapter>(),
+            services.GetServices<IProviderAdministrationConnector>(),
             adapter => string.Equals(
                 adapter.Manifest.PluginKey,
                 SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,

@@ -39,7 +39,7 @@ public sealed class ProviderCatalogProjectionException(
 internal sealed class DatabaseProviderProfileRegistry(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ISandboxWorkspaceStore store,
-    ProviderRegistry providerRegistry,
+    ProviderAdministrationConnectorCatalog providerConnectorCatalog,
     IProviderProfileService providerProfileService,
     ProviderProfileMapper providerMapper,
     IProviderRuntimeProfileSnapshotLoader runtimeProfileLoader,
@@ -130,31 +130,31 @@ internal sealed class DatabaseProviderProfileRegistry(
                 SharedProviderProfileOwnershipPolicy.GenericSaveRejectionMessage);
         }
 
-        if (!providerRegistry.TryResolve(connectorPluginKey, out var providerAdapter))
+        if (!providerConnectorCatalog.TryResolve(connectorPluginKey, out var providerConnector))
         {
             throw new ProviderProfileValidationException(
-                $"No workspace provider adapter is registered for plugin '{connectorPluginKey}'.");
+                $"No provider administration connector is registered for plugin '{connectorPluginKey}'.");
         }
 
         ValidateConnectorBaseUrl(
             capabilityProfile.BaseUrl,
-            providerAdapter.Manifest.PluginKey);
+            providerConnector.Manifest.PluginKey);
 
         var configSchemaVersion = ResolveConfigSchemaVersionForSave(
             model,
             current,
-            providerAdapter.Manifest.ConfigurationSchema.Version);
-        if (!string.Equals(configSchemaVersion, providerAdapter.Manifest.ConfigurationSchema.Version, StringComparison.Ordinal))
+            providerConnector.Manifest.ConfigurationSchema.Version);
+        if (!string.Equals(configSchemaVersion, providerConnector.Manifest.ConfigurationSchema.Version, StringComparison.Ordinal))
         {
             throw new ProviderProfileValidationException(
-                $"Provider plugin '{providerAdapter.Manifest.PluginKey}' requires schema '{providerAdapter.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied.");
+                $"Provider plugin '{providerConnector.Manifest.PluginKey}' requires schema '{providerConnector.Manifest.ConfigurationSchema.Version}', but '{configSchemaVersion}' was supplied.");
         }
 
-        if (providerAdapter.Manifest.SecretRequirements.Any(item => item.IsRequired) &&
+        if (providerConnector.Manifest.SecretRequirements.Any(item => item.IsRequired) &&
             (!secretRecordId.HasValue || secretRecordId.Value == Guid.Empty))
         {
             throw new ProviderProfileValidationException(
-                $"{providerAdapter.Manifest.DisplayName} requires an explicit secret record reference.");
+                $"{providerConnector.Manifest.DisplayName} requires an explicit secret record reference.");
         }
 
         if (secretRecordId is { } targetSecretRecordId)
@@ -185,7 +185,7 @@ internal sealed class DatabaseProviderProfileRegistry(
             currentProfile);
         var defaultModel = string.IsNullOrWhiteSpace(capabilityProfile.DefaultModel)
             ? ProviderProfileMapper.ResolveDefaultModel(
-                providerAdapter.Manifest.PluginKey)
+                providerConnector.Manifest.PluginKey)
             : capabilityProfile.DefaultModel;
         capabilityProfile = capabilityProfile with
         {
@@ -206,8 +206,8 @@ internal sealed class DatabaseProviderProfileRegistry(
         }
 
         entity.Name = capabilityProfile.Name;
-        entity.ProviderKind = providerAdapter.LegacyProviderKind;
-        entity.ConnectorPluginKey = providerAdapter.Manifest.PluginKey;
+        entity.ProviderKind = providerConnector.LegacyProviderKind;
+        entity.ConnectorPluginKey = providerConnector.Manifest.PluginKey;
         entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = capabilityProfile.BaseUrl;
         entity.ApiKeySecretId = secretRecordId;
@@ -221,7 +221,7 @@ internal sealed class DatabaseProviderProfileRegistry(
         entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
             ProviderMetadata.BuildExtraSettingsJson(
                 capabilityProfile.ConfigurationJson,
-                providerAdapter.Manifest.PluginKey,
+                providerConnector.Manifest.PluginKey,
                 configSchemaVersion,
                 secretRecordId,
                 timeoutSeconds,
@@ -417,12 +417,12 @@ internal sealed class DatabaseProviderProfileRegistry(
     {
         if (string.Equals(
                 connectorPluginKey,
-                ScenarioHarnessProviderAdapter.PluginKey,
+                ScenarioHarnessProviderAdministrationConnector.PluginKey,
                 StringComparison.Ordinal))
         {
             if (string.Equals(
                     baseUrl,
-                    ScenarioHarnessProviderAdapter.BaseUrl,
+                    ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                     StringComparison.OrdinalIgnoreCase))
             {
                 return;
@@ -434,12 +434,12 @@ internal sealed class DatabaseProviderProfileRegistry(
 
         if (string.Equals(
                 connectorPluginKey,
-                ProcessMockProviderAdapter.PluginKey,
+                ProcessMockProviderAdministrationConnector.PluginKey,
                 StringComparison.Ordinal))
         {
             if (string.Equals(
                     baseUrl,
-                    ProcessMockProviderAdapter.BaseUrl,
+                    ProcessMockProviderAdministrationConnector.BaseUrl,
                     StringComparison.OrdinalIgnoreCase))
             {
                 return;

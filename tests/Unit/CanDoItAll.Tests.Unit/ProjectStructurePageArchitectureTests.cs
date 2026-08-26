@@ -203,6 +203,40 @@ public sealed class ProjectStructurePageArchitectureTests
         Assert.Equal(22, explicitPartialCount);
     }
 
+    [Fact]
+    public void Provider_prompt_execution_uses_the_AgentFramework_runtime_port()
+    {
+        var root = FindRepositoryRoot();
+        var pageSource = ReadSource(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Workbench",
+            "Pages",
+            "ProjectStructurePage.razor");
+        var workflowSource = ReadSource(
+            root,
+            "src",
+            "Modules",
+            "CanDoItAll.Modules.Workbench",
+            "Pages",
+            "ProjectStructurePage.Workflows.cs");
+        var combinedSource = pageSource + Environment.NewLine + workflowSource;
+
+        Assert.Contains(
+            "@inject IProviderPromptExecutionService ProviderPromptExecutionService",
+            pageSource,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ProviderPromptExecutionService.ExecuteAsync(",
+            workflowSource,
+            StringComparison.Ordinal);
+        Assert.Contains("new ProviderPromptExecutionRequest(", workflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderExecutionService", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderExecutionRequest", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Workspace.Providers", combinedSource, StringComparison.Ordinal);
+    }
+
     private static string ReadSource(string root, params string[] segments)
         => File.ReadAllText(Path.Combine([root, .. segments]));
 

@@ -1,4 +1,5 @@
 using CanDoItAll.SharedProviders.Abstractions;
+using CanDoItAll.AgentFramework.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -39,6 +40,9 @@ public static class SharedProviderHttpServiceCollectionExtensions
                 ConnectTimeout = SharedProviderRelayTimeouts.Connect
             });
         services.TryAddScoped<SharedProviderHttpRelayClient>();
+        services.TryAddSingleton<
+            IProviderInferenceRelayTransport,
+            SharedProviderInferenceRelayTransport>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<ISharedProviderRelayAdapter, SharedProviderOpenAiRelayAdapter>());
         services.TryAddEnumerable(

@@ -71,22 +71,65 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     public void Production_provider_management_connector_registration_is_explicit()
     {
         var registration = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs");
-        string[] expectedAdapters =
+        string[] expectedConnectors =
         [
-            "OpenAiProviderAdapter",
-            "ScenarioHarnessProviderAdapter",
-            "ProcessMockProviderAdapter",
-            "ComfyUiProviderAdapter",
-            "OllamaProviderAdapter",
-            "OllamaRemoteProviderAdapter"
+            "OpenAiProviderAdministrationConnector",
+            "ScenarioHarnessProviderAdministrationConnector",
+            "ProcessMockProviderAdministrationConnector",
+            "ComfyUiProviderAdministrationConnector",
+            "OllamaProviderAdministrationConnector",
+            "OllamaRemoteProviderAdministrationConnector"
         ];
 
-        foreach (var adapter in expectedAdapters)
+        foreach (var connector in expectedConnectors)
         {
-            Assert.Contains($"IProviderAdapter, {adapter}", registration, StringComparison.Ordinal);
+            Assert.Contains($"IProviderAdministrationConnector, {connector}", registration, StringComparison.Ordinal);
         }
 
-        Assert.Equal(expectedAdapters.Length, CountOccurrences(registration, "IProviderAdapter,"));
+        Assert.Equal(expectedConnectors.Length, CountOccurrences(registration, "IProviderAdministrationConnector,"));
+    }
+
+    [Fact]
+    public void Provider_administration_connectors_do_not_execute_inference()
+    {
+        var root = FindRepositoryRoot();
+        var administrationConnectors = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderAdministrationConnectors.cs");
+        var registration = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Services/ProviderManagementServiceCollectionExtensions.cs");
+
+        Assert.DoesNotContain("ProviderPromptExecutionRequest", administrationConnectors, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderPromptExecutionResponse", administrationConnectors, StringComparison.Ordinal);
+        Assert.DoesNotContain("SendAsync(", administrationConnectors, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderPromptExecutionService", registration, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderHealthCheckService", registration, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(
+            root,
+            "src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/LegacyProviderRuntimeGateway.cs")));
+    }
+
+    [Fact]
+    public void Shared_provider_relay_stays_on_transport_and_MAF_capability_ports()
+    {
+        var relayApplicationService = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRelayApplicationService.cs");
+        var relayClient = Read("src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderHttpRelayClient.cs");
+        var runtimeGateway = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Providers/AgentFrameworkProviderRuntimeGateway.cs");
+        var openAiDriver = Read("src/MAF/Common/CanDoItAll.AgentFramework.Providers/Drivers/OpenAiProviderDriver.cs");
+        var ollamaDriver = Read("src/MAF/Common/CanDoItAll.AgentFramework.Providers/Drivers/OllamaProviderDriver.cs");
+        var imageCapabilityRelay = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderImageCapabilityRelay.cs");
+
+        Assert.Contains("ISharedProviderRelayDispatcher dispatcher", relayApplicationService, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderAdministrationConnector", relayApplicationService, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderAdministrationConnectorCatalog", relayApplicationService, StringComparison.Ordinal);
+        Assert.Contains("IProviderInferenceRelayRuntime inferenceRelayRuntime", relayClient, StringComparison.Ordinal);
+        Assert.Contains("inferenceRelayRuntime.SendAsync", relayClient, StringComparison.Ordinal);
+        Assert.DoesNotContain("IHttpClientFactory", relayClient, StringComparison.Ordinal);
+        Assert.DoesNotContain("new HttpRequestMessage", relayClient, StringComparison.Ordinal);
+        Assert.Contains("IProviderInferenceRelayRuntime", runtimeGateway, StringComparison.Ordinal);
+        Assert.Contains("IProviderInferenceRelayDriver", runtimeGateway, StringComparison.Ordinal);
+        Assert.Contains("handle.DispatchAsync", runtimeGateway, StringComparison.Ordinal);
+        Assert.Contains("IProviderInferenceRelayDriver", openAiDriver, StringComparison.Ordinal);
+        Assert.Contains("IProviderInferenceRelayDriver", ollamaDriver, StringComparison.Ordinal);
+        Assert.Contains("IAgentImageGenerationService imageGenerationService", imageCapabilityRelay, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderAdministrationConnector", imageCapabilityRelay, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -94,11 +137,11 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     {
         var providerKinds = Read("src/MAF/Common/CanDoItAll.AgentFramework.Models/Common/Enums.cs");
         var providerMetadata = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderMetadata.cs");
-        var providerAdapters = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/LegacyProviderAdapters.cs");
+        var administrationConnectors = Read("src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/Administration/ProviderAdministrationConnectors.cs");
 
         Assert.Contains("AzureOpenAi", providerKinds, StringComparison.Ordinal);
-        Assert.Contains("AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdapter.PluginKey", providerMetadata, StringComparison.Ordinal);
-        Assert.DoesNotContain("class AzureOpenAiProviderAdapter", providerAdapters, StringComparison.Ordinal);
+        Assert.Contains("AgentFrameworkProviderKind.AzureOpenAi => OpenAiProviderAdministrationConnector.PluginKey", providerMetadata, StringComparison.Ordinal);
+        Assert.DoesNotContain("class AzureOpenAiProviderAdministrationConnector", administrationConnectors, StringComparison.Ordinal);
     }
 
     [Fact]

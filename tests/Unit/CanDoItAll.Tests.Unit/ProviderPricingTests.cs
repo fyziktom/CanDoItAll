@@ -4,9 +4,9 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel.Configuration;
 
-using WorkspaceOllamaProviderAdapter = CanDoItAll.Modules.AgentFramework.ProviderManagement.OllamaProviderAdapter;
-using WorkspaceOpenAiProviderAdapter = CanDoItAll.Modules.AgentFramework.ProviderManagement.OpenAiProviderAdapter;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using OllamaProviderAdministrationConnector = CanDoItAll.Modules.AgentFramework.ProviderManagement.OllamaProviderAdministrationConnector;
+using OpenAiProviderAdministrationConnector = CanDoItAll.Modules.AgentFramework.ProviderManagement.OpenAiProviderAdministrationConnector;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -562,9 +562,9 @@ public sealed class ProviderPricingTests
                 }
                 """)
         };
-        var adapter = new WorkspaceOpenAiProviderAdapter(new FakeHttpClientFactory(_ => response));
-        var result = await adapter.DiscoverModelPricingAsync(
-            new WorkspaceProviderProfile
+        var connector = new OpenAiProviderAdministrationConnector(new FakeHttpClientFactory(_ => response));
+        var result = await connector.DiscoverModelPricingAsync(
+            new PersistedProviderProfile
             {
                 Name = "OpenAI test",
                 BaseUrl = "https://api.example.test/v1/models",
@@ -585,10 +585,10 @@ public sealed class ProviderPricingTests
     [Fact]
     public async Task OpenAi_pricing_discovery_requires_secret()
     {
-        var adapter = new WorkspaceOpenAiProviderAdapter(new FakeHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+        var connector = new OpenAiProviderAdministrationConnector(new FakeHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)));
 
-        var result = await adapter.DiscoverModelPricingAsync(
-            new WorkspaceProviderProfile
+        var result = await connector.DiscoverModelPricingAsync(
+            new PersistedProviderProfile
             {
                 Name = "OpenAI test",
                 BaseUrl = "https://api.example.test/v1/models",
@@ -616,10 +616,10 @@ public sealed class ProviderPricingTests
                 }
                 """)
         };
-        var adapter = new WorkspaceOllamaProviderAdapter(new FakeHttpClientFactory(_ => response));
+        var connector = new OllamaProviderAdministrationConnector(new FakeHttpClientFactory(_ => response));
 
-        var result = await adapter.DiscoverModelPricingAsync(
-            new WorkspaceProviderProfile
+        var result = await connector.DiscoverModelPricingAsync(
+            new PersistedProviderProfile
             {
                 Name = "Ollama test",
                 BaseUrl = "http://127.0.0.1:11434",

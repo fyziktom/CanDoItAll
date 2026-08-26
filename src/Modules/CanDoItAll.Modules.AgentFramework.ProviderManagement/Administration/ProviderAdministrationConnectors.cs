@@ -1,15 +1,12 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Globalization;
 using System.Text.Json;
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
-using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
+
+using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 
 public sealed record ProviderModelPricingDiscoveryResult(
     IReadOnlyList<ProviderDiscoveredModelPrice> Models,
@@ -28,18 +25,11 @@ public static class ProviderConnectorFieldKeys
     public const string ComfyUiPollIntervalMilliseconds = "pollIntervalMilliseconds";
 }
 
-// Temporary compatibility implementation; BR04 removes direct provider inference adapters.
-internal interface IProviderAdapter : IConnectorPlugin
+internal interface IProviderAdministrationConnector : IConnectorPlugin
 {
     ProviderKind? LegacyProviderKind { get; }
 
-    Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default);
-
-    Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default);
+    SharedProviderProfilePublicationMetadata? DefaultPublicationMetadata => null;
 }
 
 internal interface IProviderModelPricingSource
@@ -50,19 +40,19 @@ internal interface IProviderModelPricingSource
         CancellationToken cancellationToken = default);
 }
 
-internal sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) :
+internal sealed class ProviderAdministrationConnectorCatalog(IEnumerable<IProviderAdministrationConnector> connectors) :
     IConnectorManifestSource,
     IProviderManifestCatalog
 {
-    private readonly IReadOnlyDictionary<string, IProviderAdapter> adaptersByKey =
-        adapters.ToDictionary(adapter => adapter.Manifest.PluginKey, StringComparer.OrdinalIgnoreCase);
+    private readonly IReadOnlyDictionary<string, IProviderAdministrationConnector> connectorsByKey =
+        connectors.ToDictionary(connector => connector.Manifest.PluginKey, StringComparer.OrdinalIgnoreCase);
 
-    private readonly IReadOnlyDictionary<ProviderKind, IProviderAdapter> adaptersByLegacyKind = adapters
-        .Where(adapter => adapter.LegacyProviderKind.HasValue)
-        .GroupBy(adapter => adapter.LegacyProviderKind!.Value)
+    private readonly IReadOnlyDictionary<ProviderKind, IProviderAdministrationConnector> connectorsByLegacyKind = connectors
+        .Where(connector => connector.LegacyProviderKind.HasValue)
+        .GroupBy(connector => connector.LegacyProviderKind!.Value)
         .ToDictionary(group => group.Key, group => group.Last());
 
-    public IProviderAdapter? Resolve(ProviderProfile profile)
+    public IProviderAdministrationConnector? Resolve(ProviderProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -72,34 +62,34 @@ internal sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) :
         }
 
         return profile.ProviderKind.HasValue
-            ? adaptersByLegacyKind.GetValueOrDefault(profile.ProviderKind.Value)
+            ? connectorsByLegacyKind.GetValueOrDefault(profile.ProviderKind.Value)
             : null;
     }
 
-    public IProviderAdapter? Resolve(string? connectorPluginKey, ProviderKind? legacyProviderKind = null)
+    public IProviderAdministrationConnector? Resolve(string? connectorPluginKey, ProviderKind? legacyProviderKind = null)
     {
         if (!string.IsNullOrWhiteSpace(connectorPluginKey) &&
-            adaptersByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
+            connectorsByKey.TryGetValue(connectorPluginKey.Trim(), out var pluginByKey))
         {
             return pluginByKey;
         }
 
         return string.IsNullOrWhiteSpace(connectorPluginKey) && legacyProviderKind.HasValue
-            ? adaptersByLegacyKind.GetValueOrDefault(legacyProviderKind.Value)
+            ? connectorsByLegacyKind.GetValueOrDefault(legacyProviderKind.Value)
             : null;
     }
 
-    public bool TryResolve(string? connectorPluginKey, out IProviderAdapter adapter)
-        => TryResolve(connectorPluginKey, legacyProviderKind: null, out adapter);
+    public bool TryResolve(string? connectorPluginKey, out IProviderAdministrationConnector connector)
+        => TryResolve(connectorPluginKey, legacyProviderKind: null, out connector);
 
-    public bool TryResolve(string? connectorPluginKey, ProviderKind? legacyProviderKind, out IProviderAdapter adapter)
+    public bool TryResolve(string? connectorPluginKey, ProviderKind? legacyProviderKind, out IProviderAdministrationConnector connector)
     {
-        adapter = null!;
+        connector = null!;
 
         var resolved = Resolve(connectorPluginKey, legacyProviderKind);
         if (resolved is not null)
         {
-            adapter = resolved;
+            connector = resolved;
             return true;
         }
 
@@ -108,17 +98,17 @@ internal sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) :
 
     public string? ResolveLegacyPluginKey(ProviderKind providerKind)
     {
-        return adaptersByLegacyKind.TryGetValue(providerKind, out var adapter)
-            ? adapter.Manifest.PluginKey
+        return connectorsByLegacyKind.TryGetValue(providerKind, out var connector)
+            ? connector.Manifest.PluginKey
             : null;
     }
 
-    public IReadOnlyCollection<ProviderKind> RegisteredLegacyKinds => adaptersByLegacyKind.Keys.ToArray();
+    public IReadOnlyCollection<ProviderKind> RegisteredLegacyKinds => connectorsByLegacyKind.Keys.ToArray();
 
     public IReadOnlyList<ConnectorPluginManifest> ListManifests()
     {
-        return adaptersByKey.Values
-            .Select(adapter => adapter.Manifest)
+        return connectorsByKey.Values
+            .Select(connector => connector.Manifest)
             .OrderBy(manifest => manifest.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -129,18 +119,7 @@ internal sealed class ProviderRegistry(IEnumerable<IProviderAdapter> adapters) :
         => Resolve(connectorPluginKey, legacyProviderKind)?.Manifest;
 }
 
-/* codex-capsule
-kind: adapter
-name: OpenAiProviderAdapter
-summary: Performs basic health and prompt send calls against the OpenAI HTTP API through the neutral provider contract.
-owns: openai-health, openai-send
-deps: IHttpClientFactory
-risks: api-shape-drift, wrong-base-url
-tests: unit:ProviderAdapterTests
-inputs: ProviderProfile, ProviderPromptExecutionRequest
-outputs: ProviderPromptExecutionResponse
-*/
-internal sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
+internal sealed class OpenAiProviderAdministrationConnector(IHttpClientFactory httpClientFactory) : IProviderAdministrationConnector, IProviderModelPricingSource
 {
     public const string PluginKey = ProviderConnectorKeys.OpenAi;
     public const string DefaultModel = ProviderConnectorDefaults.OpenAiModel;
@@ -172,54 +151,11 @@ internal sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory
 
     public ProviderKind? LegacyProviderKind => ProviderKind.OpenAi;
 
-    public async Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(secretValue))
-        {
-            return new ProviderHealthCheckResult(false, "OpenAI profiles require an API key secret.");
-        }
-
-        using var client = CreateClient(profile, secretValue);
-        using var response = await client.GetAsync(GetModelsUrl(profile.BaseUrl), cancellationToken);
-        return new ProviderHealthCheckResult(response.IsSuccessStatusCode, response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
-    }
-
-    public async Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(secretValue))
-        {
-            return Result<ProviderPromptExecutionResponse>.Failure(Error.Validation("OpenAI profiles require an API key secret."));
-        }
-
-        using var client = CreateClient(profile, secretValue);
-        using var response = await client.PostAsJsonAsync(
-            GetResponsesUrl(profile.BaseUrl),
-            new
-            {
-                model = string.IsNullOrWhiteSpace(request.ModelOverride) ? profile.DefaultModel : request.ModelOverride,
-                input = request.Prompt
-            },
-            cancellationToken);
-
-        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            return Result<ProviderPromptExecutionResponse>.Failure(Error.Failure($"OpenAI call failed with HTTP {(int)response.StatusCode}."));
-        }
-
-        var output = TryReadOpenAiOutput(payload);
-        return Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
-            profile.Name,
-            string.IsNullOrWhiteSpace(request.ModelOverride) ? profile.DefaultModel : request.ModelOverride!,
-            output,
-            request.OutputFormat,
-            request.ContainsSensitiveContent,
-            request.ContainsSensitiveContent ? "Sensitive content was included in the outbound payload." : null));
-    }
+    public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+        AgentFrameworkProviderKind.OpenAi,
+        ProviderTransportKind.Responses,
+        ProviderProfilePurpose.Chat,
+        []);
 
     public async Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
         ProviderProfile profile,
@@ -255,44 +191,12 @@ internal sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory
     private static string GetModelsUrl(string baseUrl)
         => NormalizeRoot(baseUrl).TrimEnd('/') + "/models";
 
-    private static string GetResponsesUrl(string baseUrl)
-        => NormalizeRoot(baseUrl).TrimEnd('/') + "/responses";
-
     private static string NormalizeRoot(string baseUrl)
     {
         var normalized = baseUrl.Trim().TrimEnd('/');
         return normalized.EndsWith("/models", StringComparison.OrdinalIgnoreCase)
             ? normalized[..^"/models".Length]
             : normalized;
-    }
-
-    private static string TryReadOpenAiOutput(string payload)
-    {
-        using var document = JsonDocument.Parse(payload);
-        if (document.RootElement.TryGetProperty("output_text", out var outputTextElement) &&
-            outputTextElement.ValueKind == JsonValueKind.String)
-        {
-            return outputTextElement.GetString() ?? string.Empty;
-        }
-
-        if (document.RootElement.TryGetProperty("output", out var outputElement) &&
-            outputElement.ValueKind == JsonValueKind.Array &&
-            outputElement.GetArrayLength() > 0)
-        {
-            var first = outputElement[0];
-            if (first.TryGetProperty("content", out var contentElement) &&
-                contentElement.ValueKind == JsonValueKind.Array &&
-                contentElement.GetArrayLength() > 0)
-            {
-                var content = contentElement[0];
-                if (content.TryGetProperty("text", out var textElement) && textElement.ValueKind == JsonValueKind.String)
-                {
-                    return textElement.GetString() ?? string.Empty;
-                }
-            }
-        }
-
-        return payload;
     }
 
     private static ProviderModelPricingDiscoveryResult ReadOpenAiModelPricing(string payload)
@@ -443,7 +347,7 @@ internal sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory
     }
 }
 
-internal sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
+internal sealed class ScenarioHarnessProviderAdministrationConnector : IProviderAdministrationConnector
 {
     public const string PluginKey = ProviderConnectorKeys.ScenarioHarness;
     public const string BaseUrl = ProviderConnectorDefaults.ScenarioHarnessBaseUrl;
@@ -470,49 +374,14 @@ internal sealed class ScenarioHarnessProviderAdapter : IProviderAdapter
 
     public ProviderKind? LegacyProviderKind => null;
 
-    public Task<ProviderHealthCheckResult> CheckHealthAsync(
-        ProviderProfile profile,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        var isConfigured = string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase);
-        var message = isConfigured
-            ? "Scenario harness provider is available for deterministic proof runs."
-            : $"Scenario harness profiles must use '{BaseUrl}'.";
-
-        return Task.FromResult(new ProviderHealthCheckResult(isConfigured, message));
-    }
-
-    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        if (!string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(Result<ProviderPromptExecutionResponse>.Failure(
-                Error.Validation($"Scenario harness profiles must use '{BaseUrl}'.")));
-        }
-
-        return Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
-            profile.Name,
-            string.IsNullOrWhiteSpace(request.ModelOverride) ? ResolveModel(profile) : request.ModelOverride!,
-            "Scenario harness provider routes execution through the integrated AgentFramework runtime. Run SC03, SC04, SC10, or SC11 from the integrated shell instead of a raw provider send.",
-            request.OutputFormat,
-            request.ContainsSensitiveContent,
-            request.ContainsSensitiveContent ? "Sensitive content was included in the deterministic scenario request." : null)));
-    }
-
-    private static string ResolveModel(ProviderProfile profile)
-    {
-        return string.IsNullOrWhiteSpace(profile.DefaultModel)
-            ? DefaultModel
-            : profile.DefaultModel;
-    }
+    public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+        AgentFrameworkProviderKind.OpenAi,
+        ProviderTransportKind.Responses,
+        ProviderProfilePurpose.Chat,
+        []);
 }
 
-internal sealed class ProcessMockProviderAdapter : IProviderAdapter
+internal sealed class ProcessMockProviderAdministrationConnector : IProviderAdministrationConnector
 {
     public const string PluginKey = ProviderConnectorKeys.ProcessMock;
     public const string BaseUrl = ProviderConnectorDefaults.ProcessMockBaseUrl;
@@ -539,49 +408,14 @@ internal sealed class ProcessMockProviderAdapter : IProviderAdapter
 
     public ProviderKind? LegacyProviderKind => null;
 
-    public Task<ProviderHealthCheckResult> CheckHealthAsync(
-        ProviderProfile profile,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        var isConfigured = string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase);
-        var message = isConfigured
-            ? "Process mock provider is available for deterministic process automation flow tuning."
-            : $"Process mock profiles must use '{BaseUrl}'.";
-
-        return Task.FromResult(new ProviderHealthCheckResult(isConfigured, message));
-    }
-
-    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        if (!string.Equals(profile.BaseUrl, BaseUrl, StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(Result<ProviderPromptExecutionResponse>.Failure(
-                Error.Validation($"Process mock profiles must use '{BaseUrl}'.")));
-        }
-
-        return Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
-            profile.Name,
-            string.IsNullOrWhiteSpace(request.ModelOverride) ? ResolveModel(profile) : request.ModelOverride!,
-            "Process mock provider routes execution through the AgentFramework process mock runtime. Use role-specific process mock agents from a process run instead of raw provider send.",
-            request.OutputFormat,
-            request.ContainsSensitiveContent,
-            request.ContainsSensitiveContent ? "Sensitive content was included in the deterministic process mock request." : null)));
-    }
-
-    private static string ResolveModel(ProviderProfile profile)
-    {
-        return string.IsNullOrWhiteSpace(profile.DefaultModel)
-            ? DefaultModel
-            : profile.DefaultModel;
-    }
+    public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+        AgentFrameworkProviderKind.OpenAi,
+        ProviderTransportKind.Responses,
+        ProviderProfilePurpose.Chat,
+        []);
 }
 
-internal sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
+internal sealed class ComfyUiProviderAdministrationConnector : IProviderAdministrationConnector
 {
     public const string PluginKey = ProviderConnectorKeys.ComfyUi;
     public const string DefaultModel = ProviderConnectorDefaults.ComfyUiModel;
@@ -613,38 +447,14 @@ internal sealed class ComfyUiProviderAdapter(IHttpClientFactory httpClientFactor
 
     public ProviderKind? LegacyProviderKind => null;
 
-    public async Task<ProviderHealthCheckResult> CheckHealthAsync(
-        ProviderProfile profile,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        using var client = httpClientFactory.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(Math.Max(5, profile.TimeoutSeconds));
-        try
-        {
-            using var response = await client.GetAsync($"{profile.BaseUrl.TrimEnd('/')}/system_stats", cancellationToken);
-            return new ProviderHealthCheckResult(
-                response.IsSuccessStatusCode,
-                response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            return new ProviderHealthCheckResult(false, $"ComfyUI health check failed: {exception.Message}");
-        }
-    }
-
-    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Result<ProviderPromptExecutionResponse>.Failure(
-            Error.Validation("ComfyUI provider profiles are image-generation only and cannot run generic chat prompt execution.")));
-    }
+    public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+        AgentFrameworkProviderKind.ComfyUi,
+        ProviderTransportKind.ChatCompletions,
+        ProviderProfilePurpose.ImageGeneration,
+        []);
 }
 
-internal sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
+internal sealed class OllamaProviderAdministrationConnector(IHttpClientFactory httpClientFactory) : IProviderAdministrationConnector, IProviderModelPricingSource
 {
     public const string PluginKey = ProviderConnectorKeys.Ollama;
 
@@ -669,49 +479,11 @@ internal sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory
 
     public ProviderKind? LegacyProviderKind => ProviderKind.OllamaLocal;
 
-    public async Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
-    {
-        using var client = CreateClient(profile);
-        using var response = await client.GetAsync($"{profile.BaseUrl.TrimEnd('/')}/api/tags", cancellationToken);
-        return new ProviderHealthCheckResult(response.IsSuccessStatusCode, response.IsSuccessStatusCode ? "Healthy" : $"HTTP {(int)response.StatusCode}");
-    }
-
-    public async Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-    {
-        using var client = CreateClient(profile);
-        using var response = await client.PostAsJsonAsync(
-            $"{profile.BaseUrl.TrimEnd('/')}/api/generate",
-            new
-            {
-                model = string.IsNullOrWhiteSpace(request.ModelOverride) ? profile.DefaultModel : request.ModelOverride,
-                prompt = request.Prompt,
-                stream = false
-            },
-            cancellationToken);
-
-        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            return Result<ProviderPromptExecutionResponse>.Failure(Error.Failure($"Ollama call failed with HTTP {(int)response.StatusCode}."));
-        }
-
-        using var document = JsonDocument.Parse(payload);
-        var output = document.RootElement.TryGetProperty("response", out var responseElement) && responseElement.ValueKind == JsonValueKind.String
-            ? responseElement.GetString() ?? string.Empty
-            : payload;
-
-        return Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
-            profile.Name,
-            string.IsNullOrWhiteSpace(request.ModelOverride) ? profile.DefaultModel : request.ModelOverride!,
-            output,
-            request.OutputFormat,
-            request.ContainsSensitiveContent,
-            request.ContainsSensitiveContent ? "Sensitive content was included in the outbound payload." : null));
-    }
+    public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+        AgentFrameworkProviderKind.Ollama,
+        ProviderTransportKind.ChatCompletions,
+        ProviderProfilePurpose.Chat,
+        []);
 
     public async Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
         ProviderProfile profile,
@@ -801,7 +573,7 @@ internal sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory
     }
 }
 
-internal sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
+internal sealed class OllamaRemoteProviderAdministrationConnector(IHttpClientFactory httpClientFactory) : IProviderAdministrationConnector, IProviderModelPricingSource
 {
     public const string PluginKey = ProviderConnectorKeys.OllamaRemote;
 
@@ -822,21 +594,17 @@ internal sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientF
         new ConnectorAgentExposure("workspace.prompt.send", true, true, "Allows agent-triggered prompt execution through the provider profile."),
         null);
 
-    private readonly OllamaProviderAdapter _inner = new(httpClientFactory);
+    private readonly OllamaProviderAdministrationConnector _inner = new(httpClientFactory);
 
     public ConnectorPluginManifest Manifest => PluginManifest;
 
     public ProviderKind? LegacyProviderKind => ProviderKind.OllamaRemote;
 
-    public Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
-        => _inner.CheckHealthAsync(profile, secretValue, cancellationToken);
-
-    public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-        ProviderProfile profile,
-        ProviderPromptExecutionRequest request,
-        string? secretValue,
-        CancellationToken cancellationToken = default)
-        => _inner.SendAsync(profile, request, secretValue, cancellationToken);
+    public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+        AgentFrameworkProviderKind.Ollama,
+        ProviderTransportKind.ChatCompletions,
+        ProviderProfilePurpose.Chat,
+        []);
 
     public Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
         ProviderProfile profile,
@@ -844,15 +612,3 @@ internal sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientF
         CancellationToken cancellationToken = default)
         => _inner.DiscoverModelPricingAsync(profile, secretValue, cancellationToken);
 }
-
-/* codex-capsule
-kind: service
-name: ProviderExecutionService
-summary: Resolves provider profiles, secrets, and adapters to execute generated prompts through a neutral send contract.
-owns: profile-resolution, adapter-dispatch, prompt-usage-send-boundary
-deps: AppDbContext, ProviderRegistry, SecretService, IActivityStream
-risks: missing-secret, unsupported-provider
-tests: unit:ProviderExecutionServiceTests
-inputs: ProviderPromptExecutionRequest
-outputs: ProviderPromptExecutionResponse
-*/

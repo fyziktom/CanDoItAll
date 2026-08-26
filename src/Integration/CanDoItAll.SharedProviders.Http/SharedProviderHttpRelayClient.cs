@@ -1,13 +1,15 @@
 using System.Buffers;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.SharedProviders.Http;
 
 internal sealed class SharedProviderHttpRelayClient(
-    IHttpClientFactory httpClientFactory,
+    IProviderInferenceRelayRuntime inferenceRelayRuntime,
     ILogger<SharedProviderHttpRelayClient> logger)
 {
     internal const string ClientName = "SharedProviderRelay";
@@ -18,17 +20,15 @@ internal sealed class SharedProviderHttpRelayClient(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var client = httpClientFactory.CreateClient(ClientName);
         var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutSource.CancelAfter(request.Target.Timeout);
-        HttpResponseMessage? response = null;
+        ProviderInferenceRelayTransportResponse? transportResponse = null;
         try
         {
-            using var upstreamRequest = CreateRequest(request);
-            response = await client.SendAsync(
-                upstreamRequest,
-                HttpCompletionOption.ResponseHeadersRead,
+            transportResponse = await inferenceRelayRuntime.SendAsync(
+                CreateRuntimeRequest(request),
                 timeoutSource.Token).ConfigureAwait(false);
+            var response = transportResponse.Response;
             var headers = SharedProviderRelayResponseHeaderPolicy.Project(response);
             if (!response.IsSuccessStatusCode)
             {
@@ -63,8 +63,7 @@ internal sealed class SharedProviderHttpRelayClient(
                     .ReadAsStreamAsync(timeoutSource.Token)
                     .ConfigureAwait(false);
                 var relayStream = new SharedProviderSseRelayStream(
-                    response,
-                    client,
+                    transportResponse,
                     responseStream,
                     timeoutSource,
                     cancellationToken,
@@ -72,9 +71,8 @@ internal sealed class SharedProviderHttpRelayClient(
                     request.Request.RoutingModelId,
                     SharedProviderRelayTimeouts.StreamingIdle,
                     headers);
-                response = null;
+                transportResponse = null;
                 timeoutSource = null!;
-                client = null!;
                 return new SharedProviderRelayDispatchResult.Streaming(relayStream);
             }
 
@@ -135,9 +133,8 @@ internal sealed class SharedProviderHttpRelayClient(
         }
         finally
         {
-            response?.Dispose();
+            transportResponse?.Dispose();
             timeoutSource?.Dispose();
-            client?.Dispose();
         }
     }
 
@@ -189,31 +186,68 @@ internal sealed class SharedProviderHttpRelayClient(
         }
     }
 
-    private static HttpRequestMessage CreateRequest(SharedProviderRelayDispatchRequest dispatch)
+    private static ProviderInferenceRelayRequest CreateRuntimeRequest(
+        SharedProviderRelayDispatchRequest dispatch)
     {
         var payload = dispatch.Request.CreateUpstreamPayload(dispatch.Target.UpstreamModelId);
-        var request = new HttpRequestMessage(
-            HttpMethod.Post,
-            SharedProviderRelayUriPolicy.Resolve(dispatch.Target, dispatch.Request.Operation))
+        var kind = dispatch.Target.ConnectorPluginKey switch
         {
-            Content = new ReadOnlyMemoryContent(payload)
+            SharedProviderConnectorPluginKeys.OpenAi => ProviderKind.OpenAi,
+            SharedProviderConnectorPluginKeys.OllamaLocal or
+                SharedProviderConnectorPluginKeys.OllamaRemote => ProviderKind.Ollama,
+            _ => throw new InvalidOperationException(
+                "The relay target connector has no MAF provider driver mapping.")
         };
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json")
+        var operation = dispatch.Request.Operation switch
         {
-            CharSet = "utf-8"
+            SharedProviderRelayOperation.ChatCompletions =>
+                ProviderInferenceRelayOperation.ChatCompletions,
+            SharedProviderRelayOperation.Responses =>
+                ProviderInferenceRelayOperation.Responses,
+            SharedProviderRelayOperation.ImageGenerations =>
+                ProviderInferenceRelayOperation.ImageGenerations,
+            _ => throw new InvalidOperationException(
+                "The relay operation has no MAF inference mapping.")
         };
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(
-            dispatch.Request.Stream ? "text/event-stream" : "application/json"));
-        if (dispatch.Target.Credential is not null)
+        var transport = operation == ProviderInferenceRelayOperation.Responses
+            ? ProviderTransportKind.Responses
+            : ProviderTransportKind.ChatCompletions;
+        var credential = dispatch.Target.Credential?.UseValue(
+            value => new ProviderInferenceRelayCredential(value));
+        var provider = new ProviderProfile(
+            dispatch.Target.ProviderProfileId,
+            "Shared-provider relay",
+            kind,
+            dispatch.Target.BaseUri.AbsoluteUri,
+            string.Empty,
+            dispatch.Target.UpstreamModelId,
+            transport,
+            true,
+            dispatch.Target.Support.StreamingMode != SharedProviderStreamingMode.None,
+            dispatch.Target.Support.SupportsFunctionTools,
+            transport == ProviderTransportKind.ChatCompletions,
+            transport == ProviderTransportKind.Responses,
+            dispatch.Target.ConfigurationJson,
+            string.Empty,
+            "Not checked",
+            null,
+            [dispatch.Target.UpstreamModelId])
         {
-            dispatch.Target.Credential.UseValue(value =>
-            {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", value);
-                return true;
-            });
-        }
+            ConnectorPluginKey = dispatch.Target.ConnectorPluginKey,
+            ModelSelectionConstraint = new ProviderModelSelectionConstraint(
+                [dispatch.Target.UpstreamModelId]),
+            Purpose = dispatch.Target.Purpose == SharedProviderPurpose.ImageGeneration
+                ? ProviderProfilePurpose.ImageGeneration
+                : ProviderProfilePurpose.Chat
+        };
 
-        return request;
+        return new ProviderInferenceRelayRequest(
+            provider,
+            dispatch.Target.UpstreamModelId,
+            operation,
+            payload.Span,
+            dispatch.Request.Stream,
+            credential);
     }
 
     private static bool IsContentType(MediaTypeHeaderValue? contentType, string expected)

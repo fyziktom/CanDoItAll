@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Usage;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
@@ -1562,6 +1563,9 @@ internal sealed class DirectRelayFixture : IAsyncDisposable
         services.AddLogging();
         services.AddSingleton<ISharedProviderImageCapabilityRelay>(imageRelay);
         services.AddSharedProviderHttpDescriptors();
+        services.AddSingleton<
+            IProviderInferenceRelayRuntime,
+            DirectProviderInferenceRelayRuntime>();
         services.AddHttpClient("SharedProviderRelay")
             .ConfigurePrimaryHttpMessageHandler(() => handler);
         provider = services.BuildServiceProvider();
@@ -1644,6 +1648,43 @@ internal sealed class DirectRelayFixture : IAsyncDisposable
     {
         await scope.DisposeAsync();
         await provider.DisposeAsync();
+    }
+}
+
+internal sealed class DirectProviderInferenceRelayRuntime :
+    IProviderInferenceRelayRuntime,
+    IDisposable
+{
+    private readonly HttpClient openAiClient = new();
+    private readonly HttpClient ollamaClient = new();
+    private readonly IAgentProviderFactory providerFactory;
+
+    public DirectProviderInferenceRelayRuntime(
+        IProviderInferenceRelayTransport transport)
+    {
+        providerFactory = new AgentProviderDriverRegistryBuilder()
+            .AddOpenAiProviderDriver(
+                openAiClient,
+                new EnvironmentProviderDriverCredentialResolver(),
+                inferenceRelayTransport: transport)
+            .AddOllamaProviderDriver(ollamaClient, transport)
+            .Build();
+    }
+
+    public Task<ProviderInferenceRelayTransportResponse> SendAsync(
+        ProviderInferenceRelayRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return providerFactory
+            .Resolve<IProviderInferenceRelayDriver>(request.Provider.Kind)
+            .RelayAsync(request, cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        openAiClient.Dispose();
+        ollamaClient.Dispose();
     }
 }
 

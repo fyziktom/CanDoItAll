@@ -68,7 +68,7 @@ internal sealed class ProviderAdministrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     SecretService secretService,
     ISecretRuntimeResolver secretRuntimeResolver,
-    ProviderRegistry providerRegistry,
+    ProviderAdministrationConnectorCatalog providerConnectorCatalog,
     IProviderHealthCheckService providerHealthCheckService,
     IActivityStream activityStream,
     IEnumerable<IProviderProfileDeletionGuard> providerProfileDeletionGuards,
@@ -78,7 +78,7 @@ internal sealed class ProviderAdministrationService(
 {
     public IReadOnlyList<ConnectorPluginManifest> ListProviderManifests()
     {
-        return providerRegistry.ListManifests();
+        return providerConnectorCatalog.ListManifests();
     }
 
     public async Task<IReadOnlyList<ProviderProfileSummary>> ListProviderProfilesAsync(CancellationToken cancellationToken = default)
@@ -91,8 +91,8 @@ internal sealed class ProviderAdministrationService(
         return profiles
             .Select(profile =>
             {
-                var providerPlugin = providerRegistry.Resolve(profile);
-                var connectorPluginKey = providerPlugin?.Manifest.PluginKey ?? profile.ConnectorPluginKey;
+                var providerConnector = providerConnectorCatalog.Resolve(profile);
+                var connectorPluginKey = providerConnector?.Manifest.PluginKey ?? profile.ConnectorPluginKey;
                 var pricingMetadata = ProviderPricingMetadata.Read(profile.ExtraSettingsJson);
                 var isKnownPricingKind = TryResolveAgentFrameworkProviderKind(connectorPluginKey, out var pricingKind);
                 return new ProviderProfileSummary(
@@ -100,7 +100,7 @@ internal sealed class ProviderAdministrationService(
                 profile.Name,
                 profile.ProviderKind,
                 connectorPluginKey,
-                providerPlugin?.Manifest.DisplayName ?? profile.ConnectorPluginKey,
+                providerConnector?.Manifest.DisplayName ?? profile.ConnectorPluginKey,
                 profile.BaseUrl,
                 profile.DefaultModel,
                 profile.IsEnabled,
@@ -129,7 +129,7 @@ internal sealed class ProviderAdministrationService(
             return NewProvider();
         }
 
-        var connectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey;
+        var connectorPluginKey = providerConnectorCatalog.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey;
         var isKnownPricingKind = TryResolveAgentFrameworkProviderKind(connectorPluginKey, out var pricingKind);
         var pricingMetadata = ProviderPricingMetadata.Read(provider.ExtraSettingsJson);
         var modelPrices = isKnownPricingKind
@@ -183,14 +183,14 @@ internal sealed class ProviderAdministrationService(
             return Result<Guid>.Failure(Error.Validation("Provider base URL is required."));
         }
 
-        var providerResolutionError = TryResolveProviderPlugin(
+        var connectorResolutionError = TryResolveProviderConnector(
             model,
-            out var providerPlugin,
+            out var providerConnector,
             out var providerManifest,
             out var configSchemaVersion);
-        if (providerResolutionError is not null)
+        if (connectorResolutionError is not null)
         {
-            return Result<Guid>.Failure(providerResolutionError);
+            return Result<Guid>.Failure(connectorResolutionError);
         }
 
         var secretRecordId = model.ApiKeySecretId;
@@ -209,8 +209,8 @@ internal sealed class ProviderAdministrationService(
             return Result<Guid>.Failure(Error.Validation("Provider timeout must be at least five seconds."));
         }
 
-        var defaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
-        var hasPricingKind = TryResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey, out var pricingKind);
+        var defaultModel = ResolveDefaultModel(model, providerConnector.Manifest.PluginKey);
+        var hasPricingKind = TryResolveAgentFrameworkProviderKind(providerConnector.Manifest.PluginKey, out var pricingKind);
         var editorModelPrices = ProviderPricingDefaults.FromEditorModels(model.ModelPrices);
         var modelPrices = hasPricingKind
             ? ProviderPricingDefaults.NormalizeModelPrices(
@@ -262,11 +262,11 @@ internal sealed class ProviderAdministrationService(
 
         if (!TryResolveSharedProviderPublicationMetadata(
                 entity,
-                providerPlugin.Manifest.PluginKey,
+                providerConnector,
                 out var publicationMetadata))
         {
             return Result<Guid>.Failure(Error.Validation(
-                $"Provider connector '{providerPlugin.Manifest.PluginKey}' does not define a supported publication classification."));
+                $"Provider connector '{providerConnector.Manifest.PluginKey}' does not define a supported publication classification."));
         }
 
         string extraSettingsJson;
@@ -296,21 +296,21 @@ internal sealed class ProviderAdministrationService(
         }
 
         entity.Name = model.Name.Trim();
-        entity.ConnectorPluginKey = providerPlugin.Manifest.PluginKey;
-        entity.ProviderKind = providerPlugin.LegacyProviderKind;
+        entity.ConnectorPluginKey = providerConnector.Manifest.PluginKey;
+        entity.ProviderKind = providerConnector.LegacyProviderKind;
         entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = configuredBaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = secretRecordId;
         entity.DefaultModel = defaultModel;
         entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
-        var capabilityDefaults = ProviderCapabilityDefaults.Resolve(providerPlugin.Manifest.PluginKey);
+        var capabilityDefaults = ProviderCapabilityDefaults.Resolve(providerConnector.Manifest.PluginKey);
         entity.SupportsStreaming = capabilityDefaults.SupportsStreaming || model.SupportsStreaming;
         entity.SupportsToolCalling = capabilityDefaults.SupportsToolCalling || model.SupportsToolCalling;
         entity.SupportsStructuredOutput =
             capabilityDefaults.SupportsStructuredOutput &&
             (isNewProfile || model.SupportsStructuredOutput);
-        entity.SupportsVision = string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) &&
+        entity.SupportsVision = string.Equals(providerConnector.Manifest.PluginKey, OpenAiProviderAdministrationConnector.PluginKey, StringComparison.OrdinalIgnoreCase) &&
                                 model.SupportsVision;
         entity.ExtraSettingsJson = extraSettingsJson;
 
@@ -329,7 +329,7 @@ internal sealed class ProviderAdministrationService(
             "providers",
             model.Id.HasValue ? "update" : "create",
             $"{(model.Id.HasValue ? "Updated" : "Created")} provider profile",
-            $"{entity.Name} ({providerPlugin.Manifest.DisplayName})",
+            $"{entity.Name} ({providerConnector.Manifest.DisplayName})",
             ArtifactKind: "provider-profile",
             ArtifactId: entity.Id,
             Route: "/agents?tab=providers"), cancellationToken);
@@ -349,17 +349,17 @@ internal sealed class ProviderAdministrationService(
                 Error.Validation("Provider base URL is required before model pricing can be loaded."));
         }
 
-        var providerResolutionError = TryResolveProviderPlugin(
+        var connectorResolutionError = TryResolveProviderConnector(
             model,
-            out var providerPlugin,
+            out var providerConnector,
             out var providerManifest,
             out var configSchemaVersion);
-        if (providerResolutionError is not null)
+        if (connectorResolutionError is not null)
         {
-            return Result<ProviderModelPricingRefreshResult>.Failure(providerResolutionError);
+            return Result<ProviderModelPricingRefreshResult>.Failure(connectorResolutionError);
         }
 
-        if (providerPlugin is not IProviderModelPricingSource pricingSource)
+        if (providerConnector is not IProviderModelPricingSource pricingSource)
         {
             return Result<ProviderModelPricingRefreshResult>.Failure(Error.Validation(
                 $"{providerManifest.DisplayName} does not support provider API pricing refresh. Add model prices manually."));
@@ -372,13 +372,13 @@ internal sealed class ProviderAdministrationService(
                 Error.Validation("Provider timeout must be at least five seconds."));
         }
 
-        var defaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
+        var defaultModel = ResolveDefaultModel(model, providerConnector.Manifest.PluginKey);
         var profile = new ProviderProfile
         {
             Id = model.Id ?? Guid.NewGuid(),
             Name = string.IsNullOrWhiteSpace(model.Name) ? providerManifest.DisplayName : model.Name.Trim(),
-            ConnectorPluginKey = providerPlugin.Manifest.PluginKey,
-            ProviderKind = providerPlugin.LegacyProviderKind,
+            ConnectorPluginKey = providerConnector.Manifest.PluginKey,
+            ProviderKind = providerConnector.LegacyProviderKind,
             ConfigSchemaVersion = configSchemaVersion,
             BaseUrl = configuredBaseUrl.Trim().TrimEnd('/'),
             ApiKeySecretId = model.ApiKeySecretId,
@@ -395,7 +395,7 @@ internal sealed class ProviderAdministrationService(
             return Result<ProviderModelPricingRefreshResult>.Failure(discoveryResult.Errors);
         }
 
-        var pricingKind = ResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey);
+        var pricingKind = ResolveAgentFrameworkProviderKind(providerConnector.Manifest.PluginKey);
         var mergeResult = ProviderPricingDefaults.MergeDiscoveredModelPrices(
             pricingKind,
             defaultModel,
@@ -473,12 +473,12 @@ internal sealed class ProviderAdministrationService(
 
     private static ProviderProfileEditorModel NewProvider() => new()
     {
-        ConnectorPluginKey = OpenAiProviderAdapter.PluginKey,
+        ConnectorPluginKey = OpenAiProviderAdministrationConnector.PluginKey,
         ConfigSchemaVersion = "1.0",
         Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [ProviderConnectorFieldKeys.BaseUrl] = "https://api.openai.com/v1/models",
-            [ProviderConnectorFieldKeys.DefaultModel] = OpenAiProviderAdapter.DefaultModel,
+            [ProviderConnectorFieldKeys.DefaultModel] = OpenAiProviderAdministrationConnector.DefaultModel,
             [ProviderConnectorFieldKeys.TimeoutSeconds] = "45"
         }),
         IsEnabled = true,
@@ -488,7 +488,7 @@ internal sealed class ProviderAdministrationService(
         IsPrivateProvider = false,
         ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
             AgentFrameworkProviderKind.OpenAi,
-            OpenAiProviderAdapter.DefaultModel)
+            OpenAiProviderAdministrationConnector.DefaultModel)
     };
 
     private static string ResolveDefaultModel(ProviderProfileEditorModel model, string pluginKey)
@@ -501,37 +501,37 @@ internal sealed class ProviderAdministrationService(
 
         return pluginKey.Trim() switch
         {
-            ScenarioHarnessProviderAdapter.PluginKey => ScenarioHarnessProviderAdapter.DefaultModel,
-            ProcessMockProviderAdapter.PluginKey => ProcessMockProviderAdapter.DefaultModel,
-            OpenAiProviderAdapter.PluginKey => OpenAiProviderAdapter.DefaultModel,
-            ComfyUiProviderAdapter.PluginKey => ComfyUiProviderAdapter.DefaultModel,
-            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => "llama3.1",
+            ScenarioHarnessProviderAdministrationConnector.PluginKey => ScenarioHarnessProviderAdministrationConnector.DefaultModel,
+            ProcessMockProviderAdministrationConnector.PluginKey => ProcessMockProviderAdministrationConnector.DefaultModel,
+            OpenAiProviderAdministrationConnector.PluginKey => OpenAiProviderAdministrationConnector.DefaultModel,
+            ComfyUiProviderAdministrationConnector.PluginKey => ComfyUiProviderAdministrationConnector.DefaultModel,
+            OllamaProviderAdministrationConnector.PluginKey or OllamaRemoteProviderAdministrationConnector.PluginKey => "llama3.1",
             _ => "unknown"
         };
     }
 
-    private Error? TryResolveProviderPlugin(
+    private Error? TryResolveProviderConnector(
         ProviderProfileEditorModel model,
-        out IProviderAdapter providerPlugin,
+        out IProviderAdministrationConnector providerConnector,
         out ConnectorPluginManifest manifest,
         out string configSchemaVersion)
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        providerPlugin = default!;
+        providerConnector = default!;
         manifest = default!;
         configSchemaVersion = string.Empty;
 
         var requestedPluginKey = model.ConnectorPluginKey?.Trim();
-        if (!providerRegistry.TryResolve(requestedPluginKey, out providerPlugin))
+        if (!providerConnectorCatalog.TryResolve(requestedPluginKey, out providerConnector))
         {
             return Error.Validation(
                 string.IsNullOrWhiteSpace(requestedPluginKey)
                     ? "Select a connector plugin for the provider profile."
-                    : $"No provider adapter is registered for plugin '{requestedPluginKey}'.");
+                    : $"No provider administration connector is registered for plugin '{requestedPluginKey}'.");
         }
 
-        manifest = providerPlugin.Manifest;
+        manifest = providerConnector.Manifest;
         configSchemaVersion = string.IsNullOrWhiteSpace(model.ConfigSchemaVersion)
             ? manifest.ConfigurationSchema.Version
             : model.ConfigSchemaVersion.Trim();
@@ -566,16 +566,16 @@ internal sealed class ProviderAdministrationService(
     {
         switch (connectorPluginKey?.Trim())
         {
-            case ScenarioHarnessProviderAdapter.PluginKey:
-            case ProcessMockProviderAdapter.PluginKey:
-            case OpenAiProviderAdapter.PluginKey:
+            case ScenarioHarnessProviderAdministrationConnector.PluginKey:
+            case ProcessMockProviderAdministrationConnector.PluginKey:
+            case OpenAiProviderAdministrationConnector.PluginKey:
                 kind = AgentFrameworkProviderKind.OpenAi;
                 return true;
-            case ComfyUiProviderAdapter.PluginKey:
+            case ComfyUiProviderAdministrationConnector.PluginKey:
                 kind = AgentFrameworkProviderKind.ComfyUi;
                 return true;
-            case OllamaProviderAdapter.PluginKey:
-            case OllamaRemoteProviderAdapter.PluginKey:
+            case OllamaProviderAdministrationConnector.PluginKey:
+            case OllamaRemoteProviderAdministrationConnector.PluginKey:
                 kind = AgentFrameworkProviderKind.Ollama;
                 return true;
             default:
@@ -586,9 +586,10 @@ internal sealed class ProviderAdministrationService(
 
     private static bool TryResolveSharedProviderPublicationMetadata(
         ProviderProfile current,
-        string connectorPluginKey,
+        IProviderAdministrationConnector providerConnector,
         out SharedProviderProfilePublicationMetadata metadata)
     {
+        var connectorPluginKey = providerConnector.Manifest.PluginKey;
         if (string.Equals(
                 current.ConnectorPluginKey,
                 connectorPluginKey,
@@ -598,40 +599,14 @@ internal sealed class ProviderAdministrationService(
                 out var currentMetadata,
                 out _) &&
             IsCompatiblePublicationMetadata(
-                connectorPluginKey,
+                providerConnector,
                 currentMetadata))
         {
             metadata = currentMetadata;
             return true;
         }
 
-        SharedProviderProfilePublicationMetadata? resolved =
-            connectorPluginKey switch
-            {
-                OpenAiProviderAdapter.PluginKey => new(
-                    AgentFrameworkProviderKind.OpenAi,
-                    ProviderTransportKind.Responses,
-                    ProviderProfilePurpose.Chat,
-                    []),
-                OllamaProviderAdapter.PluginKey or
-                    OllamaRemoteProviderAdapter.PluginKey => new(
-                        AgentFrameworkProviderKind.Ollama,
-                        ProviderTransportKind.ChatCompletions,
-                        ProviderProfilePurpose.Chat,
-                        []),
-                ComfyUiProviderAdapter.PluginKey => new(
-                    AgentFrameworkProviderKind.ComfyUi,
-                    ProviderTransportKind.ChatCompletions,
-                    ProviderProfilePurpose.ImageGeneration,
-                    []),
-                ScenarioHarnessProviderAdapter.PluginKey or
-                    ProcessMockProviderAdapter.PluginKey => new(
-                        AgentFrameworkProviderKind.OpenAi,
-                        ProviderTransportKind.Responses,
-                        ProviderProfilePurpose.Chat,
-                        []),
-                _ => null
-            };
+        var resolved = providerConnector.DefaultPublicationMetadata;
         if (resolved is null)
         {
             metadata = null!;
@@ -643,11 +618,11 @@ internal sealed class ProviderAdministrationService(
     }
 
     private static bool IsCompatiblePublicationMetadata(
-        string connectorPluginKey,
+        IProviderAdministrationConnector providerConnector,
         SharedProviderProfilePublicationMetadata metadata)
-        => connectorPluginKey switch
+        => providerConnector.Manifest.PluginKey switch
         {
-            OpenAiProviderAdapter.PluginKey =>
+            OpenAiProviderAdministrationConnector.PluginKey =>
                 metadata.ProviderKind is
                     AgentFrameworkProviderKind.OpenAi or
                     AgentFrameworkProviderKind.AzureOpenAi &&
@@ -661,26 +636,29 @@ internal sealed class ProviderAdministrationService(
                         metadata.Transport == ProviderTransportKind.Responses,
                     _ => false
                 },
-            OllamaProviderAdapter.PluginKey or
-                OllamaRemoteProviderAdapter.PluginKey =>
+            OllamaProviderAdministrationConnector.PluginKey or
+                OllamaRemoteProviderAdministrationConnector.PluginKey =>
                     metadata.ProviderKind == AgentFrameworkProviderKind.Ollama &&
                     metadata.Transport == ProviderTransportKind.ChatCompletions &&
                     metadata.Purpose == ProviderProfilePurpose.Chat,
-            ComfyUiProviderAdapter.PluginKey =>
+            ComfyUiProviderAdministrationConnector.PluginKey =>
                 metadata.ProviderKind == AgentFrameworkProviderKind.ComfyUi &&
                 metadata.Transport == ProviderTransportKind.ChatCompletions &&
                 metadata.Purpose == ProviderProfilePurpose.ImageGeneration,
-            ScenarioHarnessProviderAdapter.PluginKey or
-                ProcessMockProviderAdapter.PluginKey =>
+            ScenarioHarnessProviderAdministrationConnector.PluginKey or
+                ProcessMockProviderAdministrationConnector.PluginKey =>
                     metadata.ProviderKind == AgentFrameworkProviderKind.OpenAi &&
                     metadata.Transport == ProviderTransportKind.Responses &&
                     metadata.Purpose == ProviderProfilePurpose.Chat,
-            _ => false
+            _ => providerConnector.DefaultPublicationMetadata is { } supported &&
+                metadata.ProviderKind == supported.ProviderKind &&
+                metadata.Transport == supported.Transport &&
+                metadata.Purpose == supported.Purpose
         };
 
     private static string BuildProviderPricingRefreshMessage(
         string providerDisplayName,
-        string adapterMessage,
+        string discoveryMessage,
         CanDoItAll.AgentFramework.Models.ProviderModelPricingMergeResult mergeResult)
     {
         var exactPart = mergeResult.ExplicitPriceCount > 0
@@ -690,6 +668,6 @@ internal sealed class ProviderAdministrationService(
             ? $"{mergeResult.ModelNameOnlyCount} model-name-only row(s)"
             : "no model-name-only rows";
 
-        return $"{providerDisplayName}: {adapterMessage} Applied {exactPart} and {modelOnlyPart}; manual rows were preserved unless an exact API price matched the same model.";
+        return $"{providerDisplayName}: {discoveryMessage} Applied {exactPart} and {modelOnlyPart}; manual rows were preserved unless an exact API price matched the same model.";
     }
 }

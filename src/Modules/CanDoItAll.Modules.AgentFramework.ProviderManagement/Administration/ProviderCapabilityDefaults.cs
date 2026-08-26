@@ -21,27 +21,27 @@ public sealed record ProviderCapabilityDefaults(
 
         return pluginKey.Trim() switch
         {
-            OpenAiProviderAdapter.PluginKey => new(
+            OpenAiProviderAdministrationConnector.PluginKey => new(
                 SupportsStreaming: true,
                 SupportsToolCalling: true,
                 SupportsStructuredOutput: true,
                 SupportsVision: false),
-            ScenarioHarnessProviderAdapter.PluginKey => new(
+            ScenarioHarnessProviderAdministrationConnector.PluginKey => new(
                 SupportsStreaming: true,
                 SupportsToolCalling: true,
                 SupportsStructuredOutput: true,
                 SupportsVision: false),
-            ProcessMockProviderAdapter.PluginKey => new(
+            ProcessMockProviderAdministrationConnector.PluginKey => new(
                 SupportsStreaming: true,
                 SupportsToolCalling: true,
                 SupportsStructuredOutput: true,
                 SupportsVision: false),
-            ComfyUiProviderAdapter.PluginKey => new(
+            ComfyUiProviderAdministrationConnector.PluginKey => new(
                 SupportsStreaming: false,
                 SupportsToolCalling: false,
                 SupportsStructuredOutput: false,
                 SupportsVision: false),
-            OllamaProviderAdapter.PluginKey or OllamaRemoteProviderAdapter.PluginKey => new(
+            OllamaProviderAdministrationConnector.PluginKey or OllamaRemoteProviderAdministrationConnector.PluginKey => new(
                 SupportsStreaming: true,
                 SupportsToolCalling: true,
                 SupportsStructuredOutput: true,

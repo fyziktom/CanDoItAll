@@ -47,7 +47,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         var saveProviderResult = await providerAdministration.SaveProviderAsync(new ProviderProfileEditorModel
         {
             Name = "Round trip provider",
-            ConnectorPluginKey = UnknownManifestProviderAdapter.PluginKey,
+            ConnectorPluginKey = UnknownManifestProviderAdministrationConnector.PluginKey,
             ConfigSchemaVersion = "1.0",
             IsEnabled = true,
             Configuration = new ConnectorConfigState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -63,7 +63,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         Assert.True(saveProviderResult.IsSuccess);
 
         var providerEditor = await providerAdministration.GetProviderAsync(saveProviderResult.Value);
-        Assert.Equal(UnknownManifestProviderAdapter.PluginKey, providerEditor.ConnectorPluginKey);
+        Assert.Equal(UnknownManifestProviderAdministrationConnector.PluginKey, providerEditor.ConnectorPluginKey);
         Assert.Equal("https://provider.example.com/v1", providerEditor.Configuration.GetText(ProviderBaseUrlFieldKey));
         Assert.Equal("wave-10", providerEditor.Configuration.GetText(ProviderDefaultModelFieldKey));
         Assert.Equal(45, providerEditor.Configuration.GetNumber(ProviderTimeoutSecondsFieldKey));
@@ -102,7 +102,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
 
     private static void RegisterUnknownConnectorPlugins(IServiceCollection services)
     {
-        services.AddScoped<IProviderAdapter, UnknownManifestProviderAdapter>();
+        services.AddScoped<IProviderAdministrationConnector, UnknownManifestProviderAdministrationConnector>();
         services.AddScoped<IResourceConnectorPlugin, UnknownManifestResourceConnectorPlugin>();
     }
 
@@ -120,7 +120,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         return result.Value;
     }
 
-    private sealed class UnknownManifestProviderAdapter : IProviderAdapter
+    private sealed class UnknownManifestProviderAdministrationConnector : IProviderAdministrationConnector
     {
         public const string PluginKey = "provider.test-unknown-manifest";
 
@@ -148,24 +148,12 @@ public sealed class UnknownConnectorManifestIntegrationTests
 
         public ProviderKind? LegacyProviderKind => null;
 
-        public Task<ProviderHealthCheckResult> CheckHealthAsync(ProviderProfile profile, string? secretValue, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new ProviderHealthCheckResult(true, "Healthy"));
-        }
+        public SharedProviderProfilePublicationMetadata DefaultPublicationMetadata { get; } = new(
+            CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            CanDoItAll.AgentFramework.Models.ProviderTransportKind.Responses,
+            CanDoItAll.AgentFramework.Models.ProviderProfilePurpose.Chat,
+            []);
 
-        public Task<Result<ProviderPromptExecutionResponse>> SendAsync(
-            ProviderProfile profile,
-            ProviderPromptExecutionRequest request,
-            string? secretValue,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Result<ProviderPromptExecutionResponse>.Success(new ProviderPromptExecutionResponse(
-                profile.Name,
-                profile.DefaultModel,
-                "ok",
-                request.OutputFormat,
-                false)));
-        }
     }
 
     private sealed class UnknownManifestResourceConnectorPlugin : IResourceConnectorPlugin

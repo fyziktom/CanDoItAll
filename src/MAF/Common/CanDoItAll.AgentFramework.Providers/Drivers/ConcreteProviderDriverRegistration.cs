@@ -6,14 +6,16 @@ public static class ConcreteProviderDriverRegistration
         this AgentProviderDriverRegistryBuilder builder,
         HttpClient httpClient,
         IProviderDriverCredentialResolver credentialResolver,
-        IProviderHttpClientSelector? httpClientSelector = null)
+        IProviderHttpClientSelector? httpClientSelector = null,
+        IProviderInferenceRelayTransport? inferenceRelayTransport = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
         return builder.AddDriver(new OpenAiProviderDriver(
             httpClient,
             credentialResolver,
-            httpClientSelector));
+            httpClientSelector,
+            inferenceRelayTransport));
     }
 
     public static AgentProviderDriverRegistryBuilder AddAzureOpenAiProviderDriver(
@@ -28,11 +30,14 @@ public static class ConcreteProviderDriverRegistration
 
     public static AgentProviderDriverRegistryBuilder AddOllamaProviderDriver(
         this AgentProviderDriverRegistryBuilder builder,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IProviderInferenceRelayTransport? inferenceRelayTransport = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        return builder.AddDriver(new OllamaProviderDriver(httpClient));
+        return builder.AddDriver(new OllamaProviderDriver(
+            httpClient,
+            inferenceRelayTransport));
     }
 
     public static AgentProviderDriverRegistryBuilder AddComfyUiProviderDriver(
