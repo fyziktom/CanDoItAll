@@ -7,14 +7,15 @@ using Microsoft.AspNetCore.Components;
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 using IProviderAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderAdministrationService;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
+using ProviderConnectorFieldKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorFieldKeys;
 using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
-using WorkspaceProviderConnectorFieldKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorFieldKeys;
-using WorkspaceProviderPricingRefreshResult = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderModelPricingRefreshResult;
+using ProviderPricingRefreshResult = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderModelPricingRefreshResult;
 
 public partial class AgentProviderProfilesPanel
 {
     [Inject]
-    public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
 
     [Inject]
     public IProviderAdministrationService ProviderAdministrationService { get; set; } = default!;
@@ -66,7 +67,7 @@ public partial class AgentProviderProfilesPanel
         isLoading = true;
         try
         {
-            var providersTask = WorkspaceService.ListProvidersAsync();
+            var providersTask = ProviderRuntimeAdministrationService.ListProvidersAsync();
             var secretsTask = ProviderAdministrationService.ListSecretsAsync();
             await Task.WhenAll(providersTask, secretsTask);
             providers = await providersTask;
@@ -116,7 +117,7 @@ public partial class AgentProviderProfilesPanel
 
     private async Task EditProviderAsync(Guid providerId)
     {
-        providerModel = await WorkspaceService.GetProviderEditorAsync(providerId);
+        providerModel = await ProviderRuntimeAdministrationService.GetProviderEditorAsync(providerId);
         SyncProviderEditorText();
     }
 
@@ -127,8 +128,8 @@ public partial class AgentProviderProfilesPanel
         {
             providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
             providerModel.Tags = providerTagValues.ToList();
-            var providerId = await WorkspaceService.SaveProviderAsync(providerModel);
-            providers = await WorkspaceService.ListProvidersAsync();
+            var providerId = await ProviderRuntimeAdministrationService.SaveProviderAsync(providerModel);
+            providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
             RefreshProviderTreeExpansionDefaults();
             await EditProviderAsync(providerId);
             NotificationService.Success("Provider saved", "Provider profile saved.");
@@ -148,8 +149,8 @@ public partial class AgentProviderProfilesPanel
         isBusy = true;
         try
         {
-            var result = await WorkspaceService.TestProviderAsync(providerId);
-            providers = await WorkspaceService.ListProvidersAsync();
+            var result = await ProviderRuntimeAdministrationService.TestProviderAsync(providerId);
+            providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
             await EditProviderAsync(providerId);
             if (result.Success)
             {
@@ -175,8 +176,8 @@ public partial class AgentProviderProfilesPanel
         isBusy = true;
         try
         {
-            await WorkspaceService.DeleteProviderAsync(providerId);
-            providers = await WorkspaceService.ListProvidersAsync();
+            await ProviderRuntimeAdministrationService.DeleteProviderAsync(providerId);
+            providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
             RefreshProviderTreeExpansionDefaults();
             if (providers.Count > 0)
             {
@@ -220,30 +221,30 @@ public partial class AgentProviderProfilesPanel
         isBusy = true;
         try
         {
-            var workspaceProviders = await ProviderAdministrationService.ListProviderProfilesAsync();
-            if (!workspaceProviders.Any(provider => provider.Id == providerModel.Id.Value))
+        var managedProviders = await ProviderAdministrationService.ListProviderProfilesAsync();
+        if (!managedProviders.Any(provider => provider.Id == providerModel.Id.Value))
             {
                 NotificationService.Warning(
                     "Provider pricing was not loaded",
-                    "Pricing refresh is available only for saved workspace-backed providers. Add model prices manually.");
+                "Pricing refresh is available only for saved provider profiles. Add model prices manually.");
                 return;
             }
 
-            var workspaceModel = await ProviderAdministrationService.GetProviderAsync(providerModel.Id.Value);
-            if (workspaceModel.Id != providerModel.Id)
+        var administrationModel = await ProviderAdministrationService.GetProviderAsync(providerModel.Id.Value);
+        if (administrationModel.Id != providerModel.Id)
             {
                 NotificationService.Warning(
                     "Provider pricing was not loaded",
-                    "The selected provider is not a saved workspace-backed provider. Add model prices manually.");
+                "The selected provider is not a saved provider profile. Add model prices manually.");
                 return;
             }
 
-            workspaceModel.Configuration.SetText(WorkspaceProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
-            workspaceModel.Configuration.SetText(WorkspaceProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
-            workspaceModel.IsPrivateProvider = providerModel.IsPrivateProvider;
-            workspaceModel.ModelPrices = CloneModelPrices(providerModel.ModelPrices);
+        administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
+        administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
+        administrationModel.IsPrivateProvider = providerModel.IsPrivateProvider;
+        administrationModel.ModelPrices = CloneModelPrices(providerModel.ModelPrices);
 
-            var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(workspaceModel);
+        var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(administrationModel);
             if (!result.IsSuccess)
             {
                 NotificationService.Warning(
@@ -361,7 +362,7 @@ public partial class AgentProviderProfilesPanel
             .ToList();
     }
 
-    private void NotifyPricingRefresh(WorkspaceProviderPricingRefreshResult result)
+    private void NotifyPricingRefresh(ProviderPricingRefreshResult result)
     {
         if (result.ExplicitPriceCount > 0)
         {

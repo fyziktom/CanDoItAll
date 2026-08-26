@@ -176,14 +176,39 @@ public sealed class SharedProviderArchitectureCharacterizationTests
     }
 
     [Fact]
-    public void Provider_management_component_delegates_storage_and_transport()
+    public void Composition_registers_provider_management_once_and_workspace_di_is_provider_free()
     {
-        var component = Read("src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderManagementPanel.razor.cs");
+        var composition = Read("src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs");
+        var workspaceRegistration = Read("src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs");
+
+        Assert.Equal(
+            1,
+            composition.Split(
+                "services.AddAgentFrameworkProviderManagement();",
+                StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("AgentFramework.ProviderManagement", workspaceRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderAdministration", workspaceRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProviderRuntime", workspaceRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderProfile", workspaceRegistration, StringComparison.Ordinal);
+        Assert.DoesNotContain("SharedProvider", workspaceRegistration, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Provider_management_component_is_owned_by_agent_framework_and_uses_provider_management()
+    {
+        var component = Read("src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs");
+        var workspaceProject = Read("src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj");
+        var workspaceProviderPanel = Path.Combine(
+            FindRepositoryRoot(),
+            "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/ProviderManagementPanel.razor");
 
         Assert.Contains("IProviderAdministrationService", component, StringComparison.Ordinal);
-        Assert.DoesNotContain("WorkspaceService", component, StringComparison.Ordinal);
+        Assert.Contains("IProviderRuntimeAdministrationService", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAgentFrameworkWorkspaceService", component, StringComparison.Ordinal);
         Assert.DoesNotContain("HttpClient", component, StringComparison.Ordinal);
         Assert.DoesNotContain("AppDbContext", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.AgentFramework.ProviderManagement", workspaceProject, StringComparison.Ordinal);
+        Assert.False(File.Exists(workspaceProviderPanel));
     }
 
     private static IReadOnlyList<string> ReadProjectReferences(string project)

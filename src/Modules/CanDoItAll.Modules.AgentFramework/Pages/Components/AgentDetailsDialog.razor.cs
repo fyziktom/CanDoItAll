@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
+
 public sealed record AgentDetailsDialogResult(Guid? AgentId, bool Deleted);
 
 public partial class AgentDetailsDialog
@@ -27,6 +29,9 @@ public partial class AgentDetailsDialog
 
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public IProviderRuntimeAdministrationService ProviderRuntimeAdministrationService { get; set; } = default!;
 
     [Inject]
     public ProjectsService ProjectsService { get; set; } = default!;
@@ -203,7 +208,7 @@ public partial class AgentDetailsDialog
         {
             var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
             var providersTask = InitialProviders is null
-                ? WorkspaceService.ListProvidersAsync()
+            ? ProviderRuntimeAdministrationService.ListProvidersAsync()
                 : Task.FromResult<IReadOnlyList<ProviderProfile>>(InitialProviders);
             var capabilitiesTask = WorkspaceService.ListCapabilitiesAsync();
             var secretsTask = SecretService.ListForPickerAsync();

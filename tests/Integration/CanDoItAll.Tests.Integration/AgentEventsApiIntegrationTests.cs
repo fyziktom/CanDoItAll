@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel.Streaming;
 using CanDoItAll.Web.Api;
@@ -137,10 +138,10 @@ public sealed class AgentEventsApiIntegrationTests
     public async Task Provider_stream_cancels_and_observes_dispatch_when_running_frame_fails()
     {
         var provider = CreateProvider();
-        var workspaceService =
-            DispatchProxy.Create<IAgentFrameworkWorkspaceService, ProviderWorkspaceProxy>();
-        using var workspaceProxy =
-            (ProviderWorkspaceProxy)(object)workspaceService;
+        var providerAdministration =
+            DispatchProxy.Create<IProviderRuntimeAdministrationService, ProviderAdministrationProxy>();
+        using var providerAdministrationProxy =
+            (ProviderAdministrationProxy)(object)providerAdministration;
         var context = new DefaultHttpContext();
         await using var body = new ThrowOnRunningFrameStream();
         context.Response.Body = body;
@@ -154,13 +155,13 @@ public sealed class AgentEventsApiIntegrationTests
                     [],
                     "Test cancellation ownership."),
                 context,
-                workspaceService,
+                providerAdministration,
                 new StaticProviderSource(provider),
                 Options.Create(new ApiAccessOptions()),
                 NullLogger<ProviderChatCompletionApiRequest>.Instance));
 
-        await workspaceProxy.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(1));
-        Assert.True(workspaceProxy.Completion.Task.IsCanceled);
+        await providerAdministrationProxy.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(providerAdministrationProxy.Completion.Task.IsCanceled);
     }
 
     [Fact]
@@ -519,7 +520,7 @@ public sealed class AgentEventsApiIntegrationTests
         }
     }
 
-    private class ProviderWorkspaceProxy : DispatchProxy, IDisposable
+    private class ProviderAdministrationProxy : DispatchProxy, IDisposable
     {
         private CancellationTokenRegistration cancellationRegistration;
 
@@ -534,10 +535,10 @@ public sealed class AgentEventsApiIntegrationTests
             object?[]? args)
         {
             if (targetMethod?.Name !=
-                nameof(IAgentFrameworkWorkspaceService.RunProviderTestChatAsync))
+                nameof(IProviderRuntimeAdministrationService.RunProviderTestChatAsync))
             {
                 throw new NotSupportedException(
-                    $"Unexpected workspace call '{targetMethod?.Name}'.");
+                    $"Unexpected provider-administration call '{targetMethod?.Name}'.");
             }
 
             var cancellationToken = (CancellationToken)args![2]!;

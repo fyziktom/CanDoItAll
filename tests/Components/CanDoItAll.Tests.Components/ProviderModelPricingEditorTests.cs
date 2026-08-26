@@ -1,7 +1,7 @@
 using AngleSharp.Html.Dom;
 using Bunit;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.Modules.AgentFramework.Pages.Components;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 

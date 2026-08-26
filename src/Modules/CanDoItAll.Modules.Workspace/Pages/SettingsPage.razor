@@ -5,7 +5,7 @@
 @using CanDoItAll.Modules.Workspace.Pages.Components
 @using Microsoft.AspNetCore.Components
 @inject WorkspaceService WorkspaceService
-@inject IProviderAdministrationService ProviderAdministrationService
+@inject IWorkspaceProviderCatalog ProviderCatalog
 @inject SecretService SecretService
 @inject NavigationManager Navigation
 
@@ -14,8 +14,8 @@
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="Settings"
-                    Title="Workspace defaults, data sources, and providers"
-                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and provider profiles as separate jobs instead of one long settings page."
+                    Title="Workspace defaults and data sources"
+                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and API access. Provider profiles are managed from Agents."
                     Compact="true">
             <Stats>
                 <CompactStat Label="providers" Value="@providers.Count.ToString()" TooltipText="Configured provider profiles." />
@@ -224,179 +224,6 @@
                                     @if (secretModel.Id.HasValue)
                                     {
                                         <Button Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteSecretAsync" />
-                                    }
-                                </DangerActions>
-                            </StickyActionFooter>
-                        </Stack>
-                    </EditForm>
-                </DetailContent>
-            </ListDetailShell>
-        }
-        else if (string.Equals(settingsTab, "providers", StringComparison.Ordinal))
-        {
-            <ListDetailShell ListPaneWidth="25rem">
-                <ListHeader>
-                    <ListPanelHeader Title="Provider profiles" Description="Provider-specific settings live here, while the rest of the product consumes the neutral provider contract." Count="@($"{FilteredProviders.Count} profile(s)")">
-                        <Actions>
-                            <Button Text="New provider" Icon="add" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderAsync" />
-                        </Actions>
-                        <Filters>
-                            <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
-                                <input @bind="providerSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search providers" />
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderSearch" />
-                            </FilterBar>
-                        </Filters>
-                    </ListPanelHeader>
-                </ListHeader>
-
-                <ListContent>
-                    @if (FilteredProviders.Count == 0)
-                    {
-                        <EmptyState Eyebrow="No providers" Title="Add the first provider profile" Description="Provider profiles appear here after they are saved." />
-                    }
-                    else
-                    {
-                        <Stack GapScale="LayoutGap.Medium">
-                            @foreach (var provider in FilteredProviders)
-                            {
-                                <SelectionListItem Title="@provider.Name"
-                                                   Eyebrow="@provider.ConnectorDisplayName"
-                                                   Meta="@provider.DefaultModel"
-                                                   Summary="@provider.BaseUrl"
-                                                   IsSelected="@(providerModel.Id == provider.Id)"
-                                                   OnSelect="@(() => EditProviderAsync(provider.Id))">
-                                    <Status>
-                                        <StatusBadge Tone="@(provider.IsEnabled ? "success" : "warning")" Text="@(provider.IsEnabled ? "Enabled" : "Disabled")" />
-                                    </Status>
-                                </SelectionListItem>
-                            }
-                        </Stack>
-                    }
-                </ListContent>
-
-                <DetailHeader>
-                    <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow">Provider editor</p>
-                        <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
-                        <p class="cda-body-muted">Profiles keep connector transport, capability flags, and health status in one editor.</p>
-                    </Stack>
-                </DetailHeader>
-
-                <DetailContent>
-                    <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
-                        <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
-                            <Tabs @bind-SelectedIndex="providerEditorTabIndex"
-                                  RenderMode="TabRenderMode.Server"
-                                  Variant="TabsVariant.WorkspaceSecondary"
-                                  OverflowMode="TabsOverflowMode.Wrap"
-                                  AriaLabel="Provider editor tabs"
-                                  data-testid="provider-editor-tabs">
-                                <TabsItem Text="Connection" Icon="plug" data-testid="provider-editor-tab-connection">
-                                    <FormSection Title="Connector identity"
-                                                 Icon="plug"
-                                                 Description="Choose the connector plugin first, then fill only the schema fields that plugin exposes.">
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                            <div>
-                                                <label class="cda-field-label">Profile name</label>
-                                                <InputText @bind-Value="providerModel.Name" class="cda-input" data-testid="provider-name-input" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Connector plugin</label>
-                                                <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="cda-input" data-testid="provider-plugin-select">
-                                                    @foreach (var manifest in providerManifests)
-                                                    {
-                                                        <option value="@manifest.PluginKey">@manifest.DisplayName</option>
-                                                    }
-                                                </InputSelect>
-                                            </div>
-                                        </Grid>
-
-                                        @if (SelectedProviderManifest is not null)
-                                        {
-                                            <Alert AlertStyle="AlertStyle.Info">
-                                                <p class="font-semibold">@SelectedProviderManifest.DisplayName</p>
-                                                <p class="mt-1 break-all">Plugin key: @SelectedProviderManifest.PluginKey</p>
-                                                <p class="mt-1">@SelectedProviderManifest.HealthCheck.Summary</p>
-                                            </Alert>
-                                        }
-                                        else
-                                        {
-                                            <Alert AlertStyle="AlertStyle.Warning">
-                                                <p class="font-semibold">Unknown provider plugin</p>
-                                                <p class="mt-1 break-all">Plugin key: @providerModel.ConnectorPluginKey</p>
-                                            </Alert>
-                                        }
-
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                            @foreach (var field in SelectedProviderFields)
-                                            {
-                                                <ConnectorConfigFieldEditor Field="field"
-                                                                            State="providerModel.Configuration"
-                                                                            Secrets="secrets"
-                                                                            InputClass="cda-input"
-                                                                            TestId="@ResolveProviderFieldTestId(field)" />
-                                            }
-                                        </Grid>
-                                    </FormSection>
-                                </TabsItem>
-                                <TabsItem Text="Prices" Icon="paid" data-testid="provider-editor-tab-prices">
-                                    @if (TryResolveProviderPricingKind(out var pricingKind))
-                                    {
-                                        <ProviderModelPricingEditor Model="providerModel"
-                                                                    PricingKind="@pricingKind"
-                                                                    DefaultModel="@ResolveProviderDefaultModel()"
-                                                                    OnRefreshPrices="RefreshProviderModelPricesAsync" />
-                                    }
-                                    else
-                                    {
-                                        <Alert AlertStyle="AlertStyle.Warning">
-                                            <p>Pricing controls are unavailable until this provider uses a registered connector plugin.</p>
-                                        </Alert>
-                                    }
-                                </TabsItem>
-                                <TabsItem Text="Access" Icon="shield" data-testid="provider-editor-tab-access">
-                                    <FormSection Title="Auth and capabilities"
-                                                 Icon="shield"
-                                                 Description="Attach the secret reference and advertise what the profile supports.">
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                            <div>
-                                                <label class="cda-field-label">API key secret</label>
-                                                <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input" data-testid="provider-secret-select">
-                                                    <option value="">None</option>
-                                                    @foreach (var secret in secrets)
-                                                    {
-                                                        <option value="@secret.Id">@secret.Name</option>
-                                                    }
-                                                </InputSelect>
-                                            </div>
-                                        </Grid>
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                            <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>
-                                            <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStreaming" /> Streaming</label>
-                                            <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsToolCalling" /> Tool calling</label>
-                                            <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStructuredOutput" /> Structured output</label>
-                                            <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsVision" /> Vision</label>
-                                        </Grid>
-                                    </FormSection>
-                                </TabsItem>
-                            </Tabs>
-
-                            <StickyActionFooter StatusLabel="Provider profiles">
-                                <SecondaryActions>
-                                    <Button Text="Clear" Icon="restart_alt" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
-                                    @if (providerModel.Id.HasValue)
-                                    {
-                                        <Button Text="Health" Icon="fact_check" ButtonStyle="ButtonStyle.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
-                                    }
-                                </SecondaryActions>
-                                <PrimaryActions>
-                                    <Button Text="Save provider" Icon="save" Type="submit" data-testid="provider-save-button" />
-                                </PrimaryActions>
-                                <DangerActions>
-                                    @if (providerModel.Id.HasValue)
-                                    {
-                                        <Button Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>

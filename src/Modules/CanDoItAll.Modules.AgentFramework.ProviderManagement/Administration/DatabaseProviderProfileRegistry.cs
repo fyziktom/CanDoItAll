@@ -280,6 +280,11 @@ internal sealed class DatabaseProviderProfileRegistry(
                 {
                     Providers = catalog.Providers
                         .Where(item => item.Id != providerId)
+                        .ToList(),
+                    Agents = catalog.Agents
+                        .Select(agent => agent.ProviderProfileId == providerId
+                            ? agent with { ProviderProfileId = null }
+                            : agent)
                         .ToList()
                 }, projectionCancellationToken));
     }

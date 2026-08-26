@@ -11,6 +11,53 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProviderDatabaseTransferTests
 {
     [Fact]
+    public async Task Workspace_default_provider_transfer_restores_opaque_id_without_provider_dependency()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies(
+        [
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly,
+            typeof(WorkspaceModuleAssemblyMarker).Assembly,
+            typeof(SecretService).Assembly
+        ]);
+        var sourceOptions = AppDbContextTestOptionsBuilder.Create()
+            .UseInMemoryDatabase($"workspace-provider-preference-source-{Guid.NewGuid():N}")
+            .Options;
+        var targetOptions = AppDbContextTestOptionsBuilder.Create()
+            .UseInMemoryDatabase($"workspace-provider-preference-target-{Guid.NewGuid():N}")
+            .Options;
+        await using var source = new AppDbContext(sourceOptions);
+        await using var target = new AppDbContext(targetOptions);
+        var sourceProviderId = Guid.NewGuid();
+
+        source.Add(new WorkspaceSettings
+        {
+            DefaultProviderProfileId = sourceProviderId,
+            UpdatedAtUtc = DateTimeOffset.UtcNow
+        });
+        await source.SaveChangesAsync();
+
+        var context = new DatabaseTransferContext(
+            CreateProfile("source"),
+            CreateProfile("target"),
+            source,
+            target,
+            ReplaceExisting: true);
+        var handler = new WorkspaceDefaultProviderDatabaseTransferHandler();
+        var preview = await handler.PreviewAsync(context);
+        var result = await handler.TransferAsync(context);
+
+        Assert.True(preview.IsAvailable);
+        Assert.Null(preview.Warning);
+        Assert.True(result.Success);
+        Assert.Equal(
+            sourceProviderId,
+            await target.Set<WorkspaceSettings>()
+                .Select(settings => settings.DefaultProviderProfileId)
+                .SingleAsync());
+        Assert.False(await target.Set<ProviderProfile>().AnyAsync());
+    }
+
+    [Fact]
     public async Task Provider_transfer_copies_profiles_and_referenced_secrets_but_not_workspace_preference()
     {
         AppDbContextModelRegistry.ConfigureAssemblies(

@@ -23,7 +23,6 @@ public static class WorkspaceModuleServiceCollectionExtensions
         services.AddScoped<WorkspaceService>();
         services.TryAddScoped<IStorageCatalogSelectionSource, WorkspaceStorageCatalogSelectionSource>();
         services.AddScoped<DatabaseProfileWorkspaceService>();
-        services.AddScoped<IDatabaseTransferHandler, WorkspaceDefaultProviderDatabaseTransferHandler>();
         services.AddScoped<IProjectManagementKnowledgeProvider, StaticProjectManagementKnowledgeProvider>();
         services.AddScoped<ProjectManagementKnowledgeService>();
         return services;

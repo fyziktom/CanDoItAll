@@ -60,6 +60,8 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddSecurityModule(configuration);
         services.AddAgentFrameworkProviderManagement();
         services.AddWorkspaceModule();
+        services.AddScoped<IWorkspaceProviderCatalog, ProviderManagementWorkspaceProviderCatalog>();
+        services.AddScoped<IDatabaseTransferHandler, WorkspaceDefaultProviderDatabaseTransferHandler>();
         services.AddSharedProviderHttpDescriptors();
         services.AddSharedProviderRuntimeAccessContextPropagation();
         services.TryAddSingleton<

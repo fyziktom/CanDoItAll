@@ -613,17 +613,17 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         Assert.NotEqual(personalProviderId, outageFailure.ProviderId);
         Assert.Equal(personalProviderId, await LoadDefaultProviderAsync(hybridFixture.Primary));
 
-        var unavailableWorkspaceService = DispatchProxy.Create<
-            IAgentFrameworkWorkspaceService,
-            UnavailableProviderWorkspaceServiceProxy>();
-        ((UnavailableProviderWorkspaceServiceProxy)(object)unavailableWorkspaceService).ProviderId =
+        var unavailableProviderAdministration = DispatchProxy.Create<
+            IProviderRuntimeAdministrationService,
+            UnavailableProviderAdministrationProxy>();
+        ((UnavailableProviderAdministrationProxy)(object)unavailableProviderAdministration).ProviderId =
             shared.ProviderProfileId;
         await using (var apiHost = await ApiTestHost.CreateAsync(
             jwtEnabled: false,
             configureServices: services =>
             {
-                services.RemoveAll<IAgentFrameworkWorkspaceService>();
-                services.AddSingleton(unavailableWorkspaceService);
+                services.RemoveAll<IProviderRuntimeAdministrationService>();
+                services.AddSingleton(unavailableProviderAdministration);
             },
             useInMemoryDatabase: true))
         {
@@ -1422,17 +1422,17 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         SharedProviderRoutingModelId DefaultModelId,
         SharedProviderSourceInstanceId? RemoteSourceInstanceId);
 
-    private class UnavailableProviderWorkspaceServiceProxy : DispatchProxy
+    private class UnavailableProviderAdministrationProxy : DispatchProxy
     {
         public Guid ProviderId { get; set; }
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (targetMethod?.Name !=
-                nameof(IAgentFrameworkWorkspaceService.RunProviderTestChatAsync))
+                nameof(IProviderRuntimeAdministrationService.RunProviderTestChatAsync))
             {
                 throw new InvalidOperationException(
-                    $"Unexpected workspace service member '{targetMethod?.Name}'.");
+                    $"Unexpected provider administration member '{targetMethod?.Name}'.");
             }
 
             Assert.NotNull(args);

@@ -30,6 +30,9 @@ public static class ProviderManagementServiceCollectionExtensions
         services.AddScoped<ProviderAdministrationService>();
         services.AddScoped<IProviderAdministrationService>(serviceProvider =>
             serviceProvider.GetRequiredService<ProviderAdministrationService>());
+        services.AddScoped<
+            IProviderRuntimeAdministrationService,
+            ProviderRuntimeAdministrationService>();
         services.AddScoped<ProviderProfileMapper>();
         services.AddSingleton<CanonicalProviderRuntimeProfileSnapshotService>();
         services.AddSingleton<IProviderRuntimeProfileSource>(serviceProvider =>

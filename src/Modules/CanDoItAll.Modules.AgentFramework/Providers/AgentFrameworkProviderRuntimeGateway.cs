@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +10,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 using AgentFrameworkProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
 
 internal sealed class AgentFrameworkProviderRuntimeGateway(
-    ICanDoItAllAgentWorkspaceFactory workspaceFactory,
+    IProviderRuntimeAdministrationService providerAdministration,
     IProviderRuntimeProfileSource providerSource,
     IProviderRuntimeDescriptorStore descriptorStore,
     IProviderRuntimePool runtimePool,
@@ -28,7 +29,6 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
         AgentFrameworkProviderProfile? provider = null;
         try
         {
-            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             provider = await providerSource.GetProviderAsync(
                 providerProfileId,
                 cancellationToken);
@@ -39,7 +39,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
 
             var result = ProviderFailureDisclosurePolicy.SanitizeHealthResult(
                 provider,
-                await workspaceService.TestProviderAsync(
+                await providerAdministration.TestProviderAsync(
                     providerProfileId,
                     cancellationToken));
             await activityStream.RecordAsync(
@@ -89,7 +89,6 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
         AgentFrameworkProviderProfile? provider = null;
         try
         {
-            var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
             provider = await providerSource.GetProviderAsync(
                 request.ProviderProfileId,
                 cancellationToken);
@@ -103,7 +102,7 @@ internal sealed class AgentFrameworkProviderRuntimeGateway(
                     Error.Validation("Provider profile not found or disabled."));
             }
 
-            var response = await workspaceService.RunProviderTestChatAsync(
+            var response = await providerAdministration.RunProviderTestChatAsync(
                 request.ProviderProfileId,
                 new ProviderTestChatRequest(
                     request.ModelOverride ?? provider.DefaultModel,

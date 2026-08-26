@@ -24,22 +24,13 @@ public sealed class WorkspaceDefaultProviderDatabaseTransferHandler :
         var targetProviderId = await ReadDefaultProviderIdAsync(
             context.TargetDbContext,
             cancellationToken);
-        var targetContainsProvider = sourceProviderId.HasValue &&
-            await context.TargetDbContext.Set<ProviderProfile>()
-                .AsNoTracking()
-                .AnyAsync(
-                    provider => provider.Id == sourceProviderId.Value,
-                    cancellationToken);
-
         return new DatabaseTransferItemPreview(
             Descriptor,
-            sourceProviderId.HasValue && targetContainsProvider,
+            sourceProviderId.HasValue,
             sourceProviderId.HasValue
                 ? "A workspace default-provider preference is available."
                 : "The source workspace has no default-provider preference.",
-            sourceProviderId.HasValue && !targetContainsProvider
-                ? "Transfer the referenced provider profile before transferring this preference."
-                : null,
+            null,
             sourceProviderId.HasValue ? 1 : 0,
             targetProviderId.HasValue ? 1 : 0);
     }
@@ -59,18 +50,6 @@ public sealed class WorkspaceDefaultProviderDatabaseTransferHandler :
                 false,
                 "The source workspace has no default-provider preference.",
                 0);
-        }
-
-        var targetContainsProvider = await context.TargetDbContext
-            .Set<ProviderProfile>()
-            .AsNoTracking()
-            .AnyAsync(
-                provider => provider.Id == sourceProviderId.Value,
-                cancellationToken);
-        if (!targetContainsProvider)
-        {
-            throw new InvalidOperationException(
-                "The target database does not contain the referenced provider profile.");
         }
 
         var targetSettings = await context.TargetDbContext.Set<WorkspaceSettings>()

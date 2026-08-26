@@ -345,14 +345,8 @@ public sealed class ProviderFeatureMatrixTests
     }
 
     [Fact]
-    public void Provider_settings_ui_has_explicit_plugin_mapping_and_comfyui_typed_fields()
+    public void Provider_settings_ui_is_authoritative_in_agent_framework_and_workspace_only_selects_default()
     {
-        var workspaceModelsSource = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.Workspace",
-            "Models",
-            "WorkspaceModels.cs");
         var settingsPageSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -368,17 +362,17 @@ public sealed class ProviderFeatureMatrixTests
         var providerPanelSource = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
+            "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "ProviderManagementPanel.razor.cs");
+            "AgentProviderProfilesPanel.razor.cs");
         var providerPanelMarkup = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
+            "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "ProviderManagementPanel.razor");
+            "AgentProviderProfilesPanel.razor");
         var providerExecutionSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -386,24 +380,14 @@ public sealed class ProviderFeatureMatrixTests
             "Administration",
             "ProviderAdministrationConnectors.cs");
 
-        Assert.DoesNotContain("TryResolveAgentFrameworkProviderKind", workspaceModelsSource, StringComparison.Ordinal);
-        Assert.Contains("TryResolveAgentFrameworkProviderKind", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("TryResolveAgentFrameworkProviderKind", providerPanelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", workspaceModelsSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", settingsPageSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_ => AgentFrameworkProviderKind.Ollama", providerPanelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("No AgentFramework provider kind mapping exists for connector plugin", workspaceModelsSource, StringComparison.Ordinal);
-        Assert.Contains("No provider pricing kind is registered for connector plugin", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("No provider pricing kind is registered for connector plugin", providerPanelSource, StringComparison.Ordinal);
-        Assert.Contains("Unknown provider plugin", settingsPageMarkup, StringComparison.Ordinal);
-        Assert.Contains("Unknown provider plugin", providerPanelMarkup, StringComparison.Ordinal);
-        Assert.Contains("Pricing controls are unavailable", settingsPageMarkup, StringComparison.Ordinal);
-        Assert.Contains("Pricing controls are unavailable", providerPanelMarkup, StringComparison.Ordinal);
-
-        Assert.Contains("ProviderConnectorKeys.ComfyUi", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("ProviderConnectorKeys.ComfyUi", providerPanelSource, StringComparison.Ordinal);
-        Assert.Contains("http://127.0.0.1:8188", settingsPageSource, StringComparison.Ordinal);
-        Assert.Contains("http://127.0.0.1:8188", providerPanelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProviderAdministrationService", settingsPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("providerModel", settingsPageSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Provider editor", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.Contains("IWorkspaceProviderCatalog", settingsPageMarkup, StringComparison.Ordinal);
+        Assert.Contains("/agents?tab=providers", settingsPageSource, StringComparison.Ordinal);
+        Assert.Contains("IProviderRuntimeAdministrationService", providerPanelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IAgentFrameworkWorkspaceService", providerPanelSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderModelPricingEditor", providerPanelMarkup, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplateJson", providerExecutionSource, StringComparison.Ordinal);
         Assert.Contains("ConnectorConfigFieldType.Json", providerExecutionSource, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplatePath", providerExecutionSource, StringComparison.Ordinal);
@@ -491,10 +475,10 @@ public sealed class ProviderFeatureMatrixTests
         var providerPanelMarkup = ReadRepositoryFile(
             "src",
             "Modules",
-            "CanDoItAll.Modules.Workspace",
+            "CanDoItAll.Modules.AgentFramework",
             "Pages",
             "Components",
-            "ProviderManagementPanel.razor");
+            "AgentProviderProfilesPanel.razor");
         var providerDispatchModels = ReadRepositoryFile(
             "src",
             "MAF",

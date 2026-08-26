@@ -211,7 +211,7 @@ public partial class AgentsHomePage
             ResolveOverviewValue(overview.Totals.ProviderCount),
             "cloud",
             "accent",
-            "Workspace-owned providers executed through AgentFramework.",
+                "Provider profiles executed through AgentFramework.",
             "agents-overview-metric-providers"),
         new(
             "Capabilities",

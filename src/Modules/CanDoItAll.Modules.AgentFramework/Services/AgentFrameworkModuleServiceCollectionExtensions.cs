@@ -196,6 +196,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<MafAgentRuntime>().DiagnosticsPort);
         services.TryAddScoped<IProviderModelAdministrationRuntime>(serviceProvider =>
             serviceProvider.GetRequiredService<MafAgentRuntime>().ModelAdministrationPort);
+        services.TryAddScoped<IProviderDiagnosticsService>(serviceProvider => new ProviderDiagnosticsService(
+            serviceProvider.GetRequiredService<IProviderDiagnosticsRuntime>(),
+            serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
