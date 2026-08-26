@@ -16,7 +16,7 @@
 | BR04 unify provider runtime | DONE | `subbundles/BR04-unify-provider-runtime/RESULT.md` |
 | BR05 rewire UI/API/composition/transfer | DONE | `subbundles/BR05-rewire-ui-api-composition-and-transfer/RESULT.md` |
 | BR06 preserve persistence and clean up | DONE | `subbundles/BR06-preserve-persistence-and-cleanup/RESULT.md` |
-| BR07 guards and focused gates | PLANNED | — |
+| BR07 guards and focused gates | DONE | `subbundles/BR07-architecture-guards-and-focused-gates/RESULT.md` |
 | BR08 handoff to original SB07 | PLANNED | — |
 
 Update this table once per completed subbundle. Do not create parallel status trackers.

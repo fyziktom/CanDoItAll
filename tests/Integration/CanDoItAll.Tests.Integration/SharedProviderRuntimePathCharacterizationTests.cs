@@ -418,7 +418,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         {
             return $$"""
                 {
-                  "id": "chatcmpl-sb00",
+                  "id": "chatcmpl-boundary-characterization",
                   "object": "chat.completion",
                   "created": 1787533200,
                   "model": "model-test",
@@ -444,9 +444,9 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         private static string ChatCompletionStream(string text)
         {
             return $$"""
-                data: {"id":"chatcmpl-sb00-stream","object":"chat.completion.chunk","created":1787533200,"model":"model-test","choices":[{"index":0,"delta":{"role":"assistant","content":"{{text}}"},"finish_reason":null}]}
+                data: {"id":"chatcmpl-boundary-characterization-stream","object":"chat.completion.chunk","created":1787533200,"model":"model-test","choices":[{"index":0,"delta":{"role":"assistant","content":"{{text}}"},"finish_reason":null}]}
 
-                data: {"id":"chatcmpl-sb00-stream","object":"chat.completion.chunk","created":1787533200,"model":"model-test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+                data: {"id":"chatcmpl-boundary-characterization-stream","object":"chat.completion.chunk","created":1787533200,"model":"model-test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
 
                 data: [DONE]
 
@@ -457,14 +457,14 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
         {
             return $$"""
                 {
-                  "id": "resp_sb00",
+                  "id": "resp_boundary_characterization",
                   "object": "response",
                   "created_at": 1787533200,
                   "status": "completed",
                   "model": "model-test",
                   "output": [
                     {
-                      "id": "msg_sb00",
+                      "id": "msg_boundary_characterization",
                       "type": "message",
                       "status": "completed",
                       "role": "assistant",
@@ -493,7 +493,7 @@ public sealed class SharedProviderRuntimePathCharacterizationTests
             var completedResponse = ResponseJson(text).ReplaceLineEndings(string.Empty);
             return $$"""
                 event: response.output_text.delta
-                data: {"type":"response.output_text.delta","sequence_number":0,"item_id":"msg_sb00_stream","output_index":0,"content_index":0,"delta":"{{text}}"}
+                data: {"type":"response.output_text.delta","sequence_number":0,"item_id":"msg_boundary_characterization_stream","output_index":0,"content_index":0,"delta":"{{text}}"}
 
                 event: response.completed
                 data: {"type":"response.completed","sequence_number":1,"response":{{completedResponse}}}

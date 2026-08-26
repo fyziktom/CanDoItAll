@@ -346,7 +346,7 @@ public sealed class AgentApiFailureContractIntegrationTests
                 {
                     Name = "Provider validation probe key",
                     Kind = SecretKind.ApiKey,
-                    SecretValue = "sk-provider-validation-probe",
+                    SecretValue = "provider-validation-probe",
                     Scope = "workspace"
                 });
             Assert.True(secretResult.IsSuccess);

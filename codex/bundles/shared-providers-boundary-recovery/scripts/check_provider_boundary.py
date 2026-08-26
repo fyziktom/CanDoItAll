@@ -148,6 +148,13 @@ def final_violations(repo: Path) -> list[str]:
 
     add_violation(violations, not provider_csproj.exists(), "ProviderManagement project is missing.")
 
+    solution = repo / "CanDoItAll.slnx"
+    add_violation(
+        violations,
+        provider_csproj.name not in read_text(solution),
+        "ProviderManagement project is not included in the canonical solution.",
+    )
+
     if provider_csproj.exists():
         csproj_text = read_text(provider_csproj)
         add_violation(
@@ -170,8 +177,13 @@ def final_violations(repo: Path) -> list[str]:
     )
 
     workspace_provider_dir = workspace / "Providers"
-    if workspace_provider_dir.exists() and any(iter_source_files(workspace_provider_dir)):
-        violations.append("Workspace/Providers still contains source files.")
+    allowed_workspace_provider_files = {"WorkspaceProviderCatalog.cs"}
+    for path in iter_source_files(workspace_provider_dir):
+        if path.name not in allowed_workspace_provider_files:
+            violations.append(
+                "Workspace/Providers contains provider ownership/runtime source: "
+                f"{path.relative_to(repo).as_posix()}"
+            )
 
     workspace_di = workspace / "Services" / "WorkspaceModuleServiceCollectionExtensions.cs"
     forbidden_workspace_di_tokens = (
@@ -198,7 +210,12 @@ def final_violations(repo: Path) -> list[str]:
     for token in contains_any(workspace_models, forbidden_workspace_model_tokens):
         violations.append(f"Workspace model/service source still owns provider behavior: {token}")
 
+    allowed_workspace_shared_provider_files = {
+        workspace / "ApiAccess" / "ApiAccessScopeNames.cs",
+    }
     for path in iter_source_files(workspace):
+        if path in allowed_workspace_shared_provider_files:
+            continue
         text = read_text(path)
         if "SharedProvider" in text or "ProviderSharePublication" in text:
             violations.append(
@@ -212,15 +229,18 @@ def final_violations(repo: Path) -> list[str]:
     for root in provider_specific_af_roots:
         for path in iter_source_files(root):
             text = read_text(path)
-            if "CanDoItAll.Modules.Workspace" in text and (
-                "Provider" in path.name or "Provider" in text or "SharedProvider" in text
-            ):
+            is_provider_specific = (
+                root == agent_framework / "Providers"
+                or "Provider" in path.name
+                or "SharedProvider" in path.name
+            )
+            if is_provider_specific and "CanDoItAll.Modules.Workspace" in text:
                 violations.append(
                     f"Provider-specific AgentFramework source references Workspace: {path.relative_to(repo).as_posix()}"
                 )
 
     for path in iter_source_files(web_api):
-        if "SharedProvider" not in path.name and "Provider" not in path.name:
+        if "SharedProvider" not in path.name:
             continue
         text = read_text(path)
         if "CanDoItAll.Modules.Workspace" in text:
@@ -255,7 +275,11 @@ def final_violations(repo: Path) -> list[str]:
                 f"{occurrence.path}:{occurrence.line}"
             )
 
-    module_assemblies_candidates = list((repo / "src").rglob("ModuleAssemblies.cs"))
+    module_assemblies_candidates = [
+        path
+        for path in iter_source_files(repo / "src")
+        if path.name == "ModuleAssemblies.cs"
+    ]
     module_assemblies_text = "\n".join(read_text(path) for path in module_assemblies_candidates)
     add_violation(
         violations,
@@ -265,8 +289,8 @@ def final_violations(repo: Path) -> list[str]:
 
     provider_di_text = "\n".join(
         read_text(path)
-        for path in provider_project.rglob("*.cs")
-        if path.is_file()
+        for path in iter_source_files(provider_project)
+        if path.suffix == ".cs"
     ) if provider_project.exists() else ""
     add_violation(
         violations,
@@ -274,8 +298,50 @@ def final_violations(repo: Path) -> list[str]:
         "ProviderManagement DI entry point AddAgentFrameworkProviderManagement is missing.",
     )
 
+    production_source = "\n".join(
+        read_text(path)
+        for root in production_roots
+        for path in iter_source_files(root)
+        if path.suffix in {".cs", ".razor"}
+    )
+    provider_registration_count = production_source.count(
+        "services.AddAgentFrameworkProviderManagement();"
+    )
+    add_violation(
+        violations,
+        provider_registration_count != 1,
+        "ProviderManagement must be registered exactly once in production; "
+        f"found {provider_registration_count} registrations.",
+    )
+
+    forbidden_user_facing_terms = (
+        "workspace-backed provider",
+        "workspace-owned provider",
+        "workspace backed provider",
+        "workspace owned provider",
+    )
+    user_facing_roots = (
+        modules,
+        web_api,
+    )
+    for root in user_facing_roots:
+        for path in iter_source_files(root):
+            if path.suffix not in {".cs", ".razor"}:
+                continue
+            text = read_text(path).lower()
+            for term in forbidden_user_facing_terms:
+                if term in text:
+                    violations.append(
+                        f"User-facing source contains forbidden provider ownership term '{term}': "
+                        f"{path.relative_to(repo).as_posix()}"
+                    )
+
     migration_root = repo / "src" / "Foundation"
-    migration_text = "\n".join(read_text(path) for path in migration_root.rglob("*.cs"))
+    migration_text = "\n".join(
+        read_text(path)
+        for path in iter_source_files(migration_root)
+        if path.suffix == ".cs"
+    )
     for table_name in EXPECTED_TABLE_NAMES:
         add_violation(
             violations,
