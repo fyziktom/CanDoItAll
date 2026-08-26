@@ -4,7 +4,6 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +15,7 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
     private static readonly DateTimeOffset Now = new(2026, 8, 24, 21, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task Workspace_delete_reports_publication_reference_and_preserves_profile()
+    public async Task Provider_administration_delete_reports_publication_reference_and_preserves_profile()
     {
         await AssertPolicyBlocksAsync(
             SharedProviderProfileReferenceKinds.Publication,
@@ -26,7 +25,7 @@ public sealed class SharedProviderDeletionReferenceIntegrationTests
     }
 
     [Fact]
-    public async Task Workspace_delete_reports_import_reference_and_preserves_profile()
+    public async Task Provider_administration_delete_reports_import_reference_and_preserves_profile()
     {
         await AssertPolicyBlocksAsync(
             SharedProviderProfileReferenceKinds.Import,

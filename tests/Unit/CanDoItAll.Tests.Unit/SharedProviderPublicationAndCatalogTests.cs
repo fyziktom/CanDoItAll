@@ -5,7 +5,6 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +14,8 @@ using Microsoft.Extensions.Options;
 namespace CanDoItAll.Tests.Unit;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
-using WorkspaceProviderProfileEditorModel = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileEditorModel;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using ProviderAdministrationEditorModel = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileEditorModel;
 
 [Collection(AppDbContextModelRegistryTestCollectionNames.Name)]
 public sealed class SharedProviderPublicationAndCatalogTests
@@ -531,22 +530,22 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var service = fixture.CreatePublicationService(activity, observer);
         await using (var mutation = await fixture.DbContextFactory.CreateDbContextAsync())
         {
-            var profile = await mutation.Set<WorkspaceProviderProfile>()
+            var profile = await mutation.Set<PersistedProviderProfile>()
                 .SingleAsync(item => item.Id == fixture.Profile.Id);
-            profile.ExtraSettingsJson = "{\"privateOperatorNote\":\"workspace-save-path\"}";
+            profile.ExtraSettingsJson = "{\"privateOperatorNote\":\"provider-save-path\"}";
             await mutation.SaveChangesAsync();
         }
 
         var saveActivity = new RecordingActivityStream();
-        var saveObserver = new RecordingWorkspaceProviderProfileCommitObserver();
-        var workspaceService = fixture.CreateWorkspaceService(saveActivity, saveObserver);
-        var saved = await workspaceService.SaveProviderAsync(CreateEditor(fixture));
+        var saveObserver = new RecordingProviderProfileCommitObserver();
+        var providerAdministration = fixture.CreateProviderAdministrationService(saveActivity, saveObserver);
+        var saved = await providerAdministration.SaveProviderAsync(CreateEditor(fixture));
         Assert.True(saved.IsSuccess);
         Assert.Equal(fixture.Profile.Id, saved.Value);
 
         await using (var verification = await fixture.DbContextFactory.CreateDbContextAsync())
         {
-            var persistedProfile = await verification.Set<WorkspaceProviderProfile>()
+            var persistedProfile = await verification.Set<PersistedProviderProfile>()
                 .AsNoTracking()
                 .SingleAsync(item => item.Id == fixture.Profile.Id);
             using var metadataDocument = JsonDocument.Parse(persistedProfile.ExtraSettingsJson);
@@ -642,8 +641,8 @@ public sealed class SharedProviderPublicationAndCatalogTests
         }
 
         var raceActivity = new RecordingActivityStream();
-        var raceObserver = new RecordingWorkspaceProviderProfileCommitObserver();
-        var raceWorkspaceService = referencedFixture.CreateWorkspaceService(
+        var raceObserver = new RecordingProviderProfileCommitObserver();
+        var raceProviderAdministration = referencedFixture.CreateProviderAdministrationService(
             raceActivity,
             raceObserver);
         var gatedDeletionPolicy = new GatedSecretDeletionReferencePolicy(
@@ -658,7 +657,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var deleteObservation = Record.ExceptionAsync(() => raceSecretService.DeleteAsync(
             referencedFixture.SecretRecordId));
         await gatedDeletionPolicy.Entered.WaitAsync(TimeSpan.FromSeconds(5));
-        var raceSave = raceWorkspaceService.SaveProviderAsync(
+        var raceSave = raceProviderAdministration.SaveProviderAsync(
             CreateEditor(referencedFixture, replacementSecretRecordId));
         try
         {
@@ -677,7 +676,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         await using (var raceVerification =
                      await referencedFixture.DbContextFactory.CreateDbContextAsync())
         {
-            var persistedProfile = await raceVerification.Set<WorkspaceProviderProfile>()
+            var persistedProfile = await raceVerification.Set<PersistedProviderProfile>()
                 .AsNoTracking()
                 .SingleAsync(item => item.Id == referencedFixture.Profile.Id);
             Assert.Equal(replacementSecretRecordId, persistedProfile.ApiKeySecretId);
@@ -713,8 +712,8 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var observer = new RecordingPublicationCommitObserver();
         var service = fixture.CreatePublicationService(activity, observer);
         var missingSecretActivity = new RecordingActivityStream();
-        var missingSecretObserver = new RecordingWorkspaceProviderProfileCommitObserver();
-        var missingSecretSave = await fixture.CreateWorkspaceService(
+        var missingSecretObserver = new RecordingProviderProfileCommitObserver();
+        var missingSecretSave = await fixture.CreateProviderAdministrationService(
                 missingSecretActivity,
                 missingSecretObserver)
             .SaveProviderAsync(CreateEditor(fixture, Guid.NewGuid()));
@@ -817,7 +816,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             maximumImageCount: 1);
 
     private static SharedProviderCatalogProjectionSource CreateProjectionSource(
-        WorkspaceProviderProfile profile,
+        PersistedProviderProfile profile,
         SharedProviderPublicationEligibilityPolicy policy,
         bool isPublished)
         => new(
@@ -842,7 +841,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         return publication;
     }
 
-    private static WorkspaceProviderProfile CreateProfile(
+    private static PersistedProviderProfile CreateProfile(
         Guid? id = null,
         string name = "Central provider",
         string connectorPluginKey = ProviderConnectorKeys.OpenAi,
@@ -891,8 +890,8 @@ public sealed class SharedProviderPublicationAndCatalogTests
                     suggestedModels)
         };
 
-    private static WorkspaceProviderProfile CloneProfile(
-        WorkspaceProviderProfile source,
+    private static PersistedProviderProfile CloneProfile(
+        PersistedProviderProfile source,
         string? name = null,
         string? baseUrl = null,
         Guid? apiKeySecretId = null,
@@ -964,7 +963,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             new ConnectorAgentExposure("test", true, false, "Test connector."),
             null);
 
-    private static WorkspaceProviderProfileEditorModel CreateEditor(
+    private static ProviderAdministrationEditorModel CreateEditor(
         PersistenceFixture fixture,
         Guid? secretRecordId = null)
         => new()
@@ -992,7 +991,8 @@ public sealed class SharedProviderPublicationAndCatalogTests
     {
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
-            typeof(WorkspaceModuleAssemblyMarker).Assembly
+            typeof(ProviderManagementModuleAssemblyMarker).Assembly,
+            typeof(SecretService).Assembly
         ]);
         var databaseRoot = new InMemoryDatabaseRoot();
         var options = AppDbContextTestOptionsBuilder.Create()
@@ -1032,7 +1032,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
 
     private sealed record PersistenceFixture(
         IDbContextFactory<AppDbContext> DbContextFactory,
-        WorkspaceProviderProfile Profile,
+        PersistedProviderProfile Profile,
         ProviderSharePublication Publication,
         Guid SecretRecordId,
         ProviderAdministrationConnectorCatalog ProviderAdministrationConnectorCatalog,
@@ -1059,7 +1059,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 EligibilityPolicy,
                 cache);
 
-        public ProviderAdministrationService CreateWorkspaceService(
+        public ProviderAdministrationService CreateProviderAdministrationService(
             IActivityStream activityStream,
             IProviderProfileCommitObserver observer)
         {
@@ -1216,7 +1216,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         }
     }
 
-    private sealed class RecordingWorkspaceProviderProfileCommitObserver
+    private sealed class RecordingProviderProfileCommitObserver
         : IProviderProfileCommitObserver
     {
         public List<Guid> ProviderProfileIds { get; } = [];

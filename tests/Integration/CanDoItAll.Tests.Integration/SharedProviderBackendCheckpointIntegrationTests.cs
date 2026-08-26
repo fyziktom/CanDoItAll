@@ -26,8 +26,8 @@ namespace CanDoItAll.Tests.Integration;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
-using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderBackendCheckpointIntegrationTests
 {
@@ -47,11 +47,11 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         await using var fixtureLease =
             await FixtureLease<SharedProviderCatalogApiFixture>.CreateAsync();
         var catalogFixture = fixtureLease.Value;
-        var eligibleProfile = CreateWorkspaceProfile("Eligible central profile");
+        var eligibleProfile = CreatePersistedProfile("Eligible central profile");
         var unpublished = CreatePublication(eligibleProfile.Id, isPublished: false);
         Assert.False(unpublished.IsPublished);
 
-        var ineligibleProfile = CreateWorkspaceProfile("Disabled central profile");
+        var ineligibleProfile = CreatePersistedProfile("Disabled central profile");
         var projection = SharedProviderCatalogProjector.Project(
             new SharedProviderSourceInstanceId(
                 Guid.Parse("8caaf6e1-8bba-4058-8a54-0c83ce2d206c")),
@@ -152,8 +152,8 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
     public void Public_model_ids_route_duplicate_upstream_model_names_without_cross_routing()
     {
         const string upstreamModel = "same-upstream-model";
-        var firstProfile = CreateWorkspaceProfile("First central profile");
-        var secondProfile = CreateWorkspaceProfile("Second central profile");
+        var firstProfile = CreatePersistedProfile("First central profile");
+        var secondProfile = CreatePersistedProfile("Second central profile");
         var firstPublication = CreatePublication(firstProfile.Id, isPublished: true);
         var secondPublication = CreatePublication(secondProfile.Id, isPublished: true);
         var projection = SharedProviderCatalogProjector.Project(
@@ -918,12 +918,12 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         return publication;
     }
 
-    private static WorkspaceProviderProfile CreateWorkspaceProfile(string name)
+    private static PersistedProviderProfile CreatePersistedProfile(string name)
         => new()
         {
             Id = Guid.NewGuid(),
             Name = name,
-            ProviderKind = WorkspaceProviderKind.OpenAi,
+            ProviderKind = PersistedProviderKind.OpenAi,
             ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0",
             BaseUrl = "https://private-upstream.example.test/v1",
@@ -1004,7 +1004,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             .SingleAsync(item =>
                 item.SourceId == source.Id &&
                 item.RemotePublicationId == publication.PublicationId);
-        var profile = await editContext.Set<WorkspaceProviderProfile>()
+        var profile = await editContext.Set<PersistedProviderProfile>()
             .SingleAsync(item => item.Id == import.ProviderProfileId);
         profile.Name = alias ?? profile.Name;
         await editContext.SaveChangesAsync();

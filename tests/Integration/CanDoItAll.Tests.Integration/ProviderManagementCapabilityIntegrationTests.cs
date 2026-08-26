@@ -1,13 +1,12 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
-using CanDoItAll.Modules.Workspace;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
-public sealed class WorkspaceProviderCapabilityIntegrationTests
+public sealed class ProviderManagementCapabilityIntegrationTests
 {
     [Fact]
     public async Task SaveProviderAsync_persists_ollama_structured_output_as_true_from_capability_defaults()

@@ -309,7 +309,7 @@ internal sealed class LegacyAiTechnicalAgentBridge(
             if (provider is null)
             {
                 return Result<AiTechnicalAgentSaveResult>.Failure(
-                    Error.Validation("Provider profile must reference an existing workspace provider.", "crmhr.ai-agent.provider-invalid"));
+                    Error.Validation("Provider profile must reference an existing provider.", "crmhr.ai-agent.provider-invalid"));
             }
         }
 

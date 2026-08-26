@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
-using WorkspaceProviderProfile =
+using PersistedProviderProfile =
     CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
@@ -126,7 +126,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 await dbContextFactory.CreateDbContextAsync())
             {
                 var committedProvider = await dbContext
-                    .Set<WorkspaceProviderProfile>()
+                    .Set<PersistedProviderProfile>()
                     .AsNoTracking()
                     .SingleAsync(item => item.Id == providerId);
                 Assert.NotEqual(
@@ -154,7 +154,7 @@ public sealed class ProviderCatalogProjectionFailureTests
                 await dbContextFactory.CreateDbContextAsync())
             {
                 Assert.False(
-                    await dbContext.Set<WorkspaceProviderProfile>()
+                    await dbContext.Set<PersistedProviderProfile>()
                         .AnyAsync(item => item.Id == providerId));
             }
 
@@ -665,7 +665,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             await dbContextFactory.CreateDbContextAsync())
         {
             Assert.False(
-                await dbContext.Set<WorkspaceProviderProfile>()
+                await dbContext.Set<PersistedProviderProfile>()
                     .AnyAsync(item => item.Id == providerId));
         }
 

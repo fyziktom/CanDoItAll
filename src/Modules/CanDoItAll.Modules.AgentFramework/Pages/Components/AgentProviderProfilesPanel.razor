@@ -2,7 +2,7 @@
                  data-testid="agents-provider-profiles-panel">
     <ListHeader>
         <ListPanelHeader Title="Provider profiles"
-                         Description="AgentFramework provider catalog, including workspace profiles and seeded runtime providers."
+                         Description="AgentFramework provider catalog, including persisted profiles and seeded runtime providers."
                          Count="@($"{FilteredProviders.Count} profile(s)")">
             <Actions>
                 <Button Text="New provider"
@@ -39,7 +39,7 @@
         {
             <EmptyState Eyebrow="Loading"
                         Title="Loading provider catalog"
-                        Description="AgentFramework is reading workspace-backed and seeded provider profiles." />
+                        Description="AgentFramework is reading persisted and seeded provider profiles." />
         }
         else if (FilteredProviders.Count == 0)
         {

@@ -8,8 +8,8 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
@@ -3067,7 +3067,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         string model)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<PersistedProviderProfile>()
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
         provider.DefaultModel = model;
         await dbContext.SaveChangesAsync();
@@ -3078,9 +3078,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             IDbContextFactory<AppDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<PersistedProviderProfile>()
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
-        provider.ProviderKind = WorkspaceProviderKind.OllamaRemote;
+        provider.ProviderKind = PersistedProviderKind.OllamaRemote;
         provider.ConnectorPluginKey =
             CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OllamaRemote;
         provider.ConfigSchemaVersion = "customer-v7";
@@ -3105,7 +3105,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         IDbContextFactory<AppDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        return await dbContext.Set<WorkspaceProviderProfile>()
+        return await dbContext.Set<PersistedProviderProfile>()
             .Where(item => item.Id == ManagedOpenAiImageProviderId)
             .Select(item => item.DefaultModel)
             .SingleAsync();
@@ -3116,14 +3116,14 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             IDbContextFactory<AppDbContext> dbContextFactory)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        var provider = await dbContext.Set<WorkspaceProviderProfile>()
+        var provider = await dbContext.Set<PersistedProviderProfile>()
             .AsNoTracking()
             .SingleAsync(item => item.Id == ManagedOpenAiImageProviderId);
         return CaptureManagedOpenAiImageProviderState(provider);
     }
 
     private static ManagedOpenAiImageProviderState CaptureManagedOpenAiImageProviderState(
-        WorkspaceProviderProfile provider)
+        PersistedProviderProfile provider)
     {
         return new ManagedOpenAiImageProviderState(
             provider.Id,
@@ -3171,7 +3171,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     private sealed record ManagedOpenAiImageProviderState(
         Guid Id,
         string Name,
-        WorkspaceProviderKind? ProviderKind,
+        PersistedProviderKind? ProviderKind,
         string ConnectorPluginKey,
         string ConfigSchemaVersion,
         string BaseUrl,

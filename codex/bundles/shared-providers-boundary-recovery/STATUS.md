@@ -15,7 +15,7 @@
 | BR03 relocate shared-provider control plane | DONE | `subbundles/BR03-relocate-shared-provider-control-plane/RESULT.md` |
 | BR04 unify provider runtime | DONE | `subbundles/BR04-unify-provider-runtime/RESULT.md` |
 | BR05 rewire UI/API/composition/transfer | DONE | `subbundles/BR05-rewire-ui-api-composition-and-transfer/RESULT.md` |
-| BR06 preserve persistence and clean up | PLANNED | — |
+| BR06 preserve persistence and clean up | DONE | `subbundles/BR06-preserve-persistence-and-cleanup/RESULT.md` |
 | BR07 guards and focused gates | PLANNED | — |
 | BR08 handoff to original SB07 | PLANNED | — |
 

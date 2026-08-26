@@ -11,7 +11,6 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
@@ -23,8 +22,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
-using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -33,7 +32,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
     : IClassFixture<SharedProviderOpenAiCompatibilityFixture>
 {
     [Fact]
-    public async Task PersistedWorkspaceRelay_ResolvesRouteSecretAndFinalizesMetadataOnlyAudit()
+    public async Task PersistedProviderRelay_ResolvesRouteSecretAndFinalizesMetadataOnlyAudit()
     {
         fixture.PersistedDispatcher.Reset();
         const string accessContext = "persisted-relay-context";
@@ -313,7 +312,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
 
             await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
             {
-                var profile = await dbContext.Set<WorkspaceProviderProfile>()
+                var profile = await dbContext.Set<PersistedProviderProfile>()
                     .SingleAsync(item => item.Id == fixture.PersistedImageProfileId);
                 profile.ApiKeySecretId = null;
                 await dbContext.SaveChangesAsync();
@@ -333,7 +332,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
                     publication.UpdatedAtUtc.AddSeconds(1));
             }
 
-            var profile = await dbContext.Set<WorkspaceProviderProfile>()
+            var profile = await dbContext.Set<PersistedProviderProfile>()
                 .SingleAsync(item => item.Id == fixture.PersistedImageProfileId);
             profile.ApiKeySecretId = fixture.PersistedImageSecretId;
             await dbContext.SaveChangesAsync();
@@ -1064,7 +1063,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
                     TimeSpan.FromMilliseconds(100),
                     TimeSpan.FromMilliseconds(100)));
             });
-        await SeedPersistedWorkspaceAsync();
+        await SeedPersistedProviderGraphAsync();
     }
 
     public async Task DisposeAsync()
@@ -1135,7 +1134,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
         Assert.Fail("The hosted shared-provider invocation recovery worker did not recover the stale record.");
     }
 
-    private async Task SeedPersistedWorkspaceAsync()
+    private async Task SeedPersistedProviderGraphAsync()
     {
         var now = DateTimeOffset.UtcNow;
         await using var scope = PersistedHost.App.Services.CreateAsyncScope();
@@ -1261,7 +1260,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
             UpdatedAtUtc = now
         };
 
-    private static WorkspaceProviderProfile CreateOpenAiProfile(
+    private static PersistedProviderProfile CreateOpenAiProfile(
         Guid id,
         string name,
         string upstreamModel,
@@ -1275,7 +1274,7 @@ public sealed class SharedProviderOpenAiCompatibilityFixture : IAsyncLifetime
         {
             Id = id,
             Name = name,
-            ProviderKind = WorkspaceProviderKind.OpenAi,
+            ProviderKind = PersistedProviderKind.OpenAi,
             ConnectorPluginKey = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys.OpenAi,
             ConfigSchemaVersion = "1.0",
             BaseUrl = "https://persisted-upstream.example.test/private/v1",

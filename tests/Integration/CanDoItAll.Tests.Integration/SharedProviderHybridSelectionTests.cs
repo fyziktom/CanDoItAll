@@ -15,7 +15,7 @@ namespace CanDoItAll.Tests.Integration;
 using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentFrameworkProviderProfileEditorModel =
     CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderHybridSelectionTests(
     SharedProviderHybridSelectionFixture fixture) :
@@ -418,7 +418,7 @@ public sealed class SharedProviderHybridSelectionTests(
             .SingleAsync(item =>
                 item.SourceId == source.Id &&
                 item.RemotePublicationId == publication.PublicationId);
-        var profile = await editContext.Set<WorkspaceProviderProfile>()
+        var profile = await editContext.Set<PersistedProviderProfile>()
             .SingleAsync(item => item.Id == import.ProviderProfileId);
         profile.Name = alias ?? profile.Name;
         profile.IsEnabled = isEnabled;
@@ -682,7 +682,7 @@ public sealed class SharedProviderHybridSelectionTests(
         var source = await dbContext.Set<SharedProviderSource>()
             .AsNoTracking()
             .SingleAsync(item => item.Id == sourceId);
-        var profile = await dbContext.Set<WorkspaceProviderProfile>()
+        var profile = await dbContext.Set<PersistedProviderProfile>()
             .AsNoTracking()
             .SingleAsync(item => item.Id == import.ProviderProfileId);
         return new PersistedSharedIdentity(

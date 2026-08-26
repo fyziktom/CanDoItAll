@@ -10,9 +10,9 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
-using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedProviders.Abstractions;
+using CanDoItAll.Modules.Workspace;
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -32,8 +32,8 @@ using IProviderRuntimeProfileSnapshotLoader = CanDoItAll.Modules.AgentFramework.
 
 using AgentProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using AgentProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
-using WorkspaceProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
-using WorkspaceProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
+using PersistedProviderKind = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderKind;
+using PersistedProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     SharedProviderRuntimeProjectionFixture fixture) :
@@ -50,7 +50,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         await using (var dbContext = await fixture.Factory.CreateDbContextAsync())
         {
             Assert.True(dbContext.Database.IsNpgsql());
-            Assert.NotNull(await dbContext.Set<WorkspaceProviderProfile>()
+            Assert.NotNull(await dbContext.Set<PersistedProviderProfile>()
                 .SingleOrDefaultAsync(item => item.Id == seed.ProfileId));
             Assert.NotNull(await dbContext.Set<SharedProviderImport>()
                 .SingleOrDefaultAsync(item => item.Id == seed.ImportId));
@@ -704,7 +704,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             switch (owner)
             {
                 case RevisionOwner.Profile:
-                    (await dbContext.Set<WorkspaceProviderProfile>()
+                    (await dbContext.Set<PersistedProviderProfile>()
                         .SingleAsync(item => item.Id == seed.ProfileId)).ConcurrencyToken =
                         Guid.NewGuid();
                     break;
@@ -898,10 +898,10 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             : "Source unavailable.";
         source.ConcurrencyToken = Guid.NewGuid();
         var defaultCapabilities = publication.Models[0].Capabilities;
-        var profile = new WorkspaceProviderProfile
+        var profile = new PersistedProviderProfile
         {
             Name = "Local shared alias",
-            ProviderKind = WorkspaceProviderKind.OpenAi,
+            ProviderKind = PersistedProviderKind.OpenAi,
             ConnectorPluginKey =
                 SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
             ConfigSchemaVersion =
@@ -1105,7 +1105,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     private sealed record UnpersistedGraph(
         SecretRecord Secret,
         SharedProviderSource Source,
-        WorkspaceProviderProfile Profile,
+        PersistedProviderProfile Profile,
         SharedProviderImport Import,
         SharedProviderCatalogPublication Publication);
 
