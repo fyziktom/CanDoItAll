@@ -20,7 +20,7 @@
                     @if (EffectiveSelectedPartyId.HasValue)
                     {
                         <Button Text="Clear"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="ClearSelectionAsync"
                                 data-testid="@($"{TestIdPrefix}-clear")" />
@@ -69,7 +69,7 @@
                       ColumnsLg="2">
                     <FormField Text="Kind">
                         <InputSelect @bind-Value="QuickCreate.PartyKind"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="@($"{TestIdPrefix}-quick-kind")">
                             @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
                             {
@@ -79,7 +79,7 @@
                     </FormField>
                     <FormField Text="Name">
                         <InputText @bind-Value="QuickCreate.DisplayName"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"{TestIdPrefix}-quick-name")" />
                     </FormField>
                 </Grid>
@@ -88,24 +88,24 @@
                       ColumnsLg="2">
                     <FormField Text="Email">
                         <InputText @bind-Value="QuickCreate.Email"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"{TestIdPrefix}-quick-email")" />
                     </FormField>
                     <FormField Text="Phone">
                         <InputText @bind-Value="QuickCreate.Phone"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"{TestIdPrefix}-quick-phone")" />
                     </FormField>
                 </Grid>
 
                 <FormField Text="Summary">
-                    <InputTextArea @bind-Value="QuickCreate.Summary"
-                                   class="cda-input cda-input--textarea min-h-24"
+                    <TextArea @bind-Value="QuickCreate.Summary"
+                                   Rows="4"
                                    data-testid="@($"{TestIdPrefix}-quick-summary")" />
                 </FormField>
 
                 <Cluster>
-                    <Button ButtonStyle="ButtonStyle.Light"
+                    <Button Tone="ButtonTone.Default"
                             Text="Create party"
                             data-testid="@($"{TestIdPrefix}-quick-create-button")"
                             Click="CreateParty" />

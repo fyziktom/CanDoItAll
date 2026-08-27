@@ -50,7 +50,7 @@ else
                         {
                             <Button Text="New chat"
                                     Icon="add"
-                                    ButtonStyle="ButtonStyle.Primary"
+                                    Tone="ButtonTone.Primary"
                                     Click="OpenStartDialog"
                                     Disabled="@controller.IsMutating"
                                     data-testid="llm-chat-new" />
@@ -82,7 +82,7 @@ else
                                     data-testid="@($"llm-chat-rename-{conversationId:D}")" />
                             <Button Icon="archive"
                                     Variant="Variant.Text"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenArchiveDialogAsync(conversationId))"
                                     Disabled="@controller.IsMutating"
@@ -160,7 +160,7 @@ else
                                 {
                                     <Button Text="Cancel response"
                                             Icon="stop_circle"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
                                             Click="CancelActiveOperationAsync"
@@ -181,7 +181,7 @@ else
                                 {
                                     <Button Text="Abandon turn"
                                             Icon="delete_forever"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
                                             Click="AbandonActiveOperationAsync"
@@ -280,7 +280,7 @@ else
                         Disabled="@controller.IsMutating" />
                 <Button Text="Start chat"
                         Icon="add"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Click="CreateConversationAsync"
                         Disabled="@(selectedStartDefinitionId is null || string.IsNullOrWhiteSpace(startTitle))"
                         IsBusy="@controller.IsMutating"

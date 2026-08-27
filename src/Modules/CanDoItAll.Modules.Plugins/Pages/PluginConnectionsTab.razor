@@ -44,7 +44,7 @@ else
                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">
                     <Button Text="@PluginsPageHelpers.ResolveOAuthActionText(oauthStatus?.Status)"
                             Icon="login"
-                            ButtonStyle="ButtonStyle.Primary"
+                            Tone="ButtonTone.Primary"
                             Size="ButtonSize.Small"
                             data-testid="@PluginsPageHelpers.BuildOAuthLoginTestId(Plugin.PluginId, connectionDescriptor)"
                             Disabled="@(!canStartOAuth)"
@@ -52,7 +52,7 @@ else
                             Click="@(() => OnStartOAuth(Plugin, Settings, connectionDescriptor))" />
                     <Button Text="Disconnect"
                             Icon="link_off"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
                             Disabled="@(connection is null || oauthStatus?.Status != PluginOAuthConnectionStatusKind.Connected)"

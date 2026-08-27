@@ -10,7 +10,6 @@
             <InputNumber TValue="decimal?"
                          Value="NumberValue"
                          ValueChanged="HandleNumberChanged"
-                         ValueExpression="() => NumberValue"
                          class="@InputClass"
                          data-testid="@TestId" />
             break;
@@ -18,24 +17,21 @@
             <label class="cda-inline-option">
                 <InputCheckbox Value="BooleanValue"
                                ValueChanged="HandleBooleanChanged"
-                               ValueExpression="() => BooleanValue"
                                data-testid="@TestId" />
                 @Field.HelpText
             </label>
             break;
         case ConnectorConfigFieldType.Json:
         case ConnectorConfigFieldType.MultilineText:
-            <InputTextArea Value="@TextValue"
-                           ValueChanged="HandleTextChanged"
-                           ValueExpression="@(() => TextValue)"
-                           class="@($"{InputClass} cda-input--textarea min-h-24")"
+            <TextArea Value="@TextValue"
+                      ValueChanged="HandleTextChanged"
+                      Rows="4"
                            data-testid="@TestId" />
             break;
         case ConnectorConfigFieldType.Select:
             <InputSelect TValue="string"
                          Value="@TextValue"
                          ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
-                         ValueExpression="@(() => TextValue)"
                          class="@InputClass"
                          data-testid="@TestId">
                 @foreach (var option in Field.Options)
@@ -48,7 +44,6 @@
             <InputSelect TValue="string"
                          Value="@TextValue"
                          ValueChanged="EventCallback.Factory.Create<string>(this, HandleTextChanged)"
-                         ValueExpression="@(() => TextValue)"
                          class="@InputClass"
                          data-testid="@TestId">
                 <option value="">None</option>
@@ -59,11 +54,10 @@
             </InputSelect>
             break;
         default:
-            <InputText Value="@TextValue"
-                       ValueChanged="HandleTextChanged"
-                       ValueExpression="@(() => TextValue)"
-                       class="@InputClass"
-                       data-testid="@TestId" />
+            <TextBox Value="@TextValue"
+                     ValueChanged="HandleTextChanged"
+                     Class="@InputClass"
+                     data-testid="@TestId" />
             break;
     }
 
@@ -85,7 +79,7 @@
     public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
 
     [Parameter]
-    public string InputClass { get; set; } = "cda-input";
+    public string InputClass { get; set; } = "ui-input";
 
     [Parameter]
     public string? TestId { get; set; }

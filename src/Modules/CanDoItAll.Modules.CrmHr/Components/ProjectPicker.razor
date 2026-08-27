@@ -19,7 +19,7 @@
                 @if (EffectiveSelectedProjectId.HasValue)
                 {
                     <Button Text="Clear"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ClearSelectionAsync"
                             data-testid="@($"{TestIdPrefix}-clear")" />

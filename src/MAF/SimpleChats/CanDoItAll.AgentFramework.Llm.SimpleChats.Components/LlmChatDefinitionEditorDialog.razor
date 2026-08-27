@@ -69,7 +69,7 @@
                 <Sections>
                     <Tabs SelectedIndex="@selectedTabIndex"
                           SelectedIndexChanged="HandleSelectedTabChanged"
-                          Variant="TabsVariant.ModalCompact"
+                          Density="TabsDensity.Compact"
                           BorderMode="TabsBorderMode.Soft"
                           Tone="TabsTone.Info"
                           OverflowMode="TabsOverflowMode.Scroll"
@@ -247,7 +247,7 @@
                                 {
                                     <Button Text="@LlmChatDefinitionPresentationMapper.GetTransitionLabel(status)"
                                             Variant="Variant.Outlined"
-                                            ButtonStyle="@(status == LlmChatDefinitionStatus.Archived ? ButtonStyle.Danger : ButtonStyle.Secondary)"
+                                            Tone="@(status == LlmChatDefinitionStatus.Archived ? ButtonTone.Danger : ButtonTone.Secondary)"
                                             Click="@(() => ChangeStatusAsync(status))"
                                             Disabled="@isBusy"
                                             data-testid="@($"llm-chat-definition-status-{status.ToString().ToLowerInvariant()}")" />
@@ -262,7 +262,7 @@
                                     data-testid="llm-chat-definition-editor-cancel" />
                             <Button Text="Save definition"
                                     Icon="save"
-                                    ButtonStyle="ButtonStyle.Primary"
+                                    Tone="ButtonTone.Primary"
                                     Click="SaveAsync"
                                     Disabled="@isBusy"
                                     IsBusy="@isBusy"

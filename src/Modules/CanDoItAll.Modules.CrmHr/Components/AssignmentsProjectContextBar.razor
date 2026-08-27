@@ -27,14 +27,14 @@
                             @if (SelectedProjectId.HasValue)
                             {
                                 <Button Text="Clear"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="ClearProjectAsync"
                                         data-testid="crmhr-assignment-project-clear" />
                             }
                             <Button Text="@(SelectedProjectId.HasValue ? "Change project" : "Choose project")"
                                     Icon="search"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="OpenProjectPicker"
                                     data-testid="crmhr-assignment-project" />
@@ -74,9 +74,9 @@
                 <TooltipTarget Text="Switch to the selected project's structure workspace"
                                Position="TooltipPosition.Bottom"
                                TestId="crmhr-assignment-open-structure-tooltip">
-                    <Button ButtonStyle="ButtonStyle.Light"
+                    <Button Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
-                            Class="cda-button--quick"
+                            Class="ui-button--quick"
                             Icon="account_tree"
                             aria-label="Open project structure"
                             data-testid="crmhr-assignment-open-structure"
@@ -85,9 +85,9 @@
                 <TooltipTarget Text="Switch to the selected project's interactive Gantt workspace"
                                Position="TooltipPosition.Bottom"
                                TestId="crmhr-assignment-open-gantt-tooltip">
-                    <Button ButtonStyle="ButtonStyle.Light"
+                    <Button Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
-                            Class="cda-button--quick"
+                            Class="ui-button--quick"
                             Icon="timeline"
                             aria-label="Open project Gantt"
                             data-testid="crmhr-assignment-open-gantt"

@@ -25,7 +25,7 @@
     </FormField>
     <Button Text="Submit feedback"
             Icon="rate_review"
-            ButtonStyle="ButtonStyle.Primary"
+            Tone="ButtonTone.Primary"
             Size="ButtonSize.Small"
             Click="OnSubmit"
             Disabled="@(IsBusy || string.IsNullOrWhiteSpace(Editor.ContextPackId))"

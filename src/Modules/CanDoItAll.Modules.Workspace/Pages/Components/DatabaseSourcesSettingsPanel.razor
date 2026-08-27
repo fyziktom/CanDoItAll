@@ -13,7 +13,7 @@
             <Actions>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="PostgreSQL"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@IsDatabaseUiLocked"
                             Click="ResetPostgreSqlProfileAsync"
@@ -24,11 +24,11 @@
                 <FilterBar ResultText="@($"{FilteredProfiles.Count} matching profile(s)")">
                     <input @bind="profileSearch"
                            @bind:event="oninput"
-                           class="cda-input min-w-[14rem] flex-1"
+                           class="ui-input min-w-[14rem] flex-1"
                            placeholder="Search data sources"
                            data-testid="database-profile-search" />
                     <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ResetProfileSearch" />
                 </FilterBar>
@@ -174,7 +174,7 @@
                                 {
                                     <Button Text="Apply current schema"
                                             Icon="database"
-                                            ButtonStyle="ButtonStyle.Warning"
+                                            Tone="ButtonTone.Warning"
                                             Size="ButtonSize.Small"
                                             Disabled="@(databaseBusy || IsDatabaseUiLocked || schemaBusyProfileId == databaseProfileModel.Id)"
                                             IsBusy="@(schemaBusyProfileId == databaseProfileModel.Id)"
@@ -191,14 +191,14 @@
                             <div>
                                 <label class="cda-field-label">Profile name</label>
                                 <InputText @bind-Value="databaseProfileModel.DisplayName"
-                                           class="cda-input"
+                                           class="ui-input"
                                            data-testid="database-profile-name" />
                             </div>
 
                             <div>
                                 <label class="cda-field-label">Workspace root</label>
                                 <InputText @bind-Value="databaseProfileModel.WorkspaceRoot"
-                                           class="cda-input"
+                                           class="ui-input"
                                            data-testid="database-profile-workspace-root" />
                             </div>
                         </Grid>
@@ -225,14 +225,14 @@
                                 <div>
                                     <label class="cda-field-label">Host</label>
                                     <InputText @bind-Value="databaseProfileModel.PostgresHost"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="database-profile-postgres-host" />
                                 </div>
 
                                 <div>
                                     <label class="cda-field-label">Port</label>
                                     <InputNumber @bind-Value="databaseProfileModel.PostgresPort"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  data-testid="database-profile-postgres-port" />
                                 </div>
                             </Grid>
@@ -241,14 +241,14 @@
                                 <div>
                                     <label class="cda-field-label">Database</label>
                                     <InputText @bind-Value="databaseProfileModel.PostgresDatabaseName"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="database-profile-postgres-database" />
                                 </div>
 
                                 <div>
                                     <label class="cda-field-label">Admin database</label>
                                     <InputText @bind-Value="databaseProfileModel.PostgresAdminDatabaseName"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="database-profile-postgres-admin-database" />
                                 </div>
                             </Grid>
@@ -257,7 +257,7 @@
                                 <div>
                                     <label class="cda-field-label">Username</label>
                                     <InputText @bind-Value="databaseProfileModel.PostgresUsername"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="database-profile-postgres-user" />
                                 </div>
 
@@ -265,7 +265,7 @@
                                     <label class="cda-field-label">Password</label>
                                     <InputText @bind-Value="databaseProfileModel.PostgresPassword"
                                                type="password"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="database-profile-postgres-password" />
                                 </div>
                             </Grid>
@@ -298,14 +298,14 @@
                                         StatusTone="success">
                         <SecondaryActions>
                             <Button Text="Reset draft"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Disabled="@(databaseBusy || IsDatabaseUiLocked)"
                                     Click="ResetCurrentProfileAsync"
                                     data-testid="database-profile-reset" />
                             @if (databaseProfileModel.Id.HasValue && SupportsConnectionTest)
                             {
                                 <Button Text="Test connection"
-                                        ButtonStyle="ButtonStyle.Info"
+                                        Tone="ButtonTone.Info"
                                         Disabled="@(databaseBusy || IsDatabaseUiLocked)"
                                         Click="TestConnectionAsync"
                                         data-testid="database-profile-test-connection" />
@@ -313,7 +313,7 @@
                             @if (databaseProfileModel.Id.HasValue && SupportsCreateEmpty)
                             {
                                 <Button Text="Create empty"
-                                        ButtonStyle="ButtonStyle.Info"
+                                        Tone="ButtonTone.Info"
                                         Disabled="@(databaseBusy || IsDatabaseUiLocked)"
                                         Click="CreateEmptyAsync"
                                         data-testid="database-profile-create-empty" />
@@ -321,7 +321,7 @@
                             @if (databaseProfileModel.Id.HasValue)
                             {
                                 <Button Text="Transfer settings"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Disabled="@(databaseBusy || IsDatabaseUiLocked)"
                                         Click="@(() => OpenTransferDialogAsync(databaseProfileModel.Id.Value))"
                                         data-testid="database-profile-transfer-settings" />
@@ -335,7 +335,7 @@
                             @if (databaseProfileModel.Id.HasValue)
                             {
                                 <Button Text="@ResolveActivationButtonText()"
-                                        ButtonStyle="ButtonStyle.Warning"
+                                        Tone="ButtonTone.Warning"
                                         Disabled="@(databaseBusy || IsDatabaseUiLocked || IsSelectedProfileActive || IsSelectedProfilePendingRestart)"
                                         Click="ActivateProfileAsync"
                                         data-testid="database-profile-activate" />
@@ -345,7 +345,7 @@
                             @if (databaseProfileModel.Id.HasValue)
                             {
                                 <Button Text="Delete"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Disabled="@(databaseBusy || IsDatabaseUiLocked)"
                                         Click="DeleteProfileAsync"
                                         data-testid="database-profile-delete" />
@@ -398,7 +398,7 @@
                         {
                             <Button Text="Apply target schema"
                                     Icon="database"
-                                    ButtonStyle="ButtonStyle.Warning"
+                                    Tone="ButtonTone.Warning"
                                     Size="ButtonSize.Small"
                                     Disabled="@(transferBusy || schemaBusyProfileId == transferTargetProfileId)"
                                     IsBusy="@(schemaBusyProfileId == transferTargetProfileId)"
@@ -432,7 +432,7 @@
                         {
                             <Button Text="Apply source schema"
                                     Icon="database"
-                                    ButtonStyle="ButtonStyle.Warning"
+                                    Tone="ButtonTone.Warning"
                                     Size="ButtonSize.Small"
                                     Disabled="@(transferBusy || schemaBusyProfileId == transferSourceProfileId)"
                                     IsBusy="@(schemaBusyProfileId == transferSourceProfileId)"
@@ -455,7 +455,7 @@
 
                 <div>
                     <label class="cda-field-label">Copy settings from</label>
-                    <select class="cda-input"
+                    <select class="ui-input"
                             value="@transferSourceProfileId?.ToString()"
                             disabled="@(transferBusy || transferSources.Count == 0)"
                             @onchange="ChangeTransferSourceAsync"
@@ -538,11 +538,11 @@
             <p class="text-sm leading-6 text-slate-600">Encrypted values are copied as protected payloads and are not shown here.</p>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@transferBusy"
                         Click="CloseTransferDialog" />
                 <Button Text="Transfer selected"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Disabled="@(!CanTransferSelected)"
                         Click="TransferSelectedSettingsAsync"
                         data-testid="database-transfer-apply" />

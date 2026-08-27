@@ -17,7 +17,7 @@
                 <TooltipTarget Text="Create project allocation"
                                Position="TooltipPosition.Bottom"
                                TestId="crmhr-allocation-create-tooltip">
-                    <Button Class="cda-button--quick"
+                    <Button Class="ui-button--quick"
                             Icon="add"
                             Disabled="@(!CanCreate || isPreparingCreate)"
                             IsBusy="@isPreparingCreate"
@@ -30,15 +30,14 @@
             <CompactFilterBar ResultText="@($"{TotalCount} matching allocation(s)")">
                 <input value="@SearchText"
                        @oninput="HandleAllocationSearchInputAsync"
-                       class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
+                       class="ui-input ui-input--toolbar h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, task, or notes"
                        data-testid="crmhr-allocation-filter-search" />
                 <InputSelect TValue="ProjectPartyAssignmentRole?"
                              Value="@RoleFilter"
                              ValueChanged="HandleAllocationRoleChangedAsync"
-                             ValueExpression="@(() => RoleFilter)"
-                             class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                             class="ui-input ui-input--toolbar h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-allocation-filter-role">
                     <option value="">All allocation roles</option>
@@ -96,15 +95,14 @@
                         <CompactFilterBar ResultText="@($"{CandidateTotalCount} matching candidate(s)")">
                             <input value="@CandidateSearchText"
                                    @oninput="HandleCandidateSearchInputAsync"
-                                   class="cda-input cda-input--toolbar h-10 min-w-[15rem] flex-1"
+                                   class="ui-input ui-input--toolbar h-10 min-w-[15rem] flex-1"
                                    style="width: auto; flex: 1 1 20rem;"
                                    placeholder="Search people or delivery units"
                                    data-testid="crmhr-allocation-candidate-search" />
                             <InputSelect TValue="string"
                                          Value="@CandidateSkillFilter"
                                          ValueChanged="HandleCandidateSkillChangedAsync"
-                                         ValueExpression="@(() => CandidateSkillFilter)"
-                                         class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                                         class="ui-input ui-input--toolbar h-10 min-w-[13rem]"
                                          style="width: 13rem; flex: 0 1 13rem;"
                                          data-testid="crmhr-allocation-candidate-skill">
                                 <option value="">All skills</option>
@@ -115,8 +113,7 @@
                             <InputSelect TValue="string"
                                          Value="@CandidateAvailabilityFilter"
                                          ValueChanged="HandleCandidateAvailabilityChangedAsync"
-                                         ValueExpression="@(() => CandidateAvailabilityFilter)"
-                                         class="cda-input cda-input--toolbar h-10 min-w-[10rem]"
+                                         class="ui-input ui-input--toolbar h-10 min-w-[10rem]"
                                          style="width: 10rem; flex: 0 1 10rem;"
                                          data-testid="crmhr-allocation-candidate-availability">
                                 <option value="">Any availability</option>
@@ -125,18 +122,18 @@
                                 }
                             </InputSelect>
                             <TooltipTarget Text="Refresh staffing candidates" Position="TooltipPosition.Bottom">
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
+                                        Class="ui-button--quick"
                                         Icon="search"
                                         aria-label="Refresh staffing candidates"
                                         Click="SearchCandidates"
                                         data-testid="crmhr-allocation-candidate-search-button" />
                             </TooltipTarget>
                             <TooltipTarget Text="Reset candidate filters" Position="TooltipPosition.Bottom">
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
+                                        Class="ui-button--quick"
                                         Icon="restart_alt"
                                         aria-label="Reset candidate filters"
                                         Click="ResetCandidateFilters"
@@ -206,14 +203,14 @@
                                 <Cluster Gap="LayoutGap.Small">
                                     <Button Text="Previous"
                                             Icon="chevron_left"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Disabled="@(CandidatePageIndex <= 0)"
                                             Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex - 1))"
                                             data-testid="crmhr-staffing-candidates-previous" />
                                     <Button Text="Next"
                                             Icon="chevron_right"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Disabled="@(CandidatePageIndex + 1 >= CandidateTotalPages)"
                                             Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex + 1))"
@@ -227,7 +224,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Allocation role">
                         <InputSelect @bind-Value="Draft.Role"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-allocation-role">
                             @foreach (var role in AllocationRoles) {
                                 <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
@@ -255,24 +252,24 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Allocation %">
                         <InputNumber @bind-Value="Draft.AllocationPercent"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-allocation-percent" />
                     </FormField>
                     <FormField Text="Starts on">
                         <InputDate @bind-Value="Draft.StartsOn"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-allocation-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
                         <InputDate @bind-Value="Draft.EndsOn"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-allocation-end-date" />
                     </FormField>
                 </Grid>
 
                 <FormField Text="Notes">
-                    <InputTextArea @bind-Value="Draft.Notes"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                    <TextArea @bind-Value="Draft.Notes"
+
                                    data-testid="crmhr-allocation-notes" />
                 </FormField>
 
@@ -290,13 +287,13 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <Button Text="Reset"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@isAllocationSaving"
                         Click="ResetAllocation"
                         data-testid="crmhr-allocation-reset-button" />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@isAllocationSaving"
                             Click="CloseAllocationDialogAsync" />
                     <Button Text="Save allocation"

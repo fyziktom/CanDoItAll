@@ -42,13 +42,13 @@
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                         <Button Icon="cloud_sync"
                                 Text="Switch Agent"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Disabled="@(isBusy || agents.Count == 0)"
                                 Click="OpenAgentSwitchDialogAsync"
                                 data-testid="agent-switch-button" />
                         <Button Text="Refresh"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Disabled="@isBusy"
                                 Click="RefreshAsync" />
@@ -126,7 +126,7 @@
                 {
                     <Button Icon="add_comment"
                             Text="New thread"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@(isBusy || selectedAgentId is null)"
                             Click="CreateThreadAsync"
@@ -134,7 +134,7 @@
                 }
                 <Button Icon="runtime"
                         Text="Runtime details"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(!CanOpenRuntimeDetails)"
                         Click="OpenRuntimeDetailsDialogAsync"

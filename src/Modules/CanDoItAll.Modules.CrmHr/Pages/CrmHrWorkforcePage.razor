@@ -132,7 +132,7 @@
                                     </div>
                                     <Button Text="Create staffable profile"
                                             Icon="person_add"
-                                            ButtonStyle="ButtonStyle.Warning"
+                                            Tone="ButtonTone.Warning"
                                             Click="RequestProfileCreation"
                                             data-testid="crmhr-workforce-create-profile" />
                                 </Stack>
@@ -143,7 +143,6 @@
                         <Tabs SelectedIndex="@selectedDetailTabIndex"
                               SelectedIndexChanged="HandleDetailTabChangedAsync"
                               RenderMode="TabRenderMode.Server"
-                              Variant="TabsVariant.WorkspaceSecondary"
                               OverflowMode="TabsOverflowMode.Wrap"
                               AriaLabel="Workforce record sections"
                               data-testid="crmhr-workforce-tabs">
@@ -212,7 +211,7 @@
                                         <div>
                                             <label class="cda-field-label">Workforce kind</label>
                                             <InputSelect @bind-Value="profileEditor.WorkforceKind"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-kind">
                                                 @foreach (var workforceKind in AvailableWorkforceKinds)
                                                 {
@@ -223,7 +222,7 @@
                                         <div>
                                             <label class="cda-field-label">Status</label>
                                             <InputSelect @bind-Value="profileEditor.Status"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-status">
                                                 @foreach (var status in WorkforceStatuses)
                                                 {
@@ -234,7 +233,7 @@
                                         <div>
                                             <label class="cda-field-label">Employee code</label>
                                             <InputText @bind-Value="profileEditor.EmployeeCode"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-employee-code" />
                                         </div>
                                     </Grid>
@@ -243,19 +242,19 @@
                                         <div>
                                             <label class="cda-field-label">Job title</label>
                                             <InputText @bind-Value="profileEditor.JobTitle"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-job-title" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Discipline</label>
                                             <InputText @bind-Value="profileEditor.Discipline"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-discipline" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Seniority</label>
                                             <InputSelect @bind-Value="profileEditor.Seniority"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-seniority">
                                                 @foreach (var seniority in SeniorityValues)
                                                 {
@@ -286,19 +285,19 @@
                                         <div>
                                             <label class="cda-field-label">Start date</label>
                                             <InputDate @bind-Value="profileEditor.StartDate"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-start-date" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">End date</label>
                                             <InputDate @bind-Value="profileEditor.EndDate"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-end-date" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Capacity hours / week</label>
                                             <InputNumber @bind-Value="profileEditor.CapacityHoursPerWeek"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-capacity" />
                                         </div>
                                     </Grid>
@@ -307,13 +306,13 @@
                                         <div>
                                             <label class="cda-field-label">Location</label>
                                             <InputText @bind-Value="profileEditor.Location"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-location" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Time zone</label>
                                             <InputText @bind-Value="profileEditor.TimeZone"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-workforce-timezone" />
                                         </div>
                                     </Grid>
@@ -322,19 +321,19 @@
                                         <div>
                                             <label class="cda-field-label">Internal cost rate</label>
                                             <InputNumber @bind-Value="profileEditor.InternalCostRate"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-internal-rate" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">External billing rate</label>
                                             <InputNumber @bind-Value="profileEditor.ExternalBillingRate"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-external-rate" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Rate unit</label>
                                             <InputSelect @bind-Value="profileEditor.RateUnit"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-workforce-rate-unit">
                                                 <option value="@ProjectResourceRateUnit.Hour">Per hour</option>
                                                 <option value="@ProjectResourceRateUnit.ManDay">Per man-day</option>
@@ -343,7 +342,7 @@
                                         <div>
                                             <label class="cda-field-label">Rate currency</label>
                                             <InputText @bind-Value="profileEditor.RateCurrencyCode"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        maxlength="3"
                                                        data-testid="crmhr-workforce-rate-currency" />
                                         </div>
@@ -351,8 +350,8 @@
 
                                     <div class="mt-5">
                                         <label class="cda-field-label">Notes</label>
-                                        <InputTextArea @bind-Value="profileEditor.Notes"
-                                                       class="cda-input cda-input--textarea min-h-[9rem]"
+                                        <TextArea @bind-Value="profileEditor.Notes"
+                                                       Rows="6"
                                                        data-testid="crmhr-workforce-notes" />
                                     </div>
 
@@ -396,7 +395,7 @@
                                             <p class="mt-2 text-sm leading-6 text-slate-700">@capacityWorkspaceError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Class="mt-4"
                                                     Click="RetryCapacityWorkspaceAsync" />
@@ -427,7 +426,7 @@
                                             <p class="mt-2 text-sm leading-6 text-slate-700">@historyLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Class="mt-4"
                                                     Click="RetryHistoryAsync" />
@@ -458,11 +457,11 @@
                                JustifyContent="JustifyContent.SpaceBetween"
                                Wrap="FlexWrap.Wrap">
                             <Button Text="Open directory record"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="OpenDirectory" />
                             <Cluster Gap="LayoutGap.Small">
                                 <Button Text="Close"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Click="CloseRecordDialogAsync"
                                         data-testid="crmhr-workforce-record-close" />
                                 @if (selectedDetailTabIndex == ProfileTabIndex)
@@ -495,25 +494,25 @@
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                     <FormField Text="Unit name">
                                         <InputText @bind-Value="deliveryUnitEditor.Name"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="crmhr-delivery-unit-name" />
                                     </FormField>
                                     <FormField Text="External code">
                                         <InputText @bind-Value="deliveryUnitEditor.ExternalCode"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="crmhr-delivery-unit-code" />
                                     </FormField>
                                 </Grid>
 
                                 <FormField Text="Summary">
-                                    <InputTextArea @bind-Value="deliveryUnitEditor.Summary"
-                                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                    <TextArea @bind-Value="deliveryUnitEditor.Summary"
+
                                                    data-testid="crmhr-delivery-unit-summary" />
                                 </FormField>
 
                                 <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                                     <Button Text="Cancel"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Disabled="@isDeliveryUnitSaving"
                                             Click="CloseDeliveryUnitDialogAsync" />
                                     <Button Text="Create delivery unit"

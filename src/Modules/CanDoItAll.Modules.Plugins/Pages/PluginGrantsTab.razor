@@ -31,14 +31,14 @@ else
                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">
                     <Button Text="Grant"
                             Icon="check"
-                            ButtonStyle="ButtonStyle.Success"
+                            Tone="ButtonTone.Success"
                             Size="ButtonSize.Small"
                             Disabled="@(grant.State == PluginGrantState.Granted)"
                             IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.GrantBusyKey(grant, "grant"))"
                             Click="@(() => OnUpdateGrant(Plugin, grant, PluginGrantState.Granted))" />
                     <Button Text="Deny"
                             Icon="close"
-                            ButtonStyle="ButtonStyle.Danger"
+                            Tone="ButtonTone.Danger"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
                             Disabled="@(grant.State == PluginGrantState.Denied)"
@@ -46,7 +46,7 @@ else
                             Click="@(() => OnUpdateGrant(Plugin, grant, PluginGrantState.Denied))" />
                     <Button Text="Revoke"
                             Icon="undo"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
                             Disabled="@(grant.State == PluginGrantState.Revoked)"

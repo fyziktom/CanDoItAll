@@ -24,9 +24,9 @@
                            Position="TooltipPosition.Bottom"
                            TestId="crmhr-assignment-create-tooltip">
                 <Button Icon="add"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Size="ButtonSize.Small"
-                        Class="cda-button--quick"
+                        Class="ui-button--quick"
                         Disabled="@(!CanCreate || isPreparingCreate)"
                         IsBusy="@isPreparingCreate"
                         aria-label="Create project assignment"
@@ -43,15 +43,14 @@
             <CompactFilterBar ResultText="@($"{TotalCount} matching assignment(s)")">
                 <input value="@SearchText"
                        @oninput="HandleSearchInputAsync"
-                       class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
+                       class="ui-input ui-input--toolbar h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, node, or notes"
                        data-testid="crmhr-assignment-search" />
                 <InputSelect TValue="ProjectPartyAssignmentRole?"
                              Value="@RoleFilter"
                              ValueChanged="HandleRoleFilterChangedAsync"
-                             ValueExpression="@(() => RoleFilter)"
-                             class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                             class="ui-input ui-input--toolbar h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-assignment-role-filter">
                     <option value="">All roles</option>
@@ -103,7 +102,7 @@
                   ColumnsLg="2">
                 <FormField Text="Assignment role">
                     <InputSelect @bind-Value="Draft.Role"
-                                 class="cda-input"
+                                 class="ui-input"
                                  data-testid="crmhr-assignment-role">
                         @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
                             <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
@@ -112,7 +111,7 @@
                 </FormField>
                 <FormField Text="Node key">
                     <InputText @bind-Value="Draft.NodeKey"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-assignment-node-key" />
                 </FormField>
             </Grid>
@@ -131,17 +130,17 @@
                   ColumnsLg="3">
                 <FormField Text="Allocation %">
                     <InputNumber @bind-Value="Draft.AllocationPercent"
-                                 class="cda-input"
+                                 class="ui-input"
                                  data-testid="crmhr-assignment-allocation" />
                 </FormField>
                 <FormField Text="Starts on">
                     <InputDate @bind-Value="Draft.StartsOn"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-assignment-starts-on" />
                 </FormField>
                 <FormField Text="Ends on">
                     <InputDate @bind-Value="Draft.EndsOn"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-assignment-ends-on" />
                 </FormField>
             </Grid>
@@ -149,8 +148,8 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="2">
                 <FormField Text="Notes">
-                    <InputTextArea @bind-Value="Draft.Notes"
-                                   class="cda-input cda-input--textarea min-h-24"
+                    <TextArea @bind-Value="Draft.Notes"
+                                   Rows="4"
                                    data-testid="crmhr-assignment-notes" />
                 </FormField>
                 <label class="inline-flex items-center gap-2 self-start text-sm text-slate-700">
@@ -167,13 +166,13 @@
                AlignItems="AlignItems.Center"
                JustifyContent="JustifyContent.SpaceBetween"
                Wrap="FlexWrap.Wrap">
-            <Button ButtonStyle="ButtonStyle.Light"
+            <Button Tone="ButtonTone.Default"
                     Text="Reset"
                     Disabled="@isSaving"
                     data-testid="crmhr-assignment-reset-button"
                     Click="ResetDraft" />
             <Cluster Gap="LayoutGap.Small">
-                <Button ButtonStyle="ButtonStyle.Light"
+                <Button Tone="ButtonTone.Default"
                         Text="Cancel"
                         Disabled="@isSaving"
                         Click="CloseCreateDialogAsync" />

@@ -128,15 +128,15 @@
                                          Count="@($"{DefinitionCatalog.Items.Count} definition(s)")">
                             <Filters>
                                 <FilterBar>
-                                    <input class="cda-input min-w-[16rem] flex-1"
+                                    <input class="ui-input min-w-[16rem] flex-1"
                                            value="@pendingSearchText"
                                            @oninput="UpdateDefinitionSearchText"
                                            placeholder="Search definitions"
                                            aria-label="Search process definitions"
                                            data-testid="processes-definition-search" />
                                     <Button Icon="search"
-                                            Class="cda-button--quick"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Class="ui-button--quick"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             title="Search definitions"
                                             aria-label="Search definitions"
@@ -144,8 +144,8 @@
                                             Click="ApplyDefinitionSearchAsync"
                                             data-testid="processes-definition-search-submit" />
                                     <Button Icon="close"
-                                            Class="cda-button--quick"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Class="ui-button--quick"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             title="Clear search"
                                             aria-label="Clear search"
@@ -169,7 +169,6 @@
                         <Tabs SelectedIndex="@activeDetailTabIndex"
                               SelectedIndexChanged="HandleDetailTabChangedAsync"
                               RenderMode="TabRenderMode.Server"
-                              Variant="TabsVariant.WorkspaceSecondary"
                               BorderMode="TabsBorderMode.Soft"
                               OverflowMode="TabsOverflowMode.Auto"
                               PanelOverflowMode="TabsPanelOverflowMode.Auto"
@@ -210,7 +209,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseRunDetailDialogAsync" />
             </Cluster>
@@ -234,7 +233,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseEventDetailDialogAsync" />
             </Cluster>
@@ -1403,7 +1402,6 @@
 
         <Tabs SelectedIndex="@selectedRunViewIndex"
               SelectedIndexChanged="HandleSelectedRunViewChangedAsync"
-              Variant="TabsVariant.WorkspaceSecondary"
               BorderMode="TabsBorderMode.Soft"
               OverflowMode="TabsOverflowMode.Auto"
               PanelOverflowMode="TabsPanelOverflowMode.Auto"
@@ -1483,7 +1481,7 @@
                 <Stack GapScale="LayoutGap.Small">
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-history-window">History length</label>
                     <select id="processes-manager-chat-history-window"
-                            class="cda-input"
+                            class="ui-input"
                             value="@managerChatHistoryWindow"
                             @onchange="ChangeManagerChatHistoryWindowAsync"
                             data-testid="processes-manager-chat-history-window">
@@ -1495,7 +1493,7 @@
 
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-run-select">Run</label>
                     <select id="processes-manager-chat-run-select"
-                            class="cda-input"
+                            class="ui-input"
                             value="@RuntimeRunSelectValue"
                             @onchange="SelectRuntimeRunAsync"
                             data-testid="processes-manager-chat-run-select">
@@ -1504,7 +1502,7 @@
 
                     <label class="text-xs font-semibold text-slate-500" for="processes-manager-chat-agent-select">Manager agent</label>
                     <select id="processes-manager-chat-agent-select"
-                            class="cda-input"
+                            class="ui-input"
                             value="@ManagerChatAgentSelectValue"
                             @onchange="SelectManagerChatAgentAsync"
                             disabled="@(managerChatAgents.Count == 0)"
@@ -1526,7 +1524,7 @@
 
                 <Button Text="Reload"
                         Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Class="w-full justify-start"
                         Disabled="@managerChatIsLoading"
@@ -1535,7 +1533,7 @@
                         data-testid="processes-manager-chat-reload" />
                 <Button Text="Open agent context"
                         Icon="smart_toy"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Class="w-full justify-start"
                         Disabled="@AgentContextDisabled"
@@ -1789,7 +1787,7 @@
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="History on demand" />
                 <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-window">History window</label>
                 <select id="processes-process-graphs-load-window"
-                        class="cda-input"
+                        class="ui-input"
                         value="@runtimeHistoryWindow"
                         @onchange="ChangeRuntimeHistoryWindowAsync"
                         data-testid="processes-runtime-history-window">
@@ -1802,7 +1800,7 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="processes-process-graphs-load-run">Run</label>
                 <select id="processes-process-graphs-load-run"
-                        class="cda-input"
+                        class="ui-input"
                         value="@RuntimeRunSelectValue"
                         @onchange="SelectRuntimeRunAsync"
                         data-testid="processes-runtime-run-select">
@@ -1811,7 +1809,7 @@
             </Stack>
             <Button Text="Load data history"
                     Icon="bar_chart"
-                    ButtonStyle="ButtonStyle.Primary"
+                    Tone="ButtonTone.Primary"
                     Size="ButtonSize.Small"
                     Disabled="@isBusy"
                     IsBusy="@isBusy"
@@ -1829,7 +1827,7 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History window</label>
                 <select id="@($"{testId}-window")"
-                        class="cda-input"
+                        class="ui-input"
                         value="@runtimeHistoryWindow"
                         @onchange="ChangeRuntimeHistoryWindowAsync"
                         data-testid="processes-runtime-history-window">
@@ -1842,7 +1840,7 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
                 <select id="@($"{testId}-run")"
-                        class="cda-input"
+                        class="ui-input"
                         value="@RuntimeRunSelectValue"
                         @onchange="SelectRuntimeRunAsync"
                         data-testid="processes-runtime-run-select">
@@ -1851,7 +1849,7 @@
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
                 <Button Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         title="Previous event page"
                         aria-label="Previous event page"
@@ -1860,7 +1858,7 @@
                         data-testid="processes-runtime-events-prev" />
                 <StatusBadge Tone="neutral" Text="@($"Page {runtimeEventPage + 1}")" />
                 <Button Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         title="Next event page"
                         aria-label="Next event page"
@@ -1869,7 +1867,7 @@
                         data-testid="processes-runtime-events-next" />
                 <Button Text="Refresh"
                         Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@isBusy"
                         IsBusy="@isBusy"
@@ -1907,7 +1905,7 @@
             </Cluster>
             <Button Text="Launch"
                     Icon="rocket_launch"
-                    ButtonStyle="ButtonStyle.Success"
+                    Tone="ButtonTone.Success"
                     Size="ButtonSize.Small"
                     Class="mt-4"
                     Disabled="@(isBusy || DefinitionCatalog.SelectedItem is null)"
@@ -1965,7 +1963,7 @@
             <p class="mt-2 text-sm leading-6 text-slate-600">Manager messages are filtered to the selected run and history window.</p>
             <Button Text="Open manager chat"
                     Icon="forum"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Class="mt-4"
                     Click="OpenManagerChatTabAsync"
@@ -2018,9 +2016,9 @@
                         </span>
                     </button>
                     <Button Icon="open_in_new"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
-                            Class="cda-button--quick processes-runtime-run-card__open"
+                            Class="ui-button--quick processes-runtime-run-card__open"
                             title="Open run details"
                             aria-label="Open run details"
                             Click="@(() => OpenRunDetailDialogAsync(run))"
@@ -2242,7 +2240,7 @@
                                 <p class="mt-2 text-sm leading-6 text-slate-700">@wait.Summary</p>
                             </div>
                             <Button Icon="open_in_new"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Open child run"
                                     aria-label="Open child run"
@@ -3392,7 +3390,7 @@
             {
                 <Button Text="@command.Text"
                         Icon="@command.Icon"
-                        ButtonStyle="@ResolveDefinitionEditorCommandButtonStyle(command.Kind)"
+                        Tone="@ResolveDefinitionEditorCommandButtonStyle(command.Kind)"
                         Size="ButtonSize.Small"
                         Disabled="@(!command.IsEnabled || isBusy)"
                         IsBusy="@isBusy"
@@ -3877,16 +3875,16 @@
             _ => "neutral"
         };
 
-    private static ButtonStyle ResolveCommandButtonStyle(ProcessWorkspaceCommandProjection command)
+    private static ButtonTone ResolveCommandButtonStyle(ProcessWorkspaceCommandProjection command)
         => command.Kind switch
         {
-            ProcessWorkspaceCommandKind.RefreshProjections => ButtonStyle.Light,
-            ProcessWorkspaceCommandKind.OpenAgentContext => ButtonStyle.Info,
-            ProcessWorkspaceCommandKind.OpenLiveDashboard => ButtonStyle.Light,
-            ProcessWorkspaceCommandKind.FeedDefaults => ButtonStyle.Info,
-            ProcessWorkspaceCommandKind.LaunchRun => ButtonStyle.Success,
-            ProcessWorkspaceCommandKind.CreateDefinition => ButtonStyle.Primary,
-            _ => ButtonStyle.Light
+            ProcessWorkspaceCommandKind.RefreshProjections => ButtonTone.Default,
+            ProcessWorkspaceCommandKind.OpenAgentContext => ButtonTone.Info,
+            ProcessWorkspaceCommandKind.OpenLiveDashboard => ButtonTone.Default,
+            ProcessWorkspaceCommandKind.FeedDefaults => ButtonTone.Info,
+            ProcessWorkspaceCommandKind.LaunchRun => ButtonTone.Success,
+            ProcessWorkspaceCommandKind.CreateDefinition => ButtonTone.Primary,
+            _ => ButtonTone.Default
         };
 
     private static string ResolveScopeIcon(ProcessDefinitionCatalogScopeKind scopeKind)
@@ -3957,14 +3955,14 @@
             _ => "neutral"
         };
 
-    private static ButtonStyle ResolveDefinitionEditorCommandButtonStyle(ProcessDefinitionEditorCommandKind kind)
+    private static ButtonTone ResolveDefinitionEditorCommandButtonStyle(ProcessDefinitionEditorCommandKind kind)
         => kind switch
         {
-            ProcessDefinitionEditorCommandKind.SaveDraft => ButtonStyle.Primary,
-            ProcessDefinitionEditorCommandKind.Publish => ButtonStyle.Success,
-            ProcessDefinitionEditorCommandKind.Archive => ButtonStyle.Light,
-            ProcessDefinitionEditorCommandKind.Delete => ButtonStyle.Danger,
-            _ => ButtonStyle.Light
+            ProcessDefinitionEditorCommandKind.SaveDraft => ButtonTone.Primary,
+            ProcessDefinitionEditorCommandKind.Publish => ButtonTone.Success,
+            ProcessDefinitionEditorCommandKind.Archive => ButtonTone.Default,
+            ProcessDefinitionEditorCommandKind.Delete => ButtonTone.Danger,
+            _ => ButtonTone.Default
         };
 
     private static string BuildScopeTestId(ProcessDefinitionCatalogScopeKind kind)

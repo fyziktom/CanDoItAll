@@ -48,13 +48,13 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <Button Text="Cancel"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="IsBusy"
                         Click="HandleCloseAsync"
                         data-testid="crmhr-opportunity-create-cancel" />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Back"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(IsBusy || step == CreateOpportunityStep.Basics)"
                             Click="MoveBack"
                             data-testid="crmhr-opportunity-create-back" />

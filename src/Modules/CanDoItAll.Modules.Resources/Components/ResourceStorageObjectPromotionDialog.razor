@@ -30,7 +30,7 @@
             }
             <div class="w-full">
                 <label class="cda-field-label">Target project</label>
-                <InputSelect @bind-Value="projectId" class="cda-input w-full" data-testid="resources-promotion-project">
+                <InputSelect @bind-Value="projectId" class="ui-input w-full" data-testid="resources-promotion-project">
                     <option value="">Select a project</option>
                     @foreach (KeyValuePair<Guid, string> project in projects.OrderBy(project => project.Value))
                     {
@@ -40,11 +40,11 @@
             </div>
             <div class="w-full">
                 <label class="cda-field-label">Resource name</label>
-                <InputText @bind-Value="resourceName" class="cda-input w-full" data-testid="resources-promotion-name" />
+                <InputText @bind-Value="resourceName" class="ui-input w-full" data-testid="resources-promotion-name" />
             </div>
             <div class="w-full">
                 <label class="cda-field-label">Sensitivity</label>
-                <InputSelect @bind-Value="sensitivity" class="cda-input w-full" data-testid="resources-promotion-sensitivity">
+                <InputSelect @bind-Value="sensitivity" class="ui-input w-full" data-testid="resources-promotion-sensitivity">
                     @foreach (ResourceSensitivity option in Enum.GetValues<ResourceSensitivity>())
                     {
                         <option value="@option">@option</option>
@@ -56,7 +56,7 @@
     <Footer>
         <Cluster Gap="LayoutGap.Small" Class="justify-end">
             <Button Text="Cancel"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Disabled="@isSaving"
                     Click="CancelPromotion" />
             <Button Text="Save resource"

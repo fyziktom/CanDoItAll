@@ -11,19 +11,19 @@
                 <Button Text="New team"
                         Icon="groups"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="OpenNewTeamDialogAsync"
                         data-testid="agents-team-new" />
                 <Button Text="New agent"
                         Icon="add"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
                 <div class="agent-catalog-panel__search" role="search">
                     <input @bind="agentSearch"
                            @bind:event="oninput"
-                           class="cda-input agent-catalog-panel__search-input"
+                           class="ui-input agent-catalog-panel__search-input"
                            placeholder="Search agents"
                            data-testid="agents-catalog-search" />
                     <TooltipTarget Text="Reset agent search"
@@ -31,7 +31,7 @@
                                    Duration="@((TimeSpan?)null)"
                                    TestId="agents-catalog-reset-tooltip">
                         <Button Icon="restart_alt"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="ResetAgentSearch"
                                 aria-label="Reset agent search"
@@ -86,27 +86,27 @@
                     <Button Text="New"
                             Icon="add"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="OpenNewTeamDialogAsync"
                             data-testid="agents-team-new-compact" />
                     <Button Text="Edit"
                             Icon="edit"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(SelectedTeam is null)"
                             Click="OpenSelectedTeamDialogAsync"
                             data-testid="agents-team-edit" />
                     <Button Text="Members"
                             Icon="group_add"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(SelectedTeam is null)"
                             Click="OpenSelectedTeamMembersDialogAsync"
                             data-testid="agents-team-members" />
                     <Button Text="Delete"
                             Icon="delete"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Danger"
+                            Tone="ButtonTone.Danger"
                             Disabled="@(SelectedTeam is null)"
                             Click="DeleteSelectedTeamAsync"
                             data-testid="agents-team-delete" />
@@ -153,7 +153,7 @@
                                             <Button Text="Open chat"
                                                     Icon="forum"
                                                     Size="ButtonSize.Small"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Disabled="@openingManagedAgentChatId.HasValue"
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-hr-agent-open" />
@@ -163,7 +163,7 @@
                                             <Button Text="Open chat"
                                                     Icon="forum"
                                                     Size="ButtonSize.Small"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Disabled="@openingManagedAgentChatId.HasValue"
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-prompts-curator-open" />
@@ -173,7 +173,7 @@
                                             <Button Text="Open chat"
                                                     Icon="account_tree"
                                                     Size="ButtonSize.Small"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Disabled="@openingManagedAgentChatId.HasValue"
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-workflow-curator-open" />
@@ -183,7 +183,7 @@
                                             <Button Text="Open chat"
                                                     Icon="event_repeat"
                                                     Size="ButtonSize.Small"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Disabled="@openingManagedAgentChatId.HasValue"
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-scheduler-agent-open" />

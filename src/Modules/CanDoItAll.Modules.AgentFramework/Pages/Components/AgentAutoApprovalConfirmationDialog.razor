@@ -19,12 +19,12 @@
              Wrap="FlexWrap.Wrap"
              JustifyContent="JustifyContent.End">
         <Button Text="Cancel"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Click="CancelAsync"
                 data-testid="agents-auto-approval-cancel" />
         <Button Text="Enable auto-approval"
                 Icon="warning"
-                ButtonStyle="ButtonStyle.Warning"
+                Tone="ButtonTone.Warning"
                 Disabled="@(!riskAcknowledged)"
                 Click="ConfirmAsync"
                 data-testid="agents-auto-approval-confirm" />

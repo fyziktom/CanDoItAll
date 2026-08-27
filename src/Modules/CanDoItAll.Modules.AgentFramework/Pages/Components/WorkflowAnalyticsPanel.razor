@@ -59,7 +59,7 @@ else if (snapshot is not null)
                                      Value="@scopeKind"
                                      ValueChanged="HandleScopeChangedAsync"
                                      ValueExpression="@(() => scopeKind)"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="workflow-analytics-scope">
                             <option value="@WorkflowAnalyticsScopeKind.All">All workflows</option>
                             @if (Workflows.Count > 0)
@@ -76,7 +76,7 @@ else if (snapshot is not null)
                                          Value="@selectedWorkflowValue"
                                          ValueChanged="HandleSelectedWorkflowChangedAsync"
                                          ValueExpression="@(() => selectedWorkflowValue)"
-                                         class="cda-input"
+                                         class="ui-input"
                                          data-testid="workflow-analytics-workflow">
                                 @foreach (var workflow in OrderedWorkflows)
                                 {

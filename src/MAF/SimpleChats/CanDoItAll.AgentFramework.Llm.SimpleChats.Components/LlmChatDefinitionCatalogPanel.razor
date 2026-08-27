@@ -65,7 +65,7 @@
                                            Duration="@((TimeSpan?)null)"
                                            TestId="llm-chat-definition-reset-tooltip">
                                 <Button Icon="filter_alt_off"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="ResetFiltersAsync"
                                         Disabled="@(!HasActiveFilters || isLoading)"
@@ -81,7 +81,7 @@
             {
                 <Button Text="New definition"
                         Icon="add"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Click="OpenCreateEditor"
                         data-testid="llm-chat-definition-create" />
             }

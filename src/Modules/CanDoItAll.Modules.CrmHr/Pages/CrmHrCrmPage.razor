@@ -32,7 +32,7 @@
                 <PageHeaderActionButton Icon="smart_toy"
                                         Label="Agent chats"
                                         TooltipText="Open the global agent catalog with the current CRM selection as context."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="OpenAgentChats"
                                         data-testid="crmhr-crm-agent-chats" />
                 <PageHeaderActionButton Icon="asset"
@@ -85,7 +85,6 @@
                         <Tabs SelectedIndex="@SelectedCrmRecordTabIndex"
                               SelectedIndexChanged="HandleCrmRecordTabChanged"
                               RenderMode="TabRenderMode.Server"
-                              Variant="TabsVariant.WorkspaceSecondary"
                               BorderMode="TabsBorderMode.Soft"
                               OverflowMode="TabsOverflowMode.Wrap"
                               AriaLabel="CRM account sections"
@@ -101,7 +100,7 @@
                                         <div>
                                             <label class="cda-field-label">Relationship stage</label>
                                             <InputSelect @bind-Value="profileEditor.RelationshipStage"
-                                                         class="cda-input"
+                                                         class="ui-input"
                                                          data-testid="crmhr-account-stage">
                                                 @foreach (var stage in Enum.GetValues<CrmAccountRelationshipStage>())
                                                 {
@@ -120,20 +119,20 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
                                             <label class="cda-field-label">Commercial notes</label>
-                                            <InputTextArea @bind-Value="profileEditor.CommercialNotes"
-                                                           class="cda-input cda-input--textarea min-h-[9rem]"
+                                            <TextArea @bind-Value="profileEditor.CommercialNotes"
+                                                           Rows="6"
                                                            data-testid="crmhr-account-commercial-notes" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Constraints</label>
-                                            <InputTextArea @bind-Value="profileEditor.ConstraintNotes"
-                                                           class="cda-input cda-input--textarea min-h-[9rem]"
+                                            <TextArea @bind-Value="profileEditor.ConstraintNotes"
+                                                           Rows="6"
                                                            data-testid="crmhr-account-constraints" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Timing risks</label>
-                                            <InputTextArea @bind-Value="profileEditor.TimingRiskNotes"
-                                                           class="cda-input cda-input--textarea min-h-[9rem]"
+                                            <TextArea @bind-Value="profileEditor.TimingRiskNotes"
+                                                           Rows="6"
                                                            data-testid="crmhr-account-timing-risks" />
                                         </div>
                                     </Grid>
@@ -143,7 +142,7 @@
                                                 data-testid="crmhr-account-save-button"
                                                 Type="submit" />
                                         <Button Text="Open directory record"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Click="OpenDirectory" />
                                     </Cluster>
                                 </FormSection>
@@ -169,7 +168,7 @@
                                         <p class="mt-1 text-sm leading-6 text-slate-600">Use typed relationship roles for employees, contacts, sponsors, partners, and delivery participants. Project links are optional.</p>
                                     </div>
                                     <Button Text="Add connection"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="AddConnectedRecord"
                                             data-testid="crmhr-connection-add" />
@@ -206,7 +205,7 @@
                                                                     @if (connection.RelatedPartyId != Guid.Empty)
                                                                     {
                                                                         <Button Text="Clear"
-                                                                                ButtonStyle="ButtonStyle.Light"
+                                                                                Tone="ButtonTone.Default"
                                                                                 Size="ButtonSize.Small"
                                                                                 Click="@(() => ClearConnectionParty(rowIndex))"
                                                                                 data-testid="@($"crmhr-connection-party-clear-{rowIndex}")" />
@@ -223,7 +222,7 @@
                                                     <div>
                                                         <label class="cda-field-label">Relationship role</label>
                                                         <InputSelect @bind-Value="connection.Role"
-                                                                     class="cda-input"
+                                                                     class="ui-input"
                                                                      data-testid="@($"crmhr-connection-role-{rowIndex}")">
                                                             @foreach (var role in Enum.GetValues<CrmAccountConnectionRole>())
                                                             {
@@ -233,7 +232,7 @@
                                                     </div>
                                                     <div class="flex items-end justify-end">
                                                         <Button Text="Remove"
-                                                                ButtonStyle="ButtonStyle.Danger"
+                                                                Tone="ButtonTone.Danger"
                                                                 Size="ButtonSize.Small"
                                                                 Click="@(() => RemoveConnectedRecord(rowIndex))"
                                                                 data-testid="@($"crmhr-connection-remove-{rowIndex}")" />
@@ -250,7 +249,7 @@
                                                     <div class="lg:col-span-2">
                                                         <label class="cda-field-label">Relationship notes</label>
                                                         <InputText @bind-Value="connection.Notes"
-                                                                   class="cda-input"
+                                                                   class="ui-input"
                                                                    data-testid="@($"crmhr-connection-notes-{rowIndex}")" />
                                                     </div>
                                                     <div class="flex items-end gap-3">
@@ -284,7 +283,7 @@
                                         <p class="mt-2 text-sm leading-6 text-slate-700">@accountActivityLoadError</p>
                                         <Button Text="Retry"
                                                 Icon="refresh"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Class="mt-4"
                                                 Click="RetryAccountActivityAsync" />
@@ -323,7 +322,7 @@
                                             <div>
                                                 <label class="cda-field-label">Interaction type</label>
                                                 <InputSelect @bind-Value="interactionEditor.InteractionType"
-                                                             class="cda-input"
+                                                             class="ui-input"
                                                              data-testid="crmhr-interaction-type">
                                                     @foreach (var interactionType in Enum.GetValues<InteractionType>())
                                                     {
@@ -334,13 +333,13 @@
                                             <div>
                                                 <label class="cda-field-label">Occurred on</label>
                                                 <InputDate @bind-Value="interactionEditor.OccurredOn"
-                                                           class="cda-input"
+                                                           class="ui-input"
                                                            data-testid="crmhr-interaction-occurred-on" />
                                             </div>
                                             <div>
                                                 <label class="cda-field-label">Linked opportunity</label>
                                                 <InputSelect @bind-Value="interactionEditor.RelatedOpportunityId"
-                                                             class="cda-input"
+                                                             class="ui-input"
                                                              data-testid="crmhr-interaction-opportunity">
                                                     <option value="">No linked opportunity</option>
                                                     @if (SelectedOpportunity is { } selectedOpportunity)
@@ -357,21 +356,21 @@
                                         <div class="mt-5">
                                             <label class="cda-field-label">Subject</label>
                                             <InputText @bind-Value="interactionEditor.Subject"
-                                                       class="cda-input"
+                                                       class="ui-input"
                                                        data-testid="crmhr-interaction-subject" />
                                         </div>
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
                                             <div>
                                                 <label class="cda-field-label">Summary</label>
-                                                <InputTextArea @bind-Value="interactionEditor.Summary"
-                                                               class="cda-input cda-input--textarea min-h-[9rem]"
+                                                <TextArea @bind-Value="interactionEditor.Summary"
+                                                               Rows="6"
                                                                data-testid="crmhr-interaction-summary" />
                                             </div>
                                             <div>
                                                 <label class="cda-field-label">Notes</label>
-                                                <InputTextArea @bind-Value="interactionEditor.Notes"
-                                                               class="cda-input cda-input--textarea min-h-[9rem]"
+                                                <TextArea @bind-Value="interactionEditor.Notes"
+                                                               Rows="6"
                                                                data-testid="crmhr-interaction-notes" />
                                             </div>
                                         </Grid>
@@ -437,10 +436,10 @@
                                JustifyContent="JustifyContent.SpaceBetween"
                                Wrap="FlexWrap.Wrap">
                             <Button Text="Open directory record"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="OpenDirectory" />
                             <Button Text="Close"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="CloseAccountDialogAsync"
                                     data-testid="crmhr-crm-record-close" />
                         </Split>

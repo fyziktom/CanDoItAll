@@ -146,7 +146,7 @@
     font-size: 1rem;
 }
 
-.project-structure-page ::deep .project-structure-toolbar-toggle .rz-button-text {
+.project-structure-page ::deep .project-structure-toolbar-toggle .ui-button__label {
     display: none;
 }
 

@@ -36,7 +36,7 @@
                             <PageHeaderActionButton Icon="warning_amber"
                                                     Label="Open report notes and warnings"
                                                     TooltipText="@FormatReportDiagnosticsTooltip(loadedSnapshot)"
-                                                    ButtonStyle="ButtonStyle.Warning"
+                                                    Tone="ButtonTone.Warning"
                                                     Click="OpenWarningsDialog"
                                                     TestId="manager-summary-open-warnings" />
                         }
@@ -51,7 +51,7 @@
                     <TextBlock TextStyle="TextStyle.Caption" Value="Cost view" />
                     <InputSelect TValue="ProjectManagerSummaryContentMode"
                                  @bind-Value="ContentMode"
-                                 class="cda-input"
+                                 class="ui-input"
                                  disabled="@isLoading"
                                  data-testid="manager-summary-content-mode">
                         <option value="@ProjectManagerSummaryContentMode.HistoryOnly">History only</option>
@@ -62,7 +62,7 @@
                     <TextBlock TextStyle="TextStyle.Caption" Value="Project scope" />
                     <InputSelect TValue="ProjectManagerSummaryScope"
                                  @bind-Value="Scope"
-                                 class="cda-input"
+                                 class="ui-input"
                                  disabled="@isLoading"
                                  data-testid="manager-summary-project-scope">
                         <option value="@ProjectManagerSummaryScope.CurrentProject">This project</option>

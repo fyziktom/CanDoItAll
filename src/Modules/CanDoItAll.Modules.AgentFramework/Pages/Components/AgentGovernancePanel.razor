@@ -5,7 +5,7 @@
                          Description="Inspect durable technical execution state, approvals, artifacts, checkpoints, and receipts without leaving the integrated shell.">
             <Actions>
                 <Button Text="Refresh"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@isBusy"
                         Click="RefreshAsync" />
@@ -22,7 +22,7 @@
                                  Value="@selectedAgentId"
                                  ValueChanged="HandleAgentFilterChangedAsync"
                                  ValueExpression="@(() => selectedAgentId)"
-                                 class="cda-input">
+                                 class="ui-input">
                         <option value="">All technical agents</option>
                         @foreach (var agent in agents.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
                         {

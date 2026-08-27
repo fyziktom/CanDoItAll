@@ -7,7 +7,7 @@
             <p class="mt-1 text-sm leading-6 text-slate-600">Keep secondary email, phone, website, messaging, or social handles attached to the same party record.</p>
         </div>
         <Button Text="Add contact"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Size="ButtonSize.Small"
                 Click="OpenContactWizard"
                 data-testid="crmhr-contact-add" />
@@ -26,7 +26,7 @@
                     <div>
                         <label class="cda-field-label">Type</label>
                         <InputSelect @bind-Value="item.ContactType"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="@($"crmhr-contact-type-{rowIndex}")">
                             @foreach (var contactType in Enum.GetValues<PartyContactType>()) {
                                 <option value="@contactType">@contactType</option>
@@ -36,18 +36,18 @@
                     <div>
                         <label class="cda-field-label">Label</label>
                         <InputText @bind-Value="item.Label"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-contact-label-{rowIndex}")" />
                     </div>
                     <div class="lg:col-span-2">
                         <label class="cda-field-label">Value</label>
                         <InputText @bind-Value="item.Value"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-contact-value-{rowIndex}")" />
                     </div>
                     <div class="flex items-end">
                         <Button Text="Remove"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Size="ButtonSize.Small"
                                 Click="@(() => RemoveContactPoint(item))"
                                 data-testid="@($"crmhr-contact-remove-{rowIndex}")" />
@@ -63,7 +63,7 @@
                     <div>
                         <label class="cda-field-label">Notes</label>
                         <InputText @bind-Value="item.Notes"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-contact-notes-{rowIndex}")" />
                     </div>
                 </Grid>
@@ -116,7 +116,7 @@
                         <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                             <FormField Text="Value">
                                 <InputText @bind-Value="contactDraft.Value"
-                                           class="cda-input"
+                                           class="ui-input"
                                            aria-invalid="@(!string.IsNullOrEmpty(contactValidationError) ? "true" : "false")"
                                            data-testid="crmhr-contact-wizard-value" />
                                 @if (!string.IsNullOrEmpty(contactValidationError)) {
@@ -130,7 +130,7 @@
 
                             <FormField Text="Label">
                                 <InputText @bind-Value="contactDraft.Label"
-                                           class="cda-input"
+                                           class="ui-input"
                                            data-testid="crmhr-contact-wizard-label" />
                             </FormField>
                         </Grid>
@@ -170,13 +170,13 @@
                    Wrap="FlexWrap.Wrap">
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="CancelContactWizard"
                             data-testid="crmhr-contact-wizard-cancel" />
                     @if (contactWizardStep == ContactWizardStep.Details) {
                         <Button Text="Back"
                                 Icon="arrow_back"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="MoveToContactTypeStep"
                                 data-testid="crmhr-contact-wizard-back" />
                     }

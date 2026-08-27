@@ -16,7 +16,7 @@
     <div class="memory-ui-row-actions">
         <Button Text="Refresh status"
                 Icon="refresh"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Size="ButtonSize.Small"
                 Click="RefreshStatusAsync"
                 Disabled="@(IsBusy || !CanRefreshStatus)"
@@ -25,7 +25,7 @@
         {
             <Button Text="Cancel operation"
                     Icon="cancel"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Click="CancelOperationAsync"
                     Disabled="@IsBusy"

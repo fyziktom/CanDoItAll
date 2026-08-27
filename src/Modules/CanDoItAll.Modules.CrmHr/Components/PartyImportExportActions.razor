@@ -13,17 +13,17 @@
         </Stack>
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Refresh export"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Click="RefreshExportAsync"
                     data-testid="crmhr-export-refresh" />
             <Button Text="Preview import"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Size="ButtonSize.Small"
                     Click="PreviewImportAsync"
                     data-testid="crmhr-import-preview-button" />
             <Button Text="Apply import"
-                    ButtonStyle="ButtonStyle.Success"
+                    Tone="ButtonTone.Success"
                     Size="ButtonSize.Small"
                     Click="ApplyImportAsync"
                     Disabled="@(preview is null || preview.ReadyRowCount == 0)"
@@ -41,15 +41,15 @@
     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
         <div>
             <label class="cda-field-label">Export preview</label>
-            <InputTextArea @bind-Value="exportText"
-                           class="cda-input cda-input--textarea min-h-40"
+            <TextArea @bind-Value="exportText"
+                           Rows="8"
                            readonly
                            data-testid="crmhr-export-textarea" />
         </div>
         <div>
             <label class="cda-field-label">Import CSV</label>
-            <InputTextArea @bind-Value="importText"
-                           class="cda-input cda-input--textarea min-h-40"
+            <TextArea @bind-Value="importText"
+                           Rows="8"
                            placeholder="DisplayName,PartyType,LifecycleStatus,ExternalCode,..."
                            data-testid="crmhr-import-textarea" />
         </div>

@@ -51,7 +51,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
                             }
                             <Cluster JustifyContent="JustifyContent.End">
                                 <Button Text="Retry cleanup"
-                                        ButtonStyle="ButtonStyle.Warning"
+                                        Tone="ButtonTone.Warning"
                                         Disabled="false"
                                         Click="@(() => RetryProjectDeletionCleanupAsync(cleanup))"
                                         data-testid="project-deletion-retry" />

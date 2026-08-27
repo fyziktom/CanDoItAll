@@ -24,7 +24,7 @@
                     <InputSelect TValue="ProjectManagerActivityKind"
                                  @bind-Value="activityKind"
                                  @bind-Value:after="ResetAndLoadAsync"
-                                 class="cda-input"
+                                 class="ui-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-kind">
                         <option value="@ProjectManagerActivityKind.Conversation">Agents</option>
@@ -38,7 +38,7 @@
                     <InputSelect TValue="ProjectManagerActivityStatusFilter"
                                  @bind-Value="statusFilter"
                                  @bind-Value:after="ResetAndLoadAsync"
-                                 class="cda-input"
+                                 class="ui-input"
                                  disabled="@isLoading"
                                  data-testid="manager-activity-status">
                         <option value="@ProjectManagerActivityStatusFilter.All">All outcomes</option>

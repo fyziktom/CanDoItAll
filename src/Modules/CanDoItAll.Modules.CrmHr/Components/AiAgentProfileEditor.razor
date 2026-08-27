@@ -5,7 +5,7 @@
             <div>
                 <label class="cda-field-label">Provider profile</label>
                 <InputSelect @bind-Value="Model.ProviderProfileId"
-                             class="cda-input"
+                             class="ui-input"
                              data-testid="crmhr-agent-provider">
                     <option value="">No provider linked</option>
                     @foreach (var option in ProviderOptions)
@@ -18,7 +18,7 @@
             <div>
                 <label class="cda-field-label">Default model</label>
                 <InputText @bind-Value="Model.DefaultModel"
-                           class="cda-input"
+                           class="ui-input"
                            data-testid="crmhr-agent-default-model" />
             </div>
         </Grid>
@@ -27,7 +27,7 @@
             <div>
                 <label class="cda-field-label">Execution mode</label>
                 <InputSelect @bind-Value="Model.ExecutionMode"
-                             class="cda-input"
+                             class="ui-input"
                              data-testid="crmhr-agent-execution-mode">
                     @foreach (var executionMode in Enum.GetValues<AiExecutionMode>())
                     {
@@ -38,7 +38,7 @@
             <div>
                 <label class="cda-field-label">Owner / steward</label>
                 <InputSelect @bind-Value="Model.OwnerPartyId"
-                             class="cda-input"
+                             class="ui-input"
                              data-testid="crmhr-agent-owner">
                     <option value="">No steward assigned</option>
                     @foreach (var owner in OwnerOptions)
@@ -50,7 +50,7 @@
             <div>
                 <label class="cda-field-label">Validation status</label>
                 <InputSelect @bind-Value="Model.ValidationStatus"
-                             class="cda-input"
+                             class="ui-input"
                              data-testid="crmhr-agent-validation-status">
                     @foreach (var validationStatus in Enum.GetValues<AiValidationStatus>())
                     {
@@ -63,14 +63,14 @@
         <div class="mt-5 max-w-sm">
             <label class="cda-field-label">Last reviewed on</label>
             <InputDate @bind-Value="Model.LastReviewedOn"
-                       class="cda-input"
+                       class="ui-input"
                        data-testid="crmhr-agent-last-reviewed-on" />
         </div>
 
         <div class="mt-5">
             <label class="cda-field-label">Governance notes</label>
-            <InputTextArea @bind-Value="Model.Notes"
-                           class="cda-input cda-input--textarea min-h-[8rem]"
+            <TextArea @bind-Value="Model.Notes"
+                           Rows="6"
                            data-testid="crmhr-agent-notes" />
         </div>
     </FormSection>

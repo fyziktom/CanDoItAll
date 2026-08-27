@@ -27,8 +27,8 @@
 
                 <div>
                     <label class="cda-field-label">Merge note</label>
-                    <InputTextArea @bind-Value="mergeReason"
-                                   class="cda-input cda-input--textarea min-h-24"
+                    <TextArea @bind-Value="mergeReason"
+                                   Rows="4"
                                    data-testid="crmhr-merge-reason" />
                 </div>
             </Stack>
@@ -40,10 +40,10 @@
                 <p class="text-sm leading-6 text-slate-600">Merge removes the duplicate party after references, contacts, addresses, and relationships are consolidated.</p>
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="HandleCloseAsync" />
                     <Button Text="Merge duplicate"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Click="HandleConfirmAsync"
                             data-testid="crmhr-merge-confirm" />
                 </Cluster>

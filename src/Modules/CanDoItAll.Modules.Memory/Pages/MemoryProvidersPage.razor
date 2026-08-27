@@ -11,9 +11,9 @@
                     Description="Generic provider profiles, capability manifests, health, and safe provider selection.">
             <Actions>
                 <Button Icon="refresh"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
-                        Class="cda-button--quick"
+                        Class="ui-button--quick"
                         title="Refresh memory providers"
                         aria-label="Refresh memory providers"
                         Click="Controller.RefreshAsync"
@@ -55,7 +55,6 @@
                 <Tabs @key="Controller.TabsRenderKey"
                       @bind-SelectedIndex="Controller.ActiveTabIndex"
                       RenderMode="TabRenderMode.Server"
-                      Variant="TabsVariant.WorkspacePrimary"
                       OverflowMode="TabsOverflowMode.Wrap"
                       AriaLabel="Memory provider tabs"
                       data-testid="memory-ui-tabs">

@@ -63,7 +63,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Task kind">
                         <InputSelect @bind-Value="TaskDraft.TaskKind"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-recruiting-task-kind">
                             @foreach (var taskKind in Enum.GetValues<LifecycleTaskKind>())
                             {
@@ -73,7 +73,7 @@
                     </FormField>
                     <FormField Text="Status">
                         <InputSelect @bind-Value="TaskDraft.Status"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-recruiting-task-status">
                             @foreach (var status in Enum.GetValues<LifecycleTaskStatus>())
                             {
@@ -86,7 +86,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Title">
                         <InputText @bind-Value="TaskDraft.Title"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-recruiting-task-title" />
                     </FormField>
                     <PartyPicker Label="Owner"
@@ -101,7 +101,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Due date">
                         <InputDate @bind-Value="TaskDraft.DueDate"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-recruiting-task-due-date" />
                     </FormField>
                     <ProjectPicker Label="Related project"
@@ -112,8 +112,8 @@
 
                 <div class="mt-4">
                     <FormField Text="Notes">
-                        <InputTextArea @bind-Value="TaskDraft.Notes"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                        <TextArea @bind-Value="TaskDraft.Notes"
+
                                        data-testid="crmhr-recruiting-task-notes" />
                     </FormField>
                 </div>
@@ -123,7 +123,7 @@
                             Click="SaveTask"
                             data-testid="crmhr-recruiting-task-save-button" />
                     <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="ResetTask"
                             data-testid="crmhr-recruiting-task-reset-button" />
                 </Cluster>
@@ -163,7 +163,7 @@
                                     <StatusBadge Tone="@ResolveTaskTone(item)"
                                                  Text="@item.Status.ToString()" />
                                     <Button Text="Delete"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Size="ButtonSize.Small"
                                             Click="@(() => DeleteTask.InvokeAsync(item.Id))"
                                             data-testid="crmhr-recruiting-task-delete-button" />

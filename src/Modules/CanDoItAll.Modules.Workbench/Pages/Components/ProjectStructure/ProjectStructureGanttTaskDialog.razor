@@ -82,7 +82,7 @@
                 <Button Text="@preset.Label"
                         Size="ButtonSize.Small"
                         Variant="Variant.Outlined"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Disabled="@IsScheduleReadOnly"
                         data-testid="@($"project-structure-gantt-task-preset-{preset.Hours:0.##}")"
                         Click="@(() => ApplyDurationPreset(preset.Hours))" />
@@ -146,7 +146,7 @@
                         Icon="close"
                         Size="ButtonSize.Small"
                         Variant="Variant.Text"
-                        ButtonStyle="ButtonStyle.Base"
+                        Tone="ButtonTone.Default"
                         data-testid="project-structure-gantt-task-resource-clear"
                         Click="ClearResourceAsync" />
             }
@@ -183,12 +183,12 @@
              JustifyContent="JustifyContent.End">
         <Button Text="Cancel"
                 Variant="Variant.Outlined"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 data-testid="project-structure-gantt-task-cancel"
                 Click="CancelAsync" />
         <Button Text="@(IsEditMode ? "Save task" : "Create task")"
                 Icon="@(IsEditMode ? "save" : "add_task")"
-                ButtonStyle="ButtonStyle.Info"
+                Tone="ButtonTone.Info"
                 data-testid="project-structure-gantt-task-submit"
                 Click="SubmitAsync" />
     </Cluster>

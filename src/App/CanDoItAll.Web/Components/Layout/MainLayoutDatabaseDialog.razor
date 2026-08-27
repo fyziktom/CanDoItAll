@@ -163,7 +163,7 @@
                 @if (IsStartupMode)
                 {
                     <Button Text="Continue"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@DatabaseDialogBusy"
                             Click="ContinueWithCurrentDatabase"
                             data-testid="database-startup-continue" />
@@ -171,13 +171,13 @@
                 else
                 {
                     <Button Text="Close"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@DatabaseDialogBusy"
                             Click="CloseDatabaseDialog" />
                 }
 
                 <Button Text="Open Data Sources"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@DatabaseDialogBusy"
                         Click="OpenDatabaseSettings"
                         data-testid="database-startup-open-settings" />
@@ -185,7 +185,7 @@
 
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="@ResolveSwitchButtonText()"
-                        ButtonStyle="ButtonStyle.Warning"
+                        Tone="ButtonTone.Warning"
                         Disabled="@(DatabaseDialogBusy || !CanSwitchSelectedProfile)"
                         Click="SwitchDatabaseProfile"
                         data-testid="database-startup-switch" />

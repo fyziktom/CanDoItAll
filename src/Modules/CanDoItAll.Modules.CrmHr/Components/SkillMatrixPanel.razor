@@ -19,7 +19,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Skill">
                         <InputSelect @bind-Value="SkillDraft.SkillId"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-skill-skill-id">
                             <option value="@Guid.Empty">Choose a skill</option>
                             @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
@@ -30,7 +30,7 @@
                     </FormField>
                     <FormField Text="Proficiency">
                         <InputSelect @bind-Value="SkillDraft.Proficiency"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-skill-proficiency">
                             @foreach (var proficiency in Enum.GetValues<SkillProficiencyLevel>())
                             {
@@ -43,25 +43,25 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <FormField Text="Years">
                         <InputNumber @bind-Value="SkillDraft.YearsExperience"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-skill-years" />
                     </FormField>
                     <FormField Text="Certification">
                         <InputText @bind-Value="SkillDraft.CertificationStatus"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-skill-certification" />
                     </FormField>
                     <FormField Text="Last validated">
                         <InputDate @bind-Value="SkillDraft.LastValidatedOn"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-skill-validated-on" />
                     </FormField>
                 </Grid>
 
                 <div class="mt-4">
                     <FormField Text="Notes">
-                        <InputTextArea @bind-Value="SkillDraft.Notes"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                        <TextArea @bind-Value="SkillDraft.Notes"
+
                                        data-testid="crmhr-skill-notes" />
                     </FormField>
                 </div>
@@ -84,20 +84,20 @@
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Skill name">
                     <InputText @bind-Value="SkillDefinitionDraft.Name"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-skill-definition-name" />
                 </FormField>
                 <FormField Text="Category">
                     <InputText @bind-Value="SkillDefinitionDraft.Category"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-skill-definition-category" />
                 </FormField>
             </Grid>
 
             <div class="mt-4">
                 <FormField Text="Description">
-                    <InputTextArea @bind-Value="SkillDefinitionDraft.Description"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                    <TextArea @bind-Value="SkillDefinitionDraft.Description"
+
                                    data-testid="crmhr-skill-definition-description" />
                 </FormField>
             </div>
@@ -155,7 +155,7 @@
                                 <StatusBadge Tone="@ResolveProficiencyTone(skill.Proficiency)"
                                              Text="@skill.Proficiency.ToString()" />
                                 <Button Text="Delete"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Size="ButtonSize.Small"
                                         Click="@(() => DeletePartySkill.InvokeAsync(skill.Id))"
                                         data-testid="crmhr-skill-delete-button" />

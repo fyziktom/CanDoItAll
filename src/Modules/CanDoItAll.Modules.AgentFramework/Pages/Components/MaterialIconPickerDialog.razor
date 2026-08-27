@@ -6,7 +6,7 @@
         <FilterBar ResultText="@($"{FilteredIcons.Count} of {AgentTeamIconCatalog.Options.Count} icon(s)")">
             <input @bind="searchText"
                    @bind:event="oninput"
-                   class="cda-input min-w-[14rem] flex-1"
+                   class="ui-input min-w-[14rem] flex-1"
                    placeholder="Search icons"
                    data-testid="material-icon-picker-search" />
             <StatusBadge Tone="info" Text="@selectedIcon" />

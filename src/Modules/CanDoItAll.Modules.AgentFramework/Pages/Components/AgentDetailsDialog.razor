@@ -25,7 +25,7 @@ else
                 <Tabs data-testid="agents-details-tabs"
                   SelectedIndex="@selectedTabIndex"
                   SelectedIndexChanged="HandleSelectedTabIndexChanged"
-                  Variant="@(TabsVariant.ModalCompact)"
+                  Density="@(TabsDensity.Compact)"
                   BorderMode="@(TabsBorderMode.Soft)"
                   Tone="@(TabsTone.Info)"
                   OverflowMode="@(TabsOverflowMode.Scroll)"
@@ -112,7 +112,7 @@ else
                             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                                 <div>
                                     <label class="cda-field-label">Status</label>
-                                    <InputSelect @bind-Value="editorModel.Status" class="cda-input">
+                                    <InputSelect @bind-Value="editorModel.Status" class="ui-input">
                                         @foreach (var status in Enum.GetValues<AgentLifecycleStatus>())
                                         {
                                             <option value="@status">@status</option>
@@ -121,7 +121,7 @@ else
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Workload</label>
-                                    <InputSelect @bind-Value="editorModel.Workload" class="cda-input">
+                                    <InputSelect @bind-Value="editorModel.Workload" class="ui-input">
                                         @foreach (var workload in Enum.GetValues<AgentWorkloadKind>())
                                         {
                                             <option value="@workload">@workload</option>
@@ -130,7 +130,7 @@ else
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Chat history</label>
-                                    <InputSelect @bind-Value="editorModel.ChatHistoryMode" class="cda-input">
+                                    <InputSelect @bind-Value="editorModel.ChatHistoryMode" class="ui-input">
                                         @foreach (var mode in Enum.GetValues<AgentChatHistoryMode>())
                                         {
                                             <option value="@mode">@mode</option>
@@ -325,12 +325,12 @@ else
                                         </div>
                                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                             <Button Text="Select all"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Click="SelectAllProjectStructureProjects"
                                                     Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
                                             <Button Text="Clear"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Click="ClearProjectStructureProjects"
                                                     Disabled="@(!areProjectStructureProjectsLoaded || isLoadingProjectStructureProjects || !string.IsNullOrWhiteSpace(projectStructureProjectsErrorMessage) || editorModel.ProjectStructureAccess.AllowAllProjects)" />
@@ -352,7 +352,7 @@ else
                                                  Wrap="FlexWrap.Wrap"
                                                  Class="mt-3">
                                             <Button Text="Load project list"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Click="RequestProjectStructureProjectsAsync"
                                                     Disabled="@isLoadingProjectStructureProjects"
@@ -376,7 +376,7 @@ else
                                                  Wrap="FlexWrap.Wrap"
                                                  Class="mt-3">
                                             <Button Text="Retry project list"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Click="RequestProjectStructureProjectsAsync"
                                                     Disabled="@isLoadingProjectStructureProjects"
@@ -417,7 +417,7 @@ else
                                 <div class="cda-admin-subpanel">
                                     <label class="cda-field-label" for="agents-catalog-workspace-profile">Access profile</label>
                                     <select id="agents-catalog-workspace-profile"
-                                            class="cda-input mt-2"
+                                            class="ui-input mt-2"
                                             value="@editorModel.WorkspaceToolAccess.Profile"
                                             @onchange="args => ChangeWorkspaceToolProfile(args.Value)"
                                             data-testid="agents-catalog-workspace-profile">
@@ -665,21 +665,21 @@ else
                                  data-testid="agents-details-new-capability">
                                 <Button Text="New tool"
                                         Icon="build"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Disabled="@(isBusy || isOpeningCapabilityWizard)"
                                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
                                         data-testid="agents-details-new-tool" />
                                 <Button Text="New MCP"
                                         Icon="hub"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Disabled="@(isBusy || isOpeningCapabilityWizard)"
                                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
                                         data-testid="agents-details-new-mcp" />
                                 <Button Text="New skill"
                                         Icon="psychology"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Disabled="@(isBusy || isOpeningCapabilityWizard)"
                                         Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
@@ -692,18 +692,18 @@ else
                                     <div class="agent-details-dialog__capability-filters">
                                         <input @bind="capabilitySearch"
                                                @bind:event="oninput"
-                                               class="cda-input agent-details-dialog__capability-filter-input"
+                                               class="ui-input agent-details-dialog__capability-filter-input"
                                                placeholder="Search capabilities"
                                                data-testid="agents-details-capability-search" />
                                         <InputSelect @bind-Value="capabilityAssignmentFilter"
-                                                     class="cda-input agent-details-dialog__capability-filter-select"
+                                                     class="ui-input agent-details-dialog__capability-filter-select"
                                                      data-testid="agents-details-capability-assignment-filter">
                                             <option value="@CapabilityDialogAssignmentFilter.All">All assignments</option>
                                             <option value="@CapabilityDialogAssignmentFilter.Attached">Attached</option>
                                             <option value="@CapabilityDialogAssignmentFilter.Available">Available</option>
                                         </InputSelect>
                                         <InputSelect @bind-Value="capabilityKindFilter"
-                                                     class="cda-input agent-details-dialog__capability-filter-select"
+                                                     class="ui-input agent-details-dialog__capability-filter-select"
                                                      data-testid="agents-details-capability-kind-filter">
                                             <option value="@CapabilityDialogKindFilter.All">All kinds</option>
                                             <option value="@CapabilityDialogKindFilter.Tool">Tool</option>
@@ -711,7 +711,7 @@ else
                                             <option value="@CapabilityDialogKindFilter.Mcp">MCP server</option>
                                         </InputSelect>
                                         <Button Text="Reset"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="ResetCapabilityFilters"
                                                 data-testid="agents-details-capability-filter-reset" />
@@ -763,7 +763,7 @@ else
                                 <div class="cda-admin-subpanel">
                                     <label class="cda-field-label">Voice override</label>
                                     <InputSelect @bind-Value="editorModel.VoiceAccess.PreferredVoiceId"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  disabled="@(!editorModel.VoiceAccess.CanUseVoiceMode)"
                                                  data-testid="agents-catalog-voice-override">
                                         <option value="">Use general voice</option>
@@ -786,7 +786,7 @@ else
             <Actions>
                 <StickyActionFooter StatusLabel="Technical agents">
                     <SecondaryActions>
-                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetAgentAsync" />
+                        <Button Text="Clear" Tone="ButtonTone.Default" Click="ResetAgentAsync" />
                     </SecondaryActions>
                     <PrimaryActions>
                         <Button Text="Save agent"
@@ -800,7 +800,7 @@ else
                         {
                             <Button Text="Delete"
                                     Icon="delete"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Disabled="@(isBusy || isConfirmingDelete)"
                                     IsBusy="@isBusy"
                                     Click="DeleteAgentAsync"

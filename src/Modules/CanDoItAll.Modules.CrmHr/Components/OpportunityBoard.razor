@@ -56,7 +56,7 @@
                 @if (CanAdvance(opportunity.Stage))
                 {
                     <Button Text="@($"Advance to {ResolveNextStage(opportunity.Stage)}")"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="@(() => AdvanceOpportunityStage.InvokeAsync(opportunity.Id))"
                             data-testid="@($"crmhr-opportunity-advance-{opportunity.Id:N}")" />

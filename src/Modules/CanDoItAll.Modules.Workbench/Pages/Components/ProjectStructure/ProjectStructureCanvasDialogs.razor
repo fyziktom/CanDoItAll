@@ -18,15 +18,15 @@
         <Actions>
             <Button Text="Create new project"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     data-testid="project-structure-hierarchy-create-project"
                     Click="OpenProjectCreateDialog" />
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseProjectHierarchy" />
             <Button Text="@hierarchyDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-hierarchy-submit"
                     Disabled="@(hierarchyDialog.AvailableProjects.Count == 0)"
                     Click="ExecuteProjectHierarchyCommand" />
@@ -86,10 +86,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseBlockMutation" />
             <Button Text="@blockDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-block-mutation-submit"
                     Click="ExecuteBlockMutation" />
         </Actions>
@@ -150,10 +150,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseSubprojectTransfer" />
             <Button Text="@transferDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-subproject-transfer-submit"
                     Click="ExecuteSubprojectTransfer" />
         </Actions>
@@ -208,10 +208,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseProcessLink" />
             <Button Text="@processDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-process-link-submit"
                     Disabled="@(processDialog.Options.Count == 0 || !processDialog.SelectedDefinitionId.HasValue)"
                     Click="ExecuteProcessLink" />
@@ -283,10 +283,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseWorkflowAdd" />
             <Button Text="@workflowDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-workflow-add-submit"
                     Disabled="@(workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"
                     Click="ExecuteWorkflowAdd" />
@@ -453,11 +453,11 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Disabled="@workflowStart.IsBusy"
                     Click="CloseWorkflowStart" />
             <Button Text="@workflowStart.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Success"
+                    Tone="ButtonTone.Success"
                     data-testid="project-structure-workflow-start-submit"
                     IsBusy="@workflowStart.IsBusy"
                     Disabled="@workflowStart.IsBusy"
@@ -562,7 +562,7 @@
             <Pill Tone="PillTone.Info" Text="@quickActionDialog.NodeLabel" />
             <Button Text="Close"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseQuickActionDialog" />
         </Actions>
         <Body>
@@ -584,7 +584,7 @@
                       Class="project-structure-quick-action-grid">
                     @foreach (var action in quickActionDialog.Actions)
                     {
-                        <Button ButtonStyle="@ResolveButtonStyle(action.Tone)"
+                        <Button Tone="@ResolveButtonStyle(action.Tone)"
                                 Variant="Variant.Outlined"
                                 Class="project-structure-quick-action-card"
                                 data-testid="@ResolveQuickActionTestId(action)"
@@ -646,7 +646,7 @@
             <Button @key="processStartCancelKey"
                     Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Disabled="@startDialog.IsBusy"
                     Click="CloseProcessStart" />
             @if (isStaffingStage)
@@ -656,13 +656,13 @@
                     <Button @key="processStartKeepManualKey"
                             Text="Keep manual matching"
                             Variant="Variant.Text"
-                            ButtonStyle="ButtonStyle.Base"
+                            Tone="ButtonTone.Default"
                             Disabled="@startDialog.IsBusy"
                             data-testid="project-structure-process-start-cancel-hr-match"
                             Click="CancelHrManagerMatch" />
                     <Button @key="processStartConfirmHrKey"
                             Text="Confirm HR match"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             IsBusy="@startDialog.IsBusy"
                             data-testid="project-structure-process-start-confirm-hr-match"
                             Click="ExecuteHrManagerMatch" />
@@ -671,7 +671,7 @@
                 {
                     <Button @key="processStartStartKey"
                             Text="@startDialog.SubmitLabel"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Disabled="@(!startDialog.CanStart || startDialog.IsBusy)"
                             IsBusy="@startDialog.IsBusy"
                             data-testid="project-structure-process-start-start"
@@ -679,7 +679,7 @@
                     <Button @key="processStartRequestHrKey"
                             Text="Use HR manager suggestions"
                             Variant="Variant.Text"
-                            ButtonStyle="ButtonStyle.Base"
+                            Tone="ButtonTone.Default"
                             Disabled="@startDialog.IsBusy"
                             data-testid="project-structure-process-start-request-hr-match"
                             Click="RequestHrManagerMatch" />
@@ -689,7 +689,7 @@
             {
                 <Button @key="processStartContinueKey"
                         Text="@startDialog.SubmitLabel"
-                        ButtonStyle="ButtonStyle.Warning"
+                        Tone="ButtonTone.Warning"
                         IsBusy="@startDialog.IsBusy"
                         data-testid="project-structure-process-start-continue"
                         Click="ExecuteProcessStart" />
@@ -921,7 +921,7 @@
                                                                        Class="cw-panel-copy" />
                                                             <Button Text="@(candidate.IsSelected ? "Selected" : "Select")"
                                                                     Variant="@(candidate.IsSelected ? Variant.Filled : Variant.Outlined)"
-                                                                    ButtonStyle="@(candidate.IsSelected ? ButtonStyle.Success : ButtonStyle.Info)"
+                                                                    Tone="@(candidate.IsSelected ? ButtonTone.Success : ButtonTone.Info)"
                                                                     Disabled="@(!candidate.IsResolvable || startDialog.IsBusy || candidate.IsSelected)"
                                                                     data-testid="@($"project-structure-process-start-select-{role.LaunchPlanRoleId:D}-{candidate.CandidateId:D}")"
                                                                     Click="@(() => SelectProcessStartCandidate.InvokeAsync(new ProjectStructureProcessStartCandidateSelection(role.LaunchPlanRoleId, candidate.CandidateId)))" />
@@ -940,7 +940,7 @@
                                                                    Class="cw-panel-copy" />
                                                         <Button Text="Show all candidates"
                                                                 Variant="Variant.Text"
-                                                                ButtonStyle="ButtonStyle.Info"
+                                                                Tone="ButtonTone.Info"
                                                                 Click="ShowAllProcessStartCandidates" />
                                                     </Stack>
                                                 </PanelCard>
@@ -1175,15 +1175,15 @@
         showAllProcessStartCandidates = false;
     }
 
-    private static ButtonStyle ResolveButtonStyle(string tone)
+    private static ButtonTone ResolveButtonStyle(string tone)
     {
         return tone switch
         {
-            "danger" => ButtonStyle.Danger,
-            "warn" => ButtonStyle.Warning,
-            "mint" => ButtonStyle.Success,
-            "sky" => ButtonStyle.Info,
-            _ => ButtonStyle.Primary
+            "danger" => ButtonTone.Danger,
+            "warn" => ButtonTone.Warning,
+            "mint" => ButtonTone.Success,
+            "sky" => ButtonTone.Info,
+            _ => ButtonTone.Primary
         };
     }
 

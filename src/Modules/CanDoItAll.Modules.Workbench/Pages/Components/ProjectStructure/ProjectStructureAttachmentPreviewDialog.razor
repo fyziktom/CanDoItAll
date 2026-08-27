@@ -20,25 +20,25 @@
         @if (CanEditNode(Node))
         {
             <Button Text="Edit node details"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Disabled="HasGuardedWork"
                     Click="@(() => EditNode.InvokeAsync(Node))" />
         }
         @if (CanOpenInPreferredApplication(Node))
         {
             <Button Text="Open in preferred app"
-                    ButtonStyle="ButtonStyle.Primary"
+                    Tone="ButtonTone.Primary"
                     Click="@(() => OpenInPreferredApplication.InvokeAsync(Node))" />
         }
         @if (CanShowLocalOpen(Node))
         {
             <Button Text="Show in folder"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Click="@(() => OpenLocally.InvokeAsync(Node))" />
         }
         <Button Text="Close"
                 Variant="Variant.Text"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 Click="RequestCloseAsync" />
     </Actions>
     <Body>
@@ -108,7 +108,7 @@
                                         Variant="Variant.Text"
                                         Click="CancelClose" />
                                 <Button Text="Discard and close"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Disabled="@(state?.IsSaving == true)"
                                         data-testid="project-structure-interaction-close-confirm"
                                         Click="ConfirmCloseAsync" />

@@ -125,13 +125,13 @@
 
                                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                             <Button Text="Approve"
-                                                    ButtonStyle="@(IsApprovalChoice(approvalId, true) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                    Tone="@(IsApprovalChoice(approvalId, true) ? ButtonTone.Primary : ButtonTone.Default)"
                                                     Size="ButtonSize.Small"
                                                     Disabled="@IsBusy"
                                                     Click="@(() => SetApprovalChoice(approvalId, true))"
                                                     data-testid="@($"chat-approval-approve-{approvalId}")" />
                                             <Button Text="Reject"
-                                                    ButtonStyle="@(IsApprovalChoice(approvalId, false) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                    Tone="@(IsApprovalChoice(approvalId, false) ? ButtonTone.Primary : ButtonTone.Default)"
                                                     Size="ButtonSize.Small"
                                                     Disabled="@IsBusy"
                                                     Click="@(() => SetApprovalChoice(approvalId, false))"
@@ -193,7 +193,7 @@
                                    data-testid="chat-image-attachment-input" />
                     }
                     <Button Icon="add"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@IsBusy"
                             Class="chat-composer__icon-button"
@@ -204,7 +204,7 @@
             </LeadingActions>
             <TrailingActions>
                     <Button Icon="@(IsVoiceRecording ? "stop" : "mic")"
-                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Tone="@(IsVoiceModeEnabled ? ButtonTone.Primary : ButtonTone.Default)"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceTranscribing || HasPendingApprovals)"
                             IsBusy="@IsVoiceTranscribing"
@@ -214,7 +214,7 @@
                             title="@ResolveVoiceRecordingLabel()"
                             data-testid="chat-voice-record-button" />
                     <Button Icon="volume_up"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceSpeaking)"
                             IsBusy="@IsVoiceSpeaking"
@@ -224,7 +224,7 @@
                             title="Speak latest assistant message"
                             data-testid="chat-voice-speak-button" />
                     <Button Icon="hearing"
-                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Tone="@(IsVoiceModeEnabled ? ButtonTone.Primary : ButtonTone.Default)"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanUseVoiceMode || IsBusy)"
                             Class="chat-composer__icon-button"
@@ -281,13 +281,13 @@
                                 data-testid="chat-approve-conversation-button" />
                     }
                     <Button Text="@(PendingApprovals.Count > 1 ? "Approve all once" : "Approve once")"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@IsBusy"
                             IsBusy="@IsBusy"
                             Click="@(() => SubmitUniformDecisionAsync(true))"
                             data-testid="chat-approve-once-button" />
                     <Button Text="@(PendingApprovals.Count > 1 ? "Reject all and continue" : "Reject and continue")"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@IsBusy"
                             Click="@(() => SubmitUniformDecisionAsync(false))"
                             data-testid="chat-reject-button" />

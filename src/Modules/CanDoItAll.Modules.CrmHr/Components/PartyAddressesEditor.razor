@@ -7,7 +7,7 @@
             <p class="mt-1 text-sm leading-6 text-slate-600">Capture legal, billing, shipping, or work addresses without creating duplicate parties.</p>
         </div>
         <Button Text="Add address"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Size="ButtonSize.Small"
                 Click="AddAddress"
                 data-testid="crmhr-address-add" />
@@ -30,18 +30,18 @@
                     <div>
                         <label class="cda-field-label">Type</label>
                         <InputText @bind-Value="item.AddressType"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-type-{rowIndex}")" />
                     </div>
                     <div class="lg:col-span-2">
                         <label class="cda-field-label">Line 1</label>
                         <InputText @bind-Value="item.Line1"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-line1-{rowIndex}")" />
                     </div>
                     <div class="flex items-end">
                         <Button Text="Remove"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Size="ButtonSize.Small"
                                 Click="@(() => RemoveAddress(item))"
                                 data-testid="@($"crmhr-address-remove-{rowIndex}")" />
@@ -52,25 +52,25 @@
                     <div>
                         <label class="cda-field-label">Line 2</label>
                         <InputText @bind-Value="item.Line2"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-line2-{rowIndex}")" />
                     </div>
                     <div>
                         <label class="cda-field-label">City</label>
                         <InputText @bind-Value="item.City"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-city-{rowIndex}")" />
                     </div>
                     <div>
                         <label class="cda-field-label">Region</label>
                         <InputText @bind-Value="item.Region"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-region-{rowIndex}")" />
                     </div>
                     <div>
                         <label class="cda-field-label">Postal code</label>
                         <InputText @bind-Value="item.PostalCode"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-postal-{rowIndex}")" />
                     </div>
                 </Grid>
@@ -79,7 +79,7 @@
                     <div>
                         <label class="cda-field-label">Country code</label>
                         <InputText @bind-Value="item.CountryCode"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-address-country-{rowIndex}")" />
                     </div>
                     <label class="cda-inline-option">

@@ -35,7 +35,7 @@
                 <PageHeaderActionButton Icon="done_all"
                                         Label="Mark selected read"
                                         TooltipText="Mark the selected collaboration thread as read."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Disabled="@(workspace.SelectedThread is null || !workspace.SelectedThread.IsUnread)"
                                         Click="MarkSelectedThreadAsReadAsync"
                                         data-testid="collaboration-mark-read" />
@@ -47,7 +47,6 @@
         <Stack GapScale="LayoutGap.Large">
             <Tabs SelectedIndex="@selectedViewIndex"
                   SelectedIndexChanged="HandleSelectedViewChangedAsync"
-                  Variant="TabsVariant.WorkspaceSecondary"
                   BorderMode="TabsBorderMode.Soft"
                   OverflowMode="TabsOverflowMode.Wrap"
                   data-testid="collaboration-tabs">
@@ -71,12 +70,12 @@
                                 @if (selectedViewIndex != 1)
                                 {
                                     <Button Text="Unread only"
-                                            ButtonStyle="@(showUnreadOnly ? ButtonStyle.Info : ButtonStyle.Light)"
+                                            Tone="@(showUnreadOnly ? ButtonTone.Info : ButtonTone.Default)"
                                             Size="ButtonSize.Small"
                                             Click="ShowUnreadOnlyAsync"
                                             data-testid="collaboration-filter-unread" />
                                     <Button Text="Show all"
-                                            ButtonStyle="@(showUnreadOnly ? ButtonStyle.Light : ButtonStyle.Info)"
+                                            Tone="@(showUnreadOnly ? ButtonTone.Default : ButtonTone.Info)"
                                             Size="ButtonSize.Small"
                                             Click="ShowAllItemsAsync"
                                             data-testid="collaboration-filter-all" />
@@ -84,11 +83,11 @@
                                 @if (selectedViewIndex == 0)
                                 {
                                     <Button Text="Notification"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => PrepareNewThread(CollaborationInboxItemKind.Notification))" />
                                     <Button Text="Escalation"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => PrepareNewThread(CollaborationInboxItemKind.Escalation))" />
                                 }
@@ -108,12 +107,12 @@
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
                                         <label class="cda-field-label">Subject</label>
-                                        <InputText @bind-Value="newThreadEditor.Subject" class="cda-input" data-testid="collaboration-thread-subject" />
+                                        <InputText @bind-Value="newThreadEditor.Subject" class="ui-input" data-testid="collaboration-thread-subject" />
                                         <ValidationMessage For="@(() => newThreadEditor.Subject)" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Item kind</label>
-                                        <InputSelect @bind-Value="newThreadEditor.ItemKind" class="cda-input" data-testid="collaboration-thread-kind">
+                                        <InputSelect @bind-Value="newThreadEditor.ItemKind" class="ui-input" data-testid="collaboration-thread-kind">
                                             @foreach (var kind in Enum.GetValues<CollaborationInboxItemKind>())
                                             {
                                                 <option value="@kind">@kind</option>
@@ -124,7 +123,7 @@
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                                     <div>
                                         <label class="cda-field-label">Context kind</label>
-                                        <InputSelect @bind-Value="newThreadEditor.ContextKind" class="cda-input" data-testid="collaboration-thread-context-kind">
+                                        <InputSelect @bind-Value="newThreadEditor.ContextKind" class="ui-input" data-testid="collaboration-thread-context-kind">
                                             @foreach (var kind in Enum.GetValues<CollaborationContextKind>())
                                             {
                                                 <option value="@kind">@kind</option>
@@ -133,21 +132,21 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Context label</label>
-                                        <InputText @bind-Value="newThreadEditor.ContextLabel" class="cda-input" data-testid="collaboration-thread-context-label" />
+                                        <InputText @bind-Value="newThreadEditor.ContextLabel" class="ui-input" data-testid="collaboration-thread-context-label" />
                                     </div>
                                 </Grid>
                                 <div class="mt-4">
                                     <label class="cda-field-label">Context route</label>
-                                    <InputText @bind-Value="newThreadEditor.ContextRoute" class="cda-input" placeholder="/processes" data-testid="collaboration-thread-context-route" />
+                                    <InputText @bind-Value="newThreadEditor.ContextRoute" class="ui-input" placeholder="/processes" data-testid="collaboration-thread-context-route" />
                                 </div>
                                 <div class="mt-4">
                                     <label class="cda-field-label">First message</label>
-                                    <InputTextArea @bind-Value="newThreadEditor.MessageBody" class="cda-input cda-input--textarea min-h-[6rem]" data-testid="collaboration-thread-message" />
+                                    <TextArea @bind-Value="newThreadEditor.MessageBody" Rows="4" data-testid="collaboration-thread-message" />
                                     <ValidationMessage For="@(() => newThreadEditor.MessageBody)" />
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Class="mt-4">
                                     <Button Text="Create collaboration item" Type="submit" data-testid="collaboration-thread-create" />
-                                    <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => PrepareNewThread(newThreadEditor.ItemKind))" />
+                                    <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => PrepareNewThread(newThreadEditor.ItemKind))" />
                                 </Cluster>
                             </SurfaceCard>
                         </EditForm>
@@ -322,7 +321,7 @@
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">Message kind</label>
-                                            <InputSelect @bind-Value="replyEditor.MessageKind" class="cda-input" data-testid="collaboration-reply-kind">
+                                            <InputSelect @bind-Value="replyEditor.MessageKind" class="ui-input" data-testid="collaboration-reply-kind">
                                                 @foreach (var kind in Enum.GetValues<CollaborationMessageKind>())
                                                 {
                                                     <option value="@kind">@kind</option>
@@ -332,18 +331,18 @@
                                         <div class="flex items-end">
                                             @if (!string.IsNullOrWhiteSpace(workspace.SelectedThread.ContextRoute))
                                             {
-                                                <Button Text="Open linked context" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="OpenContext" data-testid="collaboration-open-context" />
+                                                <Button Text="Open linked context" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="OpenContext" data-testid="collaboration-open-context" />
                                             }
                                         </div>
                                     </Grid>
                                     <div class="mt-4">
                                         <label class="cda-field-label">Reply</label>
-                                        <InputTextArea @bind-Value="replyEditor.MessageBody" class="cda-input cda-input--textarea min-h-[6rem]" data-testid="collaboration-reply-message" />
+                                        <TextArea @bind-Value="replyEditor.MessageBody" Rows="4" data-testid="collaboration-reply-message" />
                                         <ValidationMessage For="@(() => replyEditor.MessageBody)" />
                                     </div>
                                     <Cluster Gap="LayoutGap.Small" Class="mt-4">
                                         <Button Text="Add reply" Type="submit" data-testid="collaboration-reply-submit" />
-                                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ClearReply" />
+                                        <Button Text="Clear" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ClearReply" />
                                     </Cluster>
                                 </EditForm>
                             </SectionCard>

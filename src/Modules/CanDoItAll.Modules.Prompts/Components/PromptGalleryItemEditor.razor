@@ -26,12 +26,12 @@ else
                 <Grid Gap="LayoutGap.Large" ColumnsXl="2">
                     <FormField Text="Name">
                         <InputText @bind-Value="editor.Title"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="prompt-gallery-editor-title" />
                     </FormField>
                     <FormField Text="Kind">
                         <InputSelect @bind-Value="editor.Kind"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="prompt-gallery-editor-kind">
                             @foreach (var option in Enum.GetValues<PromptGalleryItemKind>())
                             {
@@ -43,12 +43,12 @@ else
                 <Grid Gap="LayoutGap.Large" ColumnsXl="2">
                     <FormField Text="Summary">
                         <InputText @bind-Value="editor.Summary"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="prompt-gallery-editor-summary" />
                     </FormField>
                     <FormField Text="Phase or group">
                         <InputText @bind-Value="editor.Phase"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="prompt-gallery-editor-phase" />
                     </FormField>
                 </Grid>
@@ -65,8 +65,8 @@ else
             <FormSection Title="Reusable content"
                          Description="Keep the editable draft here. Finalization creates a separate immutable version.">
                 <FormField Text="Prompt or prompt-part content">
-                    <InputTextArea @bind-Value="editor.Content"
-                                   class="cda-input cda-input--textarea cda-input--mono min-h-80"
+                    <TextArea @bind-Value="editor.Content"
+                                   Class="ui-input--mono min-h-80"
                                    data-testid="prompt-gallery-editor-content" />
                 </FormField>
             </FormSection>
@@ -120,18 +120,18 @@ else
                 <Grid Gap="LayoutGap.Medium" ColumnsXl="3">
                     <FormField Text="Provider">
                         <InputText @bind-Value="providerToAdd"
-                                   class="cda-input"
+                                   class="ui-input"
                                    placeholder="OpenAI, Ollama, ..." />
                     </FormField>
                     <FormField Text="Model">
                         <InputText @bind-Value="modelToAdd"
-                                   class="cda-input"
+                                   class="ui-input"
                                    placeholder="Model identifier" />
                     </FormField>
                     <Cluster AlignItems="AlignItems.End">
                         <Button Text="Add model"
                                 Icon="add"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="AddSupportedModelAsync" />
                     </Cluster>
                 </Grid>
@@ -164,7 +164,7 @@ else
                                 <Template Context="supported">
                                     <Button Text="Remove"
                                             Icon="delete"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => RemoveSupportedModelAsync(supported))" />
                                 </Template>
@@ -179,21 +179,21 @@ else
                 <Grid Gap="LayoutGap.Large" ColumnsXl="3">
                     <FormField Text="Temperature">
                         <InputNumber @bind-Value="editor.Temperature"
-                                     class="cda-input"
+                                     class="ui-input"
                                      min="0"
                                      max="2"
                                      step="0.1" />
                     </FormField>
                     <FormField Text="Top-p">
                         <InputNumber @bind-Value="editor.TopP"
-                                     class="cda-input"
+                                     class="ui-input"
                                      min="0"
                                      max="1"
                                      step="0.05" />
                     </FormField>
                     <FormField Text="Maximum output tokens">
                         <InputNumber @bind-Value="editor.MaxOutputTokens"
-                                     class="cda-input"
+                                     class="ui-input"
                                      min="1" />
                     </FormField>
                 </Grid>
@@ -226,13 +226,13 @@ else
                 <SecondaryActions>
                     <Button Text="Cancel"
                             Icon="close"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="CancelAsync" />
                     @if (loadedItemId.HasValue)
                     {
                         <Button Text="@(isArchived ? "Restore" : "Archive")"
                                 Icon="@(isArchived ? "unarchive" : "archive")"
-                                ButtonStyle="ButtonStyle.Warning"
+                                Tone="ButtonTone.Warning"
                                 Variant="Variant.Outlined"
                                 Disabled="@isBusy"
                                 Click="ToggleArchivedAsync" />
@@ -246,7 +246,7 @@ else
                             IsBusy="@isBusy" />
                     <Button Text="Create final version"
                             Icon="verified"
-                            ButtonStyle="ButtonStyle.Success"
+                            Tone="ButtonTone.Success"
                             Disabled="@isBusy"
                             Click="CreateVersionAsync" />
                 </PrimaryActions>

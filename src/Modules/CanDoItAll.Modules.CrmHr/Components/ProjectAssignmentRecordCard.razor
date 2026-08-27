@@ -47,9 +47,9 @@
             <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
                 <TooltipTarget Text="Show assignment and linked work-item details"
                                Position="TooltipPosition.Bottom">
-                    <Button ButtonStyle="ButtonStyle.Light"
+                    <Button Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
-                            Class="cda-button--quick"
+                            Class="ui-button--quick"
                             Icon="visibility"
                             aria-label="Show details"
                             data-testid="@($"{TestIdPrefix}-details-button")"
@@ -57,9 +57,9 @@
                 </TooltipTarget>
                 <TooltipTarget Text="Delete this project assignment"
                                Position="TooltipPosition.Bottom">
-                    <Button ButtonStyle="ButtonStyle.Danger"
+                    <Button Tone="ButtonTone.Danger"
                             Size="ButtonSize.Small"
-                            Class="cda-button--quick"
+                            Class="ui-button--quick"
                             Icon="delete"
                             aria-label="Delete assignment"
                             data-testid="@($"{TestIdPrefix}-delete-button")"

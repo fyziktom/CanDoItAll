@@ -17,7 +17,7 @@
                 <TooltipTarget Text="@CreateTooltipText"
                                Position="TooltipPosition.Bottom"
                                TestId="crmhr-staffing-request-create-tooltip">
-                    <Button Class="cda-button--quick"
+                    <Button Class="ui-button--quick"
                             Icon="add"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanOpenCreate)"
@@ -31,7 +31,7 @@
             <CompactFilterBar ResultText="@($"{TotalCount} matching request(s)")">
                 <input value="@SearchText"
                        @oninput="HandleSearchInputAsync"
-                       class="cda-input cda-input--toolbar h-10 min-w-[16rem] flex-1"
+                       class="ui-input ui-input--toolbar h-10 min-w-[16rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search title, role, project, requester, unit, skill, or notes"
                        aria-label="Search staffing requests"
@@ -39,8 +39,7 @@
                 <InputSelect TValue="StaffingRequestStatus?"
                              Value="@StatusFilter"
                              ValueChanged="HandleStatusFilterChangedAsync"
-                             ValueExpression="@(() => StatusFilter)"
-                             class="cda-input cda-input--toolbar h-10 min-w-[12rem]"
+                             class="ui-input ui-input--toolbar h-10 min-w-[12rem]"
                              style="width: 12rem; flex: 0 1 12rem;"
                              aria-label="Filter staffing requests by status"
                              data-testid="crmhr-staffing-request-status-filter">
@@ -111,9 +110,9 @@
                             <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
                                 <TooltipTarget Text="Show staffing request details"
                                                Position="TooltipPosition.Bottom">
-                                    <Button ButtonStyle="ButtonStyle.Light"
+                                    <Button Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
-                                            Class="cda-button--quick"
+                                            Class="ui-button--quick"
                                             Icon="visibility"
                                             aria-label="Show staffing request details"
                                             data-testid="crmhr-staffing-request-details-button"
@@ -121,9 +120,9 @@
                                 </TooltipTarget>
                                 <TooltipTarget Text="Delete this staffing request"
                                                Position="TooltipPosition.Bottom">
-                                    <Button ButtonStyle="ButtonStyle.Danger"
+                                    <Button Tone="ButtonTone.Danger"
                                             Size="ButtonSize.Small"
-                                            Class="cda-button--quick"
+                                            Class="ui-button--quick"
                                             Icon="delete"
                                             aria-label="Delete staffing request"
                                             data-testid="crmhr-staffing-request-delete-button"
@@ -146,14 +145,14 @@
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Previous"
                         Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(PageIndex <= 0)"
                         Click="@(() => PageChanged.InvokeAsync(PageIndex - 1))"
                         data-testid="crmhr-staffing-request-previous" />
                 <Button Text="Next"
                         Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(PageIndex + 1 >= TotalPages)"
                         Click="@(() => PageChanged.InvokeAsync(PageIndex + 1))"
@@ -180,12 +179,12 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Request title">
                         <InputText @bind-Value="Draft.Title"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-staffing-request-title" />
                     </FormField>
                     <FormField Text="Needed role">
                         <InputText @bind-Value="Draft.NeededRole"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-staffing-request-role" />
                     </FormField>
                 </Grid>
@@ -193,22 +192,22 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                     <FormField Text="Allocation %">
                         <InputNumber @bind-Value="Draft.AllocationPercent"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-staffing-request-allocation" />
                     </FormField>
                     <FormField Text="Starts on">
                         <InputDate @bind-Value="Draft.StartDate"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-staffing-request-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
                         <InputDate @bind-Value="Draft.EndDate"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-staffing-request-end-date" />
                     </FormField>
                     <FormField Text="Status">
                         <InputSelect @bind-Value="Draft.Status"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-staffing-request-status">
                             @foreach (var status in Enum.GetValues<StaffingRequestStatus>())
                             {
@@ -261,8 +260,8 @@
                 </div>
 
                 <FormField Text="Notes">
-                    <InputTextArea @bind-Value="Draft.Notes"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                    <TextArea @bind-Value="Draft.Notes"
+
                                    data-testid="crmhr-staffing-request-notes" />
                 </FormField>
             </Stack>
@@ -270,7 +269,7 @@
         <Footer>
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                 <Button Text="Reset"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@isSaving"
                         Click="ResetRequest"
                         data-testid="crmhr-staffing-request-reset-button" />
@@ -356,7 +355,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="CloseDetailsAsync" />
             </Cluster>
         </Footer>

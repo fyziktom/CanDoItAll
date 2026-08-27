@@ -215,7 +215,7 @@ public sealed class AgentCatalogPanelTests
         var resetButton = cut.Find("[data-testid='agents-catalog-reset']");
         Assert.Equal("Reset agent search", resetButton.GetAttribute("aria-label"));
         Assert.Equal("restart_alt", resetButton.QuerySelector(".material-icons")?.TextContent.Trim());
-        Assert.Null(resetButton.QuerySelector(".rz-button-text"));
+        Assert.Null(resetButton.QuerySelector(".ui-button__label"));
 
         var resetTarget = Assert.IsAssignableFrom<AngleSharp.Dom.IElement>(resetButton.ParentElement);
         resetTarget.TriggerEvent("onmouseenter", new MouseEventArgs { ClientX = 120, ClientY = 80 });

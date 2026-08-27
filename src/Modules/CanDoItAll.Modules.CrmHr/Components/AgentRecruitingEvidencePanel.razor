@@ -29,7 +29,7 @@
                 <TextBlock TextStyle="TextStyle.Body2" Value="@loadError" />
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="Retry"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ReloadAsync"
                             data-testid="crmhr-assessment-retry" />
@@ -63,13 +63,13 @@
                             data-testid="crmhr-assessment-create" />
                     <Button Text="Attach result"
                             Icon="attach_file"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(interviews.Count == 0)"
                             Click="OpenAttachDialog"
                             data-testid="crmhr-assessment-attach" />
                     <Button Text="Refresh"
                             Icon="refresh"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="ReloadAsync"
                             data-testid="crmhr-assessment-refresh" />
                 </Cluster>
@@ -229,7 +229,7 @@
                                                             @if (attempt.Analysis?.ProposedNextStep == AgentRecruitingProposedNextStep.AssignTraining)
                                                             {
                                                                 <Button Text="Create training task"
-                                                                        ButtonStyle="ButtonStyle.Light"
+                                                                        Tone="ButtonTone.Default"
                                                                         Size="ButtonSize.Small"
                                                                         Click="@(() => RequestTraining.InvokeAsync(
                                                                             new RecruitmentTrainingRequest(
@@ -244,7 +244,7 @@
                                                                 AgentRecruitingProposedNextStep.AssignTraining)
                                                             {
                                                                 <Button Text="Start recheck"
-                                                                        ButtonStyle="ButtonStyle.Light"
+                                                                        Tone="ButtonTone.Default"
                                                                         Size="ButtonSize.Small"
                                                                         Click="@(() => OpenRecheckDialog(interview, attempt))"
                                                                         data-testid="crmhr-assessment-recheck" />
@@ -307,11 +307,11 @@
         <ChildContent>
             <FormStack>
                 <FormField Text="Candidate">
-                    <InputText @bind-Value="createCandidateName" class="cda-input" disabled />
+                    <InputText @bind-Value="createCandidateName" class="ui-input" disabled />
                 </FormField>
                 <FormField Text="Purpose">
-                    <InputTextArea @bind-Value="createPurpose"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                    <TextArea @bind-Value="createPurpose"
+
                                    data-testid="crmhr-assessment-purpose" />
                 </FormField>
                 <Alert AlertStyle="AlertStyle.Info">
@@ -322,7 +322,7 @@
         <Footer>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="Cancel"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="CloseCreateDialog" />
                 <Button Text="Create assessment"
                         Disabled="@isSaving"
@@ -349,7 +349,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Assessment">
                         <InputSelect @bind-Value="attemptDraft.InterviewId"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-assessment-interview">
                             @foreach (var interview in interviews)
                             {
@@ -359,7 +359,7 @@
                     </FormField>
                     <FormField Text="Target kind">
                         <InputSelect @bind-Value="attemptDraft.TargetKind"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-assessment-target-kind">
                             @foreach (var targetKind in Enum.GetValues<AgentRecruitingTargetKind>())
                             {
@@ -369,7 +369,7 @@
                     </FormField>
                     <FormField Text="Target run ID">
                         <InputText @bind-Value="attemptDraft.TargetId"
-                                   class="cda-input"
+                                   class="ui-input"
                                    placeholder="00000000-0000-0000-0000-000000000000"
                                    data-testid="crmhr-assessment-target-id" />
                     </FormField>
@@ -378,17 +378,17 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Challenge key">
                         <InputText @bind-Value="attemptDraft.ChallengeKey"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-assessment-challenge-key" />
                     </FormField>
                     <FormField Text="Challenge version">
                         <InputText @bind-Value="attemptDraft.ChallengeVersion"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-assessment-challenge-version" />
                     </FormField>
                     <FormField Text="Rubric version">
                         <InputText @bind-Value="attemptDraft.RubricVersion"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-assessment-rubric-version" />
                     </FormField>
                 </Grid>
@@ -398,7 +398,7 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                         <FormField Text="Classification">
                             <InputSelect @bind-Value="attemptDraft.Classification"
-                                         class="cda-input"
+                                         class="ui-input"
                                          data-testid="crmhr-assessment-classification">
                                 @foreach (var classification in Enum.GetValues<AgentRecruitingAssessmentClassification>())
                                 {
@@ -408,7 +408,7 @@
                         </FormField>
                         <FormField Text="Confidence (0-1)">
                             <InputNumber @bind-Value="attemptDraft.Confidence"
-                                         class="cda-input"
+                                         class="ui-input"
                                          min="0"
                                          max="1"
                                          step="0.01"
@@ -416,7 +416,7 @@
                         </FormField>
                         <FormField Text="Proposed next step">
                             <InputSelect @bind-Value="attemptDraft.ProposedNextStep"
-                                         class="cda-input"
+                                         class="ui-input"
                                          data-testid="crmhr-assessment-next-step">
                                 @foreach (var nextStep in Enum.GetValues<AgentRecruitingProposedNextStep>())
                                 {
@@ -426,19 +426,19 @@
                         </FormField>
                     </Grid>
                     <FormField Text="Analysis summary" Class="mt-4">
-                        <InputTextArea @bind-Value="attemptDraft.AnalysisSummary"
-                                       class="cda-input cda-input--textarea min-h-[6rem]"
+                        <TextArea @bind-Value="attemptDraft.AnalysisSummary"
+                                       Rows="4"
                                        data-testid="crmhr-assessment-analysis-summary" />
                     </FormField>
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                         <FormField Text="Strengths (one per line)">
-                            <InputTextArea @bind-Value="attemptDraft.Strengths"
-                                           class="cda-input cda-input--textarea min-h-[6rem]"
+                            <TextArea @bind-Value="attemptDraft.Strengths"
+                                           Rows="4"
                                            data-testid="crmhr-assessment-strengths" />
                         </FormField>
                         <FormField Text="Gaps (one per line)">
-                            <InputTextArea @bind-Value="attemptDraft.Gaps"
-                                           class="cda-input cda-input--textarea min-h-[6rem]"
+                            <TextArea @bind-Value="attemptDraft.Gaps"
+                                           Rows="4"
                                            data-testid="crmhr-assessment-gaps" />
                         </FormField>
                     </Grid>
@@ -449,7 +449,7 @@
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
                         <FormField Text="Decision">
                             <InputSelect @bind-Value="attemptDraft.AutomatedDecision"
-                                         class="cda-input">
+                                         class="ui-input">
                                 @foreach (var decision in Enum.GetValues<AgentRecruitingAutomatedDecision>())
                                 {
                                     <option value="@decision">@decision</option>
@@ -458,13 +458,13 @@
                         </FormField>
                         <FormField Text="Score (0-100)">
                             <InputNumber @bind-Value="attemptDraft.Score"
-                                         class="cda-input"
+                                         class="ui-input"
                                          min="0"
                                          max="100" />
                         </FormField>
                         <FormField Text="Evaluator agent">
                             <InputSelect @bind-Value="attemptDraft.EvaluatorAgentId"
-                                         class="cda-input">
+                                         class="ui-input">
                                 <option value="">Not supplied</option>
                                 @foreach (var option in evaluatorAgents)
                                 {
@@ -474,7 +474,7 @@
                         </FormField>
                         <FormField Text="Provider">
                             <InputSelect @bind-Value="attemptDraft.ProviderProfileId"
-                                         class="cda-input">
+                                         class="ui-input">
                                 <option value="">Not supplied</option>
                                 @foreach (var provider in providers)
                                 {
@@ -485,7 +485,7 @@
                     </Grid>
                     <FormField Text="Model" Class="mt-4">
                         <InputText @bind-Value="attemptDraft.Model"
-                                   class="cda-input"
+                                   class="ui-input"
                                    placeholder="Evaluator model name" />
                     </FormField>
                 </SurfaceCard>
@@ -497,16 +497,16 @@
                     </p>
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                         <FormField Text="Input SHA-256">
-                            <InputText @bind-Value="attemptDraft.InputHash" class="cda-input" />
+                            <InputText @bind-Value="attemptDraft.InputHash" class="ui-input" />
                         </FormField>
                         <FormField Text="Output SHA-256">
-                            <InputText @bind-Value="attemptDraft.OutputHash" class="cda-input" />
+                            <InputText @bind-Value="attemptDraft.OutputHash" class="ui-input" />
                         </FormField>
                         <FormField Text="Structured output contract">
-                            <InputText @bind-Value="attemptDraft.StructuredOutputContractKey" class="cda-input" />
+                            <InputText @bind-Value="attemptDraft.StructuredOutputContractKey" class="ui-input" />
                         </FormField>
                         <FormField Text="Schema SHA-256">
-                            <InputText @bind-Value="attemptDraft.StructuredOutputSchemaHash" class="cda-input" />
+                            <InputText @bind-Value="attemptDraft.StructuredOutputSchemaHash" class="ui-input" />
                         </FormField>
                     </Grid>
                 </SurfaceCard>
@@ -521,7 +521,7 @@
                 <SmallText Text="The target is validated in the current workspace before the append succeeds." />
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="CloseAttachDialog" />
                     <Button Text="Attach result"
                             Disabled="@isSaving"

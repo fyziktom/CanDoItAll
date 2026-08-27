@@ -4,12 +4,12 @@
     <ListHeader>
         <ListPanelHeader Title="Provider profiles" Description="Workspace and Security remain the master-data owners, while AgentFramework executes diagnostics and prompts through the same provider catalog." Count="@($"{FilteredProviders.Count} profile(s)")">
             <Actions>
-                <Button Text="New provider" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderAsync" />
+                <Button Text="New provider" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetProviderAsync" />
             </Actions>
             <Filters>
                 <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
-                    <input @bind="providerSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search providers" />
-                    <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderSearch" />
+                    <input @bind="providerSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search providers" />
+                    <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetProviderSearch" />
                 </FilterBar>
             </Filters>
         </ListPanelHeader>
@@ -52,7 +52,6 @@
             <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                 <Tabs @bind-SelectedIndex="providerEditorTabIndex"
                       RenderMode="TabRenderMode.Server"
-                      Variant="TabsVariant.WorkspaceSecondary"
                       OverflowMode="TabsOverflowMode.Wrap"
                       AriaLabel="Provider editor tabs"
                       data-testid="provider-editor-tabs">
@@ -61,11 +60,11 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Profile name</label>
-                                    <InputText @bind-Value="providerModel.Name" class="cda-input" data-testid="provider-name-input" />
+                                    <InputText @bind-Value="providerModel.Name" class="ui-input" data-testid="provider-name-input" />
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Connector plugin</label>
-                                    <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="cda-input" data-testid="provider-plugin-select">
+                                    <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="ui-input" data-testid="provider-plugin-select">
                                         @foreach (var manifest in providerManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
@@ -96,7 +95,7 @@
                                     <ConnectorConfigFieldEditor Field="field"
                                                                 State="providerModel.Configuration"
                                                                 Secrets="secrets"
-                                                                InputClass="cda-input"
+                                                                InputClass="ui-input"
                                                                 TestId="@ResolveProviderFieldTestId(field)" />
                                 }
                             </Grid>
@@ -122,7 +121,7 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">API key secret</label>
-                                    <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input" data-testid="provider-secret-select">
+                                    <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="ui-input" data-testid="provider-secret-select">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
                                         {
@@ -145,10 +144,10 @@
 
                 <StickyActionFooter StatusLabel="Provider profiles">
                     <SecondaryActions>
-                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
+                        <Button Text="Clear" Tone="ButtonTone.Default" Click="ResetProviderAsync" />
                         @if (providerModel.Id.HasValue)
                         {
-                            <Button Text="Health" ButtonStyle="ButtonStyle.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
+                            <Button Text="Health" Tone="ButtonTone.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
                         }
                     </SecondaryActions>
                     <PrimaryActions>
@@ -157,7 +156,7 @@
                     <DangerActions>
                         @if (providerModel.Id.HasValue)
                         {
-                            <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
+                            <Button Text="Delete" Tone="ButtonTone.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
                         }
                     </DangerActions>
                 </StickyActionFooter>

@@ -17,12 +17,12 @@
         <HeaderActions>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="New draft"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="ResetDraftAsync"
                         Disabled="@isBusy"
                         data-testid="workflow-canvas-new-draft" />
                 <Button Text="Validate"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="ValidateAsync"
                         Disabled="@isBusy"
                         data-testid="workflow-canvas-validate" />
@@ -50,17 +50,17 @@
                 <ToolbarLeftContent>
                     <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap">
                         <Button Icon="widgets"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="ToggleToolboxWindowAsync"
                                 data-testid="workflow-canvas-toggle-toolbox" />
                         <Button Icon="select_all"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="ToggleSelectionWindowAsync"
                                 data-testid="workflow-canvas-toggle-selection" />
                         <Button Icon="smart_toy"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="ToggleComponentsWindowAsync"
                                 data-testid="workflow-canvas-toggle-components" />
@@ -135,7 +135,7 @@
                                 {
                                     <Button Text="Open details"
                                             Icon="open_in_new"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="OpenSelectedNodeDetailsAsync"
                                             data-testid="workflow-canvas-open-selected-node-details" />
@@ -186,7 +186,7 @@
                                 {
                                     <label class="workflow-canvas-field">
                                         <span>Provider</span>
-                                        <select class="cda-input"
+                                        <select class="ui-input"
                                                 value="@newComponentProviderProfileId"
                                                 @onchange="HandleNewComponentProviderChanged"
                                                 data-testid="workflow-canvas-component-provider">
@@ -230,7 +230,7 @@
                                                 <span>@ResolveComponentProviderLabel(component) · @component.Model · @component.Modality · @component.ResultShape.Kind</span>
                                             </div>
                                             <Button Text="Place"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Click="@(() => OpenLlmComponentCreateAsync(component))"
                                                     data-testid="workflow-canvas-place-component" />
@@ -247,7 +247,6 @@
             <Tabs SelectedIndex="@workflowInspectorTabIndex"
                   SelectedIndexChanged="HandleWorkflowInspectorTabChanged"
                   RenderMode="TabRenderMode.Server"
-                  Variant="TabsVariant.WorkspaceSecondary"
                   OverflowMode="TabsOverflowMode.Scroll"
                   AriaLabel="Workflow editor inspector sections"
                   data-testid="workflow-canvas-inspector">
@@ -257,21 +256,21 @@
                 <div class="workflow-canvas-panel workflow-canvas-definition-panel">
                     <label class="workflow-canvas-field">
                         <span>Name</span>
-                        <input class="cda-input"
+                        <input class="ui-input"
                                value="@document.Name"
                                @onchange="HandleNameChanged"
                                data-testid="workflow-canvas-name" />
                     </label>
                     <label class="workflow-canvas-field workflow-canvas-field--description">
                         <span>Description</span>
-                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                        <textarea class="ui-input ui-input--textarea workflow-canvas-textarea"
                                   value="@document.Description"
                                   @onchange="HandleDescriptionChanged"
                                   data-testid="workflow-canvas-description"></textarea>
                     </label>
                     <label class="workflow-canvas-field">
                         <span>Runtime backend</span>
-                        <select class="cda-input"
+                        <select class="ui-input"
                                 value="@document.RuntimePolicy.PreferredBackend"
                                 @onchange="HandleRuntimeBackendChanged"
                                 data-testid="workflow-canvas-runtime">
@@ -302,14 +301,14 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected node" />
                         <label class="workflow-canvas-field">
                             <span>Node name</span>
-                            <input class="cda-input"
+                            <input class="ui-input"
                                    value="@selected.Name"
                                    @onchange="args => HandleSelectedNodeNameChanged(selected, args)"
                                    data-testid="workflow-canvas-node-name" />
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Kind</span>
-                            <select class="cda-input"
+                            <select class="ui-input"
                                     value="@selected.Kind"
                                     @onchange="args => HandleSelectedNodeKindChanged(selected, args)"
                                     disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
@@ -343,7 +342,7 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 <label class="workflow-canvas-field">
                                     <span>Provider</span>
-                                    <select class="cda-input"
+                                    <select class="ui-input"
                                             value="@selected.ProviderProfileId?.ToString("D")"
                                             @onchange="args => HandleSelectedProviderChanged(selected, args)"
                                             data-testid="workflow-canvas-node-provider">
@@ -381,7 +380,7 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Request kind</span>
-                                <select class="cda-input"
+                                <select class="ui-input"
                                         value="@selected.ExternalRequestKind"
                                         @onchange="args => HandleSelectedRequestKindChanged(selected, args)"
                                         data-testid="workflow-canvas-node-request-kind">
@@ -397,7 +396,7 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Agent id</span>
-                                <input class="cda-input"
+                                <input class="ui-input"
                                        value="@selected.AgentId?.ToString("D")"
                                        @onchange="args => HandleSelectedAgentIdChanged(selected, args)"
                                        data-testid="workflow-canvas-node-agent-id" />
@@ -408,7 +407,7 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Subworkflow id</span>
-                                <input class="cda-input"
+                                <input class="ui-input"
                                        value="@selected.SubworkflowId?.Value.ToString("D")"
                                        @onchange="args => HandleSelectedSubworkflowIdChanged(selected, args)"
                                        data-testid="workflow-canvas-node-subworkflow-id" />
@@ -421,7 +420,7 @@
                             var policy = ResolveSelectedExecutionPolicy(selected);
                             <label class="workflow-canvas-field">
                                 <span>Executor</span>
-                                <select class="cda-input"
+                                <select class="ui-input"
                                         value="@selected.ExecutorId?.Value"
                                         @onchange="args => HandleSelectedExecutorChanged(selected, args)"
                                         data-testid="workflow-canvas-node-executor">
@@ -480,7 +479,7 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="3">
                                 <label class="workflow-canvas-field">
                                     <span>Timeout seconds</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            type="number"
                                            min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
@@ -490,7 +489,7 @@
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retries</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            type="number"
                                            min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
@@ -500,7 +499,7 @@
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retry delay ms</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            type="number"
                                            min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
@@ -538,7 +537,7 @@
                         <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                             <label class="workflow-canvas-field">
                                 <span>Input shape</span>
-                                <select class="cda-input"
+                                <select class="ui-input"
                                         value="@selected.InputShapeKind"
                                         @onchange="args => HandleSelectedInputShapeChanged(selected, args)"
                                         data-testid="workflow-canvas-node-input-shape">
@@ -550,7 +549,7 @@
                             </label>
                             <label class="workflow-canvas-field">
                                 <span>Result shape</span>
-                                <select class="cda-input"
+                                <select class="ui-input"
                                         value="@selected.ResultShapeKind"
                                         @onchange="args => HandleSelectedResultShapeChanged(selected, args)"
                                         data-testid="workflow-canvas-node-result-shape">
@@ -564,7 +563,7 @@
 
                         <label class="workflow-canvas-field">
                             <span>@(selected.Kind == WorkflowNodeKind.LlmCall ? "Immutable prompt snapshot" : "Instructions")</span>
-                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                            <textarea class="ui-input ui-input--textarea workflow-canvas-textarea"
                                       value="@selected.Instructions"
                                       @onchange="args => HandleSelectedInstructionsChanged(selected, args)"
                                       readonly="@(selected.Kind == WorkflowNodeKind.LlmCall)"
@@ -572,7 +571,7 @@
                         </label>
 
                         <Button Text="Remove node"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Size="ButtonSize.Small"
                                 Disabled="@(selected.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
                                 Click="RemoveSelectedNodeAsync"
@@ -593,7 +592,7 @@
                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                         <label class="workflow-canvas-field">
                             <span>Source</span>
-                            <select class="cda-input" @bind="edgeSourceNodeId" data-testid="workflow-canvas-edge-source">
+                            <select class="ui-input" @bind="edgeSourceNodeId" data-testid="workflow-canvas-edge-source">
                                 @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.End))
                                 {
                                     <option value="@node.Id.Value">@node.Name</option>
@@ -602,7 +601,7 @@
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Target</span>
-                            <select class="cda-input" @bind="edgeTargetNodeId" data-testid="workflow-canvas-edge-target">
+                            <select class="ui-input" @bind="edgeTargetNodeId" data-testid="workflow-canvas-edge-target">
                                 @foreach (var node in document.Nodes.Where(node => node.Kind != WorkflowNodeKind.Start))
                                 {
                                     <option value="@node.Id.Value">@node.Name</option>
@@ -614,7 +613,7 @@
                         <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                             <label class="workflow-canvas-field">
                                 <span>Route mode</span>
-                                <select class="cda-input"
+                                <select class="ui-input"
                                         value="@edgeRouteKind"
                                         @onchange="HandleEdgeRouteKindChanged"
                                         data-testid="workflow-canvas-edge-route-kind">
@@ -626,7 +625,7 @@
                             </label>
                             <label class="workflow-canvas-field">
                                 <span>Edge label</span>
-                                <input class="cda-input"
+                                <input class="ui-input"
                                        @bind="edgeRouteLabel"
                                        data-testid="workflow-canvas-edge-route-label" />
                             </label>
@@ -637,7 +636,7 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                 <label class="workflow-canvas-field">
                                     <span>JSON path</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            @bind="edgeRouteJsonPath"
                                            placeholder="$.status"
                                            data-testid="workflow-canvas-edge-route-json-path" />
@@ -646,7 +645,7 @@
                                 {
                                     <label class="workflow-canvas-field">
                                         <span>Operator</span>
-                                        <select class="cda-input"
+                                        <select class="ui-input"
                                                 @bind="edgeRouteOperator"
                                                 data-testid="workflow-canvas-edge-route-operator">
                                             @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
@@ -664,7 +663,7 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                 <label class="workflow-canvas-field">
                                     <span>Value kind</span>
-                                    <select class="cda-input"
+                                    <select class="ui-input"
                                             @bind="edgeRouteValueKind"
                                             data-testid="workflow-canvas-edge-route-value-kind">
                                         @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
@@ -675,7 +674,7 @@
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Expected value</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            @bind="edgeRouteExpectedValue"
                                            data-testid="workflow-canvas-edge-route-expected-value" />
                                 </label>
@@ -686,7 +685,7 @@
                         {
                             <label class="workflow-canvas-field">
                                 <span>Fan-out target index</span>
-                                <input class="cda-input"
+                                <input class="ui-input"
                                        type="number"
                                        min="0"
                                        value="@(edgeRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
@@ -708,7 +707,7 @@
                     <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="workflow-canvas-legacy-edge-fields">
                         <label class="workflow-canvas-field">
                             <span>Kind</span>
-                            <select class="cda-input" value="@edgeKind" disabled data-testid="workflow-canvas-edge-kind">
+                            <select class="ui-input" value="@edgeKind" disabled data-testid="workflow-canvas-edge-kind">
                                 @foreach (var kind in Enum.GetValues<WorkflowEdgeKind>())
                                 {
                                     <option value="@kind">@kind</option>
@@ -717,7 +716,7 @@
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Legacy condition</span>
-                            <input class="cda-input" @bind="edgeCondition" data-testid="workflow-canvas-edge-condition" />
+                            <input class="ui-input" @bind="edgeCondition" data-testid="workflow-canvas-edge-condition" />
                         </label>
                     </Grid>
                     <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.Wrap" Class="mt-3">
@@ -729,7 +728,7 @@
                         @if (editingEdgeId is not null)
                         {
                             <Button Text="Cancel"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="CancelEdgeEditAsync"
                                     Disabled="@isBusy"
@@ -750,12 +749,12 @@
                                                  Text="@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(edge)" />
                                     <StatusBadge Tone="info" Text="@edge.Kind.ToString()" />
                                     <Button Text="Edit"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => EditEdgeAsync(edge))"
                                             data-testid="workflow-canvas-edit-edge" />
                                     <Button Text="Remove"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => RemoveEdgeAsync(edge))"
                                             data-testid="workflow-canvas-remove-edge" />
@@ -794,7 +793,7 @@
 
                     <label class="workflow-canvas-field mt-3">
                         <span>Preview input JSON</span>
-                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea"
+                        <textarea class="ui-input ui-input--textarea workflow-canvas-textarea"
                                   @bind="testInputJson"
                                   data-testid="workflow-canvas-test-input"></textarea>
                     </label>
@@ -850,7 +849,7 @@
                             {
                                 <label class="workflow-canvas-field">
                                     <span>Project</span>
-                                    <select class="cda-input"
+                                    <select class="ui-input"
                                             value="@previewInputState.ProjectId"
                                             @onchange="HandlePreviewProjectChanged"
                                             data-testid="workflow-canvas-preview-project-select">
@@ -865,14 +864,14 @@
 
                             <label class="workflow-canvas-field">
                                 <span>Project id</span>
-                                <input class="cda-input"
+                                <input class="ui-input"
                                        @bind="previewInputState.ProjectId"
                                        data-testid="workflow-canvas-preview-project-id" />
                             </label>
 
                             <label class="workflow-canvas-field">
                                 <span>Parent node id</span>
-                                <input class="cda-input"
+                                <input class="ui-input"
                                        @bind="previewInputState.ParentNodeId"
                                        data-testid="workflow-canvas-preview-node-id" />
                             </label>
@@ -902,7 +901,7 @@
                     <section class="workflow-canvas-dialog-section">
                         <label class="workflow-canvas-field">
                             <span>Input JSON</span>
-                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
+                            <textarea class="ui-input ui-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
                                       @bind="previewInputState.InputJson"
                                       data-testid="workflow-canvas-preview-input-json"></textarea>
                         </label>
@@ -918,7 +917,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Text="Cancel"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="ClosePreviewInputDialog"
                         data-testid="workflow-canvas-preview-input-cancel" />
                 <Button Text="Run preview"
@@ -949,14 +948,14 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity" />
                         <label class="workflow-canvas-field">
                             <span>Node name</span>
-                            <input class="cda-input"
+                            <input class="ui-input"
                                    value="@modalNode.Name"
                                    @onchange="args => HandleSelectedNodeNameChanged(modalNode, args)"
                                    data-testid="workflow-canvas-node-modal-name" />
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Kind</span>
-                            <select class="cda-input"
+                            <select class="ui-input"
                                     value="@modalNode.Kind"
                                     @onchange="args => HandleSelectedNodeKindChanged(modalNode, args)"
                                     disabled="@(modalNode.Kind is WorkflowNodeKind.Start or WorkflowNodeKind.End)"
@@ -973,7 +972,7 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload" />
                         <label class="workflow-canvas-field">
                             <span>Input shape</span>
-                            <select class="cda-input"
+                            <select class="ui-input"
                                     value="@modalNode.InputShapeKind"
                                     @onchange="args => HandleSelectedInputShapeChanged(modalNode, args)"
                                     data-testid="workflow-canvas-node-modal-input-shape">
@@ -985,7 +984,7 @@
                         </label>
                         <label class="workflow-canvas-field">
                             <span>Result shape</span>
-                            <select class="cda-input"
+                            <select class="ui-input"
                                     value="@modalNode.ResultShapeKind"
                                     @onchange="args => HandleSelectedResultShapeChanged(modalNode, args)"
                                     data-testid="workflow-canvas-node-modal-result-shape">
@@ -1023,7 +1022,7 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="2" Class="mt-3">
                                 <label class="workflow-canvas-field">
                                     <span>Provider</span>
-                                    <select class="cda-input"
+                                    <select class="ui-input"
                                             value="@modalNode.ProviderProfileId?.ToString("D")"
                                             @onchange="args => HandleSelectedProviderChanged(modalNode, args)"
                                             data-testid="workflow-canvas-node-modal-provider">
@@ -1066,7 +1065,7 @@
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor" />
                             <label class="workflow-canvas-field">
                                 <span>Tool</span>
-                                <select class="cda-input"
+                                <select class="ui-input"
                                         value="@modalNode.ExecutorId?.Value"
                                         @onchange="args => HandleSelectedExecutorChanged(modalNode, args)"
                                         data-testid="workflow-canvas-node-modal-executor">
@@ -1128,7 +1127,7 @@
                             <Grid Gap="LayoutGap.Small" ColumnsLg="3">
                                 <label class="workflow-canvas-field">
                                     <span>Timeout seconds</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            type="number"
                                            min="@WorkflowExecutorPolicyLimits.MinTimeoutSeconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxTimeoutSeconds"
@@ -1138,7 +1137,7 @@
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retries</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            type="number"
                                            min="@WorkflowExecutorPolicyLimits.MinRetryAttempts"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryAttempts"
@@ -1148,7 +1147,7 @@
                                 </label>
                                 <label class="workflow-canvas-field">
                                     <span>Retry delay ms</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            type="number"
                                            min="@WorkflowExecutorPolicyLimits.MinRetryDelayMilliseconds"
                                            max="@WorkflowExecutorPolicyLimits.MaxRetryDelayMilliseconds"
@@ -1188,7 +1187,7 @@
 
                         <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--fill">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Executor settings JSON" />
-                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea workflow-canvas-json-textarea--dialog"
+                            <textarea class="ui-input ui-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea workflow-canvas-json-textarea--dialog"
                                       value="@FormatExecutorSettingsJson(modalNode)"
                                       @onchange="args => HandleSelectedExecutorSettingsJsonChanged(modalNode, args)"
                                       data-testid="workflow-canvas-node-modal-settings-json"></textarea>
@@ -1233,12 +1232,12 @@
                                                 <StatusBadge Tone="@WorkflowCanvasDefinitionMapper.ResolveRouteTone(routeEdge)"
                                                              Text="@WorkflowCanvasDefinitionMapper.ResolveRouteLabel(routeEdge)" />
                                                 <Button Text="Edit"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Click="@(() => StartEditDecisionRouteAsync(modalNode, routeEdge))"
                                                         data-testid="workflow-canvas-decision-edit-route" />
                                                 <Button Text="Remove"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Click="@(() => RemoveDecisionRouteAsync(modalNode, routeEdge))"
                                                         data-testid="workflow-canvas-decision-remove-route" />
@@ -1264,7 +1263,7 @@
                                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                         <label class="workflow-canvas-field">
                                             <span>Target output</span>
-                                            <select class="cda-input"
+                                            <select class="ui-input"
                                                     @bind="decisionRouteTargetNodeId"
                                                     data-testid="workflow-canvas-decision-route-target">
                                                 <option value="">Create new branch output</option>
@@ -1276,7 +1275,7 @@
                                         </label>
                                         <label class="workflow-canvas-field">
                                             <span>Route mode</span>
-                                            <select class="cda-input"
+                                            <select class="ui-input"
                                                     value="@decisionRouteKind"
                                                     @onchange="HandleDecisionRouteKindChanged"
                                                     data-testid="workflow-canvas-decision-route-kind">
@@ -1291,7 +1290,7 @@
                                     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
                                         <label class="workflow-canvas-field">
                                             <span>Route label</span>
-                                            <input class="cda-input"
+                                            <input class="ui-input"
                                                    @bind="decisionRouteLabel"
                                                    data-testid="workflow-canvas-decision-route-label" />
                                         </label>
@@ -1299,7 +1298,7 @@
                                         {
                                             <label class="workflow-canvas-field">
                                                 <span>JSON path</span>
-                                                <input class="cda-input"
+                                                <input class="ui-input"
                                                        @bind="decisionRouteJsonPath"
                                                        placeholder="$.route"
                                                        data-testid="workflow-canvas-decision-route-json-path" />
@@ -1314,7 +1313,7 @@
                                             {
                                                 <label class="workflow-canvas-field">
                                                     <span>Operator</span>
-                                                    <select class="cda-input"
+                                                    <select class="ui-input"
                                                             @bind="decisionRouteOperator"
                                                             data-testid="workflow-canvas-decision-route-operator">
                                                         @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
@@ -1328,7 +1327,7 @@
                                             {
                                                 <label class="workflow-canvas-field">
                                                     <span>Value kind</span>
-                                                    <select class="cda-input"
+                                                    <select class="ui-input"
                                                             @bind="decisionRouteValueKind"
                                                             data-testid="workflow-canvas-decision-route-value-kind">
                                                         @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
@@ -1345,7 +1344,7 @@
                                     {
                                         <label class="workflow-canvas-field">
                                             <span>Expected value</span>
-                                            <input class="cda-input"
+                                            <input class="ui-input"
                                                    @bind="decisionRouteExpectedValue"
                                                    data-testid="workflow-canvas-decision-route-expected-value" />
                                         </label>
@@ -1355,7 +1354,7 @@
                                     {
                                         <label class="workflow-canvas-field">
                                             <span>Fan-out target index</span>
-                                            <input class="cda-input"
+                                            <input class="ui-input"
                                                    type="number"
                                                    min="0"
                                                    value="@(decisionRouteFanOutTargetIndex?.ToString() ?? string.Empty)"
@@ -1385,7 +1384,7 @@
                                                 Click="@(() => SaveDecisionRouteAsync(modalNode))"
                                                 data-testid="workflow-canvas-decision-save-route" />
                                         <Button Text="Cancel"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="CancelDecisionRouteEditAsync"
                                                 data-testid="workflow-canvas-decision-cancel-route" />
@@ -1397,7 +1396,7 @@
 
                     <section class="workflow-canvas-dialog-section workflow-canvas-dialog-section--instructions">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Instructions" />
-                        <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
+                        <textarea class="ui-input ui-input--textarea workflow-canvas-textarea workflow-canvas-textarea--comfortable"
                                   value="@modalNode.Instructions"
                                   @onchange="args => HandleSelectedInstructionsChanged(modalNode, args)"
                                   readonly="@(modalNode.Kind == WorkflowNodeKind.LlmCall)"
@@ -1414,7 +1413,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="CloseNodeDetailsDialogAsync"
                         data-testid="workflow-canvas-node-modal-close" />
             </Cluster>

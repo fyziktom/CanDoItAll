@@ -21,7 +21,7 @@
                          Value="@kind"
                          ValueChanged="HandleKindChangedAsync"
                          ValueExpression="@(() => kind)"
-                         class="cda-input"
+                         class="ui-input"
                          aria-label="Prompt kind"
                          data-testid="prompt-gallery-kind-filter">
                 <option value="">All kinds</option>
@@ -34,7 +34,7 @@
                          Value="@status"
                          ValueChanged="HandleStatusChangedAsync"
                          ValueExpression="@(() => status)"
-                         class="cda-input"
+                         class="ui-input"
                          aria-label="Prompt status"
                          data-testid="prompt-gallery-status-filter">
                 <option value="">All statuses</option>
@@ -83,7 +83,7 @@
             }
             <Button Text=""
                     Icon="filter_alt_off"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Variant="Variant.Text"
                     Size="ButtonSize.Small"
                     Click="ClearFiltersAsync"
@@ -206,7 +206,7 @@
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap">
                             <Button Text=""
                                     Icon="@(item.IsFavorite ? "star" : "star_border")"
-                                    ButtonStyle="@(item.IsFavorite ? ButtonStyle.Warning : ButtonStyle.Light)"
+                                    Tone="@(item.IsFavorite ? ButtonTone.Warning : ButtonTone.Default)"
                                     Variant="Variant.Text"
                                     Size="ButtonSize.Small"
                                     Disabled="@(favoriteBusyItemId == item.Id)"
@@ -227,7 +227,7 @@
                             {
                                 <Button Text="Details"
                                         Icon="edit"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="@(() => EditAsync(item.Id))"
                                         data-testid="prompt-gallery-edit" />
@@ -242,13 +242,13 @@
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Previous"
                         Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(page.PageIndex <= 0)"
                         Click="PreviousPageAsync" />
                 <Button Text="Next"
                         Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(page.PageIndex + 1 >= page.TotalPages)"
                         Click="NextPageAsync" />

@@ -96,7 +96,6 @@ else
 
         <Tabs @bind-SelectedIndex="structureViewIndex"
               AriaLabel="Project structure views"
-              Variant="TabsVariant.WorkspaceSecondary"
               RenderMode="TabRenderMode.Server">
             <TabsItem Text="Canvas" Icon="account_tree">
         <CanvasWorkbenchStage Eyebrow=""
@@ -157,7 +156,7 @@ else
                                     <TextBlock Value="@workflowFeedback" />
                                     @if (pendingDeletionRecoveries.Count > 0)
                                     {
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Retry cleanup"
                                                 Disabled="@isRetryingDeletionCleanup"
                                                 data-testid="project-structure-deletion-retry"
@@ -418,7 +417,7 @@ else
                                         <Cluster>
                                             <Button Text="Clear selection"
                                                     Variant="Variant.Text"
-                                                    ButtonStyle="ButtonStyle.Base"
+                                                    Tone="ButtonTone.Default"
                                                     Disabled="@(!partyEditor.SelectedPartyId.HasValue)"
                                                     data-testid="project-structure-participant-party-clear"
                                                     Click="ClearPartySelectionAsync" />
@@ -438,7 +437,7 @@ else
                                                   ColumnsLg="2">
                                                 <FormField Text="Kind">
                                                     <InputSelect @bind-Value="partyEditor.QuickCreate.PartyKind"
-                                                                 class="cda-input"
+                                                                 class="ui-input"
                                                                  data-testid="project-structure-participant-quick-kind">
                                                         @foreach (var kind in Enum.GetValues<ProjectPartyQuickCreateKind>())
                                                         {
@@ -448,7 +447,7 @@ else
                                                 </FormField>
                                                 <FormField Text="Name">
                                                     <InputText @bind-Value="partyEditor.QuickCreate.DisplayName"
-                                                               class="cda-input"
+                                                               class="ui-input"
                                                                data-testid="project-structure-participant-quick-name" />
                                                 </FormField>
                                             </Grid>
@@ -457,24 +456,24 @@ else
                                                   ColumnsLg="2">
                                                 <FormField Text="Email">
                                                     <InputText @bind-Value="partyEditor.QuickCreate.Email"
-                                                               class="cda-input"
+                                                               class="ui-input"
                                                                data-testid="project-structure-participant-quick-email" />
                                                 </FormField>
                                                 <FormField Text="Phone">
                                                     <InputText @bind-Value="partyEditor.QuickCreate.Phone"
-                                                               class="cda-input"
+                                                               class="ui-input"
                                                                data-testid="project-structure-participant-quick-phone" />
                                                 </FormField>
                                             </Grid>
 
                                             <FormField Text="Summary">
-                                                <InputTextArea @bind-Value="partyEditor.QuickCreate.Summary"
-                                                               class="cda-input cda-input--textarea min-h-24"
+                                                <TextArea @bind-Value="partyEditor.QuickCreate.Summary"
+                                                               Rows="4"
                                                                data-testid="project-structure-participant-quick-summary" />
                                             </FormField>
 
                                             <Cluster>
-                                                <Button ButtonStyle="ButtonStyle.Light"
+                                                <Button Tone="ButtonTone.Default"
                                                         Text="Create party"
                                                         Disabled="@isPartyEditorBusy"
                                                         data-testid="project-structure-participant-quick-create"
@@ -498,7 +497,7 @@ else
                         <SurfaceCard>
                             <Stack GapScale="LayoutGap.Large">
                                 <Cluster>
-                                    <Button ButtonStyle="ButtonStyle.Light"
+                                    <Button Tone="ButtonTone.Default"
                                             Text="Use project defaults"
                                             Disabled="@isPartyEditorBusy"
                                             data-testid="project-structure-meeting-project-defaults"
@@ -593,7 +592,7 @@ else
             <Button Text="Close"
                     Icon="close"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseSecretReferenceDialog" />
         </Actions>
         <Body>
@@ -609,7 +608,7 @@ else
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Stored secret">
-                        <select class="cda-input"
+                        <select class="ui-input"
                                 value="@selectedSecretReferenceId"
                                 @onchange="HandleSelectedSecretReferenceChanged"
                                 disabled="@isSecretReferenceDialogBusy"
@@ -622,7 +621,7 @@ else
                         </select>
                     </FormField>
                     <FormField Text="Search stored secrets">
-                        <input class="cda-input"
+                        <input class="ui-input"
                                value="@secretReferenceSearch"
                                @oninput="HandleSecretReferenceSearchChanged"
                                data-testid="project-structure-secret-search" />
@@ -638,13 +637,13 @@ else
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Purpose">
-                        <input class="cda-input"
+                        <input class="ui-input"
                                value="@secretReferencePurpose"
                                @oninput="HandleSecretReferencePurposeChanged"
                                data-testid="project-structure-secret-purpose" />
                     </FormField>
                     <FormField Text="Reference note">
-                        <input class="cda-input"
+                        <input class="ui-input"
                                value="@secretReferenceExternalReference"
                                @oninput="HandleSecretReferenceExternalReferenceChanged"
                                data-testid="project-structure-secret-external-reference" />
@@ -654,7 +653,7 @@ else
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="@SecretReferenceUseSelectedButtonText"
                             Icon="shield"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Disabled="@(isSecretReferenceDialogBusy || !SelectedSecretReferenceGuid.HasValue)"
                             IsBusy="@isSecretReferenceDialogBusy"
                             Click="UseSelectedProjectStructureSecretAsync"
@@ -668,7 +667,7 @@ else
                         <Button Text="Cancel"
                                 Icon="close"
                                 Variant="Variant.Text"
-                                ButtonStyle="ButtonStyle.Base"
+                                Tone="ButtonTone.Default"
                                 Disabled="@isSecretReferenceDialogBusy"
                                 Click="CloseSecretReferenceDialog" />
                     }
@@ -680,11 +679,11 @@ else
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
                             <label class="cda-field-label">Name</label>
-                            <InputText @bind-Value="secretReferenceCreateModel.Name" class="cda-input" data-testid="project-structure-secret-create-name" />
+                            <InputText @bind-Value="secretReferenceCreateModel.Name" class="ui-input" data-testid="project-structure-secret-create-name" />
                         </div>
                         <div>
                             <label class="cda-field-label">Kind</label>
-                            <InputSelect @bind-Value="secretReferenceCreateModel.Kind" class="cda-input">
+                            <InputSelect @bind-Value="secretReferenceCreateModel.Kind" class="ui-input">
                                 @foreach (var kind in Enum.GetValues<SecretKind>())
                                 {
                                     <option value="@kind">@kind</option>
@@ -703,12 +702,12 @@ else
                     </div>
                     <div class="mt-3">
                         <label class="cda-field-label">Purpose</label>
-                        <InputText @bind-Value="secretReferenceCreateModel.RotationNote" class="cda-input" />
+                        <InputText @bind-Value="secretReferenceCreateModel.RotationNote" class="ui-input" />
                     </div>
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
                         <Button Text="Create and use"
                                 Icon="save"
-                                ButtonStyle="ButtonStyle.Info"
+                                Tone="ButtonTone.Info"
                                 Disabled="@isSecretReferenceDialogBusy"
                                 IsBusy="@isSecretReferenceDialogBusy"
                                 Click="CreateAndUseProjectStructureSecretAsync"

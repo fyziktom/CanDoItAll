@@ -15,7 +15,7 @@
         <HeaderActions>
             <StatusBadge Tone="neutral" Text="@($"{State.ParentProjects.Count} parent(s)")" />
             <StatusBadge Tone="info" Text="@($"{State.Subprojects.Count} subproject(s)")" />
-            <Button ButtonStyle="ButtonStyle.Light"
+            <Button Tone="ButtonTone.Default"
                     Text="Close"
                     Click="Close" />
         </HeaderActions>
@@ -58,11 +58,11 @@
                                         <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(parentProject.Status)" Text="@parentProject.Status.ToString()" />
                                     </Split>
                                     <Cluster Class="mt-4">
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="View"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenProjectPreview.InvokeAsync(parentProject.Id))" />
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Structure"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenStructure.InvokeAsync(parentProject.Id))" />
@@ -117,11 +117,11 @@
                                     </CompactStatStrip>
 
                                     <Cluster Class="mt-4">
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="View"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenProjectPreview.InvokeAsync(subproject.Id))" />
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Structure"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenStructure.InvokeAsync(subproject.Id))" />

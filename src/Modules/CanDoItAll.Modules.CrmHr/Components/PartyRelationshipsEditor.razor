@@ -9,7 +9,7 @@
             <p class="mt-1 text-sm leading-6 text-slate-600">Model parent-child, reporting, membership, and partner links without losing the shared party identity.</p>
         </div>
         <Button Text="Add relationship"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Size="ButtonSize.Small"
                 Click="AddRelationship"
                 Disabled="@(!CurrentPartyId.HasValue)"
@@ -40,7 +40,7 @@
                         <label class="cda-field-label">Direction</label>
                         <InputSelect TValue="bool"
                                      @bind-Value="item.IsOutgoing"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="@($"crmhr-relationship-direction-{rowIndex}")">
                             <option value="@true">This party points to related party</option>
                             <option value="@false">Related party points to this party</option>
@@ -49,7 +49,7 @@
                     <div>
                         <label class="cda-field-label">Relationship</label>
                         <InputSelect @bind-Value="item.RelationshipKind"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="@($"crmhr-relationship-kind-{rowIndex}")">
                             @foreach (var relationshipKind in Enum.GetValues<PartyRelationshipKind>())
                             {
@@ -69,7 +69,7 @@
                             </p>
                             <Button Text="Choose party"
                                     Icon="search"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenRelatedPartyPicker(item))"
                                     data-testid="@($"crmhr-relationship-party-{rowIndex}")" />
@@ -81,13 +81,13 @@
                     <div>
                         <label class="cda-field-label">Start date</label>
                         <InputDate @bind-Value="item.StartDateUtc"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-relationship-start-{rowIndex}")" />
                     </div>
                     <div>
                         <label class="cda-field-label">End date</label>
                         <InputDate @bind-Value="item.EndDateUtc"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-relationship-end-{rowIndex}")" />
                     </div>
                     <label class="cda-inline-option">
@@ -101,12 +101,12 @@
                     <div>
                         <label class="cda-field-label">Notes</label>
                         <InputText @bind-Value="item.Notes"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="@($"crmhr-relationship-notes-{rowIndex}")" />
                     </div>
                     <div class="flex items-end justify-end">
                         <Button Text="Remove"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Size="ButtonSize.Small"
                                 Click="@(() => RemoveRelationship(item))"
                                 data-testid="@($"crmhr-relationship-remove-{rowIndex}")" />

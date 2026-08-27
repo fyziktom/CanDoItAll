@@ -24,7 +24,7 @@
         {
             <Button Text="Install and enable"
                     Icon="download"
-                    ButtonStyle="ButtonStyle.Primary"
+                    Tone="ButtonTone.Primary"
                     Size="ButtonSize.Small"
                     IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.InstallAction)"
                     Click="@(() => OnInstall(Plugin))" />
@@ -33,7 +33,7 @@
         {
             <Button Text="Disable"
                     Icon="block"
-                    ButtonStyle="ButtonStyle.Warning"
+                    Tone="ButtonTone.Warning"
                     Variant="Variant.Outlined"
                     Size="ButtonSize.Small"
                     IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.DisableAction)"
@@ -43,7 +43,7 @@
         {
             <Button Text="Enable"
                     Icon="play_arrow"
-                    ButtonStyle="ButtonStyle.Success"
+                    Tone="ButtonTone.Success"
                     Size="ButtonSize.Small"
                     IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.EnableAction)"
                     Click="@(() => OnEnable(Plugin))" />

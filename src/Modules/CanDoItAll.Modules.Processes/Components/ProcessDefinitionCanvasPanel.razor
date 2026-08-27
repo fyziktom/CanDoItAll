@@ -31,7 +31,7 @@
                              Wrap="FlexWrap.Wrap"
                              Class="process-canvas-toolbar-actions">
                         <Button Icon="widgets"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 title="Toggle process canvas toolbox"
                                 aria-label="Toggle process canvas toolbox"
@@ -39,7 +39,7 @@
                                 Click="ToggleToolboxWindowAsync"
                                 data-testid="processes-canvas-toggle-toolbox" />
                         <Button Icon="select_all"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 title="Toggle process canvas selection"
                                 aria-label="Toggle process canvas selection"
@@ -47,7 +47,7 @@
                                 Click="ToggleSelectionWindowAsync"
                                 data-testid="processes-canvas-toggle-selection" />
                         <Button Icon="edit_note"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 title="Toggle process canvas editor"
                                 aria-label="Toggle process canvas editor"
@@ -55,7 +55,7 @@
                                 Click="ToggleEditorWindowAsync"
                                 data-testid="processes-canvas-toggle-editor" />
                         <Button Icon="restart_alt"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 title="Recompose process canvas"
                                 aria-label="Recompose process canvas"
@@ -143,14 +143,14 @@
                                          Class="flex-wrap">
                                     <Button Text="Clear"
                                             Icon="close"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="ClearSelectionAsync"
                                             Disabled="@Disabled"
                                             data-testid="processes-canvas-clear-selection" />
                                     <Button Text="Open editor"
                                             Icon="edit"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="OpenEditorWindowAsync"
                                             Disabled="@(Disabled || selection.Kind == ProcessDefinitionCanvasSelectionKind.None)"
@@ -187,7 +187,7 @@
                                     {
                                         <Button Text="@action.Text"
                                                 Icon="@action.Icon"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Disabled="@(!action.IsEnabled || Disabled)"
                                                 title="@action.DisabledReason"

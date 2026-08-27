@@ -28,7 +28,7 @@
                                TestId="@($"{DataTestId}-refresh-tooltip")">
                     <Button Icon="refresh"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Variant="Variant.Outlined"
                             Disabled="@(isLoading || QuoteResolver is null || !AllowsAuthoritativeRepricing)"
                             aria-label="Reload and recalculate resource price"

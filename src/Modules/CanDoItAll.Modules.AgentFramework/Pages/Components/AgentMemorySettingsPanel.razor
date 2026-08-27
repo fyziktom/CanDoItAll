@@ -15,7 +15,7 @@
                          Value="@Value.InvocationMode"
                          ValueChanged="state.HandleInvocationModeChanged"
                          ValueExpression="@(() => Value.InvocationMode)"
-                         class="cda-input"
+                         class="ui-input"
                          data-testid="agents-catalog-memory-mode">
                 @foreach (var mode in Enum.GetValues<AgentMemoryInvocationMode>())
                 {
@@ -58,14 +58,14 @@
         <div>
             <label class="cda-field-label">Alias</label>
             <InputText @bind-Value="state.NewAlias"
-                       class="cda-input"
+                       class="ui-input"
                        placeholder="team-memory"
                        data-testid="agents-catalog-memory-new-alias" />
         </div>
         <div>
             <label class="cda-field-label">Configured provider</label>
             <InputSelect @bind-Value="state.NewProviderInstanceId"
-                         class="cda-input"
+                         class="ui-input"
                          disabled="@(!state.AvailableProviders.Any())"
                          data-testid="agents-catalog-memory-new-provider">
                 <option value="">Select an enabled provider</option>
@@ -78,7 +78,7 @@
         <div>
             <label class="cda-field-label">Failure behavior</label>
             <InputSelect @bind-Value="state.NewRequirement"
-                         class="cda-input"
+                         class="ui-input"
                          data-testid="agents-catalog-memory-new-requirement">
                 @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
                 {
@@ -93,7 +93,7 @@
             </label>
             <Button Text="Add provider binding"
                     Icon="add"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Click="state.AddBindingAsync"
                     Disabled="@(!state.CanAddBindings)"
                     data-testid="agents-catalog-memory-add-binding" />

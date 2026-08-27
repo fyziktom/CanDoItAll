@@ -24,7 +24,7 @@
                 <PageHeaderActionButton Icon="add"
                                         Label="New test plan"
                                         TooltipText="Create a new test plan."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
@@ -38,29 +38,29 @@
                                  Count="@($"{FilteredPlans.Count} plan(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredPlans.Count} matching plan(s)")">
-                            <input @bind="planSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search test plans" />
-                            <InputSelect @bind-Value="projectFilter" class="cda-input">
+                            <input @bind="planSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search test plans" />
+                            <InputSelect @bind-Value="projectFilter" class="ui-input">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name))
                                 {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="phaseFilter" class="cda-input">
+                            <InputSelect @bind-Value="phaseFilter" class="ui-input">
                                 <option value="">All phases</option>
                                 @foreach (var phase in plans.Select(item => item.Phase).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(item => item))
                                 {
                                     <option value="@phase">@phase</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="resultFilter" class="cda-input">
+                            <InputSelect @bind-Value="resultFilter" class="ui-input">
                                 <option value="">All latest results</option>
                                 @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
+                            <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -125,7 +125,7 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Project</label>
-                                        <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
+                                        <InputSelect @bind-Value="editor.ProjectId" class="ui-input" data-testid="testlab-project-select" @bind-Value:after="LoadResponsiblePartyOptionsAsync">
                                             <option value="">None</option>
                                             @foreach (var project in projects)
                                             {
@@ -135,13 +135,13 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Phase</label>
-                                        <InputText @bind-Value="editor.Phase" class="cda-input" />
+                                        <InputText @bind-Value="editor.Phase" class="ui-input" />
                                     </div>
                                 </Grid>
 
                                 <div class="max-w-xl">
                                     <label class="cda-field-label">Responsible party</label>
-                                    <InputSelect @bind-Value="editor.ResponsiblePartyId" class="cda-input" data-testid="testlab-responsible-party-select">
+                                    <InputSelect @bind-Value="editor.ResponsiblePartyId" class="ui-input" data-testid="testlab-responsible-party-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
                                         {
@@ -152,17 +152,17 @@
 
                                 <div>
                                     <label class="cda-field-label">Title</label>
-                                        <InputText @bind-Value="editor.Title" class="cda-input" data-testid="testlab-title-input" />
+                                        <InputText @bind-Value="editor.Title" class="ui-input" data-testid="testlab-title-input" />
                                 </div>
 
                                 <div>
                                     <label class="cda-field-label">Coverage goal</label>
-                                    <InputTextArea @bind-Value="editor.CoverageGoal" class="cda-input cda-input--textarea min-h-24" />
+                                    <TextArea @bind-Value="editor.CoverageGoal" Rows="4" />
                                 </div>
 
                                 <div>
                                     <label class="cda-field-label">Playwright spec path</label>
-                                    <InputText @bind-Value="editor.PlaywrightSpecPath" class="cda-input" />
+                                    <InputText @bind-Value="editor.PlaywrightSpecPath" class="ui-input" />
                                 </div>
                             </FormSection>
                         }
@@ -182,15 +182,15 @@
                                         @foreach (var testCase in editor.Cases)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
-                                                <InputText @bind-Value="testCase.Name" class="cda-input" />
-                                                <InputText @bind-Value="testCase.StoryOrFeature" class="cda-input" />
-                                                <InputSelect @bind-Value="testCase.Status" class="cda-input">
+                                                <InputText @bind-Value="testCase.Name" class="ui-input" />
+                                                <InputText @bind-Value="testCase.StoryOrFeature" class="ui-input" />
+                                                <InputSelect @bind-Value="testCase.Status" class="ui-input">
                                                     @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                                     {
                                                         <option value="@status">@status</option>
                                                     }
                                                 </InputSelect>
-                                                <InputText @bind-Value="testCase.Notes" class="cda-input" />
+                                                <InputText @bind-Value="testCase.Notes" class="ui-input" />
                                             </Grid>
                                         }
                                     </Stack>
@@ -213,10 +213,10 @@
                                         @foreach (var evidence in editor.Evidence)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
-                                                <InputText @bind-Value="evidence.EvidenceLabel" class="cda-input" />
-                                                <InputText @bind-Value="evidence.ArtifactPath" class="cda-input" />
-                                                <InputText @bind-Value="evidence.EvidenceKind" class="cda-input" />
-                                                <InputText @bind-Value="evidence.Notes" class="cda-input" />
+                                                <InputText @bind-Value="evidence.EvidenceLabel" class="ui-input" />
+                                                <InputText @bind-Value="evidence.ArtifactPath" class="ui-input" />
+                                                <InputText @bind-Value="evidence.EvidenceKind" class="ui-input" />
+                                                <InputText @bind-Value="evidence.Notes" class="ui-input" />
                                             </Grid>
                                         }
                                     </Stack>
@@ -239,15 +239,15 @@
                                         @foreach (var run in editor.Runs)
                                         {
                                             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="cda-panel-card">
-                                                <InputDate @bind-Value="run.ExecutedAtUtc" class="cda-input" />
-                                                <InputText @bind-Value="run.Runner" class="cda-input" />
-                                                <InputSelect @bind-Value="run.Result" class="cda-input">
+                                                <InputDate @bind-Value="run.ExecutedAtUtc" class="ui-input" />
+                                                <InputText @bind-Value="run.Runner" class="ui-input" />
+                                                <InputSelect @bind-Value="run.Result" class="ui-input">
                                                     @foreach (var status in Enum.GetValues<TestCaseStatus>())
                                                     {
                                                         <option value="@status">@status</option>
                                                     }
                                                 </InputSelect>
-                                                <InputText @bind-Value="run.Summary" class="cda-input" />
+                                                <InputText @bind-Value="run.Summary" class="ui-input" />
                                             </Grid>
                                         }
                                     </Stack>
@@ -257,7 +257,7 @@
 
                         <StickyActionFooter StatusLabel="Plan save state">
                             <SecondaryActions>
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
+                                <Button Text="Reset" Tone="ButtonTone.Default" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
                                 <Button Text="Save plan" Type="submit" data-testid="testlab-save-button" />
@@ -312,11 +312,11 @@
 
     private TestCaseStatus? LatestRunResult => editor.Runs.OrderByDescending(run => run.ExecutedAtUtc).FirstOrDefault()?.Result;
 
-    private RenderFragment CaseActions => @<Button Text="Add case" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddCaseAsync" />;
+    private RenderFragment CaseActions => @<Button Text="Add case" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="AddCaseAsync" />;
 
-    private RenderFragment EvidenceActions => @<Button Text="Add evidence" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddEvidenceAsync" />;
+    private RenderFragment EvidenceActions => @<Button Text="Add evidence" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="AddEvidenceAsync" />;
 
-    private RenderFragment RunActions => @<Button Text="Add run" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="AddRunAsync" />;
+    private RenderFragment RunActions => @<Button Text="Add run" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="AddRunAsync" />;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync(PlanIdQuery, ProjectIdQuery);
 

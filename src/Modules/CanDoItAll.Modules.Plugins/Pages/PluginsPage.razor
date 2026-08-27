@@ -63,7 +63,7 @@
                     </Stack>
                     <Button Text="Restart application"
                             Icon="restart_alt"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Size="ButtonSize.Small"
                             data-testid="plugin-runtime-restart"
                             Disabled="@restartStatus.IsRestartRequested"
@@ -184,7 +184,7 @@
                                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">
                                     <Button Text="Install"
                                             Icon="download"
-                                            ButtonStyle="ButtonStyle.Primary"
+                                            Tone="ButtonTone.Primary"
                                             Size="ButtonSize.Small"
                                             data-testid="@PluginsPageHelpers.BuildPackageInstallTestId(package)"
                                             Disabled="@package.IsInstalled"
@@ -202,7 +202,7 @@
                 <div>
                     <label class="cda-field-label" for="plugin-package-upload">Package archive</label>
                     <InputFile id="plugin-package-upload"
-                               class="cda-input"
+                               class="ui-input"
                                accept=".zip,application/zip"
                                data-testid="plugin-package-upload"
                                OnChange="UploadPackageAsync" />
@@ -217,7 +217,7 @@
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
             <Button Text="Close"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Click="ClosePackageDialog" />
         </Cluster>
     </Footer>

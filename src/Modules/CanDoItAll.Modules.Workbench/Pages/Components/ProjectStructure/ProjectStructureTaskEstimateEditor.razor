@@ -9,7 +9,7 @@
           Gap="LayoutGap.Medium">
         <FormField Text="Pure effort">
             <input type="number"
-                   class="cda-input"
+                   class="ui-input"
                    min="0.01"
                    step="0.25"
                    value="@expectedEffortValueText"
@@ -40,7 +40,7 @@
             <Button Text="@capturedPreset.Label"
                     Size="ButtonSize.Small"
                     Variant="Variant.Outlined"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     data-testid="@TestId($"preset-{capturedPreset.TestId}")"
                     Click="@(() => ApplyPresetAsync(capturedPreset))" />
         }
@@ -50,7 +50,7 @@
           Gap="LayoutGap.Medium">
         <FormField Text="Expected cost">
             <input type="number"
-                   class="cda-input"
+                   class="ui-input"
                    min="0"
                    step="0.01"
                    value="@expectedCostAmountText"

@@ -52,20 +52,20 @@
     <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
         <Button Text="Cancel"
                 Icon="close"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Variant="Variant.Outlined"
                 Click="CancelAsync" />
         @if (Compatibility.CanUse)
         {
             <Button Text="Insert anyway"
                     Icon="add_circle"
-                    ButtonStyle="ButtonStyle.Warning"
+                    Tone="ButtonTone.Warning"
                     Click="InsertAsync" />
             @if (CanSuppressAll)
             {
                 <Button Text="Insert anyway and do not display on this item anymore"
                         Icon="notifications_off"
-                        ButtonStyle="ButtonStyle.Warning"
+                        Tone="ButtonTone.Warning"
                         Variant="Variant.Outlined"
                         Click="InsertAndSuppressAsync" />
             }

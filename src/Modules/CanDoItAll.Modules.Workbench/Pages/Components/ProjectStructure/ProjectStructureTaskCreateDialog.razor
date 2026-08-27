@@ -49,7 +49,7 @@
 
         <FormField Text="Due (UTC)">
             <input type="datetime-local"
-                   class="cda-input"
+                   class="ui-input"
                    value="@FormatDateTimeLocal(dueUtc)"
                    aria-label="Task due date in UTC"
                    data-testid="project-structure-task-create-due"
@@ -112,7 +112,7 @@
                         Icon="close"
                         Size="ButtonSize.Small"
                         Variant="Variant.Text"
-                        ButtonStyle="ButtonStyle.Base"
+                        Tone="ButtonTone.Default"
                         data-testid="project-structure-task-create-assignee-clear"
                         Click="ClearAssignee" />
             }
@@ -154,12 +154,12 @@
              JustifyContent="JustifyContent.End">
         <Button Text="Cancel"
                 Variant="Variant.Outlined"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 data-testid="project-structure-task-create-cancel"
                 Click="CancelAsync" />
         <Button Text="@(IsEditMode ? "Save task" : "Create task")"
                 Icon="@(IsEditMode ? "save" : "add_task")"
-                ButtonStyle="ButtonStyle.Info"
+                Tone="ButtonTone.Info"
                 data-testid="project-structure-task-create-submit"
                 Click="SubmitAsync" />
     </Cluster>

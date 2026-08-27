@@ -330,7 +330,7 @@ else if (State.SelectedNode is not null)
                 @foreach (var action in selectedNode.Actions)
                 {
                     <Button Variant="Variant.Outlined"
-                            ButtonStyle="@ResolveActionButtonStyle(action.Tone)"
+                            Tone="@ResolveActionButtonStyle(action.Tone)"
                             Class="project-structure-node-action"
                             Click="@(() => ExecuteInspectorActionAsync.InvokeAsync(action.ActionId))">
                         <span class="project-structure-node-action__icon" aria-hidden="true">
@@ -359,7 +359,7 @@ else if (State.SelectedNode is not null)
             </div>
             <div class="cw-button-row">
                 <Button Text="Open standard blocks"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Click="OpenToolboxAsync" />
             </div>
         </div>
@@ -487,15 +487,15 @@ else if (State.SelectedNode is not null)
     private Task HandleSelectionBorderNameChangedAsync(ChangeEventArgs args)
         => SelectionBorderNameChangedAsync.InvokeAsync(args.Value?.ToString() ?? string.Empty);
 
-    private static ButtonStyle ResolveActionButtonStyle(string tone)
+    private static ButtonTone ResolveActionButtonStyle(string tone)
     {
         return tone switch
         {
-            "danger" => ButtonStyle.Danger,
-            "warn" => ButtonStyle.Warning,
-            "mint" => ButtonStyle.Success,
-            "sky" => ButtonStyle.Info,
-            _ => ButtonStyle.Base
+            "danger" => ButtonTone.Danger,
+            "warn" => ButtonTone.Warning,
+            "mint" => ButtonTone.Success,
+            "sky" => ButtonTone.Info,
+            _ => ButtonTone.Default
         };
     }
 }

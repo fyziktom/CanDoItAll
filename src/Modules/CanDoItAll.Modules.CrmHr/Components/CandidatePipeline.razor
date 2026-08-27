@@ -10,7 +10,7 @@
                 Select an existing person or bound AI agent, or create a new human candidate inline, then keep role, ownership, stage, and decision on the same record.
             </p>
 
-            <Tabs Variant="TabsVariant.ModalCompact"
+            <Tabs Density="TabsDensity.Compact"
                   BorderMode="TabsBorderMode.Soft"
                   Tone="TabsTone.Success"
                   OverflowMode="TabsOverflowMode.Wrap"
@@ -33,7 +33,7 @@
                                              SelectedPartyIdChanged="SetCandidatePartyAsync" />
                                 <FormField Text="Desired role">
                                     <InputText @bind-Value="Draft.DesiredRole"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="crmhr-recruiting-role" />
                                 </FormField>
                             </Grid>
@@ -43,24 +43,24 @@
                                   ColumnsLg="3">
                                 <FormField Text="New candidate name">
                                     <InputText @bind-Value="Draft.CandidateName"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="crmhr-recruiting-candidate-name" />
                                 </FormField>
                                 <FormField Text="Email">
                                     <InputText @bind-Value="Draft.CandidateEmail"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="crmhr-recruiting-candidate-email" />
                                 </FormField>
                                 <FormField Text="Phone">
                                     <InputText @bind-Value="Draft.CandidatePhone"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="crmhr-recruiting-candidate-phone" />
                                 </FormField>
                             </Grid>
 
                             <FormField Text="Candidate summary">
-                                <InputTextArea @bind-Value="Draft.CandidateSummary"
-                                               class="cda-input cda-input--textarea"
+                                <TextArea @bind-Value="Draft.CandidateSummary"
+
                                                data-testid="crmhr-recruiting-candidate-summary" />
                             </FormField>
                         </Stack>
@@ -74,7 +74,7 @@
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                 <FormField Text="Stage">
                                     <InputSelect @bind-Value="Draft.Stage"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  data-testid="crmhr-recruiting-stage">
                                         @foreach (var stage in Enum.GetValues<RecruitmentStage>())
                                         {
@@ -84,7 +84,7 @@
                                 </FormField>
                                 <FormField Text="Decision">
                                     <InputSelect @bind-Value="Draft.Decision"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  data-testid="crmhr-recruiting-decision">
                                         @foreach (var decision in Enum.GetValues<RecruitmentDecision>())
                                         {
@@ -94,12 +94,12 @@
                                 </FormField>
                                 <FormField Text="Available from">
                                     <InputDate @bind-Value="Draft.AvailableFrom"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="crmhr-recruiting-available-from" />
                                 </FormField>
                                 <FormField Text="Source">
                                     <InputText @bind-Value="Draft.Source"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="crmhr-recruiting-source" />
                                 </FormField>
                             </Grid>
@@ -142,14 +142,14 @@
                         <Stack GapScale="LayoutGap.Medium"
                                AlignItems="AlignItems.Stretch">
                             <FormField Text="Stage note">
-                                <InputTextArea @bind-Value="Draft.StageNotes"
-                                               class="cda-input cda-input--textarea"
+                                <TextArea @bind-Value="Draft.StageNotes"
+
                                                data-testid="crmhr-recruiting-stage-notes" />
                             </FormField>
 
                             <FormField Text="Notes">
-                                <InputTextArea @bind-Value="Draft.Notes"
-                                               class="cda-input cda-input--textarea"
+                                <TextArea @bind-Value="Draft.Notes"
+
                                                data-testid="crmhr-recruiting-notes" />
                             </FormField>
                         </Stack>
@@ -166,7 +166,7 @@
                         data-testid="crmhr-recruiting-save-button" />
                 <Button Text="Reset"
                         Icon="restart_alt"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="ResetApplication"
                         data-testid="crmhr-recruiting-reset-button" />
             </Cluster>

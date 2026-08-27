@@ -61,7 +61,7 @@
                                      Count="Server-paged">
                         <Actions>
                             <Button Text="New application"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="CreateNewApplicationAsync"
                                     data-testid="crmhr-recruiting-new-button" />
@@ -162,7 +162,6 @@
                         <Tabs SelectedIndex="@SelectedRecruitingTabIndex"
                               SelectedIndexChanged="HandleRecruitingTabChangedAsync"
                               RenderMode="TabRenderMode.Server"
-                              Variant="TabsVariant.WorkspaceSecondary"
                               BorderMode="TabsBorderMode.Soft"
                               OverflowMode="TabsOverflowMode.Wrap"
                               AriaLabel="Recruitment record sections"
@@ -233,7 +232,7 @@
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                                             <FormField Text="Workforce kind">
-                                                <InputSelect @bind-Value="conversionEditor.WorkforceKind" class="cda-input" data-testid="crmhr-recruiting-convert-kind">
+                                                <InputSelect @bind-Value="conversionEditor.WorkforceKind" class="ui-input" data-testid="crmhr-recruiting-convert-kind">
                                                     @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
                                                     {
                                                         <option value="@workforceKind">@workforceKind</option>
@@ -241,16 +240,16 @@
                                                 </InputSelect>
                                             </FormField>
                                             <FormField Text="Job title">
-                                                <InputText @bind-Value="conversionEditor.JobTitle" class="cda-input" data-testid="crmhr-recruiting-convert-job-title" />
+                                                <InputText @bind-Value="conversionEditor.JobTitle" class="ui-input" data-testid="crmhr-recruiting-convert-job-title" />
                                             </FormField>
                                             <FormField Text="Discipline">
-                                                <InputText @bind-Value="conversionEditor.Discipline" class="cda-input" data-testid="crmhr-recruiting-convert-discipline" />
+                                                <InputText @bind-Value="conversionEditor.Discipline" class="ui-input" data-testid="crmhr-recruiting-convert-discipline" />
                                             </FormField>
                                         </Grid>
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                                             <FormField Text="Seniority">
-                                                <InputText @bind-Value="conversionEditor.Seniority" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
+                                                <InputText @bind-Value="conversionEditor.Seniority" class="ui-input" data-testid="crmhr-recruiting-convert-seniority" />
                                             </FormField>
                                             <PartyPicker Label="Home unit"
                                                          TestIdPrefix="crmhr-recruiting-convert-home-unit"
@@ -268,15 +267,15 @@
                                         </Grid>
 
                                         <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
-                                            <FormField Text="Start date"><InputDate @bind-Value="conversionEditor.StartDate" class="cda-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
-                                            <FormField Text="Location"><InputText @bind-Value="conversionEditor.Location" class="cda-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
-                                            <FormField Text="Time zone"><InputText @bind-Value="conversionEditor.TimeZone" class="cda-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
-                                            <FormField Text="Capacity h/week"><InputNumber @bind-Value="conversionEditor.CapacityHoursPerWeek" class="cda-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
+                                            <FormField Text="Start date"><InputDate @bind-Value="conversionEditor.StartDate" class="ui-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
+                                            <FormField Text="Location"><InputText @bind-Value="conversionEditor.Location" class="ui-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
+                                            <FormField Text="Time zone"><InputText @bind-Value="conversionEditor.TimeZone" class="ui-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
+                                            <FormField Text="Capacity h/week"><InputNumber @bind-Value="conversionEditor.CapacityHoursPerWeek" class="ui-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
                                         </Grid>
 
                                         <div class="mt-4">
                                             <FormField Text="Notes">
-                                                <InputTextArea @bind-Value="conversionEditor.Notes" class="cda-input cda-input--textarea min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
+                                                <TextArea @bind-Value="conversionEditor.Notes" data-testid="crmhr-recruiting-convert-notes" />
                                             </FormField>
                                         </div>
 
@@ -287,7 +286,7 @@
                                                     data-testid="crmhr-recruiting-convert-save-button" />
                                             @if (SelectedPartyId.HasValue)
                                             {
-                                                <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="OpenWorkforceAsync" data-testid="crmhr-recruiting-convert-open-workforce" />
+                                                <Button Text="Open workforce" Tone="ButtonTone.Default" Click="OpenWorkforceAsync" data-testid="crmhr-recruiting-convert-open-workforce" />
                                             }
                                         </Cluster>
                                     </SurfaceCard>
@@ -307,11 +306,11 @@
                                 @if (SelectedPartyId.HasValue)
                                 {
                                     <Button Text="Open workforce"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Click="OpenWorkforceAsync" />
                                 }
                                 <Button Text="Close"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Click="CloseRecruitmentDialogAsync"
                                         data-testid="crmhr-recruiting-record-close" />
                             </Cluster>

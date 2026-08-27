@@ -43,57 +43,57 @@
                                     data-testid="@($"provider-pricing-row-{index}")">
                                     <td class="min-w-[14rem] px-3 py-2 align-top">
                                         <InputText @bind-Value="price.Model"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="@($"provider-pricing-model-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.InputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-input-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.CachedInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-cached-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.CacheWritePerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-cache-write-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-output-{index}")" />
                                     </td>
                                     <td class="min-w-[12rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.LongContextThresholdTokens"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-long-threshold-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.LongContextInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-long-input-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.LongContextCachedInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-long-cached-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.LongContextCacheWritePerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-long-cache-write-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <InputNumber @bind-Value="price.LongContextOutputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"provider-pricing-long-output-{index}")" />
                                     </td>
                                     <td class="px-3 py-2 align-top">
                                         <Button Text="Remove"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => RemovePriceRow(price))" />
                                     </td>
@@ -107,18 +107,18 @@
 
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Load from provider"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Size="ButtonSize.Small"
                             Disabled="@(!OnRefreshPrices.HasDelegate)"
                             Click="RefreshPricesAsync"
                             data-testid="provider-pricing-refresh-button" />
                     <Button Text="Add model price"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="AddPriceRow"
                             data-testid="provider-pricing-add-button" />
                     <Button Text="Reset defaults"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ResetDefaults"
                             data-testid="provider-pricing-reset-button" />

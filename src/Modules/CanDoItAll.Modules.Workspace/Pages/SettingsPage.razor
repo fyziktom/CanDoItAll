@@ -38,16 +38,16 @@
                                  Description="These values define how the rest of the app boots and which provider profile new prompt sessions prefer.">
                         <div>
                             <label class="cda-field-label">Workspace name</label>
-                            <InputText @bind-Value="settingsModel.WorkspaceName" class="cda-input" />
+                            <InputText @bind-Value="settingsModel.WorkspaceName" class="ui-input" />
                         </div>
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <label class="cda-field-label">Default output format</label>
-                                <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="cda-input" />
+                                <InputText @bind-Value="settingsModel.DefaultPromptOutputFormat" class="ui-input" />
                             </div>
                             <div>
                                 <label class="cda-field-label">Default provider</label>
-                                <InputSelect @bind-Value="settingsModel.DefaultProviderProfileId" class="cda-input">
+                                <InputSelect @bind-Value="settingsModel.DefaultProviderProfileId" class="ui-input">
                                     <option value="">None</option>
                                     @foreach (var provider in providers)
                                     {
@@ -59,11 +59,11 @@
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                             <div>
                                 <label class="cda-field-label">Currency code</label>
-                                <InputText @bind-Value="settingsModel.CurrencyCode" class="cda-input" maxlength="3" />
+                                <InputText @bind-Value="settingsModel.CurrencyCode" class="ui-input" maxlength="3" />
                             </div>
                             <div>
                                 <label class="cda-field-label">Currency culture</label>
-                                <InputText @bind-Value="settingsModel.CurrencyCultureName" class="cda-input" />
+                                <InputText @bind-Value="settingsModel.CurrencyCultureName" class="ui-input" />
                             </div>
                         </Grid>
                     </FormSection>
@@ -73,7 +73,7 @@
                                  Description="Keep any operating notes or setup caveats close to the defaults.">
                         <div>
                             <label class="cda-field-label">Notes</label>
-                            <InputTextArea @bind-Value="settingsModel.Notes" class="cda-input cda-input--textarea min-h-32" />
+                            <TextArea @bind-Value="settingsModel.Notes" Class="min-h-32" />
                         </div>
                     </FormSection>
 
@@ -103,12 +103,12 @@
                 <ListHeader>
                     <ListPanelHeader Title="Secret vault" Description="Encrypted secrets are stored once and referenced from other modules." Count="@($"{FilteredSecrets.Count} secret(s)")">
                         <Actions>
-                            <Button Text="New secret" Icon="add" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetSecretAsync" />
+                            <Button Text="New secret" Icon="add" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetSecretAsync" />
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredSecrets.Count} matching secret(s)")">
-                                <input @bind="secretSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search secrets" />
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetSecretSearch" />
+                                <input @bind="secretSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search secrets" />
+                                <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetSecretSearch" />
                             </FilterBar>
                         </Filters>
                     </ListPanelHeader>
@@ -169,11 +169,11 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Name</label>
-                                        <InputText @bind-Value="secretModel.Name" class="cda-input" />
+                                        <InputText @bind-Value="secretModel.Name" class="ui-input" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Kind</label>
-                                        <InputSelect @bind-Value="secretModel.Kind" class="cda-input">
+                                        <InputSelect @bind-Value="secretModel.Kind" class="ui-input">
                                             @foreach (var kind in Enum.GetValues<SecretKind>())
                                             {
                                                 <option value="@kind">@kind</option>
@@ -184,11 +184,11 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Scope</label>
-                                        <InputText @bind-Value="secretModel.Scope" class="cda-input" />
+                                        <InputText @bind-Value="secretModel.Scope" class="ui-input" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Rotation note</label>
-                                        <InputText @bind-Value="secretModel.RotationNote" class="cda-input" />
+                                        <InputText @bind-Value="secretModel.RotationNote" class="ui-input" />
                                     </div>
                                 </Grid>
                             </FormSection>
@@ -208,13 +208,13 @@
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Metadata JSON</label>
-                                    <InputTextArea @bind-Value="secretModel.MetadataJson" class="cda-input cda-input--textarea" />
+                                    <TextArea @bind-Value="secretModel.MetadataJson" />
                                 </div>
                             </FormSection>
 
                             <StickyActionFooter StatusLabel="Secret vault">
                                 <SecondaryActions>
-                                    <Button Text="Clear" Icon="restart_alt" ButtonStyle="ButtonStyle.Light" Click="ResetSecretAsync" />
+                                    <Button Text="Clear" Icon="restart_alt" Tone="ButtonTone.Default" Click="ResetSecretAsync" />
                                 </SecondaryActions>
                                 <PrimaryActions>
                                     <Button Text="Save secret" Icon="save" Type="submit" />
@@ -222,7 +222,7 @@
                                 <DangerActions>
                                     @if (secretModel.Id.HasValue)
                                     {
-                                        <Button Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteSecretAsync" />
+                                        <Button Text="Delete" Icon="delete" Tone="ButtonTone.Danger" Click="DeleteSecretAsync" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>
@@ -237,12 +237,12 @@
                 <ListHeader>
                     <ListPanelHeader Title="Provider profiles" Description="Provider-specific settings live here, while the rest of the product consumes the neutral provider contract." Count="@($"{FilteredProviders.Count} profile(s)")">
                         <Actions>
-                            <Button Text="New provider" Icon="add" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderAsync" />
+                            <Button Text="New provider" Icon="add" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetProviderAsync" />
                         </Actions>
                         <Filters>
                             <FilterBar ResultText="@($"{FilteredProviders.Count} matching profile(s)")">
-                                <input @bind="providerSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search providers" />
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetProviderSearch" />
+                                <input @bind="providerSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search providers" />
+                                <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetProviderSearch" />
                             </FilterBar>
                         </Filters>
                     </ListPanelHeader>
@@ -286,7 +286,6 @@
                         <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                             <Tabs @bind-SelectedIndex="providerEditorTabIndex"
                                   RenderMode="TabRenderMode.Server"
-                                  Variant="TabsVariant.WorkspaceSecondary"
                                   OverflowMode="TabsOverflowMode.Wrap"
                                   AriaLabel="Provider editor tabs"
                                   data-testid="provider-editor-tabs">
@@ -297,11 +296,11 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <div>
                                                 <label class="cda-field-label">Profile name</label>
-                                                <InputText @bind-Value="providerModel.Name" class="cda-input" data-testid="provider-name-input" />
+                                                <InputText @bind-Value="providerModel.Name" class="ui-input" data-testid="provider-name-input" />
                                             </div>
                                             <div>
                                                 <label class="cda-field-label">Connector plugin</label>
-                                                <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="cda-input" data-testid="provider-plugin-select">
+                                                <InputSelect @bind-Value="providerModel.ConnectorPluginKey" @bind-Value:after="HandleProviderPluginChangedAsync" class="ui-input" data-testid="provider-plugin-select">
                                                     @foreach (var manifest in providerManifests)
                                                     {
                                                         <option value="@manifest.PluginKey">@manifest.DisplayName</option>
@@ -332,7 +331,7 @@
                                                 <ConnectorConfigFieldEditor Field="field"
                                                                             State="providerModel.Configuration"
                                                                             Secrets="secrets"
-                                                                            InputClass="cda-input"
+                                                                            InputClass="ui-input"
                                                                             TestId="@ResolveProviderFieldTestId(field)" />
                                             }
                                         </Grid>
@@ -360,7 +359,7 @@
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                             <div>
                                                 <label class="cda-field-label">API key secret</label>
-                                                <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="cda-input" data-testid="provider-secret-select">
+                                                <InputSelect @bind-Value="providerModel.ApiKeySecretId" class="ui-input" data-testid="provider-secret-select">
                                                     <option value="">None</option>
                                                     @foreach (var secret in secrets)
                                                     {
@@ -383,10 +382,10 @@
 
                             <StickyActionFooter StatusLabel="Provider profiles">
                                 <SecondaryActions>
-                                    <Button Text="Clear" Icon="restart_alt" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
+                                    <Button Text="Clear" Icon="restart_alt" Tone="ButtonTone.Default" Click="ResetProviderAsync" />
                                     @if (providerModel.Id.HasValue)
                                     {
-                                        <Button Text="Health" Icon="fact_check" ButtonStyle="ButtonStyle.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
+                                        <Button Text="Health" Icon="fact_check" Tone="ButtonTone.Info" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </SecondaryActions>
                                 <PrimaryActions>
@@ -395,7 +394,7 @@
                                 <DangerActions>
                                     @if (providerModel.Id.HasValue)
                                     {
-                                        <Button Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
+                                        <Button Text="Delete" Icon="delete" Tone="ButtonTone.Danger" Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
                                     }
                                 </DangerActions>
                             </StickyActionFooter>
@@ -436,22 +435,22 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Subject</label>
-                                        <InputText @bind-Value="apiTokenModel.Subject" class="cda-input" />
+                                        <InputText @bind-Value="apiTokenModel.Subject" class="ui-input" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Display name</label>
-                                        <InputText @bind-Value="apiTokenModel.DisplayName" class="cda-input" />
+                                        <InputText @bind-Value="apiTokenModel.DisplayName" class="ui-input" />
                                     </div>
                                 </Grid>
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Lifetime minutes</label>
-                                        <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="cda-input" />
+                                        <InputNumber @bind-Value="apiTokenModel.LifetimeMinutes" class="ui-input" />
                                         <p class="cda-body-muted mt-1">Maximum: @apiStatus.MaxTokenLifetimeMinutes minutes</p>
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Scopes</label>
-                                        <InputText @bind-Value="apiScopesText" class="cda-input" />
+                                        <InputText @bind-Value="apiScopesText" class="ui-input" />
                                         <p class="cda-body-muted mt-1">Separate scopes with spaces or commas.</p>
                                     </div>
                                 </Grid>
@@ -464,7 +463,7 @@
                             <Alert AlertStyle="AlertStyle.Success">
                                 <p class="font-semibold">Token created for @issuedApiToken.DisplayName.</p>
                                 <p class="mt-1">Expires: @FormatTimestamp(issuedApiToken.ExpiresAtUtc)</p>
-                                <textarea readonly class="cda-input cda-input--textarea mt-3 min-h-32">@issuedApiToken.Token</textarea>
+                                <textarea readonly class="ui-input ui-input--textarea mt-3 min-h-32">@issuedApiToken.Token</textarea>
                             </Alert>
                         }
                     }

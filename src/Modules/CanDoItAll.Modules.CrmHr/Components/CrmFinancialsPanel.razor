@@ -75,13 +75,13 @@
             </div>
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Monthly"
-                        ButtonStyle="@(period == FinancialChartPeriod.Month ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(period == FinancialChartPeriod.Month ? ButtonTone.Info : ButtonTone.Default)"
                         Variant="Variant.Outlined"
                         Size="ButtonSize.Small"
                         Click="@(() => SetPeriod(FinancialChartPeriod.Month))"
                         data-testid="crmhr-financials-month" />
                 <Button Text="Yearly"
-                        ButtonStyle="@(period == FinancialChartPeriod.Year ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(period == FinancialChartPeriod.Year ? ButtonTone.Info : ButtonTone.Default)"
                         Variant="Variant.Outlined"
                         Size="ButtonSize.Small"
                         Click="@(() => SetPeriod(FinancialChartPeriod.Year))"

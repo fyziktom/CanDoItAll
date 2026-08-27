@@ -321,7 +321,7 @@
     justify-content: flex-end;
 }
 
-.scheduler-dialog-footer ::deep .cda-button {
+.scheduler-dialog-footer ::deep .ui-button {
     width: auto;
 }
 

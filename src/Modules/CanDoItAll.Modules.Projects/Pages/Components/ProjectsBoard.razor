@@ -44,7 +44,7 @@
                 <TooltipTarget Text="Create project"
                                Position="TooltipPosition.Bottom"
                                TestId="projects-new-tooltip">
-                    <Button Class="cda-button--quick"
+                    <Button Class="ui-button--quick"
                             Icon="add"
                             aria-label="Create project"
                             data-testid="projects-new-button"
@@ -53,8 +53,8 @@
                 <TooltipTarget Text="Open dashboard"
                                Position="TooltipPosition.Bottom"
                                TestId="projects-dashboard-tooltip">
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Class="cda-button--quick"
+                    <Button Tone="ButtonTone.Default"
+                            Class="ui-button--quick"
                             Icon="dashboard"
                             aria-label="Open dashboard"
                             Click="NavigateHome" />
@@ -62,8 +62,8 @@
                 <TooltipTarget Text="Import or export projects package"
                                Position="TooltipPosition.Bottom"
                                TestId="projects-package-dialog-tooltip">
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Class="cda-button--quick"
+                    <Button Tone="ButtonTone.Default"
+                            Class="ui-button--quick"
                             Icon="inventory_2"
                             aria-label="Import or export projects package"
                             data-testid="projects-package-dialog-button"
@@ -79,7 +79,7 @@
                     <input value="@ProjectSearch"
                            @oninput="HandleProjectSearchInput"
                            maxlength="@ProjectFileFilter.MaximumTextLength"
-                           class="cda-input cda-input--toolbar h-10"
+                           class="ui-input ui-input--toolbar h-10"
                            placeholder="Search by name or current phase"
                            data-testid="projects-search-input" />
                 </PrefixedField>
@@ -91,7 +91,7 @@
                                Class="min-w-0">
                     <InputSelect TValue="ProjectStatus?"
                                  @bind-Value="StatusFilterProxy"
-                                 class="cda-input cda-input--toolbar h-10 appearance-none">
+                                 class="ui-input ui-input--toolbar h-10 appearance-none">
                         <option value="">All statuses</option>
                         @foreach (var status in Enum.GetValues<ProjectStatus>())
                         {
@@ -107,7 +107,7 @@
                                Class="min-w-0">
                     <InputSelect TValue="ProjectPartyPortfolioCategory?"
                                  @bind-Value="RelatedPartyCategoryFilterProxy"
-                                 class="cda-input cda-input--toolbar h-10 appearance-none"
+                                 class="ui-input ui-input--toolbar h-10 appearance-none"
                                  data-testid="project-related-party-category-filter">
                         <option value="">Any relationship</option>
                         @foreach (var category in Enum.GetValues<ProjectPartyPortfolioCategory>())
@@ -123,7 +123,7 @@
                                StackOnMobile="true"
                                Class="min-w-0">
                     <InputSelect @bind-Value="RelatedPartyValueFilterProxy"
-                                 class="cda-input cda-input--toolbar h-10 appearance-none"
+                                 class="ui-input ui-input--toolbar h-10 appearance-none"
                                  data-testid="project-related-party-value-filter">
                         <option value="">Any party</option>
                         @foreach (var value in ProjectProjection.AvailableRelatedPartyValues)
@@ -140,7 +140,7 @@
                                Class="min-w-0">
                     <InputSelect TValue="Guid?"
                                  @bind-Value="HierarchyFilterProjectIdProxy"
-                                 class="cda-input cda-input--toolbar h-10 appearance-none"
+                                 class="ui-input ui-input--toolbar h-10 appearance-none"
                                  data-testid="hierarchy-filter-project">
                         <option value="">Any project</option>
                         @foreach (var project in MainProjectOptions)
@@ -157,7 +157,7 @@
                                Class="min-w-0">
                     <InputSelect TValue="ProjectHierarchyFilterMode"
                                  @bind-Value="HierarchyFilterModeProxy"
-                                 class="cda-input cda-input--toolbar h-10 appearance-none"
+                                 class="ui-input ui-input--toolbar h-10 appearance-none"
                                  data-testid="hierarchy-filter-mode">
                         <option value="@ProjectHierarchyFilterMode.Descendants">Project scope</option>
                         <option value="@ProjectHierarchyFilterMode.Children">Subprojects</option>
@@ -178,8 +178,8 @@
                 <TooltipTarget Text="Reset filters"
                                Position="TooltipPosition.Bottom"
                                TestId="projects-reset-filters-tooltip">
-                <Button ButtonStyle="ButtonStyle.Light"
-                        Class="cda-button--quick"
+                <Button Tone="ButtonTone.Default"
+                        Class="ui-button--quick"
                         Icon="restart_alt"
                         aria-label="Reset filters"
                         Click="ResetFilters" />
@@ -203,7 +203,7 @@
                 {
                     <StatusBadge Tone="info" Text="Working" />
                 }
-                <Button ButtonStyle="ButtonStyle.Light"
+                <Button Tone="ButtonTone.Default"
                         Icon="close"
                         aria-label="Close project package dialog"
                         Click="CloseProjectPackageDialogAsync" />
@@ -216,7 +216,7 @@
                                    Class="min-w-0">
                         <input value="@ProjectPackagePath"
                                @oninput="HandleProjectPackagePathInput"
-                               class="cda-input cda-input--toolbar h-10"
+                               class="ui-input ui-input--toolbar h-10"
                                placeholder="Package path"
                                data-testid="projects-package-path-input" />
                     </PrefixedField>
@@ -228,7 +228,7 @@
                                    Class="min-w-0">
                         <InputSelect TValue="Guid?"
                                      @bind-Value="ProjectPackageTargetProfileIdProxy"
-                                     class="cda-input cda-input--toolbar h-10 appearance-none"
+                                     class="ui-input ui-input--toolbar h-10 appearance-none"
                                      data-testid="projects-package-target-profile-select">
                             <option value="">Select an inactive target profile</option>
                             @foreach (var profile in ProjectPackageTargetProfiles)
@@ -243,7 +243,7 @@
                         <TooltipTarget Text="Export projects package"
                                        Position="TooltipPosition.Bottom"
                                        TestId="projects-export-package-tooltip">
-                            <Button Class="cda-button--quick"
+                            <Button Class="ui-button--quick"
                                     Icon="file_download"
                                     aria-label="Export projects package"
                                     Disabled="@IsProjectPackageBusy"
@@ -254,8 +254,8 @@
                         <TooltipTarget Text="Import projects package"
                                        Position="TooltipPosition.Bottom"
                                        TestId="projects-import-package-tooltip">
-                            <Button ButtonStyle="ButtonStyle.Light"
-                                    Class="cda-button--quick"
+                            <Button Tone="ButtonTone.Default"
+                                    Class="ui-button--quick"
                                     Icon="file_upload"
                                     aria-label="Import projects package"
                                     Disabled="@(IsProjectPackageBusy || !ProjectPackageTargetProfileId.HasValue)"
@@ -313,7 +313,6 @@
         <DetailContent>
             <Tabs SelectedIndex="@selectedPortfolioTabIndex"
                   SelectedIndexChanged="HandlePortfolioTabChanged"
-                  Variant="TabsVariant.WorkspaceSecondary"
                   BorderMode="TabsBorderMode.Soft"
                   PanelOverflowMode="TabsPanelOverflowMode.Hidden"
                   FillHeight="true"

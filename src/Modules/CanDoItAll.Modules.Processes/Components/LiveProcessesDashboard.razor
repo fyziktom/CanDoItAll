@@ -177,7 +177,6 @@
                      data-testid="live-processes-tabs-frame">
                     <Tabs SelectedIndex="@selectedTabIndex"
                           SelectedIndexChanged="HandleTabChangedAsync"
-                          Variant="TabsVariant.WorkspacePrimary"
                           RenderMode="TabRenderMode.Client"
                           OverflowMode="TabsOverflowMode.Auto"
                           PanelOverflowMode="TabsPanelOverflowMode.Auto"
@@ -230,12 +229,12 @@
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Icon="folder"
                         Text="Files"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         data-testid="live-processes-run-files"
                         Click="@(() => OpenRunFilesAsync(runDetailSnapshot.RunId.Value))" />
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseRunDetailDialogAsync" />
             </Cluster>
@@ -267,11 +266,11 @@
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Icon="open_in_new"
                         Text="Process"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="@(() => OpenProcessControlAsync(agentDetailAgent.RunId))" />
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseAgentDetailDialogAsync" />
             </Cluster>
@@ -1051,7 +1050,7 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History</label>
                 <select id="@($"{testId}-window")"
-                        class="cda-input"
+                        class="ui-input"
                         value="@runtimeHistoryWindow"
                         @onchange="ChangeRuntimeHistoryWindowAsync"
                         data-testid="live-processes-history-window">
@@ -1064,7 +1063,7 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-status")">Status</label>
                 <select id="@($"{testId}-status")"
-                        class="cda-input"
+                        class="ui-input"
                         value="@StatusFilterValue"
                         @onchange="ChangeStatusFilterAsync"
                         data-testid="live-processes-status-filter">
@@ -1078,7 +1077,7 @@
             <Stack GapScale="LayoutGap.Tiny">
                 <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
                 <select id="@($"{testId}-run")"
-                        class="cda-input"
+                        class="ui-input"
                         value="@RuntimeRunSelectValue"
                         @onchange="SelectRuntimeRunAsync"
                         data-testid="live-processes-run-filter">
@@ -1087,7 +1086,7 @@
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
                 <Button Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         title="Previous event page"
                         aria-label="Previous event page"
@@ -1096,7 +1095,7 @@
                         data-testid="live-processes-events-prev" />
                 <StatusBadge Tone="neutral" Text="@($"Page {runtimeEventPage + 1}")" />
                 <Button Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         title="Next event page"
                         aria-label="Next event page"
@@ -1169,7 +1168,7 @@
                             {
                                 <Button Icon="replay"
                                         Text="@action.Label"
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Size="ButtonSize.Small"
                                         Disabled="@IsOperatorActionBusy(action)"
                                         IsBusy="@IsOperatorActionBusy(action)"
@@ -1178,19 +1177,19 @@
                             }
                             <Button Icon="info"
                                     Text="Details"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenRunDetailDialogAsync(run))"
                                     data-testid="live-processes-attention-open-details" />
                             <Button Icon="forum"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Open process control"
                                     aria-label="Open process control"
                                     Click="@(() => OpenProcessControlAsync(run.RunId.Value))" />
                             <Button Icon="visibility_off"
                                     Text="Hide run"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Hide this run group"
                                     aria-label="Hide this run group"
@@ -1333,7 +1332,7 @@
             {
                 <Button Icon="replay"
                         Text="@action.Label"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Size="ButtonSize.Small"
                         title="@action.Label"
                         aria-label="@action.Label"
@@ -1344,21 +1343,21 @@
             }
             <Button Icon="open_in_new"
                     Text="Details"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Open run details"
                     aria-label="Open run details"
                     Click="@(() => OpenRunDetailDialogAsync(run))" />
             <Button Icon="forum"
                     Text="Control"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Open process control"
                     aria-label="Open process control"
                     Click="@(() => OpenProcessControlAsync(run.RunId.Value))" />
             <Button Icon="visibility_off"
                     Text="Hide run"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Hide this run group"
                     aria-label="Hide this run group"
@@ -1412,17 +1411,17 @@
                     <Stack GapScale="LayoutGap.XSmall"
                            Class="live-processes-run-card__actions">
                         <Button Icon="open_in_new"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
-                                Class="cda-button--quick live-processes-run-card__open"
+                                Class="ui-button--quick live-processes-run-card__open"
                                 title="Open run details"
                                 aria-label="Open run details"
                                 Click="@(() => OpenRunDetailDialogAsync(run))"
                                 data-testid="live-processes-run-open-details" />
                         <Button Icon="visibility_off"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
-                                Class="cda-button--quick live-processes-run-card__open"
+                                Class="ui-button--quick live-processes-run-card__open"
                                 title="Hide this run group"
                                 aria-label="Hide this run group"
                                 Click="@(() => HideRunGroupAsync(run))"
@@ -1492,14 +1491,14 @@
         <Cluster Gap="LayoutGap.XSmall" Class="live-processes-agent-card__actions">
             <Button Icon="info"
                     Text="Details"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Open active agent details"
                     aria-label="Open active agent details"
                     Click="@(() => OpenAgentDetailDialogAsync(agent))"
                     data-testid="live-processes-agent-open-details" />
             <Button Icon="open_in_new"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Class="live-processes-agent-card__open"
                     title="Open process control"
@@ -1683,7 +1682,7 @@
                             <Cluster Gap="LayoutGap.Small" Class="live-processes-run-detail-decision__actions">
                                 <Button Icon="replay"
                                         Text="@primaryAction.Label"
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Size="ButtonSize.Small"
                                         Disabled="@IsOperatorActionBusy(primaryAction)"
                                         IsBusy="@IsOperatorActionBusy(primaryAction)"
@@ -1691,7 +1690,7 @@
                                         data-testid="live-processes-dialog-request-rework" />
                                 <Button Icon="science"
                                         Text="Run tests"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="@(() => OpenProcessControlAsync(primaryAction.RunId))" />
                             </Cluster>
@@ -1855,7 +1854,7 @@
                         </div>
                         <Button Icon="replay"
                                 Text="@action.Label"
-                                ButtonStyle="ButtonStyle.Primary"
+                                Tone="ButtonTone.Primary"
                                 Size="ButtonSize.Small"
                                 Disabled="@(!action.IsEnabled || IsOperatorActionBusy(action))"
                                 IsBusy="@IsOperatorActionBusy(action)"
@@ -1959,7 +1958,7 @@
                                 <p class="mt-2 text-sm leading-6 text-slate-700">@wait.Summary</p>
                             </div>
                             <Button Icon="open_in_new"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Open child run"
                                     aria-label="Open child run"

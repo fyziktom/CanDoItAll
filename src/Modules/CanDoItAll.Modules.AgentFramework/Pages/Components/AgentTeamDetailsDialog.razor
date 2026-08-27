@@ -25,7 +25,7 @@
                     </span>
                     <Button Text="Choose icon"
                             Icon="widgets"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Variant="Variant.Outlined"
                             Click="OpenIconPickerAsync"
                             data-testid="agents-team-choose-icon" />
@@ -36,7 +36,7 @@
                 <span>Name</span>
                 <input @bind="editorModel.Name"
                        @bind:event="oninput"
-                       class="cda-input agent-team-details-dialog__input"
+                       class="ui-input agent-team-details-dialog__input"
                        data-testid="agents-team-name" />
             </label>
 
@@ -44,7 +44,7 @@
                 <span>Description</span>
                 <textarea @bind="editorModel.Description"
                           @bind:event="oninput"
-                          class="cda-input agent-team-details-dialog__textarea"
+                          class="ui-input agent-team-details-dialog__textarea"
                           data-testid="agents-team-description"></textarea>
             </label>
 

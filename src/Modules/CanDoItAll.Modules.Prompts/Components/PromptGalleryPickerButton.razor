@@ -3,7 +3,7 @@
 
 <Button Text="@(IconOnly ? string.Empty : Text)"
         Icon="@Icon"
-        ButtonStyle="@ButtonStyle"
+        Tone="@ButtonTone"
         Variant="@Variant"
         Size="@Size"
         Disabled="@Disabled"
@@ -29,7 +29,7 @@
     public bool Disabled { get; set; }
 
     [Parameter]
-    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Light;
+    public ButtonTone ButtonTone { get; set; } = ButtonTone.Default;
 
     [Parameter]
     public Variant Variant { get; set; } = Variant.Outlined;

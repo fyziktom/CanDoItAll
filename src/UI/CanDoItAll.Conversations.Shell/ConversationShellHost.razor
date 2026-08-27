@@ -99,7 +99,7 @@
                         Icon="@option.Icon"
                         Size="ButtonSize.Small"
                         Variant="@(state.KindFilter == option.Value ? Variant.Filled : Variant.Outlined)"
-                        ButtonStyle="@(state.KindFilter == option.Value ? ButtonStyle.Primary : ButtonStyle.Light)"
+                        Tone="@(state.KindFilter == option.Value ? ButtonTone.Primary : ButtonTone.Default)"
                         Click="@(() => ChangeKindFilter(option.Value))"
                         data-testid="@($"conversation-shell-filter-{option.Value.ToString().ToLowerInvariant()}")" />
             }

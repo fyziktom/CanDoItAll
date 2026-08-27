@@ -36,8 +36,8 @@ public sealed class AgentCompactListTests
         var history = cut.Find($"[data-testid='test-agent-list-history-{selectedAgent.Id:N}']");
         Assert.Equal("Start a new chat with Selected agent", newChat.GetAttribute("aria-label"));
         Assert.Equal("Open chat history for Selected agent", history.GetAttribute("aria-label"));
-        Assert.Null(newChat.QuerySelector(".rz-button-text"));
-        Assert.Null(history.QuerySelector(".rz-button-text"));
+        Assert.Null(newChat.QuerySelector(".ui-button__label"));
+        Assert.Null(history.QuerySelector(".ui-button__label"));
         Assert.Equal("add_comment", newChat.QuerySelector(".material-icons")?.TextContent.Trim());
         Assert.Equal("history", history.QuerySelector(".material-icons")?.TextContent.Trim());
 

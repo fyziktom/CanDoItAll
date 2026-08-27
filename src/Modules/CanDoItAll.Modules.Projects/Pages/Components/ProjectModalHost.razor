@@ -29,7 +29,7 @@
                                      Tip="The overview modal is still the faster path when you only need to inspect the project and open dashboard, structure, or calendar." />
                         @if (Editor.Id.HasValue)
                         {
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Text="Back to details"
                                     Click="SwitchToOverview" />
                         }
@@ -90,36 +90,33 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Name">
-                                                <InputText @bind-Value="Editor.Name" class="cda-input" data-testid="project-name-input" />
+                                                <TextBox @bind-Value="Editor.Name" data-testid="project-name-input" />
                                             </FormField>
                                             <FormField Text="Current phase">
-                                                <InputText @bind-Value="Editor.CurrentPhase"
-                                                           class="cda-input"
-                                                           data-testid="project-phase-input" />
+                                                <TextBox @bind-Value="Editor.CurrentPhase"
+                                                         data-testid="project-phase-input" />
                                             </FormField>
                                         </Grid>
 
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Status">
-                                                <InputSelect @bind-Value="Editor.Status" class="cda-input">
-                                                    @foreach (var status in Enum.GetValues<ProjectStatus>())
-                                                    {
-                                                        <option value="@status">@status</option>
-                                                    }
-                                                </InputSelect>
+                                                <DropDown TValue="ProjectStatus"
+                                                          @bind-Value="Editor.Status"
+                                                          Data="@(Enum.GetValues<ProjectStatus>())" />
                                             </FormField>
                                             <FormField Text="Target date">
-                                                <InputDate @bind-Value="Editor.TargetDateUtc" class="cda-input" />
+                                                <InputDate @bind-Value="Editor.TargetDateUtc"
+                                                           class="form-input ui-input ui-input--outlined" />
                                             </FormField>
                                         </Grid>
 
                                         <FormField Text="Description">
-                                            <InputTextArea @bind-Value="Editor.Description" class="cda-input cda-input--textarea min-h-28" />
+                                            <TextArea @bind-Value="Editor.Description" />
                                         </FormField>
 
                                         <FormField Text="Objective">
-                                            <InputTextArea @bind-Value="Editor.Objective" class="cda-input cda-input--textarea min-h-28" />
+                                            <TextArea @bind-Value="Editor.Objective" />
                                         </FormField>
                                     </ChildContent>
                                 </FormSection>
@@ -128,7 +125,7 @@
                             <FormSection Title="Dates and phases"
                                          Description="Keep phase planning explicit so the project calendar and workbench stay aligned.">
                                     <Actions>
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Add phase"
                                                 Click="AddPhase" />
                                     </Actions>
@@ -151,17 +148,16 @@
                                                     <PanelCard>
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="5">
-                                                            <InputText @bind-Value="phase.Name" class="cda-input xl:col-span-2" />
-                                                            <InputSelect @bind-Value="phase.Status" class="cda-input">
-                                                                @foreach (var status in Enum.GetValues<ProjectPhaseStatus>())
-                                                                {
-                                                                    <option value="@status">@status</option>
-                                                                }
-                                                            </InputSelect>
-                                                            <InputDate @bind-Value="phase.StartDateUtc" class="cda-input" />
-                                                            <InputDate @bind-Value="phase.EndDateUtc" class="cda-input" />
-                                                            <InputTextArea @bind-Value="phase.Goal" class="cda-input cda-input--textarea min-h-20 xl:col-span-4" />
-                                                            <Button ButtonStyle="ButtonStyle.Danger"
+                                                            <TextBox @bind-Value="phase.Name" Class="xl:col-span-2" />
+                                                            <DropDown TValue="ProjectPhaseStatus"
+                                                                      @bind-Value="phase.Status"
+                                                                      Data="@(Enum.GetValues<ProjectPhaseStatus>())" />
+                                                            <InputDate @bind-Value="phase.StartDateUtc"
+                                                                       class="form-input ui-input ui-input--outlined" />
+                                                            <InputDate @bind-Value="phase.EndDateUtc"
+                                                                       class="form-input ui-input ui-input--outlined" />
+                                                            <TextArea @bind-Value="phase.Goal" Rows="3" Class="xl:col-span-4" />
+                                                            <Button Tone="ButtonTone.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
                                                                     Click="@(() => RemovePhase.InvokeAsync(phase))" />
@@ -184,8 +180,8 @@
                                                 <PanelCard>
                                                     <div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
                                                     <Grid Gap="LayoutGap.Medium">
-                                                        <InputText @bind-Value="option.OptionName" class="cda-input" />
-                                                        <InputText @bind-Value="option.Notes" class="cda-input" />
+                                                        <TextBox @bind-Value="option.OptionName" />
+                                                        <TextBox @bind-Value="option.Notes" />
                                                     </Grid>
                                                 </PanelCard>
                                             }
@@ -197,7 +193,7 @@
                                 <FormSection Title="Linked object planning"
                                              Description="Capture the first notes, milestones, repositories, or links that should appear when the structure workbench opens.">
                                     <Actions>
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Add planned object"
                                                 Click="AddStarterObject" />
                                     </Actions>
@@ -220,15 +216,12 @@
                                                     <PanelCard>
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="4">
-                                                            <InputSelect @bind-Value="starter.ObjectType" class="cda-input">
-                                                                @foreach (var kind in StarterObjectKinds)
-                                                                {
-                                                                    <option value="@kind">@kind</option>
-                                                                }
-                                                            </InputSelect>
-                                                            <InputText @bind-Value="starter.Title" class="cda-input" />
-                                                            <InputText @bind-Value="starter.Subtitle" class="cda-input" />
-                                                            <Button ButtonStyle="ButtonStyle.Danger"
+                                                            <DropDown TValue="ProjectObjectType"
+                                                                      @bind-Value="starter.ObjectType"
+                                                                      Data="StarterObjectKinds" />
+                                                            <TextBox @bind-Value="starter.Title" />
+                                                            <TextBox @bind-Value="starter.Subtitle" />
+                                                            <Button Tone="ButtonTone.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
                                                                     Click="@(() => RemoveStarterObject.InvokeAsync(starter))" />
@@ -279,29 +272,29 @@
                         </Stack>
 
                         <Cluster>
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Text="Back"
                                     Disabled="@(WizardStep == 0)"
                                     Click="PreviousStep" />
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Text="Next"
                                     Disabled="@(WizardStep == WizardSteps.Count - 1)"
                                     Click="NextStep" />
                             <Button Type="submit"
                                     Text="Save project"
                                     data-testid="project-save-button" />
-                            <Button ButtonStyle="ButtonStyle.Info"
+                            <Button Tone="ButtonTone.Info"
                                     Text="Save and open structure"
                                     Click="SaveAndOpenStructure" />
                             @if (Editor.Id.HasValue)
                             {
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Text="Open dashboard tab"
                                         Click="OpenProjectDashboard" />
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Text="Open processes"
                                         Click="OpenProcesses" />
-                                <Button ButtonStyle="ButtonStyle.Danger"
+                                <Button Tone="ButtonTone.Danger"
                                         Text="Delete"
                                         Click="Delete"
                                         data-testid="project-delete-button" />
@@ -389,21 +382,21 @@
                                 <Button Class="w-full"
                                         Text="Edit name and details"
                                         Click="SwitchToEditor" />
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Class="w-full"
                                         Text="Open dashboard tab"
                                         Click="OpenProjectDashboard" />
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Class="w-full"
                                         Text="Open structure"
                                         Disabled="@(!Editor.Id.HasValue)"
                                         Click="HandleOpenStructureAsync" />
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Class="w-full"
                                         Text="Open processes"
                                         Disabled="@(!Editor.Id.HasValue)"
                                         Click="HandleOpenProcessesAsync" />
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Class="w-full"
                                         Text="Open calendar"
                                         Disabled="@(!Editor.Id.HasValue)"
@@ -500,7 +493,7 @@
                     </Stack>
 
                     <Cluster>
-                        <Button ButtonStyle="ButtonStyle.Light"
+                        <Button Tone="ButtonTone.Default"
                                 Text="Edit project"
                                 Click="SwitchToEditor" />
                         <Button Text="Open dashboard tab"

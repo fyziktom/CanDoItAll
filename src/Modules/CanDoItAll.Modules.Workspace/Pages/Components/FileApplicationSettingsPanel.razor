@@ -20,14 +20,14 @@
                     <div>
                         <label class="cda-field-label">File extension</label>
                         <InputText @bind-Value="editor.Extension"
-                                   class="cda-input"
+                                   class="ui-input"
                                    placeholder=".xlsx"
                                    data-testid="file-application-extension" />
                     </div>
                     <div>
                         <label class="cda-field-label">Application executable</label>
                         <InputText @bind-Value="editor.ExecutablePath"
-                                   class="cda-input"
+                                   class="ui-input"
                                    placeholder="C:\Program Files\...\application.exe"
                                    data-testid="file-application-executable" />
                     </div>
@@ -40,13 +40,13 @@
                             Disabled="isBusy"
                             data-testid="file-application-save" />
                     <Button Text="New override"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="isBusy"
                             Click="ResetEditorAsync" />
                     @if (selectedExtension.HasValue)
                     {
                         <Button Text="Use system default"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Variant="Variant.Outlined"
                                 Disabled="isBusy"
                                 Click="DeleteAsync"

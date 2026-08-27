@@ -10,7 +10,7 @@
         <div class="external-workspace-root-selection-field__entry mt-2">
             <input id="@InputId"
                    type="text"
-                   class="cda-input"
+                   class="ui-input"
                    value="@candidate"
                    disabled="@Disabled"
                    placeholder="C:\repositories\OtherRepo or external-target/v1/..."
@@ -21,7 +21,7 @@
             <Button Text="Add root"
                     Icon="add"
                     Type="button"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Disabled="@Disabled"
                     Click="AddCandidateAsync"
                     data-testid="@($"{DataTestId}-add")" />

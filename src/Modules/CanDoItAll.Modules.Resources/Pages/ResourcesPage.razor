@@ -31,7 +31,7 @@
                 <PageHeaderActionButton Icon="add"
                                         Label="New resource"
                                         TooltipText="Create a new typed resource."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
@@ -39,7 +39,6 @@
 
     <ChildContent>
         <Tabs @bind-SelectedIndex="resourcesTabIndex"
-              Variant="TabsVariant.WorkspacePrimary"
               BorderMode="TabsBorderMode.Soft"
               PanelOverflowMode="TabsPanelOverflowMode.Hidden"
               FillHeight="true"
@@ -57,29 +56,29 @@
                                  Count="@($"{FilteredResources.Count} item(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredResources.Count} matching resource(s)")">
-                            <input @bind="resourceSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search resources" />
-                            <InputSelect @bind-Value="projectFilter" class="cda-input">
+                            <input @bind="resourceSearch" @bind:event="oninput" class="ui-input min-w-[14rem] flex-1" placeholder="Search resources" />
+                            <InputSelect @bind-Value="projectFilter" class="ui-input">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name))
                                 {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="connectorFilter" class="cda-input">
+                            <InputSelect @bind-Value="connectorFilter" class="ui-input">
                                 <option value="">All connectors</option>
                                 @foreach (var manifest in resourceManifests)
                                 {
                                     <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                 }
                             </InputSelect>
-                            <InputSelect @bind-Value="validationFilter" class="cda-input">
+                            <InputSelect @bind-Value="validationFilter" class="ui-input">
                                 <option value="">All validation states</option>
                                 @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                 {
                                     <option value="@status.ToString()">@status</option>
                                 }
                             </InputSelect>
-                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
+                            <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -174,13 +173,13 @@
                             <SecondaryActions>
                                 <Button Text="Browse sources"
                                         Icon="folder_open"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Click="OpenBrowseTab" />
                             </SecondaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue)
                                 {
-                                    <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Tone="ButtonTone.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>
@@ -194,7 +193,7 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Project</label>
-                                    <InputSelect @bind-Value="editor.ProjectId" class="cda-input" data-testid="resource-project-select" @bind-Value:after="RefreshResponsiblePartyOptionsAsync">
+                                    <InputSelect @bind-Value="editor.ProjectId" class="ui-input" data-testid="resource-project-select" @bind-Value:after="RefreshResponsiblePartyOptionsAsync">
                                         <option value="">Select a project</option>
                                         @foreach (var project in projects)
                                         {
@@ -204,7 +203,7 @@
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Connector plugin</label>
-                                    <InputSelect @bind-Value="editor.ConnectorPluginKey" class="cda-input" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
+                                    <InputSelect @bind-Value="editor.ConnectorPluginKey" class="ui-input" data-testid="resource-plugin-select" @bind-Value:after="HandleConnectorPluginChangedAsync">
                                         @foreach (var manifest in EditableResourceManifests)
                                         {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
@@ -216,11 +215,11 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Name</label>
-                                    <InputText @bind-Value="editor.Name" class="cda-input" data-testid="resource-name-input" />
+                                    <InputText @bind-Value="editor.Name" class="ui-input" data-testid="resource-name-input" />
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Linked secret</label>
-                                    <InputSelect @bind-Value="editor.LinkedSecretId" class="cda-input">
+                                    <InputSelect @bind-Value="editor.LinkedSecretId" class="ui-input">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
                                         {
@@ -233,7 +232,7 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Owner</label>
-                                    <InputSelect @bind-Value="editor.OwnerPartyId" class="cda-input" data-testid="resource-owner-select">
+                                    <InputSelect @bind-Value="editor.OwnerPartyId" class="ui-input" data-testid="resource-owner-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
                                         {
@@ -243,7 +242,7 @@
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Maintainer</label>
-                                    <InputSelect @bind-Value="editor.MaintainerPartyId" class="cda-input" data-testid="resource-maintainer-select">
+                                    <InputSelect @bind-Value="editor.MaintainerPartyId" class="ui-input" data-testid="resource-maintainer-select">
                                         <option value="">None</option>
                                         @foreach (var option in responsiblePartyOptions)
                                         {
@@ -261,7 +260,7 @@
                                     <ConnectorConfigFieldEditor Field="field"
                                                                 State="editor.Configuration"
                                                                 Secrets="secrets"
-                                                                InputClass="cda-input"
+                                                                InputClass="ui-input"
                                                                 TestId="@ResolveResourceFieldTestId(field, SelectedResourceFields)" />
                                 }
                             </Stack>
@@ -275,13 +274,13 @@
                         <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
                             <div>
                                 <label class="cda-field-label">Description</label>
-                                <InputTextArea @bind-Value="editor.Description" class="cda-input cda-input--textarea min-h-24" />
+                                <TextArea @bind-Value="editor.Description" Rows="4" />
                             </div>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <div>
                                     <label class="cda-field-label">Validation</label>
-                                    <InputSelect @bind-Value="editor.ValidationStatus" class="cda-input">
+                                    <InputSelect @bind-Value="editor.ValidationStatus" class="ui-input">
                                         @foreach (var status in Enum.GetValues<ResourceValidationStatus>())
                                         {
                                             <option value="@status">@status</option>
@@ -290,7 +289,7 @@
                                 </div>
                                 <div>
                                     <label class="cda-field-label">Sensitivity</label>
-                                    <InputSelect @bind-Value="editor.Sensitivity" class="cda-input">
+                                    <InputSelect @bind-Value="editor.Sensitivity" class="ui-input">
                                         @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>())
                                         {
                                             <option value="@sensitivity">@sensitivity</option>
@@ -307,7 +306,7 @@
 
                         <StickyActionFooter StatusLabel="Resource save state">
                             <SecondaryActions>
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
+                                <Button Text="Reset" Tone="ButtonTone.Default" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
                                 <Button Text="Save resource" Type="submit" data-testid="resource-save-button" />
@@ -315,7 +314,7 @@
                             <DangerActions>
                                 @if (editor.Id.HasValue)
                                 {
-                                    <Button Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Tone="ButtonTone.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>

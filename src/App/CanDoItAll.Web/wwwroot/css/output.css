@@ -3305,12 +3305,12 @@
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
-    border-color: var(--cad-tone-info-soft-border);
-    background: var(--cad-tone-info-soft-bg);
-    color: var(--cad-tone-info-soft-fg);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
+    color: var(--tone-info-soft-fg);
   }
   .cda-tunable-boundary__button:hover {
-    background: var(--cad-tone-info-soft-hover);
+    background: var(--tone-info-soft-hover);
   }
   .cda-tunable-boundary__icon {
     font-size: var(--text-base);

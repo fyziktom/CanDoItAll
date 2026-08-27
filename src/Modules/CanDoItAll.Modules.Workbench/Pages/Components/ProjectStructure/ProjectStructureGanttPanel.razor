@@ -55,21 +55,21 @@
                     <Button Text="Export Mermaid"
                             Icon="download"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(projection is not { IsValid: true, Tasks.Count: > 0 })"
                             data-testid="project-structure-gantt-export-mermaid"
                             Click="OpenMermaidPreviewAsync" />
                     <Button Text="Add task"
                             Icon="add_task"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Disabled="@(!CanMutate)"
                             data-testid="project-structure-gantt-add-task"
                             Click="OpenGeneralTaskDialogAsync" />
                     <Button Text="Agent chats"
                             Icon="smart_toy"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             data-testid="project-structure-gantt-agent-chats"
                             Click="OpenAgentCatalog" />
                     <ErrorBoundary @ref="dragSourceErrorBoundary">
@@ -189,7 +189,7 @@
                     data-testid="project-structure-gantt-download-mermaid" />
             <Button Text="Close"
                     Size="ButtonSize.Small"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Click="CloseMermaidPreviewAsync" />
         </HeaderActions>
         <ChildContent>

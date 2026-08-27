@@ -15,14 +15,14 @@
                                    Close="CloseSummary">
         <Actions>
             <Button Text="Export XLSX"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Click="ExportSummaryWorkbook" />
             <Button Text="Export Gantt"
-                    ButtonStyle="ButtonStyle.Primary"
+                    Tone="ButtonTone.Primary"
                     Click="ExportSummaryGantt" />
             <Button Text="Close"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseSummary" />
         </Actions>
         <Body>
@@ -85,25 +85,25 @@
             {
                 var deletesMultipleNodes = PendingDeletePrompt.IsBulk || PendingDeletePrompt.DescendantCount > 0;
                 <Button Text="@(deletesMultipleNodes ? "Delete nodes only" : "Delete node only")"
-                        ButtonStyle="ButtonStyle.Base"
+                        Tone="ButtonTone.Default"
                         Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.RetainManagedFiles))" />
                 <Button Text="@(deletesMultipleNodes
                     ? "Delete nodes and files"
                     : PendingDeletePrompt.ManagedAttachmentCount > 1
                         ? "Delete node and files"
                         : "Delete node and file")"
-                        ButtonStyle="ButtonStyle.Danger"
+                        Tone="ButtonTone.Danger"
                         Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles))" />
             }
             else
             {
                 <Button Text="@(PendingDeletePrompt.IsBulk ? "Delete selected" : "Delete")"
-                        ButtonStyle="ButtonStyle.Danger"
+                        Tone="ButtonTone.Danger"
                         Click="@(() => ConfirmDelete.InvokeAsync(ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles))" />
             }
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CancelDelete" />
         </Actions>
     </ProjectStructureOverlayDialog>
@@ -119,11 +119,11 @@
                                    Close="CancelTranscriptAction">
         <Actions>
             <Button Text="Send request"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Click="ExecuteTranscriptAction" />
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CancelTranscriptAction" />
         </Actions>
         <Body>
@@ -174,12 +174,12 @@
             @if (CanEditMermaidNode(MermaidPreviewNode))
             {
                 <Button Text="Edit"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Click="@(() => EditMermaidNode.InvokeAsync(MermaidPreviewNode))" />
             }
             <Button Text="Close"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseMermaidViewer" />
         </Actions>
         <Body>

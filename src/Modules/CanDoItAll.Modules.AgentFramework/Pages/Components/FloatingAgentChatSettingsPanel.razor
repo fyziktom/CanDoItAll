@@ -29,7 +29,7 @@
             <label class="cda-field">
                 <span class="cda-field-label">Maximum prepared agents</span>
                 <InputNumber @bind-Value="maximumPreparedAgents"
-                             class="cda-input"
+                             class="ui-input"
                              min="0"
                              max="@FloatingAgentChatSettingsValidator.MaximumPreparedAgentLimit"
                              data-testid="floating-agent-chat-maximum-prepared" />
@@ -45,7 +45,7 @@
             <label class="cda-field">
                 <span class="cda-field-label">Prepared metadata idle retention (minutes)</span>
                 <InputNumber @bind-Value="preparedResourceIdleRetentionMinutes"
-                             class="cda-input"
+                             class="ui-input"
                              min="1"
                              max="@FloatingAgentChatSettingsValidator.MaximumRetentionMinutes"
                              data-testid="floating-agent-chat-prepared-retention" />

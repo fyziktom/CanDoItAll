@@ -36,7 +36,7 @@
                 <PageHeaderActionButton Icon="asset"
                                         Label="Open directory"
                                         TooltipText="Open the CRM-HR party directory."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="OpenDirectory"
                                         data-testid="crmhr-home-open-directory" />
             </Actions>
@@ -103,19 +103,19 @@
                         <Button Text="Directory"
                                 Click="OpenDirectory" />
                         <Button Text="CRM"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="OpenCrm" />
                         <Button Text="Workforce"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="OpenWorkforce" />
                         <Button Text="Recruiting"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="OpenRecruiting" />
                         <Button Text="Agents"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="OpenAgents" />
                         <Button Text="Assignments"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="OpenAssignments" />
                     </Grid>
 
@@ -143,7 +143,7 @@
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="warning" Text="@($"{SensitiveCount} sensitive record(s)")" />
                             <Button Text="Open directory"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="OpenDirectory"
                                     data-testid="crmhr-home-sensitive-open-directory" />
@@ -188,7 +188,7 @@
                         </p>
                     </div>
                     <Button Text="Open CRM"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="OpenCrm" />
                 </Split>
 

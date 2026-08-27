@@ -35,14 +35,14 @@
                 <Button Text="Search"
                         Icon="search"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Disabled="@Disabled"
                         Click="ApplySearchAsync"
                         data-testid="processes-template-library-search-submit" />
                 <Button Text="Clear"
                         Icon="close"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@Disabled"
                         Click="ClearSearchAsync"
                         data-testid="processes-template-library-search-clear" />
@@ -54,7 +54,7 @@
                 <Button Text="@($"{category.Label} ({category.Count})")"
                         Icon="@ResolveCategoryIcon(category.Kind)"
                         Size="ButtonSize.Small"
-                        ButtonStyle="@(category.IsSelected ? ButtonStyle.Primary : ButtonStyle.Light)"
+                        Tone="@(category.IsSelected ? ButtonTone.Primary : ButtonTone.Default)"
                         Disabled="@Disabled"
                         Click="@(() => SelectCategoryAsync(category.Kind))"
                         title="@category.Description"
@@ -75,7 +75,7 @@
                     <Button Text="@item.Title"
                             Icon="@ResolveItemIcon(item.Kind)"
                             Size="ButtonSize.Small"
-                            ButtonStyle="@(item.IsSelected ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Tone="@(item.IsSelected ? ButtonTone.Primary : ButtonTone.Default)"
                             Disabled="@Disabled"
                             Click="@(() => SelectItemAsync(item.Key))"
                             data-testid="@BuildItemTestId(item.Key)" />
@@ -120,7 +120,7 @@
                         <Button Text="@ResolvePreviewTabText(tab)"
                                 Icon="@ResolvePreviewTabIcon(tab)"
                                 Size="ButtonSize.Small"
-                                ButtonStyle="@(TemplateCatalog.Query.PreviewTab == tab ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                Tone="@(TemplateCatalog.Query.PreviewTab == tab ? ButtonTone.Primary : ButtonTone.Default)"
                                 Disabled="@Disabled"
                                 Click="@(() => SelectPreviewTabAsync(tab))"
                                 data-testid="@BuildPreviewTabTestId(tab)" />
@@ -141,7 +141,7 @@
                             <Button Text="Import process"
                                     Icon="account_tree"
                                     Size="ButtonSize.Small"
-                                    ButtonStyle="ButtonStyle.Success"
+                                    Tone="ButtonTone.Success"
                                     Disabled="@(Disabled || !CanImport(ProcessTemplateImportCommandKind.ImportProcess))"
                                     Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportProcess, TemplateCatalog.SelectedItem.Key))"
                                     data-testid="processes-template-library-import-process" />
@@ -151,7 +151,7 @@
                             <Button Text="Import role"
                                     Icon="badge"
                                     Size="ButtonSize.Small"
-                                    ButtonStyle="ButtonStyle.Success"
+                                    Tone="ButtonTone.Success"
                                     Disabled="@(Disabled || !CanImport(ProcessTemplateImportCommandKind.ImportRole))"
                                     Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportRole, TemplateCatalog.SelectedItem.Key))"
                                     data-testid="processes-template-library-import-role" />
@@ -161,7 +161,7 @@
                             <Button Text="Import artifact"
                                     Icon="inventory_2"
                                     Size="ButtonSize.Small"
-                                    ButtonStyle="ButtonStyle.Success"
+                                    Tone="ButtonTone.Success"
                                     Disabled="@(Disabled || !CanImport(ProcessTemplateImportCommandKind.ImportArtifact))"
                                     Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportArtifact, TemplateCatalog.SelectedItem.Key))"
                                     data-testid="processes-template-library-import-artifact" />
@@ -193,7 +193,7 @@
                                         <Button Text="Import role"
                                                 Icon="badge"
                                                 Size="ButtonSize.Small"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Disabled="@Disabled"
                                                 Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportRole, related.Key))"
                                                 data-testid="@BuildRelatedImportTestId(ProcessTemplateImportCommandKind.ImportRole, related.Key)" />
@@ -203,7 +203,7 @@
                                         <Button Text="Import artifact"
                                                 Icon="inventory_2"
                                                 Size="ButtonSize.Small"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Disabled="@(Disabled || selectedTargetStepKey is null)"
                                                 Click="@(() => ExecuteImportAsync(ProcessTemplateImportCommandKind.ImportArtifact, related.Key))"
                                                 data-testid="@BuildRelatedImportTestId(ProcessTemplateImportCommandKind.ImportArtifact, related.Key)" />

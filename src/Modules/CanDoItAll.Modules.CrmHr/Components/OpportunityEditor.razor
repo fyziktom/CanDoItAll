@@ -13,7 +13,7 @@
                            Class="lg:col-span-2">
                         <label class="cda-field-label">Opportunity title</label>
                         <InputText @bind-Value="Model.Title"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-opportunity-title" />
                     </Stack>
                     <PanelCard Soft="true">
@@ -32,7 +32,7 @@
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Stage</label>
                         <InputSelect @bind-Value="Model.Stage"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-opportunity-stage">
                             @foreach (var stage in Enum.GetValues<OpportunityStage>())
                             {
@@ -43,7 +43,7 @@
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Source</label>
                         <InputSelect @bind-Value="Model.OpportunitySource"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-opportunity-source">
                             @foreach (var source in Enum.GetValues<OpportunitySource>())
                             {
@@ -54,14 +54,14 @@
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Currency</label>
                         <InputText @bind-Value="Model.CurrencyCode"
-                                   class="cda-input"
+                                   class="ui-input"
                                    maxlength="3"
                                    data-testid="crmhr-opportunity-currency" />
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Amount</label>
                         <InputNumber @bind-Value="Model.Amount"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-opportunity-amount" />
                     </Stack>
                 </Grid>
@@ -72,13 +72,13 @@
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Probability %</label>
                         <InputNumber @bind-Value="Model.ProbabilityPercent"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="crmhr-opportunity-probability" />
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Expected close</label>
                         <InputDate @bind-Value="Model.ExpectedCloseOn"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-opportunity-close-date" />
                     </Stack>
                 </Grid>
@@ -99,14 +99,14 @@
                             @if (Model.LinkedProjectId.HasValue)
                             {
                                 <Button Text="Clear"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="ClearLinkedProject"
                                         data-testid="crmhr-opportunity-project-clear" />
                             }
                             <Button Text="Select project"
                                     Icon="folder_open"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="OpenProjectPicker"
                                     data-testid="crmhr-opportunity-project-select" />
@@ -137,7 +137,7 @@
                             </Stack>
                             <Button Text="Choose owner"
                                     Icon="person_search"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenPartyPicker(OpportunityPartySelectionKind.Owner))"
                                     data-testid="crmhr-opportunity-owner" />
@@ -159,14 +159,14 @@
                                 @if (Model.DeliveryUnitPartyId.HasValue)
                                 {
                                     <Button Text="Clear"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => Model.DeliveryUnitPartyId = null)"
                                             data-testid="crmhr-opportunity-delivery-unit-clear" />
                                 }
                                 <Button Text="Choose unit"
                                         Icon="account_tree"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="@(() => OpenPartyPicker(OpportunityPartySelectionKind.DeliveryUnit))"
                                         data-testid="crmhr-opportunity-delivery-unit" />
@@ -185,7 +185,7 @@
                         <SmallText Text="Partner, sponsor, billing, technical, delivery, and stakeholder links" />
                         <Button Text="Add linked party"
                                 Icon="person_add"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="AddPartyLink"
                                 data-testid="crmhr-opportunity-party-add" />
@@ -214,7 +214,7 @@
                                                    Value="@ResolveLinkedPartyLabel(partyLink)" />
                                         <Button Text="Choose party"
                                                 Icon="person_search"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenLinkedPartyPicker(rowIndex))"
                                                 data-testid="@($"crmhr-opportunity-party-{rowIndex}")" />
@@ -222,7 +222,7 @@
                                     <Stack GapScale="LayoutGap.XSmall">
                                         <label class="cda-field-label">Role</label>
                                         <InputSelect @bind-Value="partyLink.Role"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="@($"crmhr-opportunity-party-role-{rowIndex}")">
                                             @foreach (var role in PartyRoleOptions)
                                             {
@@ -234,7 +234,7 @@
                                            AlignItems="AlignItems.End"
                                            JustifyContent="JustifyContent.End">
                                         <Button Text="Remove"
-                                                ButtonStyle="ButtonStyle.Danger"
+                                                Tone="ButtonTone.Danger"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => RemovePartyLink(rowIndex))"
                                                 data-testid="@($"crmhr-opportunity-party-remove-{rowIndex}")" />
@@ -257,14 +257,14 @@
                       ColumnsLg="2">
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Summary</label>
-                        <InputTextArea @bind-Value="Model.Summary"
-                                       class="cda-input cda-input--textarea min-h-[8rem]"
+                        <TextArea @bind-Value="Model.Summary"
+                                       Rows="6"
                                        data-testid="crmhr-opportunity-summary" />
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Notes</label>
-                        <InputTextArea @bind-Value="Model.Notes"
-                                       class="cda-input cda-input--textarea min-h-[8rem]"
+                        <TextArea @bind-Value="Model.Notes"
+                                       Rows="6"
                                        data-testid="crmhr-opportunity-notes" />
                     </Stack>
                 </Grid>
@@ -274,27 +274,27 @@
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Stage note</label>
-                        <InputTextArea @bind-Value="Model.StageNotes"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                        <TextArea @bind-Value="Model.StageNotes"
+
                                        data-testid="crmhr-opportunity-stage-notes" />
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Competitor</label>
                         <InputText @bind-Value="Model.CompetitorName"
-                                   class="cda-input"
+                                   class="ui-input"
                                    data-testid="crmhr-opportunity-competitor" />
                         @if (Model.Stage == OpportunityStage.Lost)
                         {
                             <label class="cda-field-label">Lost reason</label>
-                            <InputTextArea @bind-Value="Model.LostReason"
-                                           class="cda-input cda-input--textarea min-h-[6rem]"
+                            <TextArea @bind-Value="Model.LostReason"
+                                           Rows="4"
                                            data-testid="crmhr-opportunity-lost-reason" />
                         }
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
                         <label class="cda-field-label">Partner contribution</label>
-                        <InputTextArea @bind-Value="Model.PartnerContributionSummary"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                        <TextArea @bind-Value="Model.PartnerContributionSummary"
+
                                        data-testid="crmhr-opportunity-partner-contribution" />
                     </Stack>
                 </Grid>

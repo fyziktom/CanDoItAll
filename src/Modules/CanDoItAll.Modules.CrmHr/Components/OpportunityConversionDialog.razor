@@ -69,14 +69,14 @@
                                                 @if (draft.ExistingProjectId.HasValue)
                                                 {
                                                     <Button Text="Clear"
-                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Tone="ButtonTone.Default"
                                                             Size="ButtonSize.Small"
                                                             Click="ClearExistingProject"
                                                             data-testid="crmhr-opportunity-conversion-project-clear" />
                                                 }
                                                 <Button Text="Select project"
                                                         Icon="folder_open"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Click="OpenProjectPicker"
                                                         data-testid="crmhr-opportunity-conversion-project" />
@@ -89,25 +89,25 @@
                                     <Stack GapScale="LayoutGap.XSmall">
                                         <label class="cda-field-label">Project name</label>
                                         <InputText @bind-Value="draft.ProjectName"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="crmhr-opportunity-conversion-name" />
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
                                         <label class="cda-field-label">Description</label>
-                                        <InputTextArea @bind-Value="draft.ProjectDescription"
-                                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                        <TextArea @bind-Value="draft.ProjectDescription"
+
                                                        data-testid="crmhr-opportunity-conversion-description" />
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
                                         <label class="cda-field-label">Objective</label>
-                                        <InputTextArea @bind-Value="draft.ProjectObjective"
-                                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                        <TextArea @bind-Value="draft.ProjectObjective"
+
                                                        data-testid="crmhr-opportunity-conversion-objective" />
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
                                         <label class="cda-field-label">Current phase</label>
                                         <InputText @bind-Value="draft.CurrentPhase"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="crmhr-opportunity-conversion-phase" />
                                     </Stack>
                                 }
@@ -149,12 +149,12 @@
                 <SmallText Text="The opportunity remains in CRM history after project handoff." />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="IsBusy"
                             Click="HandleCloseAsync"
                             data-testid="crmhr-opportunity-conversion-cancel" />
                     <Button Text="Save conversion"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Disabled="IsBusy"
                             IsBusy="IsBusy"
                             Click="HandleSaveAsync"

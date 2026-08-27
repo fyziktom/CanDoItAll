@@ -27,7 +27,6 @@
                 <Tabs SelectedIndex="@selectedTabIndex"
                       SelectedIndexChanged="HandleTabChangedAsync"
                       RenderMode="TabRenderMode.Server"
-                      Variant="TabsVariant.WorkspaceSecondary"
                       BorderMode="TabsBorderMode.Soft"
                       OverflowMode="TabsOverflowMode.Wrap"
                       AriaLabel="CRM-HR agent record sections"
@@ -197,12 +196,12 @@
                             data-testid="crmhr-agent-open-technical-record" />
                     <Button Text="Open directory record"
                             Icon="asset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(Item is null || Workspace is null)"
                             Click="OpenDirectoryRecord"
                             data-testid="crmhr-agent-open-directory-record" />
                     <Button Text="Close"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="Close"
                             data-testid="crmhr-agent-record-close" />
                 </Cluster>

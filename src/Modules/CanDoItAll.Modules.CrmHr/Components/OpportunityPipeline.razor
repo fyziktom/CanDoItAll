@@ -28,13 +28,13 @@
                   ColumnsLg="3">
                 <input value="@searchText"
                        @oninput="HandleSearchInputAsync"
-                       class="cda-input"
+                       class="ui-input"
                        placeholder="Search title or summary"
                        aria-label="Search opportunities"
                        data-testid="crmhr-opportunity-search" />
                 <InputSelect @bind-Value="stageFilter"
                              @bind-Value:after="HandleFilterChangedAsync"
-                             class="cda-input"
+                             class="ui-input"
                              aria-label="Opportunity stage"
                              data-testid="crmhr-opportunity-stage-filter">
                     <option value="">All stages</option>
@@ -45,7 +45,7 @@
                 </InputSelect>
                 <InputSelect @bind-Value="sourceFilter"
                              @bind-Value:after="HandleFilterChangedAsync"
-                             class="cda-input"
+                             class="ui-input"
                              aria-label="Opportunity source"
                              data-testid="crmhr-opportunity-source-filter">
                     <option value="">All sources</option>
@@ -60,25 +60,25 @@
                      Wrap="FlexWrap.Wrap">
                 <Button Text="@(ownerPartyId.HasValue ? "Owner selected" : "Any owner")"
                         Icon="person_search"
-                        ButtonStyle="@(ownerPartyId.HasValue ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(ownerPartyId.HasValue ? ButtonTone.Info : ButtonTone.Default)"
                         Size="ButtonSize.Small"
                         Click="@(() => OpenPartyFilter(OpportunityPartyFilterKind.Owner))"
                         data-testid="crmhr-opportunity-owner-filter" />
                 <Button Text="@(deliveryUnitPartyId.HasValue ? "Delivery selected" : "Any delivery unit")"
                         Icon="account_tree"
-                        ButtonStyle="@(deliveryUnitPartyId.HasValue ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(deliveryUnitPartyId.HasValue ? ButtonTone.Info : ButtonTone.Default)"
                         Size="ButtonSize.Small"
                         Click="@(() => OpenPartyFilter(OpportunityPartyFilterKind.DeliveryUnit))"
                         data-testid="crmhr-opportunity-delivery-filter" />
                 <Button Text="@(partnerPartyId.HasValue ? "Partner selected" : "Any partner")"
                         Icon="handshake"
-                        ButtonStyle="@(partnerPartyId.HasValue ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(partnerPartyId.HasValue ? ButtonTone.Info : ButtonTone.Default)"
                         Size="ButtonSize.Small"
                         Click="@(() => OpenPartyFilter(OpportunityPartyFilterKind.Partner))"
                         data-testid="crmhr-opportunity-partner-filter" />
                 <Button Text="Reset"
                         Icon="restart_alt"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(!HasActiveFilters)"
                         Click="ResetFiltersAsync"
@@ -103,7 +103,7 @@
                         Description="Retry after checking the active CRM data source.">
                 <Actions>
                     <Button Text="Retry"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="@(() => LoadPageAsync(page.PageIndex))"
                             data-testid="crmhr-opportunity-retry" />
                 </Actions>
@@ -143,14 +143,14 @@
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Previous"
                     Icon="chevron_left"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Disabled="@(!CanMovePrevious)"
                     Click="@(() => LoadPageAsync(page.PageIndex - 1))"
                     data-testid="crmhr-opportunity-previous" />
             <Button Text="Next"
                     Icon="chevron_right"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Disabled="@(!CanMoveNext)"
                     Click="@(() => LoadPageAsync(page.PageIndex + 1))"

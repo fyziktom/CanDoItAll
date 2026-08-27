@@ -51,7 +51,7 @@
                            AlignItems="AlignItems.Stretch"
                            Class="h-full min-h-0 overflow-hidden">
                         <Cluster Gap="LayoutGap.XSmall" Class="shrink-0">
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Icon="arrow_back"
                                     Text="Back to run files"
                                     data-testid="process-run-files-back"
@@ -117,7 +117,7 @@
                 <Cluster Gap="LayoutGap.Small">
                     <Button Icon="refresh"
                             Text="Refresh sources"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@isLoading"
                             data-testid="process-run-files-refresh"
@@ -126,7 +126,7 @@
                                Value="Host cache and session retention are disabled for live run roots." />
                 </Cluster>
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseAsync" />
             </Split>

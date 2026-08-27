@@ -34,8 +34,8 @@
             <TooltipTarget Text="Refresh filtered project sources"
                            Position="TooltipPosition.Bottom"
                            TestId="project-files-portfolio-refresh-tooltip">
-                <Button ButtonStyle="ButtonStyle.Light"
-                        Class="cda-button--quick"
+                <Button Tone="ButtonTone.Default"
+                        Class="ui-button--quick"
                         Icon="refresh"
                         aria-label="Refresh filtered project sources"
                         Disabled="@isLoading"
@@ -76,7 +76,7 @@
                Class="h-full min-h-0">
             <Cluster Gap="LayoutGap.Small"
                      Class="shrink-0">
-                <Button ButtonStyle="ButtonStyle.Light"
+                <Button Tone="ButtonTone.Default"
                         Icon="arrow_back"
                         Text="Back to filtered files"
                         data-testid="project-files-portfolio-back"

@@ -4,13 +4,13 @@
 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
     <Button Text="Choose avatar"
             Icon="face"
-            ButtonStyle="ButtonStyle.Light"
+            Tone="ButtonTone.Default"
             Size="ButtonSize.Small"
             Click="OpenAsync"
             data-testid="@($"{TestIdPrefix}-open")" />
     <Button Text="Use default"
             Icon="restart_alt"
-            ButtonStyle="ButtonStyle.Light"
+            Tone="ButtonTone.Default"
             Size="ButtonSize.Small"
             Disabled="@(Disabled || string.IsNullOrWhiteSpace(Value))"
             Click="ClearAsync"
@@ -52,7 +52,7 @@
                         <div>
                             <label class="cda-field-label" for="@UploadInputId">Custom image</label>
                             <InputFile id="@UploadInputId"
-                                       class="cda-input"
+                                       class="ui-input"
                                        accept="image/png,image/jpeg,image/webp,image/gif"
                                        OnChange="LoadCustomAvatarAsync"
                                        data-testid="@($"{TestIdPrefix}-upload")" />
@@ -95,7 +95,7 @@
                             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                                 <Button Text="Create avatar with AI"
                                         Icon="auto_awesome"
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Size="ButtonSize.Small"
                                         IsBusy="@isGenerationBusy"
                                         Disabled="@(isGenerationBusy || string.IsNullOrWhiteSpace(generationPrompt))"
@@ -147,7 +147,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseAsync"
                         data-testid="@($"{TestIdPrefix}-close")" />

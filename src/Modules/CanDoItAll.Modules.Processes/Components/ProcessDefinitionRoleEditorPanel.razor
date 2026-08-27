@@ -14,7 +14,7 @@
             {
                 <Button Text="@command.Text"
                         Icon="@command.Icon"
-                        ButtonStyle="@ResolveCommandButtonStyle(command.Kind)"
+                        Tone="@ResolveCommandButtonStyle(command.Kind)"
                         Size="ButtonSize.Small"
                         Disabled="@(!command.IsEnabled || Disabled)"
                         IsBusy="@Disabled"
@@ -63,7 +63,7 @@
                     <Button Text="Details"
                             Icon="open_in_new"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Class="process-role-card__details"
                             Disabled="@Disabled"
                             Click="@(() => OpenRoleDetailsAsync(role.RoleKey))"
@@ -122,21 +122,21 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identity and staffing" />
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-display-name-input">Display name</label>
                         <input id="processes-role-display-name-input"
-                               class="cda-input"
+                               class="ui-input"
                                value="@roleDisplayName"
                                @oninput="args => roleDisplayName = ReadChangeValue(args)"
                                data-testid="processes-role-display-name" />
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-purpose-input">Purpose</label>
                         <textarea id="processes-role-purpose-input"
-                                  class="cda-input cda-input--textarea process-role-dialog-textarea"
+                                  class="ui-input ui-input--textarea process-role-dialog-textarea"
                                   value="@rolePurpose"
                                   @oninput="args => rolePurpose = ReadChangeValue(args)"
                                   data-testid="processes-role-purpose"></textarea>
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-staffing-input">Staffing intent</label>
                         <textarea id="processes-role-staffing-input"
-                                  class="cda-input cda-input--textarea process-role-dialog-textarea"
+                                  class="ui-input ui-input--textarea process-role-dialog-textarea"
                                   value="@roleStaffingIntent"
                                   @oninput="args => roleStaffingIntent = ReadChangeValue(args)"
                                   data-testid="processes-role-staffing-intent"></textarea>
@@ -145,7 +145,7 @@
                             <Stack GapScale="LayoutGap.Tiny">
                                 <label class="text-xs font-semibold text-slate-500" for="processes-role-executor-kind-input">Executor kind</label>
                                 <select id="processes-role-executor-kind-input"
-                                        class="cda-input"
+                                        class="ui-input"
                                         value="@roleExecutorKind"
                                         @onchange="UpdateRoleExecutorKind"
                                         data-testid="processes-role-executor-kind">
@@ -158,7 +158,7 @@
                             <Stack GapScale="LayoutGap.Tiny">
                                 <label class="text-xs font-semibold text-slate-500" for="processes-role-project-assignment-input">Project role</label>
                                 <select id="processes-role-project-assignment-input"
-                                        class="cda-input"
+                                        class="ui-input"
                                         value="@roleProjectAssignment"
                                         @onchange="args => roleProjectAssignment = ParseProjectAssignment(args)"
                                         data-testid="processes-role-project-assignment">
@@ -214,7 +214,7 @@
                                type="number"
                                min="0"
                                max="100"
-                               class="cda-input"
+                               class="ui-input"
                                value="@roleDefaultAllocationPercent"
                                @oninput="args => roleDefaultAllocationPercent = ParseInt(args)"
                                data-testid="processes-role-allocation" />
@@ -248,7 +248,7 @@
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Template and bindings" />
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-template-action-input">Apply template</label>
                         <select id="processes-role-template-action-input"
-                                class="cda-input"
+                                class="ui-input"
                                 value="@selectedTemplateActionKey"
                                 @onchange="args => selectedTemplateActionKey = ReadChangeValue(args)"
                                 data-testid="processes-role-template-action">
@@ -260,21 +260,21 @@
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-template-source-input">Template source</label>
                         <input id="processes-role-template-source-input"
-                               class="cda-input"
+                               class="ui-input"
                                value="@roleTemplateSourceKey"
                                @oninput="args => roleTemplateSourceKey = ReadChangeValue(args)"
                                data-testid="processes-role-template-source" />
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-template-snapshot-input">Template snapshot</label>
                         <input id="processes-role-template-snapshot-input"
-                               class="cda-input"
+                               class="ui-input"
                                value="@roleTemplateSnapshotName"
                                @oninput="args => roleTemplateSnapshotName = ReadChangeValue(args)"
                                data-testid="processes-role-template-snapshot" />
 
                         <label class="text-xs font-semibold text-slate-500" for="processes-role-snapshot-summary-input">Snapshot summary</label>
                         <textarea id="processes-role-snapshot-summary-input"
-                                  class="cda-input cda-input--textarea process-role-dialog-textarea"
+                                  class="ui-input ui-input--textarea process-role-dialog-textarea"
                                   value="@roleSnapshotSummary"
                                   @oninput="args => roleSnapshotSummary = ReadChangeValue(args)"
                                   data-testid="processes-role-snapshot-summary"></textarea>
@@ -306,7 +306,7 @@
                 {
                     <Button Text="@command.Text"
                             Icon="@command.Icon"
-                            ButtonStyle="@ResolveCommandButtonStyle(command.Kind)"
+                            Tone="@ResolveCommandButtonStyle(command.Kind)"
                             Size="ButtonSize.Small"
                             Disabled="@IsCommandDisabled(command)"
                             IsBusy="@Disabled"
@@ -315,7 +315,7 @@
                             data-testid="@BuildRoleCommandTestId(command.Kind)" />
                 }
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseRoleDetailsAsync" />
             </Cluster>
@@ -640,14 +640,14 @@
             _ => "neutral"
         };
 
-    private static ButtonStyle ResolveCommandButtonStyle(ProcessDefinitionRoleCommandKind kind)
+    private static ButtonTone ResolveCommandButtonStyle(ProcessDefinitionRoleCommandKind kind)
         => kind switch
         {
-            ProcessDefinitionRoleCommandKind.AddRole => ButtonStyle.Primary,
-            ProcessDefinitionRoleCommandKind.SaveRole => ButtonStyle.Success,
-            ProcessDefinitionRoleCommandKind.ApplyTemplate => ButtonStyle.Info,
-            ProcessDefinitionRoleCommandKind.DeleteRole => ButtonStyle.Danger,
-            _ => ButtonStyle.Light
+            ProcessDefinitionRoleCommandKind.AddRole => ButtonTone.Primary,
+            ProcessDefinitionRoleCommandKind.SaveRole => ButtonTone.Success,
+            ProcessDefinitionRoleCommandKind.ApplyTemplate => ButtonTone.Info,
+            ProcessDefinitionRoleCommandKind.DeleteRole => ButtonTone.Danger,
+            _ => ButtonTone.Default
         };
 
     private static string BuildRoleCommandTestId(ProcessDefinitionRoleCommandKind kind)

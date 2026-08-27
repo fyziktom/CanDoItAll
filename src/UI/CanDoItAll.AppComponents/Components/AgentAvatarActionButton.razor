@@ -8,8 +8,8 @@
                TooltipClass="cda-page-header-action-tooltip"
                TestId="@TooltipTestId">
     <Button Size="ButtonSize.Small"
-            ButtonStyle="@ButtonStyle"
-            Class="cda-button--quick"
+            Tone="@ButtonTone"
+            Class="ui-button--quick"
             Style="padding-block:0"
             Click="@Click"
             Disabled="@Disabled"
@@ -38,7 +38,7 @@
     public string Label { get; set; } = string.Empty;
 
     [Parameter]
-    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Info;
+    public ButtonTone ButtonTone { get; set; } = ButtonTone.Info;
 
     [Parameter]
     public bool Disabled { get; set; }

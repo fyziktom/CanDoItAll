@@ -24,7 +24,7 @@ else
                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                     <div>
                         <label class="cda-field-label">Connection name</label>
-                        <input class="cda-input"
+                        <input class="ui-input"
                                value="@editor.DisplayName"
                                data-testid="@PluginsPageHelpers.BuildConnectionNameTestId(Plugin.PluginId, connectionDescriptor)"
                                @onchange="@((ChangeEventArgs args) => HandleDisplayNameChanged(editor, args))" />
@@ -73,12 +73,12 @@ else
                                         break;
                                     case ConfigurationFieldType.Json:
                                     case ConfigurationFieldType.MultilineText:
-                                        <textarea class="cda-input cda-input--textarea min-h-24"
+                                        <textarea class="ui-input ui-input--textarea min-h-24"
                                                   data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
                                                   @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))">@fieldValue</textarea>
                                         break;
                                     case ConfigurationFieldType.Select:
-                                        <select class="cda-input"
+                                        <select class="ui-input"
                                                 value="@fieldValue"
                                                 data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
                                                 @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))">
@@ -90,7 +90,7 @@ else
                                         </select>
                                         break;
                                     default:
-                                        <input class="cda-input"
+                                        <input class="ui-input"
                                                type="@PluginsPageHelpers.ResolveInputType(field)"
                                                value="@fieldValue"
                                                placeholder="@(PluginsPageHelpers.ResolveFieldPlaceholder(Settings, field, Navigation.ToAbsoluteUri("/api/plugins/oauth/callback").ToString()))"
@@ -116,7 +116,7 @@ else
                 <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                     <Button Text="Save settings"
                             Icon="save"
-                            ButtonStyle="ButtonStyle.Primary"
+                            Tone="ButtonTone.Primary"
                             Size="ButtonSize.Small"
                             data-testid="@PluginsPageHelpers.BuildConnectionSaveTestId(Plugin.PluginId, connectionDescriptor)"
                             IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.ConnectionSaveBusyKey(connectionDescriptor))"

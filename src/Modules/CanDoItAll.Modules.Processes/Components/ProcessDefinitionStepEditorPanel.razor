@@ -37,7 +37,7 @@
                     <Button Text="@step.Title"
                             Icon="@ResolveStepIcon(step.StepKind)"
                             Size="ButtonSize.Small"
-                            ButtonStyle="@(step.StepKey == selectedStepKey ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Tone="@(step.StepKey == selectedStepKey ? ButtonTone.Primary : ButtonTone.Default)"
                             Disabled="@Disabled"
                             Click="@(() => SelectStep(step.StepKey))"
                             data-testid="@BuildStepItemTestId(step.StepKey)" />
@@ -236,7 +236,7 @@
                 <Button Text="Add route"
                         Icon="alt_route"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@Disabled"
                         IsBusy="@Disabled"
                         Click="@(() => ExecuteAsync(ProcessDefinitionStepCommandKind.AddBranchOutcome))"
@@ -285,7 +285,7 @@
                 <Button Text="Add artifact"
                         Icon="inventory_2"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Disabled="@Disabled"
                         IsBusy="@Disabled"
                         Click="@(() => ExecuteAsync(ProcessDefinitionStepCommandKind.AddArtifactExpectation))"
@@ -311,7 +311,7 @@
                 <Button Text="Map subprocess"
                         Icon="account_tree"
                         Size="ButtonSize.Small"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@(Disabled || stepKind != ProcessDefinitionStepKind.Subprocess)"
                         IsBusy="@Disabled"
                         Click="@(() => ExecuteAsync(ProcessDefinitionStepCommandKind.MapSubprocess))"
@@ -342,7 +342,7 @@
             {
                 <Button Text="@command.Text"
                         Icon="@command.Icon"
-                        ButtonStyle="@ResolveCommandButtonStyle(command.Kind)"
+                        Tone="@ResolveCommandButtonStyle(command.Kind)"
                         Size="ButtonSize.Small"
                         Disabled="@(!command.IsEnabled || Disabled)"
                         IsBusy="@Disabled"
@@ -712,14 +712,14 @@
             _ => "neutral"
         };
 
-    private static ButtonStyle ResolveCommandButtonStyle(ProcessDefinitionStepCommandKind kind)
+    private static ButtonTone ResolveCommandButtonStyle(ProcessDefinitionStepCommandKind kind)
         => kind switch
         {
-            ProcessDefinitionStepCommandKind.SaveStep => ButtonStyle.Success,
-            ProcessDefinitionStepCommandKind.AddBranchOutcome => ButtonStyle.Light,
-            ProcessDefinitionStepCommandKind.AddArtifactExpectation => ButtonStyle.Info,
-            ProcessDefinitionStepCommandKind.MapSubprocess => ButtonStyle.Light,
-            _ => ButtonStyle.Light
+            ProcessDefinitionStepCommandKind.SaveStep => ButtonTone.Success,
+            ProcessDefinitionStepCommandKind.AddBranchOutcome => ButtonTone.Default,
+            ProcessDefinitionStepCommandKind.AddArtifactExpectation => ButtonTone.Info,
+            ProcessDefinitionStepCommandKind.MapSubprocess => ButtonTone.Default,
+            _ => ButtonTone.Default
         };
 
     private static string BuildCommandTestId(ProcessDefinitionStepCommandKind kind)

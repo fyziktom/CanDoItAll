@@ -79,7 +79,6 @@
         {
             <Tabs @bind-SelectedIndex="activeTabIndex"
                   RenderMode="TabRenderMode.Server"
-                  Variant="TabsVariant.WorkspacePrimary"
                   OverflowMode="TabsOverflowMode.Wrap"
                   AriaLabel="Scheduler planner tabs"
                   data-testid="scheduler-tabs">
@@ -115,11 +114,11 @@
                                 <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
                             </div>
                             <InputText @bind-Value="scheduleSearchText"
-                                       class="cda-input scheduler-list-toolbar__search"
+                                       class="ui-input scheduler-list-toolbar__search"
                                        placeholder="Search schedules"
                                        data-testid="scheduler-schedules-search" />
                             <select value="@FormatScheduleTargetKindFilter()"
-                                    class="cda-input scheduler-list-toolbar__select"
+                                    class="ui-input scheduler-list-toolbar__select"
                                     @onchange="HandleScheduleTargetKindFilterChanged"
                                     data-testid="scheduler-schedules-target-kind">
                                 <option value="">All targets</option>
@@ -129,7 +128,7 @@
                                 }
                             </select>
                             <InputSelect @bind-Value="scheduleStateFilter"
-                                         class="cda-input scheduler-list-toolbar__select"
+                                         class="ui-input scheduler-list-toolbar__select"
                                          data-testid="scheduler-schedules-state">
                                 @foreach (var state in Enum.GetValues<ScheduleStateFilter>())
                                 {
@@ -140,7 +139,7 @@
                             <div class="scheduler-list-toolbar__actions">
                                 <Button Text="Clear"
                                         Icon="restart_alt"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Disabled="@(!HasScheduleFilters)"
                                         Click="ClearScheduleFilters"
@@ -225,13 +224,13 @@
                                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="scheduler-plan-card__actions">
                                                 <Button Text="@(plan.IsEnabled ? "Pause" : "Resume")"
                                                         Icon="@(plan.IsEnabled ? "pause" : "play_arrow")"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Disabled="@isBusy"
                                                         Click="@(() => TogglePlanAsync(plan))" />
                                                 <Button Text="Delete"
                                                         Icon="delete"
-                                                        ButtonStyle="ButtonStyle.Danger"
+                                                        Tone="ButtonTone.Danger"
                                                         Size="ButtonSize.Small"
                                                         Disabled="@isBusy"
                                                         Click="@(() => OpenDeleteScheduleDialog(plan))"
@@ -255,7 +254,7 @@
                                 <label class="block">
                                     <span class="cda-eyebrow">Name</span>
                                     <InputText @bind-Value="editor.Name"
-                                               class="cda-input mt-1"
+                                               class="ui-input mt-1"
                                                data-testid="scheduler-name" />
                                 </label>
 
@@ -268,7 +267,7 @@
                                         </div>
                                         <Button Text="Choose"
                                                 Icon="switch_account"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="OpenTargetPicker"
                                                 data-testid="scheduler-target-open" />
@@ -278,7 +277,7 @@
                                 <label class="block">
                                     <span class="cda-eyebrow">Quartz CRON</span>
                                     <InputText @bind-Value="editor.CronExpression"
-                                               class="cda-input mt-1 font-mono"
+                                               class="ui-input mt-1 font-mono"
                                                data-testid="scheduler-cron" />
                                 </label>
 
@@ -287,18 +286,18 @@
                                          data-testid="scheduler-cron-presets">
                                     <Button Text="Every 2 hours"
                                             Icon="schedule"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => ApplyCronPreset(SchedulerCronPreset.EveryTwoHours))"
                                             data-testid="scheduler-cron-preset-every-two-hours" />
                                     <Button Text="Weekdays 9 AM"
                                             Icon="work_history"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => ApplyCronPreset(SchedulerCronPreset.WeekdaysAtNine))" />
                                     <Button Text="Daily 9 AM"
                                             Icon="today"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => ApplyCronPreset(SchedulerCronPreset.DailyAtNine))" />
                                 </Cluster>
@@ -306,14 +305,14 @@
                                 <label class="block">
                                     <span class="cda-eyebrow">Time zone</span>
                                     <InputText @bind-Value="editor.TimeZoneId"
-                                               class="cda-input mt-1"
+                                               class="ui-input mt-1"
                                                data-testid="scheduler-timezone" />
                                 </label>
 
                                 <label class="block">
                                     <span class="cda-eyebrow">Misfire policy</span>
                                     <InputSelect @bind-Value="editor.MisfirePolicy"
-                                                 class="cda-input mt-1"
+                                                 class="ui-input mt-1"
                                                  data-testid="scheduler-misfire">
                                         @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>())
                                         {
@@ -356,7 +355,7 @@
                                                     @if (ShouldRenderSelect(parameter, options))
                                                     {
                                                         <select value="@GetWorkflowInputValue(parameter.Key)"
-                                                                class="cda-input mt-1"
+                                                                class="ui-input mt-1"
                                                                 aria-required="@parameter.IsRequired"
                                                                 @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
                                                                 data-testid="@BuildWorkflowInputTestId(parameter)">
@@ -373,7 +372,7 @@
                                                                min="@parameter.MinimumValue"
                                                                max="@parameter.MaximumValue"
                                                                value="@GetWorkflowInputValue(parameter.Key)"
-                                                               class="cda-input mt-1"
+                                                               class="ui-input mt-1"
                                                                placeholder="@parameter.Placeholder"
                                                                aria-required="@parameter.IsRequired"
                                                                @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
@@ -385,7 +384,7 @@
                                                         <input type="text"
                                                                list="@BuildWorkflowInputDatalistId(parameter)"
                                                                value="@GetWorkflowInputValue(parameter.Key)"
-                                                               class="cda-input mt-1"
+                                                               class="ui-input mt-1"
                                                                placeholder="@parameter.Placeholder"
                                                                aria-required="@parameter.IsRequired"
                                                                @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
@@ -419,10 +418,9 @@
 
                                 <label class="block">
                                     <span class="cda-eyebrow">Advanced input JSON</span>
-                                    <InputTextArea Value="@editor.InputJson"
+                                    <TextArea Value="@editor.InputJson"
                                                    ValueChanged="HandleRawInputJsonChangedAsync"
-                                                   ValueExpression="@(() => editor.InputJson)"
-                                                   class="cda-input cda-input--textarea mt-1 font-mono"
+                                                   Class="mt-1 font-mono"
                                                    data-testid="scheduler-input-json" />
                                 </label>
 
@@ -440,7 +438,7 @@
                                             data-testid="scheduler-save" />
                                     <Button Text="Reset"
                                             Icon="restart_alt"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Disabled="@isBusy"
                                             Click="ResetEditorAsync" />
                                 </Cluster>
@@ -469,11 +467,11 @@
                                 <h2 class="text-base font-semibold text-slate-900">Dispatched scheduled runs</h2>
                             </div>
                             <InputText @bind-Value="historyQuery.Search"
-                                       class="cda-input scheduler-list-toolbar__search"
+                                       class="ui-input scheduler-list-toolbar__search"
                                        placeholder="Search history"
                                        data-testid="scheduler-history-search" />
                             <InputSelect @bind-Value="historyQuery.Status"
-                                         class="cda-input scheduler-list-toolbar__select"
+                                         class="ui-input scheduler-list-toolbar__select"
                                          data-testid="scheduler-history-status">
                                 <option value="">All statuses</option>
                                 @foreach (var status in Enum.GetValues<SchedulerPlanRunDispatchStatus>())
@@ -482,7 +480,7 @@
                                 }
                             </InputSelect>
                             <InputSelect @bind-Value="historyQuery.TargetKind"
-                                         class="cda-input scheduler-list-toolbar__select"
+                                         class="ui-input scheduler-list-toolbar__select"
                                          data-testid="scheduler-history-kind">
                                 <option value="">All targets</option>
                                 @foreach (var kind in Enum.GetValues<SchedulerPlanTargetKind>())
@@ -494,7 +492,7 @@
                             <div class="scheduler-list-toolbar__actions">
                                 <Button Text="Search"
                                         Icon="search"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Disabled="@isBusy"
                                         Click="RefreshAsync"
@@ -690,21 +688,21 @@
                                 <label class="block">
                                     <span class="cda-eyebrow">Name</span>
                                     <InputText @bind-Value="editScheduleEditor.Name"
-                                               class="cda-input mt-1"
+                                               class="ui-input mt-1"
                                                data-testid="scheduler-edit-name" />
                                 </label>
 
                                 <label class="block">
                                     <span class="cda-eyebrow">Description</span>
-                                    <InputTextArea @bind-Value="editScheduleEditor.Description"
-                                                   class="cda-input cda-input--textarea mt-1"
+                                    <TextArea @bind-Value="editScheduleEditor.Description"
+                                                   Class="mt-1"
                                                    data-testid="scheduler-edit-description" />
                                 </label>
 
                                 <label class="block">
                                     <span class="cda-eyebrow">Quartz CRON</span>
                                     <InputText @bind-Value="editScheduleEditor.CronExpression"
-                                               class="cda-input mt-1 font-mono"
+                                               class="ui-input mt-1 font-mono"
                                                data-testid="scheduler-edit-cron" />
                                 </label>
 
@@ -713,17 +711,17 @@
                                          data-testid="scheduler-edit-cron-presets">
                                     <Button Text="Every 2 hours"
                                             Icon="schedule"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => ApplyCronPresetToEditor(editScheduleEditor, SchedulerCronPreset.EveryTwoHours))" />
                                     <Button Text="Weekdays 9 AM"
                                             Icon="work_history"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => ApplyCronPresetToEditor(editScheduleEditor, SchedulerCronPreset.WeekdaysAtNine))" />
                                     <Button Text="Daily 9 AM"
                                             Icon="today"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => ApplyCronPresetToEditor(editScheduleEditor, SchedulerCronPreset.DailyAtNine))" />
                                 </Cluster>
@@ -732,14 +730,14 @@
                                     <label class="block">
                                         <span class="cda-eyebrow">Time zone</span>
                                         <InputText @bind-Value="editScheduleEditor.TimeZoneId"
-                                                   class="cda-input mt-1"
+                                                   class="ui-input mt-1"
                                                    data-testid="scheduler-edit-timezone" />
                                     </label>
 
                                     <label class="block">
                                         <span class="cda-eyebrow">Misfire policy</span>
                                         <InputSelect @bind-Value="editScheduleEditor.MisfirePolicy"
-                                                     class="cda-input mt-1"
+                                                     class="ui-input mt-1"
                                                      data-testid="scheduler-edit-misfire">
                                             @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>())
                                             {
@@ -751,8 +749,8 @@
 
                                 <label class="block">
                                     <span class="cda-eyebrow">Advanced input JSON</span>
-                                    <InputTextArea @bind-Value="editScheduleEditor.InputJson"
-                                                   class="cda-input cda-input--textarea mt-1 font-mono"
+                                    <TextArea @bind-Value="editScheduleEditor.InputJson"
+                                                   Class="mt-1 font-mono"
                                                    data-testid="scheduler-edit-input-json" />
                                 </label>
 
@@ -772,7 +770,7 @@
                                         </div>
                                         <Button Text="Change"
                                                 Icon="switch_account"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Disabled="@isBusy"
                                                 Click="OpenEditTargetPicker"
@@ -812,14 +810,14 @@
                             <div class="scheduler-dialog-footer__start">
                                 <Button Text="Delete"
                                         Icon="delete"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Disabled="@isBusy"
                                         Click="@(() => OpenDeleteScheduleDialog(selectedPlanForEdit))"
                                         data-testid="scheduler-edit-delete" />
                             </div>
                             <div class="scheduler-dialog-footer__actions">
                                 <Button Text="Cancel"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Disabled="@isBusy"
                                         Click="CloseEditScheduleDialogAsync"
                                         data-testid="scheduler-edit-cancel" />
@@ -860,13 +858,13 @@
                             <p class="text-sm leading-6 text-rose-700">Existing run history is not edited by this action.</p>
                             <div class="scheduler-dialog-footer__actions">
                                 <Button Text="Cancel"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Disabled="@isBusy"
                                         Click="CloseDeleteScheduleDialogAsync"
                                         data-testid="scheduler-delete-cancel" />
                                 <Button Text="Remove"
                                         Icon="delete"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Disabled="@isBusy"
                                         IsBusy="@isBusy"
                                         Click="ConfirmDeleteScheduleAsync"

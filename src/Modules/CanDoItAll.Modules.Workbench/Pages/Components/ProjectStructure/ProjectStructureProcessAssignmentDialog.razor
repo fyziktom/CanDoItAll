@@ -17,12 +17,12 @@
         {
             <Button Text="Keep manual matching"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Disabled="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-cancel-hr"
                     Click="CancelHrManagerMatch" />
             <Button Text="Confirm HR match"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     IsBusy="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-confirm-hr"
                     Click="ExecuteHrManagerMatch" />
@@ -38,17 +38,17 @@
             </div>
             <Button Text="Cancel"
                     Variant="Variant.Outlined"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Disabled="@Dialog.IsBusy"
                     Click="Close" />
             <Button Text="Save and close"
                     Variant="Variant.Outlined"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Disabled="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-save-close"
                     Click="Close" />
             <Button Text="Review and start"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     Disabled="@(Dialog.RequiredGapCount > 0 || Dialog.IsBusy)"
                     IsBusy="@Dialog.IsBusy"
                     data-testid="project-structure-process-assignment-review-start"

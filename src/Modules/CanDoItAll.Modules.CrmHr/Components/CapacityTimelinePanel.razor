@@ -111,7 +111,7 @@
             <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                 <FormField Text="Block type">
                     <InputSelect @bind-Value="CapacityBlockDraft.BlockKind"
-                                 class="cda-input"
+                                 class="ui-input"
                                  data-testid="crmhr-capacity-block-kind">
                         @foreach (var blockKind in Enum.GetValues<CapacityBlockKind>())
                         {
@@ -121,12 +121,12 @@
                 </FormField>
                 <FormField Text="Starts on">
                     <InputDate @bind-Value="CapacityBlockDraft.StartDate"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-capacity-block-start-date" />
                 </FormField>
                 <FormField Text="Ends on">
                     <InputDate @bind-Value="CapacityBlockDraft.EndDate"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-capacity-block-end-date" />
                 </FormField>
             </Grid>
@@ -134,12 +134,12 @@
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Blocked %">
                     <InputNumber @bind-Value="CapacityBlockDraft.Percentage"
-                                 class="cda-input"
+                                 class="ui-input"
                                  data-testid="crmhr-capacity-block-percentage" />
                 </FormField>
                 <FormField Text="Notes">
                     <InputText @bind-Value="CapacityBlockDraft.Notes"
-                               class="cda-input"
+                               class="ui-input"
                                data-testid="crmhr-capacity-block-notes" />
                 </FormField>
             </Grid>
@@ -219,7 +219,7 @@
                                     <StatusBadge Tone="@(block.IsActive ? "warning" : block.IsFuture ? "info" : "base")"
                                                  Text="@(block.IsActive ? "Active" : block.IsFuture ? "Future" : "Past")" />
                                     <Button Text="Delete"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Size="ButtonSize.Small"
                                             Click="@(() => DeleteCapacityBlock.InvokeAsync(block.Id))"
                                             data-testid="crmhr-capacity-block-delete-button" />
@@ -266,7 +266,7 @@
                                     <StatusBadge Tone="@(allocation.IsActive ? "success" : allocation.IsFuture ? "info" : "base")"
                                                  Text="@(allocation.IsActive ? "Active" : allocation.IsFuture ? "Future" : "Past")" />
                                     <Button Text="Open project"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => OpenProject.InvokeAsync(allocation.ProjectId))"
                                             data-testid="crmhr-workforce-open-project" />

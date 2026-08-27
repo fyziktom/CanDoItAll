@@ -350,7 +350,7 @@ a {
     }
 }
 
-.cda-button__spinner {
+.ui-button__spinner {
     animation: none;
     background-image: url("/assets/feedback/spinner.gif");
     background-position: center;

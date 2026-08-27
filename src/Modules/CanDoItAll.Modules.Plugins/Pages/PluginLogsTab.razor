@@ -8,13 +8,13 @@
         <Cluster Gap="LayoutGap.Tiny">
             <Button Text="Selected plugin"
                     Icon="filter_alt"
-                    ButtonStyle="@(ShowAllPluginLogs ? ButtonStyle.Light : ButtonStyle.Primary)"
+                    Tone="@(ShowAllPluginLogs ? ButtonTone.Default : ButtonTone.Primary)"
                     Size="ButtonSize.Small"
                     data-testid="plugins-logs-selected-filter"
                     Click="@(() => OnSetLogScope(false))" />
             <Button Text="All plugins"
                     Icon="public"
-                    ButtonStyle="@(ShowAllPluginLogs ? ButtonStyle.Primary : ButtonStyle.Light)"
+                    Tone="@(ShowAllPluginLogs ? ButtonTone.Primary : ButtonTone.Default)"
                     Size="ButtonSize.Small"
                     data-testid="plugins-logs-all-filter"
                     Click="@(() => OnSetLogScope(true))" />

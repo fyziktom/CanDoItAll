@@ -25,7 +25,7 @@ else
                                      Value="binding.Requirement"
                                      ValueChanged="requirement => UpdateRequirement.InvokeAsync(new(binding.Alias, requirement))"
                                      ValueExpression="@(() => binding.Requirement)"
-                                     class="cda-input"
+                                     class="ui-input"
                                      data-testid="@($"agents-catalog-memory-requirement-{binding.Alias.Value}")">
                             @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>())
                             {
@@ -39,21 +39,21 @@ else
                              JustifyContent="JustifyContent.End">
                         <Button Text="Up"
                                 Icon="arrow_upward"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Disabled="@(bindingIndex == 0)"
                                 Click="() => Move.InvokeAsync(new(binding.Alias, -1))"
                                 data-testid="@($"agents-catalog-memory-up-{binding.Alias.Value}")" />
                         <Button Text="Down"
                                 Icon="arrow_downward"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Disabled="@(bindingIndex == Bindings.Count - 1)"
                                 Click="() => Move.InvokeAsync(new(binding.Alias, 1))"
                                 data-testid="@($"agents-catalog-memory-down-{binding.Alias.Value}")" />
                         <Button Text="Remove"
                                 Icon="delete"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="() => Remove.InvokeAsync(binding.Alias)"
                                 data-testid="@($"agents-catalog-memory-remove-{binding.Alias.Value}")" />

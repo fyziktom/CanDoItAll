@@ -85,7 +85,7 @@
 
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 <Button Text="Refresh evidence"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Disabled="@isBusy"
                                         Click="RefreshScenarioAsync"
                                         data-testid="scenario-refresh-button" />
@@ -104,7 +104,6 @@
                     <Tabs data-testid="scenario-harness-tabs"
                           SelectedIndex="@selectedTabIndex"
                           SelectedIndexChanged="HandleSelectedTabIndexChanged"
-                          Variant="@(TabsVariant.WorkspaceSecondary)"
                           BorderMode="@(TabsBorderMode.Soft)"
                           Tone="@(TabsTone.Secondary)"
                           OverflowMode="@(TabsOverflowMode.Scroll)"
@@ -130,7 +129,7 @@
                                                                 Click="ApproveSelectedScenarioAsync"
                                                                 data-testid="@($"approve-scenario-{SelectedDefinition.Id.ToLowerInvariant()}")" />
                                                         <Button Text="Reject"
-                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Tone="ButtonTone.Default"
                                                                 Disabled="@isBusy"
                                                                 Click="RejectSelectedScenarioAsync"
                                                                 data-testid="@($"reject-scenario-{SelectedDefinition.Id.ToLowerInvariant()}")" />

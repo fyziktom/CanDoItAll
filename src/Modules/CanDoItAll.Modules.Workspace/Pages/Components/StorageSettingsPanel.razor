@@ -14,17 +14,17 @@
             <Actions>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="File system"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="@(() => ResetStorageAsync(StorageProviderKind.FileSystem))"
                             data-testid="storage-settings-new-filesystem" />
                     <Button Text="IPFS"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="@(() => ResetStorageAsync(StorageProviderKind.Ipfs))"
                             data-testid="storage-settings-new-ipfs" />
                     <Button Text="FTP"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="@(() => ResetStorageAsync(StorageProviderKind.Ftp))"
                             data-testid="storage-settings-new-ftp" />
@@ -34,11 +34,11 @@
                 <FilterBar ResultText="@($"{FilteredStorages.Count} matching storage target(s)")">
                     <input @bind="storageSearch"
                            @bind:event="oninput"
-                           class="cda-input min-w-[14rem] flex-1"
+                           class="ui-input min-w-[14rem] flex-1"
                            placeholder="Search storage catalog"
                            data-testid="storage-settings-search" />
                     <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ResetStorageSearch" />
                 </FilterBar>
@@ -114,7 +114,7 @@
                                 <div>
                                     <label class="cda-field-label">Name</label>
                                     <InputText @bind-Value="storageModel.Name"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="storage-settings-name" />
                                 </div>
                                 <div>
@@ -122,7 +122,7 @@
                                     <InputSelect Value="storageModel.ProviderKind"
                                                  ValueChanged="@((StorageProviderKind value) => HandleProviderKindChangedAsync(value))"
                                                  ValueExpression="() => storageModel.ProviderKind"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  data-testid="storage-settings-provider">
                                         @foreach (var providerKind in Enum.GetValues<StorageProviderKind>())
                                         {
@@ -136,7 +136,7 @@
                                 <div>
                                     <label class="cda-field-label">Connection mode</label>
                                     <InputSelect @bind-Value="storageModel.ConnectionMode"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  disabled="@(storageModel.ProviderKind == StorageProviderKind.FileSystem)"
                                                  data-testid="storage-settings-connection-mode">
                                         @foreach (var connectionMode in Enum.GetValues<StorageConnectionMode>())
@@ -148,7 +148,7 @@
                                 <div>
                                     <label class="cda-field-label">Credential secret</label>
                                     <InputSelect @bind-Value="storageModel.CredentialSecretId"
-                                                 class="cda-input"
+                                                 class="ui-input"
                                                  data-testid="storage-settings-secret">
                                         <option value="">None</option>
                                         @foreach (var secret in secrets)
@@ -175,7 +175,7 @@
                             <div>
                                 <label class="cda-field-label">Display order</label>
                                 <InputNumber @bind-Value="storageModel.DisplayOrder"
-                                             class="cda-input"
+                                             class="ui-input"
                                              data-testid="storage-settings-display-order" />
                             </div>
                         </FormSection>
@@ -188,7 +188,7 @@
                             <div>
                                 <label class="cda-field-label">@(storageModel.ProviderKind == StorageProviderKind.FileSystem ? "Root path" : "Endpoint or host")</label>
                                 <InputText @bind-Value="storageModel.EndpointOrRoot"
-                                           class="cda-input"
+                                           class="ui-input"
                                            data-testid="storage-settings-endpoint" />
                             </div>
 
@@ -198,13 +198,13 @@
                                     <div>
                                         <label class="cda-field-label">Gateway base URL</label>
                                         <InputText @bind-Value="storageModel.GatewayBaseUrl"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="storage-settings-ipfs-gateway" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Base path</label>
                                         <InputText @bind-Value="storageModel.BasePath"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="storage-settings-base-path" />
                                     </div>
                                 </Grid>
@@ -221,13 +221,13 @@
                                     <div>
                                         <label class="cda-field-label">Port</label>
                                         <InputNumber @bind-Value="storageModel.Port"
-                                                     class="cda-input"
+                                                     class="ui-input"
                                                      data-testid="storage-settings-ftp-port" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Username</label>
                                         <InputText @bind-Value="storageModel.Username"
-                                                   class="cda-input"
+                                                   class="ui-input"
                                                    data-testid="storage-settings-ftp-username" />
                                     </div>
                                 </Grid>
@@ -235,7 +235,7 @@
                                 <div>
                                     <label class="cda-field-label">Base path</label>
                                     <InputText @bind-Value="storageModel.BasePath"
-                                               class="cda-input"
+                                               class="ui-input"
                                                data-testid="storage-settings-base-path" />
                                 </div>
 
@@ -298,10 +298,10 @@
                                     StatusTone="success">
                     <SecondaryActions>
                         <Button Text="Clear"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="@(() => ResetStorageAsync(storageModel.ProviderKind))" />
                         <Button Text="Test connection"
-                                ButtonStyle="ButtonStyle.Info"
+                                Tone="ButtonTone.Info"
                                 Click="TestStorageAsync"
                                 data-testid="storage-settings-test" />
                     </SecondaryActions>
@@ -314,7 +314,7 @@
                         @if (storageModel.Id.HasValue && !storageModel.IsSystemDefault)
                         {
                             <Button Text="Delete"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Click="DeleteStorageAsync"
                                     data-testid="storage-settings-delete" />
                         }

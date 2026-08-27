@@ -19,14 +19,14 @@
                  Wrap="FlexWrap.Wrap">
             <Button Text="Create new"
                     Icon="note_add"
-                    ButtonStyle="@(sourceMode == ProjectAssetSourceMode.CreateNew ? ButtonStyle.Info : ButtonStyle.Base)"
+                    Tone="@(sourceMode == ProjectAssetSourceMode.CreateNew ? ButtonTone.Info : ButtonTone.Default)"
                     Variant="Variant.Outlined"
                     aria-pressed="@(sourceMode == ProjectAssetSourceMode.CreateNew)"
                     data-testid="project-structure-text-asset-source-create"
                     Click="SelectCreateNew" />
             <Button Text="Upload existing"
                     Icon="upload_file"
-                    ButtonStyle="@(sourceMode == ProjectAssetSourceMode.UploadExisting ? ButtonStyle.Info : ButtonStyle.Base)"
+                    Tone="@(sourceMode == ProjectAssetSourceMode.UploadExisting ? ButtonTone.Info : ButtonTone.Default)"
                     Variant="Variant.Outlined"
                     aria-pressed="@(sourceMode == ProjectAssetSourceMode.UploadExisting)"
                     data-testid="project-structure-text-asset-source-upload"
@@ -114,13 +114,13 @@
              JustifyContent="JustifyContent.End">
         <Button Text="Cancel"
                 Variant="Variant.Outlined"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 Disabled="@isSubmitting"
                 data-testid="project-structure-text-asset-cancel"
                 Click="CancelAsync" />
         <Button Text="@Definition.SubmitLabel"
                 Icon="@(sourceMode == ProjectAssetSourceMode.CreateNew ? "note_add" : "upload_file")"
-                ButtonStyle="ButtonStyle.Info"
+                Tone="ButtonTone.Info"
                 Disabled="@SubmitDisabled"
                 IsBusy="@isSubmitting"
                 data-testid="project-structure-text-asset-submit"

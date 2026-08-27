@@ -42,7 +42,7 @@
                 <PageHeaderActionButton Icon="add"
                                         Label="Create starter"
                                         TooltipText="Create the starter workflow definition."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="CreateStarterWorkflowAsync"
                                         Disabled="@isBusy"
                                         data-testid="workflows-create-starter" />
@@ -87,7 +87,6 @@
             <Tabs SelectedIndex="@activeWorkflowTabIndex"
                   SelectedIndexChanged="HandleWorkflowTabChangedAsync"
                   RenderMode="TabRenderMode.Server"
-                  Variant="TabsVariant.WorkspacePrimary"
                   OverflowMode="TabsOverflowMode.Wrap"
                   AriaLabel="Workflow workspace tabs"
                   data-testid="workflows-tabs">
@@ -116,7 +115,7 @@
                                     <StatusBadge Tone="info" Text="@definitions.Count.ToString()" />
                                     <Button Text="Templates"
                                             Icon="content_copy"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Click="OpenTemplateCatalogueDialogAsync"
                                             Disabled="@isBusy"
                                             data-testid="workflows-open-template-catalogue" />
@@ -187,7 +186,7 @@
                                     {
                                         <Button Text="Publish"
                                                 Icon="publish"
-                                                ButtonStyle="ButtonStyle.Primary"
+                                                Tone="ButtonTone.Primary"
                                                 Size="ButtonSize.Small"
                                                 Click="PublishSelectedDefinitionAsync"
                                                 Disabled="@(isBusy || validationIssues.Count > 0)"
@@ -273,14 +272,14 @@
 
                             <label class="workflows-field mt-4">
                                 <span>Input JSON</span>
-                                <textarea class="cda-input cda-input--textarea workflows-input"
+                                <textarea class="ui-input ui-input--textarea workflows-input"
                                           @bind="testInputJson"
                                           data-testid="workflows-test-input"></textarea>
                             </label>
 
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
                                 <Button Icon="play_arrow"
-                                        Class="cda-button--quick"
+                                        Class="ui-button--quick"
                                         title="Run test"
                                         aria-label="Run test"
                                         Click="RunSelectedWorkflowAsync"
@@ -288,8 +287,8 @@
                                         IsBusy="@isRunningTest"
                                         data-testid="workflows-run-test" />
                                 <Button Icon="stop"
-                                        Class="cda-button--quick"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Class="ui-button--quick"
+                                        Tone="ButtonTone.Default"
                                         title="Cancel selected run"
                                         aria-label="Cancel selected run"
                                         Click="CancelSelectedRunAsync"
@@ -344,8 +343,8 @@
                                             </button>
                                             <Button Icon="open_in_full"
                                                     Size="ButtonSize.Small"
-                                                    Class="cda-button--quick"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Class="ui-button--quick"
+                                                    Tone="ButtonTone.Default"
                                                     title="Open run details"
                                                     aria-label="Open run details"
                                                     Click="@(() => OpenRunDetailDialogAsync(run))"
@@ -360,8 +359,8 @@
                                     <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
                                         <Button Icon="chevron_left"
                                                 Size="ButtonSize.Small"
-                                                Class="cda-button--quick"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Class="ui-button--quick"
+                                                Tone="ButtonTone.Default"
                                                 title="Previous run page"
                                                 aria-label="Previous run page"
                                                 Disabled="@(!CanGoToPreviousRunPage)"
@@ -369,8 +368,8 @@
                                                 data-testid="workflows-run-page-previous" />
                                         <Button Icon="chevron_right"
                                                 Size="ButtonSize.Small"
-                                                Class="cda-button--quick"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Class="ui-button--quick"
+                                                Tone="ButtonTone.Default"
                                                 title="Next run page"
                                                 aria-label="Next run page"
                                                 Disabled="@(!CanGoToNextRunPage)"
@@ -411,8 +410,8 @@
                                                 </div>
                                                 <Button Icon="open_in_full"
                                                         Size="ButtonSize.Small"
-                                                        Class="cda-button--quick"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Class="ui-button--quick"
+                                                        Tone="ButtonTone.Default"
                                                         title="Open event details"
                                                         aria-label="Open event details"
                                                         Click="@(() => OpenEventDetailDialog(workflowEvent))"
@@ -427,8 +426,8 @@
                                         <Cluster Gap="LayoutGap.Tiny" Wrap="FlexWrap.NoWrap">
                                             <Button Icon="chevron_left"
                                                     Size="ButtonSize.Small"
-                                                    Class="cda-button--quick"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Class="ui-button--quick"
+                                                    Tone="ButtonTone.Default"
                                                     title="Previous event page"
                                                     aria-label="Previous event page"
                                                     Disabled="@(!CanGoToPreviousEventPage)"
@@ -436,8 +435,8 @@
                                                     data-testid="workflows-event-page-previous" />
                                             <Button Icon="chevron_right"
                                                     Size="ButtonSize.Small"
-                                                    Class="cda-button--quick"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Class="ui-button--quick"
+                                                    Tone="ButtonTone.Default"
                                                     title="Next event page"
                                                     aria-label="Next event page"
                                                     Disabled="@(!CanGoToNextEventPage)"
@@ -496,13 +495,13 @@
                                                 <small>@request.RequestJson</small>
                                                 <label class="workflows-field">
                                                     <span>Response JSON</span>
-                                                    <textarea class="cda-input cda-input--textarea workflows-request-response"
+                                                    <textarea class="ui-input ui-input--textarea workflows-request-response"
                                                               @bind="pendingResponseJson"
                                                               data-testid="workflows-pending-response"></textarea>
                                                 </label>
                                                 <Button Icon="send"
                                                         Size="ButtonSize.Small"
-                                                        Class="cda-button--quick"
+                                                        Class="ui-button--quick"
                                                         title="Respond"
                                                         aria-label="Respond"
                                                         Click="@(() => RespondToRequestAsync(request))"
@@ -573,7 +572,7 @@
 
                                         <label class="workflows-field mt-4">
                                             <span>Search</span>
-                                            <input class="cda-input"
+                                            <input class="ui-input"
                                                    value="@templateSearchText"
                                                    @onchange="HandleWorkflowTemplateSearchChanged"
                                                    data-testid="workflows-template-catalogue-search" />
@@ -604,7 +603,7 @@
                                                         <Button Text="Preview"
                                                                 Icon="visibility"
                                                                 Size="ButtonSize.Small"
-                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Tone="ButtonTone.Default"
                                                                 Click="@(() => OpenTemplatePreviewDialogAsync(template))"
                                                                 data-testid="workflows-template-preview" />
                                                     </div>
@@ -681,7 +680,7 @@
                     <Footer>
                         <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                             <Button Text="Close"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="CloseTemplateCatalogueDialog"
                                     data-testid="workflows-template-catalogue-close" />
                         </Cluster>
@@ -790,7 +789,7 @@
                     <Footer>
                         <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                             <Button Text="Close"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="CloseTemplatePreviewDialog"
                                     data-testid="workflows-template-preview-close" />
                             <Button Text="Add to my drafts"
@@ -830,7 +829,7 @@
                                 {
                                     <label class="workflows-field">
                                         <span>Project</span>
-                                        <select class="cda-input"
+                                        <select class="ui-input"
                                                 value="@previewInputState.ProjectId"
                                                 @onchange="HandlePreviewProjectChanged"
                                                 data-testid="workflows-preview-project-select">
@@ -845,14 +844,14 @@
 
                                 <label class="workflows-field">
                                     <span>Project id</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            @bind="previewInputState.ProjectId"
                                            data-testid="workflows-preview-project-id" />
                                 </label>
 
                                 <label class="workflows-field">
                                     <span>Parent node id</span>
-                                    <input class="cda-input"
+                                    <input class="ui-input"
                                            @bind="previewInputState.ParentNodeId"
                                            data-testid="workflows-preview-node-id" />
                                 </label>
@@ -880,7 +879,7 @@
 
                             <label class="workflows-field">
                                 <span>Input JSON</span>
-                                <textarea class="cda-input cda-input--textarea workflows-input"
+                                <textarea class="ui-input ui-input--textarea workflows-input"
                                           @bind="previewInputState.InputJson"
                                           data-testid="workflows-preview-input-json"></textarea>
                             </label>
@@ -894,7 +893,7 @@
                     <Footer>
                         <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                             <Button Text="Cancel"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="ClosePreviewInputDialog"
                                     data-testid="workflows-preview-input-cancel" />
                             <Button Text="Run preview"

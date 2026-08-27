@@ -52,11 +52,11 @@
 
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                     <Button Text="@(isAttached ? "Remove" : "Assign")"
-                                            ButtonStyle="@(isAttached ? ButtonStyle.Light : ButtonStyle.Primary)"
+                                            Tone="@(isAttached ? ButtonTone.Default : ButtonTone.Primary)"
                                             Size="ButtonSize.Small"
                                             Click="@(async () => await ToggleCapabilityRequested.InvokeAsync(capability.Id))" />
                                     <Button Text="Details"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(async () => await OpenDetailsAsync(capability))" />
                                     <Button Text="Verify"
@@ -189,7 +189,7 @@
             <Button Text="Open on capabilities page"
                     Click="OpenCapabilityPage" />
             <Button Text="Close"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Click="CloseDetailsDialog" />
         </Cluster>
     </Footer>
