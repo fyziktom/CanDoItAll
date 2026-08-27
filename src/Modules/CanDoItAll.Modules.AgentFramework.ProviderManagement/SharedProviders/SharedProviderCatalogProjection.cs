@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedProviders.Abstractions;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
@@ -148,16 +149,25 @@ public static class SharedProviderCatalogProjector
         var transport = eligibility.Transport ??
             throw new InvalidOperationException("An eligible publication must define its transport.");
         var publicationId = source.Publication.PublicId;
+        if (!SharedProviderProfilePublicationMetadataReader.TryRead(profile, out var metadata, out var failure)) {
+            throw new InvalidOperationException(failure);
+        }
+        var pricing = ProviderPricingMetadata.Read(profile.ExtraSettingsJson);
+        var prices = pricing.ModelPrices.ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
         var models = eligibility.Models
-            .Select((model, index) =>
+            .Select(model =>
             {
                 var routingModelId = SharedProviderRoutingModelIdCodec.Create(
                     publicationId,
                     model.UpstreamModelId);
                 var publicModel = new SharedProviderCatalogModel(
                     routingModelId,
-                    CreateModelDisplayName(profile.Name, eligibility.Models.Count, index),
-                    Array.AsReadOnly(model.Capabilities.ToArray()));
+                    model.UpstreamModelId,
+                    Array.AsReadOnly(model.Capabilities.ToArray())) {
+                    Price = prices.TryGetValue(model.UpstreamModelId, out var price)
+                        ? SharedProviderPriceMapper.ToCatalog(price)
+                        : null
+                };
                 if (!routes.TryAdd(
                         routingModelId,
                         new SharedProviderRoutingTarget(
@@ -185,14 +195,9 @@ public static class SharedProviderCatalogProjector
             transport,
             defaultModelId,
             Array.AsReadOnly(models),
-            new SharedProviderCatalogHealth(SharedProviderPublicHealthMapper.Map(profile)));
+            new SharedProviderCatalogHealth(SharedProviderPublicHealthMapper.Map(profile))) {
+            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(
+                metadata.ProviderKind, pricing.IsPrivateProvider)
+        };
     }
-
-    private static string CreateModelDisplayName(
-        string profileName,
-        int modelCount,
-        int modelIndex)
-        => modelCount == 1
-            ? profileName
-            : $"{profileName} {modelIndex + 1}";
 }

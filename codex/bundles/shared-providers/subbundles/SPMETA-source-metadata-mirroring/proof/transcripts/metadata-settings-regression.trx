@@ -1,0 +1,522 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="c4b75f13-65db-41b4-9801-a10b5deea031" name="lucys@LUCYSPOWER 2026-08-27 06:38:06" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T06:38:06.4610943-04:00" queuing="2026-08-27T06:38:06.4610948-04:00" start="2026-08-27T06:37:54.7943088-04:00" finish="2026-08-27T06:38:44.6906938-04:00" />
+  <TestSettings name="default" id="5121b90d-53e7-40f1-bb53-2d49b3427982">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_06_38_06" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e68fb7d6-1c6f-42be-afea-dba75210867a" testId="ec28c196-f22d-b534-11d9-5fab980b8637" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Original_gpt5_lists_minimal_and_does_not_offer_none" computerName="LUCYSPOWER" duration="00:00:00.0078321" startTime="2026-08-27T06:38:16.0158968-04:00" endTime="2026-08-27T06:38:16.0236932-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e68fb7d6-1c6f-42be-afea-dba75210867a" />
+    <UnitTestResult executionId="5715b01e-51bc-4450-b746-a50c26ba98c2" testId="3550410a-768e-9580-3bb8-18c6f6096df7" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default" computerName="LUCYSPOWER" duration="00:00:00.0028701" startTime="2026-08-27T06:38:16.1562898-04:00" endTime="2026-08-27T06:38:16.1563400-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5715b01e-51bc-4450-b746-a50c26ba98c2">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.</Message>
+          <StackTrace>   at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+   at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+--- End of stack trace from previous location ---&#xD;
+   at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions() in /_/src/bunit/Rendering/BunitRenderer.cs:line 707&#xD;
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597&#xD;
+   at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 137&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 230&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 214&#xD;
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169&#xD;
+   at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder) in /_/src/bunit/BunitContext.cs:line 152&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 212&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 160&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="16fd969a-82ee-42d9-996c-6c5021dfa1ae" testId="f04ad6c9-963d-5aae-ec66-f2fd740600dc" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save" computerName="LUCYSPOWER" duration="00:00:00.0203416" startTime="2026-08-27T06:38:16.0893264-04:00" endTime="2026-08-27T06:38:16.1355479-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="16fd969a-82ee-42d9-996c-6c5021dfa1ae">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.</Message>
+          <StackTrace>   at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+   at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+--- End of stack trace from previous location ---&#xD;
+   at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions() in /_/src/bunit/Rendering/BunitRenderer.cs:line 707&#xD;
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597&#xD;
+   at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 137&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 230&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 214&#xD;
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169&#xD;
+   at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder) in /_/src/bunit/BunitContext.cs:line 152&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 212&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 60&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="78bf3aa1-cd22-4d8c-a228-6e2a657c921e" testId="b849ce50-f7af-a56a-692c-de3c6c4a4130" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected" computerName="LUCYSPOWER" duration="00:00:00.0021611" startTime="2026-08-27T06:38:16.1586143-04:00" endTime="2026-08-27T06:38:16.1586806-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="78bf3aa1-cd22-4d8c-a228-6e2a657c921e">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.</Message>
+          <StackTrace>   at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+   at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+--- End of stack trace from previous location ---&#xD;
+   at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions() in /_/src/bunit/Rendering/BunitRenderer.cs:line 707&#xD;
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597&#xD;
+   at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 137&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 230&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 214&#xD;
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169&#xD;
+   at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder) in /_/src/bunit/BunitContext.cs:line 152&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 212&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 135&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="123bc586-297e-4c36-8225-2a60b4a9473d" testId="313e1ba2-6852-4d9b-6630-52efa7ae2188" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_lists_allowed_efforts_and_configured_provider_default" computerName="LUCYSPOWER" duration="00:00:00.0027908" startTime="2026-08-27T06:38:16.0755837-04:00" endTime="2026-08-27T06:38:16.0780875-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="123bc586-297e-4c36-8225-2a60b4a9473d" />
+    <UnitTestResult executionId="067492e8-bd82-46a0-a059-3b8c1bbe5996" testId="cbc1418a-d3eb-7aa0-736b-35c531875be0" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null" computerName="LUCYSPOWER" duration="00:00:00.0030105" startTime="2026-08-27T06:38:16.1544627-04:00" endTime="2026-08-27T06:38:16.1545111-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="067492e8-bd82-46a0-a059-3b8c1bbe5996">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.</Message>
+          <StackTrace>   at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+   at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+--- End of stack trace from previous location ---&#xD;
+   at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions() in /_/src/bunit/Rendering/BunitRenderer.cs:line 707&#xD;
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597&#xD;
+   at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 137&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 230&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 214&#xD;
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169&#xD;
+   at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder) in /_/src/bunit/BunitContext.cs:line 152&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 212&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 85&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="d0ca9084-e97a-453a-b131-27f9255262e4" testId="2e27610a-51b8-72bc-39dd-ad05981041cc" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_openai_model_disables_inherited_selector_and_requests_verified_definition" computerName="LUCYSPOWER" duration="00:00:00.0038868" startTime="2026-08-27T06:38:16.0816418-04:00" endTime="2026-08-27T06:38:16.0854294-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d0ca9084-e97a-453a-b131-27f9255262e4" />
+    <UnitTestResult executionId="6545920c-6e05-482c-9f9b-010e0e89729d" testId="3a60d9eb-5658-081f-050e-4e639b17d29c" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Source_list_shows_offline_state_as_unavailable_and_keeps_recovery_actions" computerName="LUCYSPOWER" duration="00:00:04.3084556" startTime="2026-08-27T06:38:40.2382779-04:00" endTime="2026-08-27T06:38:44.5462798-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6545920c-6e05-482c-9f9b-010e0e89729d" />
+    <UnitTestResult executionId="d0045176-b9d4-476e-b643-462db5981c9a" testId="8a725cf2-8997-b36a-7928-94d68a6f4e4b" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Source_dialog_lists_secret_names_but_never_secret_values" computerName="LUCYSPOWER" duration="00:00:04.9391835" startTime="2026-08-27T06:38:35.2984287-04:00" endTime="2026-08-27T06:38:40.2373585-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d0045176-b9d4-476e-b643-462db5981c9a" />
+    <UnitTestResult executionId="9b18dcd2-165f-4fb9-aed0-80cb4747256a" testId="acbbc80c-ab45-2566-dccf-7bdfe67546bc" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Imported_profile_exposes_only_local_alias_and_enabled_intent_as_inputs" computerName="LUCYSPOWER" duration="00:00:06.4182547" startTime="2026-08-27T06:38:28.8810157-04:00" endTime="2026-08-27T06:38:35.2975936-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9b18dcd2-165f-4fb9-aed0-80cb4747256a" />
+    <UnitTestResult executionId="2b11d699-e38f-4c4c-991d-ca1f4baa147a" testId="01a7f409-f054-82cd-f1ab-ce321c04c719" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Existing_incompatible_override_is_preserved_until_user_resets_to_provider_default" computerName="LUCYSPOWER" duration="00:00:00.0453749" startTime="2026-08-27T06:38:15.9648484-04:00" endTime="2026-08-27T06:38:16.0104358-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b11d699-e38f-4c4c-991d-ca1f4baa147a" />
+    <UnitTestResult executionId="d3da75eb-3692-4e2a-88c1-7e14cfba8c7a" testId="925ddca8-9d73-d32c-390b-4dc5fda02512" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Ineligible_local_provider_explains_why_publish_is_disabled" computerName="LUCYSPOWER" duration="00:00:04.0100059" startTime="2026-08-27T06:38:06.4295326-04:00" endTime="2026-08-27T06:38:10.4011347-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d3da75eb-3692-4e2a-88c1-7e14cfba8c7a" />
+    <UnitTestResult executionId="960937fb-bd0a-41df-9f73-70c5be793811" testId="81ba7cbb-e490-9cff-d8bd-fc641a028e83" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_emits_override_and_provider_default_reset" computerName="LUCYSPOWER" duration="00:00:00.0092324" startTime="2026-08-27T06:38:16.0662003-04:00" endTime="2026-08-27T06:38:16.0752162-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="960937fb-bd0a-41df-9f73-70c5be793811" />
+    <UnitTestResult executionId="6cea3429-603d-4d12-b04b-4659a56ef628" testId="3adc4c01-b744-3755-4539-ab47f46ee60c" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved" computerName="LUCYSPOWER" duration="00:00:00.0034145" startTime="2026-08-27T06:38:16.1508735-04:00" endTime="2026-08-27T06:38:16.1510955-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6cea3429-603d-4d12-b04b-4659a56ef628">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.</Message>
+          <StackTrace>   at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+   at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+--- End of stack trace from previous location ---&#xD;
+   at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions() in /_/src/bunit/Rendering/BunitRenderer.cs:line 707&#xD;
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597&#xD;
+   at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 137&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 230&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 214&#xD;
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169&#xD;
+   at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder) in /_/src/bunit/BunitContext.cs:line 152&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 212&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 38&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6c2ff593-5435-4009-9e8f-e7c4039c392a" testId="1de7e7cf-6ad5-cce1-37dc-24f81f0ef687" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Incompatible_override_does_not_recommend_an_unavailable_provider_default" computerName="LUCYSPOWER" duration="00:00:00.0079576" startTime="2026-08-27T06:38:16.0510798-04:00" endTime="2026-08-27T06:38:16.0592585-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6c2ff593-5435-4009-9e8f-e7c4039c392a" />
+    <UnitTestResult executionId="bfa7dbdd-f174-4182-b6c7-977288fdf3c1" testId="5913422e-970c-5297-aaa0-06678d07a7a5" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Published_provider_requires_confirmation_before_unpublish" computerName="LUCYSPOWER" duration="00:00:05.4595216" startTime="2026-08-27T06:38:10.4041002-04:00" endTime="2026-08-27T06:38:15.8663779-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bfa7dbdd-f174-4182-b6c7-977288fdf3c1" />
+    <UnitTestResult executionId="cebd24dc-c108-433a-9b5f-660b61f3f3e1" testId="67a8a51c-7a7e-03bd-4a8c-d3c4d60b3fd8" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_azure_deployment_requests_provider_scoped_definition" computerName="LUCYSPOWER" duration="00:00:00.0032602" startTime="2026-08-27T06:38:16.0802148-04:00" endTime="2026-08-27T06:38:16.0814177-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cebd24dc-c108-433a-9b5f-660b61f3f3e1" />
+    <UnitTestResult executionId="1a299d2a-5b87-40cc-8e16-5264f5e08578" testId="bf35da5c-b2f0-f689-fcd7-26f49be089fb" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Eligible_local_provider_can_be_published_from_provider_settings" computerName="LUCYSPOWER" duration="00:00:10.5649871" startTime="2026-08-27T06:37:55.8054744-04:00" endTime="2026-08-27T06:38:06.3865293-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1a299d2a-5b87-40cc-8e16-5264f5e08578" />
+    <UnitTestResult executionId="a6d4cce9-a4d1-4335-81d6-8d198fbabac5" testId="f2382970-0fd4-9d8d-b077-426921d40458" testName="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Provider_empty_instance_can_add_a_shared_provider_source" computerName="LUCYSPOWER" duration="00:00:12.7253613" startTime="2026-08-27T06:38:16.1615531-04:00" endTime="2026-08-27T06:38:28.8787411-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a6d4cce9-a4d1-4335-81d6-8d198fbabac5" />
+    <UnitTestResult executionId="6ed2aa7a-3d00-452d-8df5-f1a2eda226e1" testId="11530af4-25fb-791f-f27d-b259a999580c" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_ollama_capability_lists_only_native_allowed_efforts" computerName="LUCYSPOWER" duration="00:00:00.0032079" startTime="2026-08-27T06:38:16.0856251-04:00" endTime="2026-08-27T06:38:16.0887841-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6ed2aa7a-3d00-452d-8df5-f1a2eda226e1" />
+    <UnitTestResult executionId="f6fe1a35-da39-447f-a7c3-00a509e89fdc" testId="f8f7c27a-f94c-732c-8dcc-14698275b44d" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_gptoss_capability_lists_levels_without_disable" computerName="LUCYSPOWER" duration="00:00:00.0265121" startTime="2026-08-27T06:38:16.0239009-04:00" endTime="2026-08-27T06:38:16.0504699-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f6fe1a35-da39-447f-a7c3-00a509e89fdc" />
+    <UnitTestResult executionId="2072fd81-a9e3-4315-b47f-2513113da957" testId="d9bf62c9-4b56-f646-c947-e02cf3a6d5f7" testName="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence" computerName="LUCYSPOWER" duration="00:00:00.0034661" startTime="2026-08-27T06:38:16.1528958-04:00" endTime="2026-08-27T06:38:16.1529400-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2072fd81-a9e3-4315-b47f-2513113da957">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.</Message>
+          <StackTrace>   at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+   at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+   at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+   at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+--- End of stack trace from previous location ---&#xD;
+   at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions() in /_/src/bunit/Rendering/BunitRenderer.cs:line 707&#xD;
+   at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 597&#xD;
+   at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment) in /_/src/bunit/Rendering/BunitRenderer.cs:line 137&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 230&#xD;
+   at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 214&#xD;
+   at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment) in /_/src/bunit/BunitContext.cs:line 169&#xD;
+   at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder) in /_/src/bunit/BunitContext.cs:line 152&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 212&#xD;
+   at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence() in C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs:line 110&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="22c3c4c6-e1a7-4055-89bb-739849b4d19e" testId="25305725-f367-dbb6-aafb-9dfa2b6ad08f" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Missing_provider_disables_selector_and_requests_provider_selection" computerName="LUCYSPOWER" duration="00:00:00.0050317" startTime="2026-08-27T06:38:16.0112642-04:00" endTime="2026-08-27T06:38:16.0156941-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="22c3c4c6-e1a7-4055-89bb-739849b4d19e" />
+    <UnitTestResult executionId="a089e9b8-c465-4f1d-9fa7-8f7fdc740bad" testId="3538c2d7-ffcd-e145-9db9-5570d51eecf4" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unsupported_model_disables_inherited_selector_and_explains_the_limitation" computerName="LUCYSPOWER" duration="00:00:00.0854988" startTime="2026-08-27T06:38:15.8793059-04:00" endTime="2026-08-27T06:38:15.9646290-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a089e9b8-c465-4f1d-9fa7-8f7fdc740bad" />
+    <UnitTestResult executionId="692edca7-b475-4f6d-836b-b82df7e342f0" testId="b775eede-3a2e-fc8f-bed5-57bdeee350be" testName="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Invalid_provider_default_is_visible_and_can_be_replaced_by_a_valid_override" computerName="LUCYSPOWER" duration="00:00:00.0062179" startTime="2026-08-27T06:38:16.0595830-04:00" endTime="2026-08-27T06:38:16.0657780-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="692edca7-b475-4f6d-836b-b82df7e342f0" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Invalid_provider_default_is_visible_and_can_be_replaced_by_a_valid_override" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="b775eede-3a2e-fc8f-bed5-57bdeee350be">
+      <Execution id="692edca7-b475-4f6d-836b-b82df7e342f0" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Invalid_provider_default_is_visible_and_can_be_replaced_by_a_valid_override" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3550410a-768e-9580-3bb8-18c6f6096df7">
+      <Execution id="5715b01e-51bc-4450-b746-a50c26ba98c2" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Switching_provider_clears_custom_model_before_validating_the_new_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3adc4c01-b744-3755-4539-ab47f46ee60c">
+      <Execution id="6cea3429-603d-4d12-b04b-4659a56ef628" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Supported_override_selection_updates_the_editor_and_can_be_saved" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Ineligible_local_provider_explains_why_publish_is_disabled" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="925ddca8-9d73-d32c-390b-4dc5fda02512">
+      <Execution id="d3da75eb-3692-4e2a-88c1-7e14cfba8c7a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests" name="Ineligible_local_provider_explains_why_publish_is_disabled" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_ollama_capability_lists_only_native_allowed_efforts" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="11530af4-25fb-791f-f27d-b259a999580c">
+      <Execution id="6ed2aa7a-3d00-452d-8df5-f1a2eda226e1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Discovered_ollama_capability_lists_only_native_allowed_efforts" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Published_provider_requires_confirmation_before_unpublish" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="5913422e-970c-5297-aaa0-06678d07a7a5">
+      <Execution id="bfa7dbdd-f174-4182-b6c7-977288fdf3c1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests" name="Published_provider_requires_confirmation_before_unpublish" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="f04ad6c9-963d-5aae-ec66-f2fd740600dc">
+      <Execution id="16fd969a-82ee-42d9-996c-6c5021dfa1ae" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_lists_allowed_efforts_and_configured_provider_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="313e1ba2-6852-4d9b-6630-52efa7ae2188">
+      <Execution id="123bc586-297e-4c36-8225-2a60b4a9473d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Supported_model_lists_allowed_efforts_and_configured_provider_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="b849ce50-f7af-a56a-692c-de3c6c4a4130">
+      <Execution id="78bf3aa1-cd22-4d8c-a228-6e2a657c921e" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_openai_model_disables_inherited_selector_and_requests_verified_definition" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="2e27610a-51b8-72bc-39dd-ad05981041cc">
+      <Execution id="d0ca9084-e97a-453a-b131-27f9255262e4" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Unknown_openai_model_disables_inherited_selector_and_requests_verified_definition" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Original_gpt5_lists_minimal_and_does_not_offer_none" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="ec28c196-f22d-b534-11d9-5fab980b8637">
+      <Execution id="e68fb7d6-1c6f-42be-afea-dba75210867a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Original_gpt5_lists_minimal_and_does_not_offer_none" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="d9bf62c9-4b56-f646-c947-e02cf3a6d5f7">
+      <Execution id="2072fd81-a9e3-4315-b47f-2513113da957" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests.Eligible_local_provider_can_be_published_from_provider_settings" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="bf35da5c-b2f0-f689-fcd7-26f49be089fb">
+      <Execution id="1a299d2a-5b87-40cc-8e16-5264f5e08578" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderPublicationPanelTests" name="Eligible_local_provider_can_be_published_from_provider_settings" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Imported_profile_exposes_only_local_alias_and_enabled_intent_as_inputs" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="acbbc80c-ab45-2566-dccf-7bdfe67546bc">
+      <Execution id="9b18dcd2-165f-4fb9-aed0-80cb4747256a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests" name="Imported_profile_exposes_only_local_alias_and_enabled_intent_as_inputs" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Discovered_gptoss_capability_lists_levels_without_disable" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="f8f7c27a-f94c-732c-8dcc-14698275b44d">
+      <Execution id="f6fe1a35-da39-447f-a7c3-00a509e89fdc" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Discovered_gptoss_capability_lists_levels_without_disable" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Provider_empty_instance_can_add_a_shared_provider_source" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="f2382970-0fd4-9d8d-b077-426921d40458">
+      <Execution id="a6d4cce9-a4d1-4335-81d6-8d198fbabac5" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests" name="Provider_empty_instance_can_add_a_shared_provider_source" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Source_dialog_lists_secret_names_but_never_secret_values" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="8a725cf2-8997-b36a-7928-94d68a6f4e4b">
+      <Execution id="d0045176-b9d4-476e-b643-462db5981c9a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests" name="Source_dialog_lists_secret_names_but_never_secret_values" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests.Source_list_shows_offline_state_as_unavailable_and_keeps_recovery_actions" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3a60d9eb-5658-081f-050e-4e639b17d29c">
+      <Execution id="6545920c-6e05-482c-9f9b-010e0e89729d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.SharedProviderSourceAndImportComponentTests" name="Source_list_shows_offline_state_as_unavailable_and_keeps_recovery_actions" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Supported_model_emits_override_and_provider_default_reset" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="81ba7cbb-e490-9cff-d8bd-fc641a028e83">
+      <Execution id="960937fb-bd0a-41df-9f73-70c5be793811" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Supported_model_emits_override_and_provider_default_reset" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="cbc1418a-d3eb-7aa0-736b-35c531875be0">
+      <Execution id="067492e8-bd82-46a0-a059-3b8c1bbe5996" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests" name="Selecting_provider_default_clears_an_incompatible_override_and_saves_null" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Incompatible_override_does_not_recommend_an_unavailable_provider_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="1de7e7cf-6ad5-cce1-37dc-24f81f0ef687">
+      <Execution id="6c2ff593-5435-4009-9e8f-e7c4039c392a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Incompatible_override_does_not_recommend_an_unavailable_provider_default" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Missing_provider_disables_selector_and_requests_provider_selection" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="25305725-f367-dbb6-aafb-9dfa2b6ad08f">
+      <Execution id="22c3c4c6-e1a7-4055-89bb-739849b4d19e" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Missing_provider_disables_selector_and_requests_provider_selection" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unknown_azure_deployment_requests_provider_scoped_definition" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="67a8a51c-7a7e-03bd-4a8c-d3c4d60b3fd8">
+      <Execution id="cebd24dc-c108-433a-9b5f-660b61f3f3e1" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Unknown_azure_deployment_requests_provider_scoped_definition" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Unsupported_model_disables_inherited_selector_and_explains_the_limitation" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="3538c2d7-ffcd-e145-9db9-5570d51eecf4">
+      <Execution id="a089e9b8-c465-4f1d-9fa7-8f7fdc740bad" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Unsupported_model_disables_inherited_selector_and_explains_the_limitation" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests.Existing_incompatible_override_is_preserved_until_user_resets_to_provider_default" storage="c:\repositories\candoitall\tests\components\candoitall.tests.components\bin\debug\net10.0\candoitall.tests.components.dll" id="01a7f409-f054-82cd-f1ab-ce321c04c719">
+      <Execution id="2b11d699-e38f-4c4c-991d-ca1f4baa147a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Components.AgentFramework.AgentThinkingEffortSettingsTests" name="Existing_incompatible_override_is_preserved_until_user_resets_to_provider_default" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="ec28c196-f22d-b534-11d9-5fab980b8637" executionId="e68fb7d6-1c6f-42be-afea-dba75210867a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3550410a-768e-9580-3bb8-18c6f6096df7" executionId="5715b01e-51bc-4450-b746-a50c26ba98c2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f04ad6c9-963d-5aae-ec66-f2fd740600dc" executionId="16fd969a-82ee-42d9-996c-6c5021dfa1ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b849ce50-f7af-a56a-692c-de3c6c4a4130" executionId="78bf3aa1-cd22-4d8c-a228-6e2a657c921e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="313e1ba2-6852-4d9b-6630-52efa7ae2188" executionId="123bc586-297e-4c36-8225-2a60b4a9473d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cbc1418a-d3eb-7aa0-736b-35c531875be0" executionId="067492e8-bd82-46a0-a059-3b8c1bbe5996" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2e27610a-51b8-72bc-39dd-ad05981041cc" executionId="d0ca9084-e97a-453a-b131-27f9255262e4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3a60d9eb-5658-081f-050e-4e639b17d29c" executionId="6545920c-6e05-482c-9f9b-010e0e89729d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a725cf2-8997-b36a-7928-94d68a6f4e4b" executionId="d0045176-b9d4-476e-b643-462db5981c9a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="acbbc80c-ab45-2566-dccf-7bdfe67546bc" executionId="9b18dcd2-165f-4fb9-aed0-80cb4747256a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="01a7f409-f054-82cd-f1ab-ce321c04c719" executionId="2b11d699-e38f-4c4c-991d-ca1f4baa147a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="925ddca8-9d73-d32c-390b-4dc5fda02512" executionId="d3da75eb-3692-4e2a-88c1-7e14cfba8c7a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="81ba7cbb-e490-9cff-d8bd-fc641a028e83" executionId="960937fb-bd0a-41df-9f73-70c5be793811" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3adc4c01-b744-3755-4539-ab47f46ee60c" executionId="6cea3429-603d-4d12-b04b-4659a56ef628" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1de7e7cf-6ad5-cce1-37dc-24f81f0ef687" executionId="6c2ff593-5435-4009-9e8f-e7c4039c392a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5913422e-970c-5297-aaa0-06678d07a7a5" executionId="bfa7dbdd-f174-4182-b6c7-977288fdf3c1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="67a8a51c-7a7e-03bd-4a8c-d3c4d60b3fd8" executionId="cebd24dc-c108-433a-9b5f-660b61f3f3e1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bf35da5c-b2f0-f689-fcd7-26f49be089fb" executionId="1a299d2a-5b87-40cc-8e16-5264f5e08578" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f2382970-0fd4-9d8d-b077-426921d40458" executionId="a6d4cce9-a4d1-4335-81d6-8d198fbabac5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="11530af4-25fb-791f-f27d-b259a999580c" executionId="6ed2aa7a-3d00-452d-8df5-f1a2eda226e1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f8f7c27a-f94c-732c-8dcc-14698275b44d" executionId="f6fe1a35-da39-447f-a7c3-00a509e89fdc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d9bf62c9-4b56-f646-c947-e02cf3a6d5f7" executionId="2072fd81-a9e3-4315-b47f-2513113da957" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="25305725-f367-dbb6-aafb-9dfa2b6ad08f" executionId="22c3c4c6-e1a7-4055-89bb-739849b4d19e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3538c2d7-ffcd-e145-9db9-5570d51eecf4" executionId="a089e9b8-c465-4f1d-9fa7-8f7fdc740bad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b775eede-3a2e-fc8f-bed5-57bdeee350be" executionId="692edca7-b475-4f6d-836b-b82df7e342f0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="25" executed="25" passed="19" failed="6" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.21]   Discovering: CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.36]   Discovered:  CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:00.39]   Starting:    CanDoItAll.Tests.Components&#xD;
+[xUnit.net 00:00:20.76]       System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.&#xD;
+[xUnit.net 00:00:20.76]       Stack Trace:&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+[xUnit.net 00:00:20.76]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+[xUnit.net 00:00:20.76]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/Rendering/BunitRenderer.cs(707,0): at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions()&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/Rendering/BunitRenderer.cs(597,0): at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/Rendering/BunitRenderer.cs(137,0): at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/BunitContext.cs(230,0): at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/BunitContext.cs(214,0): at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/BunitContext.cs(169,0): at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.76]         /_/src/bunit/BunitContext.cs(152,0): at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder)&#xD;
+[xUnit.net 00:00:20.76]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:20.76]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(60,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save()&#xD;
+[xUnit.net 00:00:20.76]            at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+[xUnit.net 00:00:20.76]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:20.76]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:20.76]       System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.&#xD;
+[xUnit.net 00:00:20.76]       Stack Trace:&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+[xUnit.net 00:00:20.77]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(707,0): at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions()&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(597,0): at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(137,0): at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(230,0): at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(214,0): at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(169,0): at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(152,0): at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(38,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved()&#xD;
+[xUnit.net 00:00:20.77]            at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:20.77]       System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.&#xD;
+[xUnit.net 00:00:20.77]       Stack Trace:&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+[xUnit.net 00:00:20.77]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(707,0): at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions()&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(597,0): at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(137,0): at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(230,0): at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(214,0): at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(169,0): at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(152,0): at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(110,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence()&#xD;
+[xUnit.net 00:00:20.77]            at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:20.77]       System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.&#xD;
+[xUnit.net 00:00:20.77]       Stack Trace:&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+[xUnit.net 00:00:20.77]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(707,0): at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions()&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(597,0): at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(137,0): at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(230,0): at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(214,0): at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(169,0): at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(152,0): at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(85,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null()&#xD;
+[xUnit.net 00:00:20.77]            at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:20.77]       System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.&#xD;
+[xUnit.net 00:00:20.77]       Stack Trace:&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+[xUnit.net 00:00:20.77]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(707,0): at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions()&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(597,0): at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(137,0): at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(230,0): at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(214,0): at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(169,0): at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(152,0): at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(160,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default()&#xD;
+[xUnit.net 00:00:20.77]            at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:20.77]       System.InvalidOperationException : Cannot provide a value for property 'ProviderRuntimeAdministrationService' on type 'CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests+TestAgentDetailsDialog'. There is no registered service of type 'CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService'.&#xD;
+[xUnit.net 00:00:20.77]       Stack Trace:&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.&lt;&gt;c__DisplayClass11_0.&lt;CreatePropertyInjector&gt;g__Initialize|1(IServiceProvider serviceProvider, IComponent component)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.ComponentFactory.InstantiateComponent(IServiceProvider serviceProvider, Type componentType, IComponentRenderMode callerSpecifiedRenderMode, Nullable`1 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.InstantiateChildComponentOnFrame(RenderTreeFrame[] frames, Int32 frameIndex, Int32 parentComponentId)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewComponentFrame(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InitializeNewSubtree(DiffContext&amp; diffContext, Int32 frameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext&amp; diffContext, Int32 newFrameIndex)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext&amp; diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.ComputeDiff(Renderer renderer, RenderBatchBuilder batchBuilder, Int32 componentId, ArrayRange`1 oldTree, ArrayRange`1 newTree)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception&amp; renderFragmentException)&#xD;
+[xUnit.net 00:00:20.77]            at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()&#xD;
+[xUnit.net 00:00:20.77]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(707,0): at Bunit.Rendering.BunitRenderer.AssertNoUnhandledExceptions()&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(597,0): at Bunit.Rendering.BunitRenderer.Render(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/Rendering/BunitRenderer.cs(137,0): at Bunit.Rendering.BunitRenderer.RenderFragment(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(230,0): at Bunit.BunitContext.RenderInsideRenderTree(RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(214,0): at Bunit.BunitContext.RenderInsideRenderTree[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(169,0): at Bunit.BunitContext.Render[TComponent](RenderFragment renderFragment)&#xD;
+[xUnit.net 00:00:20.77]         /_/src/bunit/BunitContext.cs(152,0): at Bunit.BunitContext.Render[TComponent](Action`1 parameterBuilder)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(212,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.RenderRuntimeTab(BunitContext context, AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:20.77]         C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\AgentDetailsDialogThinkingEffortTests.cs(135,0): at CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected()&#xD;
+[xUnit.net 00:00:20.77]            at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:20.77]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)&#xD;
+[xUnit.net 00:00:49.16]   Finished:    CanDoItAll.Tests.Components&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:38:16.1415990-04:00">
+        <Text>[xUnit.net 00:00:20.75]     CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unsupported_provider_preserves_the_override_and_disables_save [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:38:16.1518111-04:00">
+        <Text>[xUnit.net 00:00:20.76]     CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Supported_override_selection_updates_the_editor_and_can_be_saved [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:38:16.1533799-04:00">
+        <Text>[xUnit.net 00:00:20.77]     CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_to_an_unknown_model_preserves_the_override_and_blocks_persistence [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:38:16.1550274-04:00">
+        <Text>[xUnit.net 00:00:20.77]     CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Selecting_provider_default_clears_an_incompatible_override_and_saves_null [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:38:16.1568334-04:00">
+        <Text>[xUnit.net 00:00:20.77]     CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Switching_provider_clears_custom_model_before_validating_the_new_default [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:38:16.1592369-04:00">
+        <Text>[xUnit.net 00:00:20.77]     CanDoItAll.Tests.Components.AgentFramework.AgentDetailsDialogThinkingEffortTests.Invalid_provider_default_blocks_save_until_a_supported_agent_override_is_selected [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

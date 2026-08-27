@@ -448,7 +448,7 @@ public sealed class SharedProviderSourceUriPolicyTests
                 catalog,
                 entityTag,
                 json: SharedProviderProtocolJson.SerializeCatalog(catalog)
-                    .Replace("\"schemaVersion\":\"1.0\"", "\"schemaVersion\":\"2.0\"", StringComparison.Ordinal)),
+                    .Replace("\"schemaVersion\":\"1.1\"", "\"schemaVersion\":\"2.0\"", StringComparison.Ordinal)),
             () => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StreamContent(new MemoryStream(new byte[SharedProviderCatalogClient.MaximumResponseBytes + 1]))

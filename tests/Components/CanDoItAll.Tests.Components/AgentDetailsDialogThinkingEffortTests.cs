@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
 using ProviderProfile = CanDoItAll.AgentFramework.Models.ProviderProfile;
+using IProviderRuntimeAdministrationService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IProviderRuntimeAdministrationService;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
@@ -197,6 +198,8 @@ public sealed class AgentDetailsDialogThinkingEffortTests
             DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceServiceProxy>();
         workspaceProxy = (RecordingWorkspaceServiceProxy)(object)workspaceService;
         context.Services.AddSingleton(workspaceService);
+        context.Services.AddSingleton(
+            DispatchProxy.Create<IProviderRuntimeAdministrationService, RecordingWorkspaceServiceProxy>());
         context.Services.AddSingleton(
             (ProjectsService)RuntimeHelpers.GetUninitializedObject(typeof(ProjectsService)));
         context.Services.AddSingleton(

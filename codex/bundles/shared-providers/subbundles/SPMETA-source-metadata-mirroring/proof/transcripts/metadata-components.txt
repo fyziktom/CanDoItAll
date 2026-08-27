@@ -1,0 +1,47 @@
+**********************
+PowerShell transcript start
+Start time: 20260827062826
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\Run-FocusedTests.ps1 -Project tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj -Filter 'FullyQualifiedName~ProviderModelSelectorTests|FullyQualifiedName~ProviderModelPricingEditorTests' -ExpectedCount 12 -RunLabel metadata-components
+Process ID: 11928
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA invariants: META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E
+Working directory: C:\repositories\CanDoItAll
+dotnet build tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --nologo
+
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --list-tests --filter FullyQualifiedName~ProviderModelSelectorTests|FullyQualifiedName~ProviderModelPricingEditorTests
+Testovací běh pro C:\repositories\CanDoItAll\tests\Components\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelPricingEditorTests.Source_managed_empty_prices_remain_empty_and_private_flag_is_not_inferred(isPrivate: True)
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelPricingEditorTests.Source_managed_empty_prices_remain_empty_and_private_flag_is_not_inferred(isPrivate: False)
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelPricingEditorTests.Renders_existing_model_prices_as_editable_rows
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelPricingEditorTests.Add_model_price_creates_named_manual_row
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.Shared_model_labels_emit_routing_ids_and_disable_custom_overrides
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.Removed_shared_model_is_explicitly_unavailable_and_does_not_show_its_routing_id
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.ProviderModelSelector_lists_provider_default_and_suggested_models
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.ProviderModelSelector_keeps_custom_model_behind_override
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.ProviderModelSelector_unchecking_override_returns_to_provider_default
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.ProviderModelSelector_starts_in_override_for_unknown_existing_model
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.ProviderModelSelector_treats_non_empty_provider_default_value_as_explicit_override
+    CanDoItAll.Tests.Components.AgentFramework.ProviderModelSelectorTests.ProviderModelSelector_supports_scalar_provider_metadata_for_workflow_surfaces
+Discovered tests: 12; expected: 12 (0 means inspect the named selection)
+dotnet test tests\Components\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter FullyQualifiedName~ProviderModelSelectorTests|FullyQualifiedName~ProviderModelPricingEditorTests --logger console;verbosity=normal --logger trx;LogFileName=metadata-components.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts --nologo --no-build
+
+Exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827062917
+**********************

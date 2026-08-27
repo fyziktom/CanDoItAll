@@ -69,8 +69,12 @@ internal sealed class SharedProviderProfileMapper
                 AllowsParallelFunctionTools: provider.SupportsParallelTools),
             ModelSelectionConstraint =
                 new ProviderModelSelectionConstraint(allowedModels),
-            IsPrivateProvider = false,
-            ModelPrices = [],
+            IsPrivateProvider = provider.IsPrivateProvider,
+            ModelCatalog = Array.AsReadOnly(provider.Models
+                .Select(model => new ProviderModelDisplayMetadata(model.Id.Value, model.DisplayName)).ToArray()),
+            ModelPrices = Array.AsReadOnly(provider.Models
+                .Where(model => model.Price is not null)
+                .Select(model => SharedProviderPriceMapper.ToRuntime(model.Id.Value, model.Price!)).ToArray()),
             Tags = provider.Tags
         };
     }

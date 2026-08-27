@@ -75,3 +75,18 @@ The design separates:
 
 UI work is locked until SB07 proves the backend through real HTTP, persistence, authorization,
 streaming, synchronization, failure behavior, and three separate CanDoItAll app instances.
+
+## Latest operator repair validation
+
+The operator separately authorized a two-instance UI lane on August 26 and metadata repair
+on August 27. SPMETA is complete for that scope: readable source model names, exact published
+prices/private status, source resynchronization and two final UI chat/image/vision passes.
+The engines on 5210/5212 run the final image; 5032 is unchanged. Historical SB07's distinct
+three-app gate and downstream locks are not closed by this evidence.
+
+Compatible feedback work-unit roles: inputs/traceability, architecture/plan and gates live in
+`subbundles/SPMETA-source-metadata-mirroring/README.md` and inputs.md; proof/ holds governed
+artifacts; reviews/ holds primary-agent reviews; RESULT.md is execution summary/operator
+handoff. Root STATUS.md remains status authority. No parallel bundle structure was created.
+See [SPMETA result](subbundles/SPMETA-source-metadata-mirroring/RESULT.md) for exact tests,
+upgrade requirements, retained data, deterministic-fixture limitations and evidence.

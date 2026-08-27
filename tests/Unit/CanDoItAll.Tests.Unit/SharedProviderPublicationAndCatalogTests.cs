@@ -27,6 +27,52 @@ public sealed class SharedProviderPublicationAndCatalogTests
         new(Guid.Parse("10000000-0000-0000-0000-000000000001"));
 
     [Fact]
+    public void SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds() {
+        var profile = CreateProfile(defaultModel: "model-alpha", suggestedModels: ["model-beta"]);
+        var projection = SharedProviderCatalogProjector.Project(
+            SourceInstanceId,
+            [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
+        var publication = Assert.Single(projection.Catalog.Providers);
+
+        Assert.Equal(["model-alpha", "model-beta"], publication.Models.Select(model => model.DisplayName).Order());
+        Assert.All(publication.Models, model => Assert.StartsWith("sp1.", model.Id.Value));
+    }
+
+    [Fact]
+    public void SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults() {
+        var profile = CreateProfile(defaultModel: "model-alpha");
+        profile.ExtraSettingsJson = ProviderPricingMetadata.Write(profile.ExtraSettingsJson, true,
+            [new ProviderModelTokenPrice("model-alpha", 1.23m, 0m, 4.56m)]);
+        var projection = SharedProviderCatalogProjector.Project(
+            SourceInstanceId,
+            [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
+        using var document = JsonDocument.Parse(SharedProviderProtocolJson.SerializeCatalog(projection.Catalog));
+        var publication = document.RootElement.GetProperty("providers")[0];
+
+        Assert.True(publication.GetProperty("isPrivateProvider").GetBoolean());
+        var price = publication.GetProperty("models")[0].GetProperty("price");
+        Assert.Equal(1.23m, price.GetProperty("inputPerMillionTokensUsd").GetDecimal());
+        Assert.Equal(0m, price.GetProperty("cachedInputPerMillionTokensUsd").GetDecimal());
+        Assert.Equal(4.56m, price.GetProperty("outputPerMillionTokensUsd").GetDecimal());
+        Assert.Single(publication.GetProperty("models").EnumerateArray());
+    }
+
+    [Fact]
+    public void SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute() {
+        var profile = CreateProfile(defaultModel: "model-alpha");
+        var source = CreateProjectionSource(profile, CreatePolicy(), isPublished: true);
+        profile.ExtraSettingsJson = ProviderPricingMetadata.Write(profile.ExtraSettingsJson, false,
+            [new ProviderModelTokenPrice("model-alpha", 1m, 0m, 2m)]);
+        var before = SharedProviderCatalogProjector.Project(SourceInstanceId, [source]);
+        profile.ExtraSettingsJson = ProviderPricingMetadata.Write(profile.ExtraSettingsJson, true,
+            [new ProviderModelTokenPrice("model-alpha", 9m, 0m, 2m)]);
+        var after = SharedProviderCatalogProjector.Project(SourceInstanceId, [source]);
+
+        Assert.NotEqual(before.EntityTag, after.EntityTag);
+        Assert.Equal(before.Catalog.Providers[0].DefaultModelId, after.Catalog.Providers[0].DefaultModelId);
+    }
+
+    [Fact]
     public void EligibleChatProfileIntersectsTypedMetadataProfileAndRelayCapabilities()
     {
         var profile = CreateProfile(
@@ -506,7 +552,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             SourceInstanceId,
             [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
         var publication = Assert.Single(projection.Catalog.Providers);
-        var secondaryModel = publication.Models.Single(model => model.DisplayName.EndsWith("2", StringComparison.Ordinal));
+        var secondaryModel = publication.Models.Single(model => model.DisplayName == "secondary-model");
         var unknown = SharedProviderRoutingModelIdCodec.Create(
             publication.PublicationId,
             "unknown-model");

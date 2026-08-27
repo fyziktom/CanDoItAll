@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedProviders.Abstractions;
 
@@ -59,7 +57,9 @@ public sealed record SharedProviderEffectiveRuntimeProfile(
     bool SupportsBackgroundResponses,
     IReadOnlyList<SharedProviderCatalogModel> Models,
     string ConnectorPluginKey,
-    IReadOnlyList<string> Tags);
+    IReadOnlyList<string> Tags) {
+    public bool IsPrivateProvider { get; init; }
+}
 
 public sealed record SharedProviderRuntimeProfileMaterializationResult
 {
@@ -164,7 +164,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
             return Unavailable(importAvailability);
         }
 
-        if (!TryReadSnapshot(import, out var publication) ||
+        if (!SharedProviderPublicationSnapshotReader.TryRead(import, out var publication) ||
             !TryResolveRuntimeShape(
                 publication,
                 out var transport,
@@ -217,7 +217,9 @@ public sealed class SharedProviderRuntimeProfileMaterializer
             false,
             models,
             SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
-            BuildTags(source, publication, transport, purpose, availability));
+            BuildTags(source, publication, transport, purpose, availability)) {
+            IsPrivateProvider = publication.IsPrivateProvider
+        };
         return availability == SharedProviderRuntimeProfileAvailability.Available
             ? SharedProviderRuntimeProfileMaterializationResult.Available(
                 effectiveProfile)
@@ -368,59 +370,6 @@ public sealed class SharedProviderRuntimeProfileMaterializer
             : SharedProviderRuntimeProfileAvailability.Available;
     }
 
-    private static bool TryReadSnapshot(
-        SharedProviderImport import,
-        out SharedProviderCatalogPublication publication)
-    {
-        publication = null!;
-        try
-        {
-            if (string.IsNullOrEmpty(import.RemoteCatalogSnapshotJson) ||
-                Encoding.UTF8.GetByteCount(import.RemoteCatalogSnapshotJson) >
-                    SharedProviderRemotePublicationState.MaximumSnapshotBytes)
-            {
-                return false;
-            }
-
-            var snapshot = JsonSerializer.Deserialize<SharedProviderRemotePublicationSnapshot>(
-                import.RemoteCatalogSnapshotJson,
-                SharedProviderProtocolJson.Options);
-            if (snapshot is null ||
-                snapshot.SchemaVersion != SharedProviderProtocolVersion.Current ||
-                snapshot.Publication is null)
-            {
-                return false;
-            }
-
-            var candidate = snapshot.Publication;
-            var revision = SharedProviderCanonicalRevision.ComputePublication(candidate);
-            if (candidate.Revision != revision ||
-                candidate.PublicationId != import.RemotePublicationId ||
-                candidate.Revision != import.RemoteRevision ||
-                !string.Equals(
-                    candidate.DisplayName,
-                    import.RemoteDisplayName,
-                    StringComparison.Ordinal) ||
-                candidate.Purpose != import.RemotePurpose ||
-                candidate.Transport != import.RemoteTransport ||
-                candidate.DefaultModelId != import.RemoteDefaultModelId)
-            {
-                return false;
-            }
-
-            publication = candidate;
-            return true;
-        }
-        catch (Exception exception) when (
-            exception is JsonException or
-                ArgumentException or
-                InvalidOperationException or
-                NotSupportedException)
-        {
-            return false;
-        }
-    }
-
     private static bool TryResolveRuntimeShape(
         SharedProviderCatalogPublication publication,
         out ProviderTransportKind transport,
@@ -487,7 +436,7 @@ public sealed class SharedProviderRuntimeProfileMaterializer
                 StringComparison.Ordinal) &&
             string.Equals(
                 profile.ConfigSchemaVersion,
-                SharedProviderProtocol.CurrentSchemaVersion,
+                SharedProviderReconciliationCoordinator.ImportedConfigurationSchemaVersion,
                 StringComparison.Ordinal) &&
             string.Equals(
                 profile.BaseUrl,

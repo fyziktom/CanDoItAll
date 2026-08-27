@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using System.Collections.Immutable;
 using CanDoItAll.Conversations.Components.Presentation;
 
 namespace CanDoItAll.AgentFramework.Components;
@@ -14,7 +15,10 @@ public static class AgentProviderPresentationMapper
             provider.Name,
             provider.IsEnabled,
             provider.DefaultModel,
-            provider.SuggestedModels);
+            provider.SuggestedModels) {
+            ModelDisplayNames = provider.ModelCatalog.ToImmutableDictionary(model => model.Id, model => model.DisplayName),
+            AllowsModelOverride = !provider.IsSourceManaged
+        };
     }
 
     public static IReadOnlyList<ConversationProviderOption> Map(

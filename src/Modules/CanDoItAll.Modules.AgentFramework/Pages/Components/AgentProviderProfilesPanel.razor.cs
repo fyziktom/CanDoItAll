@@ -66,6 +66,15 @@ public partial class AgentProviderProfilesPanel
                 ProviderConnectorKeys.SharedImport,
                 StringComparison.Ordinal));
 
+    private ProviderProfile? SelectedProvider => providers.FirstOrDefault(provider => provider.Id == providerModel.Id);
+
+    private string ProviderDefaultModelText {
+        get => SelectedProviderIsSourceManaged
+            ? SelectedProvider!.GetModelDisplayName(providerModel.DefaultModel)
+            : providerModel.DefaultModel;
+        set => providerModel.DefaultModel = value;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
@@ -323,7 +332,7 @@ public partial class AgentProviderProfilesPanel
         return provider.Name.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.Kind.ToString().Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.Transport.ToString().Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.DefaultModel.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
+               provider.GetModelDisplayName(provider.DefaultModel).Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.BaseUrl.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
                provider.Tags.Any(tag => tag.Contains(providerSearch, StringComparison.OrdinalIgnoreCase));
     }
@@ -335,7 +344,9 @@ public partial class AgentProviderProfilesPanel
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        suggestedModelsText = string.Join(Environment.NewLine, providerModel.SuggestedModels);
+        suggestedModelsText = string.Join(Environment.NewLine, SelectedProviderIsSourceManaged
+            ? providerModel.SuggestedModels.Select(SelectedProvider!.GetModelDisplayName)
+            : providerModel.SuggestedModels);
     }
 
     private string ResolveSelectedProviderStatus()

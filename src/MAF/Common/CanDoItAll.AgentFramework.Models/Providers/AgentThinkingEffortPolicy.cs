@@ -62,6 +62,12 @@ public static class AgentThinkingEffortPolicy
         ArgumentNullException.ThrowIfNull(provider);
 
         var normalizedModel = NormalizeModel(model);
+        if (provider.IsSourceManaged) {
+            return CreateUnknownCapability(
+                normalizedModel,
+                AgentThinkingEffortCapabilitySource.Defined,
+                $"Thinking effort for shared model '{provider.GetModelDisplayName(normalizedModel)}' is managed by the source instance. Use Provider default.");
+        }
         if (string.IsNullOrWhiteSpace(normalizedModel))
         {
             return CreateUnknownCapability(

@@ -15,6 +15,68 @@ public sealed class SharedProviderProtocolContractTests
         new($"sha256:{new string('a', 64)}");
 
     [Fact]
+    public void MetadataPricesRoundTripExactlyAndEveryFieldParticipatesInRevision() {
+        var price = new SharedProviderCatalogPrice(1.23m, 0m, 4.56m) {
+            CacheWritePerMillionTokensUsd = 0.50m,
+            LongContextThresholdTokens = 1000,
+            LongContextInputPerMillionTokensUsd = 2m,
+            LongContextCachedInputPerMillionTokensUsd = 0.1m,
+            LongContextCacheWritePerMillionTokensUsd = 0.7m,
+            LongContextOutputPerMillionTokensUsd = 8m
+        };
+        var original = CreateCatalog();
+        var publication = original.Providers[0] with { IsPrivateProvider = true,
+            Models = [original.Providers[0].Models[0] with { Price = price }] };
+        var catalog = WithComputedRevisions(original with { Providers = [publication] });
+        var json = SharedProviderProtocolJson.SerializeCatalog(catalog);
+        var restored = SharedProviderProtocolJson.DeserializeCatalog(json);
+        Assert.True(restored.Providers[0].IsPrivateProvider);
+        Assert.Equal(price, restored.Providers[0].Models[0].Price);
+
+        SharedProviderCatalogPrice[] changes = [
+            price with { InputPerMillionTokensUsd = 9 },
+            price with { CachedInputPerMillionTokensUsd = 9 },
+            price with { OutputPerMillionTokensUsd = 9 },
+            price with { CacheWritePerMillionTokensUsd = null },
+            price with { LongContextThresholdTokens = 2000 },
+            price with { LongContextInputPerMillionTokensUsd = 9 },
+            price with { LongContextCachedInputPerMillionTokensUsd = 9 },
+            price with { LongContextCacheWritePerMillionTokensUsd = null },
+            price with { LongContextOutputPerMillionTokensUsd = 9 }
+        ];
+        foreach (var changedPrice in changes) {
+            var changed = publication with { Models = [publication.Models[0] with { Price = changedPrice }] };
+            Assert.NotEqual(catalog.Providers[0].Revision, SharedProviderCanonicalRevision.ComputePublication(changed));
+        }
+        Assert.NotEqual(catalog.Providers[0].Revision,
+            SharedProviderCanonicalRevision.ComputePublication(publication with { IsPrivateProvider = false }));
+        Assert.Throws<JsonException>(() => SharedProviderProtocolJson.DeserializeCatalog(
+            json.Replace("\"isPrivateProvider\":true", "\"isPrivateProvider\":false", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void NegativeOrIncompletePricesAndMissingPrivateFlagAreRejected() {
+        var catalog = CreateCatalog();
+        var publication = catalog.Providers[0];
+        SharedProviderCatalogPrice[] invalidPrices = [
+            new(-1, 0, 0), new(0, -1, 0), new(0, 0, -1),
+            new(0, 0, 0) { CacheWritePerMillionTokensUsd = -1 },
+            new(0, 0, 0) { LongContextThresholdTokens = 0 },
+            new(0, 0, 0) { LongContextInputPerMillionTokensUsd = 1 },
+            new(0, 0, 0) { LongContextCachedInputPerMillionTokensUsd = -1 },
+            new(0, 0, 0) { LongContextCacheWritePerMillionTokensUsd = -1 },
+            new(0, 0, 0) { LongContextOutputPerMillionTokensUsd = -1 }
+        ];
+        foreach (var price in invalidPrices) {
+            Assert.Throws<JsonException>(() => SharedProviderCanonicalRevision.ComputePublication(
+                publication with { Models = [publication.Models[0] with { Price = price }] }));
+        }
+        var json = SharedProviderProtocolJson.SerializeCatalog(catalog);
+        Assert.Throws<JsonException>(() => SharedProviderProtocolJson.DeserializeCatalog(
+            json.Replace(",\"isPrivateProvider\":false", string.Empty, StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void RoutesExposeOnlyTheVersionedCatalogAndSupportedOpenAiSubset()
     {
         Assert.Equal("/api/shared-providers/v1/catalog", SharedProviderRoutes.Catalog);
@@ -52,12 +114,9 @@ public sealed class SharedProviderProtocolContractTests
         var json = SharedProviderProtocolJson.SerializeCatalog(catalog);
         var publication = catalog.Providers[0];
         Assert.Equal(
-            "sha256:bfd5f054f8954c4e27c528cbd946f1712cc5b99099455475bedc5ed2e573a044",
-            publication.Revision.Value);
-        Assert.Equal(
-            "sha256:3d6412b25bcac91e302ab962367d4592083f5226f35f237704ff1ba46fa2b197",
-            catalog.CatalogRevision.Value);
-        var expected = $"{{\"schemaVersion\":\"1.0\",\"sourceInstanceId\":\"{SourceInstanceId}\",\"catalogRevision\":\"{catalog.CatalogRevision}\",\"protocols\":{{\"openAiCompatibleBasePath\":\"/api/shared-providers/openai/v1\"}},\"providers\":[{{\"publicationId\":\"{PublicationId}\",\"revision\":\"{publication.Revision}\",\"displayName\":\"Central OpenAI\",\"purpose\":\"chat\",\"transport\":\"openai-compatible\",\"defaultModelId\":\"{publication.DefaultModelId}\",\"models\":[{{\"id\":\"{publication.DefaultModelId}\",\"displayName\":\"GPT 4.1\",\"capabilities\":[\"chat-completions\",\"function-tools\",\"responses\",\"streaming\",\"structured-output\"]}}],\"health\":{{\"state\":\"available\"}}}}]}}";
+            "sha256:7780e5f612eee8c6998e704048c542d325079dd1ed834716715f251ee927e5bc|sha256:e55c8eae4bf6d19f49a41f64d47d9f68fcb5da6e098887d31fea701b3d175e93",
+            $"{publication.Revision.Value}|{catalog.CatalogRevision.Value}");
+        var expected = $"{{\"schemaVersion\":\"1.1\",\"sourceInstanceId\":\"{SourceInstanceId}\",\"catalogRevision\":\"{catalog.CatalogRevision}\",\"protocols\":{{\"openAiCompatibleBasePath\":\"/api/shared-providers/openai/v1\"}},\"providers\":[{{\"publicationId\":\"{PublicationId}\",\"revision\":\"{publication.Revision}\",\"displayName\":\"Central OpenAI\",\"purpose\":\"chat\",\"transport\":\"openai-compatible\",\"defaultModelId\":\"{publication.DefaultModelId}\",\"models\":[{{\"id\":\"{publication.DefaultModelId}\",\"displayName\":\"GPT 4.1\",\"capabilities\":[\"chat-completions\",\"function-tools\",\"responses\",\"streaming\",\"structured-output\"],\"price\":null}}],\"health\":{{\"state\":\"available\"}},\"isPrivateProvider\":false}}]}}";
 
         Assert.Equal(expected, json);
 
@@ -66,7 +125,7 @@ public sealed class SharedProviderProtocolContractTests
         var provider = root.GetProperty("providers")[0];
         var model = provider.GetProperty("models")[0];
 
-        Assert.Equal("1.0", root.GetProperty("schemaVersion").GetString());
+        Assert.Equal("1.1", root.GetProperty("schemaVersion").GetString());
         Assert.Equal(SourceInstanceId.ToString(), root.GetProperty("sourceInstanceId").GetString());
         Assert.Equal(SharedProviderRoutes.OpenAiBase, root.GetProperty("protocols")
             .GetProperty("openAiCompatibleBasePath")
@@ -138,7 +197,7 @@ public sealed class SharedProviderProtocolContractTests
     public void UnsupportedProtocolVersionIsRejected()
     {
         var json = SharedProviderProtocolJson.SerializeCatalog(CreateCatalog())
-            .Replace("\"schemaVersion\":\"1.0\"", "\"schemaVersion\":\"2.0\"", StringComparison.Ordinal);
+            .Replace("\"schemaVersion\":\"1.1\"", "\"schemaVersion\":\"2.0\"", StringComparison.Ordinal);
 
         Assert.Throws<JsonException>(() => SharedProviderProtocolJson.DeserializeCatalog(json));
     }

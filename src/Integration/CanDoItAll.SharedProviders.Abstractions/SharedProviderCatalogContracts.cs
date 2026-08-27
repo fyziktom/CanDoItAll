@@ -116,7 +116,10 @@ public sealed record SharedProviderCatalogModel(
     [property: JsonPropertyName("displayName")]
     string DisplayName,
     [property: JsonPropertyName("capabilities")]
-    IReadOnlyList<SharedProviderCapability> Capabilities);
+    IReadOnlyList<SharedProviderCapability> Capabilities) {
+    [JsonPropertyName("price")]
+    public SharedProviderCatalogPrice? Price { get; init; }
+}
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderCatalogHealth(
@@ -140,7 +143,11 @@ public sealed record SharedProviderCatalogPublication(
     [property: JsonPropertyName("models")]
     IReadOnlyList<SharedProviderCatalogModel> Models,
     [property: JsonPropertyName("health")]
-    SharedProviderCatalogHealth Health);
+    SharedProviderCatalogHealth Health) {
+    [JsonRequired]
+    [JsonPropertyName("isPrivateProvider")]
+    public bool IsPrivateProvider { get; init; }
+}
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record SharedProviderCatalogDocument(
@@ -295,6 +302,7 @@ public static class SharedProviderProtocolJson
         }
 
         ValidateCapabilityCoherence(purpose, capabilities);
+        model.Price?.Validate();
     }
 
     private static void ValidateCapabilityCoherence(

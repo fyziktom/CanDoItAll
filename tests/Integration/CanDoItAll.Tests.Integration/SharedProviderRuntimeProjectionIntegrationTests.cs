@@ -111,6 +111,11 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             ProviderRuntimeDescriptor.FromProfile(snapshotProfile).Key,
             ProviderRuntimeDescriptor.FromProfile(changedConstraintProfile).Key);
         Assert.Equal(catalogProfile.Tags, snapshotProfile.Tags);
+        Assert.True(snapshotProfile.IsPrivateProvider);
+        Assert.Equal(seed.Publication.Models[0].DisplayName,
+            snapshotProfile.GetModelDisplayName(snapshotProfile.DefaultModel));
+        Assert.Equal(seed.Publication.Models[0].Price,
+            SharedProviderPriceMapper.ToCatalog(Assert.Single(snapshotProfile.ModelPrices)));
         Assert.Equal(seed.Publication.DefaultModelId.Value, snapshotProfile.DefaultModel);
         Assert.Equal(SharedProviderReconciliationCoordinator.ImportedConnectorPluginKey,
             snapshotProfile.ConnectorPluginKey);
@@ -863,7 +868,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
                     publicationId,
                     $"upstream-model-{index + 1}"),
                 $"Remote model {index + 1}",
-                Array.AsReadOnly(capabilities.ToArray())))
+                Array.AsReadOnly(capabilities.ToArray())) { Price = new(1.25m, 0m, 2.75m) })
             .ToArray();
         var publication = new SharedProviderCatalogPublication(
             publicationId,
@@ -874,7 +879,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             SharedProviderTransport.OpenAiCompatible,
             models[0].Id,
             Array.AsReadOnly(models),
-            new SharedProviderCatalogHealth(SharedProviderHealthState.Available));
+            new SharedProviderCatalogHealth(SharedProviderHealthState.Available)) { IsPrivateProvider = true };
         publication = publication with
         {
             Revision = SharedProviderCanonicalRevision.ComputePublication(publication)

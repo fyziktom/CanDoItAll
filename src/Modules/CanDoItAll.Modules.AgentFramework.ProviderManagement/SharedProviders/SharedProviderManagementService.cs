@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -263,11 +262,7 @@ public sealed class SharedProviderManagementService(
     private static SharedProviderImportedProfileSnapshot CreateImportedSnapshot(
         ImportedProfileRow row)
     {
-        var remoteSnapshot = JsonSerializer.Deserialize<SharedProviderRemotePublicationSnapshot>(
-            row.Import.RemoteCatalogSnapshotJson,
-            SharedProviderProtocolJson.Options) ??
-            throw new InvalidOperationException(
-                $"Shared-provider import '{row.Import.Id:D}' has no readable remote catalog snapshot.");
+        var hasCompatibleSnapshot = SharedProviderPublicationSnapshotReader.TryRead(row.Import, out var publication);
         return new SharedProviderImportedProfileSnapshot(
             row.Import.Id,
             row.Source.Id,
@@ -281,8 +276,8 @@ public sealed class SharedProviderManagementService(
             row.Import.RemoteTransport,
             row.Import.RemoteDefaultModelId,
             row.Import.SelectionState,
-            row.Import.AvailabilityState,
-            Array.AsReadOnly(remoteSnapshot.Publication.Models.ToArray()),
+            hasCompatibleSnapshot ? row.Import.AvailabilityState : SharedProviderAvailabilityState.IncompatibleContract,
+            hasCompatibleSnapshot ? Array.AsReadOnly(publication.Models.ToArray()) : [],
             row.Import.ConcurrencyToken,
             row.Profile.ConcurrencyToken);
     }

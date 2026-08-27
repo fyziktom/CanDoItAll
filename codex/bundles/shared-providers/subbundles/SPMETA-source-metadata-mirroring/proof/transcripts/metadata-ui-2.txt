@@ -1,0 +1,69 @@
+**********************
+PowerShell transcript start
+Start time: 20260827064216
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\Run-TwoInstanceUi.ps1 -RunLabel metadata-ui-2
+Process ID: 14156
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA invariants: META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E
+Working directory: C:\repositories\CanDoItAll
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-build --list-tests --filter FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision
+Discovered tests: 1; expected: 1 (0 means inspect the named selection)
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision --logger console;verbosity=normal --logger trx;LogFileName=metadata-ui-2.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts --nologo --no-build
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.12]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.19]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.22]   Starting:    CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:47.25]       Assert.InRange() Failure: Value not in range
+[xUnit.net 00:00:47.25]       Range:  (1 - 2)
+[xUnit.net 00:00:47.25]       Actual: 14
+[xUnit.net 00:00:47.25]       Stack Trace:
+[xUnit.net 00:00:47.26]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs(104,0): at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.ReadAsync(IPage page, String baseUrl, String providerName, Boolean sourceManaged)
+[xUnit.net 00:00:47.26]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs(42,0): at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.AssertMirroredAsync(IPage sharedPage, IPage clientPage, String sharedUrl, String clientUrl, String providerName, String evidenceDirectory, String label)
+[xUnit.net 00:00:47.26]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(66,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:00:47.26]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(82,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:00:47.26]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(82,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:00:47.26]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(82,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:00:47.26]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:47.27]   Finished:    CanDoItAll.Tests.Playwright
+  Neúspěšné CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision [46 s]
+  Chybová zpráva:
+   Assert.InRange() Failure: Value not in range
+Range:  (1 - 2)
+Actual: 14
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.ReadAsync(IPage page, String baseUrl, String providerName, Boolean sourceManaged) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs:line 104
+   at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.AssertMirroredAsync(IPage sharedPage, IPage clientPage, String sharedUrl, String clientUrl, String providerName, String evidenceDirectory, String label) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs:line 42
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 66
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 82
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 82
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 82
+--- End of stack trace from previous location ---
+
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 47,8960 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts\metadata-ui-2.trx
+Exit code: 1
+**********************
+PowerShell transcript end
+End time: 20260827064308
+**********************

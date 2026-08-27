@@ -68,6 +68,7 @@ public static class SharedProviderCanonicalRevision
         writer.WriteString("purpose", SharedProviderPurposeJsonConverter.GetToken(publication.Purpose));
         writer.WriteString("transport", SharedProviderTransportJsonConverter.GetToken(publication.Transport));
         writer.WriteString("defaultModelId", publication.DefaultModelId.Value);
+        writer.WriteBoolean("isPrivateProvider", publication.IsPrivateProvider);
         writer.WriteStartArray("models");
         foreach (var model in publication.Models.OrderBy(item => item.Id.Value, StringComparer.Ordinal))
         {
@@ -77,6 +78,8 @@ public static class SharedProviderCanonicalRevision
             writer.WriteStartObject();
             writer.WriteString("id", model.Id.Value);
             writer.WriteString("displayName", model.DisplayName);
+            writer.WritePropertyName("price");
+            JsonSerializer.Serialize(writer, model.Price, SharedProviderProtocolJson.Options);
             writer.WriteStartArray("capabilities");
             foreach (var capability in model.Capabilities
                 .Select(SharedProviderCapabilityJsonConverter.GetToken)

@@ -92,7 +92,7 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Default model</label>
-                                        <InputText @bind-Value="providerModel.DefaultModel"
+                                        <InputText @bind-Value="ProviderDefaultModelText"
                                                    class="cda-input"
                                                    data-testid="providers-model-input" />
                                     </div>
@@ -169,6 +169,8 @@
                                       class="agent-provider-readonly-fields">
                             <div class="agent-provider-prices-tab">
                                 <ProviderModelPricingEditor Model="providerModel"
+                                                            SourceManaged="@SelectedProviderIsSourceManaged"
+                                                            Provider="@SelectedProvider"
                                                             PricingKind="@providerModel.Kind"
                                                             DefaultModel="@providerModel.DefaultModel"
                                                             OnRefreshPrices="RefreshProviderModelPricesAsync" />

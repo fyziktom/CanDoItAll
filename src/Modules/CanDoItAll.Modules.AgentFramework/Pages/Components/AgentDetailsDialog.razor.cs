@@ -844,7 +844,7 @@ public partial class AgentDetailsDialog
         var model = ResolveEditorRuntimeModel(provider);
         var modelLabel = string.IsNullOrWhiteSpace(model)
             ? "the selected model"
-            : $"model '{model}'";
+            : $"model '{provider.GetModelDisplayName(model)}'";
 
         if (!AgentProviderModelParameterPolicy.IsOpenAiLikeProvider(provider.Kind))
         {

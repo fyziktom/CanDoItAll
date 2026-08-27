@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.SharedKernel.Configuration;
 
 using OllamaProviderAdministrationConnector = CanDoItAll.Modules.AgentFramework.ProviderManagement.OllamaProviderAdministrationConnector;
@@ -12,6 +13,27 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class ProviderPricingTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Editor_private_flag_replaces_stale_configuration_and_survives_reload(bool initialValue) {
+        var prices = new[] { new ProviderModelTokenPrice("model-a", 1.23m, 0m, 4.56m) };
+        var current = CreateProvider("Source pricing", prices) with {
+            IsPrivateProvider = initialValue,
+            ConfigurationJson = ProviderPricingMetadata.Write("{}", initialValue, prices)
+        };
+        var service = new ProviderProfileService();
+        var editor = service.CreateEditor(current);
+        editor.IsPrivateProvider = !initialValue;
+
+        var saved = service.CreateProfile(editor, current);
+
+        Assert.Equal(!initialValue, saved.IsPrivateProvider);
+        Assert.Equal(!initialValue, ProviderPricingMetadata.Read(saved.ConfigurationJson).IsPrivateProvider);
+        Assert.Equal(!initialValue, service.CreateEditor(saved).IsPrivateProvider);
+        Assert.Equal(prices[0], Assert.Single(saved.ModelPrices, price => price.Model == "model-a"));
+    }
+
     [Fact]
     public void OpenAi_defaults_include_current_pricing_rows()
     {

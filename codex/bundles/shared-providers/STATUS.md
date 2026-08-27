@@ -19,7 +19,15 @@ Overall state: `BLOCKED_SB07_TEST_BUDGET_AUTHORITY`
 | SB11 | `LOCKED` | SB10 | OpenAPI export and SharedInfo skills |
 | SB12 | `LOCKED` | SB11 | final regression, running stack, closure |
 
-## State rules
+## Operator feedback repair
+
+- 2026-08-27 `SPMETA` — `DONE`: source model names, exact published-model prices and private-provider
+  metadata repaired. Final focused lanes pass 161/217/46/38; final image-3 two-instance UI
+  acceptance passes twice, including persisted private edits, resync and chat/image/vision.
+  Governed evidence and handoff: `subbundles/SPMETA-source-metadata-mirroring/RESULT.md`.
+  Original SB07 and its downstream locks remain unchanged; no live/paid-provider claim.
+
+## Historical state rules
 
 - Only one subbundle may be `READY` or `IN_PROGRESS`.
 - `DONE` requires a passing proof manifest and completed handoff.

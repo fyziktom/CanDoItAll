@@ -31,7 +31,7 @@
             <ReadOnlyFact Label="Remote display name" Value="@Import.RemoteDisplayName" />
             <ReadOnlyFact Label="Purpose" Value="@FormatStatus(Import.Purpose)" />
             <ReadOnlyFact Label="Transport" Value="@FormatStatus(Import.Transport)" />
-            <ReadOnlyFact Label="Default routing model" Value="@Import.DefaultModelId.Value" Monospace="true" />
+            <ReadOnlyFact Label="Default model" Value="@(Import.Models.FirstOrDefault(model => model.Id == Import.DefaultModelId)?.DisplayName ?? "Unavailable shared model")" />
             <ReadOnlyFact Label="Published models" Value="@Import.Models.Count.ToString()" />
         </Grid>
 

@@ -1,0 +1,58 @@
+**********************
+PowerShell transcript start
+Start time: 20260827071202
+Username: LucysPower\CodexSandboxOffline
+RunAs User: LucysPower\CodexSandboxOffline
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -NoProfile -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+Start-Transcript -Path 'codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts\architecture-closure.txt' -Force | Out-Null
+Write-Output "SPMETA architecture gate; cwd=$((Get-Location).Path)"
+Write-Output 'python codex/bundles/shared-providers-boundary-recovery/scripts/check_provider_boundary.py --repo . --mode final --output codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/provider-boundary-closure.json'
+$boundaryOutput = python codex\bundles\shared-providers-boundary-recovery\scripts\check_provider_boundary.py --repo . --mode final --output codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\provider-boundary-closure.json
+$boundaryExit = $LASTEXITCODE
+$boundaryResult = $boundaryOutput | ConvertFrom-Json
+$boundaryResult | Select-Object mode,passed,violations | ConvertTo-Json -Depth 3
+Write-Output "Boundary exit code: $boundaryExit"
+Write-Output 'git diff --check'
+git diff --check
+Write-Output "Diff check exit code: $LASTEXITCODE"
+Stop-Transcript | Out-Null
+& codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\Check-Source.ps1
+Process ID: 34368
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E source assertions; cwd=C:\repositories\CanDoItAll
+PASS src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs: model.UpstreamModelId,
+PASS src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs: SharedProviderPriceMapper.ToCatalog
+PASS src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs: IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider
+PASS src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs: IsPrivateProvider = provider.IsPrivateProvider
+PASS src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs: ModelCatalog = Array.AsReadOnly
+PASS src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs: SharedProviderPriceMapper.ToRuntime
+PASS src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCanonicalRevision.cs: publication.IsPrivateProvider
+PASS src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCanonicalRevision.cs: model.Price
+PASS src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs: if (provider.IsSourceManaged)
+PASS src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs: return provider;
+PASS src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs: ProviderPricingMetadata.Write(normalizedConfigurationJson, isPrivateProvider, modelPrices)
+PASS src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelPricingEditor.razor: if (SourceManaged)
+PASS src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelPricingEditor.razor: provider-pricing-unavailable
+PASS src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelPricingEditor.razor: Provider.GetModelDisplayName(model)
+PASS src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor: GetModelDisplayName
+PASS src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor: Unavailable shared model
+PASS src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor: valueChangedExternally || Provider?.AllowsModelOverride == false
+PASS src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs: SharedProviderPublicationSnapshotReader.TryRead
+PASS src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs: SharedProviderAvailabilityState.IncompatibleContract
+Anti-stub command: rg -n TODO|NotImplementedException|deterministic fixture|e2e-|spmeta over all changed production .cs/.razor files
+PASS: 22 production files scanned; no stubs/fixture branches, project changes, or new partial boundaries. Exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827071202
+**********************

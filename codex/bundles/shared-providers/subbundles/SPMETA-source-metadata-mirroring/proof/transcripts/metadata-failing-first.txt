@@ -1,0 +1,29 @@
+**********************
+PowerShell transcript start
+Start time: 20260827061244
+Username: LucysPower\CodexSandboxOffline
+RunAs User: LucysPower\CodexSandboxOffline
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -NoProfile -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\Run-FocusedTests.ps1 -Project tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj -Filter 'FullyQualifiedName~SharedProviderPublicationAndCatalogTests.SourceMetadata' -RunLabel metadata-failing-first
+Process ID: 22368
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA invariants: META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E
+Working directory: C:\repositories\CanDoItAll
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter FullyQualifiedName~SharedProviderPublicationAndCatalogTests.SourceMetadata --logger console;verbosity=normal --logger trx;LogFileName=metadata-failing-first.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts --nologo
+
+Exit code: 1
+**********************
+PowerShell transcript end
+End time: 20260827061253
+**********************

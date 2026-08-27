@@ -17,4 +17,13 @@ public sealed record ConversationProviderOption(
         get => suggestedModels;
         init => suggestedModels = PresentationCollection.Snapshot(value, nameof(SuggestedModels));
     }
+
+    public IReadOnlyDictionary<string, string> ModelDisplayNames { get; init; } =
+        System.Collections.Immutable.ImmutableDictionary<string, string>.Empty;
+
+    public bool AllowsModelOverride { get; init; } = true;
+
+    public string GetModelDisplayName(string model) => ModelDisplayNames.TryGetValue(model, out var name)
+        ? name
+        : AllowsModelOverride ? model : "Unavailable shared model";
 }

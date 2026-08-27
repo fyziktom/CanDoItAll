@@ -33,6 +33,7 @@ Do not pre-fill passing claims.
 | SB10 | Behavioral | Not executed | Not executed | Locked | none |
 | SB11 | Governed | Not executed | Not executed | Locked | none |
 | SB12 | Governed | Not executed | Not executed | Locked | none |
+| SPMETA | Governed | Pass, operator feedback semantic gate | Pass for metadata repair | DONE; original SB07 unchanged | `bundle://subbundles/SPMETA-source-metadata-mirroring/proof/manifest.md` |
 
 ## Browser Validation Analytics
 
@@ -40,6 +41,27 @@ Do not pre-fill passing claims.
 | --- | --- | --- | --- | --- | --- | --- |
 | SB08 | `1600x1000` planned | Not executed | Not executed | component-level plan only | Not executed | none |
 | SB09 | `1600x1000` planned | Not executed | Not executed | Not executed | Not executed | none |
+| SPMETA | `1920x1080` | Provider identity, exact source prices/private status and agent model control | Provider editor/table and dialog body | Native model dropdown inside dialog right column | Readable labels; no harmful overflow/footer overlap | `bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/ui-review.md` |
+
+## SPMETA — August 27 source metadata repair
+
+- Baseline: providers-shared at f092472ab83d36caf0e0fb52119d57d7aad35a65, initially clean.
+  Changes remain uncommitted; exact before/after hashes are in the governed manifest.
+- Catalog 1.1 publishes names, typed prices and private status. Mappers preserve them;
+  source-owned UI stops inserting OpenAI defaults. Source private edits now survive save.
+  No project-reference or new partial-class boundary change.
+- Final focused tests: 161 unit, 217 dependent-consumer, 46 integration, 38 component
+  executions passed. Discovery/selection details and real failing-first proof are preserved.
+- Both final image-3 two-instance UI runs pass source setup/reload, import/resync, model
+  removal, prices/private comparison and shared chat/image/vision. Each run records eight
+  complete successful central operations. Repeat verifies new PNG and healthy endpoints.
+- Architecture/source/anti-stub and primary-agent semantic/visual reviews pass within scope.
+  CodeAnalytics impact selection and Components MCP gaps are explicit, not full-suite claims.
+- Final engine image: candoitall-shared-providers-ui:spmeta-20260827-3, ports 5210/5212.
+  Data and rollback containers retained; 5032 untouched. Deterministic upstream only, no
+  live/paid-provider or central billed-cost claim.
+- Progression: SPMETA DONE. Original SB07 and downstream locks unchanged.
+  Handoff: `bundle://subbundles/SPMETA-source-metadata-mirroring/RESULT.md`.
 
 ## SB00 — Baseline characterization and decision lock
 

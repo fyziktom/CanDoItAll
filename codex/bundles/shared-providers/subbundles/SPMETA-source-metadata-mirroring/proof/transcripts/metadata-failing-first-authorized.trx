@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="7f4e30c6-0246-4c9a-8cbe-0099746a3ffb" name="lucys@LUCYSPOWER 2026-08-27 06:15:20" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T06:15:20.2831584-04:00" queuing="2026-08-27T06:15:20.2831589-04:00" start="2026-08-27T06:15:17.7860959-04:00" finish="2026-08-27T06:15:20.2955126-04:00" />
+  <TestSettings name="default" id="b9d9ad2d-db43-4053-ab5e-0e618bab1e52">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_06_15_20" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="f38d0ad4-b456-4acd-8f5c-6a96715ba26e" testId="f7d372c4-81a3-d23f-8be6-0e4f4530acef" testName="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds" computerName="LUCYSPOWER" duration="00:00:00.0187353" startTime="2026-08-27T06:15:20.1400625-04:00" endTime="2026-08-27T06:15:20.1401837-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f38d0ad4-b456-4acd-8f5c-6a96715ba26e">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Collections differ&#xD;
+                                           ↓ (pos 0)&#xD;
+Expected: &lt;generated&gt;                     ["model-alpha", "model-beta"]&#xD;
+Actual:   OrderedIterator&lt;string, string&gt; ["Central provider 1", "Central provider 2"]&#xD;
+                                           ↑ (pos 0)</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderPublicationAndCatalogTests.cs:line 37&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="9110d272-d3de-4ded-b96a-e6830a72469a" testId="4c823b92-850b-c955-e7d4-3b5c6744ed62" testName="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults" computerName="LUCYSPOWER" duration="00:00:00.0025605" startTime="2026-08-27T06:15:20.1427788-04:00" endTime="2026-08-27T06:15:20.1428343-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9110d272-d3de-4ded-b96a-e6830a72469a">
+      <Output>
+        <ErrorInfo>
+          <Message>System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.</Message>
+          <StackTrace>   at System.Text.Json.JsonElement.GetProperty(String propertyName)&#xD;
+   at CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderPublicationAndCatalogTests.cs:line 52&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3591947b-23c3-4676-abee-c1d599488f64" testId="20ef6dde-50c3-924f-fd43-801ebe9150f2" testName="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute" computerName="LUCYSPOWER" duration="00:00:00.1796931" startTime="2026-08-27T06:15:19.9529161-04:00" endTime="2026-08-27T06:15:20.1182650-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3591947b-23c3-4676-abee-c1d599488f64">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.NotEqual() Failure: Values are equal&#xD;
+Expected: Not "sha256:ae73b07cbbd9c1c74e573233674f75b4b826456b3b02ec056308b234707926be"&#xD;
+Actual:       "sha256:ae73b07cbbd9c1c74e573233674f75b4b826456b3b02ec056308b234707926be"</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderPublicationAndCatalogTests.cs:line 71&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="f7d372c4-81a3-d23f-8be6-0e4f4530acef">
+      <Execution id="f38d0ad4-b456-4acd-8f5c-6a96715ba26e" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests" name="SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="4c823b92-850b-c955-e7d4-3b5c6744ed62">
+      <Execution id="9110d272-d3de-4ded-b96a-e6830a72469a" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests" name="SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="20ef6dde-50c3-924f-fd43-801ebe9150f2">
+      <Execution id="3591947b-23c3-4676-abee-c1d599488f64" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests" name="SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="f7d372c4-81a3-d23f-8be6-0e4f4530acef" executionId="f38d0ad4-b456-4acd-8f5c-6a96715ba26e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4c823b92-850b-c955-e7d4-3b5c6744ed62" executionId="9110d272-d3de-4ded-b96a-e6830a72469a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="20ef6dde-50c3-924f-fd43-801ebe9150f2" executionId="3591947b-23c3-4676-abee-c1d599488f64" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="3" executed="3" passed="0" failed="3" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.38]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.53]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.57]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.80]       Assert.NotEqual() Failure: Values are equal&#xD;
+[xUnit.net 00:00:01.80]       Expected: Not "sha256:ae73b07cbbd9c1c74e573233674f75b4b826456b3b02ec056308b234707926be"&#xD;
+[xUnit.net 00:00:01.80]       Actual:       "sha256:ae73b07cbbd9c1c74e573233674f75b4b826456b3b02ec056308b234707926be"&#xD;
+[xUnit.net 00:00:01.80]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.80]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderPublicationAndCatalogTests.cs(71,0): at CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute()&#xD;
+[xUnit.net 00:00:01.80]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.80]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.82]       Assert.Equal() Failure: Collections differ&#xD;
+[xUnit.net 00:00:01.82]                                                  ↓ (pos 0)&#xD;
+[xUnit.net 00:00:01.82]       Expected: &lt;generated&gt;                     ["model-alpha", "model-beta"]&#xD;
+[xUnit.net 00:00:01.82]       Actual:   OrderedIterator&lt;string, string&gt; ["Central provider 1", "Central provider 2"]&#xD;
+[xUnit.net 00:00:01.82]                                                  ↑ (pos 0)&#xD;
+[xUnit.net 00:00:01.82]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.82]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderPublicationAndCatalogTests.cs(37,0): at CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds()&#xD;
+[xUnit.net 00:00:01.82]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.82]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.82]       System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.&#xD;
+[xUnit.net 00:00:01.82]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.82]            at System.Text.Json.JsonElement.GetProperty(String propertyName)&#xD;
+[xUnit.net 00:00:01.82]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\SharedProviderPublicationAndCatalogTests.cs(52,0): at CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults()&#xD;
+[xUnit.net 00:00:01.82]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.82]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.83]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:15:20.1213900-04:00">
+        <Text>[xUnit.net 00:00:01.80]     CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:15:20.1414004-04:00">
+        <Text>[xUnit.net 00:00:01.82]     CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T06:15:20.1432767-04:00">
+        <Text>[xUnit.net 00:00:01.82]     CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

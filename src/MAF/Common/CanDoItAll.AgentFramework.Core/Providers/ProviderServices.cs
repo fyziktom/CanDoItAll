@@ -66,6 +66,8 @@ public sealed class ProviderProfileService : IProviderProfileService
         {
             throw new ProviderProfileValidationException(validationMessage);
         }
+        var isPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider);
+        normalizedConfigurationJson = ProviderPricingMetadata.Write(normalizedConfigurationJson, isPrivateProvider, modelPrices);
 
         var profile = new ProviderProfile(
             Id: model.Id ?? Guid.NewGuid(),
@@ -87,7 +89,7 @@ public sealed class ProviderProfileService : IProviderProfileService
             LastCheckedAtUtc: current?.LastCheckedAtUtc,
             SuggestedModels: NormalizeSuggestedModels(model.SuggestedModels))
         {
-            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider),
+            IsPrivateProvider = isPrivateProvider,
             ModelPrices = modelPrices,
             Tags = NormalizeTags(model.Tags),
             ModelThinkingEffortCapabilities = NormalizeEditorThinkingEffortCapabilities(
@@ -113,6 +115,9 @@ public sealed class ProviderProfileService : IProviderProfileService
         bool allowLegacyKindMigration)
     {
         ArgumentNullException.ThrowIfNull(provider);
+        if (provider.IsSourceManaged) {
+            return provider;
+        }
 
         var normalizedKind = provider.Kind;
         var normalizedTransport = provider.Transport;

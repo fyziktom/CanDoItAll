@@ -749,6 +749,7 @@ internal sealed class CanonicalProviderRuntimeProfileSnapshotService :
                 provider.Profile.SuggestedModels.ToImmutableArray(),
             ModelPrices =
                 provider.Profile.ModelPrices.ToImmutableArray(),
+            ModelCatalog = provider.Profile.ModelCatalog.ToImmutableArray(),
             Tags = provider.Profile.Tags.ToImmutableArray()
         };
         return new ProviderRuntimeProfileSnapshotLease(

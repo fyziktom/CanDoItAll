@@ -1,0 +1,500 @@
+**********************
+PowerShell transcript start
+Start time: 20260827070032
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\Run-FocusedTests.ps1 -Project tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj -Filter 'FullyQualifiedName~ProviderPricingTests|FullyQualifiedName~ProviderProfileSaveValidationTests|FullyQualifiedName~ProviderProfileThinkingCapabilityTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~ProviderRuntimeProfileSnapshotServiceTests|FullyQualifiedName~SharedProviderPublicationAndCatalogTests|FullyQualifiedName~SharedProviderProtocolContractTests|FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests|FullyQualifiedName~SharedProviderSourceUriPolicyTests' -RunLabel metadata-private-edit-final
+Process ID: 22828
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA invariants: META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E
+Working directory: C:\repositories\CanDoItAll
+dotnet build tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --nologo
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.Security.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Security.Abstractions\bin\Debug\net10.0\CanDoItAll.Security.Abstractions.dll
+  CanDoItAll.Memory.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.Abstractions.dll
+  CanDoItAll.FileTools.Abstractions -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.Abstractions\bin\Debug\net10.0\CanDoItAll.FileTools.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Memory.SourceGateway.Abstractions -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.SourceGateway.Abstractions\bin\Debug\net10.0\CanDoItAll.Memory.SourceGateway.Abstractions.dll
+  CanDoItAll.FileTools.FileInteraction.Core -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Core\bin\Debug\net10.0\CanDoItAll.FileTools.FileInteraction.Core.dll
+  CanDoItAll.Memory.Http.Contracts -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Http.Contracts\bin\Debug\net10.0\CanDoItAll.Memory.Http.Contracts.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Contracts\bin\Debug\net10.0\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.SharedProviders.Abstractions -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.SharedProviders.Abstractions\bin\Debug\net10.0\CanDoItAll.SharedProviders.Abstractions.dll
+  CanDoItAll.Memory.Application -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Application\bin\Debug\net10.0\CanDoItAll.Memory.Application.dll
+  CanDoItAll.AgentFramework.Capabilities.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Abstractions.dll
+  CanDoItAll.Infrastructure.Abstractions -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure.Abstractions\bin\Debug\net10.0\CanDoItAll.Infrastructure.Abstractions.dll
+  CanDoItAll.FileTools.FileBrowser.Core -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileBrowser.Core\bin\Debug\net10.0\CanDoItAll.FileTools.FileBrowser.Core.dll
+  CanDoItAll.Processes.Abstractions -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Abstractions\bin\Debug\net10.0\CanDoItAll.Processes.Abstractions.dll
+  CanDoItAll.Memory.Mock -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Mock\bin\Debug\net10.0\CanDoItAll.Memory.Mock.dll
+  CanDoItAll.FileTools.FileInteraction.Components -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Components\bin\Debug\net10.0\CanDoItAll.FileTools.FileInteraction.Components.dll
+  CanDoItAll.Memory.Http -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Http\bin\Debug\net10.0\CanDoItAll.Memory.Http.dll
+  CanDoItAll.Components.Charts -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Charts\bin\Debug\net10.0\CanDoItAll.Components.Charts.dll
+  CanDoItAll.FileTools.Integration.Abstractions -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.FileTools.Integration.Abstractions\bin\Debug\net10.0\CanDoItAll.FileTools.Integration.Abstractions.dll
+  CanDoItAll.Git -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Git\bin\Debug\net10.0\CanDoItAll.Git.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Core\bin\Debug\net10.0\CanDoItAll.Processes.Core.dll
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\bin\Debug\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Memory.Drivers.CognitiveMemory -> C:\repositories\CanDoItAll\src\Memory\Drivers\CanDoItAll.Memory.Drivers.CognitiveMemory\bin\Debug\net10.0\CanDoItAll.Memory.Drivers.CognitiveMemory.dll
+  CanDoItAll.FileTools.FileInteraction.Markdown -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Markdown\bin\Debug\net10.0\CanDoItAll.FileTools.FileInteraction.Markdown.dll
+  CanDoItAll.FileTools.Desktop -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.Desktop\bin\Debug\net10.0\CanDoItAll.FileTools.Desktop.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Abstractions\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.Processes.Projections -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Projections\bin\Debug\net10.0\CanDoItAll.Processes.Projections.dll
+  CanDoItAll.Processes.Templates -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Templates\bin\Debug\net10.0\CanDoItAll.Processes.Templates.dll
+  CanDoItAll.AgentFramework.Mcp.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Mcp.Abstractions.dll
+  CanDoItAll.Processes.Builder -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Builder\bin\Debug\net10.0\CanDoItAll.Processes.Builder.dll
+  CanDoItAll.Processes.Drivers.Standard -> C:\repositories\CanDoItAll\src\Processes\Drivers\CanDoItAll.Processes.Drivers.Standard\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.Standard.dll
+  CanDoItAll.Memory.Persistence -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Persistence\bin\Debug\net10.0\CanDoItAll.Memory.Persistence.dll
+  CanDoItAll.AgentFramework.Capabilities.Access -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Access\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Access.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Capabilities.Templates -> C:\repositories\CanDoItAll\src\MAF\Capabilities\CanDoItAll.AgentFramework.Capabilities.Templates\bin\Debug\net10.0\CanDoItAll.AgentFramework.Capabilities.Templates.dll
+  CanDoItAll.AgentFramework.Tools.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.AgentFramework.Tools.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tools.Abstractions.dll
+  CanDoItAll.Processes.Runtime -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Runtime\bin\Debug\net10.0\CanDoItAll.Processes.Runtime.dll
+  CanDoItAll.AgentFramework.Workflows.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Abstractions.dll
+  CanDoItAll.AgentFramework.Runtime.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Runtime.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Runtime.Abstractions.dll
+  CanDoItAll.AgentFramework.Usage -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Usage\bin\Debug\net10.0\CanDoItAll.AgentFramework.Usage.dll
+  CanDoItAll.FileTools.FileInteraction.Spreadsheet -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileInteraction.Spreadsheet\bin\Debug\net10.0\CanDoItAll.FileTools.FileInteraction.Spreadsheet.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.AgentFramework.Tooling\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.AgentFramework.Llm.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.Abstractions.dll
+  CanDoItAll.Memory.Mcp -> C:\repositories\CanDoItAll\src\Memory\CanDoItAll.Memory.Mcp\bin\Debug\net10.0\CanDoItAll.Memory.Mcp.dll
+  CanDoItAll.Processes.Application -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Application\bin\Debug\net10.0\CanDoItAll.Processes.Application.dll
+  CanDoItAll.AgentFramework.Tools -> C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.AgentFramework.Tools\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tools.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\bin\Debug\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.Workflows.Builder -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Builder\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Builder.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\plugins\Abstractions\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.ProviderPipelines -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.ProviderPipelines\bin\Debug\net10.0\CanDoItAll.AgentFramework.ProviderPipelines.dll
+  CanDoItAll.DurableFileWriter.TestHost -> C:\repositories\CanDoItAll\tests\Support\CanDoItAll.DurableFileWriter.TestHost\bin\Debug\net10.0\CanDoItAll.DurableFileWriter.TestHost.dll
+  CanDoItAll.Processes.Persistence -> C:\repositories\CanDoItAll\src\Processes\CanDoItAll.Processes.Persistence\bin\Debug\net10.0\CanDoItAll.Processes.Persistence.dll
+  CanDoItAll.FileTools.FileBrowser.Components -> C:\repositories\CanDoItAll.FileTools\src\CanDoItAll.FileTools.FileBrowser.Components\bin\Debug\net10.0\CanDoItAll.FileTools.FileBrowser.Components.dll
+  CanDoItAll.AgentFramework.Skills.Abstractions -> C:\repositories\CanDoItAll\src\MAF\Skills\CanDoItAll.AgentFramework.Skills.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.Skills.Abstractions.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Abstractions.dll
+  CanDoItAll.FileTools.Integration -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.FileTools.Integration\bin\Debug\net10.0\CanDoItAll.FileTools.Integration.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Core -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Core.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Core -> C:\repositories\CanDoItAll\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Core.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Plugins -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Plugins.dll
+  CanDoItAll.AgentFramework.Llm.Conversations -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Llm.Conversations\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.Conversations.dll
+  CanDoItAll.Components.Git -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.Components.Git\bin\Debug\net10.0\CanDoItAll.Components.Git.dll
+  CanDoItAll.AgentFramework.Providers -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Providers\bin\Debug\net10.0\CanDoItAll.AgentFramework.Providers.dll
+  CanDoItAll.Modules.Memory -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Memory\bin\Debug\net10.0\CanDoItAll.Modules.Memory.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\bin\Debug\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Collaboration\bin\Debug\net10.0\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.AgentFramework.Llm.ProviderRuntime -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Llm.ProviderRuntime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.ProviderRuntime.dll
+  CanDoItAll.SharedProviders.Http -> C:\repositories\CanDoItAll\src\Integration\CanDoItAll.SharedProviders.Http\bin\Debug\net10.0\CanDoItAll.SharedProviders.Http.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Application -> C:\repositories\CanDoItAll\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Application\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Application.dll
+  CanDoItAll.Conversations.Components -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.Conversations.Components\bin\Debug\net10.0\CanDoItAll.Conversations.Components.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime -> C:\repositories\CanDoItAll\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Runtime.dll
+  CanDoItAll.Components.WebGlLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib\bin\Debug\net10.0\CanDoItAll.Components.WebGlLib.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid\bin\Debug\net10.0\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.Conversations.Shell -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.Conversations.Shell\bin\Debug\net10.0\CanDoItAll.Conversations.Shell.dll
+  CanDoItAll.AgentFramework.Skills -> C:\repositories\CanDoItAll\src\MAF\Skills\CanDoItAll.AgentFramework.Skills\bin\Debug\net10.0\CanDoItAll.AgentFramework.Skills.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib\bin\Debug\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence -> C:\repositories\CanDoItAll\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.dll
+  CanDoItAll.Components.Gantt -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Gantt\bin\Debug\net10.0\CanDoItAll.Components.Gantt.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\src\UI\CanDoItAll.AppComponents\bin\Debug\net10.0\CanDoItAll.AppComponents.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Prompts\bin\Debug\net10.0\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AgentFramework.Memory -> C:\repositories\CanDoItAll\src\MAF\Memory\CanDoItAll.AgentFramework.Memory\bin\Debug\net10.0\CanDoItAll.AgentFramework.Memory.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\src\MAF\Tools\CanDoItAll.Tools.Documents\bin\Debug\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.Workflows.Core -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Core.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Voice\bin\Debug\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.AgentFramework.Mcp -> C:\repositories\CanDoItAll\src\MAF\Mcp\CanDoItAll.AgentFramework.Mcp\bin\Debug\net10.0\CanDoItAll.AgentFramework.Mcp.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Media.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\tools\App\CanDoItAll.Manager\bin\Debug\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Workspace.dll
+  CanDoItAll.Modules.AgentFramework.ProviderManagement -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework.ProviderManagement\bin\Debug\net10.0\CanDoItAll.Modules.AgentFramework.ProviderManagement.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.ProjectStructure.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Documents.dll
+  CanDoItAll.AgentFramework.Workflows.Runtime -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Runtime\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Runtime.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Transforms.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Control.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Persistence\bin\Debug\net10.0\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Projects\bin\Debug\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Maf\bin\Debug\net10.0\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.AgentFramework.WorkflowExecutors.Standard -> C:\repositories\CanDoItAll\src\MAF\WorkflowExecutors\Standard\CanDoItAll.AgentFramework.WorkflowExecutors.Standard\bin\Debug\net10.0\CanDoItAll.AgentFramework.WorkflowExecutors.Standard.dll
+  CanDoItAll.AgentFramework.Workflows.Templates -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.Templates\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.Templates.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.AgentFramework.Workflows.MafAdapter -> C:\repositories\CanDoItAll\src\MAF\Workflows\CanDoItAll.AgentFramework.Workflows.MafAdapter\bin\Debug\net10.0\CanDoItAll.AgentFramework.Workflows.MafAdapter.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Components\bin\Debug\net10.0\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Gmail\bin\Debug\net10.0\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Office365\bin\Debug\net10.0\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\src\plugins\Implementations\CanDoItAll.Plugin.Docker\bin\Debug\net10.0\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Hosting\bin\Debug\net10.0\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.TestLab\bin\Debug\net10.0\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workspace\bin\Debug\net10.0\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.AgentFramework.Llm.SimpleChats.Components -> C:\repositories\CanDoItAll\src\MAF\SimpleChats\CanDoItAll.AgentFramework.Llm.SimpleChats.Components\bin\Debug\net10.0\CanDoItAll.AgentFramework.Llm.SimpleChats.Components.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.SchedulerPlanner\bin\Debug\net10.0\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Resources\bin\Debug\net10.0\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.CrmHr\bin\Debug\net10.0\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Workbench\bin\Debug\net10.0\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.AgentFramework\bin\Debug\net10.0\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\src\Modules\CanDoItAll.Modules.Processes\bin\Debug\net10.0\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\src\App\CanDoItAll.Composition\bin\Debug\net10.0\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\src\Foundation\CanDoItAll.Migrations.PostgreSql\bin\Debug\net10.0\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\src\App\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\tests\Support\CanDoItAll.Tests.Support\bin\Debug\net10.0\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Unit -> C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:30.66
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --list-tests --filter FullyQualifiedName~ProviderPricingTests|FullyQualifiedName~ProviderProfileSaveValidationTests|FullyQualifiedName~ProviderProfileThinkingCapabilityTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~ProviderRuntimeProfileSnapshotServiceTests|FullyQualifiedName~SharedProviderPublicationAndCatalogTests|FullyQualifiedName~SharedProviderProtocolContractTests|FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests|FullyQualifiedName~SharedProviderSourceUriPolicyTests
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.MetadataPricesRoundTripExactlyAndEveryFieldParticipatesInRevision
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.NegativeOrIncompletePricesAndMissingPrivateFlagAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RoutesExposeOnlyTheVersionedCatalogAndSupportedOpenAiSubset
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RouteResolutionPreservesAReverseProxyBasePath
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogSerializationUsesTheFrozenPublicNamesAndStringValues
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogRoundTripPreservesTypedPublicIdentitiesAndCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownTopLevelMemberIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownNestedMemberIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnsupportedProtocolVersionIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.InvalidMissingOrIncoherentProtocolMembersAreRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.ModelRouteFromAnotherPublicationIsRejected
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CanonicalRepresentationSortsInputsAndTracksPublicHealth
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.PublicContractsRejectSecretsInvalidDefaultsAndIncoherentPorts
+    CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.AbstractionsAssemblyHasNoWebEfWorkspaceOrProviderSdkDependency
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.EligibleChatProfileIntersectsTypedMetadataProfileAndRelayCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.DisabledProfileIsIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SyntheticImportedAndRuntimeFallbackProfilesAreIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnknownOrNonExecutionConnectorIsIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MissingRelayDescriptorIsIneligibleWithActionableReason
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MalformedMetadataMissingSecretOrInvalidModelsAreIneligible
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ImageProfileRequiresImageRelayAndAdvertisesOnlyImageCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnsupportedOptionalProfileCapabilitiesAreOmittedFromIntersection
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorExcludesUnpublishedAndIneligibleProfiles
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorCreatesStablePublicIdentitiesAndDistinctDuplicateModelRoutes
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorProducesCanonicalOrderingAndDeterministicRevisions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PrivateProfileChangesDoNotChangePublicRevisionOrEntityTag
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicProfileChangesChangePublicationAndCatalogRevisions
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SerializedCatalogContainsNoPrivateProviderFieldsOrValues
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.RoutingIndexResolvesExactPublishedModelAndRejectsUnknownModel
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationPublishesAndUnpublishesWithPostCommitActivityAndInvalidation
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationRejectsIneligibleAndStaleRequestsWithoutPostCommitSideEffects
+    CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.QueryCacheUsesPersistedStampAcrossInstancesAndRechecksCurrentEligibility
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(isPrivate: True)
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(isPrivate: False)
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Legacy_snapshot_requires_resynchronization_instead_of_guessing_source_metadata
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ResponsesChat_MapsCanonicalEffectiveProfileWithoutSecretValue
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ChatCompletions_MapsHistoryModeAndPrivateNetworkPolicy
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ImageGeneration_MapsPurposeAndImageCapabilities
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MultipleModels_PreservesCatalogAndUsesSafeCapabilityIntersection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_DegradedPublication_RemainsAvailableWithValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_LocalProfileDisabled_RetainsAliasAndDisabledIntent
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceDisabledRetainsProjection_ButNeverSynchronizedDoesNot
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceOffline_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_AuthorizationFailed_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceIdentityMismatch_RetainsOnlyPreviouslyValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_IncompatibleContract_RetainsLastValidatedProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RetiredImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_UnpublishedImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingImport_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RemoteUnavailableHealth_RetainsProjectionButCannotInvoke
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingOrMismatchedRelationship_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_TamperedSnapshotOrDuplicatedImportFields_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ForgedDerivedProfileCaches_ProducesNoProjection
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_CanonicalizesHostPortAndReverseProxyRoot
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsRelativeAndNonHttpSchemes
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsUserInfoQueryAndFragment
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsAmbiguousAndOverlongAddresses
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsPlainHttpPublicDestinationsEvenWhenPrivateAccessIsApproved
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_AllowsLoopbackHttpWithoutBroadPrivateApproval
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_PrivateHttpRequiresExplicitApproval
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_PrivateAndLoopbackHttpsRequireExplicitApproval
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PublicAddressPolicy_AcceptsOnlyGlobalUnicastDestinations
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.TrustedAddressPolicy_AllowsPrivateButNeverLinkLocalOrMulticast
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PrivateHttpConnectionPolicy_RejectsPublicDnsAndAllowsApprovedPrivateDns
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PublicConnectionPolicy_RejectsPrivateAndMixedDnsAnswers
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.ConnectionPolicy_RevalidatesEveryNewConnectionAgainstDnsRebinding
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.HandlerAndDependencyInjection_DisableRedirectsProxyCookiesAndUriLogging
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogRequest_UsesTypedRedactedCredentialAndPinnedIdentity
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_SendsCanonicalAuthenticatedRequestAndValidatesSuccess
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_HandlesConditionalNoOpAndSanitizedStatusFailures
+    CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_RejectsInvalidBoundsContractIdentityAndMapsTimeouts
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_responses_as_structured_output_and_native_tool_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.AudioCapabilityPolicyRejectsSourceProfilesAndPreservesPersonalProfiles
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_chat_completions_as_structured_output_with_maf_approval
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_with_maf_approval
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_as_structured_output_and_local_tool_bridge_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_vision_model_as_vision_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_uses_selected_model_instead_of_provider_suggestions
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_does_not_let_ollama_provider_wide_vision_metadata_override_text_model
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_configured_ollama_provider_as_vision_capable
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_image_generation_provider_by_explicit_purpose
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_comfyui_as_private_image_provider_without_chat_tools
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Persisted_provider_registry_uses_feature_matrix_and_transport_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_is_authoritative_in_agent_framework_and_workspace_only_selects_default
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Agent_framework_provider_mapping_and_workflow_image_selection_do_not_fallback_to_chat_providers
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_does_not_expose_non_persisted_batch_controls
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Runtime_bootstrap_provider_uses_managed_openai_responses_defaults
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Editor_private_flag_replaces_stale_configuration_and_survives_reload(initialValue: False)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Editor_private_flag_replaces_stale_configuration_and_survives_reload(initialValue: True)
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_defaults_include_current_pricing_rows
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_defaults_include_exact_gpt_5_6_standard_and_long_context_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Ollama_defaults_are_private_and_non_zero
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_uncached_cached_and_output_tokens_separately
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_uses_long_context_rates_above_the_gpt_5_6_threshold
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_standard_context_cache_writes_separately
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_long_context_cache_writes_at_the_long_rate
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_applies_long_context_pricing_per_observation_not_to_aggregate_tokens
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Observation_cost_uses_total_tokens_when_reasoning_is_not_in_output_tokens
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Metric_cost_resolution_prices_cached_input_tokens_when_cost_is_not_persisted
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_counts_only_observed_usage_as_known_actual_cost
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_counts_observed_usage_across_runtime_repair_and_finalizer_phases
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Pricing_metadata_round_trips_without_breaking_flat_configuration_state
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Discovered_prices_override_same_model_but_preserve_manual_rows_without_fabricating_unknown_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Known_defaults_enrich_existing_gpt_5_6_rows_without_overwriting_standard_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Authoritative_known_defaults_replace_stale_known_rows_and_preserve_custom_models
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Explicit_discovery_preserves_existing_optional_gpt_5_6_pricing_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Name_only_discovery_adds_known_gpt_5_6_default_but_does_not_price_unknown_models
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_pricing_discovery_reads_explicit_price_metadata
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_pricing_discovery_requires_secret
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Ollama_pricing_discovery_returns_model_names_without_prices
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "empty-id")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "blank-name")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "blank-base-url")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "relative-base-url")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-user-info")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-query")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-fragment")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "malformed-configuration")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "non-object-configuration")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-kind")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-transport")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-purpose")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "incompatible-kind-transport")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_accepts_absolute_first_party_custom_scheme(baseUrl: "scenario://harness")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_accepts_absolute_first_party_custom_scheme(baseUrl: "process-mock://agents")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"connectorPluginKey\":\"provider.openai\",\"Conn"···, canonicalPropertyName: "connectorPluginKey")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"configSchemaVersion\":\"1\",\"ConfigSchemaVersi"···, canonicalPropertyName: "configSchemaVersion")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"secretRecordId\":\"72d10cca-63f7-4f6f-8055-938c"···, canonicalPropertyName: "secretRecordId")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"timeoutSeconds\":45,\"TimeoutSeconds\":90}", canonicalPropertyName: "timeoutSeconds")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"agentFrameworkProviderKind\":\"OpenAi\",\"Agent"···, canonicalPropertyName: "agentFrameworkProviderKind")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"providerTransport\":\"Responses\",\"ProviderTra"···, canonicalPropertyName: "providerTransport")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"providerPurpose\":\"Chat\",\"ProviderPurpose\":"···, canonicalPropertyName: "providerPurpose")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"suggestedModels\":[\"gemma4\"],\"SuggestedModel"···, canonicalPropertyName: "suggestedModels")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"tags\":[\"planning\"],\"Tags\":[\"brainstorming"···, canonicalPropertyName: "tags")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_writer_canonicalizes_single_case_insensitive_aliases
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":\"gptoss20b64k\"}")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":[null]}")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":[\"\"]}")
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_secret_resolver_rejects_conflicting_explicit_sources
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_read_path_does_not_hide_corrupt_persisted_json
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Warm_reads_probe_revisions_without_full_profile_reload
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Same_process_commit_observer_publishes_new_revision_before_acquisition
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_revision_change_refreshes_from_database_and_ignores_catalog
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_delete_removes_provider_instead_of_serving_stale_lease
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Revision_probe_failure_faults_snapshot_and_never_serves_stale_lease
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Superseded_profile_rebuild_cannot_publish_old_data
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cancelled_initialization_remains_not_ready
+    CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Committed_projection_failure_is_an_explicit_fault
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_PersistsNormalizedPerModelThinkingCapabilities
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_PreservesAzureCapabilitiesWhenRefreshDoesNotProvideMetadata
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_ClearsAzureCapabilitiesWhenRefreshProvidesAuthoritativeEmptyMetadata
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_PreservesDiscoveredThinkingCapabilitiesDuringNonIdentityEdit
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.EditorRoundTrip_PreservesThinkingCapabilitiesWithoutCurrentProfileFallback
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_PreservesExplicitAzureKindForOrdinaryAzureName
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_InvalidatesDiscoveredThinkingCapabilitiesWhenBaseUrlChanges
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_InvalidatesOllamaDiscoveryWhenProviderKindChangesToOpenAi
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ResolveCapability_IgnoresStoredOllamaDiscoveryForOpenAiProvider
+    CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_RejectsDuplicateModelThinkingCapabilitiesCaseInsensitively
+Discovered tests: 161; expected: 0 (0 means inspect the named selection)
+dotnet test tests\Unit\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter FullyQualifiedName~ProviderPricingTests|FullyQualifiedName~ProviderProfileSaveValidationTests|FullyQualifiedName~ProviderProfileThinkingCapabilityTests|FullyQualifiedName~ProviderFeatureMatrixTests|FullyQualifiedName~ProviderRuntimeProfileSnapshotServiceTests|FullyQualifiedName~SharedProviderPublicationAndCatalogTests|FullyQualifiedName~SharedProviderProtocolContractTests|FullyQualifiedName~SharedProviderRuntimeProfileMaterializerTests|FullyQualifiedName~SharedProviderSourceUriPolicyTests --logger console;verbosity=normal --logger trx;LogFileName=metadata-private-edit-final.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts --nologo --no-build
+Testovací běh pro C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.81]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:02.56]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:02.74]   Starting:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"suggestedModels\":[\"gemma4\"],\"SuggestedModel"···, canonicalPropertyName: "suggestedModels") [26 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RouteResolutionPreservesAReverseProxyBasePath [15 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PublicAddressPolicy_AcceptsOnlyGlobalUnicastDestinations [17 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"configSchemaVersion\":\"1\",\"ConfigSchemaVersi"···, canonicalPropertyName: "configSchemaVersion") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"timeoutSeconds\":45,\"TimeoutSeconds\":90}", canonicalPropertyName: "timeoutSeconds") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"tags\":[\"planning\"],\"Tags\":[\"brainstorming"···, canonicalPropertyName: "tags") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"agentFrameworkProviderKind\":\"OpenAi\",\"Agent"···, canonicalPropertyName: "agentFrameworkProviderKind") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"providerPurpose\":\"Chat\",\"ProviderPurpose\":"···, canonicalPropertyName: "providerPurpose") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"secretRecordId\":\"72d10cca-63f7-4f6f-8055-938c"···, canonicalPropertyName: "secretRecordId") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"providerTransport\":\"Responses\",\"ProviderTra"···, canonicalPropertyName: "providerTransport") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Strict_metadata_reader_rejects_case_insensitive_duplicate_aliases(configurationJson: "{\"connectorPluginKey\":\"provider.openai\",\"Conn"···, canonicalPropertyName: "connectorPluginKey") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_as_structured_output_and_local_tool_bridge_capable [33 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_responses_as_structured_output_and_native_tool_capable [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_comfyui_as_private_image_provider_without_chat_tools [5 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Persisted_provider_registry_uses_feature_matrix_and_transport_metadata [4 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Discovered_prices_override_same_model_but_preserve_manual_rows_without_fabricating_unknown_prices [48 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_configured_ollama_provider_as_vision_capable [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_openai_chat_completions_as_structured_output_with_maf_approval [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Authoritative_known_defaults_replace_stale_known_rows_and_preserve_custom_models [16 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "blank-base-url") [38 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "empty-id") [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-fragment") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_pricing_discovery_requires_secret [8 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_defaults_include_current_pricing_rows [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "malformed-configuration") [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-transport") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-purpose") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "non-object-configuration") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-query") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "undefined-kind") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "relative-base-url") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "incompatible-kind-transport") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "blank-name") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_rejects_invalid_editor_before_catalog_mutation(scenario: "base-url-user-info") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":[\"\"]}") [6 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":[null]}") [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Suggested_model_reader_rejects_malformed_metadata(configurationJson: "{\"suggestedModels\":\"gptoss20b64k\"}") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_read_path_does_not_hide_corrupt_persisted_json [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Ollama_pricing_discovery_returns_model_names_without_prices [31 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Ollama_defaults_are_private_and_non_zero [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.AudioCapabilityPolicyRejectsSourceProfilesAndPreservesPersonalProfiles [73 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_pricing_discovery_reads_explicit_price_metadata [19 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_does_not_expose_non_persisted_batch_controls [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_azure_chat_completions_as_structured_output_with_maf_approval [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_writer_canonicalizes_single_case_insensitive_aliases [44 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_image_generation_provider_by_explicit_purpose [5 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Runtime_bootstrap_provider_uses_managed_openai_responses_defaults [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Metadata_secret_resolver_rejects_conflicting_explicit_sources [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_does_not_let_ollama_provider_wide_vision_metadata_override_text_model [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrixForModel_uses_selected_model_instead_of_provider_suggestions [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogRequest_UsesTypedRedactedCredentialAndPinnedIdentity [108 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_PrivateAndLoopbackHttpsRequireExplicitApproval [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Agent_framework_provider_mapping_and_workflow_image_selection_do_not_fallback_to_chat_providers [5 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.ResolveFeatureMatrix_marks_ollama_vision_model_as_vision_capable [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsRelativeAndNonHttpSchemes [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_AllowsLoopbackHttpWithoutBroadPrivateApproval [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsAmbiguousAndOverlongAddresses [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsPlainHttpPublicDestinationsEvenWhenPrivateAccessIsApproved [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderFeatureMatrixTests.Provider_settings_ui_is_authoritative_in_agent_framework_and_workspace_only_selects_default [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_RejectsUserInfoQueryAndFragment [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_PreservesExplicitAzureKindForOrdinaryAzureName [168 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_accepts_absolute_first_party_custom_scheme(baseUrl: "process-mock://agents") [39 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderProfileSaveValidationTests.Core_registry_accepts_absolute_first_party_custom_scheme(baseUrl: "scenario://harness") [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_HandlesConditionalNoOpAndSanitizedStatusFailures [51 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_RejectsDuplicateModelThinkingCapabilitiesCaseInsensitively [40 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Pricing_metadata_round_trips_without_breaking_flat_configuration_state [83 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_applies_long_context_pricing_per_observation_not_to_aggregate_tokens [24 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ResolveCapability_IgnoresStoredOllamaDiscoveryForOpenAiProvider [29 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.OpenAi_defaults_include_exact_gpt_5_6_standard_and_long_context_prices [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Name_only_discovery_adds_known_gpt_5_6_default_but_does_not_price_unknown_models [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_long_context_cache_writes_at_the_long_rate [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Observation_cost_uses_total_tokens_when_reasoning_is_not_in_output_tokens [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_counts_observed_usage_across_runtime_repair_and_finalizer_phases [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Usage_summary_counts_only_observed_usage_as_known_actual_cost [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_PersistsNormalizedPerModelThinkingCapabilities [26 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_InvalidatesOllamaDiscoveryWhenProviderKindChangesToOpenAi [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Editor_private_flag_replaces_stale_configuration_and_survives_reload(initialValue: True) [24 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Editor_private_flag_replaces_stale_configuration_and_survives_reload(initialValue: False) [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_uncached_cached_and_output_tokens_separately [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_PreservesAzureCapabilitiesWhenRefreshDoesNotProvideMetadata [8 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.EditorRoundTrip_PreservesThinkingCapabilitiesWithoutCurrentProfileFallback [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Metric_cost_resolution_prices_cached_input_tokens_when_cost_is_not_persisted [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_PreservesDiscoveredThinkingCapabilitiesDuringNonIdentityEdit [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.InvalidMissingOrIncoherentProtocolMembersAreRejected [246 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.ApplyHealthResult_ClearsAzureCapabilitiesWhenRefreshProvidesAuthoritativeEmptyMetadata [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Explicit_discovery_preserves_existing_optional_gpt_5_6_pricing_metadata [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_TamperedSnapshotOrDuplicatedImportFields_ProducesNoProjection [280 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_uses_long_context_rates_above_the_gpt_5_6_threshold [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.Providers.ProviderProfileThinkingCapabilityTests.CreateProfile_InvalidatesDiscoveredThinkingCapabilitiesWhenBaseUrlChanges [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_SendsCanonicalAuthenticatedRequestAndValidatesSuccess [82 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Known_defaults_enrich_existing_gpt_5_6_rows_without_overwriting_standard_prices [6 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderPricingTests.Cost_calculator_prices_standard_context_cache_writes_separately [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.NegativeOrIncompletePricesAndMissingPrivateFlagAreRejected [12 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnsupportedProtocolVersionIsRejected [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.ConnectionPolicy_RevalidatesEveryNewConnectionAgainstDnsRebinding [16 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.TrustedAddressPolicy_AllowsPrivateButNeverLinkLocalOrMulticast [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_CanonicalizesHostPortAndReverseProxyRoot [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RetiredImport_RetainsProjectionButCannotInvoke [24 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PublicConnectionPolicy_RejectsPrivateAndMixedDnsAnswers [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CanonicalRepresentationSortsInputsAndTracksPublicHealth [17 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ForgedDerivedProfileCaches_ProducesNoProjection [7 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_UnpublishedImport_RetainsProjectionButCannotInvoke [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownNestedMemberIsRejected [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_DegradedPublication_RemainsAvailableWithValidatedProjection [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_revision_change_refreshes_from_database_and_ignores_catalog [324 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.CatalogClient_RejectsInvalidBoundsContractIdentityAndMapsTimeouts [21 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.PrivateHttpConnectionPolicy_RejectsPublicDnsAndAllowsApprovedPrivateDns [4 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogRoundTripPreservesTypedPublicIdentitiesAndCapabilities [26 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.UnknownTopLevelMemberIsRejected [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.ModelRouteFromAnotherPublicationIsRejected [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.RoutesExposeOnlyTheVersionedCatalogAndSupportedOpenAiSubset [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.CatalogSerializationUsesTheFrozenPublicNamesAndStringValues [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(isPrivate: False) [33 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(isPrivate: True) [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.MetadataPricesRoundTripExactlyAndEveryFieldParticipatesInRevision [4 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_LocalProfileDisabled_RetainsAliasAndDisabledIntent [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.AbstractionsAssemblyHasNoWebEfWorkspaceOrProviderSdkDependency [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Warm_reads_probe_revisions_without_full_profile_reload [35 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MultipleModels_PreservesCatalogAndUsesSafeCapabilityIntersection [6 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_RemoteUnavailableHealth_RetainsProjectionButCannotInvoke [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ImageGeneration_MapsPurposeAndImageCapabilities [7 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingImport_RetainsProjectionButCannotInvoke [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Revision_probe_failure_faults_snapshot_and_never_serves_stale_lease [14 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ChatCompletions_MapsHistoryModeAndPrivateNetworkPolicy [7 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceIdentityMismatch_RetainsOnlyPreviouslyValidatedProjection [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Same_process_commit_observer_publishes_new_revision_before_acquisition [6 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_IncompatibleContract_RetainsLastValidatedProjection [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceDisabledRetainsProjection_ButNeverSynchronizedDoesNot [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Committed_projection_failure_is_an_explicit_fault [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_MissingOrMismatchedRelationship_ProducesNoProjection [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Legacy_snapshot_requires_resynchronization_instead_of_guessing_source_metadata [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.HandlerAndDependencyInjection_DisableRedirectsProxyCookiesAndUriLogging [69 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderSourceUriPolicyTests.Normalize_PrivateHttpRequiresExplicitApproval [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderProtocolContractTests.PublicContractsRejectSecretsInvalidDefaultsAndIncoherentPorts [48 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Superseded_profile_rebuild_cannot_publish_old_data [38 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_ResponsesChat_MapsCanonicalEffectiveProfileWithoutSecretValue [48 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_SourceOffline_RetainsLastValidatedProjection [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderRuntimeProfileMaterializerTests.Materialize_AuthorizationFailed_RetainsLastValidatedProjection [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cross_host_delete_removes_provider_instead_of_serving_stale_lease [8 ms]
+  Úspěšné CanDoItAll.Tests.Unit.AgentFramework.ProviderRuntimeProfileSnapshotServiceTests.Cancelled_initialization_remains_not_ready [7 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SerializedCatalogContainsNoPrivateProviderFieldsOrValues [63 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.DisabledProfileIsIneligible [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SyntheticImportedAndRuntimeFallbackProfilesAreIneligible [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PrivateProfileChangesDoNotChangePublicRevisionOrEntityTag [17 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationRejectsIneligibleAndStaleRequestsWithoutPostCommitSideEffects [2 s]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MalformedMetadataMissingSecretOrInvalidModelsAreIneligible [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicProfileChangesChangePublicationAndCatalogRevisions [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.RoutingIndexResolvesExactPublishedModelAndRejectsUnknownModel [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.EligibleChatProfileIntersectsTypedMetadataProfileAndRelayCapabilities [18 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPriceChangeInvalidatesRevisionWithoutChangingRoute [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnknownOrNonExecutionConnectorIsIneligible [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.PublicationApplicationPublishesAndUnpublishesWithPostCommitActivityAndInvalidation [22 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.MissingRelayDescriptorIsIneligibleWithActionableReason [< 1 ms]
+[xUnit.net 00:00:05.92]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorProducesCanonicalOrderingAndDeterministicRevisions [8 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorExcludesUnpublishedAndIneligibleProfiles [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.UnsupportedOptionalProfileCapabilitiesAreOmittedFromIntersection [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ProjectorCreatesStablePublicIdentitiesAndDistinctDuplicateModelRoutes [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.SourceMetadataPublishesPrivateFlagAndExactPricesWithoutDriverDefaults [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.ImageProfileRequiresImageRelayAndAdvertisesOnlyImageCapabilities [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.SharedProviderPublicationAndCatalogTests.QueryCacheUsesPersistedStampAcrossInstancesAndRechecksCurrentEligibility [78 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 161
+     Úspěšné: 161
+ Celkový čas: 6,9872 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts\metadata-private-edit-final.trx
+Exit code: 0
+**********************
+PowerShell transcript end
+End time: 20260827070117
+**********************

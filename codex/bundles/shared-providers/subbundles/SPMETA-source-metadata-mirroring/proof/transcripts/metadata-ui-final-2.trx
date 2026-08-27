@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="940a65b7-143b-4dc6-88b6-02fc3641890b" name="lucys@LUCYSPOWER 2026-08-27 06:56:15" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T06:56:15.7609574-04:00" queuing="2026-08-27T06:56:15.7609579-04:00" start="2026-08-27T06:54:11.3066844-04:00" finish="2026-08-27T06:56:15.7716975-04:00" />
+  <TestSettings name="default" id="155f3516-b49f-4051-b2be-a55583ef8154">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_06_56_15" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d8388460-371f-4043-add2-031406cc3d13" testId="b1710f4b-cd47-e4bb-4d0b-1a3a2bc9c7fd" testName="CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision" computerName="LUCYSPOWER" duration="00:02:03.5509206" startTime="2026-08-27T06:54:12.0941351-04:00" endTime="2026-08-27T06:56:15.6540349-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d8388460-371f-4043-add2-031406cc3d13" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision" storage="c:\repositories\candoitall\tests\playwright\candoitall.tests.playwright\bin\debug\net10.0\candoitall.tests.playwright.dll" id="b1710f4b-cd47-e4bb-4d0b-1a3a2bc9c7fd">
+      <Execution id="d8388460-371f-4043-add2-031406cc3d13" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests" name="Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b1710f4b-cd47-e4bb-4d0b-1a3a2bc9c7fd" executionId="d8388460-371f-4043-add2-031406cc3d13" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:00.18]   Discovered:  CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:00:00.21]   Starting:    CanDoItAll.Tests.Playwright&#xD;
+[xUnit.net 00:02:03.81]   Finished:    CanDoItAll.Tests.Playwright&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

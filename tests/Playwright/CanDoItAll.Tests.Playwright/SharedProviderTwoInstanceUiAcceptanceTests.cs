@@ -53,8 +53,28 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         ConfigurePage(clientPage, browserErrors);
 
         var sourceToken = await ConfigureSharedInstanceAsync(sharedPage, settings);
+        await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
+            OpenAiChatProviderName, "e2e-duplicate-model", false, 1.23m, "e2e-secondary-model");
+        await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
+            OpenAiImageProviderName, "e2e-openai-image", false, 2.34m);
+        await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
+            OllamaProviderName, "e2e-ollama", true, 0.12m);
         await VerifySharedRelayContractAsync(settings, sourceToken);
         await ConfigureClientInstanceAsync(clientPage, settings, sourceToken);
+        foreach (var (providerName, label) in new[] {
+            (OpenAiChatProviderName, "openai"), (OpenAiImageProviderName, "image"), (OllamaProviderName, "ollama") }) {
+            await SharedProviderMetadataUiChecks.AssertMirroredAsync(sharedPage, clientPage,
+                settings.SharedUrl, settings.ClientUrl, providerName, settings.EvidenceDirectory, label);
+        }
+        await SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(clientPage, settings.ClientUrl,
+            MultimediaAgentName, "e2e-duplicate-model", settings.EvidenceDirectory, "e2e-secondary-model");
+        await SharedProviderMetadataUiChecks.ConfigureAsync(sharedPage, settings.SharedUrl,
+            OpenAiChatProviderName, "e2e-duplicate-model", true, 9.87m);
+        await ConfigureClientInstanceAsync(clientPage, settings, sourceToken);
+        await SharedProviderMetadataUiChecks.AssertMirroredAsync(sharedPage, clientPage,
+            settings.SharedUrl, settings.ClientUrl, OpenAiChatProviderName, settings.EvidenceDirectory, "resynced");
+        await SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(clientPage, settings.ClientUrl,
+            MultimediaAgentName, "e2e-duplicate-model", settings.EvidenceDirectory);
         await ExerciseClientAgentsAsync(clientPage, settings);
 
         Assert.False(await sharedPage.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -407,6 +427,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
     private static async Task CreateSecretAsync(IPage page, string baseUrl, string name, string value)
     {
         await NavigateAsync(page, $"{baseUrl}/settings?tab=secrets");
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Secret vault", Exact = true }).WaitForAsync();
         var existingSecret = page.GetByText(name, new() { Exact = true }).First;
         if (await existingSecret.CountAsync() > 0)
         {
@@ -414,6 +435,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
             await page.GetByTestId("settings-secret-value").FillAsync(value);
             await page.GetByRole(AriaRole.Button, new() { Name = "Save secret", Exact = true }).ClickAsync();
             await page.GetByText("Secret saved", new() { Exact = true }).WaitForAsync();
+            await Assertions.Expect(FieldByLabel(page, "Name")).ToHaveValueAsync(string.Empty);
             await AssertSecretValueRoundTripsThroughUiAsync(page, name, value);
             return;
         }
@@ -424,7 +446,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await FieldByLabel(page, "Scope").FillAsync("workspace");
         await page.GetByTestId("settings-secret-value").FillAsync(value);
         await page.GetByRole(AriaRole.Button, new() { Name = "Save secret", Exact = true }).ClickAsync();
-        await page.GetByText(name, new() { Exact = true }).First.WaitForAsync();
+        await Assertions.Expect(FieldByLabel(page, "Name")).ToHaveValueAsync(string.Empty);
         await AssertSecretValueRoundTripsThroughUiAsync(page, name, value);
     }
 
@@ -635,7 +657,7 @@ public sealed class SharedProviderTwoInstanceUiAcceptanceTests
         await select.SelectOptionAsync(value);
     }
 
-    private static async Task NavigateAsync(IPage page, string url)
+    internal static async Task NavigateAsync(IPage page, string url)
     {
         var response = await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.NotNull(response);

@@ -2,7 +2,7 @@ namespace CanDoItAll.SharedProviders.Abstractions;
 
 public static class SharedProviderProtocol
 {
-    public const string CurrentSchemaVersion = "1.0";
+    public const string CurrentSchemaVersion = "1.1";
 }
 
 public static class SharedProviderHeaders

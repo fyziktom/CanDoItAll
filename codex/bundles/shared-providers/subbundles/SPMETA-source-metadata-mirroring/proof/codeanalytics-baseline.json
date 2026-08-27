@@ -1,0 +1,163 @@
+{
+  "tool": "code_analytics_dashboard_get",
+  "timestampUtc": "2026-08-27T10:07:50.0622912+00:00",
+  "snapshotId": "snap-20260827100739-e9442d71",
+  "scope": {
+    "solutionPath": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework.ProviderManagement\\CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj",
+    "scopeProjectNames": [
+      "CanDoItAll.Modules.AgentFramework.ProviderManagement"
+    ],
+    "scopeNamespacePrefixes": [],
+    "includeDi": true,
+    "includePersistence": true,
+    "includeRisks": true,
+    "includeXmlDocs": true,
+    "includeMermaidExports": true
+  },
+  "inventory": {
+    "name": "CanDoItAll.Modules.AgentFramework.ProviderManagement",
+    "path": "C:\\repositories\\CanDoItAll\\src\\Modules\\CanDoItAll.Modules.AgentFramework.ProviderManagement\\CanDoItAll.Modules.AgentFramework.ProviderManagement.csproj",
+    "projectCount": 1,
+    "documentCount": 67
+  },
+  "topDiagnostics": [
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 26,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 28,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 31,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 38,
+        "column": 9
+      }
+    },
+    {
+      "code": "DI0001",
+      "severity": "Info",
+      "message": "Factory-based registration at Services/ProviderManagementServiceCollectionExtensions.cs is only partially interpreted.",
+      "source": {
+        "path": "Services/ProviderManagementServiceCollectionExtensions.cs",
+        "line": 40,
+        "column": 9
+      }
+    }
+  ],
+  "topFindings": [
+    {
+      "findingId": "finding-file-size-doc-administration-databaseproviderprofileregistry-cs",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "Administration/DatabaseProviderProfileRegistry.cs has 559 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-administration-databaseproviderprofileregistry-cs"
+      ],
+      "source": {
+        "path": "Administration/DatabaseProviderProfileRegistry.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-administration-provideradministrationconnectors-cs",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "Administration/ProviderAdministrationConnectors.cs has 614 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-administration-provideradministrationconnectors-cs"
+      ],
+      "source": {
+        "path": "Administration/ProviderAdministrationConnectors.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-administration-provideradministrationservice-cs",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "Administration/ProviderAdministrationService.cs has 673 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-administration-provideradministrationservice-cs"
+      ],
+      "source": {
+        "path": "Administration/ProviderAdministrationService.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-administration-sharedproviderprofilep-33b731f38d70",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "Administration/SharedProviderProfilePublicationMetadata.cs has 416 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-administration-sharedproviderprofilepublicationmetadata-cs"
+      ],
+      "source": {
+        "path": "Administration/SharedProviderProfilePublicationMetadata.cs"
+      }
+    },
+    {
+      "findingId": "finding-file-size-doc-runtimeprojection-providermetadata-cs",
+      "ruleId": "COMPLEXITY-001",
+      "severity": "Warning",
+      "category": "Complexity",
+      "title": "Large source file detected",
+      "description": "RuntimeProjection/ProviderMetadata.cs has 777 lines.",
+      "rationale": "Oversized files are harder to review and usually hide multiple responsibilities.",
+      "confidence": 0.88,
+      "relatedIds": [
+        "doc-runtimeprojection-providermetadata-cs"
+      ],
+      "source": {
+        "path": "RuntimeProjection/ProviderMetadata.cs"
+      }
+    }
+  ],
+  "dependencyCount": 244,
+  "cycles": [],
+  "limitations": [
+    "Scoped ProviderManagement snapshot excludes external project references; use unchanged-project-reference diff and boundary guard for cross-project direction.",
+    "Pre-edit snapshot supports analysis, not a claim that final source was reanalyzed."
+  ]
+}

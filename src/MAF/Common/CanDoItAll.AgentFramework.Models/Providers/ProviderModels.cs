@@ -251,6 +251,8 @@ public static class ProviderNativeToolKeys
     }
 }
 
+public sealed record ProviderModelDisplayMetadata(string Id, string DisplayName);
+
 public sealed record ProviderProfile(
     Guid Id,
     string Name,
@@ -286,6 +288,16 @@ public sealed record ProviderProfile(
     }
 
     public bool IsPrivateProvider { get; init; }
+
+    public bool IsSourceManaged => CredentialBinding?.Purpose == ProviderCredentialPurpose.SourceAccessToken;
+
+    public IReadOnlyList<ProviderModelDisplayMetadata> ModelCatalog { get; init; } = [];
+
+    public string GetModelDisplayName(string? model) {
+        var id = model?.Trim() ?? string.Empty;
+        return ModelCatalog.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal))?.DisplayName
+            ?? (IsSourceManaged && id.Length > 0 ? "Unavailable shared model" : id);
+    }
 
     public IReadOnlyList<ProviderModelTokenPrice> ModelPrices { get; init; } = [];
 

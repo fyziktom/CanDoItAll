@@ -1,0 +1,1072 @@
+{
+  "baseline": "f092472ab83d36caf0e0fb52119d57d7aad35a65",
+  "beforeMeaning": "Raw Git blob bytes at baseline, not checkout CRLF; null means newly added.",
+  "afterMeaning": "SHA-256 of actual worktree bytes.",
+  "selfHashExceptions": [
+    "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/changed-files.json",
+    "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/closure-validation.txt"
+  ],
+  "skillFilesChanged": false,
+  "files": [
+    {
+      "path": "bundle://EXECUTION-REPORT.md",
+      "before": "518fcb1a6ec868ed3b8fb3c7d78c48e392ffa47e133d9dd54f1bcba599b4f312",
+      "after": "785e28c262fc654ea3dda52638d2fa3d6d5f420e213a5a9db52e9c5f3f267caa"
+    },
+    {
+      "path": "bundle://README.md",
+      "before": "422176baae99e1fef35b560a03b241dac1aed7d57d142d69acccb1df47d83345",
+      "after": "521a795456e08a98b2653ad9c0e9534eba844a3a79fa49a6cc5839229e2ee0a2"
+    },
+    {
+      "path": "bundle://STATUS.md",
+      "before": "0814e78cdcf1624293e9c56d77959cfe64c6a4f65895a1b8fc3214200280390e",
+      "after": "a5956c6f14524286e6c524b54b86da1252841bc70c823dfae1b70861bb1fb958"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/README.md",
+      "before": null,
+      "after": "f6755eb41413b6a1b4cfd861df31839aa3c94da8ed5957199c24b7848e2d1088"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/RESULT.md",
+      "before": null,
+      "after": "658a5f0f19e8b35f22df848f2ba6d5ee41278bbde338044b6a0536fea142d1ba"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/inputs.md",
+      "before": null,
+      "after": "3967810f45779ce808a65f73a17a5f8088d98a6c227898b74d353e4445d221cc"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/inputs/codex-clipboard-114850a7-dde7-480b-99f4-afc5a550f5dc.png",
+      "before": null,
+      "after": "ebb675fa0340561cf0c536d1a8d977647b0f88a5921b9f50b6159f3880f2b3c8"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/inputs/codex-clipboard-219cc393-ee05-4379-874b-3c38171569aa.png",
+      "before": null,
+      "after": "7f5b4469c42e2a7fa11ba496f9a203610ec04e8b22a267c97a75691e0f052e03"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/inputs/codex-clipboard-48673145-a04b-4fe3-ae11-706c917aa34d.png",
+      "before": null,
+      "after": "b71f1efd2c59aa95b9fe8810597f120ab913100d2c44e13bef2e75e501a7df48"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/inputs/codex-clipboard-6d86f561-cf13-4fc5-ba48-1836856b8ec4.png",
+      "before": null,
+      "after": "86e5804fa817d0a19b31d11226da9e5455f5e2880fc365373a2c46287191cbe0"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Build-ProofIndex.mjs",
+      "before": null,
+      "after": "afd682c5695bc95b1039b87c696594bebf25eadfd04b5e2b1ea514f35adf388b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Check-Source.ps1",
+      "before": null,
+      "after": "3a858bc6deddbcae7836eda2be31acde05c3ea4c911ea92430f643d69110ec66"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Read-RuntimeEvidence.ps1",
+      "before": null,
+      "after": "5348bb9abad1fe85f275186a893a03f76d63fdfd155d4bb5d957bceba3ccc7ea"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Restart-TestInstances.ps1",
+      "before": null,
+      "after": "db8f5e4bbc1efdf320fb05e1d9cadd706534438dd1a1b35b6dcd939ee214d6f2"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Run-FocusedTests.ps1",
+      "before": null,
+      "after": "9c0e527a39b984fb84729e8678e1cdcfbf4cc02629275f8dff35ca75eb7b1f52"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Run-TwoInstanceUi.ps1",
+      "before": null,
+      "after": "dc5ca0876d7b48e47c47dcff1413b597b72e2448bb88ecce04b87af52cd75282"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/Validate-Closure.ps1",
+      "before": null,
+      "after": "e041bb073af97dd506d3a8d6bb3068a8872281de506dacb3c2a018c420528ed9"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-1/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "53a6748f4ea98ddd303e4005f9132001555933ab470e27d2fad22917de48322a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-1/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "2ad0680551ec101919f05e3deb1f1f9c0eddc77bc4c58be53a52c3ebf73a5937"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-2/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "b3750a7c8886b6654f16fb0ab33d38415fccf57b5780b41cb71371192d1c8b6c"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-2/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "57ad19a95a4afc9805b8cd006c94c0782725892ef600bfb0e8e3acfeafe6f035"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-2/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "bd28d0bcb0bca97fa2130330d31efd8a6f66ea69d2a54d5b0212cb3d25f1b1ae"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-2/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-3/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "9729e77ec20ffc24ff8cc46b0222b26f622b9157c820cfb613bf89cc039e2233"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-3/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "2ee0b0d6b0df65566688453bc0e75c229d3d19caf886bcafe28cc346dce495b2"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-3/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "a2985d3ac395fc55ade778da6e15a7647c18077c477a21add29d376ccde770e4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-3/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-3/metadata-openai-central.png",
+      "before": null,
+      "after": "e6437f796b17c37da5f4f7fe0cfae74773dabdaf6b9774efa8377bbd1dedce47"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-3/metadata-openai-client.png",
+      "before": null,
+      "after": "53594375ec3ba48e24c1712109b1832adbe6d4861096823c8dc36c10627c7b5f"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "735c84d151ee6e2872952381ea20778a5f88a28bae2c0f3fff5e0f90c82c1b56"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "5500e2c3f680fb647555db62f60c24953c73aea450523e08f4f92485782dd7c5"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "02db7d653d4e5838c0f3f9c47d093462f061f5eb20b44c72b2a55a8cef7d62a4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/06-client-ollama-shared-chat.png",
+      "before": null,
+      "after": "23fea34f49e0701461880cc366e0c9409a5e5dba970310a63e441db91c9a1d7e"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/07-client-shared-image-generation.png",
+      "before": null,
+      "after": "8bd9a9a9ba084a98402fb783e318327e85708fb27584c3639b3e90448e3f5834"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/07a-client-shared-image-generation-approval.png",
+      "before": null,
+      "after": "22dd5c759524d8cb927a19fb3a5df07245d0466cad93f9fc2c54238d79916f07"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/08-client-shared-image-analysis.png",
+      "before": null,
+      "after": "262b5949e1ad2cfd80306d514302c029fcecf10b0a2a79d8483916bc6fd79499"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-agent-models-open.png",
+      "before": null,
+      "after": "b4371c23db92dd3f74f655f44c508c07d724b42ba0877b12d9e4ae253f6df090"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-agent-models-resynced.png",
+      "before": null,
+      "after": "3fa83beaf831621fc9d18cb92ac37430ab3fac2ec86efa34f7f316804cc74dd3"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-image-central.png",
+      "before": null,
+      "after": "562be67afb9d3160f541789e3ffd2d8169884c54468f14cd642e27cda3a5c09f"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-image-client.png",
+      "before": null,
+      "after": "a935fff2875ae6656ee133c01247727baf618f40f199e0d2a568f95dcc33c81e"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-ollama-central.png",
+      "before": null,
+      "after": "8de9a20faa9278c8a41cff744e9634ab46079bbf8785b87f89ce8b398cb5a90c"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-ollama-client.png",
+      "before": null,
+      "after": "06cb3f4c6550e05ffcb7dae2141ae635c9bef70372e9f4ab9141b03d97e08060"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-openai-central.png",
+      "before": null,
+      "after": "cef2177fc57509eca4592ae800c331378b1e9d3d69f47e22d2a5118e41e65e0f"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-openai-client.png",
+      "before": null,
+      "after": "3400e0914371442b9263d3ef1579f7e9292839c3dbed4e00b35a47d63b123e5a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-resynced-central.png",
+      "before": null,
+      "after": "082e3cd601cc5a187d4e764bfa2371dfc4ad42006eb0657b0df0f06f2443c3f1"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-2/metadata-resynced-client.png",
+      "before": null,
+      "after": "259226e199b724844c161cb1c907fd08d095686050db477d991c4f10c4859442"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "1c4c4c340563fd9267da3e80269a4212a77d3b5a3c804f193fa1e3ff70499a10"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "fefbf70271fbb8ea9ca716f6e062ae8ffab8b1253f9be96ed0d56ab4c5fd6f39"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "25e92bd169bdef4d56c1a8c85878ffbb0c2164d1278cd45731072a660bf74c88"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/06-client-ollama-shared-chat.png",
+      "before": null,
+      "after": "feda9b0c7159c5afe4ef241f846b32929267b6d91cfb60bb875ef1c8ac70f145"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/07-client-shared-image-generation.png",
+      "before": null,
+      "after": "93b644c0c449d0678dcdc846c6b575b8ac8bdbaa67f6881f097963a42adf23c6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/07a-client-shared-image-generation-approval.png",
+      "before": null,
+      "after": "2c0530b5ea21c9ca2b3951df54f60319f449c24cd94ffd9cffae13822fac291c"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/08-client-shared-image-analysis.png",
+      "before": null,
+      "after": "6e42f8582db70eb0e1edffbc3ecc5c3398c7acaab9640414d8d8b803e58b976c"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-agent-models-open.png",
+      "before": null,
+      "after": "88b1ec01f6c1bdb8f97d5f34dd24d040569fd5fd2612c9a6ecb6aef8041137cc"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-agent-models-resynced.png",
+      "before": null,
+      "after": "fd4569423ed7008fe7150323b3d5da0e3135a442b75a888f385ce928565a96c4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-image-central.png",
+      "before": null,
+      "after": "5070c8d904b1c8ba2ac437234e3f5ee342b6a44161bb61bf26da038508d9b99c"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-image-client.png",
+      "before": null,
+      "after": "e8c979da41998d23bbf6757a5fe9711945a9e5e121181573fed12505e75d0c62"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-ollama-central.png",
+      "before": null,
+      "after": "22408498d6f2871cea3876f7a6e22bac98d4e1818afd6d967fb88427b5a9cec6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-ollama-client.png",
+      "before": null,
+      "after": "b2a03804c6ad44c9855be780e34f667882bc3ac189994a58a2b0c5766abbf20d"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-openai-central.png",
+      "before": null,
+      "after": "9df8d629c7a58da8af5786c29d363e410e0bcf68b5dddfea61d206afac737e06"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-openai-client.png",
+      "before": null,
+      "after": "13c76af90451cf0a3f072af4b8ecac976eaf9a7d016370dd3be66d988d6a7952"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-resynced-central.png",
+      "before": null,
+      "after": "61a138823049d286e32fe7198dafbcd5bc6e8d723a4d97c02c48b6acd1501115"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure-repeat/metadata-resynced-client.png",
+      "before": null,
+      "after": "547b847cc7449b0bc95efb65c16a408ec62b19b8f8eabfcc908d1a178f4a974f"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "9b221a3c29a0ec3383599d83bfa4dec4ea0b05544dd6c981712b6f5ddaa27d93"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-closure/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "faa99279287c5de370809c8a35f3e5f5c78ec63f42972101dfa80cb790db2619"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "39fb228014673adbd79949d38ea204cb23e64f81a932a117e88246f0d37fe7b8"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "a5cf7831faa2cadd3bf2bb7bf3542818751fd5205b6dade5e2f6446a7a02d45c"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "5039f0fb81f348a41f79af03d5d364dc2a7f31645ade3aea36fa32043bc403c8"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/06-client-ollama-shared-chat.png",
+      "before": null,
+      "after": "5110b7da9f7ee3a67d1733e4073be746eaace5d0acce11ed44c022082a1b6ad2"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/07-client-shared-image-generation.png",
+      "before": null,
+      "after": "5b9e751240e8e29548c830443a7fc4fb9ab79f948b82c6b913d55720634119a6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/07a-client-shared-image-generation-approval.png",
+      "before": null,
+      "after": "fa61c1184d8150bdf27685727c46559c6b8b0cb3aabcdfa4cd41f1ef9a684798"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/08-client-shared-image-analysis.png",
+      "before": null,
+      "after": "6b712199bd7250a5e2d3bc90572e92f3e5441413d97dfd02d3f1ffa8d158c1d0"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-agent-models-open.png",
+      "before": null,
+      "after": "224b6fcd8e23be57ecbc936ab30d2a91883d074a8eb90936bbcf4c78b983ae20"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-agent-models-resynced.png",
+      "before": null,
+      "after": "5838a756b42481008d1e673e0c3808076bd36245df2690995a6c1280afb3db1b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-image-central.png",
+      "before": null,
+      "after": "2374f78eeedd5049548a1920ef8fead8e163481d08453d97d60686847c3bf123"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-image-client.png",
+      "before": null,
+      "after": "8d2472a6bcd89c5524a35ef6c45b5e3bee868c2d0d444838f0118a6e67428a61"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-ollama-central.png",
+      "before": null,
+      "after": "8ed2bda560f4f3a6f656b3b386d1038b78b8c38ec3adb539a7e806e9f8cbd8c8"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-ollama-client.png",
+      "before": null,
+      "after": "aa7e6a730ae3761a5d0dd02b748041b88bcc02b43031739e37ad0e02c2e291cb"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-openai-central.png",
+      "before": null,
+      "after": "20755bbb1e43c504b908dbae060971a80b06ccfa7353e673c7460c51c76b293d"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-openai-client.png",
+      "before": null,
+      "after": "5fd4925219dd9625c36a8103544a3683530f0e0f29eb4812c3008eda6ce3aebd"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-resynced-central.png",
+      "before": null,
+      "after": "7a993d3487fcfd59c90920add4c97cf588cadd6df97754de6e325bc336a9f279"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final-2/metadata-resynced-client.png",
+      "before": null,
+      "after": "1341536628248243ebe7c339ef64738be572d9662a57cb270a8b468037ff9c5e"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "9c9c9a90486cc3fb1b9b0ac824e64f223689564bac5b0f620901d1653895795a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "f04869d3f25c85573a31d087c6e8989871d0c538545029b3142dc42f07d0b3a6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "eb16d256f8a33ae93d6e08170b89e692fb65f26f67f4fce2a4d37d11f9dfe6c4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/metadata-image-central.png",
+      "before": null,
+      "after": "d4cd15add565ce481cfd2be295ef4d12b2fdb458ee34e9d34afd9d5588b64418"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/metadata-image-client.png",
+      "before": null,
+      "after": "d270720adebf245b5dc35b59cc2fbf0cc71406cddc1cac0ca43fca402f2396cc"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/metadata-ollama-central.png",
+      "before": null,
+      "after": "20f08016021a3dc8c054320fdd6c3310b36f6153334f2191f874afcc4e98595e"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/metadata-ollama-client.png",
+      "before": null,
+      "after": "6aae5e60b1e7633720f43bb91e72a008bdfe9fe7ada5d2e32ea68550b4f3a2be"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/metadata-openai-central.png",
+      "before": null,
+      "after": "6938269e21982a87553dea4e5900f43365ce464e1a9bd5f280baf9c869c4ff46"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-final/metadata-openai-client.png",
+      "before": null,
+      "after": "829ccc401e6dd84092884f4f54516cce8ddda7edb2216d246607756672e0e0b0"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/01-shared-api-token-issued.png",
+      "before": null,
+      "after": "0f1514337c4008680cfb217c730f6b0eecfc81b23331571ab3a04c9a10ee340d"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/02-shared-three-providers-published.png",
+      "before": null,
+      "after": "3f8a3244248c9ba77fe448ee6d701e5c6964451a455584fcbbea25a4a0aeccc6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/04-client-three-shared-providers-imported.png",
+      "before": null,
+      "after": "5973719a6bc3f9c93731f1ddd6fccaab0610f01b7083ca959ae68f7cb609f499"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/05-client-agents-created-from-shared-providers.png",
+      "before": null,
+      "after": "71dbfc9e1c26a49692615ccab2dec46825411a78edd4bed8bdcdede063eaa11b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/06-client-ollama-shared-chat.png",
+      "before": null,
+      "after": "34c71cdd6ade387c8dff1aa033be0bc14242e1640408f2fabd193d30a425cf24"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/07-client-shared-image-generation.png",
+      "before": null,
+      "after": "e7ef103e534065c9b856195e560f5a0b6fe8d1a1454c1faf27bbcf4a6bc211ee"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/07a-client-shared-image-generation-approval.png",
+      "before": null,
+      "after": "2349e9f8a2fc9139f0184f8461ba618fba4e2a9e7ef6ae342e77bb9e49cb72af"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/08-client-shared-image-analysis.png",
+      "before": null,
+      "after": "2da40c66420400ea1c5e80df68186eaa8b45d73d636fd1f8dca0177fcdbff390"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-agent-models-open.png",
+      "before": null,
+      "after": "4ced24fe7595a34a64a00557e9b8564be58d0d2717db97e20e1cd070e33357c0"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-agent-models-resynced.png",
+      "before": null,
+      "after": "40e3e9bafdf3ceff0af0464cea83278de59781f7b6edd15862ce52325aabb8b9"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-image-central.png",
+      "before": null,
+      "after": "88d76d08ff8f6f7447cf6089e72038d5133adb125e0b045f33a5774b27568e5d"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-image-client.png",
+      "before": null,
+      "after": "23aa1642fe52779c7549c556cd270b56dd39a12846599e0fb26f6f0521744efc"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-ollama-central.png",
+      "before": null,
+      "after": "5c9ed2dbb307f785d8a47c8e5e95846f837e15e5fa97b43ca3eaa88e3dfcd090"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-ollama-client.png",
+      "before": null,
+      "after": "2fd96c0f1a18796246086f2cba07711984e033193910d8d87bf036aaeafe6aa4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-openai-central.png",
+      "before": null,
+      "after": "874d104c7c35f6786558989468cec8848122b0529c87ffea34eb1c8d51c1fa94"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-openai-client.png",
+      "before": null,
+      "after": "04968c6008d1a43ced4c225daef50520b2d53f1b36a8f9e42ac5925794954cb6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-resynced-central.png",
+      "before": null,
+      "after": "99b42cb49ae56ab601cec4fda6b8fe506c401ccdc88f1dec59f068d18bae90ce"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/browser/metadata-ui-repeat/metadata-resynced-client.png",
+      "before": null,
+      "after": "306e19bde3e474a2e335a0e2c13a16e4b74887d840df35d6b6501b7de02d1254"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/codeanalytics-baseline.json",
+      "before": null,
+      "after": "02fc497a4a8302695a2cae6246a78b0a3ebc70a47213e9eb949ab2c163788fe1"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/impacted-tests-unavailable.json",
+      "before": null,
+      "after": "8f2b377c8756c0c7dd6a5413705654ea8b48896164e4e0947817b11fbdd56c20"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/manifest.md",
+      "before": null,
+      "after": "a822862dd12bc47b3cc114e03caf2553b2c4a4bd2f17b19ce6963607a3eb32fa"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/provider-boundary-closure.json",
+      "before": null,
+      "after": "987d1525479474218b2e91e240d6dfbc935f2cca33508ff6d2644adf0ded1abd"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/provider-boundary-final.json",
+      "before": null,
+      "after": "12d42308e0f9b39e525abd3943b650ffb90c76ba32abd7453b2b0cac84963c2a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/semantic-invariants.md",
+      "before": null,
+      "after": "803b7edfb120ecd7a2dd94e75b597d3cab1ae9bc51c886649ef9ab5b2a23a963"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/architecture-closure.txt",
+      "before": null,
+      "after": "c18e4299787ad6682f30c46533c8015214d359eb1d394f098622ce909a3adf93"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/docker-closure-build.txt",
+      "before": null,
+      "after": "336974ad044680b23a76536b9af7db6c6a016528607c3d6412ef593ef1e07c27"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/docker-final-build.txt",
+      "before": null,
+      "after": "ffd3425010d4bd37013c88fb3b707a237387abf264f99f7d4529354e1cf1c0ce"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-components-closure.trx",
+      "before": null,
+      "after": "9f1bc39000d318d02bb43538b67960b742fd1a752d535640d20bea7d99cbe579"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-components-closure.txt",
+      "before": null,
+      "after": "e74287af98ee30f05447a6c5d07114948198cf46d4afdc12f43be451288cab40"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-components-final.trx",
+      "before": null,
+      "after": "9596119362b81ea6772722f638af5ff615f7f34bee6d1920bfa74a1309958065"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-components-final.txt",
+      "before": null,
+      "after": "5bab7abc26e34a76baf64cd901e76538b78d88a851a4e02834c51a5b6cf97be1"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-components.trx",
+      "before": null,
+      "after": "d6ed28ae8323814046fde424c615d379469ab560550ec76ba0b64d43b679851b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-components.txt",
+      "before": null,
+      "after": "92bc065477eecb53939cf295ae2b38ed7de2b2ac93d20253c2db8a0f52a1ddee"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-failing-first-authorized.trx",
+      "before": null,
+      "after": "ac268804ca2e49279421b8c5bfce3c28ab3aa89cd2410cd73ddbdff3d3292ecd"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-failing-first-authorized.txt",
+      "before": null,
+      "after": "a07163dfe8a19ac7091f29d5aa270440f55074587caa2f085f4daa1806c768ff"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-failing-first.txt",
+      "before": null,
+      "after": "edd6f953a95ea59adccccb6df7b19f2f117fd05e4c3efcf7b5be08043bb1840a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-foundation-2.trx",
+      "before": null,
+      "after": "8b135c3e524a0721e2999fa93a7086e5bae8a23c65f402ecfe62b6b7e5750edb"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-foundation-2.txt",
+      "before": null,
+      "after": "f7bbe65c84ad0c6b2222e2152e5e24aa1a7067eb761ff2a0beae8e3665c7f9fc"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-foundation.txt",
+      "before": null,
+      "after": "9b39268c3f1d73eafc75ac7c77158cce6a420887f413bf6731e1169ffed39d82"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-integration-final.trx",
+      "before": null,
+      "after": "091aa7fbe6339549bcc2104819bb2c7ca539103c444e50c451ec6ca7dc63786a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-integration-final.txt",
+      "before": null,
+      "after": "defde758f315532c478d1d99a7f7627e084aedd002e157357a64bc7c6844cc20"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-integration.trx",
+      "before": null,
+      "after": "e6947b4163b1ee66590972ebeb80bbaa6f9fdc53e082cca42b1fd9a09cfdebd1"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-integration.txt",
+      "before": null,
+      "after": "3b7e5ce95e576e4b172503a4b1525c650db000c39114a558eea2a24b73b2038b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-local-regression.trx",
+      "before": null,
+      "after": "6d93e80150a0a8a7128dcf799a3efac55c1b98a545877f8f87b2505d4da99af4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-local-regression.txt",
+      "before": null,
+      "after": "ebf87e4d8a050f7fee985db790a6b4c663dcc27f91925249abfb59bab2adc7d9"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-private-edit-failing-first.trx",
+      "before": null,
+      "after": "9a0094f30de8a5c40ce36716f1fbd608f1d427f0c08cd723426fc2fdf5484d8e"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-private-edit-failing-first.txt",
+      "before": null,
+      "after": "26aa5dabd4c4ae96c12652cf3931965a770aeaa20f7d5747be8a9eb8649f36af"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-private-edit-final.trx",
+      "before": null,
+      "after": "145da6f3a904b3b1ce30def5b3494b794bcabd5c7a7535a13e10799687a12b61"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-private-edit-final.txt",
+      "before": null,
+      "after": "6dd39c0dc8d57f08c31abb60d2ef9537d0bfe17467f9efec5bfbc1510bd3a565"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-removed-model-rerender.trx",
+      "before": null,
+      "after": "d0184c634d4f2ab0526beeb0d53c54d0de138112eac9422fe4d4d5dc1c7140f6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-removed-model-rerender.txt",
+      "before": null,
+      "after": "df2c47e8a8d38762e077371d4aaa675ebe9391fe3062cc923f576076562243c8"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-save-consumers.trx",
+      "before": null,
+      "after": "cff2415d62f0d4ba17ac1f3c11cbf5490697c05c722e8a91a15b089f4630bdd6"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-save-consumers.txt",
+      "before": null,
+      "after": "2eac0935a233547d4de491a1ec455e39dde7e81728a7d87183235339475bc697"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-settings-regression-2.trx",
+      "before": null,
+      "after": "a24826f23c1733df2c649a8760c7015a644bb1d97e3a7efb92898203d61ca7d4"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-settings-regression-2.txt",
+      "before": null,
+      "after": "f80f902b704454e4bb34e7750535c6bfafa506e17bd3f77dd05a08c403d36933"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-settings-regression.trx",
+      "before": null,
+      "after": "4c6191919b2bd40bb940127a4efe83a195f7b0865f9dcecaf05d8c73dad11a16"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-settings-regression.txt",
+      "before": null,
+      "after": "67b54c4f2143fe2141e785810acec80c2ee1c0a247cce98573bc426a227aa8ce"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-1.trx",
+      "before": null,
+      "after": "91bdbe1b7e9fa5429b2177f6cfaad5a2515559270a160da1f232bb1c04b98d94"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-1.txt",
+      "before": null,
+      "after": "23f46ba5d3c3a62ff2352b799ba9acc2e039b1915cdf202eff463eb551210504"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-2.trx",
+      "before": null,
+      "after": "f0c7a21799d1e6f937841eccfc09dd325d1b8a65783f6d51c87d4a507be5c797"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-2.txt",
+      "before": null,
+      "after": "c72b2d92b49b43dcb4ce0b053476786585905dfa5870b16e9209d537d5803abf"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-3.trx",
+      "before": null,
+      "after": "a68761c63e2c859b502692bd8e149bc97fba4bedb3f5361b00ff7010b28a1470"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-3.txt",
+      "before": null,
+      "after": "83be5f3a3221b4cb6f325e6a6de5135e2dc15f8dbe5c37e1f1701fa152d3cdee"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure-2-runtime.txt",
+      "before": null,
+      "after": "82768072d695c1ec6b7fd82b1f76dc26fd86de001b293fe6c97807218b233c05"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure-2.trx",
+      "before": null,
+      "after": "c6e74328d97abf280570795760947c39d0fdfafa8cbb0b7ecb5f49573236a82d"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure-2.txt",
+      "before": null,
+      "after": "76bce24a2e64384b6d6a704077ef2229a03ee8d82b64020fae31eb8b38e85fd1"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure-repeat-runtime.txt",
+      "before": null,
+      "after": "45c55825d014c51ffb61126774d020365c1e9d423fec98ab08878589b44cd8c2"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure-repeat.trx",
+      "before": null,
+      "after": "c070ffb0375061a384db2ef9d63c5676decb3f3dd81b7a6a4d5e24e125b64d0b"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure-repeat.txt",
+      "before": null,
+      "after": "a0cc40fc6374a06ed88cd32bdd0cc6aab6485b6bb716dfd5f5562fd2225e8544"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure.trx",
+      "before": null,
+      "after": "ac215f6b31639699762e8713ab6bff509b0941a1754b0513d26e389c1d559108"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-closure.txt",
+      "before": null,
+      "after": "858a093576501ebe426a7614a1a5c4b64e5cee109fcc39ebbeebcf371242d79f"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-final-2-runtime.txt",
+      "before": null,
+      "after": "ab218bfe4f771e616523a8eb5e8f2104b4bbf04a7881931363cd74aa09f15b90"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-final-2.trx",
+      "before": null,
+      "after": "716215f3f5c6ec6e18b9e80c7ad4399e9418e010f7ba7737fd042ffc8548e614"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-final-2.txt",
+      "before": null,
+      "after": "6211003fd5624db611533c8ac94cf08bdd9f34cf73485dcaa9f518f9559ba62a"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-final.trx",
+      "before": null,
+      "after": "eb4e6ee848fe605b0d6b094fb019f8ceb037a7193e191aafe463488d23699b53"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-final.txt",
+      "before": null,
+      "after": "71f2aea7e08f50d38cef51afade53eca30b0a363f0a985c98569023959913a4d"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-repeat.trx",
+      "before": null,
+      "after": "ea0ee697d07a120941f15b459afd2ba34172091951bac0d5ad42510cca861970"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/metadata-ui-repeat.txt",
+      "before": null,
+      "after": "5f3136078ec8ddb1f8d5e92d1c326129522b49fa88cf5150c95fc183f382d0ec"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/playwright-closure-build.txt",
+      "before": null,
+      "after": "628cded67571ee0cec3cd83d77c1ed983cc660f4e1b3545e1dc0878d7ea16c54"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/source-assertions.txt",
+      "before": null,
+      "after": "78695d8a0eca06d00769d8045477beebb4356164926bba95e4d6f62ef917d075"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/01-execution-report.md",
+      "before": null,
+      "after": "81fe55cf869bd06ab9a21b95068c997987294e48b7c480e266320819b0b5ec42"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/architecture-review.md",
+      "before": null,
+      "after": "f43bf48ff95975b49a2e9f3ff25d8a337555f95c23a6e0e740c57112cd3b3070"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/semantic-review.md",
+      "before": null,
+      "after": "7e8c12718ecbb9398426b8fece757b55aee5ce6fac659414915fc0cbade2c3ae"
+    },
+    {
+      "path": "bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/ui-review.md",
+      "before": null,
+      "after": "da90676ddc8a9d232e7596e05fde37f79a6815d9bc4824754ceff61e9f2e8bd0"
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCanonicalRevision.cs",
+      "before": "974cdce59ff4fd718eaf386a250d9e7d9ac84c569eef4d4f79389ec7a0820d5b",
+      "after": "b729389c904006b0c4bc056593430c9b5973b8d348a6082b9cdd732e57031de4"
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCatalogContracts.cs",
+      "before": "74ea768daace4071d7ec030ae24adc98e0dfacffa2e7da0de57f78b80f7e0515",
+      "after": "ce040be3a64a0252440f632fc67aa7770ea65055830a9af0ce0c5e3c41ca4101"
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderCatalogPrice.cs",
+      "before": null,
+      "after": "2ed00a29db9f3784b3721012f492b84f587dab592bca1551b3436997a376eff1"
+    },
+    {
+      "path": "repo://src/Integration/CanDoItAll.SharedProviders.Abstractions/SharedProviderProtocol.cs",
+      "before": "35b68d68662cff7dba16f1b337acc440e4235ea444d4d18e79184f27ad13e8ca",
+      "after": "4f2686180ab8b517c438c6f746394effe9f7c0fabd6a342326a08ca439b094ba"
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentProviderPresentationMapper.cs",
+      "before": "aa722034af57e47720a48f6456a8e34ff8feffdba64b321ede11ddde396786e9",
+      "after": "0c98dcbe317fe7f10a27a06ea764dc35de4b7401fb93cc9a8e7f3f82c68d75d2"
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Core/Providers/ProviderServices.cs",
+      "before": "0b54e3ca911ca6cb0e13aa029cee3c8c7be6b223d4d6fa75780bf7af3b2aaec7",
+      "after": "34e555a40750d1654ed7b9c92b565812fa09c199f15442cde9f7b3414e1242a9"
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/AgentThinkingEffortPolicy.cs",
+      "before": "5dab1073c5209d29401dab665b6f35c3764e615bb6dce2e6fefb41efbf22f1b1",
+      "after": "ddbcd0c8dfb824d1c1e4e5f4b53b70c6a08198ec98e82b0a2602d822e81d9385"
+    },
+    {
+      "path": "repo://src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderModels.cs",
+      "before": "73f175952f2dfe17034474fed1f7ee95ce38608d80d5dbfc87fbd9e2ddc82436",
+      "after": "9614db15fc7b5eec02ec4b2198a93fc3f30af6f752de0d09012394a5878292f7"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/RuntimeProjection/ProviderRuntimeProfileSnapshotService.cs",
+      "before": "0d51fdae9f03c214ebc64bae90e629948e3ce34eb376c9209a24a10056069fdb",
+      "after": "d2a6544c585d02f16a162213aad44414d4531e1bd41ba048954808e30edd2721"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderCatalogProjection.cs",
+      "before": "27daf1b2b93763cf35973c674df857c9e0ff4708d90077230ce46f21c69d0f53",
+      "after": "804d0238fa82fc06098c98eaabeea85078b2e3a6e1cce29b0902c24f55077637"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderManagementService.cs",
+      "before": "6d03827b7ab7ad34fe72cc97733140bee5d65b4a54814756341455fa28f7a83f",
+      "after": "e83710ef1eff3991900b1501ed46156a6a56f64d931e3fb1f3a02b63b43a7c73"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPriceMapper.cs",
+      "before": null,
+      "after": "e3d0baa896df2d2e4d8a98c0a5cf8cc030596c30a451c438dceed372a78c32c3"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderPublicationSnapshotReader.cs",
+      "before": null,
+      "after": "2c698b39c02bd59be0b52c394e6ad2c3789e402102d58d26e1ff4b760c38284a"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework.ProviderManagement/SharedProviders/SharedProviderRuntimeProfileMaterializer.cs",
+      "before": "204373e76da9dcd368f34630398bcb125681eab616717d5198bc107f735b9596",
+      "after": "e00737e0d6c1993c8c4e7564cb8b6587e9cdcef263adef5d54f1688af66f82e5"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
+      "before": "f6cbb4ff4b251e9d00d1c6443e2907a97e7b2dbc4fcae734afe83768b13ec7a8",
+      "after": "067bf6078b5443efe7c803a8ab24bc0f36a38ea4e69c1038b41d08094b86926f"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
+      "before": "5faa8488575ba1e724c038b37e6761d2a62949437c7e350be11f4e920caac1a3",
+      "after": "82e3745911e8e6f07ccff57b229d0cc3434490c3800b78859ba7fdeacd2b19d2"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
+      "before": "de1b1ebb0416c3074aaba1a21a77a159dda664a188536870ec97276f276da1b3",
+      "after": "85ad2eb9bd65f3e99e8ee888fda6b010f36828b5f5b7c457099d7a234b55f031"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderModelPricingEditor.razor",
+      "before": "9f420ad563ce140226e826cc50a65a202ece04159b065ca36317378dfefd9ee2",
+      "after": "36b531d2cdb6f1a478f1c8cb53d49e96e410762ce93989c338c0d4a57ba0c7d8"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderImportedProfileContent.razor",
+      "before": "6d201c1e31119036efd5c94a67e4feb141807fe71db57703f92b1c9077a920f6",
+      "after": "934a4ca0d9b06dfc994c7e437557ba1392f90fd3db885e0cdfc87695587b6ed9"
+    },
+    {
+      "path": "repo://src/Modules/CanDoItAll.Modules.AgentFramework/Providers/SharedProviderProfileMapper.cs",
+      "before": "741382706aa94f9d0d1214a46d8cc1ae93215b4395a4576bb7d8d49733fc9c07",
+      "after": "df909af1c31dd94aafaec203302a20da554ebd7f78244719b7f270b6d8b8bec0"
+    },
+    {
+      "path": "repo://src/UI/CanDoItAll.Conversations.Components/ConversationProviderModelSelector.razor",
+      "before": "863ce15c902d359b206d7e719770cdb5984f6f4bf0b6113568f5603cdd1cc5d2",
+      "after": "7bcff673a17bfb0e78190ffe210ab0951eb0a8e93e257a5d425bbfa12e35118e"
+    },
+    {
+      "path": "repo://src/UI/CanDoItAll.Conversations.Components/Presentation/ConversationProviderOption.cs",
+      "before": "2d316797c7226ab17bef974be417deac06b0f19f9cd29ceb327147aab63b5735",
+      "after": "d6468c892c1ba54fb20b2770179d52f1893a1305d1e36e83bb547b8f17809cc8"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/AgentDetailsDialogThinkingEffortTests.cs",
+      "before": "c75947d225414643f616a11d89aa17259bd8f0c627297f956c061932001b4839",
+      "after": "aae36d0c0e366d0ef6456d18c31e0e58f5713e0366dd399862a66f77f5cb76fd"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/ProviderModelPricingEditorTests.cs",
+      "before": "1204f8f23fb209c1e5f29ee9bdc540dd7bc03665bdb3935d26ce7b466756663b",
+      "after": "002979943b8c94a3f28e60382eca46192c13ad55cedb6708efc44522350c52f2"
+    },
+    {
+      "path": "repo://tests/Components/CanDoItAll.Tests.Components/ProviderModelSelectorTests.cs",
+      "before": "6bb2ddfa448489e055f52b57983556f721d4ce4d908ef3c2deed571c7e43beca",
+      "after": "03cd6895b4a3c601fcf9a3cd30cf8f7604cf970375521cec3d411eabb513ddaf"
+    },
+    {
+      "path": "repo://tests/Integration/CanDoItAll.Tests.Integration/SharedProviderRuntimeProjectionIntegrationTests.cs",
+      "before": "3b235bc39becf6bfe8d20278fd5e52fab1658dbe59dc018a0ce5aff14250cb62",
+      "after": "744d7755a8c003c6c4f7e0c1ce0295d6ab8573b6551f4f494dcf91717aaef628"
+    },
+    {
+      "path": "repo://tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderMetadataUiChecks.cs",
+      "before": null,
+      "after": "08c68d23f3cc90f893a103a1f46df11d7f89316c3fed62176f0da5b375b14097"
+    },
+    {
+      "path": "repo://tests/Playwright/CanDoItAll.Tests.Playwright/SharedProviderTwoInstanceUiAcceptanceTests.cs",
+      "before": "5be6e382c0c84a5afca2855707f7f30de617882d87358e227aa4a5d74eccb23f",
+      "after": "24a601e9f4dd4f20de97f1f0d801860414ad9f82bc193deb0c1630c047a168be"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/ProviderPricingTests.cs",
+      "before": "620913c743bfbd77976a25e1932da55e08d27000f2d65067731d8f972967690f",
+      "after": "534a583f3c7b514f43af5c9109db1df866eccf223fb7c8cabdb83dfcda1c34a6"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderProtocolContractTests.cs",
+      "before": "7596e53855c971d4e9c5850b91e047e7b770c6227916daa22ccf5019bf5e400e",
+      "after": "783cc3d672a3ee66c87adc35c31e83dce67ee8fcc003f2c39cb191f2c3fd2cdd"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderPublicationAndCatalogTests.cs",
+      "before": "39a6b4268439916f1221aef8702a4f23583d67ad39ac486f474460927c6d32d2",
+      "after": "2cf11b36b5adb70788254c299ed605127ea582f288ac41e72e7cfdcba1444910"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderRuntimeProfileMaterializerTests.cs",
+      "before": "1aa119b18326b54d4dd1e4a08cca53799b7a378cb1866d03d4b2666141664d20",
+      "after": "1f5f86908198a0fb22a255182be7a383da57208003b0b430c8d97cdef98fc894"
+    },
+    {
+      "path": "repo://tests/Unit/CanDoItAll.Tests.Unit/SharedProviderSourceUriPolicyTests.cs",
+      "before": "1ec1249fc8ab5a40c51d5b3484f2311f19169285b76c89d1e92e20266c9f8d54",
+      "after": "0e3cb5ffb2a12450d78115611010c3a5b8efbf572e69fc62fe8c1433b67300b1"
+    }
+  ]
+}

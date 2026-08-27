@@ -13,6 +13,47 @@ using ProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.Pro
 
 public sealed class SharedProviderRuntimeProfileMaterializerTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Source_metadata_survives_materializer_mapper_and_editor_without_invented_prices(bool isPrivate) {
+        var price = new SharedProviderCatalogPrice(1.23m, 0m, 4.56m) {
+            CacheWritePerMillionTokensUsd = 0.35m,
+            LongContextThresholdTokens = 12345,
+            LongContextInputPerMillionTokensUsd = 2.46m,
+            LongContextCachedInputPerMillionTokensUsd = 0m,
+            LongContextCacheWritePerMillionTokensUsd = 0.70m,
+            LongContextOutputPerMillionTokensUsd = 9.12m
+        };
+        var graph = CreateGraph(isPrivateProvider: isPrivate, price: price);
+        var profile = new CanDoItAll.Modules.AgentFramework.SharedProviderProfileMapper().Map(Materialize(graph));
+        var mappedPrice = Assert.Single(profile.ModelPrices);
+
+        Assert.Equal(isPrivate, profile.IsPrivateProvider);
+        Assert.Equal(price, SharedProviderPriceMapper.ToCatalog(mappedPrice));
+        Assert.Equal(profile.DefaultModel, mappedPrice.Model);
+        Assert.Equal("Remote model 1", profile.GetModelDisplayName(profile.DefaultModel));
+        var service = new CanDoItAll.AgentFramework.Core.ProviderProfileService();
+        Assert.Same(profile, service.NormalizeImportedProfile(profile));
+        Assert.Equal(isPrivate, service.CreateEditor(profile).IsPrivateProvider);
+        Assert.Single(service.CreateEditor(profile).ModelPrices);
+
+        var unpriced = new CanDoItAll.Modules.AgentFramework.SharedProviderProfileMapper()
+            .Map(Materialize(CreateGraph(isPrivateProvider: isPrivate)));
+        Assert.Empty(service.CreateEditor(unpriced).ModelPrices);
+        Assert.Equal(isPrivate, service.CreateEditor(unpriced).IsPrivateProvider);
+    }
+
+    [Fact]
+    public void Legacy_snapshot_requires_resynchronization_instead_of_guessing_source_metadata() {
+        var graph = CreateGraph();
+        graph.Import.RemoteCatalogSnapshotJson = graph.Import.RemoteCatalogSnapshotJson.Replace(
+            "\"schemaVersion\":\"1.1\"", "\"schemaVersion\":\"1.0\"", StringComparison.Ordinal);
+
+        Assert.False(SharedProviderPublicationSnapshotReader.TryRead(graph.Import, out _));
+        Assert.Equal(SharedProviderRuntimeProfileAvailability.SnapshotInvalid, Materialize(graph).Availability);
+    }
+
     private const string ImportedSchemaVersion = "1.0";
     private const string SensitiveStatusMarker = "central-token-value-must-not-escape";
     private static readonly Guid SourceId =
@@ -431,7 +472,9 @@ public sealed class SharedProviderRuntimeProfileMaterializerTests
         SharedProviderHealthState health = SharedProviderHealthState.Available,
         string sourceBaseUri = "https://central.example.test/reverse-proxy/",
         bool allowPrivateNetwork = false,
-        IReadOnlyList<IReadOnlyList<SharedProviderCapability>>? modelCapabilities = null)
+        IReadOnlyList<IReadOnlyList<SharedProviderCapability>>? modelCapabilities = null,
+        bool isPrivateProvider = false,
+        SharedProviderCatalogPrice? price = null)
     {
         modelCapabilities ??=
         [
@@ -450,7 +493,7 @@ public sealed class SharedProviderRuntimeProfileMaterializerTests
                     PublicationId,
                     $"central-model-{index + 1}"),
                 $"Remote model {index + 1}",
-                Array.AsReadOnly(capabilities.ToArray())))
+                Array.AsReadOnly(capabilities.ToArray())) { Price = price })
             .ToArray();
         var publication = new SharedProviderCatalogPublication(
             PublicationId,
@@ -461,7 +504,7 @@ public sealed class SharedProviderRuntimeProfileMaterializerTests
             SharedProviderTransport.OpenAiCompatible,
             models[0].Id,
             Array.AsReadOnly(models),
-            new SharedProviderCatalogHealth(health));
+            new SharedProviderCatalogHealth(health)) { IsPrivateProvider = isPrivateProvider };
         publication = publication with
         {
             Revision = SharedProviderCanonicalRevision.ComputePublication(publication)
