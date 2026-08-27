@@ -383,7 +383,7 @@ internal static class SharedProviderRelayResponsePolicy
 
     private static byte[] RewriteImageResponse(JsonElement root)
     {
-        if (root.EnumerateObject().Any(property => property.Name is not ("created" or "data")) ||
+        if (root.EnumerateObject().Any(property => !IsValidImageMetadata(property)) ||
             !root.TryGetProperty("data", out var data) ||
             data.ValueKind != JsonValueKind.Array ||
             data.GetArrayLength() is < 1 or > SharedProviderRelaySupportDescriptor.MaximumAllowedImageCount)
@@ -441,6 +441,12 @@ internal static class SharedProviderRelayResponsePolicy
                 writer.WriteNumber("created", createdValue);
             }
 
+            foreach (var property in root.EnumerateObject()) {
+                if (property.Name is not ("created" or "data")) {
+                    property.WriteTo(writer);
+                }
+            }
+
             writer.WriteStartArray("data");
             foreach (var image in images)
             {
@@ -460,4 +466,40 @@ internal static class SharedProviderRelayResponsePolicy
 
         return output.ToArray();
     }
+
+    private static bool IsValidImageMetadata(JsonProperty property) => property.Name switch {
+        "created" or "data" => true,
+        "usage" => IsValidImageUsage(property.Value),
+        _ => property.Value.ValueKind == JsonValueKind.String && property.Name switch {
+            "background" => property.Value.GetString() is "transparent" or "opaque",
+            "output_format" => property.Value.GetString() is "png" or "jpeg" or "webp",
+            "quality" => property.Value.GetString() is "low" or "medium" or "high",
+            "size" => property.Value.GetString() is "1024x1024" or "1024x1536" or "1536x1024",
+            _ => false
+        }
+    };
+
+    private static bool IsValidImageUsage(JsonElement usage) {
+        if (usage.ValueKind != JsonValueKind.Object ||
+            !HasTokenCount(usage, "input_tokens") || !HasTokenCount(usage, "output_tokens") ||
+            !HasTokenCount(usage, "total_tokens")) {
+            return false;
+        }
+
+        return usage.EnumerateObject().All(property => property.Name switch {
+            "input_tokens" or "output_tokens" or "total_tokens" => IsTokenCount(property.Value),
+            "input_tokens_details" or "output_tokens_details" =>
+                property.Value.ValueKind == JsonValueKind.Object &&
+                HasTokenCount(property.Value, "text_tokens") && HasTokenCount(property.Value, "image_tokens") &&
+                property.Value.EnumerateObject().All(detail =>
+                    detail.Name is "text_tokens" or "image_tokens" && IsTokenCount(detail.Value)),
+            _ => false
+        });
+    }
+
+    private static bool HasTokenCount(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && IsTokenCount(value);
+
+    private static bool IsTokenCount(JsonElement value) =>
+        value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var count) && count >= 0;
 }

@@ -58,14 +58,12 @@ public sealed class ProviderProfileService : IProviderProfileService
                 .Where(item => item.Source != AgentThinkingEffortCapabilitySource.Discovered);
         }
 
-        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
-            model.Kind,
-            model.DefaultModel,
-            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
-        if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var validationMessage))
+        var configuredPrices = ProviderPricingDefaults.FromEditorModels(model.ModelPrices);
+        if (!ProviderPricingDefaults.TryValidateModelPrices(configuredPrices, out var validationMessage))
         {
             throw new ProviderProfileValidationException(validationMessage);
         }
+        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(model.Kind, model.DefaultModel, configuredPrices);
         var isPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider);
         normalizedConfigurationJson = ProviderPricingMetadata.Write(normalizedConfigurationJson, isPrivateProvider, modelPrices);
 

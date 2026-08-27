@@ -1,0 +1,73 @@
+**********************
+PowerShell transcript start
+Start time: 20260827083413
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+& codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/Run-TwoInstanceUi.ps1 -RunLabel full-catalog-simple-chats-probe -Filter 'FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection'
+Process ID: 40900
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA invariants: META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E
+Working directory: C:\repositories\CanDoItAll
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-build --list-tests --filter FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection
+Discovered tests: 1; expected: 1 (0 means inspect the named selection)
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection --logger console;verbosity=normal --logger trx;LogFileName=full-catalog-simple-chats-probe.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts --nologo --no-build
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.13]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.19]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.22]   Starting:    CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:37.30]       System.TimeoutException : Timeout 30000ms exceeded.
+Call log:
+  - waiting for GetByTestId("llm-chat-definition-create") to be visible
+[xUnit.net 00:00:37.30]       Stack Trace:
+[xUnit.net 00:00:37.30]         /_/src/Playwright/Transport/Connection.cs(201,0): at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls)
+[xUnit.net 00:00:37.30]         /_/src/Playwright/Transport/Connection.cs(499,0): at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal, String title)
+[xUnit.net 00:00:37.30]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(147,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.AuthorizeSimpleChatsBrowserAsync(IPage page, AcceptanceSettings settings)
+[xUnit.net 00:00:37.30]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(150,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.AuthorizeSimpleChatsBrowserAsync(IPage page, AcceptanceSettings settings)
+[xUnit.net 00:00:37.30]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(39,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection()
+[xUnit.net 00:00:37.30]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(40,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection()
+[xUnit.net 00:00:37.30]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(40,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection()
+[xUnit.net 00:00:37.30]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(40,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection()
+[xUnit.net 00:00:37.31]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:37.32]   Finished:    CanDoItAll.Tests.Playwright
+  Neúspěšné CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection [37 s]
+  Chybová zpráva:
+   System.TimeoutException : Timeout 30000ms exceeded.
+Call log:
+  - waiting for GetByTestId("llm-chat-definition-create") to be visible
+  Trasování zásobníku:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 201
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal, String title) in /_/src/Playwright/Transport/Connection.cs:line 499
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.AuthorizeSimpleChatsBrowserAsync(IPage page, AcceptanceSettings settings) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 147
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.AuthorizeSimpleChatsBrowserAsync(IPage page, AcceptanceSettings settings) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 150
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 39
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 40
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 40
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Existing_two_instance_catalog_supports_simple_chat_model_selection() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 40
+--- End of stack trace from previous location ---
+
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 37,8530 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts\full-catalog-simple-chats-probe.trx
+Exit code: 1
+**********************
+PowerShell transcript end
+End time: 20260827083454
+**********************

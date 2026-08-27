@@ -153,7 +153,9 @@ public static class SharedProviderCatalogProjector
             throw new InvalidOperationException(failure);
         }
         var pricing = ProviderPricingMetadata.Read(profile.ExtraSettingsJson);
-        var prices = pricing.ModelPrices.ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
+        var prices = ProviderPricingDefaults.NormalizeModelPrices(
+                metadata.ProviderKind, profile.DefaultModel, pricing.ModelPrices)
+            .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
         var models = eligibility.Models
             .Select(model =>
             {

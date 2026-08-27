@@ -79,9 +79,12 @@ streaming, synchronization, failure behavior, and three separate CanDoItAll app 
 ## Latest operator repair validation
 
 The operator separately authorized a two-instance UI lane on August 26 and metadata repair
-on August 27. SPMETA is complete for that scope: readable source model names, exact published
-prices/private status, source resynchronization and two final UI chat/image/vision passes.
-The engines on 5210/5212 run the final image; 5032 is unchanged. Historical SB07's distinct
+on August 27. SPMETA's full source/client model-catalog parity repair is now DONE; the
+previous metadata proof did not establish that all source-selectable models reached the
+client. Current proof compares independent source/client UI catalogs, validates non-default
+agent/chat execution twice and passes the completed-stage source/hash gate.
+See its full-catalog-repair.md for the findings, implementation and validation.
+The engines on 5210/5212 are the isolated validation pair; 5032 is unchanged. Historical SB07's distinct
 three-app gate and downstream locks are not closed by this evidence.
 
 Compatible feedback work-unit roles: inputs/traceability, architecture/plan and gates live in

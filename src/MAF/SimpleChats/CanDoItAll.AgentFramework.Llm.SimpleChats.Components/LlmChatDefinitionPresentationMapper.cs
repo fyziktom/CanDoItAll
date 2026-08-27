@@ -1,5 +1,6 @@
 using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using System.Collections.Immutable;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
@@ -59,7 +60,10 @@ internal static class LlmChatDefinitionPresentationMapper
             provider.ProviderName,
             true,
             models.FirstOrDefault() ?? string.Empty,
-            models);
+            models) {
+            ModelDisplayNames = provider.Models.ToImmutableDictionary(model => model.Model, model => model.DisplayName),
+            AllowsModelOverride = !provider.IsSourceManaged
+        };
     }
 
     public static ConversationPresentationKey ToKey(Guid definitionId)

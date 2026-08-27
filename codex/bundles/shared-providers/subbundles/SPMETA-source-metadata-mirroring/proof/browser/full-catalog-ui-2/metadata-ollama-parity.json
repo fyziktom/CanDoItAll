@@ -1,0 +1,90 @@
+{
+  "Source": {
+    "DefaultModel": "e2e-ollama",
+    "IsPrivate": true,
+    "Models": [
+      "e2e-ollama",
+      "e2e-ollama-secondary",
+      "e2e-ollama-vision"
+    ],
+    "Prices": {
+      "e2e-ollama": [
+        0.12,
+        0,
+        0.35,
+        4.56,
+        12345,
+        0.24,
+        0,
+        0.70,
+        9.12
+      ],
+      "e2e-ollama-secondary": [
+        1.12,
+        0,
+        0.35,
+        4.56,
+        12345,
+        2.24,
+        0,
+        0.70,
+        9.12
+      ],
+      "e2e-ollama-vision": [
+        1.12,
+        0,
+        0.35,
+        4.56,
+        12345,
+        2.24,
+        0,
+        0.70,
+        9.12
+      ]
+    }
+  },
+  "Client": {
+    "DefaultModel": "e2e-ollama",
+    "IsPrivate": true,
+    "Models": [
+      "e2e-ollama-secondary",
+      "e2e-ollama",
+      "e2e-ollama-vision"
+    ],
+    "Prices": {
+      "e2e-ollama-secondary": [
+        1.12,
+        0,
+        0.35,
+        4.56,
+        12345,
+        2.24,
+        0,
+        0.70,
+        9.12
+      ],
+      "e2e-ollama": [
+        0.12,
+        0,
+        0.35,
+        4.56,
+        12345,
+        0.24,
+        0,
+        0.70,
+        9.12
+      ],
+      "e2e-ollama-vision": [
+        1.12,
+        0,
+        0.35,
+        4.56,
+        12345,
+        2.24,
+        0,
+        0.70,
+        9.12
+      ]
+    }
+  }
+}

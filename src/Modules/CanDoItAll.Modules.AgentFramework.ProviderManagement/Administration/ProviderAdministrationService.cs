@@ -62,7 +62,9 @@ public sealed record ProviderModelPricingRefreshResult(
     int DiscoveredModelCount,
     int ExplicitPriceCount,
     int ModelNameOnlyCount,
-    string Message);
+    string Message) {
+    public IReadOnlyList<string> Models { get; init; } = [];
+}
 
 internal sealed class ProviderAdministrationService(
     IDbContextFactory<AppDbContext> dbContextFactory,
@@ -396,6 +398,15 @@ internal sealed class ProviderAdministrationService(
         }
 
         var pricingKind = ResolveAgentFrameworkProviderKind(providerConnector.Manifest.PluginKey);
+        var models = discoveryResult.Value!.Models
+            .Select(item => item.Model.Trim())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (models.Length == 0) {
+            return Result<ProviderModelPricingRefreshResult>.Failure(Error.Validation(
+                "The provider returned no model names. Existing catalog and prices were not changed."));
+        }
         var mergeResult = ProviderPricingDefaults.MergeDiscoveredModelPrices(
             pricingKind,
             defaultModel,
@@ -406,7 +417,9 @@ internal sealed class ProviderAdministrationService(
             mergeResult.DiscoveredModelCount,
             mergeResult.ExplicitPriceCount,
             mergeResult.ModelNameOnlyCount,
-            BuildProviderPricingRefreshMessage(providerManifest.DisplayName, discoveryResult.Value.Message, mergeResult));
+            BuildProviderPricingRefreshMessage(providerManifest.DisplayName, discoveryResult.Value.Message, mergeResult)) {
+            Models = models
+        };
 
         return Result<ProviderModelPricingRefreshResult>.Success(refreshResult);
     }
@@ -668,6 +681,6 @@ internal sealed class ProviderAdministrationService(
             ? $"{mergeResult.ModelNameOnlyCount} model-name-only row(s)"
             : "no model-name-only rows";
 
-        return $"{providerDisplayName}: {discoveryMessage} Applied {exactPart} and {modelOnlyPart}; manual rows were preserved unless an exact API price matched the same model.";
+        return $"{providerDisplayName}: {discoveryMessage} Replaced the catalog with {mergeResult.DiscoveredModelCount} model(s); applied {exactPart} and {modelOnlyPart}. Prices for removed models were discarded. Known published prices or existing operator prices apply only to returned models; otherwise usage remains unpriced.";
     }
 }

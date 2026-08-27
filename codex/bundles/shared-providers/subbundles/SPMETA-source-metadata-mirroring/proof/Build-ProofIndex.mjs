@@ -8,7 +8,9 @@ const bundle = 'codex/bundles/shared-providers/';
 const unit = bundle + 'subbundles/SPMETA-source-metadata-mirroring/';
 const excluded = [
     unit + 'proof/changed-files.json',
-    unit + 'proof/transcripts/closure-validation.txt'
+    unit + 'proof/transcripts/closure-validation.txt',
+    unit + 'proof/full-catalog-changed-files.json',
+    unit + 'proof/transcripts/full-catalog-closure.txt'
 ];
 const git = (...args) => execFileSync('git', args, {
     cwd: root, maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe']

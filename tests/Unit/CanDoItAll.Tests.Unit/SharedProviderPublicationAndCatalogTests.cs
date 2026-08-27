@@ -27,6 +27,64 @@ public sealed class SharedProviderPublicationAndCatalogTests
         new(Guid.Parse("10000000-0000-0000-0000-000000000001"));
 
     [Fact]
+    public void PublicationDoesNotInventOpenAiModelsWithoutPersistedSuggestions() {
+        var profile = CreateProfile(defaultModel: "custom-default");
+        var decision = CreatePolicy().Evaluate(profile, CreateManifest(profile.ConnectorPluginKey), true);
+
+        Assert.True(decision.IsEligible);
+        Assert.Equal("custom-default", decision.Models[0].UpstreamModelId);
+        Assert.Equal("custom-default", Assert.Single(decision.Models).UpstreamModelId);
+    }
+
+    [Theory]
+    [InlineData(ProviderConnectorKeys.OpenAi, AgentFrameworkProviderKind.OpenAi, ProviderProfilePurpose.Chat)]
+    [InlineData(ProviderConnectorKeys.OpenAi, AgentFrameworkProviderKind.OpenAi, ProviderProfilePurpose.ImageGeneration)]
+    [InlineData(OllamaProviderAdministrationConnector.PluginKey, AgentFrameworkProviderKind.Ollama, ProviderProfilePurpose.Chat)]
+    public void PublicationModelSetMatchesSourceRuntimeMapper(string connector, AgentFrameworkProviderKind kind,
+        ProviderProfilePurpose purpose) {
+        var profile = CreateProfile(connectorPluginKey: connector, providerKind: kind, purpose: purpose,
+            defaultModel: "custom-default", suggestedModels: ["custom-secondary", "CUSTOM-SECONDARY"]);
+        var mapper = new ProviderProfileMapper(new ProviderAdministrationConnectorCatalog([]), new ProviderProfileService());
+        var runtime = mapper.Map(profile);
+
+        Assert.True(SharedProviderProfilePublicationMetadataReader.TryRead(profile, out var metadata, out var failure), failure);
+        Assert.Equal(runtime.SuggestedModels.Order(), metadata.Models.Order());
+        Assert.Equal("custom-default", metadata.Models[0]);
+        Assert.Equal(1, metadata.Models.Count(model => model.Equals("custom-secondary", StringComparison.OrdinalIgnoreCase)));
+        if (kind == AgentFrameworkProviderKind.Ollama || purpose == ProviderProfilePurpose.ImageGeneration) {
+            Assert.Equal(["custom-default", "custom-secondary"], metadata.Models);
+        }
+    }
+
+    [Fact]
+    public void PublicationRejectsConfiguredCatalogBeyondProtocolModelLimit() {
+        var profile = CreateProfile(defaultModel: "custom-default");
+        var configuration = System.Text.Json.Nodes.JsonNode.Parse(profile.ExtraSettingsJson)!.AsObject();
+        configuration[ProviderProfileMetadataPropertyNames.SuggestedModels] =
+            JsonSerializer.SerializeToNode(Enumerable.Range(1, 128).Select(index => $"custom-{index}"));
+        profile.ExtraSettingsJson = configuration.ToJsonString();
+        var decision = CreatePolicy().Evaluate(profile, CreateManifest(profile.ConnectorPluginKey), true);
+
+        Assert.Equal(SharedProviderPublicationEligibilityCode.MetadataInvalid, decision.Code);
+        Assert.Contains("at most", decision.SanitizedReason);
+    }
+
+    [Fact]
+    public void PublicationPricesMatchEffectiveSourcePricesWithoutPersistedPricing() {
+        var profile = CreateProfile();
+        var mapper = new ProviderProfileMapper(new ProviderAdministrationConnectorCatalog([]), new ProviderProfileService());
+        var runtime = mapper.Map(profile);
+        var projection = SharedProviderCatalogProjector.Project(SourceInstanceId,
+            [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
+
+        foreach (var model in Assert.Single(projection.Catalog.Providers).Models) {
+            var sourcePrice = runtime.ModelPrices.SingleOrDefault(price => price.Model == model.DisplayName);
+            Assert.Equal(sourcePrice?.InputPerMillionTokensUsd, model.Price?.InputPerMillionTokensUsd);
+            Assert.Equal(sourcePrice?.OutputPerMillionTokensUsd, model.Price?.OutputPerMillionTokensUsd);
+        }
+    }
+
+    [Fact]
     public void SourceMetadataNamesPreserveModelNamesAndDistinctRoutingIds() {
         var profile = CreateProfile(defaultModel: "model-alpha", suggestedModels: ["model-beta"]);
         var projection = SharedProviderCatalogProjector.Project(
@@ -34,7 +92,8 @@ public sealed class SharedProviderPublicationAndCatalogTests
             [CreateProjectionSource(profile, CreatePolicy(), isPublished: true)]);
         var publication = Assert.Single(projection.Catalog.Providers);
 
-        Assert.Equal(["model-alpha", "model-beta"], publication.Models.Select(model => model.DisplayName).Order());
+        Assert.Equal(new[] { "model-alpha", "model-beta" }.Order(),
+            publication.Models.Select(model => model.DisplayName).Order());
         Assert.All(publication.Models, model => Assert.StartsWith("sp1.", model.Id.Value));
     }
 
@@ -50,11 +109,13 @@ public sealed class SharedProviderPublicationAndCatalogTests
         var publication = document.RootElement.GetProperty("providers")[0];
 
         Assert.True(publication.GetProperty("isPrivateProvider").GetBoolean());
-        var price = publication.GetProperty("models")[0].GetProperty("price");
+        var price = publication.GetProperty("models").EnumerateArray()
+            .Single(model => model.GetProperty("displayName").GetString() == "model-alpha").GetProperty("price");
         Assert.Equal(1.23m, price.GetProperty("inputPerMillionTokensUsd").GetDecimal());
         Assert.Equal(0m, price.GetProperty("cachedInputPerMillionTokensUsd").GetDecimal());
         Assert.Equal(4.56m, price.GetProperty("outputPerMillionTokensUsd").GetDecimal());
-        Assert.Single(publication.GetProperty("models").EnumerateArray());
+        Assert.Single(publication.GetProperty("models").EnumerateArray(),
+            model => model.TryGetProperty("price", out var item) && item.ValueKind != JsonValueKind.Null);
     }
 
     [Fact]
@@ -124,7 +185,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
                 SharedProviderCapability.StructuredOutput,
                 SharedProviderCapability.VisionInput
             ],
-            Assert.Single(decision.Models).Capabilities);
+            decision.Models.Single(model => model.UpstreamModelId == profile.DefaultModel).Capabilities);
     }
 
     [Fact]
@@ -385,7 +446,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
         Assert.True(decision.IsEligible);
         Assert.Equal(
             [SharedProviderCapability.Responses],
-            Assert.Single(decision.Models).Capabilities);
+            decision.Models.Single(model => model.UpstreamModelId == profile.DefaultModel).Capabilities);
         Assert.Equal(
             SharedProviderPublicationEligibilityCode.RelayUnsupported,
             transportMismatch.Code);
@@ -430,7 +491,7 @@ public sealed class SharedProviderPublicationAndCatalogTests
             .Select(model => model.Id)
             .ToArray();
         Assert.Equal(2, routingIds.Length);
-        Assert.Equal(2, routingIds.Distinct().Count());
+        Assert.Equal(routingIds.Length, routingIds.Distinct().Count());
     }
 
     [Fact]

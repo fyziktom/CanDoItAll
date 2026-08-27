@@ -98,7 +98,9 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Provider kind</label>
-                                        <InputSelect @bind-Value="providerModel.Kind"
+                                        <InputSelect TValue="ProviderKind" Value="@providerModel.Kind"
+                                                     ValueChanged="ChangeProviderKind"
+                                                     ValueExpression="@(() => providerModel.Kind)"
                                                      class="cda-input"
                                                      data-testid="providers-kind-select">
                                             @foreach (var kind in Enum.GetValues<ProviderKind>())
@@ -169,6 +171,7 @@
                                       class="agent-provider-readonly-fields">
                             <div class="agent-provider-prices-tab">
                                 <ProviderModelPricingEditor Model="providerModel"
+                                                            ModelNames="@providerModel.SuggestedModels"
                                                             SourceManaged="@SelectedProviderIsSourceManaged"
                                                             Provider="@SelectedProvider"
                                                             PricingKind="@providerModel.Kind"

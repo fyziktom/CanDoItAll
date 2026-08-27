@@ -33,7 +33,7 @@ Do not pre-fill passing claims.
 | SB10 | Behavioral | Not executed | Not executed | Locked | none |
 | SB11 | Governed | Not executed | Not executed | Locked | none |
 | SB12 | Governed | Not executed | Not executed | Locked | none |
-| SPMETA | Governed | Pass, operator feedback semantic gate | Pass for metadata repair | DONE; original SB07 unchanged | `bundle://subbundles/SPMETA-source-metadata-mirroring/proof/manifest.md` |
+| SPMETA | Governed | Pass, reopened full-catalog feedback gate | Pass: UI/runtime twice, source/hash/architecture gates | DONE; original SB07 unchanged | `bundle://subbundles/SPMETA-source-metadata-mirroring/proof/full-catalog-manifest.md` |
 
 ## Browser Validation Analytics
 
@@ -41,9 +41,35 @@ Do not pre-fill passing claims.
 | --- | --- | --- | --- | --- | --- | --- |
 | SB08 | `1600x1000` planned | Not executed | Not executed | component-level plan only | Not executed | none |
 | SB09 | `1600x1000` planned | Not executed | Not executed | Not executed | Not executed | none |
-| SPMETA | `1920x1080` | Provider identity, exact source prices/private status and agent model control | Provider editor/table and dialog body | Native model dropdown inside dialog right column | Readable labels; no harmful overflow/footer overlap | `bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/ui-review.md` |
+| SPMETA | `1920x1080` | Source/client full catalogs, exact prices/private status; agent and Simple Chat selectors | Provider editor/table and dialog body | Native model dropdowns in agent and Simple Chat editors | Readable labels; selections/save work. Chrome native popup extends above capture; not a layout-fix claim | `bundle://subbundles/SPMETA-source-metadata-mirroring/reviews/full-catalog-review.md` |
 
-## SPMETA — August 27 source metadata repair
+## SPMETA — current full-catalog repair
+
+- Baseline: 0ecb6307823576e80f79074187668771b166609a, initially clean; changes uncommitted.
+- Root cause: the source runtime added built-in model choices that publication omitted.
+  One pure ProviderManagement policy now supplies both; importer defaults remain disabled.
+  Source-normalized prices and private flags mirror exactly, with explicit missing prices.
+- Simple Chats now preserves model labels and source ownership through its existing adapters.
+  Agent save validates shared selections against the published constraint, not a required
+  local price row. Unpublished/missing constraints reject; local manual-price rules remain.
+- Final focused lanes: 52 unit, 52 integration, 24 component, 39 agent-save/consumer tests
+  pass (167 executions, not the whole suite). Genuine failing-first regressions retained.
+- Both final full UI runs pass with 12 OpenAI chat and 3 Ollama models on source/client,
+  source price edits and synchronization, non-default agent and Simple Chat saves/execution,
+  image generation and image analysis. Independent runtime checks record ten central
+  successes with Complete usage per run, one image, correct non-default routes, fresh PNG,
+  HTTP 200 health and no application error headings. Installed Chrome 151 used for UI auth.
+- Both engines run image fullcatalog-20260827-2 on 5210/5212. Volumes and rollback containers
+  retained; 5032 unchanged. Deterministic upstream only, not paid/vendor or billed-cost proof.
+- Architecture boundary scan passes; primary-agent self-review records tooling limitations
+  and native popup capture behavior. Completed-stage hash/source gate passes; SPMETA DONE.
+  Original SB07 and its downstream locks remain unchanged.
+- Handoff: `bundle://subbundles/SPMETA-source-metadata-mirroring/RESULT.md`.
+
+## SPMETA — historical August 27 source metadata repair
+
+The following is prior metadata-repair history. The current full-catalog repair is
+tracked by the SPMETA gate row and full-catalog-repair.md, not this earlier closure.
 
 - Baseline: providers-shared at f092472ab83d36caf0e0fb52119d57d7aad35a65, initially clean.
   Changes remain uncommitted; exact before/after hashes are in the governed manifest.

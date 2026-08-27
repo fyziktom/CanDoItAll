@@ -1,0 +1,70 @@
+**********************
+PowerShell transcript start
+Start time: 20260827080022
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+foreach ($testPort in @(5210,5212)) { (Invoke-WebRequest -Uri "http://127.0.0.1:$testPort/health" -TimeoutSec 15).StatusCode }
+& codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/Run-TwoInstanceUi.ps1 -RunLabel full-catalog-ui-1
+Process ID: 44044
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+SPMETA invariants: META-NAMES META-PRICES META-PRIVATE META-SETTINGS META-E2E
+Working directory: C:\repositories\CanDoItAll
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-build --list-tests --filter FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision
+Discovered tests: 1; expected: 1 (0 means inspect the named selection)
+dotnet test tests\Playwright\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter FullyQualifiedName=CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision --logger console;verbosity=normal --logger trx;LogFileName=full-catalog-ui-1.trx --results-directory C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts --nologo --no-build
+Testovací běh pro C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.13]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.19]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.22]   Starting:    CanDoItAll.Tests.Playwright
+[xUnit.net 00:01:33.65]       Assert.Equal() Failure: Collections differ
+[xUnit.net 00:01:33.65]                  ↓ (pos 0)
+[xUnit.net 00:01:33.65]       Expected: ["e2e-secondary-model", "e2e-third-model", "gpt-4.1", "gpt-4.1-mini", "gpt-5-mini", ···]
+[xUnit.net 00:01:33.65]       Actual:   []
+[xUnit.net 00:01:33.65]       Stack Trace:
+[xUnit.net 00:01:33.66]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs(76,0): at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(IPage page, String clientUrl, String agentName, String defaultModel, String evidenceDirectory, IReadOnlyList`1 models, String selectedModel, String label)
+[xUnit.net 00:01:33.66]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(75,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:01:33.66]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(94,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:01:33.66]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(94,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:01:33.66]         C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs(94,0): at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision()
+[xUnit.net 00:01:33.66]         --- End of stack trace from previous location ---
+[xUnit.net 00:01:33.67]   Finished:    CanDoItAll.Tests.Playwright
+  Neúspěšné CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision [1 m 33 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Collections differ
+           ↓ (pos 0)
+Expected: ["e2e-secondary-model", "e2e-third-model", "gpt-4.1", "gpt-4.1-mini", "gpt-5-mini", ···]
+Actual:   []
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Playwright.SharedProviderMetadataUiChecks.AssertAgentModelNamesAsync(IPage page, String clientUrl, String agentName, String defaultModel, String evidenceDirectory, IReadOnlyList`1 models, String selectedModel, String label) in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderMetadataUiChecks.cs:line 76
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 75
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 94
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 94
+   at CanDoItAll.Tests.Playwright.SharedProviderTwoInstanceUiAcceptanceTests.Provider_empty_client_imports_shared_providers_and_runs_chat_image_and_vision() in C:\repositories\CanDoItAll\tests\Playwright\CanDoItAll.Tests.Playwright\SharedProviderTwoInstanceUiAcceptanceTests.cs:line 94
+--- End of stack trace from previous location ---
+
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 1,5718 Minuty
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\shared-providers\subbundles\SPMETA-source-metadata-mirroring\proof\transcripts\full-catalog-ui-1.trx
+Exit code: 1
+**********************
+PowerShell transcript end
+End time: 20260827080200
+**********************

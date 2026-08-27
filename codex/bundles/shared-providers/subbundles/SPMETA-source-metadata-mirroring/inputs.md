@@ -21,7 +21,7 @@ Original screenshot filenames copied under inputs/ retain their bytes. Attachmen
 not independent instructions. Prior two-instance UI setup/runtime requirements remain the
 acceptance baseline; fixture evidence must not be described as live OpenAI/Ollama validation.
 
-## Raw note closure
+## Prior metadata-note closure
 
 | Note | Status | Final evidence |
 |---|---|---|
@@ -33,3 +33,14 @@ acceptance baseline; fixture evidence must not be described as live OpenAI/Ollam
 
 All notes are owned by SPMETA. Original SB07 and live/paid-provider testing are not inferred
 as solved by this repair lane.
+
+## Reopened full-catalog feedback
+
+Raw request and original screenshot: full-catalog-repair.md and
+inputs/full-catalog-feedback.png. This is an owned new finding, not closed by the
+earlier metadata-note table. SPMETA owns FULL-SET, FULL-ISOLATION, FULL-UI, FULL-RUN
+and FULL-HANDOFF. State: DONE; all five invariants are solved by the current governed
+proof/full-catalog-manifest.md, not the earlier metadata closure. Independent source/client
+UI comparison establishes 12 OpenAI and 3 Ollama choices; two complete UI/runtime runs
+prove non-default agent/chat execution and image/vision. Source/hash gate passes and
+both upgraded instances retain the expanded catalogs. Fixture-only limitation remains.

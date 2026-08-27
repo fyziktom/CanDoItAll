@@ -57,7 +57,7 @@ public sealed class ProviderModelPricingEditorTests : BunitContext
     }
 
     [Fact]
-    public void Add_model_price_creates_named_manual_row()
+    public void Add_model_price_requires_a_real_model_name_instead_of_inventing_one()
     {
         var model = new ProviderProfileEditorModel
         {
@@ -80,8 +80,9 @@ public sealed class ProviderModelPricingEditorTests : BunitContext
 
         cut.Find("[data-testid='provider-pricing-add-button']").Click();
 
-        Assert.Contains(model.ModelPrices, price => price.Model == "custom-model");
-        Assert.Equal("custom-model", ReadInputValue(cut, "provider-pricing-model-1"));
+        Assert.Equal(string.Empty, model.ModelPrices[1].Model);
+        Assert.Equal(string.Empty, ReadInputValue(cut, "provider-pricing-model-1"));
+        Assert.Equal(0m, model.ModelPrices[1].InputPerMillionTokensUsd);
     }
 
     private static string? ReadInputValue(

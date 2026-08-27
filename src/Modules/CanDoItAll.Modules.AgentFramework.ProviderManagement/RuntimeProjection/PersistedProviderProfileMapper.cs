@@ -58,10 +58,12 @@ public sealed class ProviderProfileMapper(
             provider.ConnectorPluginKey,
             provider.LastHealthStatus ?? "Not checked",
             provider.LastHealthCheckAtUtc,
-            ResolvePersistedProviderSuggestedModels(
-                provider,
+            ProviderModelCatalogPolicy.Resolve(
+                provider.ConnectorPluginKey,
                 mappedKind,
-                mappedPurpose),
+                mappedPurpose,
+                provider.DefaultModel,
+                ProviderMetadata.ReadSuggestedModels(provider)),
             mappedPurpose)
         {
             ConnectorPluginKey = provider.ConnectorPluginKey,
@@ -128,37 +130,6 @@ public sealed class ProviderProfileMapper(
                 ComfyUiProviderAdministrationConnector.DefaultModel,
             _ => "llama3.1"
         };
-    }
-
-    private static IReadOnlyList<string>
-        ResolvePersistedProviderSuggestedModels(
-            ProviderProfile provider,
-            AgentFrameworkProviderKind mappedKind,
-            ProviderProfilePurpose mappedPurpose)
-    {
-        IReadOnlyList<string> defaultModels =
-            string.IsNullOrWhiteSpace(provider.DefaultModel)
-                ? []
-                : [provider.DefaultModel.Trim()];
-        var persistedModels =
-            ProviderMetadata.ReadSuggestedModels(provider);
-        if (provider.ConnectorPluginKey != OpenAiProviderAdministrationConnector.PluginKey ||
-            mappedKind != AgentFrameworkProviderKind.OpenAi ||
-            mappedPurpose != ProviderProfilePurpose.Chat)
-        {
-            return defaultModels
-                .Concat(persistedModels)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        }
-
-        return ManagedSeedProviderFallbacks.OpenAiSuggestedModels
-            .Concat(persistedModels)
-            .Concat(defaultModels)
-            .Where(model => !string.IsNullOrWhiteSpace(model))
-            .Select(model => model.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private static IReadOnlyList<string> ResolvePersistedProviderTags(

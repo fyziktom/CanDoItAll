@@ -13,7 +13,7 @@
                                            data-testid="provider-private-input" />
                             Private provider
                         </label>
-                        <StatusBadge Tone="info" Text="@($"{Model.ModelPrices.Count} model(s)")" />
+                        <StatusBadge Tone="info" Text="@($"{CatalogModels.Count} model(s), {ConfiguredModelCount} priced")" />
                     </Cluster>
                     <p class="cda-body-muted">Prices are USD per one million tokens.</p>
                 </div>
@@ -101,16 +101,22 @@
                                     </td>
                                 </tr>
                             }
+                            @foreach (var modelName in UnpricedModels) {
+                                <tr class="border-b border-slate-100" data-testid="provider-pricing-unpriced-model">
+                                    <td class="px-3 py-2">@DisplayModel(modelName)</td>
+                                    <td colspan="10" class="px-3 py-2 cda-body-muted">Price not published or configured</td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                 </div>
 
-                @if (SourceManaged && Model.ModelPrices.Count == 0) {
-                    <p class="cda-body-muted" data-testid="provider-pricing-unavailable">The source has not published prices for these models. Usage remains unpriced.</p>
+                @if (Model.ModelPrices.Count == 0) {
+                    <p class="cda-body-muted" data-testid="provider-pricing-unavailable">No prices have been published or configured for these models. Usage remains unpriced.</p>
                 }
 
                 @if (!SourceManaged) {
-                <p class="cda-body-muted">GPT-5.6 long-context rates apply when a request exceeds 272,000 input tokens.</p>
+                <p class="cda-body-muted">Loading replaces the model catalog and removes prices for models no longer offered. Ollama does not publish token prices; manual private-provider rates are operator estimates.</p>
 
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Load from provider"
@@ -124,7 +130,7 @@
                             Size="ButtonSize.Small"
                             Click="AddPriceRow"
                             data-testid="provider-pricing-add-button" />
-                    <Button Text="Reset defaults"
+                    <Button Text="Reset catalog prices"
                             ButtonStyle="ButtonStyle.Light"
                             Size="ButtonSize.Small"
                             Click="ResetDefaults"
@@ -141,7 +147,7 @@
                         <dd>@PricingModeText</dd>
                     </div>
                     <div>
-                        <dt>Configured models</dt>
+                        <dt>Priced models</dt>
                         <dd>@ConfiguredModelCount</dd>
                     </div>
                     <div>
@@ -177,6 +183,19 @@
     [Parameter]
     public ProviderProfile? Provider { get; set; }
 
+    [Parameter]
+    public IReadOnlyList<string>? ModelNames { get; set; }
+
+    private IReadOnlyList<string> CatalogModels => (ModelNames ?? Provider?.SuggestedModels ??
+        Model.ModelPrices.Select(price => price.Model).ToArray())
+        .Append(ResolveDefaultModel())
+        .Where(name => !string.IsNullOrWhiteSpace(name))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private IEnumerable<string> UnpricedModels => CatalogModels.Except(
+        Model.ModelPrices.Select(price => price.Model), StringComparer.OrdinalIgnoreCase);
+
     private bool PrivateProviderLocked => ProviderPricingDefaults.IsPrivateProvider(PricingKind);
 
     private int ConfiguredModelCount => Model.ModelPrices.Count(price => !string.IsNullOrWhiteSpace(price.Model));
@@ -198,10 +217,6 @@
         if (SourceManaged) {
             return;
         }
-        if (Model.ModelPrices.Count == 0)
-        {
-            ResetDefaults();
-        }
 
         if (PrivateProviderLocked)
         {
@@ -214,22 +229,7 @@
         if (SourceManaged) {
             return;
         }
-        var defaultPrice = ProviderPricingDefaults.CreateManualPriceTemplate(
-            PricingKind,
-            ResolveNextManualModelName());
-        Model.ModelPrices.Add(new ProviderModelTokenPriceEditorModel
-        {
-            Model = defaultPrice.Model,
-            InputPerMillionTokensUsd = defaultPrice.InputPerMillionTokensUsd,
-            CachedInputPerMillionTokensUsd = defaultPrice.CachedInputPerMillionTokensUsd,
-            OutputPerMillionTokensUsd = defaultPrice.OutputPerMillionTokensUsd,
-            CacheWritePerMillionTokensUsd = defaultPrice.CacheWritePerMillionTokensUsd,
-            LongContextThresholdTokens = defaultPrice.LongContextThresholdTokens,
-            LongContextInputPerMillionTokensUsd = defaultPrice.LongContextInputPerMillionTokensUsd,
-            LongContextCachedInputPerMillionTokensUsd = defaultPrice.LongContextCachedInputPerMillionTokensUsd,
-            LongContextCacheWritePerMillionTokensUsd = defaultPrice.LongContextCacheWritePerMillionTokensUsd,
-            LongContextOutputPerMillionTokensUsd = defaultPrice.LongContextOutputPerMillionTokensUsd
-        });
+        Model.ModelPrices.Add(new ProviderModelTokenPriceEditorModel());
     }
 
     private void RemovePriceRow(ProviderModelTokenPriceEditorModel price)
@@ -245,7 +245,10 @@
         if (SourceManaged) {
             return;
         }
-        Model.ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(PricingKind, ResolveDefaultModel());
+        var models = CatalogModels
+            .Select(name => new ProviderDiscoveredModelPrice(name, null, null, null));
+        Model.ModelPrices = ProviderPricingDefaults.ToEditorModels(
+            ProviderPricingDefaults.MergeDiscoveredModelPrices(PricingKind, ResolveDefaultModel(), [], models).ModelPrices);
         Model.IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(PricingKind, null);
     }
 
@@ -259,27 +262,4 @@
         return DefaultModel?.Trim() ?? string.Empty;
     }
 
-    private string ResolveNextManualModelName()
-    {
-        const string manualModelName = "custom-model";
-        if (!ModelNameExists(manualModelName))
-        {
-            return manualModelName;
-        }
-
-        for (var suffix = 2; ; suffix++)
-        {
-            var candidate = $"{manualModelName}-{suffix}";
-            if (!ModelNameExists(candidate))
-            {
-                return candidate;
-            }
-        }
-    }
-
-    private bool ModelNameExists(string model)
-    {
-        return Model.ModelPrices.Any(price =>
-            string.Equals(price.Model, model, StringComparison.OrdinalIgnoreCase));
-    }
 }

@@ -19,6 +19,26 @@ public sealed class LlmChatDefinitionUiTests
     private static readonly Guid ProviderId = Guid.Parse("20202020-2020-2020-2020-202020202020");
 
     [Fact]
+    public void Shared_definition_shows_labels_but_saves_nondefault_route_and_forbids_override() {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(gateway,
+            new StubProviderGateway("opaque-default", "opaque-secondary", true),
+            new StubAuthorization(canRead: true, canManage: true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>();
+        cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
+        cut.Find("[data-testid='llm-chat-definition-name']").Change("Shared chat");
+        cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
+        cut.Find("[data-testid='llm-chat-definition-provider']").Change("0");
+
+        cut.WaitForAssertion(() => Assert.Equal(["Provider default (Readable default)", "Readable secondary"],
+            cut.FindAll("[data-testid='llm-chat-definition-model'] option").Select(option => option.TextContent)));
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-definition-model-override']"));
+        cut.Find("[data-testid='llm-chat-definition-model']").Change("1");
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal("opaque-secondary", gateway.CreatedMutation?.Model));
+    }
+
+    [Fact]
     public void Read_only_catalog_renders_neutral_cards_without_mutation_controls_or_prompt_access()
     {
         var gateway = new StubDefinitionGateway(CreateEditor());
@@ -492,7 +512,7 @@ public sealed class LlmChatDefinitionUiTests
 
     private sealed class StubProviderGateway(
         string defaultModel = "model-a",
-        string? suggestedModel = null) : ILlmChatProviderUiGateway
+        string? suggestedModel = null, bool sourceManaged = false) : ILlmChatProviderUiGateway
     {
         public Task<LlmChatUiResult<IReadOnlyList<LlmChatProviderOptionPresentation>>> ListAsync(
             CancellationToken cancellationToken = default)
@@ -508,7 +528,9 @@ public sealed class LlmChatDefinitionUiTests
                                 LlmChatThinkingEffortSupport.Supported,
                                 LlmChatThinkingEffortControl.EffortLevels,
                                 [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High],
-                                LlmChatThinkingEffort.Low)),
+                                LlmChatThinkingEffort.Low)) {
+                            DisplayName = sourceManaged ? "Readable default" : defaultModel
+                        },
                         .. suggestedModel is null
                             ? []
                             : new LlmChatModelOptionPresentation[]
@@ -519,9 +541,11 @@ public sealed class LlmChatDefinitionUiTests
                                         LlmChatThinkingEffortSupport.Supported,
                                         LlmChatThinkingEffortControl.EffortLevels,
                                         [LlmChatThinkingEffort.Low, LlmChatThinkingEffort.High],
-                                        LlmChatThinkingEffort.Low))
+                                        LlmChatThinkingEffort.Low)) {
+                                    DisplayName = sourceManaged ? "Readable secondary" : suggestedModel
+                                }
                             }
-                    ])
+                    ]) { IsSourceManaged = sourceManaged }
             ]));
     }
 

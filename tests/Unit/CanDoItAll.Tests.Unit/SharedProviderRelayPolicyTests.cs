@@ -56,6 +56,46 @@ public sealed class SharedProviderRelayPolicyTests
             $$"""{"model":"{{RoutingModelId.Value}}","messages":[{"role":"tool","content":"sunny"}]}""");
     }
 
+    [Theory]
+    [InlineData("\"none\"")]
+    [InlineData("\"minimal\"")]
+    [InlineData("\"low\"")]
+    [InlineData("\"medium\"")]
+    [InlineData("\"high\"")]
+    [InlineData("\"xhigh\"")]
+    [InlineData("\"max\"")]
+    [InlineData("null")]
+    public void Chat_reasoning_effort_round_trips_documented_values(string value) {
+        var request = Accept(SharedProviderRelayOperation.ChatCompletions,
+            ChatJson($"\"reasoning_effort\":{value}"));
+
+        using var upstream = JsonDocument.Parse(RewriteForUpstream(request));
+        Assert.Equal(value, upstream.RootElement.GetProperty("reasoning_effort").GetRawText());
+    }
+
+    [Theory]
+    [InlineData("[\"none\"]")]
+    [InlineData("{}")]
+    [InlineData("true")]
+    [InlineData("1")]
+    [InlineData("\"NONE\"")]
+    [InlineData("\"bogus\"")]
+    [InlineData("\"\"")]
+    [InlineData("\" none \"")]
+    [InlineData("\"none\",\"reasoning_effort\":\"high\"")]
+    public void Chat_reasoning_effort_rejects_invalid_or_duplicate_values(string value) {
+        AssertValidationFailure(SharedProviderRelayOperation.ChatCompletions,
+            ChatJson($"\"reasoning_effort\":{value}"));
+    }
+
+    [Fact]
+    public void Chat_reasoning_effort_is_not_accepted_on_other_operations() {
+        AssertValidationFailure(SharedProviderRelayOperation.Responses,
+            ResponsesJson("\"reasoning_effort\":\"none\""));
+        AssertValidationFailure(SharedProviderRelayOperation.ImageGenerations,
+            ImagesJson("\"reasoning_effort\":\"none\""), ImageSupport());
+    }
+
     [Fact]
     public void ResponsesSupportedSubset_NormalizesCanonicalRequest()
     {

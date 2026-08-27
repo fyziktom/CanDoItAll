@@ -189,7 +189,7 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 Success: true,
                 ProviderProfileId: provider.Id,
                 ProviderName: provider.Name,
-                Model: generated.Model,
+                Model: provider.IsSourceManaged ? provider.GetModelDisplayName(model) : generated.Model,
                 Operation: sourceImages.Count == 0 ? "generation" : "edit",
                 OutputWorkspacePath: outputPath.RelativePath,
                 ContentType: contentType,
@@ -329,6 +329,17 @@ public sealed class ImageGenerationAgentRuntimeToolProvider : IAgentRuntimeToolP
                 throw new InvalidOperationException($"Image-generation provider '{provider.Name}' does not define a default model.");
             }
 
+            if (provider.IsSourceManaged && provider.ModelSelectionConstraint?.Allows(model) != true) {
+                var matches = provider.ModelCatalog
+                    .Where(item => string.Equals(item.DisplayName, model, StringComparison.Ordinal))
+                    .Take(2)
+                    .ToArray();
+                if (matches.Length != 1) {
+                    throw new ProviderModelSelectionException(provider.Id, model);
+                }
+                model = matches[0].Id;
+            }
+            ProviderModelSelectionPolicy.EnsureAllowed(provider, model);
             return model;
         }
 

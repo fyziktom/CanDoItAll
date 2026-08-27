@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -12,6 +13,7 @@ using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.SharedProviders.Http;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Compaction;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
@@ -148,12 +150,18 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
     }
 
     [Theory]
-    [InlineData(OpenAiModelIds.Gpt56Terra)]
-    [InlineData(OpenAiModelIds.Gpt56Luna)]
-    [InlineData(OpenAiModelIds.Gpt54Mini)]
+    [InlineData(OpenAiModelIds.Gpt56Terra, false)]
+    [InlineData(OpenAiModelIds.Gpt56Luna, false)]
+    [InlineData(OpenAiModelIds.Gpt54Mini, false)]
+    [InlineData(OpenAiModelIds.Gpt56Terra, true)]
+    [InlineData(OpenAiModelIds.Gpt56Luna, true)]
+    [InlineData(OpenAiModelIds.Gpt54Mini, true)]
     public async Task Maf_agent_for_affected_model_sends_none_and_completes_function_tool_turn(
-        string model)
-    {
+        string upstreamModel, bool shared) {
+        var model = shared
+            ? SharedProviderRoutingModelIdCodec.Create(
+                new SharedProviderPublicationId(Guid.NewGuid()), upstreamModel).Value
+            : upstreamModel;
         var handler = new ScriptedChatCompletionsHandler(model);
         using var httpClient = new HttpClient(handler);
         var nativeClient = new ChatClient(
@@ -165,6 +173,15 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
                 Transport = new HttpClientPipelineTransport(httpClient)
             });
         var provider = CreateProvider(model);
+        if (shared) {
+            provider = provider with {
+                CredentialBinding = new ProviderCredentialBinding(
+                    Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                    ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+                ModelCatalog = [new(model, upstreamModel)],
+                ModelSelectionConstraint = new ProviderModelSelectionConstraint([model])
+            };
+        }
         var invocationCount = 0;
         string? invokedValue = null;
         var function = AIFunctionFactory.Create(
@@ -234,12 +251,132 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
             var root = request.RootElement;
             Assert.Equal(model, root.GetProperty("model").GetString());
             Assert.Equal("none", root.GetProperty("reasoning_effort").GetString());
+            if (shared) {
+                Assert.True(new SharedProviderRelaySupportCatalog().TryGet(
+                    SharedProviderConnectorPluginKeys.OpenAi, SharedProviderPurpose.Chat, out var descriptor));
+                var normalized = new SharedProviderRelayRequestPolicy().Normalize(
+                    SharedProviderRelayOperation.ChatCompletions,
+                    Encoding.UTF8.GetBytes(root.GetRawText()), descriptor.Support);
+                Assert.IsType<SharedProviderRelayRequestPolicyResult.Accepted>(normalized);
+            }
 
             var tool = Assert.Single(root.GetProperty("tools").EnumerateArray());
             Assert.Equal("function", tool.GetProperty("type").GetString());
             Assert.Equal(
                 FunctionName,
                 tool.GetProperty("function").GetProperty("name").GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Shared_model_requires_unique_source_metadata_before_dispatch(bool duplicate) {
+        var model = SharedProviderRoutingModelIdCodec.Create(
+            new SharedProviderPublicationId(Guid.NewGuid()), OpenAiModelIds.Gpt54Mini).Value;
+        var provider = CreateProvider(model) with {
+            CredentialBinding = new ProviderCredentialBinding(
+                Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = duplicate ? [new(model, OpenAiModelIds.Gpt54Mini), new(model, OpenAiModelIds.Gpt56Luna)] : []
+        };
+        var handler = new ScriptedChatCompletionsHandler(model);
+        using var httpClient = new HttpClient(handler);
+        var nativeClient = new ChatClient(model, new ApiKeyCredential("unused-test-key"), new OpenAIClientOptions {
+            Endpoint = new Uri("https://openai.test/v1"),
+            Transport = new HttpClientPipelineTransport(httpClient)
+        });
+        using var client = new OpenAiChatCompletionsCompatibilityChatClient(
+            nativeClient.AsIChatClient(), provider, model, logger: null);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => client.GetResponseAsync("Test metadata validation."));
+
+        Assert.Empty(handler.RequestBodies);
+    }
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, true)]
+    public async Task Approved_tool_after_session_restore_has_valid_wire_history(bool streaming, bool includeContext, bool includeCompaction) {
+        const string model = OpenAiModelIds.Gpt54Mini;
+        var handler = new ScriptedChatCompletionsHandler(model);
+        using var httpClient = new HttpClient(handler);
+        var provider = CreateProvider(model);
+        var factory = new MafProviderAgentFactory(
+            new MafProviderCredentialService(new ProfileCredentialResolver(
+                new Dictionary<Guid, string> { [provider.Id] = "unused-test-key" })),
+            NoOpMafProviderStreamingDispatchGate.Instance,
+            httpClientSelector: new FixedProviderHttpClientSelector(httpClient));
+        var invocationCount = 0;
+        var function = AIFunctionFactory.Create((string value) => {
+            invocationCount++;
+            return $"recorded:{value}";
+        }, FunctionName);
+        var options = MafChatClientAgentOptionsFactory.Create(new ChatOptions {
+            Tools = [new ApprovalRequiredAIFunction(function)]
+        });
+        options.ChatHistoryProvider = new InMemoryChatHistoryProvider(new InMemoryChatHistoryProviderOptions {
+            StorageInputRequestMessageFilter = messages => messages.Where(message =>
+                message.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.AIContextProvider &&
+                message.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.ChatHistory).ToList()
+        });
+        options.RequirePerServiceCallChatHistoryPersistence = true;
+#pragma warning disable MAAI001
+        var providers = new List<AIContextProvider>();
+        if (includeContext) {
+            providers.Add(new StaticMessageContextProvider(new(ChatRole.User, "Scoped runtime context"), StaticMessageContextProvider.TransientAgentChatStateKey));
+        }
+        if (includeCompaction) {
+            providers.Add(new CompactionProvider(new PipelineCompactionStrategy(
+                new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(40)),
+                new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(32)),
+                new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(64000)))));
+        }
+        options.AIContextProviders = providers;
+#pragma warning restore MAAI001
+        var agent = factory.CreateFrameworkAgent(provider, model, options, true, false);
+        try {
+            var session = await agent.CreateSessionAsync();
+            var paused = await RunAsync([new(ChatRole.User, "Record alpha with the available tool.")], session);
+            var approval = Assert.Single(paused.Messages.SelectMany(message => message.Contents)
+                .OfType<ToolApprovalRequestContent>());
+            Assert.Equal(0, invocationCount);
+            var serialized = await agent.SerializeSessionAsync(session);
+            var restored = await agent.DeserializeSessionAsync(serialized);
+
+            var completed = await RunAsync([new(ChatRole.User, [approval.CreateResponse(true)])], restored);
+
+            Assert.Equal("Recorded alpha.", completed.Text);
+            Assert.Equal(1, invocationCount);
+            Assert.Equal(2, handler.RequestBodies.Count);
+            var messages = handler.RequestBodies[1].RootElement.GetProperty("messages").EnumerateArray().ToArray();
+            var assistantIndex = Array.FindIndex(messages, message => message.TryGetProperty("tool_calls", out _));
+            var toolIndex = Array.FindIndex(messages, message => message.GetProperty("role").GetString() == "tool");
+            Assert.True(assistantIndex >= 0);
+            Assert.Equal(assistantIndex + 1, toolIndex);
+            Assert.Equal(FunctionCallId, messages[toolIndex].GetProperty("tool_call_id").GetString());
+            Assert.All(handler.RequestBodies, request => Assert.Equal("none", request.RootElement.GetProperty("reasoning_effort").GetString()));
+        } finally {
+            await DisposeAgentAsync(agent);
+        }
+
+        async Task<AgentResponse> RunAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AgentSession session) {
+            var runOptions = new ChatClientAgentRunOptions(new ChatOptions { AllowMultipleToolCalls = false, Temperature = 0.4f });
+            if (!streaming) {
+                return await agent.RunAsync(messages, session, runOptions);
+            }
+
+            var updates = new List<AgentResponseUpdate>();
+            await foreach (var update in agent.RunStreamingAsync(messages, session, runOptions)) {
+                updates.Add(MafAgentResponseSnapshotter.SnapshotUpdate(update));
+            }
+            return updates.ToAgentResponse();
         }
     }
 
@@ -403,6 +540,22 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
                 2 => CreateTerminalResponse(),
                 _ => throw new InvalidOperationException("The fake endpoint received an unexpected request.")
             };
+            if (requestBodies[^1].RootElement.TryGetProperty("stream", out var stream) && stream.GetBoolean()) {
+                var envelope = JsonNode.Parse(responseBody)!;
+                envelope["object"] = "chat.completion.chunk";
+                var choice = envelope["choices"]![0]!.AsObject();
+                var delta = choice["message"]!.DeepClone();
+                choice.Remove("message");
+                choice["delta"] = delta;
+                if (delta["tool_calls"] is JsonArray calls) {
+                    for (var index = 0; index < calls.Count; index++) {
+                        calls[index]!["index"] = index;
+                    }
+                }
+                return new HttpResponseMessage(HttpStatusCode.OK) {
+                    Content = new StringContent($"data: {envelope.ToJsonString()}\n\ndata: [DONE]\n\n", Encoding.UTF8, "text/event-stream")
+                };
+            }
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(responseBody, Encoding.UTF8, "application/json")

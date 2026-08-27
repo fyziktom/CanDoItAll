@@ -87,6 +87,22 @@ public sealed class LlmInvocationPortCompositionTests
 public sealed class LlmChatProviderResolutionTests
 {
     [Fact]
+    public async Task Shared_options_preserve_model_labels_and_source_ownership() {
+        var provider = ProviderRuntimeTestData.CreateProvider("Shared provider") with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("model-fast", "Readable fast model"), new("model-deep", "Readable deep model")]
+        };
+        var result = await ProviderRuntimeTestData.CreateResolver(provider).ListOptionsAsync();
+
+        Assert.True(result.IsSuccess);
+        var option = Assert.Single(result.Value!);
+        Assert.True(option.IsSourceManaged);
+        Assert.Equal("Readable fast model", option.Models.Single(model => model.Model == "model-fast").DisplayName);
+        Assert.Equal("Readable deep model", option.Models.Single(model => model.Model == "model-deep").DisplayName);
+    }
+
+    [Fact]
     public async Task Options_project_distinct_effort_sets_for_models_without_sensitive_profile_fields()
     {
         var provider = ProviderRuntimeTestData.CreateProvider("Renamed provider");

@@ -13,6 +13,66 @@ public sealed class ImageGenerationAgentRuntimeToolProviderTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = new(JsonSerializerDefaults.Web);
 
+    [Theory]
+    [InlineData(null, "image-route-default", "gpt-image-1-mini")]
+    [InlineData("gpt-image-1-mini", "image-route-default", "gpt-image-1-mini")]
+    [InlineData("gpt-image-1", "image-route-secondary", "gpt-image-1")]
+    [InlineData("image-route-secondary", "image-route-secondary", "gpt-image-1")]
+    public async Task Shared_image_tool_resolves_real_names_and_returns_real_names(
+        string? requestedModel, string expectedRoute, string expectedName) {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var imageService = new FakeAgentImageGenerationService();
+        var provider = CreateSharedImageProvider();
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([provider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path), imageService, services);
+        var agent = CreateAgent(provider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true, PreferredProviderProfileId = provider.Id
+        }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(CreateContext(agent, provider), CancellationToken.None));
+
+        var result = await InvokeImageGenerationToolAsync(tool,
+            new ImageGenerationCreateInput("A lighthouse", "images/lighthouse.png", Model: requestedModel));
+
+        Assert.Equal(expectedRoute, Assert.Single(imageService.Requests).Model);
+        Assert.Equal(expectedName, result.Model);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Shared_image_tool_rejects_unknown_or_ambiguous_names(bool ambiguous) {
+        using var services = new ServiceCollection().BuildServiceProvider();
+        using var workspace = new ImageGenerationTempWorkspace();
+        var imageService = new FakeAgentImageGenerationService();
+        var provider = CreateSharedImageProvider();
+        if (ambiguous) {
+            provider = provider with { ModelCatalog = [new("image-route-default", "gpt-image-1"), new("image-route-secondary", "gpt-image-1")] };
+        }
+        var toolProvider = new ImageGenerationAgentRuntimeToolProvider(
+            new InMemoryProviderProfileRegistry([provider]),
+            TestWorkspaceServices.CreatePathResolutionService(workspace.Path), imageService, services);
+        var agent = CreateAgent(provider.Id, AgentImageGenerationAccessMetadata.Write("{}", new() {
+            CanGenerateImages = true, PreferredProviderProfileId = provider.Id
+        }));
+        var tool = Assert.Single(await toolProvider.CreateToolsAsync(CreateContext(agent, provider), CancellationToken.None));
+
+        await Assert.ThrowsAsync<ProviderModelSelectionException>(() => InvokeImageGenerationToolAsync(tool,
+            new ImageGenerationCreateInput("A lighthouse", "images/lighthouse.png", Model: ambiguous ? "gpt-image-1" : "unpublished-image")));
+
+        Assert.Empty(imageService.Requests);
+    }
+
+    private static ProviderProfile CreateSharedImageProvider() => CreateProvider(ProviderProfilePurpose.ImageGeneration) with {
+        DefaultModel = "image-route-default",
+        CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+            ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+        SuggestedModels = ["image-route-default", "image-route-secondary"],
+        ModelSelectionConstraint = new(["image-route-default", "image-route-secondary"]),
+        ModelCatalog = [new("image-route-default", "gpt-image-1-mini"), new("image-route-secondary", "gpt-image-1")]
+    };
+
     [Fact]
     public async Task CreateToolsAsync_returns_image_generation_tool_when_agent_is_allowed()
     {

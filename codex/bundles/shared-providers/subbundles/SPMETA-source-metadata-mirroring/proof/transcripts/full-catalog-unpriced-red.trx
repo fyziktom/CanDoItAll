@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="2457b1b8-8440-4fa2-b898-1742b9797433" name="lucys@LUCYSPOWER 2026-08-27 08:08:12" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-27T08:08:12.9929321-04:00" queuing="2026-08-27T08:08:12.9929326-04:00" start="2026-08-27T08:08:10.7245446-04:00" finish="2026-08-27T08:08:13.0014362-04:00" />
+  <TestSettings name="default" id="8f0b80d7-671c-4613-8830-56636f0b9dd0">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-08-27_08_08_12" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="6e3f0431-0e6b-4698-8d9d-89a2fda83a87" testId="49652d7c-a6dc-7eb3-f0cc-e36e99bd409a" testName="CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice" computerName="LUCYSPOWER" duration="00:00:00.0080405" startTime="2026-08-27T08:08:12.8961193-04:00" endTime="2026-08-27T08:08:12.8962164-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6e3f0431-0e6b-4698-8d9d-89a2fda83a87">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Throws() Failure: No exception was thrown&#xD;
+Expected: typeof(System.InvalidOperationException)</Message>
+          <StackTrace>   at CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentDefinitionFactoryThinkingEffortTests.cs:line 39&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="722f9ea4-19bf-4084-8bb8-5eefb94cfd13" testId="4336d354-01d6-7d7c-906c-a2b37d0fb5db" testName="CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_PublishedSharedModelWithoutPriceCanBeSelected" computerName="LUCYSPOWER" duration="00:00:00.0409104" startTime="2026-08-27T08:08:12.8506964-04:00" endTime="2026-08-27T08:08:12.8802008-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="722f9ea4-19bf-4084-8bb8-5eefb94cfd13">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : Agent model override 'route-secondary' for provider 'OpenAi provider' requires a model price row on the provider profile.</Message>
+          <StackTrace>   at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.EnsureManualModelOverrideHasPricing(Nullable`1 providerProfileId, String normalizedModel, ProviderProfile selectedProvider) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 229&#xD;
+   at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.Create(SandboxWorkspaceCatalog catalog, AgentEditorModel model, Guid id, AgentDefinition existingAgent, DateTimeOffset now, IProviderProfileService providerProfileService, String operationLabel) in C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs:line 46&#xD;
+   at CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.CreateDefinition(AgentEditorModel editor, IReadOnlyList`1 providers) in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentDefinitionFactoryThinkingEffortTests.cs:line 362&#xD;
+   at CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_PublishedSharedModelWithoutPriceCanBeSelected() in C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentDefinitionFactoryThinkingEffortTests.cs:line 21&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="49652d7c-a6dc-7eb3-f0cc-e36e99bd409a">
+      <Execution id="6e3f0431-0e6b-4698-8d9d-89a2fda83a87" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests" name="Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_PublishedSharedModelWithoutPriceCanBeSelected" storage="c:\repositories\candoitall\tests\unit\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="4336d354-01d6-7d7c-906c-a2b37d0fb5db">
+      <Execution id="722f9ea4-19bf-4084-8bb8-5eefb94cfd13" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests" name="Create_PublishedSharedModelWithoutPriceCanBeSelected" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="49652d7c-a6dc-7eb3-f0cc-e36e99bd409a" executionId="6e3f0431-0e6b-4698-8d9d-89a2fda83a87" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4336d354-01d6-7d7c-906c-a2b37d0fb5db" executionId="722f9ea4-19bf-4084-8bb8-5eefb94cfd13" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="2" executed="2" passed="0" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.51]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.45]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.49]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:01.57]       System.InvalidOperationException : Agent model override 'route-secondary' for provider 'OpenAi provider' requires a model price row on the provider profile.&#xD;
+[xUnit.net 00:00:01.57]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.57]         C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs(229,0): at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.EnsureManualModelOverrideHasPricing(Nullable`1 providerProfileId, String normalizedModel, ProviderProfile selectedProvider)&#xD;
+[xUnit.net 00:00:01.57]         C:\repositories\CanDoItAll\src\MAF\Common\CanDoItAll.AgentFramework.Core\Agents\AgentDefinitionFactory.cs(46,0): at CanDoItAll.AgentFramework.Core.AgentDefinitionFactory.Create(SandboxWorkspaceCatalog catalog, AgentEditorModel model, Guid id, AgentDefinition existingAgent, DateTimeOffset now, IProviderProfileService providerProfileService, String operationLabel)&#xD;
+[xUnit.net 00:00:01.57]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentDefinitionFactoryThinkingEffortTests.cs(362,0): at CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.CreateDefinition(AgentEditorModel editor, IReadOnlyList`1 providers)&#xD;
+[xUnit.net 00:00:01.57]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentDefinitionFactoryThinkingEffortTests.cs(21,0): at CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_PublishedSharedModelWithoutPriceCanBeSelected()&#xD;
+[xUnit.net 00:00:01.57]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.57]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.58]       Assert.Throws() Failure: No exception was thrown&#xD;
+[xUnit.net 00:00:01.58]       Expected: typeof(System.InvalidOperationException)&#xD;
+[xUnit.net 00:00:01.58]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.58]         C:\repositories\CanDoItAll\tests\Unit\CanDoItAll.Tests.Unit\AgentDefinitionFactoryThinkingEffortTests.cs(39,0): at CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice()&#xD;
+[xUnit.net 00:00:01.58]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.58]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.58]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T08:08:12.8829630-04:00">
+        <Text>[xUnit.net 00:00:01.56]     CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_PublishedSharedModelWithoutPriceCanBeSelected [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="LUCYSPOWER" outcome="Error" timestamp="2026-08-27T08:08:12.8972427-04:00">
+        <Text>[xUnit.net 00:00:01.58]     CanDoItAll.Tests.Unit.AgentFramework.AgentDefinitionFactoryThinkingEffortTests.Create_UnpublishedSharedModelIsRejectedEvenWithLocalPrice [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

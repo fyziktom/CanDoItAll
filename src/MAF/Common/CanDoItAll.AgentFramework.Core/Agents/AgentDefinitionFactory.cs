@@ -43,7 +43,7 @@ internal static class AgentDefinitionFactory
             thinkingEffortOverride,
             selectedProvider,
             effectiveModel);
-        EnsureManualModelOverrideHasPricing(
+        EnsureModelSelectionIsValid(
             model.ProviderProfileId,
             normalizedModel,
             selectedProvider);
@@ -210,11 +210,17 @@ internal static class AgentDefinitionFactory
             configuredThinkingEffortOverride);
     }
 
-    private static void EnsureManualModelOverrideHasPricing(
+    private static void EnsureModelSelectionIsValid(
         Guid? providerProfileId,
         string normalizedModel,
-        ProviderProfile? selectedProvider)
-    {
+        ProviderProfile? selectedProvider) {
+        if (selectedProvider is { IsSourceManaged: true }) {
+            ProviderModelSelectionPolicy.EnsureAllowed(
+                selectedProvider,
+                ResolveEffectiveModel(normalizedModel, selectedProvider));
+            return;
+        }
+
         if (!providerProfileId.HasValue || string.IsNullOrWhiteSpace(normalizedModel))
         {
             return;

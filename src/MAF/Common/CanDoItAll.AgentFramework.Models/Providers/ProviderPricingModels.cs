@@ -119,21 +119,20 @@ public static class ProviderPricingDefaults
 
     private static readonly ProviderModelTokenPrice OpenAiGpt56SolPrice = new(
         OpenAiModelIds.Gpt56Sol,
-        5.00m,
-        0.50m,
-        30.00m)
+        4.00m,
+        0.40m,
+        20.00m)
     {
-        CacheWritePerMillionTokensUsd = 6.25m,
+        CacheWritePerMillionTokensUsd = 5.00m,
         LongContextThresholdTokens = OpenAiModelPricingPolicy.Gpt56LongContextThresholdTokens,
-        LongContextInputPerMillionTokensUsd = 10.00m,
-        LongContextCachedInputPerMillionTokensUsd = 1.00m,
-        LongContextCacheWritePerMillionTokensUsd = 12.50m,
-        LongContextOutputPerMillionTokensUsd = 45.00m
+        LongContextInputPerMillionTokensUsd = 8.00m,
+        LongContextCachedInputPerMillionTokensUsd = 0.80m,
+        LongContextCacheWritePerMillionTokensUsd = 10.00m,
+        LongContextOutputPerMillionTokensUsd = 30.00m
     };
 
     private static readonly IReadOnlyList<ProviderModelTokenPrice> OpenAiModelPrices =
     [
-        OpenAiGpt56SolPrice with { Model = OpenAiModelIds.Gpt56 },
         new(OpenAiModelIds.Gpt56Luna, 0.20m, 0.02m, 1.20m)
         {
             CacheWritePerMillionTokensUsd = 0.25m,
@@ -159,7 +158,7 @@ public static class ProviderPricingDefaults
         new("gpt-5.4-nano", 0.20m, 0.02m, 1.25m),
         new("gpt-5.3-codex", 1.75m, 0.175m, 14.00m),
         new("chat-latest", 5.00m, 0.50m, 30.00m),
-        new("gpt-5-mini", 0.75m, 0.075m, 4.50m)
+        new("gpt-5-mini", 0.25m, 0.025m, 2.00m)
     ];
 
     public static bool IsPrivateProvider(ProviderKind kind)
@@ -206,13 +205,7 @@ public static class ProviderPricingDefaults
             .Select(group => group.Last())
             .ToList();
 
-        if (normalizedPrices.Count == 0)
-        {
-            normalizedPrices.AddRange(CreateDefaultPrices(kind, defaultModel));
-        }
-
         var normalizedDefaultModel = NormalizeModelName(defaultModel);
-        EnsureModelPrice(normalizedPrices, kind, normalizedDefaultModel);
 
         return normalizedPrices
             .OrderBy(price => string.Equals(price.Model, normalizedDefaultModel, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
@@ -271,8 +264,9 @@ public static class ProviderPricingDefaults
         IEnumerable<ProviderModelTokenPrice>? configuredPrices,
         IEnumerable<ProviderDiscoveredModelPrice>? discoveredPrices)
     {
-        var mergedPrices = NormalizeModelPrices(kind, defaultModel, configuredPrices)
+        var configured = NormalizeModelPrices(kind, defaultModel, configuredPrices)
             .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
+        var mergedPrices = new Dictionary<string, ProviderModelTokenPrice>(StringComparer.OrdinalIgnoreCase);
         var discoveredModels = (discoveredPrices ?? [])
             .Select(NormalizeDiscoveredPrice)
             .Where(price => !string.IsNullOrWhiteSpace(price.Model))
@@ -291,7 +285,7 @@ public static class ProviderPricingDefaults
                     discoveredPrice.InputPerMillionTokensUsd!.Value,
                     discoveredPrice.CachedInputPerMillionTokensUsd!.Value,
                     discoveredPrice.OutputPerMillionTokensUsd!.Value);
-                mergedPrices.TryGetValue(discoveredPrice.Model, out var existingPrice);
+                configured.TryGetValue(discoveredPrice.Model, out var existingPrice);
                 TryFindKnownDefaultPrice(kind, discoveredPrice.Model, out var knownDefaultPrice);
                 mergedPrices[discoveredPrice.Model] = PreserveOptionalPriceMetadata(
                     explicitPrice,
@@ -302,14 +296,11 @@ public static class ProviderPricingDefaults
             }
 
             modelNameOnlyCount++;
-            if (!TryFindKnownDefaultPrice(kind, discoveredPrice.Model, out var defaultPrice))
-            {
-                continue;
+            if (TryFindKnownDefaultPrice(kind, discoveredPrice.Model, out var defaultPrice)) {
+                mergedPrices[discoveredPrice.Model] = defaultPrice;
+            } else if (configured.TryGetValue(discoveredPrice.Model, out var configuredPrice)) {
+                mergedPrices[discoveredPrice.Model] = configuredPrice;
             }
-
-            mergedPrices[discoveredPrice.Model] = mergedPrices.TryGetValue(discoveredPrice.Model, out var configuredPrice)
-                ? EnrichKnownPrice(configuredPrice, defaultPrice)
-                : defaultPrice;
         }
 
         return new ProviderModelPricingMergeResult(

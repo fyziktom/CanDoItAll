@@ -11,13 +11,17 @@ public sealed record LlmChatThinkingEffortOption(
 
 public sealed record LlmChatModelOption(
     string Model,
-    LlmChatThinkingEffortOption ThinkingEffort);
+    LlmChatThinkingEffortOption ThinkingEffort) {
+    public string DisplayName { get; init; } = Model;
+}
 
 public sealed record LlmChatProviderOption(
     Guid ProviderProfileId,
     string ProviderName,
     ProviderKind ProviderKind,
-    IReadOnlyList<LlmChatModelOption> Models);
+    IReadOnlyList<LlmChatModelOption> Models) {
+    public bool IsSourceManaged { get; init; }
+}
 
 public sealed record LlmChatResolvedProvider(
     Guid ProviderProfileId,

@@ -21,9 +21,14 @@ Overall state: `BLOCKED_SB07_TEST_BUDGET_AUTHORITY`
 
 ## Operator feedback repair
 
-- 2026-08-27 `SPMETA` — `DONE`: source model names, exact published-model prices and private-provider
-  metadata repaired. Final focused lanes pass 161/217/46/38; final image-3 two-instance UI
-  acceptance passes twice, including persisted private edits, resync and chat/image/vision.
+- 2026-08-27 `SPMETA` — `DONE`: full-model-catalog feedback repaired and governed gate passed;
+  see `subbundles/SPMETA-source-metadata-mirroring/full-catalog-repair.md`. Source/client
+  catalogs match: 12 OpenAI chat and 3 Ollama choices, exact available prices/private flags.
+  Shared unpriced selections save correctly; Simple Chats preserves source model labels.
+  Final focused lanes pass 52/52/24/39 (167 executions). Two complete UI runs and independent
+  runtime checks pass with ten complete central successes each, including non-default
+  agents/chats and image/vision. Final image fullcatalog-20260827-2 runs on 5210/5212.
+  Source/hash, anti-stub and architecture gates pass; data retained and 5032 untouched.
   Governed evidence and handoff: `subbundles/SPMETA-source-metadata-mirroring/RESULT.md`.
   Original SB07 and its downstream locks remain unchanged; no live/paid-provider claim.
 

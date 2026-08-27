@@ -229,6 +229,13 @@ public static class SharedProviderProfilePublicationMetadataReader
                 return false;
             }
 
+            models = ProviderModelCatalogPolicy.Resolve(
+                profile.ConnectorPluginKey, providerKind, purpose, profile.DefaultModel, models);
+            if (models.Count > SharedProviderProfilePublicationMetadataSchema.MaximumModels) {
+                sanitizedReason = $"A provider can publish at most {SharedProviderProfilePublicationMetadataSchema.MaximumModels} models, including its default model.";
+                return false;
+            }
+
             metadata = new SharedProviderProfilePublicationMetadata(
                 providerKind,
                 transport,

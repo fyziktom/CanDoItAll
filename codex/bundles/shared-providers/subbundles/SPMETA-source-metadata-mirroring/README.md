@@ -1,6 +1,12 @@
 # SPMETA — source metadata mirroring
 
-State: `DONE`. Proof tier: `Governed`. Owner: current operator repair lane.
+State: `DONE` (full model-catalog parity repair validated). Proof tier: `Governed`.
+Owner: current operator repair lane. Current repair plan: [full-catalog-repair.md](full-catalog-repair.md).
+
+The latest full-catalog closure is [RESULT.md](RESULT.md) and
+[full-catalog-manifest.md](proof/full-catalog-manifest.md): 167 focused tests and two
+complete two-instance UI/runtime runs pass, with source/client model-set parity.
+The original metadata plan and results below remain historical context.
 
 ## Objective and covered inputs
 

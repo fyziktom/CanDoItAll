@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
+using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
@@ -157,6 +158,11 @@ public partial class AgentProviderProfilesPanel
         try
         {
             providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
+            if (string.IsNullOrWhiteSpace(providerModel.DefaultModel) ||
+                (providerModel.SuggestedModels.Count > 0 &&
+                 !providerModel.SuggestedModels.Contains(providerModel.DefaultModel.Trim(), StringComparer.OrdinalIgnoreCase))) {
+                throw new ProviderProfileValidationException("Choose a default model from this provider's model catalog before saving.");
+            }
             providerModel.Tags = providerTagValues.ToList();
             var providerId = await ProviderRuntimeAdministrationService.SaveProviderAsync(providerModel);
             providers = await ProviderRuntimeAdministrationService.ListProvidersAsync();
@@ -238,43 +244,48 @@ public partial class AgentProviderProfilesPanel
         return Task.CompletedTask;
     }
 
-    private async Task RefreshProviderModelPricesAsync()
-    {
-        if (!providerModel.Id.HasValue)
-        {
-            NotificationService.Warning(
-                "Provider pricing was not loaded",
-                "Save the provider before loading prices from its API.");
+    private void ChangeProviderKind(ProviderKind kind) {
+        if (SelectedProviderIsSourceManaged || providerModel.Kind == kind) {
+            return;
+        }
+
+        providerModel.Kind = kind;
+        providerModel.BaseUrl = string.Empty;
+        providerModel.ApiKeyEnvironmentVariable = string.Empty;
+        providerModel.DefaultModel = string.Empty;
+        providerModel.ConfigurationJson = "{}";
+        providerModel.SuggestedModels = [];
+        providerModel.ModelPrices = [];
+        providerModel.ModelThinkingEffortCapabilities = [];
+        providerModel.Tags = [];
+        providerModel.IsPrivateProvider = ProviderPricingDefaults.IsPrivateProvider(kind);
+        providerModel.Transport = kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
+            ? ProviderTransportKind.Responses : ProviderTransportKind.ChatCompletions;
+        providerModel.SupportsBackgroundResponses = false;
+        SyncProviderEditorText();
+        NotificationService.Info("Provider kind changed",
+            "Connection, models, prices and provider metadata were cleared. Configure the endpoint and load its models before saving.");
+    }
+
+    private async Task RefreshProviderModelPricesAsync() {
+        if (SelectedProviderIsSourceManaged) {
             return;
         }
 
         isBusy = true;
-        try
-        {
-        var managedProviders = await ProviderAdministrationService.ListProviderProfilesAsync();
-        if (!managedProviders.Any(provider => provider.Id == providerModel.Id.Value))
-            {
-                NotificationService.Warning(
-                    "Provider pricing was not loaded",
-                "Pricing refresh is available only for saved provider profiles. Add model prices manually.");
-                return;
-            }
-
-        var administrationModel = await ProviderAdministrationService.GetProviderAsync(providerModel.Id.Value);
-        if (administrationModel.Id != providerModel.Id)
-            {
-                NotificationService.Warning(
-                    "Provider pricing was not loaded",
-                "The selected provider is not a saved provider profile. Add model prices manually.");
-                return;
-            }
-
-        administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
-        administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
-        administrationModel.IsPrivateProvider = providerModel.IsPrivateProvider;
-        administrationModel.ModelPrices = CloneModelPrices(providerModel.ModelPrices);
-
-        var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(administrationModel);
+        try {
+            var administrationModel = new ProviderManagement.ProviderProfileEditorModel {
+                Id = providerModel.Id,
+                Name = providerModel.Name,
+                ConnectorPluginKey = ProviderMetadata.ResolveConnectorPluginKey(providerModel, null),
+                ApiKeySecretId = ProviderMetadata.ResolveSecretRecordId(providerModel),
+                Configuration = ConnectorConfigState.FromJson(providerModel.ConfigurationJson),
+                IsPrivateProvider = providerModel.IsPrivateProvider,
+                ModelPrices = CloneModelPrices(providerModel.ModelPrices)
+            };
+            administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
+            administrationModel.Configuration.SetText(ProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
+            var result = await ProviderAdministrationService.RefreshProviderModelPricesAsync(administrationModel);
             if (!result.IsSuccess)
             {
                 NotificationService.Warning(
@@ -284,7 +295,15 @@ public partial class AgentProviderProfilesPanel
             }
 
             providerModel.ModelPrices = result.Value!.ModelPrices;
-            NotifyPricingRefresh(result.Value);
+            providerModel.SuggestedModels = result.Value.Models.ToList();
+            SyncProviderEditorText();
+            if (!providerModel.SuggestedModels.Contains(providerModel.DefaultModel, StringComparer.OrdinalIgnoreCase)) {
+                providerModel.DefaultModel = string.Empty;
+                NotificationService.Warning("Provider models loaded",
+                    $"{result.Value.Message} Select a default model from the loaded catalog before saving.");
+            } else {
+                NotifyPricingRefresh(result.Value);
+            }
         }
         catch (Exception exception)
         {
@@ -413,7 +432,7 @@ public partial class AgentProviderProfilesPanel
             Kind = ProviderKind.OpenAi,
             BaseUrl = ManagedSeedProviderFallbacks.OpenAiBaseUrl,
             ApiKeyEnvironmentVariable = string.Empty,
-            DefaultModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+            DefaultModel = string.Empty,
             Transport = ProviderTransportKind.Responses,
             Purpose = ProviderProfilePurpose.Chat,
             IsEnabled = true,
@@ -422,11 +441,9 @@ public partial class AgentProviderProfilesPanel
             SupportsBackgroundResponses = true,
             PreferFrameworkManagedChatHistory = false,
             ConfigurationJson = "{}",
-            SuggestedModels = ManagedSeedProviderFallbacks.OpenAiSuggestedModels.ToList(),
+            SuggestedModels = [],
             IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(ProviderKind.OpenAi, null),
-            ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
-                ProviderKind.OpenAi,
-                ManagedSeedProviderFallbacks.OpenAiDefaultModel),
+            ModelPrices = [],
             Tags = ["openai", "cloud", "chat", "responses"]
         };
     }

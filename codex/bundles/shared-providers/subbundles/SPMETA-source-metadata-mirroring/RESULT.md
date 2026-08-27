@@ -1,9 +1,60 @@
 # SPMETA result and operator handoff
 
-State: `DONE` for the 2026-08-27 operator-authorized metadata repair lane.
+State: `DONE`; completed-stage source, artifact-hash and proof gates passed. Current repair:
+[full-catalog-repair.md](full-catalog-repair.md).
 Original SB07 remains `BLOCKED`; this is not whole-bundle closure.
 
-## Outcome and root causes
+## Current full-catalog repair
+
+The source runtime added built-in OpenAI choices, but the publication reader only used
+persisted suggestions/default. They now use one effective catalog policy. The importer
+receives the complete source-selectable set without adding unrelated driver defaults.
+Source-normalized prices are mirrored; absent prices remain absent, not invented zeros.
+
+Two downstream defects were also repaired: Simple Chats dropped display labels/source
+ownership in its own adapters, and agent save required a price for any model override.
+Shared agent selections now use the published model constraint, allowing advertised
+unpriced models while rejecting unpublished or missing-constraint selections. Local
+manual-provider pricing requirements remain unchanged.
+
+The current test setup has identical source/client sets: 12 OpenAI chat models (10 priced,
+2 explicitly unpriced), 3 private Ollama models with 3 matching price rows, and one image
+model. All nine price fields and private flags match. Saved opaque route IDs remain stable;
+the UI displays source names. No project/reference, migration or authorization change.
+
+Validation: 52 unit, 52 integration, 24 component and 39 agent-save/consumer tests pass
+(167 focused executions, not the whole suite). The isolated Simple Chats UI probe passes.
+Both complete Chrome UI runs, full-catalog-ui-6 and full-catalog-ui-repeat, pass with
+10 successful central operations and complete token/image usage per run. Each executes
+gpt-4.1-mini and e2e-ollama-secondary
+through agents, gpt-5.4-mini and e2e-ollama-vision through Simple Chats, plus image generation
+and image analysis. Runtime proof confirms image input, fresh PNG, HTTP 200 health and
+no application error headings in either engine during either run.
+
+Both engines are rebuilt and running: source http://localhost:5210, client
+http://localhost:5212, image `candoitall-shared-providers-ui:fullcatalog-20260827-2`
+(`sha256:db76a05c23434b3fb660c9d4546c9dcd725add605ce76382441939f85d914d6d`).
+Volumes and rollback containers are retained; 5032 and unrelated PostgreSQL are unchanged.
+Refresh the browser to see the expanded catalog. Other clients must synchronize their
+source after both engines are upgraded. No data reset or reimport is required.
+
+The two-instance stack uses a deterministic upstream: these are routing/UI/persistence
+tests, not live paid OpenAI/Ollama or image-quality proof. Central monetary price remains
+Unavailable in this fixture; price metadata parity is not a billed-cost claim. Simple
+Chats on the JWT-protected Docker client requires an authenticated browser with its
+read/manage/execute scopes; the test creates that token through Settings, never bypassing
+authorization. Final browser runs use installed Chrome 151 because the bundled browser
+failed interactive authentication despite correct scopes.
+
+Current proof: [full-catalog-manifest.md](proof/full-catalog-manifest.md). Architecture,
+semantic and desktop self-review: [full-catalog-review.md](reviews/full-catalog-review.md).
+
+## Historical metadata-only repair
+
+The following earlier results did not establish full source model-list parity and are
+retained as history, not substituted for the current repair's evidence.
+
+### Outcome and root causes
 
 - Public catalog labels were fabricated, then discarded by the runtime mapper. UI controls
   consequently displayed opaque routing IDs. The catalog now publishes actual source model

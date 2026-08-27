@@ -14,6 +14,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
     private const int MaximumTextCharacters = 1024 * 1024;
     private const int MaximumSchemaCharacters = 256 * 1024;
     private const string ResponsesStorePropertyName = "store";
+    private const string ChatReasoningEffortPropertyName = "reasoning_effort";
 
     private static readonly FrozenSet<string> ChatProperties = Set(
         "model",
@@ -24,6 +25,7 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         "tool_choice",
         "parallel_tool_calls",
         "response_format",
+        ChatReasoningEffortPropertyName,
         "temperature",
         "top_p",
         "stop",
@@ -165,6 +167,13 @@ public sealed class SharedProviderRelayRequestPolicy : ISharedProviderRelayReque
         ISet<SharedProviderCapability> requiredCapabilities)
     {
         requiredCapabilities.Add(SharedProviderCapability.ChatCompletions);
+        if (root.TryGetProperty(ChatReasoningEffortPropertyName, out var reasoningEffort) &&
+            reasoningEffort.ValueKind != JsonValueKind.Null &&
+            (reasoningEffort.ValueKind != JsonValueKind.String ||
+             reasoningEffort.GetString() is not ("none" or "minimal" or "low" or "medium" or "high" or "xhigh" or "max"))) {
+            return Validation("The reasoning effort is unsupported or invalid.", ChatReasoningEffortPropertyName);
+        }
+
         if (!root.TryGetProperty("messages", out var messages) ||
             messages.ValueKind != JsonValueKind.Array ||
             messages.GetArrayLength() is < 1 or > MaximumMessages)

@@ -38,7 +38,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         const string accessContext = "persisted-relay-context";
         using var request = CreatePost(
             SharedProviderRoutes.ChatCompletions,
-            ChatJson(fixture.PersistedChatModelId));
+            ChatJson(fixture.PersistedChatModelId, "\"reasoning_effort\":\"none\""));
         request.Headers.TryAddWithoutValidation(
             SharedProviderHeaders.AccessContextReference,
             accessContext);
@@ -111,6 +111,8 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
             Assert.IsType<SharedProviderRelayCredential>(dispatched.Target.Credential)
                 .UseValue(value => value));
         Assert.Equal(SharedProviderRelayOperation.ChatCompletions, dispatched.Request.Operation);
+        using var chatPayload = JsonDocument.Parse(dispatched.Request.CanonicalPayloadUtf8);
+        Assert.Equal("none", chatPayload.RootElement.GetProperty("reasoning_effort").GetString());
         var dispatchedResponses = Assert.Single(
             dispatchedRequests,
             item => item.Request.Operation == SharedProviderRelayOperation.Responses);
@@ -421,6 +423,27 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
     }
 
     [Fact]
+    public async Task GptImage_ResponsePreservesDocumentedMetadataAndImageUsage() {
+        const string responseBody = """
+            {"created":1713833628,"background":"opaque","output_format":"png","quality":"low","size":"1024x1024",
+             "data":[{"b64_json":"AQID"}],"usage":{"input_tokens":10,"output_tokens":20,"total_tokens":30,
+             "input_tokens_details":{"text_tokens":10,"image_tokens":0}}}
+            """;
+        await using var relay = DirectRelayFixture.Create(responseFactory: _ => JsonResponse(responseBody));
+
+        var result = await relay.DispatchAsync("provider.openai", SharedProviderPurpose.ImageGeneration,
+            SharedProviderRelayOperation.ImageGenerations, ImagesJson(relay.ModelId));
+
+        var buffered = Assert.IsType<SharedProviderRelayDispatchResult.Buffered>(result);
+        using var expected = JsonDocument.Parse(responseBody);
+        using var actual = JsonDocument.Parse(buffered.PayloadUtf8);
+        Assert.True(JsonElement.DeepEquals(expected.RootElement, actual.RootElement));
+        Assert.Equal(1, buffered.Usage.ImageCount);
+        Assert.Equal(SharedProviderRelayUsageCompleteness.Complete, buffered.Usage.Completeness);
+        Assert.Equal("/v1/images/generations", Assert.Single(relay.Handler.Requests).Uri.AbsolutePath);
+    }
+
+    [Fact]
     public async Task ComfyUiAdapter_MapsExistingImageCapabilityToBase64()
     {
         var imageRelay = new RecordingImageCapabilityRelay(
@@ -451,7 +474,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         string payload = ChatJson(
             relay.ModelId,
             """
-            "tools":[{"type":"function","function":{"name":"weather","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}],"tool_choice":{"type":"function","function":{"name":"weather"}}
+            "reasoning_effort":"none","tools":[{"type":"function","function":{"name":"weather","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}],"tool_choice":{"type":"function","function":{"name":"weather"}}
             """);
 
         var result = await relay.DispatchAsync(
@@ -465,6 +488,7 @@ public sealed class SharedProviderOpenAiCompatibilityIntegrationTests(
         Assert.Contains("\"name\":\"weather\"", upstream, StringComparison.Ordinal);
         Assert.Contains("\"required\":[\"city\"]", upstream, StringComparison.Ordinal);
         Assert.Contains("\"tool_choice\"", upstream, StringComparison.Ordinal);
+        Assert.Contains("\"reasoning_effort\":\"none\"", upstream, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,0 +1,46 @@
+**********************
+PowerShell transcript start
+Start time: 20260827075958
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+Start-Transcript -Path codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/full-catalog-restart.txt -Force
+try {
+ & codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/Restart-TestInstances.ps1 -Image candoitall-shared-providers-ui:fullcatalog-20260827-1 -BackupSuffix before-fullcatalog-20260827-1
+} finally {
+ Stop-Transcript
+}
+Process ID: 39988
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is codex/bundles/shared-providers/subbundles/SPMETA-source-metadata-mirroring/proof/transcripts/full-catalog-restart.txt
+
+candoitall-spui-shared
+
+6fc965194352ec4a4a1b2ca6d77864ed1799534b468e2d068dd4d8c39625f93a
+
+
+
+candoitall-spui-shared
+candoitall-spui-shared started; rollback retained as candoitall-spui-shared-before-fullcatalog-20260827-1; named data volumes preserved.
+candoitall-spui-client
+
+f90f2756b8a25d24ddea1fb3035ed851a34015b1f878ac38907966940f6c409e
+
+
+candoitall-spui-client
+candoitall-spui-client started; rollback retained as candoitall-spui-client-before-fullcatalog-20260827-1; named data volumes preserved.
+**********************
+PowerShell transcript end
+End time: 20260827080004
+**********************

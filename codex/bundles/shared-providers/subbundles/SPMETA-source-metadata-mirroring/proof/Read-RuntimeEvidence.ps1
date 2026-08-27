@@ -1,4 +1,9 @@
-param([Parameter(Mandatory)] [DateTimeOffset] $SinceUtc, [Parameter(Mandatory)] [string] $RunLabel)
+param(
+    [Parameter(Mandatory)] [DateTimeOffset] $SinceUtc,
+    [Parameter(Mandatory)] [string] $RunLabel,
+    [int] $ExpectedInvocationCount = 8,
+    [string[]] $ExpectedModels = @()
+)
 $ErrorActionPreference = 'Stop'
 Start-Transcript -Path (Join-Path $PSScriptRoot "transcripts\$RunLabel-runtime.txt") -Force | Out-Null
 try {
@@ -20,18 +25,33 @@ try {
     $countsSql = 'SELECT count(*)::text || ''|'' || count(*) FILTER (WHERE "Outcome" = ''Succeeded'' AND "UsageCompleteness" = ''Complete'')::text || ''|'' || count(*) FILTER (WHERE "Operation" = ''ImageGenerations'' AND "ImageCount" = 1)::text FROM "Workspace_SharedProviderInvocations" WHERE "StartedAtUtc" >= ''' + $sinceText + ''';'
     Write-Output "Central run-count assertion query: $countsSql"
     $counts = (docker exec candoitall-spui-db psql -U $dbUser -d candoitall_e2e_central -Atc $countsSql).Trim()
-    if ($LASTEXITCODE -ne 0 -or $counts -ne '8|8|1') {
-        throw "Expected eight complete successes including one generated image; actual counts: $counts"
+    if ($LASTEXITCODE -ne 0 -or $counts -ne "$ExpectedInvocationCount|$ExpectedInvocationCount|1") {
+        throw "Expected $ExpectedInvocationCount complete successes including one generated image; actual counts: $counts"
     }
     Write-Output "PASS production ledger counts: $counts"
+    $modelsSql = 'SELECT DISTINCT "UpstreamModelId" FROM "Workspace_SharedProviderInvocations" WHERE "StartedAtUtc" >= ''' + $sinceText + ''' AND "Outcome" = ''Succeeded'' ORDER BY "UpstreamModelId";'
+    $observedModels = @(docker exec candoitall-spui-db psql -U $dbUser -d candoitall_e2e_central -Atc $modelsSql)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Cannot read executed models from central ledger.'
+    }
+    foreach ($expectedModel in $ExpectedModels) {
+        if ($observedModels -notcontains $expectedModel) {
+            throw "The selected non-default model did not execute: $expectedModel"
+        }
+        Write-Output "PASS selected non-default model recorded by central ledger: $expectedModel"
+    }
     $controlToken = (docker exec candoitall-spui-upstream /usr/local/bin/busybox cat /run/secrets/upstream-control-token).Trim()
     $capture = Invoke-RestMethod -Uri 'http://127.0.0.1:5213/_test/captures' -Headers @{Authorization="Bearer $controlToken"}
     $controlToken = $null
     Write-Output 'GET /_test/captures: credential and request bodies omitted; only safe route/model/status/image-presence facts follow.'
     $requests = @($capture.requests | Where-Object { [DateTimeOffset]$_.received_at_utc -ge $SinceUtc })
-    if ($requests.Count -ne 8 -or @($requests | Where-Object { $_.response_status_code -ne 200 }).Count -ne 0) {
-        throw 'Expected eight successful upstream requests in the completed UI run.'
+    if ($requests.Count -ne $ExpectedInvocationCount -or @($requests | Where-Object { $_.response_status_code -ne 200 }).Count -ne 0) {
+        throw "Expected $ExpectedInvocationCount successful upstream requests in the completed UI run."
     }
+    if (@($requests | Where-Object { $_.body.Contains('image_url') -or $_.body.Contains('data:image') }).Count -eq 0) {
+        throw 'No upstream request contained the image attachment.'
+    }
+    Write-Output 'PASS upstream request contained image input'
     foreach ($request in $requests) {
         $model = [regex]::Match($request.body, '"model"\s*:\s*"([^"]+)"').Groups[1].Value
         [pscustomobject]@{

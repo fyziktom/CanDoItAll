@@ -86,14 +86,18 @@ public sealed class CanonicalLlmChatProviderResolver(
                         resolved.ThinkingEffortCapability.Status,
                         resolved.ThinkingEffortCapability.ControlMode,
                         [.. resolved.ThinkingEffortCapability.AllowedEfforts],
-                        resolved.ProviderDefaultThinkingEffort)));
+                        resolved.ProviderDefaultThinkingEffort)) {
+                    DisplayName = provider.GetModelDisplayName(model)
+                });
             }
 
             options.Add(new LlmChatProviderOption(
                 provider.Id,
                 provider.Name,
                 provider.Kind,
-                models));
+                models) {
+                IsSourceManaged = provider.IsSourceManaged
+            });
         }
 
         return Result<IReadOnlyList<LlmChatProviderOption>>.Success(options);
